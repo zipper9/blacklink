@@ -30,6 +30,8 @@
 #include "../client/NetworkUtil.h"
 #include "../client/webrtc/talk/base/winfirewall.h"
 
+NetworkPage::Settings* NetworkPage::prevSettings = nullptr;
+
 extern bool g_DisableTestPort;
 extern int g_tlsOption;
 
@@ -147,6 +149,7 @@ void NetworkPage::write()
 	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
 	if (selIndex >= 0 && selIndex < (int) mappers.size())
 		g_settings->set(SettingsManager::MAPPER, mappers[selIndex]);
+	g_settings->set(SettingsManager::USE_TLS, useTLS);
 }
 
 LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -308,34 +311,30 @@ static int getIconForMappingState(int state)
 	return IconQuestion;
 }
 
-static int getControlIDForProto(int proto)
+static const struct
 {
-	switch (proto)
-	{
-		case PortTest::PORT_UDP: return IDC_NETWORK_TEST_PORT_UDP_ICO;
-		case PortTest::PORT_TCP: return IDC_NETWORK_TEST_PORT_TCP_ICO;
-		case PortTest::PORT_TLS: return IDC_NETWORK_TEST_PORT_TLS_TCP_ICO;
-	}
-	return -1;
-}
-
-static int getControlIDForUPnP(int type)
+	SettingsManager::IntSetting setting;
+	int edit;
+	int protoIcon;
+	int upnpIcon;
+} controlInfo[] =
 {
-	switch (type)
-	{
-		case MappingManager::PORT_UDP: return IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP;
-		case MappingManager::PORT_TCP: return IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP;
-		case MappingManager::PORT_TLS: return IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP;
-	}
-	return -1;
-}
+	{ SettingsManager::UDP_PORT, IDC_PORT_UDP, IDC_NETWORK_TEST_PORT_UDP_ICO, IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP },
+	{ SettingsManager::TCP_PORT, IDC_PORT_TCP, IDC_NETWORK_TEST_PORT_TCP_ICO, IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP },
+	{ SettingsManager::TLS_PORT, IDC_PORT_TLS, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP },
+};
 
 void NetworkPage::updatePortState()
 {
+	static_assert(PortTest::PORT_UDP == 0 && PortTest::PORT_TCP == 1 && PortTest::PORT_TLS == 2, "PortTest constants mismatch");
 	const MappingManager& mapperV4 = ConnectivityManager::getInstance()->getMapperV4();
 	bool running = false;
+	bool updatePrevSettings = false;
+	tstring oldText;
+	tstring newText;
 	for (int type = 0; type < PortTest::MAX_PORTS; type++)
 	{
+		const auto& ci = controlInfo[type];
 		int port, portIcon, mappingIcon;
 		int portState = g_portTest.getState(type, port, nullptr);
 		int mappingState = mapperV4.getState(type);
@@ -352,8 +351,19 @@ void NetworkPage::updatePortState()
 			if (mappingIcon == IconFailure && portIcon == IconSuccess)
 				mappingIcon = IconUnknown;
 		}
-		setIcon(getControlIDForProto(type), portIcon);
-		setIcon(getControlIDForUPnP(type), mappingIcon);
+		setIcon(ci.protoIcon, portIcon);
+		setIcon(ci.upnpIcon, mappingIcon);
+		CEdit edit(GetDlgItem(ci.edit));
+		if (!edit.IsWindowEnabled())
+		{
+			WinUtil::getWindowText(edit, oldText);
+			newText = Util::toStringT(g_settings->get(ci.setting));
+			if (oldText != newText)
+			{
+				edit.SetWindowText(newText.c_str());
+				updatePrevSettings = true;
+			}
+		}
 	}
 
 	CButton ctrl(GetDlgItem(IDC_GETIP));
@@ -384,6 +394,9 @@ void NetworkPage::updatePortState()
 	// Testing DHT port is not supported
 	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO, IconUnknown);
 #endif
+
+	if (updatePrevSettings && prevSettings)
+		prevSettings->get();
 }
 
 LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
@@ -471,8 +484,11 @@ LRESULT NetworkPage::onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* h
 			return 0;
 		write();
 		ConnectivityManager::getInstance()->setupConnections(true);
+		if (prevSettings)
+			prevSettings->get(); // save current settings so we don't call setupConnections twice
 	}
-	runPortTest();
+	if (!ConnectivityManager::getInstance()->isSetupInProgress())
+		runPortTest();
 	return 0;
 }
 
@@ -528,10 +544,9 @@ void NetworkPage::getFromUI(Settings& settings) const
 	tstring buf;
 	WinUtil::getWindowText(GetDlgItem(IDC_PORT_TCP), buf);
 	settings.portTCP = Util::toInt(buf);
-	CButton wndTLS(GetDlgItem(IDC_PORT_TLS));
-	if (wndTLS.IsWindowEnabled())
+	if (useTLS)
 	{
-		WinUtil::getWindowText(wndTLS, buf);
+		WinUtil::getWindowText(GetDlgItem(IDC_PORT_TLS), buf);
 		settings.portTLS = Util::toInt(buf);
 	}
 	else

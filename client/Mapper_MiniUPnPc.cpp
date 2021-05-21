@@ -63,7 +63,7 @@ bool Mapper_MiniUPnPc::init()
 	bool ok = ret == 1;
 	if (ok)
 	{
-		if (localIp.empty())
+		if (!Util::isValidIp4(localIp))
 		{
 			// We have no bind address configured in settings
 			// Try to avoid choosing a random adapter for port mapping

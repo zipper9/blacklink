@@ -59,7 +59,6 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		void setPassiveMode();
 		void testPorts();
 		
-		string status;
 		string reflectedIP;
 		string localIP;
 		MappingManager mapperV4;

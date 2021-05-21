@@ -1847,21 +1847,14 @@ bool SettingsManager::set(IntSetting key, int value)
 			break;
 		}
 		case TCP_PORT:
-		{
-			VERIFY(1024, 65535);
-			break;
-		}
 		case TLS_PORT:
+		case UDP_PORT:
 		{
-			VERIFY(1024, 65535);
+			VER_MIN_EXCL_ZERO(1024);
+			VER_MAX(65535);
 			break;
 		}
 		case WEBSERVER_PORT:
-		{
-			VERIFY(1024, 65535);
-			break;
-		}
-		case UDP_PORT:
 		{
 			VERIFY(1024, 65535);
 			break;

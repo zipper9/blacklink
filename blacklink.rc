@@ -401,10 +401,11 @@ BEGIN
     GROUPBOX        "Incoming connection settings",IDC_SETTINGS_INCOMING,4,30,317,189,WS_GROUP
     CONTROL         "Use automatic detection",IDC_CONNECTION_DETECTION,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,43,152,8
-    CONTROL         "Direct connection",IDC_DIRECT,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,27,56,87,8
-    CONTROL         "UPnP (for WiFi router)",IDC_FIREWALL_UPNP,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,27,68,102,8
+    CONTROL         "Direct connection",IDC_DIRECT,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,27,56,141,8
+    CONTROL         "Router with automatic port forwarding (UPnP or NAT-PMP)",IDC_FIREWALL_UPNP,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,27,68,232,8
     CONTROL         "Firewall with manual port forwarding",IDC_FIREWALL_NAT,
-                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE | WS_TABSTOP,27,80,148,8
+                    "Button",BS_AUTORADIOBUTTON | BS_MULTILINE | WS_TABSTOP,27,80,232,8
     CONTROL         "Firewall (passive mode, worst case)",IDC_FIREWALL_PASSIVE,
                     "Button",BS_AUTORADIOBUTTON | BS_MULTILINE | WS_TABSTOP,27,92,153,8
     GROUPBOX        "External / WAN IP",IDC_SETTINGS_IP,9,107,186,76,BS_CENTER

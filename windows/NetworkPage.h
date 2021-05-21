@@ -81,9 +81,14 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 			cancel_check();
 		}
 		void updatePortState();
+		static void setPrevSettings(Settings* settings)
+		{
+			prevSettings = settings;
+		}
 
 	private:
 		bool useTLS;
+		static Settings* prevSettings;
 
 		void setIcon(int id, int stateIcon);
 		void testWinFirewall();

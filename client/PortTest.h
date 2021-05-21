@@ -34,6 +34,7 @@ public:
 	void getReflectedAddress(string& reflectedAddress) const noexcept;
 	void setPort(int type, int port) noexcept;
 	bool processInfo(int firstType, int lastType, int port, const string& reflectedAddress, const string& cid, bool checkCID = true) noexcept;
+	void resetState(int typeMask) noexcept;
 	void shutdown();
 
 private:

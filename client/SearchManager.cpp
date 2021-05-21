@@ -177,7 +177,7 @@ int SearchManager::run()
 			sockaddr_in remoteAddr;
 			socklen_t addrLen = sizeof(remoteAddr);
 			int len = ::recvfrom(nativeSocket, buf, BUFSIZE, 0, (struct sockaddr*) &remoteAddr, &addrLen);
-			if (isShutdown()) return 0;
+			if (isShutdown()) goto terminate;
 			if (len < 0)
 			{
 				if (Socket::getLastError() == SE_EWOULDBLOCK)
@@ -192,6 +192,8 @@ int SearchManager::run()
 			}
 		}
 	}
+	terminate:
+	g_portTest.resetState(1<<PortTest::PORT_UDP);
 	return 0;
 }
 

@@ -398,8 +398,7 @@ void ConnectionManager::startListen(int type)
 	}
 
 	auto newServer = new Server(type, port, bind);
-	if (autoDetectConnection)
-		SettingsManager::set(portSetting, newServer->getServerPort());
+	SettingsManager::set(portSetting, newServer->getServerPort());
 	if (type == SERVER_TYPE_SSL)
 		secureServer = newServer;
 	else
@@ -788,7 +787,7 @@ ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr)
 {
 	sock.create();
 	sock.setSocketOpt(SO_REUSEADDR, 1);
-	LogManager::message("Starting to listen " + bindIp + ':' + Util::toString(port) + " type=" + Util::toString(type), false);
+	LogManager::message("Starting server on " + bindIp + ':' + Util::toString(port) + " type=" + Util::toString(type), false);
 	serverPort = sock.bind(port, bindIp);
 	sock.listen();
 	char threadName[64];
@@ -855,6 +854,12 @@ int ConnectionManager::Server::run() noexcept
 			}
 		}
 	}
+	int mask = 0;
+	if (type == SERVER_TYPE_TCP || type == SERVER_TYPE_AUTO_DETECT)
+		mask |= 1<<PortTest::PORT_TCP;
+	if (type == SERVER_TYPE_SSL || type == SERVER_TYPE_AUTO_DETECT)
+		mask |= 1<<PortTest::PORT_TLS;
+	g_portTest.resetState(mask);
 	return 0;
 }
 

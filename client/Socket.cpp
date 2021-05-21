@@ -196,7 +196,7 @@ uint16_t Socket::bind(uint16_t port, const string& address /* = 0.0.0.0 */)
 	if (doLog)
 		LogManager::message("Socket " + Util::toHexString(sock) +
 			": Bound to " + address + ":" + Util::toString(localPort) +
-			", type=" + Util::toString(type) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
+			(type == TYPE_TCP ? " (TCP)" : " (UDP)"), false);
 	return localPort;
 }
 

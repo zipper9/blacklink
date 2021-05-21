@@ -49,15 +49,10 @@ void ConnectivityManager::startSocket()
 {
 	disconnect();
 	listen();
-	// must be done after listen calls; otherwise ports won't be set
-	if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
-		mapperV4.open();
 }
 
 void ConnectivityManager::detectConnection()
 {
-	status.clear();
-	
 	// restore connectivity settings to their default value.
 	SettingsManager::unset(SettingsManager::BIND_ADDRESS);
 	
@@ -148,6 +143,7 @@ bool ConnectivityManager::setupConnections(bool forcePortTest)
 		cs.lock();
 		running = false;
 		cs.unlock();
+		log(getInformation(), SEV_INFO, TYPE_V4);
 	}
 	return true;
 }
@@ -157,55 +153,53 @@ string ConnectivityManager::getInformation() const
 	if (isSetupInProgress())
 		return "Connectivity settings are being configured; try again later";
 	
-//	string autoStatus = ok() ? str(F_("enabled - %1%") % getStatus()) : "disabled";
-
 	string mode;
 	switch (SETTING(INCOMING_CONNECTIONS))
 	{
 		case SettingsManager::INCOMING_DIRECT:
-		{
-			mode = "Active mode";
+			mode = "Active mode (direct)";
 			break;
-		}
 		case SettingsManager::INCOMING_FIREWALL_UPNP:
-		{
+			mode = "Active mode (automatic port forwarding)";
 			break;
-		}
+		case SettingsManager::INCOMING_FIREWALL_NAT:
+			mode = "Active mode (manual port forwarding)";
+			break;
 		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
-		{
 			mode = "Passive mode";
 			break;
-		}
 	}
 	
-	auto field = [](const string & s)
+	auto field = [](const string& s) -> const string&
 	{
-		return s.empty() ? "undefined" : s;
+		static const string undefined("undefined");
+		return s.empty() ? undefined : s;
 	};
 	
+	string externalIP = getReflectedIP();
 	return str(dcpp_fmt(
 	               "Connectivity information:\n"
-	               "\tExternal IP (v4): %1%\n"
-	               "\tBound interface (v4): %2%\n"
-	               "\tTransfer port: %3%\n"
-	               "\tEncrypted transfer port: %4%\n"
-	               "\tSearch port: %5%\n"
+				   "\tMode: %1%\n"
+	               "\tExternal IP (v4): %2%\n"
+	               "\tBound interface (v4): %3%\n"
+	               "\tTransfer port: %4%\n"
+	               "\tEncrypted transfer port: %5%\n"
+	               "\tSearch port: %6%\n"
 #ifdef FLYLINKDC_USE_TORRENT
-	               "\tTorrent port: %6%\n"
-	               "\tTorrent SSL port: %6%\n"
+	               "\tTorrent port: %7%\n"
+	               "\tTorrent SSL port: %8%\n"
 #endif
-	               "\tStatus: %7%"
 	           ) %
-	           field(SETTING(EXTERNAL_IP)) %
+	           field(mode) %
+			   field(externalIP) %
 	           field(SETTING(BIND_ADDRESS)) %
 	           field(Util::toString(ConnectionManager::getInstance()->getPort())) %
 	           field(Util::toString(ConnectionManager::getInstance()->getSecurePort())) %
-	           field(SearchManager::getSearchPort()) %
+	           field(SearchManager::getSearchPort())
 #ifdef FLYLINKDC_USE_TORRENT
-	           field(Util::toString(DownloadManager::getInstance()->listen_torrent_port())) %
-	           field(Util::toString(DownloadManager::getInstance()->ssl_listen_torrent_port())) %
+	           % field(Util::toString(DownloadManager::getInstance()->listen_torrent_port()))
+	           % field(Util::toString(DownloadManager::getInstance()->ssl_listen_torrent_port()))
 #endif
-	           field(status)
 	          );
 }
 
@@ -220,7 +214,6 @@ void ConnectivityManager::mappingFinished(const string& mapper, bool /*v6*/)
 		// FIXME: we should perform a port test event when UPnP fails
 		if (autoDetectFlag && mapper.empty())
 			setPassiveMode();
-		log(getInformation(), SEV_INFO, TYPE_V4);
 		if (!mapper.empty())
 		{
 			SET_SETTING(MAPPER, mapper);
@@ -233,6 +226,7 @@ void ConnectivityManager::mappingFinished(const string& mapper, bool /*v6*/)
 		cs.lock();
 		running = false;
 		cs.unlock();
+		log(getInformation(), SEV_INFO, TYPE_V4);
 	}
 }
 
@@ -265,6 +259,7 @@ void ConnectivityManager::processPortTestResult()
 			setPassiveMode();
 		}
 	}
+	log(getInformation(), SEV_INFO, TYPE_V4);
 }
 
 void ConnectivityManager::listen()
@@ -294,6 +289,9 @@ void ConnectivityManager::listen()
 		break;
 	}
 	if (useTLS && type != ConnectionManager::SERVER_TYPE_AUTO_DETECT)
+	{
+		if (SETTING(TLS_PORT) == SETTING(TCP_PORT))
+			SET_SETTING(TLS_PORT, 0);
 		for (int i = 0; i < 2; ++i)
 		{
 			try
@@ -310,6 +308,7 @@ void ConnectivityManager::listen()
 			}
 			break;
 		}
+	}
 	for (int i = 0; i < 2; ++i)
 	{
 		try
@@ -338,15 +337,8 @@ void ConnectivityManager::disconnect()
 
 void ConnectivityManager::log(const string& message, Severity sev, int type)
 {
-	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
-	{
-		status = message;
-		LogManager::message(STRING(CONNECTIVITY) + ' ' + status);
-	}
-	else
-	{
-		LogManager::message(message);
-	}
+	// TODO: show connectivity information to the user
+	LogManager::message(message, false);
 }
 
 bool ConnectivityManager::isSetupInProgress() const noexcept

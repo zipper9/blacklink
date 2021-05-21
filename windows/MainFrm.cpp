@@ -1542,6 +1542,7 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		
 		NetworkPage::Settings prevNetworkSettings;
 		prevNetworkSettings.get();
+		NetworkPage::setPrevSettings(&prevNetworkSettings);
 
 		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
 		bool prevRegisterURLHandler = BOOLSETTING(REGISTER_URL_HANDLER);

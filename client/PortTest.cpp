@@ -111,6 +111,15 @@ int PortTest::getState(int type, int& port, string* reflectedAddress) const noex
 	return state;
 }
 
+void PortTest::resetState(int typeMask) noexcept
+{
+	cs.lock();
+	for (int type = 0; type < MAX_PORTS; type++)
+		if ((typeMask & 1<<type) && ports[type].state != STATE_RUNNING)
+			ports[type].state = STATE_UNKNOWN;
+	cs.unlock();
+}
+
 void PortTest::getReflectedAddress(string& reflectedAddress) const noexcept
 {
 	cs.lock();
