@@ -44,9 +44,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		ChatCtrl& operator= (const ChatCtrl&) = delete;
 		
 		BEGIN_MSG_MAP(thisClass)
-#ifdef IRAINMAN_INCLUDE_SMILE
-		MESSAGE_HANDLER(WM_UPDATE_SMILE, onUpdateSmile)
-#endif
 		MESSAGE_HANDLER(WM_MOUSEWHEEL, onMouseWheel)
 		NOTIFY_HANDLER(IDC_CLIENT, EN_LINK, onEnLink)
 		COMMAND_ID_HANDLER(IDC_COPY_ACTUAL_LINE, onCopyActualLine)
@@ -63,9 +60,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		MESSAGE_HANDLER(WM_SIZE, onSize)
 		END_MSG_MAP()
 		
-#ifdef IRAINMAN_INCLUDE_SMILE
-		LRESULT onUpdateSmile(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
-#endif
 		LRESULT onMouseWheel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
@@ -123,12 +117,11 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		tstring myNick;
 		int ignoreLinkStart, ignoreLinkEnd;
 		int selectedLine;
+		IRichEditOle* pRichEditOle;
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 		IStorage* pStorage;
-		IRichEditOle* pRichEditOle;
-		LPLOCKBYTES pLockBytes;
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif
 
 		struct TagItem
 		{
@@ -153,6 +146,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 
 		vector<LinkItem> links;
 
+		void initRichEditOle();
 		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
 		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles);
 		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles);
@@ -190,7 +184,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 	protected:
 		volatile LONG refs;
 		
-		void initEmoticons();
+		void replaceObjects(tstring& s, int startIndex) const;
 
 		// IRichEditOleCallback implementation
 		

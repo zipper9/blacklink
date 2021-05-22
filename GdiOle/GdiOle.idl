@@ -10,13 +10,16 @@ import "ocidl.idl";
 
 [
 	object,
-	uuid(109E151F-5C8F-4321-B842-46150141B11A),
+	uuid(109E151F-5C8F-4321-B842-46150141B23F),
 	dual,
 	nonextensible,
 	helpstring("IGdiOle Interface"),
 	pointer_default(unique)
 ]
-interface IGDIImage : IDispatch{
+interface IGDIImage : IDispatch
+{
+	[propget, id(1)] HRESULT Text([out, retval] BSTR *text);
+	[propput, id(1)] HRESULT Text([in] BSTR text);
 };
 
 [

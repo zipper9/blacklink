@@ -18,7 +18,7 @@
 class CImageDataObject : IDataObject
 {
 	public:
-		static void InsertBitmap(HWND hWnd, IRichEditOle* pRichEditOle, IOleClientSite *& pOleClientSite, IStorage *pStorage, IOleObject *& pOleObject, bool& p_out_of_memory);
+		static bool InsertObject(HWND hWnd, IRichEditOle* pRichEditOle, IOleClientSite* pOleClientSite, IStorage* pStorage, IOleObject* pOleObject);
 		
 	private:
 		ULONG   m_ulRefCnt;
@@ -26,13 +26,13 @@ class CImageDataObject : IDataObject
 		
 		// The data being bassed to the richedit
 		STGMEDIUM m_stgmed;
-		FORMATETC m_fromat;
+		FORMATETC m_format;
 		
 	public:
 		CImageDataObject() : m_ulRefCnt(0), m_bRelease(FALSE)
 		{
 			memset(&m_stgmed, 0, sizeof(m_stgmed));
-			memset(&m_fromat, 0, sizeof(m_fromat));
+			memset(&m_format, 0, sizeof(m_format));
 		}
 		~CImageDataObject()
 		{
@@ -94,7 +94,7 @@ class CImageDataObject : IDataObject
 		}
 		STDMETHOD(SetData)(FORMATETC* pformatetc, STGMEDIUM*  pmedium, BOOL  fRelease)
 		{
-			m_fromat = *pformatetc;
+			m_format = *pformatetc;
 			m_stgmed = *pmedium;
 			m_bRelease = fRelease;
 			return S_OK;

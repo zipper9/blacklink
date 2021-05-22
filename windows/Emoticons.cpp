@@ -146,7 +146,7 @@ void Emoticon::tryLoadBmp(HWND callbackWnd, UINT callbackMsg)
 	loadingError |= MASK_BMP;
 }
 
-IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground)
+IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground, const tstring& text)
 {
 	IOleObject* pObject = nullptr;
 	CGDIImage* image = getImage(flags, hCallbackWnd, callbackMsg);
@@ -158,7 +158,7 @@ IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, 
 	CComObject<CGDIImageOle>::CreateInstance(&pImageObject);
 	if (pImageObject)
 	{
-		if (pImageObject->put_SetImage(image, clrBackground, hCallbackWnd, callbackMsg) != S_OK)
+		if (!pImageObject->SetImage(image, clrBackground, hCallbackWnd, callbackMsg))
 		{
 			pImageObject->Release();
 			return nullptr;
@@ -166,6 +166,7 @@ IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, 
 		pImageObject->QueryInterface(IID_IOleObject, (void**)&pObject);
 		if (pObject)
 		{
+			pImageObject->put_Text(const_cast<TCHAR*>(text.c_str()));
 			pObject->SetClientSite(pOleClientSite);
 			return pObject;
 		}

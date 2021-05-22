@@ -36,7 +36,7 @@ class Emoticon
 		void setHidden(bool flag) { hidden = flag; }
 
 		CGDIImage* getImage(int flags, HWND callbackWnd, UINT callbackMsg);
-		IOleObject* getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground);
+		IOleObject* getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground, const tstring& text);
 		
 	protected:
 		enum

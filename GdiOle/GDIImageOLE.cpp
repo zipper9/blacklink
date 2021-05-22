@@ -180,17 +180,16 @@ HRESULT CGDIImageOle::FireViewChangeEx(BOOL bEraseBackground)
 	return Res;
 }
 
-
-STDMETHODIMP CGDIImageOle::put_SetImage(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackWnd, DWORD dwUpdateMsg)
+bool CGDIImageOle::SetImage(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackWnd, DWORD dwUpdateMsg)
 {
 	dcassert(!CGDIImage::isShutdown());
 	if (m_pImage)
-		return S_FALSE;
+		return false;
 		
 	m_pImage = pImage;
 	
 	if (!m_pImage)
-		return S_FALSE;
+		return false;
 		
 	m_pImage->AddRef();
 	
@@ -212,6 +211,20 @@ STDMETHODIMP CGDIImageOle::put_SetImage(CGDIImage *pImage, COLORREF clrBack, HWN
 	m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
 	m_bRegistered = true;
 	
+	return true;
+}
+
+STDMETHODIMP CGDIImageOle::get_Text(BSTR *text)
+{
+	if (!text) return E_INVALIDARG;
+	*text = SysAllocString(m_text.c_str());
+	return S_OK;
+}
+
+STDMETHODIMP CGDIImageOle::put_Text(BSTR text)
+{
+	if (!text) return E_INVALIDARG;
+	m_text = text;
 	return S_OK;
 }
 

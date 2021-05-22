@@ -22,6 +22,7 @@
 #include "../client/MagnetLink.h"
 #include "../client/CompatibilityManager.h"
 #include <boost/algorithm/string.hpp>
+#include <tom.h>
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "../GdiOle/GDIImageOle.h"
@@ -36,6 +37,11 @@ static const unsigned MAX_EMOTICONS_PER_MESSAGE = 48;
 #else
 #define HIDDEN_TEXT_SEP '\x05'
 #endif
+
+extern "C" const GUID IID_ITextDocument =
+{
+	0x8CC497C0, 0xA1DF, 0x11CE, { 0x80, 0x98, 0x00, 0xAA, 0x00, 0x47, 0xBE, 0x5D }
+};
 
 static const tstring badUrlChars(_T("\r\n \"<>[]"));
 static const tstring urlDelimChars(_T(",.;!?"));
@@ -131,23 +137,21 @@ tstring ChatCtrl::g_sSelectedUserName;
 tstring ChatCtrl::g_sSelectedURL;
 
 ChatCtrl::ChatCtrl() : autoScroll(true), disableChatCacheFlag(false), chatCacheSize(0),
-	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1)
+	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr)
 #ifdef IRAINMAN_INCLUDE_SMILE
-	,outOfMemory(false), totalEmoticons(0), pRichEditOle(nullptr), pStorage(nullptr), pLockBytes(nullptr), refs(0)
+	,outOfMemory(false), totalEmoticons(0), pStorage(nullptr), refs(0)
 #endif
 {
 }
 
 ChatCtrl::~ChatCtrl()
 {
+	if (pRichEditOle)
+		pRichEditOle->Release();
 #ifdef IRAINMAN_INCLUDE_SMILE
 	if (pStorage)
 		pStorage->Release();
-	if (pLockBytes)
-		pLockBytes->Release();
-	if (pRichEditOle)
-		pRichEditOle->Release();
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif
 }
 
 void ChatCtrl::adjustTextSize()
@@ -577,25 +581,24 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 				IOleClientSite *pOleClientSite = nullptr;
 					
 				if (!pRichEditOle)
-					initEmoticons();
+					initRichEditOle();
 
 				if (pRichEditOle && SUCCEEDED(pRichEditOle->GetClientSite(&pOleClientSite)) && pOleClientSite)
 				{
 					IOleObject *pObject = emoticons[imageIndex]->getImageObject(BOOLSETTING(CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
 						pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
-						message.myMessage ? Colors::g_ChatTextMyOwn.crBackColor : Colors::g_ChatTextGeneral.crBackColor);
+						message.myMessage ? Colors::g_ChatTextMyOwn.crBackColor : Colors::g_ChatTextGeneral.crBackColor,
+						emoticonText);
 					if (pObject)
 					{
-						CImageDataObject::InsertBitmap(m_hWnd, pRichEditOle, pOleClientSite, pStorage, pObject, outOfMemory);
-						if (!outOfMemory)
+						if (CImageDataObject::InsertObject(m_hWnd, pRichEditOle, pOleClientSite, pStorage, pObject))
 						{
 							messageEmoticons++;
 							totalEmoticons++;
 						}
-						safe_release(pObject);
-						safe_release(pOleClientSite);
-						//safe_release(pRichEditOle);
+						pObject->Release();
 					}
+					pOleClientSite->Release();
 				}
 				// TODO: handle failures
 			}
@@ -1073,11 +1076,50 @@ LRESULT ChatCtrl::onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	return 0;
 }
 
+#ifdef IRAINMAN_INCLUDE_SMILE
+void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
+{
+	if (!pRichEditOle) return;
+	REOBJECT ro;
+	tstring::size_type pos = 0;
+	int delta = 0;
+	for (;;)
+	{
+		auto nextPos = s.find(WCH_EMBEDDING, pos);
+		if (nextPos == tstring::npos) break;
+		int shift = 1;
+		memset(&ro, 0, sizeof(ro));
+		ro.cbStruct = sizeof(ro);
+		ro.cp = startIndex + delta + nextPos;
+		if (SUCCEEDED(pRichEditOle->GetObject(REO_IOB_USE_CP, &ro, REO_GETOBJ_POLEOBJ)))
+		{
+			IGDIImage* pImage = nullptr;
+			if (SUCCEEDED(ro.poleobj->QueryInterface(IID_IGDIImage, (void**) &pImage)))
+			{
+				BSTR text;
+				if (SUCCEEDED(pImage->get_Text(&text)))
+				{
+					int textLen = wcslen(text);
+					s.replace(nextPos, 1, text, textLen);
+					shift = textLen;
+					delta += 1 - textLen;
+					SysFreeString(text);
+				}
+				pImage->Release();
+			}
+			ro.poleobj->Release();
+		}
+		pos = nextPos + shift;
+	}
+}
+#endif
+
 LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (selectedLine >= 0)
 	{
-		int len = LineLength(LineIndex(selectedLine));
+		int startIndex = LineIndex(selectedLine);
+		int len = LineLength(startIndex);
 		if (len > 0)
 		{
 			tstring line;
@@ -1086,6 +1128,9 @@ LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 			if (len > 0)
 			{
 				line.resize(len);
+#ifdef IRAINMAN_INCLUDE_SMILE
+				replaceObjects(line, startIndex);
+#endif
 				// remove hidden text
 				tstring::size_type pos = 0;
 				while (pos < line.length())
@@ -1151,7 +1196,37 @@ LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 
 LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+#if 1
+	if (!pRichEditOle)
+	{
+		initRichEditOle();
+		if (pRichEditOle) return 0;
+	}
+	LONG start, end;
+	GetSel(start, end);
+	ITextDocument* pTextDoc = nullptr;
+	if (SUCCEEDED(pRichEditOle->QueryInterface(IID_ITextDocument, (void**) &pTextDoc)))
+	{
+		ITextRange* pRange = nullptr;
+		if (SUCCEEDED(pTextDoc->Range(start, end, &pRange)))
+		{
+			BSTR text;
+			if (SUCCEEDED(pRange->GetText(&text)))
+			{
+				tstring s = text;
+				SysFreeString(text);
+#ifdef IRAINMAN_INCLUDE_SMILE
+				replaceObjects(s, start);
+#endif
+				WinUtil::setClipboard(s);
+			}
+			pRange->Release();
+		}
+		pTextDoc->Release();
+	}
+#else
 	Copy();
+#endif
 	return 0;
 }
 
@@ -1183,48 +1258,16 @@ void ChatCtrl::Clear()
 	SetWindowText(Util::emptyStringT.c_str());
 }
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-void ChatCtrl::initEmoticons()
+void ChatCtrl::initRichEditOle()
 {
 	pRichEditOle = GetOleInterface();
 	dcassert(pRichEditOle);
-	if (pRichEditOle)
-	{
-		const SCODE sc = ::CreateILockBytesOnHGlobal(NULL, TRUE, &pLockBytes);
-		if (sc == S_OK && pLockBytes)
-			::StgCreateDocfileOnILockBytes(pLockBytes, STGM_SHARE_EXCLUSIVE | STGM_CREATE | STGM_READWRITE, 0, &pStorage);
-	}
+#ifdef IRAINMAN_INCLUDE_SMILE
 	SetOleCallback(this);
+#endif
 }
 
-// TODO - никогда не зовется
-LRESULT ChatCtrl::onUpdateSmile(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
-{
-	IOleClientSite *spClientSite = (IOleClientSite *)lParam;
-	
-	if (spClientSite)
-	{
-		CComPtr<IOleInPlaceSite> spInPlaceSite;
-		spClientSite->QueryInterface(__uuidof(IOleInPlaceSite), (void **)&spInPlaceSite);
-		
-		if (spInPlaceSite)// && spInPlaceSite->GetWindow(&hwndParent) == S_OK)
-		{
-			OLEINPLACEFRAMEINFO frameInfo;
-			RECT rcPos, rcClip;
-			frameInfo.cb = sizeof(OLEINPLACEFRAMEINFO);
-			
-			if (spInPlaceSite->GetWindowContext(NULL,
-			                                    NULL, &rcPos, &rcClip, NULL) == S_OK)
-			{
-				::InvalidateRect(m_hWnd, &rcPos, FALSE);
-			}
-		}
-		safe_release(spClientSite);
-	}
-	
-	return S_OK;
-}
-
+#ifdef IRAINMAN_INCLUDE_SMILE
 HRESULT STDMETHODCALLTYPE ChatCtrl::QueryInterface(THIS_ REFIID riid, LPVOID FAR * lplpObj)
 {
 	HRESULT res = E_NOINTERFACE;
@@ -1282,7 +1325,7 @@ COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE ChatCtrl::DeleteObject(THIS_ LPOL
 	if (lpoleobj->QueryInterface(IID_IGDIImageDeleteNotify, (void**)&pDeleteNotify) == S_OK && pDeleteNotify)
 	{
 		pDeleteNotify->SetDelete();
-		safe_release(pDeleteNotify);
+		pDeleteNotify->Release();
 	}
 	
 	return S_OK;

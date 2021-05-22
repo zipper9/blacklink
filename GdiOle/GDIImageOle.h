@@ -176,12 +176,15 @@ class ATL_NO_VTABLE CGDIImageOle :
 		HRESULT FinalConstruct();
 		
 		void FinalRelease();
+		bool SetImage(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackWnd, DWORD dwUpdateMsg);
 		
-		STDMETHOD(put_SetImage)(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackWnd, DWORD dwUpdateMsg);
-		
+		STDMETHOD(get_Text)(BSTR *text);
+		STDMETHOD(put_Text)(BSTR text);
+
 	private:
 		CGDIImage *m_pImage;
-		
+		wstring m_text;
+
 		UINT m_dwCurrentFrame;
 		UINT m_FrameCount;
 		int m_dwW;

@@ -16,78 +16,62 @@
 #include "../client/StrUtil.h"
 #include "../client/LogManager.h"
 
-// Static member functions
-void CImageDataObject::InsertBitmap(HWND hWnd, IRichEditOle* pRichEditOle, IOleClientSite *& pOleClientSite, IStorage *pStorage, IOleObject *& pOleObject, bool& p_out_of_memory)//IRichEditOle* pRichEditOle, HBITMAP hBitmap, LPCTSTR pszPath)
+#ifndef REO_OWNERDRAWSELECT
+#define REO_OWNERDRAWSELECT	0x00000040L
+#endif
+
+bool CImageDataObject::InsertObject(HWND hWnd, IRichEditOle* pRichEditOle, IOleClientSite* pOleClientSite, IStorage* pStorage, IOleObject* pOleObject)
 {
-	p_out_of_memory = false;
 	if (!pOleObject)
-		return;
-		
+		return false;
+
 	HRESULT sc = OleSetContainedObject(pOleObject, TRUE);
 	// all items are "contained" -- this makes our reference to this object
 	// weak -- which is needed for links to embedding silent update.
 	if (sc != S_OK)
 	{
-		const string l_error = "CImageDataObject::InsertBitmap, OLE OleSetContainedObject error = " + Util::toHexString(sc);
-		LogManager::message(l_error);
-		return;
+		string error = "CImageDataObject::InsertBitmap, OLE OleSetContainedObject error = " + Util::toHexString(sc);
+		LogManager::message(error, false);
+		return false;
 	}
-	
+
 	// Now Add the object to the RichEdit
 	REOBJECT reobject = { 0 };
 	reobject.cbStruct = sizeof(REOBJECT);
-	
+
 	CLSID clsid;
 	sc = pOleObject->GetUserClassID(&clsid);
-	
+
 	if (sc != S_OK)
 	{
-		dcdebug("Thrown OLE Exception: %d\n", sc);
-		const string l_error = "CImageDataObject::InsertBitmap, OLE GetUserClassID error = " + Util::toHexString(sc);
-		LogManager::message(l_error);
+		string error = "CImageDataObject::InsertBitmap, OLE GetUserClassID error = " + Util::toHexString(sc);
+		LogManager::message(error, false);
 		dcassert(0);
-		safe_release(pOleObject);
-		safe_release(pOleClientSite);
-		return;
+		return false;
 	}
-	
+
 	reobject.clsid = clsid;
 	reobject.cp = REO_CP_SELECTION;
 	reobject.dvaspect = DVASPECT_CONTENT;
-	reobject.dwFlags = REO_BELOWBASELINE;
+	reobject.dwFlags = REO_BELOWBASELINE | REO_OWNERDRAWSELECT;
 	reobject.poleobj = pOleObject;
 	reobject.polesite = pOleClientSite;
 	reobject.pstg = pStorage;
-	
+
 	// Insert the bitmap at the current location in the richedit control
 	sc = pRichEditOle->InsertObject(&reobject);
 	if (sc != S_OK)
 	{
-		dcdebug("Thrown OLE InsertObject: %d\n", sc);
-		const string l_error = "CImageDataObject::InsertBitmap, OLE InsertObject error = " + Util::toHexString(sc);
-		LogManager::message(l_error);
+		string error = "CImageDataObject::InsertBitmap, OLE InsertObject error = " + Util::toHexString(sc);
+		LogManager::message(error, false);
 		dcassert(0);
-		safe_release(pOleObject);
-		safe_release(pOleClientSite);
 		dcassert(::IsWindow(hWnd));
-		::SendMessage(hWnd, EM_SCROLLCARET, (WPARAM)0, (LPARAM)0);
-		return;
+		::SendMessage(hWnd, EM_SCROLLCARET, 0, 0);
+		return false;
 	}
 	dcassert(::IsWindow(hWnd));
-	::SendMessage(hWnd, EM_SCROLLCARET, (WPARAM)0, (LPARAM)0);
-	
-	// Release all unnecessary interfaces
-	safe_release(pOleObject);
-	safe_release(pOleClientSite);
-	
-	// [-] brain-ripper
-	// Don't release follow objects,
-	// they must be released in parent's destructor
-	//
-	//lpLockBytes->Release();
-	//pStorage->Release();
-	//pRichEditOle->Release();
-	//DeleteObject(hBitmap);
+	::SendMessage(hWnd, EM_SCROLLCARET, 0, 0);
+	return true;
 }
 
 void CImageDataObject::SetBitmap(HBITMAP hBitmap)
@@ -116,13 +100,12 @@ IOleObject *CImageDataObject::GetOleObject(IOleClientSite *pOleClientSite, IStor
 	IOleObject *pOleObject = nullptr;
 	
 	const SCODE sc = ::OleCreateStaticFromData(this, IID_IOleObject, OLERENDER_FORMAT,
-	                                           &m_fromat, pOleClientSite, pStorage, (void **) & pOleObject);
+	                                           &m_format, pOleClientSite, pStorage, (void **) & pOleObject);
 	                                           
 	if (sc != S_OK)
 	{
-		dcdebug("Thrown OLE Exception: %d\n", sc);
+		LogManager::message("CImageDataObject::GetOleObject, OleCreateStaticFromData error = " + Util::toString(sc) + " GetLastError() = " + Util::toString(GetLastError()), false);
 		dcassert(0);
-		LogManager::message("CImageDataObject::GetOleObject, OleCreateStaticFromData error = " + Util::toString(sc) + " GetLastError() = " + Util::toString(GetLastError()));
 		return nullptr;
 	}
 	return pOleObject;

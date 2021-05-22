@@ -334,7 +334,7 @@ LRESULT CAnimatedButton::onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 
 void CAnimatedButton::drawBackground(HDC hdc)
 {
-    UINT state = GetState();
+	UINT state = GetState();
 	RECT rect = { 0, 0, width, height };
 	if (hTheme)
 	{
