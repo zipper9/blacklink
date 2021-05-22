@@ -205,6 +205,9 @@ int SSLSocket::read(void* aBuffer, int aBufLen)
 	{
 		return -1;
 	}
+#ifdef _WIN32
+	lastWaitResult &= ~WAIT_READ;
+#endif
 	int len = checkSSL(SSL_read(ssl, aBuffer, aBufLen));
 	
 	if (len > 0)
@@ -225,6 +228,14 @@ int SSLSocket::write(const void* aBuffer, int aLen)
 	if (aLen)
 	{
 		ret = checkSSL(SSL_write(ssl, aBuffer, aLen));
+		if (ret < 0)
+		{
+#ifdef _WIN32
+			lastWaitResult &= ~WAIT_WRITE;
+#endif
+		}
+		else
+			g_stats.ssl.uploaded += ret;
 		if (ret > 0)
 		{
 			g_stats.ssl.uploaded += ret;

@@ -334,6 +334,9 @@ class Socket
 		int64_t maxSpeed;
 		int64_t currentBucket;
 		uint64_t bucketUpdateTick;
+#ifdef _WIN32
+		unsigned lastWaitResult;
+#endif
 		
 		struct StatsItem
 		{
@@ -389,7 +392,6 @@ class Socket
 		WinEvent<TRUE> event;
 		WinEvent<TRUE> controlEvent;
 		unsigned currentMask;
-		unsigned lastWaitResult;
 #else
 		PipeEvent controlEvent;
 #endif
