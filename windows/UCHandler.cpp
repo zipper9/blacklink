@@ -57,7 +57,7 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		UserCommand& uc = userCommands[n];
 		if (uc.getType() == UserCommand::TYPE_SEPARATOR)
 			appendSeparator(menus, cur);
-		if (uc.getType() == UserCommand::TYPE_RAW || uc.getType() == UserCommand::TYPE_RAW_ONCE)
+		if (uc.isRaw() || uc.isChat())
 		{
 			tstring name;
 			const StringList displayName = uc.getDisplayName();

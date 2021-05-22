@@ -174,7 +174,7 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 		//  is_all_my_info_loaded() без true не начинает качать при загрузке
 		//  https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1682
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-		UserManager::checkUser(ou);
+		UserManager::getInstance()->checkUser(ou);
 #endif
 	}
 	return ou;
@@ -2205,7 +2205,7 @@ void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 		if (command.getTo().empty())
 			hubMessage(cmd);
 		else
-			privateMessage(command.getTo(), myNick, cmd, false);
+			privateMessage(Util::formatParams(command.getTo(), params, false), myNick, cmd, false);
 	}
 	else
 		send(fromUtf8(cmd));

@@ -1850,7 +1850,7 @@ void DirectoryListingFrame::runUserCommand(UserCommand& uc)
 	while ((sel = ctrlList.GetNextItem(sel, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(sel);
-		if (uc.getType() == UserCommand::TYPE_RAW_ONCE)
+		if (uc.once())
 		{
 			if (nicks.find(dl->getUser()) != nicks.end())
 				continue;

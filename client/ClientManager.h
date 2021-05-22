@@ -133,8 +133,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 
 	private:
 		static void cheatMessage(Client* client, const string& report);
-		static void userCommandL(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
-		static void sendRawCommandL(const OnlineUser& ou, const int aRawCommand);
+		static void getUserCommandParams(const OnlineUserPtr& ou, const UserCommand& uc, StringMap& params, bool compatibility);
+		static void sendRawCommand(const OnlineUserPtr& ou, int commandIndex);
 
 		static OnlineUserPtr findOnlineUserL(const HintedUser& user, bool priv);
 		static OnlineUserPtr findOnlineUserL(const CID& cid, const string& hintUrl, bool priv);

@@ -47,6 +47,7 @@ class CommandDlg : public CDialogImpl<CommandDlg>
 		tstring name;
 		tstring command;
 		tstring hub;
+		tstring to;
 		const bool newCommand;
 		
 		enum { IDD = IDD_USER_COMMAND };
@@ -64,7 +65,7 @@ class CommandDlg : public CDialogImpl<CommandDlg>
 		MESSAGE_HANDLER(WMU_LINK_ACTIVATED, onLinkActivated)
 		END_MSG_MAP()
 		
-		CommandDlg(bool newCommand) : type(0), ctx(0), newCommand(newCommand) { }
+		CommandDlg(bool newCommand) : type(0), ctx(0), newCommand(newCommand), isADC(false) { }
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -81,6 +82,8 @@ class CommandDlg : public CDialogImpl<CommandDlg>
 		LRESULT onLinkActivated(UINT, WPARAM, LPARAM lParam, BOOL&);
 
 	private:
+		bool isADC;
+
 		void updateCommand();
 		void updateHub();
 		void updateControls();

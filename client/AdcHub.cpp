@@ -135,7 +135,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 	{
 		ClientManager::getInstance()->putOnline(ou, true);
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-		UserManager::checkUser(ou);
+		UserManager::getInstance()->checkUser(ou);
 #endif
 	}
 	return ou;
@@ -1170,7 +1170,7 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 		}
 		else
 		{
-			const string& to = command.getTo();
+			string to = Util::formatParams(command.getTo(), params, false);
 			READ_LOCK(*csUsers);
 			for (auto i = users.cbegin(); i != users.cend(); ++i)
 			{
@@ -1184,6 +1184,7 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 	}
 	else
 	{
+		if (!cmd.empty() && cmd.back() != '\n') cmd += '\n';
 		send(cmd);
 	}
 }

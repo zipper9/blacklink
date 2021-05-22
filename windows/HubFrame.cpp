@@ -1851,36 +1851,33 @@ void HubFrame::runUserCommand(UserCommand& uc)
 	
 	if (isTabMenuShown)
 	{
-		client->escapeParams(ucParams);
+		if (uc.isRaw()) client->escapeParams(ucParams);
 		client->sendUserCmd(uc, ucParams);
+	}
+	else if (getSelectedUser())
+	{
+		const UserInfo* u = ctrlUsers.findUser(getSelectedUser());
+		if (u && u->getUser()->isOnline())
+		{
+			StringMap tmp = ucParams;
+			u->getIdentity().getParams(tmp, "user", true);
+			if (uc.isRaw()) client->escapeParams(tmp);
+			client->sendUserCmd(uc, tmp);
+		}
 	}
 	else
 	{
-		if (getSelectedUser())
+		const auto& listView = ctrlUsers.getUserList();
+		int sel = -1;
+		while ((sel = listView.GetNextItem(sel, LVNI_SELECTED)) != -1)
 		{
-			const UserInfo* u = ctrlUsers.findUser(getSelectedUser());
-			if (u && u->getUser()->isOnline())
+			const UserInfo* u = listView.getItemData(sel);
+			if (u->getUser()->isOnline())
 			{
 				StringMap tmp = ucParams;
 				u->getIdentity().getParams(tmp, "user", true);
-				client->escapeParams(tmp);
+				if (uc.isRaw()) client->escapeParams(tmp);
 				client->sendUserCmd(uc, tmp);
-			}
-		}
-		else
-		{
-			const auto& listView = ctrlUsers.getUserList();
-			int sel = -1;
-			while ((sel = listView.GetNextItem(sel, LVNI_SELECTED)) != -1)
-			{
-				const UserInfo* u = listView.getItemData(sel);
-				if (u->getUser()->isOnline())
-				{
-					StringMap tmp = ucParams;
-					u->getIdentity().getParams(tmp, "user", true);
-					client->escapeParams(tmp);
-					client->sendUserCmd(uc, tmp);
-				}
 			}
 		}
 	}

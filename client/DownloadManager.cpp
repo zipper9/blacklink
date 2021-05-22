@@ -788,7 +788,7 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 	if (d->isSet(Download::FLAG_USER_CHECK))
 	{
-		ClientManager::setClientStatus(source->getUser(), "Filelist Not Available", SETTING(FILELIST_UNAVAILABLE), false);
+		ClientManager::setClientStatus(source->getUser(), "Filelist Not Available", SETTING(AUTOBAN_FL_UNAVAILABLE), false);
 	}
 #endif
 	

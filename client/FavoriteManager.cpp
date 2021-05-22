@@ -1028,6 +1028,7 @@ void FavoriteManager::saveFavorites()
 					xml.addChildAttrib("Context", item.getCtx());
 					xml.addChildAttrib("Name", item.getName());
 					xml.addChildAttrib("Command", item.getCommand());
+					xml.addChildAttrib("To", item.getTo());
 					xml.addChildAttrib("Hub", item.getHub());
 				}
 			}
@@ -1371,8 +1372,12 @@ void FavoriteManager::load(SimpleXML& xml)
 		xml.stepIn();
 		while (xml.findChild("UserCommand"))
 		{
-			addUserCommand(xml.getIntChildAttrib("Type"), xml.getIntChildAttrib("Context"), 0, xml.getChildAttrib("Name"),
-			               xml.getChildAttrib("Command"), xml.getChildAttrib("To"), xml.getChildAttrib("Hub"));
+			int type = xml.getIntChildAttrib("Type");
+			if (type == UserCommand::TYPE_SEPARATOR ||
+			    type == UserCommand::TYPE_RAW || type == UserCommand::TYPE_RAW_ONCE ||
+			    type == UserCommand::TYPE_CHAT || type == UserCommand::TYPE_CHAT_ONCE)
+				addUserCommand(type, xml.getIntChildAttrib("Context"), 0, xml.getChildAttrib("Name"),
+				               xml.getChildAttrib("Command"), xml.getChildAttrib("To"), xml.getChildAttrib("Hub"));
 		}
 		xml.stepOut();
 	}

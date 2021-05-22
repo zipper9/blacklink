@@ -768,36 +768,32 @@ void ClientManager::privateMessage(const HintedUser& user, const string& msg, bo
 }
 void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)
 {
-	READ_LOCK(*g_csOnlineUsers);
-	userCommandL(hintedUser, uc, params, compatibility);
+	OnlineUserPtr ou;
+	{
+		READ_LOCK(*g_csOnlineUsers);
+		/** @todo we allow wrong hints for now ("false" param of findOnlineUser) because users
+		 * extracted from search results don't always have a correct hint; see
+		 * SearchManager::onRES(const AdcCommand& cmd, ...). when that is done, and SearchResults are
+		 * switched to storing only reliable HintedUsers (found with the token of the ADC command),
+		 * change this call to findOnlineUserHint. */
+		ou = findOnlineUserL(hintedUser.user->getCID(), hintedUser.hint.empty() ? uc.getHub() : hintedUser.hint, false);
+		if (!ou) return;
+		getUserCommandParams(ou, uc, params, compatibility);
+	}
+	ou->getClient().sendUserCmd(uc, params);
 }
 
-void ClientManager::userCommandL(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)
+void ClientManager::getUserCommandParams(const OnlineUserPtr& ou, const UserCommand& uc, StringMap& params, bool compatibility)
 {
-	/** @todo we allow wrong hints for now ("false" param of findOnlineUser) because users
-	 * extracted from search results don't always have a correct hint; see
-	 * SearchManager::onRES(const AdcCommand& cmd, ...). when that is done, and SearchResults are
-	 * switched to storing only reliable HintedUsers (found with the token of the ADC command),
-	 * change this call to findOnlineUserHint. */
-	if (hintedUser.user)
-	{
-		OnlineUserPtr ou = findOnlineUserL(hintedUser.user->getCID(), hintedUser.hint.empty() ? uc.getHub() : hintedUser.hint, false);
-		if (!ou)
-			return;
-			
-		auto& client = ou->getClient();
-		const string& opChat = client.getOpChat();
-		if (opChat.find('*') == string::npos && opChat.find('?') == string::npos)
-		{
-			params["opchat"] = opChat;
-		}
+	auto& client = ou->getClient();
+	const string& opChat = client.getOpChat();
+	if (opChat.find('*') == string::npos && opChat.find('?') == string::npos)
+		params["opchat"] = opChat;
 		
-		ou->getIdentity().getParams(params, "user", compatibility);
-		client.getHubIdentity().getParams(params, "hub", false);
-		client.getMyIdentity().getParams(params, "my", compatibility);
-		client.escapeParams(params);
-		client.sendUserCmd(uc, params); // TODO - сеть зовем под Lock-ом
-	}
+	ou->getIdentity().getParams(params, "user", compatibility);
+	client.getHubIdentity().getParams(params, "hub", false);
+	client.getMyIdentity().getParams(params, "my", compatibility);
+	if (uc.isRaw()) client.escapeParams(params);
 }
 
 void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
@@ -1036,9 +1032,7 @@ void ClientManager::flushRatio()
 
 void ClientManager::usersCleanup()
 {
-	//CFlyLog l_log("[ClientManager::usersCleanup]");
 	WRITE_LOCK(*g_csUsers);
-	//LOCK(g_csUsers);
 	auto i = g_users.begin();
 	while (i != g_users.end() && !isBeforeShutdown())
 	{
@@ -1176,15 +1170,15 @@ OnlineUserPtr ClientManager::getOnlineUserL(const UserPtr& p)
 	return i->second;
 }
 
-void ClientManager::sendRawCommandL(const OnlineUser& ou, const int aRawCommand)
+void ClientManager::sendRawCommand(const OnlineUserPtr& ou, int commandIndex)
 {
-	const string rawCommand = ou.getClient().getRawCommand(aRawCommand);
+	const string rawCommand = ou->getClient().getRawCommand(commandIndex);
 	if (!rawCommand.empty())
 	{
-		StringMap ucParams;
-		
+		StringMap params;
 		const UserCommand uc = UserCommand(0, 0, 0, 0, "", rawCommand, "", "");
-		userCommandL(HintedUser(ou.getUser(), ou.getClient().getHubUrl()), uc, ucParams, true);
+		getUserCommandParams(ou, uc, params, true);
+		ou->getClient().sendUserCmd(uc, params);
 	}
 }
 
@@ -1212,6 +1206,7 @@ void ClientManager::fileListDisconnected(const UserPtr& p)
 {
 	string report;
 	Client* c = nullptr;
+	OnlineUserPtr sendCmd;
 	{
 		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
@@ -1230,10 +1225,11 @@ void ClientManager::fileListDisconnected(const UserPtr& p)
 			{
 				c = &ou->getClient();
 				report = id.setCheat(ou->getClientBase(), "Disconnected file list " + Util::toString(fileListDisconnects) + " times", false);
-				sendRawCommandL(*ou, SETTING(AUTOBAN_CMD_DISCONNECTS));
+				sendCmd = ou;
 			}
 		}
 	}
+	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_DISCONNECTS));
 	cheatMessage(c, report);
 }
 #endif // IRAINMAN_INCLUDE_USER_CHECK
@@ -1241,8 +1237,8 @@ void ClientManager::fileListDisconnected(const UserPtr& p)
 void ClientManager::connectionTimeout(const UserPtr& p)
 {
 	string report;
-	bool remove = false;
 	Client* c = nullptr;
+	OnlineUserPtr sendCmd;
 	{
 		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
@@ -1261,15 +1257,15 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 			{
 				c = &ou->getClient();
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
-				report = id.setCheat(ou.getClientBase(), "Connection timeout " + Util::toString(connectionTimeouts) + " times", false);
+				report = id.setCheat(ou->getClientBase(), "Connection timeout " + Util::toString(connectionTimeouts) + " times", false);
 #else
 				report = "Connection timeout " + Util::toString(connectionTimeouts) + " times";
 #endif
-				remove = true;
-				sendRawCommandL(*ou, SETTING(AUTOBAN_CMD_TIMEOUTS));
+				sendCmd = ou;
 			}
 		}
 	}
+	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_TIMEOUTS));
 	cheatMessage(c, report);
 }
 
@@ -1279,6 +1275,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 	Client* client;
 	string report;
 	OnlineUserPtr ou;
+	OnlineUserPtr sendCmd;
 	{
 		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
@@ -1286,28 +1283,28 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 			return;
 			
 		ou = i->second;
-		auto& id = ou->getIdentity(); // [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'ou->getIdentity()' expression repeatedly. cheatmanager.h 127
+		auto& id = ou->getIdentity();
 		
-		const int64_t l_statedSize = id.getBytesShared();
-		const int64_t l_realSize = dl->getTotalSize();
+		const int64_t statedSize = id.getBytesShared();
+		const int64_t realSize = dl->getRoot()->getTotalSize();
 		
-		const double l_multiplier = (100 + double(SETTING(PERCENT_FAKE_SHARE_TOLERATED))) / 100;
-		const int64_t l_sizeTolerated = (int64_t)(l_realSize * l_multiplier);
+		const double multiplier = (100 + SETTING(AUTOBAN_FAKE_SHARE_PERCENT)) / 100.0;
+		const int64_t sizeTolerated = (int64_t)(realSize * multiplier);
 #ifdef FLYLINKDC_USE_REALSHARED_IDENTITY
 		id.setRealBytesShared(realSize);
 #endif
 		
-		if (l_statedSize > l_sizeTolerated)
+		if (statedSize > sizeTolerated)
 		{
 			id.setFakeCardBit(Identity::BAD_LIST | Identity::CHECKED, true);
 			string detectString = STRING(CHECK_MISMATCHED_SHARE_SIZE) + " - ";
-			if (l_realSize == 0)
+			if (realSize == 0)
 			{
 				detectString += STRING(CHECK_0BYTE_SHARE);
 			}
 			else
 			{
-				const double qwe = double(l_statedSize) / double(l_realSize);
+				const double qwe = double(statedSize) / double(realSize);
 				char buf[128];
 				buf[0] = 0;
 				_snprintf(buf, _countof(buf), CSTRING(CHECK_INFLATED), Util::toString(qwe).c_str()); //-V111
@@ -1316,7 +1313,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 			detectString += STRING(CHECK_SHOW_REAL_SHARE);
 			
 			report = id.setCheat(ou->getClientBase(), detectString, false);
-			sendRawCommandL(*ou, SETTING(AUTOBAN_CMD_FAKESHARE));
+			sendCmd = ou;
 		}
 		else
 		{
@@ -1326,6 +1323,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 		
 		client = &(ou->getClient());
 	}
+	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_FAKESHARE));
 	//client->updatedMyINFO(ou); // тут тоже не нужна нотификация всем подписчикам
 	cheatMessage(client, report);
 }
@@ -1336,6 +1334,7 @@ void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString
 {
 	Client* client;
 	OnlineUserPtr ou;
+	OnlineUserPtr sendCmd;
 	string report;
 	{
 		READ_LOCK(*g_csOnlineUsers);
@@ -1346,16 +1345,13 @@ void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString
 		ou = i->second;
 		ou->getIdentity().updateClientType(*ou);
 		if (!aCheatString.empty())
-		{
 			report += ou->getIdentity().setCheat(ou->getClientBase(), aCheatString, aBadClient);
-		}
 		if (aRawCommand != -1)
-		{
-			sendRawCommandL(*ou, aRawCommand);
-		}
-		
+			sendCmd = ou;
+
 		client = &(ou->getClient());
 	}
+	if (sendCmd) sendRawCommand(sendCmd, aRawCommand);
 	//client->updatedMyINFO(ou); // Не шлем обновку подписчикам!
 	cheatMessage(client, report);
 }

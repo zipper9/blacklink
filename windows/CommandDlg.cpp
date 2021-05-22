@@ -20,6 +20,7 @@
 
 #include "../client/UserCommand.h"
 #include "../client/NmdcHub.h"
+#include "../client/AdcCommand.h"
 #include "CommandDlg.h"
 #include "WinUtil.h"
 
@@ -81,7 +82,9 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ATTACH(IDC_COMMAND, ctrlCommand);
 	ATTACH(IDC_SETTINGS_ONCE, ctrlOnce);
 
-	int selType;
+	isADC = Util::isAdcHub(Text::fromT(hub));
+
+	int selType = TYPE_RAW;
 	ctrlType.AddString(CTSTRING(USER_CMD_SEPARATOR));
 	ctrlType.AddString(CTSTRING(USER_CMD_RAW));
 	ctrlType.AddString(CTSTRING(USER_CMD_CHAT));
@@ -91,7 +94,18 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	{
 		selType = TYPE_SEPARATOR;
 	}
-	else
+	else if (type == UserCommand::TYPE_CHAT || type == UserCommand::TYPE_CHAT_ONCE)
+	{
+		if (!to.empty())
+		{
+			ctrlNick.SetWindowText(to.c_str());
+			selType = TYPE_PM;
+		}
+		else
+			selType = TYPE_CHAT;
+		ctrlCommand.SetWindowText(command.c_str());
+	}
+	else if (!isADC)
 	{
 		// More difficult, determine type by what it seems to be...
 		if ((_tcsncmp(command.c_str(), _T("$To: "), 5) == 0) &&
@@ -101,11 +115,11 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		{
 			string::size_type i = command.find(_T(' '), 5);
 			dcassert(i != string::npos);
-			const tstring to = command.substr(5, i - 5);
+			const tstring nick = command.substr(5, i - 5);
 			string::size_type pos = command.find(_T('>'), 5) + 2;
 			const tstring cmd = Text::toT(NmdcHub::validateMessage(Text::fromT(command.substr(pos, command.length() - pos - 1)), true));
 			selType = TYPE_PM;
-			ctrlNick.SetWindowText(to.c_str());
+			ctrlNick.SetWindowText(nick.c_str());
 			ctrlCommand.SetWindowText(cmd.c_str());
 		}
 		else if (((_tcsncmp(command.c_str(), _T("<%[mynick]> "), 12) == 0) ||
@@ -118,16 +132,12 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 			selType = TYPE_CHAT;
 			ctrlCommand.SetWindowText(cmd.c_str());
 		}
-		else
-		{
-			tstring cmd = command;
-			selType = TYPE_RAW;
-			ctrlCommand.SetWindowText(cmd.c_str());
-		}
-		if (type == UserCommand::TYPE_RAW_ONCE)
-			ctrlOnce.SetCheck(BST_CHECKED);
 	}
 
+	if (type == UserCommand::TYPE_RAW_ONCE || type == UserCommand::TYPE_CHAT_ONCE)
+		ctrlOnce.SetCheck(BST_CHECKED);
+
+	if (selType == TYPE_RAW) ctrlCommand.SetWindowText(command.c_str());
 	ctrlHub.SetWindowText(hub.c_str());
 	ctrlName.SetWindowText(name.c_str());
 	ctrlType.SetCurSel(selType);
@@ -144,7 +154,6 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	type = selType;
 	updateControls();
 	updateCommand();
-	ctrlResult.SetWindowText(command.c_str());
 
 	CenterWindow(GetParent());
 	return FALSE;
@@ -175,8 +184,8 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 
 		if (type == TYPE_PM)
 		{
-			WinUtil::getWindowText(ctrlNick, text);
-			boost::trim(text);
+			WinUtil::getWindowText(ctrlNick, to);
+			boost::trim(to);
 			if (text.empty())
 			{
 				ctrlNick.SetFocus();
@@ -184,12 +193,17 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 				return 0;
 			}
 		}
+		else
+			to.clear();
 
 		WinUtil::getWindowText(ctrlHub, hub);
 		boost::trim(hub);
 
-		if (type)
+		if (type == TYPE_CHAT || type == TYPE_PM)
+			type = (ctrlOnce.GetCheck() == BST_CHECKED) ? UserCommand::TYPE_CHAT_ONCE : UserCommand::TYPE_CHAT;
+		else if (type != TYPE_SEPARATOR)
 			type = (ctrlOnce.GetCheck() == BST_CHECKED) ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW;
+
 	}
 	EndDialog(wID);
 	return 0;
@@ -198,13 +212,18 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 LRESULT CommandDlg::onChange(WORD, WORD, HWND, BOOL&)
 {
 	updateCommand();
-	ctrlResult.SetWindowText(command.c_str());
 	return 0;
 }
 
 LRESULT CommandDlg::onHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	updateHub();
+	bool flag = Util::isAdcHub(Text::fromT(hub));
+	if (flag != isADC)
+	{
+		isADC = flag;
+		updateCommand();
+	}
 	return 0;
 }
 
@@ -213,14 +232,13 @@ LRESULT CommandDlg::onChangeType(WORD, WORD, HWND, BOOL&)
 	type = ctrlType.GetCurSel();
 	if (type == TYPE_PM)
 	{
-		tstring to;
-		WinUtil::getWindowText(ctrlNick, to);
-		boost::trim(to);
-		if (to.empty())
+		tstring nick;
+		WinUtil::getWindowText(ctrlNick, nick);
+		boost::trim(nick);
+		if (nick.empty())
 			ctrlNick.SetWindowText(_T("%[userNI]"));
 	}
 	updateCommand();
-	ctrlResult.SetWindowText(command.c_str());
 	updateControls();
 	return 0;
 }
@@ -241,6 +259,7 @@ void CommandDlg::updateContext()
 
 void CommandDlg::updateCommand()
 {
+	tstring result;
 	if (type == TYPE_SEPARATOR)
 	{
 		command.clear();
@@ -248,26 +267,33 @@ void CommandDlg::updateCommand()
 	else if (type == TYPE_RAW)
 	{
 		WinUtil::getWindowText(ctrlCommand, command);
+		result = command;
 	}
 	else if (type == TYPE_CHAT)
 	{
 		WinUtil::getWindowText(ctrlCommand, command);
-		command = Text::toT("<%[myNI]> " + NmdcHub::validateMessage(Text::fromT(command), false) + '|');
+		if (isADC)
+			result = Text::toT("BMSG %[mySID] " + AdcCommand::escape(Text::fromT(command), false));
+		else
+			result = Text::toT("<%[myNI]> " + NmdcHub::validateMessage(Text::fromT(command), false) + '|');
 	}
 	else if (type == TYPE_PM)
 	{
-		tstring to;
 		WinUtil::getWindowText(ctrlNick, to);
 		boost::trim(to);
 		WinUtil::getWindowText(ctrlCommand, command);
-		command = _T("$To: ") + to + _T(" From: %[myNI] $<%[myNI]> ") + Text::toT(NmdcHub::validateMessage(Text::fromT(command), false)) + _T('|');
+		if (isADC)
+			result = Text::toT("EMSG %[mySID] %[userSID] " + AdcCommand::escape(Text::fromT(command), false) + " PM%[mySID]");
+		else
+			result = _T("$To: ") + to + _T(" From: %[myNI] $<%[myNI]> ") + Text::toT(NmdcHub::validateMessage(Text::fromT(command), false)) + _T('|');
 	}
+	ctrlResult.SetWindowText(result.c_str());
 }
 
 void CommandDlg::updateHub()
 {
 	WinUtil::getWindowText(ctrlHub, hub);
-	updateCommand();
+	boost::trim(hub);
 }
 
 void CommandDlg::updateControls()
