@@ -37,8 +37,6 @@
 #include "LogManager.h"
 #include "../jsoncpp/include/json/json.h"
 
-static const uint64_t MYINFO_UPDATE_INTERVAL = 2 * 60 * 1000;
-
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
 
@@ -1601,14 +1599,14 @@ void NmdcHub::onLine(const string& aLine)
 				if (key == "Int")
 				{
 					int value = Util::toInt(rule.c_str() + pos + 1);
-					if (value > 0)
-						setSearchInterval(value * 1000, true);
+					if (value > 0 && !overrideSearchInterval)
+						setSearchInterval(value * 1000);
 				}
 				if (key == "IntPas")
 				{
 					int value = Util::toInt(rule.c_str() + pos + 1);
-					if (value > 0)
-						setSearchIntervalPassive(value * 1000, true);
+					if (value > 0 && !overrideSearchIntervalPassive)
+						setSearchIntervalPassive(value * 1000);
 				}
 			}
 		}
@@ -1788,8 +1786,9 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 {
 	const uint64_t currentTick = GET_TICK();
 	{
+		unsigned updateInterval = SETTING(MYINFO_DELAY) * 1000;
 		LOCK(csState);
-		uint64_t nextUpdate = lastUpdate + MYINFO_UPDATE_INTERVAL;
+		uint64_t nextUpdate = lastUpdate + updateInterval;
 		if (!forcePassive && !alwaysSend && nextUpdate > currentTick)
 		{
 			if (!pendingUpdate)

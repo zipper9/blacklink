@@ -292,6 +292,7 @@ static const char* g_settingTags[] =
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
+	"MyInfoDelay",
 	"PSRDelay",
 
 	// Sharing
@@ -954,6 +955,7 @@ void SettingsManager::setDefaults()
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);
+	setDefault(MYINFO_DELAY, 35);
 	setDefault(PSR_DELAY, 30);
 
 	// Sharing (Ints)
@@ -1781,6 +1783,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MAX_HUB_USER_COMMANDS:
 		{
 			VER_MIN(0);
+			break;
+		}
+		case MYINFO_DELAY:
+		{
+			VERIFY(0, 180);
 			break;
 		}
 		case PSR_DELAY:

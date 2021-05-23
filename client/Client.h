@@ -170,8 +170,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
 		
 		void escapeParams(StringMap& sm) const;
-		void setSearchInterval(unsigned interval, bool fromRule);
-		void setSearchIntervalPassive(unsigned interval, bool fromRule);
+		void setSearchInterval(unsigned interval);
+		void setSearchIntervalPassive(unsigned interval);
 		
 		uint32_t getSearchInterval() const
 		{
@@ -409,6 +409,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		// set by reloadSettings
 		bool isExclusiveHub;
 		bool hideShare;
+		bool overrideSearchInterval;
+		bool overrideSearchIntervalPassive;
 		CID shareGroup;
 		
 		void updateCounts(bool remove);

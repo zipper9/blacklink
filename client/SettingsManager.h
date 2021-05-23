@@ -271,8 +271,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			MAX_HUB_USER_COMMANDS,
+			MYINFO_DELAY,
 			PSR_DELAY, // Unused, visible in UI
-			
+
 			// Sharing (Ints)
 			AUTO_REFRESH_TIME,
 			AUTO_REFRESH_ON_STARTUP,

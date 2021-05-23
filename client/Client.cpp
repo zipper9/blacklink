@@ -48,6 +48,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	bytesShared(0),
 	exclChecks(false),
 	hideShare(false),
+	overrideSearchInterval(false), overrideSearchIntervalPassive(false),
 	overrideId(false),
 	proto(proto),
 	userListLoaded(false),
@@ -203,13 +204,17 @@ void Client::reloadSettings(bool updateNick)
 		
 		int searchInterval = hub->getSearchInterval();
 		if (searchInterval < 2)
-			searchInterval = std::max(SETTING(MIN_SEARCH_INTERVAL), 2);
-		setSearchInterval(searchInterval * 1000, false);
+			searchInterval = SETTING(MIN_SEARCH_INTERVAL);
+		else
+			overrideSearchInterval = true;
+		setSearchInterval(searchInterval * 1000);
 
 		searchInterval = hub->getSearchIntervalPassive();
 		if (searchInterval < 2)
-			searchInterval = std::max(SETTING(MIN_SEARCH_INTERVAL_PASSIVE), 2);
-		setSearchIntervalPassive(searchInterval * 1000, false);
+			searchInterval = SETTING(MIN_SEARCH_INTERVAL_PASSIVE);
+		else
+			overrideSearchIntervalPassive = true;
+		setSearchIntervalPassive(searchInterval * 1000);
 
 		opChat = hub->getOpChat();
 		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
@@ -237,8 +242,9 @@ void Client::reloadSettings(bool updateNick)
 		shareGroup.init();
 		setFavIp(Util::emptyString);
 		
-		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000, false);
-		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000, false);
+		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000);
+		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000);
+		overrideSearchInterval = overrideSearchIntervalPassive = false;
 		
 		opChat.clear();
 		exclChecks = false;
@@ -876,19 +882,19 @@ void Client::escapeParams(StringMap& sm) const
 	}
 }
 
-void Client::setSearchInterval(unsigned interval, bool fromRule)
+void Client::setSearchInterval(unsigned interval)
 {
 	// min interval is 2 seconds in FlylinkDC
 	if (interval < 2000) interval = 2000;
-	if (!fromRule && interval > 120000) interval = 120000;
+	else if (interval > 120000) interval = 120000;
 	searchQueue.interval = interval;
 }
 
-void Client::setSearchIntervalPassive(unsigned interval, bool fromRule)
+void Client::setSearchIntervalPassive(unsigned interval)
 {
 	// min interval is 2 seconds in FlylinkDC
 	if (interval < 2000) interval = 2000;
-	if (!fromRule && interval > 120000) interval = 120000;
+	else if (interval > 120000) interval = 120000;
 	searchQueue.intervalPassive = interval;
 }
 

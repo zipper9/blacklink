@@ -704,7 +704,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 			int64_t newChunkLeft = size / lastSpeed;
 			if (2 * newChunkLeft < d->getSecondsLeft())
 			{
-				dcdebug("Overlapping... old user: %I64d s, new user: %I64d s\n", d->getSecondsLeft(), newChunkLeft);
+				dcdebug("Overlapping... old user: " I64_FMT " s, new user: " I64_FMT " s\n", d->getSecondsLeft(), newChunkLeft);
 				return Segment(d->getStartPos() + pos, size, true);
 			}
 		}
