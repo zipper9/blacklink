@@ -1607,7 +1607,7 @@ void AdcHub::onConnected() noexcept
 {
 	Client::onConnected();
 
-	const bool optionUserCommands = BOOLSETTING(HUB_USER_COMMANDS);
+	const bool optionUserCommands = BOOLSETTING(HUB_USER_COMMANDS) && SETTING(MAX_HUB_USER_COMMANDS) > 0;
 	const bool optionSendBloom = BOOLSETTING(SEND_BLOOM);
 
 	userListLoaded = true;

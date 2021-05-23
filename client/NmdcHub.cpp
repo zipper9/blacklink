@@ -1052,27 +1052,14 @@ void NmdcHub::lockParse(const string& aLine)
 	
 	if (!param.empty())
 	{
-		/* [-] IRainman fix: old proto code: http://mydc.ru/topic915.html?p=6719#entry6719
-		   [-]string::size_type j = param.find(" Pk=");
-		   [-]string lock, pk;
-		   [-]if (j != string::npos)
-		   [-]{
-		   [-]  lock = param.substr(0, j);
-		   [-]  pk = param.substr(j + 4);
-		   [-]}
-		   [-]else
-		   [-] */
-		// [-]{
-		const auto j = param.find(' '); // [!]
-		const auto lock = (j != string::npos) ? param.substr(0, j) : param; // [!]
-		// [-]}
-		// [~] IRainman fix.
-		
+		const auto j = param.find(' ');
+		const auto lock = j != string::npos ? param.substr(0, j) : param;
 		if (isExtended(lock))
 		{
 			string feat = "$Supports";
 			feat.reserve(128);
-			feat += " UserCommand";
+			if (BOOLSETTING(HUB_USER_COMMANDS) && SETTING(MAX_HUB_USER_COMMANDS) > 0)
+				feat += " UserCommand";
 			feat += " NoGetINFO";
 			feat += " NoHello";
 			feat += " UserIP2";

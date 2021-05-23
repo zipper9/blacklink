@@ -948,8 +948,10 @@ void Client::clearUserCommands(int ctx)
 
 void Client::addUserCommand(const UserCommand& uc)
 {
+	size_t maxCommands = SETTING(MAX_HUB_USER_COMMANDS);
 	WRITE_LOCK(*csUserCommands);
-	userCommands.push_back(uc);
+	if (userCommands.size() < maxCommands)
+		userCommands.push_back(uc);
 }
 
 void Client::removeUserCommand(const string& name)

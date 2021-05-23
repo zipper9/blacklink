@@ -270,6 +270,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEND_DB_PARAM,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
+			MAX_HUB_USER_COMMANDS,
 			PSR_DELAY, // Unused, visible in UI
 			
 			// Sharing (Ints)

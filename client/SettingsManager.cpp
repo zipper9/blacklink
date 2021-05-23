@@ -291,6 +291,7 @@ static const char* g_settingTags[] =
 	"SendDBParam",
 	"MaxCommandLength",
 	"HubUserCommands",
+	"MaxHubUserCommands",
 	"PSRDelay",
 
 	// Sharing
@@ -952,6 +953,7 @@ void SettingsManager::setDefaults()
 	setDefault(SEND_DB_PARAM, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
+	setDefault(MAX_HUB_USER_COMMANDS, 100);
 	setDefault(PSR_DELAY, 30);
 
 	// Sharing (Ints)
@@ -1665,21 +1667,31 @@ bool SettingsManager::set(IntSetting key, int value)
 		value = min;\
 		valueAdjusted = true;\
 	}
+
 #define VER_MAX(max)\
 	if (value > max)\
 	{\
 		value = max;\
 		valueAdjusted = true;\
 	}
-#define VERIFY(min, max)\
-	VER_MIN(min);\
-	VER_MAX(max)
+
+#define VER_DEF_VAL(min, max, defVal)\
+	if (value < min || value > max)\
+	{\
+		value = defVal;\
+		valueAdjusted = true;\
+	}
+
 #define VER_MIN_EXCL_ZERO(min)\
 	if (value < min && value != 0)\
 	{\
 		value = min;\
 		valueAdjusted = true;\
 	}
+
+#define VERIFY(min, max)\
+	VER_MIN(min);\
+	VER_MAX(max)
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		case AUTOBAN_SHARE:
@@ -1759,18 +1771,14 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MIN_SEARCH_INTERVAL:
 		case MIN_SEARCH_INTERVAL_PASSIVE:
 		{
-			if (value >= 120)
-			{
-				value = 10;
-			}
-			VER_MIN(2);
-			VER_MAX(120);
+			VER_DEF_VAL(2, 120, 10);
 			break;
 		}
 		case DB_LOG_FINISHED_UPLOADS:
 		case DB_LOG_FINISHED_DOWNLOADS:
 		case MAX_FINISHED_UPLOADS:
 		case MAX_FINISHED_DOWNLOADS:
+		case MAX_HUB_USER_COMMANDS:
 		{
 			VER_MIN(0);
 			break;
@@ -1900,6 +1908,8 @@ bool SettingsManager::set(IntSetting key, int value)
 		
 #undef VER_MIN
 #undef VER_MAX
+#undef VER_DEF_VAL
+#undef VER_MIN_EXCL_ZERO
 #undef VERIFY
 	}
 	intSettings[key - INT_FIRST] = value;
