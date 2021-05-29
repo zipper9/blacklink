@@ -533,10 +533,7 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 		if (!message->replyTo)
 			return;
 			
-		if (isPrivateMessageAllowed(*message))
-		{
-			fly_fire2(ClientListener::Message(), this, message);
-		}
+		processIncomingPM(message);
 	}
 	else
 	if (isChatMessageAllowed(*message, Util::emptyString))

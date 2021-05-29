@@ -166,9 +166,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op) const;
 		void setRawCommands(const string commands[]);
 		const string& getRawCommand(int command) const;
-		bool isPrivateMessageAllowed(const ChatMessage& message);
-		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
-		
+
 		void escapeParams(StringMap& sm) const;
 		void setSearchInterval(unsigned interval);
 		void setSearchIntervalPassive(unsigned interval);
@@ -223,7 +221,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return Text::toUtf8(str, encoding);
 		}
-		
+
+	protected:
+		bool isPrivateMessageAllowed(const ChatMessage& message, string* response);
+		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
+		void logPM(const ChatMessage& message) const;
+		void processIncomingPM(std::unique_ptr<ChatMessage>& message);
+
 	private:
 		struct CFlyFloodCommand
 		{

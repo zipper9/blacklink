@@ -24,14 +24,9 @@
 #include "FavoriteManager.h"
 #include "Wildcards.h"
 
-UserManager::CheckedUserSet UserManager::checkedPasswordUsers;
-UserManager::WaitingUserMap UserManager::waitingPasswordUsers;
-
 #ifdef _DEBUG
 static bool ignoreListLoaded;
 #endif
-
-FastCriticalSection UserManager::g_csPsw;
 
 UserManager::UserManager()
 {
@@ -47,29 +42,86 @@ UserManager::UserManager()
 #endif
 }
 
-UserManager::PasswordStatus UserManager::checkPrivateMessagePassword(const ChatMessage& pm)
+void UserManager::setPMOpen(const UserPtr& user, bool flag)
+{
+	LOCK(csPM);
+	auto i = pmInfo.find(user);
+	if (i != pmInfo.end())
+	{
+		auto& flags = i->second.flags;
+		if (flag)
+			flags |= FLAG_OPEN;
+		else
+		{
+			flags &= ~FLAG_OPEN;
+			if (!flags) pmInfo.erase(i);
+		}
+	}
+	else if (flag)
+		pmInfo.insert(make_pair(user, PMInfo{FLAG_OPEN, string()}));
+}
+
+bool UserManager::checkPMOpen(const ChatMessage& pm, UserManager::PasswordStatus& passwordStatus)
+{
+	LOCK(csPM);
+	auto i = pmInfo.find(pm.replyTo->getUser());
+	if (i == pmInfo.end())
+	{
+		passwordStatus = FIRST;
+		return false;
+	}
+	auto& pmi = i->second;
+	if (pmi.flags & FLAG_PW_ACTIVITY)
+	{
+		if (pmi.flags & FLAG_GRANTED)
+			passwordStatus = GRANTED;
+		else if (pm.text.find(pmi.password) != string::npos)
+		{
+			pmi.flags |= FLAG_GRANTED;
+			passwordStatus = CHECKED;
+		}
+	}
+	return (pmi.flags & FLAG_OPEN) != 0;
+}
+
+UserManager::PasswordStatus UserManager::checkIncomingPM(const ChatMessage& pm, const string& password)
 {
 	const UserPtr& user = pm.replyTo->getUser();
-	LOCK(g_csPsw);
-	if (checkedPasswordUsers.find(user) != checkedPasswordUsers.cend())
+	LOCK(csPM);
+	auto i = pmInfo.find(user);
+	if (i != pmInfo.end())
 	{
-		return FREE;
-	}
-	else if (pm.text == SETTING(PM_PASSWORD))
-	{
-		waitingPasswordUsers.erase(user);
-		checkedPasswordUsers.insert(user);
-		return CHECKED;
-	}
-	else if (waitingPasswordUsers.find(user) != waitingPasswordUsers.cend())
-	{
+		auto& pmi = i->second;
+		if (pmi.flags & FLAG_GRANTED) return GRANTED;
+		if (pm.text.find(pmi.password) != string::npos)
+		{
+			pmi.flags |= FLAG_GRANTED;
+			return CHECKED;
+		}
 		return WAITING;
 	}
-	else
+	pmInfo.insert(make_pair(user, PMInfo{FLAG_SENDING_REQUEST | FLAG_PW_ACTIVITY, password}));
+	return FIRST;
+}
+
+bool UserManager::checkOutgoingPM(const UserPtr& user)
+{
+	LOCK(csPM);
+	auto i = pmInfo.find(user);
+	if (i == pmInfo.end())
+		return true;
+
+	auto& flags = i->second.flags;
+	if (flags & FLAG_PW_ACTIVITY)
 	{
-		waitingPasswordUsers.insert(make_pair(user, true));
-		return FIRST;
+		if (flags & FLAG_SENDING_REQUEST)
+		{
+			flags ^= FLAG_SENDING_REQUEST;
+			return (flags & FLAG_OPEN) != 0;
+		}
+		flags |= FLAG_GRANTED;
 	}
+	return true;
 }
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -213,27 +265,6 @@ void UserManager::reloadProtectedUsers()
 	hasProtectedUsers = result;
 }
 #endif
-
-bool UserManager::expectPasswordFromUser(const UserPtr& user)
-{
-	LOCK(g_csPsw);
-	auto i = waitingPasswordUsers.find(user);
-	if (i == waitingPasswordUsers.end())
-	{
-		return false;
-	}
-	else if (i->second)
-	{
-		i->second = false;
-		return true;
-	}
-	else
-	{
-		waitingPasswordUsers.erase(user);
-		checkedPasswordUsers.insert(user);
-		return false;
-	}
-}
 
 void UserManager::openUserUrl(const UserPtr& aUser)
 {

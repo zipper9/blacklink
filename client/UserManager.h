@@ -62,20 +62,23 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		{
 			fly_fire2(UserManagerListener::CollectSummaryInfo(), user, hubHint);
 		}
+
 		enum PasswordStatus
 		{
-			FIRST = -1,
-			FREE = 0,
-			CHECKED = 1,
-			WAITING = 2,
+			FIRST,
+			GRANTED,
+			CHECKED,
+			WAITING
 		};
-		static bool expectPasswordFromUser(const UserPtr& user);
-		static PasswordStatus checkPrivateMessagePassword(const ChatMessage& pm); // !SMT!-PSW
+		void setPMOpen(const UserPtr& user, bool flag);
+		bool checkPMOpen(const ChatMessage& pm, UserManager::PasswordStatus& passwordStatus);
+		bool checkOutgoingPM(const UserPtr& user);
+		PasswordStatus checkIncomingPM(const ChatMessage& pm, const string& password);
+
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		void checkUser(const OnlineUserPtr& user) const;
 #endif
-		typedef StringSet IgnoreMap;
-		
+
 		void getIgnoreList(StringSet& ignoreList) const;
 		tstring getIgnoreListAsString() const;
 		bool addToIgnoreList(const string& userName);
@@ -93,17 +96,26 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 	private:
 		void loadIgnoreList();
 		void saveIgnoreList();
-		IgnoreMap ignoreList;
+		StringSet ignoreList;
 		std::atomic_bool ignoreListEmpty;
 		std::unique_ptr<RWLock> csIgnoreList;
-	
-		typedef boost::unordered_set<UserPtr, User::Hash> CheckedUserSet;
-		typedef boost::unordered_map<UserPtr, bool, User::Hash> WaitingUserMap;
-		
-		static CheckedUserSet checkedPasswordUsers;
-		static WaitingUserMap waitingPasswordUsers;
-		
-		static FastCriticalSection g_csPsw;
+
+		enum
+		{
+			FLAG_OPEN            = 1,
+			FLAG_PW_ACTIVITY     = 2,
+			FLAG_GRANTED         = 4,
+			FLAG_SENDING_REQUEST = 8
+		};
+
+		struct PMInfo
+		{
+			int flags;
+			string password;
+		};
+
+		boost::unordered_map<UserPtr, PMInfo, User::Hash> pmInfo;
+		mutable FastCriticalSection csPM;
 		
 		friend class Singleton<UserManager>;
 		UserManager();

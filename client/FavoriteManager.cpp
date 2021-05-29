@@ -1441,6 +1441,15 @@ bool FavoriteManager::getFlag(const UserPtr& user, FavoriteUser::Flags f) const
 	return false;
 }
 
+FavoriteUser::Flags FavoriteManager::getFlags(const UserPtr& user) const
+{
+	READ_LOCK(*csUsers);
+	const auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
+		return static_cast<FavoriteUser::Flags>(i->second.getFlags());
+	return FavoriteUser::Flags(0);
+}
+
 void FavoriteManager::setFlag(const UserPtr& user, FavoriteUser::Flags f, bool value, bool createUser /*= true*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());

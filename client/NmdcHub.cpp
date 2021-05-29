@@ -1366,31 +1366,8 @@ void NmdcHub::toParse(const string& param)
 	}
 #endif
 
-	if (!isPrivateMessageAllowed(*message))
-	{
-		if (message->from && message->from->getUser())
-		{
-			logPM(message->from->getUser(), message->text, getHubUrl());
-		}
-		return;
-	}
-	
-	fly_fire2(ClientListener::Message(), this, message);
-}
-
-void NmdcHub::logPM(const UserPtr& user, const string& msg, const string& hubUrl)
-{
-	if (BOOLSETTING(LOG_PRIVATE_CHAT))
-	{
-		StringMap params;
-		params["hubNI"] = Util::toString(ClientManager::getHubNames(user->getCID(), hubUrl));
-		params["hubURL"] = Util::toString(ClientManager::getHubs(user->getCID(), hubUrl));
-		params["userNI"] = user->getLastNick();
-		params["myCID"] = ClientManager::getMyCID().toBase32();
-		params["message"] = msg;
-		LOG(PM, params);
-	}
-	LogManager::speakStatusMessage(msg);
+	message->translateMe();
+	processIncomingPM(message);
 }
 
 void NmdcHub::onLine(const string& aLine)
@@ -2171,7 +2148,7 @@ void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, b
 	const OnlineUserPtr& me = getMyOnlineUser();
 	
 	unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, me, user, me, thirdPerson));
-	if (!isPrivateMessageAllowed(*chatMessage))
+	if (!isPrivateMessageAllowed(*chatMessage, nullptr))
 		return;
 		
 	fly_fire2(ClientListener::Message(), this, chatMessage);

@@ -705,11 +705,11 @@ OnlineUserPtr Client::getUser(const UserPtr& aUser)
 }
 #endif
 
-bool Client::isPrivateMessageAllowed(const ChatMessage& message)
+bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* response)
 {
 	if (isMe(message.replyTo))
 	{
-		if (UserManager::expectPasswordFromUser(message.to->getUser())
+		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser())
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		        || UploadManager::isBanReply(message.to->getUser())
 #endif
@@ -717,6 +717,12 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 			return false;
 		return true;
 	}
+	UserManager::PasswordStatus passwordStatus;
+	bool isOpen = UserManager::getInstance()->checkPMOpen(message, passwordStatus);
+	if (passwordStatus == UserManager::CHECKED && response)
+		*response = SETTING(PM_PASSWORD_OK_HINT);
+	if (isOpen)
+		return true;
 	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 		return false;
 	if (UserManager::getInstance()->isInIgnoreList(message.replyTo->getIdentity().getNick()))
@@ -746,7 +752,6 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 			}
 			return false;
 		}
-		return true;
 	}
 	if (message.replyTo->getIdentity().isHub())
 	{
@@ -766,28 +771,34 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 		}
 		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
 	}
-	if (BOOLSETTING(PROTECT_PRIVATE) && !FavoriteManager::getInstance()->hasFreePM(message.replyTo->getUser()))
+	auto pmFlags = FavoriteManager::getInstance()->getFlags(message.replyTo->getUser());
+	if (BOOLSETTING(PROTECT_PRIVATE) && !(pmFlags & (FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE)))
 	{
-		switch (UserManager::checkPrivateMessagePassword(message))
+		if (passwordStatus == UserManager::GRANTED) return true;
+		const string& password = SETTING(PM_PASSWORD);
+		switch (UserManager::getInstance()->checkIncomingPM(message, password))
 		{
-			case UserManager::FREE:
+			case UserManager::GRANTED:
 				return true;
 			case UserManager::WAITING:
 				return false;
 			case UserManager::FIRST:
 			{
-				StringMap params;
-				params["pm_pass"] = SETTING(PM_PASSWORD);
-				privateMessage(message.replyTo, Util::formatParams(SETTING(PM_PASSWORD_HINT), params, false), false);
+				if (response)
+				{
+					StringMap params;
+					params["pm_pass"] = password;
+					*response = Util::formatParams(SETTING(PM_PASSWORD_HINT), params, false);
+				}
 				if (BOOLSETTING(PROTECT_PRIVATE_SAY))
 				{
-					fly_fire2(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + ": " + message.replyTo->getIdentity().getNick());
+					fly_fire2(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + " " + message.replyTo->getIdentity().getNick());
 				}
 				return false;
 			}
 			case UserManager::CHECKED:
 			{
-				privateMessage(message.replyTo, SETTING(PM_PASSWORD_OK_HINT), true);
+				if (response) *response = SETTING(PM_PASSWORD_OK_HINT);
 				return true;
 			}
 			default: // Only for compiler.
@@ -799,7 +810,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 	}
 	else
 	{
-		if (FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser())
+		if ((pmFlags & FavoriteUser::FLAG_IGNORE_PRIVATE)
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		        || UploadManager::isBanReply(message.replyTo->getUser())
 #endif
@@ -822,6 +833,34 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 	if (UserManager::getInstance()->isInIgnoreList(message.from->getIdentity().getNick()))
 		return false;
 	return true;
+}
+
+void Client::logPM(const ChatMessage& message) const
+{
+	if (BOOLSETTING(LOG_PRIVATE_CHAT) && message.from && message.from->getUser())
+	{
+		const UserPtr& user = message.from->getUser();
+		StringMap params;
+		params["hubNI"] = Util::toString(ClientManager::getHubNames(user->getCID(), hubURL));
+		params["hubURL"] = Util::toString(ClientManager::getHubs(user->getCID(), hubURL));
+		params["userNI"] = user->getLastNick();
+		params["myCID"] = ClientManager::getMyCID().toBase32();
+		params["message"] = message.text;
+		LOG(PM, params);
+	}
+	LogManager::speakStatusMessage(message.text);
+}
+
+void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message)
+{
+	string response;
+	OnlineUserPtr replyTo = message->replyTo;
+	if (isPrivateMessageAllowed(*message, &response))
+		fly_fire2(ClientListener::Message(), this, message);
+	else
+		logPM(*message);
+	if (!response.empty())
+		privateMessage(replyTo, response, true);
 }
 
 bool Client::isInOperatorList(const string& userName) const

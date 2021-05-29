@@ -100,7 +100,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		virtual void onBeforeActiveTab(HWND aWnd) override;
 		virtual void onAfterActiveTab(HWND aWnd) override;
 		
-		void addLine(const Identity& from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void readFrameLog();

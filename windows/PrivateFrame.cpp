@@ -83,6 +83,8 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	m_created = true;
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
+	UserManager::getInstance()->setPMOpen(replyTo.user, true);
+
 	bHandled = FALSE;
 	return 1;
 }
@@ -193,7 +195,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 	}
 	
 	PrivateFrame* p = nullptr;
-	const auto i = g_pm_frames.find(replyTo);
+	const auto i = g_pm_frames.find(replyTo.user);
 	if (i == g_pm_frames.end())
 	{
 		if (g_pm_frames.size() > MAX_PM_FRAMES)
@@ -205,7 +207,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 		if (ou)
 			replyTo.user->setLastNick(ou->getIdentity().getNick());
 		p = new PrivateFrame(replyTo, myNick);
-		g_pm_frames.insert(make_pair(replyTo, p));
+		g_pm_frames.insert(make_pair(replyTo.user, p));
 		p->Create(WinUtil::g_mdiClient);
 	}
 	else
@@ -292,7 +294,7 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 {
 	if (stricmp(cmd.c_str(), _T("grant")) == 0)
 	{
-		UploadManager::getInstance()->reserveSlot(HintedUser(getUser(), getHubHint()), 600);
+		UploadManager::getInstance()->reserveSlot(replyTo, 600);
 		addStatus(TSTRING(SLOT_GRANTED));
 	}
 	else if (stricmp(cmd.c_str(), _T("close")) == 0) // TODO
@@ -308,7 +310,7 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 	{
 		BOOL bTmp;
 		clearUserMenu();
-		reinitUserMenu(replyTo, getHubHint());
+		reinitUserMenu(replyTo.user, replyTo.hint);
 		onGetList(0, 0, 0, bTmp);
 	}
 	else if (stricmp(cmd.c_str(), _T("log")) == 0)
@@ -319,7 +321,7 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 
 void PrivateFrame::sendMessage(const tstring& msg, bool thirdperson /*= false*/)
 {
-	ClientManager::privateMessage(HintedUser(replyTo, getHubHint()), Text::fromT(msg), thirdperson);
+	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdperson);
 }
 
 LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -329,13 +331,13 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		closed = true;
 		ClientManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
-		
+		UserManager::getInstance()->setPMOpen(replyTo.user, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		g_pm_frames.erase(replyTo);
+		g_pm_frames.erase(replyTo.user);
 		bHandled = FALSE;
 		return 0;
 	}
@@ -351,7 +353,7 @@ void PrivateFrame::readFrameLog()
 	}
 }
 
-void PrivateFrame::addLine(const Identity& from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
+void PrivateFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
 	if (!m_created)
 	{
@@ -362,12 +364,12 @@ void PrivateFrame::addLine(const Identity& from, const bool bMyMess, const bool 
 	}
 	
 	tstring extra;
-	BaseChatFrame::addLine(from, bMyMess, bThirdPerson, aLine, p_max_smiles, cf, extra);
+	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, cf, extra);
 	
 	if (BOOLSETTING(LOG_PRIVATE_CHAT))
 	{
 		StringMap params = getFrameLogParams();
-		addMesageLogParams(params, from, aLine, bThirdPerson, extra);
+		addMesageLogParams(params, from, line, thirdPerson, extra);
 		LOG(PM, params);
 	}
 	
@@ -386,7 +388,7 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	clearUserMenu();
 	
 	tabMenu.InsertSeparatorFirst(replyToRealName);
-	reinitUserMenu(replyTo, getHubHint());
+	reinitUserMenu(replyTo.user, replyTo.hint);
 	appendAndActivateUserItems(tabMenu);
 	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
 	WinUtil::appendSeparator(tabMenu);
@@ -415,7 +417,7 @@ void PrivateFrame::runUserCommand(UserCommand& uc)
 	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
 		return;
 	StringMap ucParams = ucLineParams;
-	ClientManager::userCommand(HintedUser(replyTo, getHubHint()), uc, ucParams, true);
+	ClientManager::userCommand(replyTo, uc, ucParams, true);
 	// TODO тут ucParams не используется позже
 }
 
@@ -440,9 +442,9 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			{
 				CRect sr;
 				int w[1];
-				ctrlStatus.GetClientRect(sr);				
-				w[0] = sr.right - 16;				
-				ctrlStatus.SetParts(1, w);				
+				ctrlStatus.GetClientRect(sr);
+				w[0] = sr.right - 16;
+				ctrlStatus.SetParts(1, w);
 				ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			}
 		}
@@ -488,7 +490,7 @@ void PrivateFrame::updateTitle()
 		return;
 	if (!replyTo.user)
 		return;
-	pair<tstring, bool> hubs = WinUtil::getHubNames(replyTo, getHubHint());
+	pair<tstring, bool> hubs = WinUtil::getHubNames(replyTo.user, replyTo.hint);
 	
 #if 0 // FIXME
 	bool banIcon = false;
@@ -594,7 +596,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			userMenu->ClearMenu();
 			clearUserMenu();
 			
-			reinitUserMenu(replyTo, getHubHint());
+			reinitUserMenu(replyTo.user, replyTo.hint);
 			
 			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
 			WinUtil::appendSeparator(*userMenu);

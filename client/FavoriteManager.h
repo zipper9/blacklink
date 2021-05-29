@@ -114,6 +114,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void setUploadLimit(const UserPtr& user, int lim, bool createUser = true);
 
 		bool getFlag(const UserPtr& user, FavoriteUser::Flags) const;
+		FavoriteUser::Flags getFlags(const UserPtr& user) const;
 		void setFlag(const UserPtr& user, FavoriteUser::Flags, bool flag, bool createUser = true);
 		void setFlags(const UserPtr& user, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser = true);
 		

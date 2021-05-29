@@ -147,8 +147,7 @@ class NmdcHub : public Client, private Flags
 		
 		void clearUsers();
 		void onLine(const string& aLine);
-		static void logPM(const UserPtr& user, const string& msg, const string& hubUrl);
-		
+
 		OnlineUserPtr getUser(const string& aNick);
 		OnlineUserPtr findUser(const string& aNick) const;
 		void putUser(const string& aNick);
