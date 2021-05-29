@@ -178,7 +178,6 @@ class FavoriteHubsFrame :
 		static int columnIndexes[COLUMN_LAST];
 
 		static HIconWrapper stateIconOn, stateIconOff;
-		CAccelerator accel;
 
 		static tstring printConnectionStatus(const ConnectionStatus& cs, time_t curTime);
 		static tstring printLastConnected(const ConnectionStatus& cs);

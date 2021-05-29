@@ -97,7 +97,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		// Update control layouts
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 
-		virtual BOOL PreTranslateMessage(MSG* pMsg) override;		
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 
 	private:
 		// Communication with manager
@@ -113,7 +113,6 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		CButton ctrlMoveDown;
 		CButton ctrlHelp;
 		CMenu contextMenu;
-		CAccelerator accel;
 
 		// Column order
 		enum

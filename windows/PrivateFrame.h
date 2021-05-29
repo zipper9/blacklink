@@ -148,7 +148,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			if (!m_created)
 			{
-				CreateEx(WinUtil::g_mdiClient);
+				Create(WinUtil::g_mdiClient);
 			}
 			BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
 		}

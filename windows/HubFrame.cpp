@@ -133,6 +133,7 @@ LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 {
 	BaseChatFrame::onCreate(m_hWnd, rcDefault);
 
+	m_hAccel = LoadAccelerators(_Module.GetModuleInstance(), MAKEINTRESOURCE(IDR_HUB));
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
@@ -379,7 +380,7 @@ HubFrame* HubFrame::openHubWindow(const Settings& cs)
 			::GetWindowRect(WinUtil::g_mdiClient, &rcmdiClient);
 			rc = rcmdiClient; // frm->rcDefault;
 		}
-		frm->CreateEx(WinUtil::g_mdiClient, rc);
+		frm->Create(WinUtil::g_mdiClient, rc);
 		if (cs.windowType)
 			frm->ShowWindow(cs.windowType);
 		frames.insert(make_pair(cs.server, frm));
@@ -2944,8 +2945,10 @@ void HubFrame::appendNickToChat(const tstring& nick)
 
 BOOL HubFrame::PreTranslateMessage(MSG* pMsg)
 {
-	if (WinUtil::isCtrl()) return FALSE;
 	MainFrame* mainFrame = MainFrame::getMainFrame();
-	if (::TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
 }

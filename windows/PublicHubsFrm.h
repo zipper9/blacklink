@@ -206,7 +206,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
-		CAccelerator accel;
 
 		int xdu, ydu;
 		int buttonWidth, buttonHeight;

@@ -251,7 +251,7 @@ void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGL
 	pChild->disableTorrentRSS = !str.empty();
 #endif
 	pChild->setInitial(str, size, mode, type);
-	pChild->CreateEx(WinUtil::g_mdiClient);
+	pChild->Create(WinUtil::g_mdiClient);
 	g_search_frames.insert(FramePair(pChild->m_hWnd, pChild));
 }
 
@@ -2072,7 +2072,9 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
-	if (::TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
 }
 

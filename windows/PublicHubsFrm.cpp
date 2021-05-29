@@ -108,7 +108,7 @@ PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_INTERNET_HUBS));
+	m_hAccel = LoadAccelerators(_Module.GetModuleInstance(), MAKEINTRESOURCE(IDR_INTERNET_HUBS));	
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
@@ -119,7 +119,7 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	int w[3] = { 0, 0, 0 };
 	ctrlStatus.SetParts(3, w);
 	
-	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
 	                WS_EX_CLIENTEDGE, IDC_HUBLIST);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
@@ -133,32 +133,34 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetImageList(g_flagImage.getIconList(), LVSIL_SMALL);
 
-	ctrlHubs.SetFocus();
-	
-	ctrlConfigure.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_PUB_LIST_CONFIG);
-	ctrlConfigure.SetWindowText(CTSTRING(CONFIGURE));
-	ctrlConfigure.SetFont(Fonts::g_systemFont);
+	ctrlFilterDesc.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | BS_GROUPBOX, WS_EX_TRANSPARENT);
+	ctrlFilterDesc.SetWindowText(CTSTRING(FILTER));
+	ctrlFilterDesc.SetFont(Fonts::g_systemFont);
 
-	ctrlRefresh.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_REFRESH);
-	ctrlRefresh.SetWindowText(CTSTRING(REFRESH));
-	ctrlRefresh.SetFont(Fonts::g_systemFont);
+	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
+	filterContainer.SubclassWindow(ctrlFilter.m_hWnd);
+	ctrlFilter.SetFont(Fonts::g_systemFont);
 
-	ctrlLists.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_GROUPBOX, WS_EX_TRANSPARENT);
+	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
+	                     WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
+	ctrlFilterSel.SetFont(Fonts::g_systemFont, FALSE);
+
+	ctrlLists.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | BS_GROUPBOX, WS_EX_TRANSPARENT);
 	ctrlLists.SetFont(Fonts::g_systemFont);
 	ctrlLists.SetWindowText(CTSTRING(CONFIGURED_HUB_LISTS));
 
 	ctrlPubLists.Create(m_hWnd, rcDefault, NULL,
-	                    WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
+	                    WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_HSCROLL |
 	                    WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE, IDC_PUB_LIST_DROPDOWN);
 	ctrlPubLists.SetFont(Fonts::g_systemFont, FALSE);
 
-	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
-	filterContainer.SubclassWindow(ctrlFilter.m_hWnd);
-	ctrlFilter.SetFont(Fonts::g_systemFont);
+	ctrlConfigure.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_PUB_LIST_CONFIG);
+	ctrlConfigure.SetWindowText(CTSTRING(CONFIGURE));
+	ctrlConfigure.SetFont(Fonts::g_systemFont);
 
-	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                     WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
-	ctrlFilterSel.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlRefresh.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_REFRESH);
+	ctrlRefresh.SetWindowText(CTSTRING(REFRESH));
+	ctrlRefresh.SetFont(Fonts::g_systemFont);
 
 	// populate the filter list with the column names
 	for (int j = 0; j < COLUMN_LAST; j++)
@@ -167,10 +169,8 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlFilterSel.AddString(CTSTRING(ANY));
 	ctrlFilterSel.SetCurSel(COLUMN_LAST);
 
-	ctrlFilterDesc.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_GROUPBOX, WS_EX_TRANSPARENT);
-	ctrlFilterDesc.SetWindowText(CTSTRING(FILTER));
-	ctrlFilterDesc.SetFont(Fonts::g_systemFont);
-	
+	ctrlHubs.SetFocus();
+
 	HublistManager *hublistManager = HublistManager::getInstance();
 	
 	hublistManager->addListener(this);
@@ -1117,7 +1117,12 @@ void PublicHubsFrame::on(FavoriteRemoved, const FavoriteHubEntry* fhe) noexcept
 
 BOOL PublicHubsFrame::PreTranslateMessage(MSG* pMsg)
 {
-	return accel.TranslateAccelerator(m_hWnd, pMsg);
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
+	return IsDialogMessage(pMsg);
 }
 
 CFrameWndClassInfo& PublicHubsFrame::GetWndClassInfo()

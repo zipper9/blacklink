@@ -46,7 +46,7 @@ static UINT_PTR CALLBACK chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPA
 }
 #endif
 
-void BaseChatFrame::setBBCodeForCEdit(WORD wID, HWND hwndCtl)
+void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 {
 #ifdef IRAINMAN_USE_BB_CODES
 	tstring startTag;
@@ -375,7 +375,7 @@ LRESULT BaseChatFrame::onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HW
 LRESULT BaseChatFrame::onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
 {
 	if (ctrlMessage)
-		setBBCodeForCEdit(wID, hWndCtl);
+		insertBBCode(wID, hWndCtl);
 	return 0;
 }
 

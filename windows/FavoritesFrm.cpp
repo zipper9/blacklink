@@ -76,12 +76,12 @@ FavoriteHubsFrame::FavoriteHubsFrame() : TimerHelper(m_hWnd), noSave(true), xdu(
 
 LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_FAVORITES));
+	m_hAccel = LoadAccelerators(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_FAVORITES));
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
 
-	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	setListViewColors(ctrlHubs);
@@ -109,40 +109,41 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	//ctrlHubs.setVisible(SETTING(FAVORITESFRAME_VISIBLE)); // !SMT!-UI
 	ctrlHubs.setSortFromSettings(SETTING(FAVORITES_FRAME_SORT), ExListViewCtrl::SORT_STRING_NOCASE, COLUMN_LAST);
 	
-	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                   BS_PUSHBUTTON, 0, IDC_CONNECT);
-	ctrlConnect.SetWindowText(CTSTRING(CONNECT));
-	ctrlConnect.SetFont(Fonts::g_systemFont);
-	ctrlNew.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlNew.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	               BS_PUSHBUTTON, 0, IDC_NEWFAV);
 	ctrlNew.SetWindowText(CTSTRING(NEW));
 	ctrlNew.SetFont(Fonts::g_systemFont);
-	
-	ctrlProps.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+
+	ctrlProps.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                 BS_PUSHBUTTON, 0, IDC_EDIT);
 	ctrlProps.SetWindowText(CTSTRING(PROPERTIES));
 	ctrlProps.SetFont(Fonts::g_systemFont);
-	
-	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+
+	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                  BS_PUSHBUTTON, 0, IDC_REMOVE);
 	ctrlRemove.SetWindowText(CTSTRING(REMOVE));
 	ctrlRemove.SetFont(Fonts::g_systemFont);
-	
-	ctrlUp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+
+	ctrlUp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	              BS_PUSHBUTTON, 0, IDC_MOVE_UP);
 	ctrlUp.SetWindowText(CTSTRING(MOVE_UP));
 	ctrlUp.SetFont(Fonts::g_systemFont);
-	
-	ctrlDown.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+
+	ctrlDown.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                BS_PUSHBUTTON, 0, IDC_MOVE_DOWN);
 	ctrlDown.SetWindowText(CTSTRING(MOVE_DOWN));
 	ctrlDown.SetFont(Fonts::g_systemFont);
-	
-	ctrlManageGroups.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+
+	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
+	                   BS_PUSHBUTTON, 0, IDC_CONNECT);
+	ctrlConnect.SetWindowText(CTSTRING(CONNECT));
+	ctrlConnect.SetFont(Fonts::g_systemFont);
+
+	ctrlManageGroups.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                        BS_PUSHBUTTON, 0, IDC_MANAGE_GROUPS);
 	ctrlManageGroups.SetWindowText(CTSTRING(MANAGE_GROUPS));
 	ctrlManageGroups.SetFont(Fonts::g_systemFont);
-	
+
 	onlineStatusImg.Create(16, 16, ILC_COLOR32 | ILC_MASK,  0, 2);
 	onlineStatusImg.AddIcon(stateIconOn);
 	onlineStatusImg.AddIcon(stateIconOff);
@@ -932,7 +933,12 @@ void FavoriteHubsFrame::on(FavoriteChanged, const FavoriteHubEntry* entry) noexc
 
 BOOL FavoriteHubsFrame::PreTranslateMessage(MSG* pMsg)
 {
-	return accel.TranslateAccelerator(m_hWnd, pMsg);
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
+	return IsDialogMessage(pMsg);
 }
 
 CFrameWndClassInfo& FavoriteHubsFrame::GetWndClassInfo()

@@ -74,6 +74,7 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 {
 	BaseChatFrame::onCreate(m_hWnd, rcDefault);
 
+	m_hAccel = LoadAccelerators(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_PRIVATE));
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
@@ -205,7 +206,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 			replyTo.user->setLastNick(ou->getIdentity().getNick());
 		p = new PrivateFrame(replyTo, myNick);
 		g_pm_frames.insert(make_pair(replyTo, p));
-		p->CreateEx(WinUtil::g_mdiClient);
+		p->Create(WinUtil::g_mdiClient);
 	}
 	else
 	{
@@ -357,7 +358,7 @@ void PrivateFrame::addLine(const Identity& from, const bool bMyMess, const bool 
 		if (BOOLSETTING(POPUNDER_PM))
 			WinUtil::hiddenCreateEx(this);
 		else
-			CreateEx(WinUtil::g_mdiClient);
+			Create(WinUtil::g_mdiClient);
 	}
 	
 	tstring extra;
@@ -715,6 +716,9 @@ void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
 BOOL PrivateFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
-	if (::TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
 }

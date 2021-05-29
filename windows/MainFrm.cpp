@@ -2913,8 +2913,5 @@ BOOL MainFrame::PreTranslateMessage(MSG* pMsg)
 	if (CMDIFrameWindowImpl<MainFrame>::PreTranslateMessage(pMsg))
 		return TRUE;
 
-	HWND hWnd = MDIGetActive();
-	if (hWnd != NULL && (BOOL)::SendMessage(hWnd, WM_FORWARDMSG, 0, (LPARAM)pMsg))
-		return TRUE;
 	return FALSE;
 }

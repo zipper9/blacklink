@@ -28,7 +28,7 @@
 void TextFrame::openWindow(const tstring& aFileName)
 {
 	TextFrame* frame = new TextFrame(aFileName);
-	frame->CreateEx(WinUtil::g_mdiClient);
+	frame->Create(WinUtil::g_mdiClient);
 }
 
 DWORD CALLBACK TextFrame::EditStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb)
@@ -140,8 +140,3 @@ void TextFrame::on(SettingsManagerListener::Repaint)
 }
 
 #endif
-
-/**
- * @file
- * $Id: TextFrame.cpp,v 1.17 2006/09/04 12:18:49 bigmuscle Exp $
- */

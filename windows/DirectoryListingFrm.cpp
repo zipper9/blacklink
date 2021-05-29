@@ -157,7 +157,7 @@ void DirectoryListingFrame::openWindow(const tstring& aFile, const tstring& aDir
 		if (BOOLSETTING(POPUNDER_FILELIST))
 			aHWND = WinUtil::hiddenCreateEx(frame);
 		else
-			aHWND = frame->CreateEx(WinUtil::g_mdiClient);
+			aHWND = frame->Create(WinUtil::g_mdiClient);
 		if (aHWND)
 		{
 			frame->loadFile(aFile, aDir);
@@ -191,7 +191,7 @@ void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& tx
 	if (BOOLSETTING(POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
-		frame->CreateEx(WinUtil::g_mdiClient);
+		frame->Create(WinUtil::g_mdiClient);
 	frame->loadXML(txt);
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
@@ -204,7 +204,7 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing *dl, c
 	if (BOOLSETTING(POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
-		frame->CreateEx(WinUtil::g_mdiClient);
+		frame->Create(WinUtil::g_mdiClient);
 	frame->setWindowTitle();
 	frame->refreshTree(frame->dl->getRoot(), frame->treeRoot);
 	frame->loading = false;
@@ -355,7 +355,7 @@ int DirectoryListingFrame::getButtonWidth(ResourceManager::Strings id) const
 
 LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_FILELIST));
+	m_hAccel = LoadAccelerators(_Module.GetModuleInstance(), MAKEINTRESOURCE(IDR_FILELIST));
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
@@ -367,16 +367,17 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		SetIcon(icon, TRUE);
 	}
 
-	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
+	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP | DS_CONTROL | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
 	ctrlStatus.SetFont(Fonts::g_systemFont);
+	ctrlStatus.SetWindowLongPtr(GWL_EXSTYLE, ctrlStatus.GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_CONTROLPARENT);
 	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
 
-	ctrlTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
+	ctrlTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
 	WinUtil::setExplorerTheme(ctrlTree);
 	treeContainer.SubclassWindow(ctrlTree);
 
-	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_FILES);
+	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_FILES);
 	listContainer.SubclassWindow(ctrlList);
 	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 
@@ -399,30 +400,25 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	ctrlTree.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 
-	ctrlFind.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
-	                BS_PUSHBUTTON, 0, IDC_FIND);
-	ctrlFind.SetWindowText(CTSTRING(FIND));
-	ctrlFind.SetFont(Fonts::g_systemFont);
+	ctrlListDiff.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_DISABLED | BS_PUSHBUTTON, 0, IDC_FILELIST_DIFF);
+	ctrlListDiff.SetWindowText(CTSTRING(FILE_LIST_DIFF));
+	ctrlListDiff.SetFont(Fonts::g_systemFont);
 
-	ctrlFindPrev.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
-	                    BS_PUSHBUTTON, 0, IDC_PREV);
-	ctrlFindPrev.SetWindowText(CTSTRING(PREV));
-	ctrlFindPrev.SetFont(Fonts::g_systemFont);
-
-	ctrlFindNext.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
-	                    BS_PUSHBUTTON, 0, IDC_NEXT);
-	ctrlFindNext.SetWindowText(CTSTRING(NEXT));
-	ctrlFindNext.SetFont(Fonts::g_systemFont);
-
-	ctrlMatchQueue.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
-	                      BS_PUSHBUTTON, 0, IDC_MATCH_QUEUE);
+	ctrlMatchQueue.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_DISABLED | BS_PUSHBUTTON, 0, IDC_MATCH_QUEUE);
 	ctrlMatchQueue.SetWindowText(CTSTRING(MATCH_QUEUE));
 	ctrlMatchQueue.SetFont(Fonts::g_systemFont);
 
-	ctrlListDiff.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
-	                    BS_PUSHBUTTON, 0, IDC_FILELIST_DIFF);
-	ctrlListDiff.SetWindowText(CTSTRING(FILE_LIST_DIFF));
-	ctrlListDiff.SetFont(Fonts::g_systemFont);
+	ctrlFind.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_DISABLED | BS_PUSHBUTTON, 0, IDC_FIND);
+	ctrlFind.SetWindowText(CTSTRING(FIND));
+	ctrlFind.SetFont(Fonts::g_systemFont);
+
+	ctrlFindPrev.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_DISABLED | BS_PUSHBUTTON, 0, IDC_PREV);
+	ctrlFindPrev.SetWindowText(CTSTRING(PREV));
+	ctrlFindPrev.SetFont(Fonts::g_systemFont);
+
+	ctrlFindNext.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_DISABLED | BS_PUSHBUTTON, 0, IDC_NEXT);
+	ctrlFindNext.SetWindowText(CTSTRING(NEXT));
+	ctrlFindNext.SetFont(Fonts::g_systemFont);
 
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
@@ -482,11 +478,6 @@ LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 	}
 	bHandled = FALSE;
 	return 0;
-}
-
-BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)
-{
-	return accel.TranslateAccelerator(m_hWnd, pMsg);
 }
 
 tstring DirectoryListingFrame::getRootItemText() const
@@ -2788,6 +2779,16 @@ int ThreadedDirectoryListing::run()
 void ThreadedDirectoryListing::notify(int progress)
 {
 	window->PostMessage(WM_SPEAKER, DirectoryListingFrame::PROGRESS | progress);
+}
+
+BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)
+{
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
+	return IsDialogMessage(pMsg);
 }
 
 CFrameWndClassInfo& DirectoryListingFrame::GetWndClassInfo()

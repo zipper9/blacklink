@@ -42,8 +42,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	public CSplitterImpl<DirectoryListingFrame>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
 	public InternetSearchBaseHandler,
-	public CMessageFilter,
-	private TimerHelper
+	private TimerHelper,
+	public CMessageFilter
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
 		static const int MAX_FAV_DIRS = 100;
@@ -432,7 +432,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CButton ctrlFind, ctrlFindNext, ctrlFindPrev;
 		CButton ctrlListDiff;
 		CButton ctrlMatchQueue;
-		CAccelerator accel;
 
 		COLORREF colorShared, colorSharedLighter;
 		COLORREF colorDownloaded, colorDownloadedLighter;

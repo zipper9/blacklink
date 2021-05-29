@@ -22,7 +22,7 @@ class StaticFrame
 			if (g_frame == nullptr)
 			{
 				g_frame = new T();
-				g_frame->CreateEx(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
+				g_frame->Create(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
 				setButtonPressed(ID, true);
 			}
 			else
@@ -55,7 +55,7 @@ class StaticFrame
 			if (g_frame == nullptr)
 			{
 				g_frame = new T();
-				g_frame->CreateEx(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
+				g_frame->Create(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
 				setButtonPressed(ID, true);
 			}
 			else

@@ -180,7 +180,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		bool adjustChatInputSize(BOOL& bHandled);
 		void checkMultiLine();
 		void insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHandled);
-		void setBBCodeForCEdit(WORD wID, HWND hwndCtl);
+		void insertBBCode(WORD wID, HWND hwndCtl);
 };
 
 #endif // BASE_CHAT_FRAME_H_

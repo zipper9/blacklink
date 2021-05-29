@@ -56,13 +56,13 @@ static ResourceManager::Strings columnNames[] =
 // Frame creation
 LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_ADLSEARCH));
+	m_hAccel = LoadAccelerators(_Module.GetModuleInstance(), MAKEINTRESOURCE(IDR_ADLSEARCH));
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
 
 	// Create list control
-	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_ADLLIST);
 	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	setListViewColors(ctrlList);
@@ -79,33 +79,27 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlList.SetColumnOrderArray(COLUMN_LAST, columnIndexes);
 	
 	// Create buttons
-	ctrlAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	               BS_PUSHBUTTON, 0, IDC_ADD);
+	ctrlAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_ADD);
 	ctrlAdd.SetWindowText(CTSTRING(NEW));
 	ctrlAdd.SetFont(Fonts::g_systemFont);
 	
-	ctrlEdit.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                BS_PUSHBUTTON, 0, IDC_EDIT);
+	ctrlEdit.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_EDIT);
 	ctrlEdit.SetWindowText(CTSTRING(PROPERTIES));
 	ctrlEdit.SetFont(Fonts::g_systemFont);
 	
-	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                  BS_PUSHBUTTON, 0, IDC_REMOVE);
+	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_REMOVE);
 	ctrlRemove.SetWindowText(CTSTRING(REMOVE));
 	ctrlRemove.SetFont(Fonts::g_systemFont);
 	
-	ctrlMoveUp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                  BS_PUSHBUTTON, 0, IDC_MOVE_UP);
+	ctrlMoveUp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_MOVE_UP);
 	ctrlMoveUp.SetWindowText(CTSTRING(MOVE_UP));
 	ctrlMoveUp.SetFont(Fonts::g_systemFont);
 	
-	ctrlMoveDown.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                    BS_PUSHBUTTON, 0, IDC_MOVE_DOWN);
+	ctrlMoveDown.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_MOVE_DOWN);
 	ctrlMoveDown.SetWindowText(CTSTRING(MOVE_DOWN));
 	ctrlMoveDown.SetFont(Fonts::g_systemFont);
 	
-	ctrlHelp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                BS_PUSHBUTTON, 0, IDC_ADLS_HELP);
+	ctrlHelp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_ADLS_HELP);
 	ctrlHelp.SetWindowText(CTSTRING(WHATS_THIS));
 	ctrlHelp.SetFont(Fonts::g_systemFont);
 	
@@ -606,7 +600,12 @@ void ADLSearchFrame::on(SettingsManagerListener::Repaint)
 
 BOOL ADLSearchFrame::PreTranslateMessage(MSG* pMsg)
 {
-	return accel.TranslateAccelerator(m_hWnd, pMsg);
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
+	return IsDialogMessage(pMsg);
 }
 
 CFrameWndClassInfo& ADLSearchFrame::GetWndClassInfo()

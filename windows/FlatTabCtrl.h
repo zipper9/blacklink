@@ -1231,7 +1231,6 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	BEGIN_MSG_MAP(thisClass)
 	MESSAGE_HANDLER(WM_CLOSE, onClose)
 	MESSAGE_HANDLER(WM_SYSCOMMAND, onSysCommand)
-	MESSAGE_HANDLER(WM_FORWARDMSG, onForwardMsg)
 	MESSAGE_HANDLER(WM_CREATE, onCreate)
 	MESSAGE_HANDLER(WM_MDIACTIVATE, onMDIActivate)
 	MESSAGE_HANDLER(WM_DESTROY, onDestroy)
@@ -1303,12 +1302,6 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 #else
 		return NFR_ANSI;
 #endif
-	}
-
-	// All MDI windows must have this in wtl it seems to handle ctrl-tab and so on...
-	LRESULT onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/)
-	{
-		return baseClass::PreTranslateMessage((LPMSG)lParam);
 	}
 
 	LRESULT onSysCommand(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL &bHandled)
