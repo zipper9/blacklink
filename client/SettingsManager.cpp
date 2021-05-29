@@ -289,6 +289,7 @@ static const char* g_settingTags[] =
 	"SendBloom",
 	"SendExtJSON",
 	"SendDBParam",
+	"UseSaltPass",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
@@ -952,6 +953,7 @@ void SettingsManager::setDefaults()
 	setDefault(SEND_BLOOM, TRUE);
 	setDefault(SEND_EXT_JSON, TRUE);
 	setDefault(SEND_DB_PARAM, TRUE);
+	setDefault(USE_SALT_PASS, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);
@@ -1094,7 +1096,7 @@ void SettingsManager::setDefaults()
 
 	// User list colors
 	setDefault(RESERVED_SLOT_COLOR, RGB(255, 0, 128));
-	setDefault(IGNORED_COLOR, RGB(192, 192, 192));
+	setDefault(IGNORED_COLOR, RGB(128, 128, 128));
 	setDefault(FAVORITE_COLOR, RGB(0, 128, 255));
 	setDefault(NORMAL_COLOR, RGB(0, 0, 0));
 	setDefault(FIREBALL_COLOR, RGB(0, 0, 0));

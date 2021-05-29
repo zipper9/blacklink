@@ -100,7 +100,8 @@ class NmdcHub : public Client, private Flags
 #endif
 			SUPPORTS_NICKRULE    = 0x10,
 			SUPPORTS_SEARCH_TTHS = 0x20, // $SA and $SP
-			SUPPORTS_SEARCHRULE  = 0x40
+			SUPPORTS_SEARCHRULE  = 0x40,
+			SUPPORTS_SALT_PASS   = 0x80
 		};
 		
 		enum
@@ -117,6 +118,7 @@ class NmdcHub : public Client, private Flags
 
 		string   lastMyInfo;
 		string   lastExtJSONInfo;
+		string   salt;
 		uint64_t lastUpdate;
 		unsigned hubSupportFlags;
 		char lastModeChar; // last Mode MyINFO

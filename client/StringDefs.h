@@ -1257,6 +1257,7 @@ enum Strings   // @DontAdd
 	SETTINGS_SELECT_WINDOW_COLOR, // "Window color"
 	SETTINGS_SEND_BLOOM, // "Use Bloom extension (ADC only)"
 	SETTINGS_SEND_EXT_JSON, // "Use ExtJSON extension (NMDC only)"
+	SETTINGS_USE_SALTPASS, // "Use SaltPass extension (NMDC only)"
 	SETTINGS_SEND_UNKNOWN_COMMANDS, // "Send unknown /commands to the hub"
 	SETTINGS_SHARE_HIDDEN, // "Share hidden files"
 	SETTINGS_SHARE_SIZE, // "Total size:"

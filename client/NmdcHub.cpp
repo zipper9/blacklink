@@ -984,6 +984,10 @@ void NmdcHub::supportsParse(const string& param)
 		{
 			flags |= SUPPORTS_SEARCH_TTHS;
 		}
+		else if (tok == "SaltPass")
+		{
+			flags |= SUPPORTS_SALT_PASS;
+		}
 	}
 	csState.lock();
 	hubSupportFlags |= flags;
@@ -1077,6 +1081,8 @@ void NmdcHub::lockParse(const string& aLine)
 			feat += " TTHS";
 			if (CryptoManager::TLSOk())
 				feat += " TLS";
+			if (BOOLSETTING(USE_SALT_PASS))
+				feat += " SaltPass";
 			
 			feat += '|';
 			send(feat);
@@ -1519,6 +1525,10 @@ void NmdcHub::onLine(const string& aLine)
 		csState.lock();
 		string myNick = this->myNick;
 		string pwd = storedPassword;
+		if (hubSupportFlags & SUPPORTS_SALT_PASS)
+			salt = param;
+		else
+			salt.clear();
 		csState.unlock();
 		getUser(myNick);
 		setRegistered();
@@ -1739,12 +1749,28 @@ void NmdcHub::hubMessage(const string& message, bool thirdPerson)
 
 void NmdcHub::password(const string& pwd, bool setPassword)
 {
-	if (setPassword)
+	string cmd = "$MyPass ";
+	string useSalt;
 	{
 		LOCK(csState);
-		storedPassword = pwd;
+		if (setPassword) storedPassword = pwd;
+		useSalt = salt;
 	}
-	send("$MyPass " + fromUtf8(pwd) + '|');
+	if (!useSalt.empty())
+	{
+		size_t saltBytes = salt.size() * 5 / 8;
+		std::unique_ptr<uint8_t[]> buf(new uint8_t[saltBytes]);
+		Encoder::fromBase32(useSalt.c_str(), buf.get(), saltBytes);
+		TigerHash th;
+		string localPwd = fromUtf8(pwd);
+		th.update(localPwd.data(), localPwd.length());
+		th.update(buf.get(), saltBytes);
+		cmd += Encoder::toBase32(th.finalize(), TigerHash::BYTES);
+	}
+	else
+		cmd += fromUtf8(pwd);
+	cmd += '|';
+	send(cmd);
 }
 
 bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
@@ -2180,6 +2206,7 @@ void NmdcHub::onConnected() noexcept
 	
 	{
 		LOCK(csState);
+		salt.clear();
 		if (state != STATE_PROTOCOL)
 			return;
 		lastModeChar = 0;

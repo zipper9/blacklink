@@ -268,6 +268,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEND_BLOOM,
 			SEND_EXT_JSON,
 			SEND_DB_PARAM,
+			USE_SALT_PASS,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			MAX_HUB_USER_COMMANDS,
