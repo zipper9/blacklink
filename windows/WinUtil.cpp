@@ -547,6 +547,17 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID* id)
 	return result;
 }
 
+static void setFolder(IFileOpenDialog* fileOpen, const tstring& path)
+{
+	IShellItem* shellItem;
+	HRESULT hr = SHCreateItemFromParsingName(path.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
+	if (SUCCEEDED(hr) && shellItem)
+	{
+		fileOpen->SetFolder(shellItem);
+		shellItem->Release();
+	}
+}
+
 bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
 {
 	bool result = false;
@@ -578,14 +589,15 @@ bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& 
 			}
 			if (defExt) pFileOpen->SetDefaultExtension(defExt);
 			if (!initialDir.empty())
+				setFolder(pFileOpen, initialDir);
+			if (!target.empty())
 			{
-				IShellItem* shellItem;
-				hr = SHCreateItemFromParsingName(initialDir.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
-				if (SUCCEEDED(hr) && shellItem)
-				{
-					pFileOpen->SetFolder(shellItem);
-					shellItem->Release();
-				}
+				auto pos = target.rfind(PATH_SEPARATOR);
+				if (pos != tstring::npos && initialDir.empty())
+					setFolder(pFileOpen, target.substr(0, pos));
+				if (pos != tstring::npos)
+					target.erase(0, pos + 1);
+				pFileOpen->SetFileName(target.c_str());
 			}
 			hr = pFileOpen->Show(owner);
 			if (SUCCEEDED(hr))
