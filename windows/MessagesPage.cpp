@@ -6,15 +6,29 @@
 #include "stdafx.h"
 #include "MessagesPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 3, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 4, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align3 = { 5, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align4 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_SETTINGS_DEFAULT_AWAY_MSG, ResourceManager::SETTINGS_DEFAULT_AWAY_MSG },	
-	{ IDC_TIME_AWAY, ResourceManager::SET_SECONDARY_AWAY },
-	{ IDC_AWAY_TO, ResourceManager::SETCZDC_TO },	
-	{ IDC_BUFFER_STR, ResourceManager::BUFFER_STR },
-	{ IDC_CAPTION_CHAT_LINES, ResourceManager::SETTINGS_CHAT_HISTORY },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_SETTINGS_DEFAULT_AWAY_MSG, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_TIME_AWAY, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AWAY_FROM, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AWAY_START_TIME, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_AWAY_TO, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_AWAY_END_TIME, 0, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_BUFFER_STR, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_CAPTION_CHAT_LINES, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_BUFFERSIZE, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_CHAT_LINES, 0, UNSPEC, UNSPEC, 0, &align4 }
 };
 
 static const PropPage::Item items[] =
@@ -56,26 +70,19 @@ static const PropPage::ListItem listItems[] =
 
 LRESULT MessagesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_MESSAGES_BOOLEANS));
-	
-	ctrlList.Attach(GetDlgItem(IDC_MESSAGES_BOOLEANS));
-	
-	PropPage::translate((HWND)(*this), texts);
-	
-	timeCtrlBegin.Attach(GetDlgItem(IDC_AWAY_START_TIME));
-	timeCtrlEnd.Attach(GetDlgItem(IDC_AWAY_END_TIME));
-	
+
+	CComboBox timeCtrlBegin(GetDlgItem(IDC_AWAY_START_TIME));
+	CComboBox timeCtrlEnd(GetDlgItem(IDC_AWAY_END_TIME));
+
 	WinUtil::fillTimeValues(timeCtrlBegin);
 	WinUtil::fillTimeValues(timeCtrlEnd);
-	
+
 	timeCtrlBegin.SetCurSel(SETTING(SECONDARY_AWAY_START));
 	timeCtrlEnd.SetCurSel(SETTING(SECONDARY_AWAY_END));
-	
-	timeCtrlBegin.Detach();
-	timeCtrlEnd.Detach();
-	
+
 	fixControls();
-	
 	return TRUE;
 }
 
@@ -88,24 +95,18 @@ LRESULT MessagesPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 void MessagesPage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_MESSAGES_BOOLEANS));
-	
-	timeCtrlBegin.Attach(GetDlgItem(IDC_AWAY_START_TIME));
-	timeCtrlEnd.Attach(GetDlgItem(IDC_AWAY_END_TIME));
-	
+
+	CComboBox timeCtrlBegin(GetDlgItem(IDC_AWAY_START_TIME));
+	CComboBox timeCtrlEnd(GetDlgItem(IDC_AWAY_END_TIME));
+
 	g_settings->set(SettingsManager::SECONDARY_AWAY_START, timeCtrlBegin.GetCurSel());
 	g_settings->set(SettingsManager::SECONDARY_AWAY_END, timeCtrlEnd.GetCurSel());
-	
-	timeCtrlBegin.Detach();
-	timeCtrlEnd.Detach();
 }
 
 void MessagesPage::fixControls()
 {
 	BOOL state = IsDlgButtonChecked(IDC_TIME_AWAY) == BST_CHECKED;
-	::EnableWindow(GetDlgItem(IDC_AWAY_START_TIME), state);
-	::EnableWindow(GetDlgItem(IDC_AWAY_END_TIME), state);
-	::EnableWindow(GetDlgItem(IDC_SECONDARY_AWAY_MESSAGE), state);
-	::EnableWindow(GetDlgItem(IDC_SECONDARY_AWAY_MSG), state);
-	::EnableWindow(GetDlgItem(IDC_AWAY_TO), state);
+	GetDlgItem(IDC_AWAY_START_TIME).EnableWindow(state);
+	GetDlgItem(IDC_AWAY_END_TIME).EnableWindow(state);
+	GetDlgItem(IDC_SECONDARY_AWAY_MESSAGE).EnableWindow(state);
 }
-

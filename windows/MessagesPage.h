@@ -39,9 +39,6 @@ class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 
 	protected:
 		void fixControls();
-		
-		CComboBox timeCtrlBegin, timeCtrlEnd;		
-		CListViewCtrl ctrlList;
 };
 
 #endif //MESSAGES_PAGE_H

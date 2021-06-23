@@ -9,10 +9,15 @@
 #include "../client/ShareManager.h"
 #include "LineDlg.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
 static const WinUtil::TextItem texts1[] =
 {
@@ -24,25 +29,34 @@ static const WinUtil::TextItem texts1[] =
 	{ 0, ResourceManager::Strings() }
 };
 
-static const WinUtil::TextItem texts2[] =
+static const DialogLayout::Align align1 = { 7, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 8, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align3 = { 14, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align4 = { 15, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align5 = { 17, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align6 = { 18, DialogLayout::SIDE_RIGHT, U_DU(4) };
+
+static const DialogLayout::Item layoutItems2[] =
 {
-	{ IDC_SHARING_OPTIONS, ResourceManager::SETTINGS_SHARING_OPTIONS },
-	{ IDC_SHAREHIDDEN, ResourceManager::SETTINGS_SHARE_HIDDEN },
-	{ IDC_SHARESYSTEM, ResourceManager::SETTINGS_SHARE_SYSTEM },
-	{ IDC_SHAREVIRTUAL, ResourceManager::SETTINGS_SHARE_VIRTUAL },
-	{ IDC_SHARING_AUTO_REFRESH, ResourceManager::SETTINGS_AUTOMATIC_REFRESH },
-	{ IDC_REFRESH_SHARE_ON_STARTUP, ResourceManager::SETTINGS_REFRESH_ON_STARTUP },
-	{ IDC_CAPTION_REFRESH_SHARE, ResourceManager::SETTINGS_REFRESH_EVERY },
-	{ IDC_CAPTION_MINUTES, ResourceManager::SETTINGS_MINUTES },
-	{ IDC_CAPTION_0_TO_DISABLE, ResourceManager::SETTINGS_ZERO_TO_DISABLE },
-	{ IDC_SHARING_HASHING, ResourceManager::SETTINGS_HASHING_OPTIONS },
-	{ IDC_USE_FAST_HASH, ResourceManager::SETTINGS_USE_FAST_HASH },
-	{ IDC_TTH_IN_STREAM, ResourceManager::SETTINGS_SAVE_TTH_IN_NTFS_FILESTREAM },
-	{ IDC_CAPTION_MIN_SIZE, ResourceManager::SETTINGS_MIN_SIZE_SAVE_TREES },
-	{ IDC_SETTINGS_MB, ResourceManager::MB },
-	{ IDC_CAPTION_MAX_HASH_SPEED, ResourceManager::SETTINGS_MAX_HASH_SPEED },
-	{ IDC_SETTINGS_MBS, ResourceManager::MBPS },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_SHARING_OPTIONS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SHAREHIDDEN, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SHARESYSTEM, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SHAREVIRTUAL, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SHARING_AUTO_REFRESH, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_REFRESH_SHARE_ON_STARTUP, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_REFRESH_SHARE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AUTO_REFRESH_TIME, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CAPTION_MINUTES, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_CAPTION_0_TO_DISABLE, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align1 },
+	{ IDC_SHARING_HASHING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_USE_FAST_HASH, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_TTH_IN_STREAM, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_MIN_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_MIN_FILE_SIZE, 0, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_SETTINGS_MB, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align4 },
+	{ IDC_CAPTION_MAX_HASH_SPEED, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_MAX_HASH_SPEED, 0, UNSPEC, UNSPEC, 0, &align5 },
+	{ IDC_SETTINGS_MBS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align6 }
 };
 
 static const PropPage::Item items[] =
@@ -382,13 +396,16 @@ LRESULT ShareGroupsPage::onSplitAction(int, LPNMHDR pnmh, BOOL&)
 LRESULT ShareOptionsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
-	WinUtil::translate(*this, texts2);
-	
-	CUpDownCtrl updown;
-	SET_MIN_MAX(IDC_MIN_FILE_SIZE_SPIN, 1, 1000);
-	//SET_MIN_MAX(IDC_REFRESH_SPIN, 0, 3000);
-	SET_MIN_MAX(IDC_MAX_HASH_SPEED_SPIN, 0, 999);
-	
+	DialogLayout::layout(m_hWnd, layoutItems2, _countof(layoutItems2));
+
+	CUpDownCtrl spin1(GetDlgItem(IDC_MIN_FILE_SIZE_SPIN));
+	spin1.SetRange32(1, 1000);
+	spin1.SetBuddy(GetDlgItem(IDC_MIN_FILE_SIZE));
+
+	CUpDownCtrl spin2(GetDlgItem(IDC_MAX_HASH_SPEED_SPIN));
+	spin2.SetRange32(0, 999);
+	spin2.SetBuddy(GetDlgItem(IDC_MAX_HASH_SPEED));
+
 	return TRUE;
 }
 

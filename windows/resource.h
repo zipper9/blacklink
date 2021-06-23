@@ -386,7 +386,6 @@
 #define IDC_SETTINGS_DOWNLOAD_DIRECTORY 1235
 #define IDC_SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY 1236
 #define IDC_SETTINGS_PORT_TCP           1237
-#define IDC_CAPTION_FILE_NAME           1237
 #define IDC_SETTINGS_DOWNLOAD_LIMITS    1238
 #define IDC_NETWORK_WINFIREWALL_STATUS  1238
 #define IDC_SETTINGS_DOWNLOADS_MAX      1239
@@ -398,12 +397,14 @@
 #define IDC_NTFS_TTH                    1245
 #define IDC_CAPTION_MAGNET              1246
 #define IDC_SETTINGS_FILES_MAX          1247
+#define IDC_CAPTION_FILE_NAME           1248
 #define IDC_SETTINGS_UPLOADS_MIN_SPEED  1249
 #define IDC_SETTINGS_UPLOADS_SLOTS      1250
 #define IDC_SETTINGS_APPEARANCE_OPTIONS 1251
 #define IDC_SETTINGS_DEFAULT_AWAY_MSG   1252
 #define IDC_SETTINGS_LANGUAGE           1253
 #define IDC_SETTINGS_DEFAULT_AWAY_MSG2  1254
+#define IDC_SETTINGS_HINT3              1255
 #define IDC_SETTINGS_LOGGING            1256
 #define IDC_SETTINGS_LOG_DIR            1257
 #define IDC_SETTINGS_ROLLBACK           1258
@@ -417,6 +418,8 @@
 #define IDC_REM_AS_FAVORITE             1266
 #define IDC_AUTO_START_FAVORITE         1267
 #define IDC_SETTINGS_SEARCH_HISTORY     1268
+#define IDC_SETTINGS_HINT1              1269
+#define IDC_SETTINGS_HINT2              1270
 #define IDC_ADLSP_SEARCH                1271
 #define IDC_ADLSP_TYPE                  1272
 #define IDC_ADLSP_SIZE_MIN              1273
@@ -469,7 +472,7 @@
 #define IDC_TOOLBAR_IMAGE               1324
 #define IDC_TREE                        1326
 #define IDC_STATIC4                     1327
-#define IDC_STATICb                     1329
+#define IDC_SETTINGS_SLOTS_PER_HUB      1329
 #define IDC_IMAGEBROWSE                 1330
 #define IDC_CAPTION_MAX_HASH_SPEED      1332
 #define IDC_TOOLBAR_POSSIBLE            1333
@@ -698,15 +701,14 @@
 #define IDC_POPUP_TIME                  1593
 #define IDC_POPUP_TIME_STR              1594
 #define IDC_SECS                        1596
-#define IDC_SECONDARY_AWAY_MSG          1597
 #define IDC_MISC_APPEARANCE             1598
 #define IDC_TIME_AWAY                   1599
 #define IDC_AWAY_START_TIME             1600
 #define IDC_AWAY_END_TIME               1601
 #define IDC_AWAY_TO                     1602
 #define IDC_SECONDARY_AWAY_MESSAGE      1603
-#define IDC_FLINK                       1604
 #define IDC_CHECK1                      1605
+#define IDC_AWAY_FROM                   1606
 #define IDC_PROT_FAVS                   1608
 #define IDC_EXCL_CHECKS                 1609
 #define IDC_GOTO_ORIGINAL               1610
@@ -955,7 +957,7 @@
 #define IDC_GRANT_IP_GROUP              1925
 #define IDC_EXTRA_SLOT_BY_IP            1926
 #define IDC_GRANT_SLOTS_FOR_OTHER_IP    1928
-#define IDC_GRANTIP_INI_STAIC           1929
+#define IDC_CAPTION_GRANTIP_INI         1929
 #define IDC_GRANTIP_INI                 1930
 #define IDC_DCLS_ANOTHER_FOLDER         1936
 #define IDC_DCLS_GENERATORBORDER        1939
@@ -1239,7 +1241,7 @@
 #define IDC_HUBS_SWITCHPANELS           2335
 #define IDC_COPY_EXACT_SIZE             2336
 #define IDC_SPEED_STATIC                2339
-#define IDC_SEARCH_FORGET               2344
+#define IDC_SAVE_SEARCH                 2344
 #define IDC_THEME_COMBO2                2348
 #define IDC_ABOUTTAB                    2351
 #define IDC_CONVERT_TTH_HISTORY         2352

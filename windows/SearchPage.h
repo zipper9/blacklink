@@ -19,7 +19,7 @@ class SearchPage : public CPropertyPage<IDD_SEARCH_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(SearchPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_SEARCH_FORGET, onFixControls)
+		COMMAND_ID_HANDLER(IDC_SAVE_SEARCH, onFixControls)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

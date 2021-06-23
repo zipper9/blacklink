@@ -64,6 +64,7 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		magnetClick.SetCurSel(action + 1);
 	}
 	
+	fixControls();
 	return TRUE;
 }
 
@@ -83,21 +84,21 @@ void DCLSTPage::write()
 	}
 }
 
-LRESULT DCLSTPage::OnClickedDCLSTFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DCLSTPage::onClickedDCLSTFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	CheckDCLSTPath(IsDlgButtonChecked(IDC_DCLS_ANOTHER_FOLDER) == BST_CHECKED);
-	return NULL;
+	fixControls();
+	return 0;
 }
 
-void DCLSTPage::CheckDCLSTPath(BOOL isEnabled)
+void DCLSTPage::fixControls()
 {
-	::EnableWindow(GetDlgItem(IDC_DCLS_FOLDER), isEnabled);
-	::EnableWindow(GetDlgItem(IDC_PREVIEW_BROWSE), isEnabled);
+	BOOL enable = IsDlgButtonChecked(IDC_DCLS_ANOTHER_FOLDER) == BST_CHECKED;
+	GetDlgItem(IDC_DCLS_FOLDER).EnableWindow(enable);
+	GetDlgItem(IDC_PREVIEW_BROWSE).EnableWindow(enable);
 }
 
-LRESULT DCLSTPage::OnBrowseClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DCLSTPage::onBrowseClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	// Select Folder
 	tstring target;
 	if (WinUtil::browseDirectory(target, m_hWnd))
 	{
@@ -106,6 +107,5 @@ LRESULT DCLSTPage::OnBrowseClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 		if (ctrlName.GetWindowTextLength() == 0)
 			ctrlName.SetWindowText(Util::getLastDir(target).c_str());
 	}
-	
-	return NULL;
+	return 0;
 }

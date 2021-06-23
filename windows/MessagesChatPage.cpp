@@ -5,17 +5,26 @@
 #include "stdafx.h"
 #include "MessagesChatPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 2, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 3, DialogLayout::SIDE_LEFT, U_DU(4) };
+static const DialogLayout::Align align3 = { 4, DialogLayout::SIDE_LEFT, 0 };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_PROTECT_PRIVATE, ResourceManager::SETTINGS_PROTECT_PRIVATE },
-	{ IDC_SETTINGS_PASSWORD, ResourceManager::SETTINGS_PASSWORD },
-	{ IDC_SETTINGS_PASSWORD_HINT, ResourceManager::SETTINGS_PASSWORD_HINT },
-	{ IDC_SETTINGS_PASSWORD_OK_HINT, ResourceManager::SETTINGS_PASSWORD_OK_HINT },
-	{ IDC_PROTECT_PRIVATE_RND, ResourceManager::SETTINGS_PROTECT_PRIVATE_RND },
-	{ IDC_PROTECT_PRIVATE_SAY, ResourceManager::SETTINGS_PROTECT_PRIVATE_SAY },
-	{ IDC_PM_PASSWORD_GENERATE, ResourceManager::WIZARD_NICK_RND },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_PROTECT_PRIVATE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_PASSWORD, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_PM_PASSWORD_GENERATE, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_PASSWORD, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
+	{ IDC_PROTECT_PRIVATE_RND, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align3 },
+	{ IDC_SETTINGS_PASSWORD_HINT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_PASSWORD_OK_HINT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_PROTECT_PRIVATE_SAY, FLAG_TRANSLATE, AUTO, UNSPEC }
 };
 
 static const PropPage::Item items[] =
@@ -60,7 +69,8 @@ LRESULT MessagesChatPage::onInitDialog_chat(UINT /*uMsg*/, WPARAM /*wParam*/, LP
 {
 	ctrlList.Attach(GetDlgItem(IDC_MESSAGES_CHAT_BOOLEANS));
 	PropPage::read(*this, items, listItems, ctrlList);
-	
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+
 	ctrlTooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 	ctrlTooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	ATLASSERT(ctrlTooltip.IsWindow());
@@ -72,8 +82,7 @@ LRESULT MessagesChatPage::onInitDialog_chat(UINT /*uMsg*/, WPARAM /*wParam*/, LP
 	ctrlTooltip.AddTool(ctrlRnd, ResourceManager::PROTECT_PRIVATE_RND_TOOLTIP);
 	ctrlTooltip.SetMaxTipWidth(256);
 	ctrlTooltip.Activate(TRUE);
-	
-	PropPage::translate(*this, texts);
+
 	fixControls();
 	return TRUE;
 }
@@ -109,6 +118,6 @@ LRESULT MessagesChatPage::onRandomPassword(WORD /*wNotifyCode*/, WORD /*wID*/, H
 
 LRESULT MessagesChatPage::onClickedHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	MessageBox(CTSTRING(PRIVATE_PASSWORD_HELP), CTSTRING(PRIVATE_PASSWORD_HELP_DESC), MB_OK | MB_ICONINFORMATION);
+	MessageBox(CTSTRING(PRIVATE_PASSWORD_HELP), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
 	return 0;
 }

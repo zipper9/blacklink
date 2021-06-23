@@ -20,19 +20,22 @@
 #include "Resource.h"
 #include "SoundsPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 #include <mmsystem.h>
 
-static const PropPage::TextItem texts[] =
-{
-	{ IDC_SOUND_ENABLE, ResourceManager::ENABLE_SOUNDS },
-	{ IDC_PRIVATE_MESSAGE_BEEP, ResourceManager::SETTINGS_PM_BEEP },
-	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, ResourceManager::SETTINGS_PM_BEEP_OPEN },
-	{ IDC_CZDC_SOUND, ResourceManager::SETTINGS_SOUNDS },
-	{ IDC_PLAY, ResourceManager::PLAY },
-	{ IDC_NONE, ResourceManager::NONE },
-	{ IDC_DEFAULT, ResourceManager::DEFAULT },
-	{ IDC_SOUNDS, ResourceManager::SOUND_THEME },
-	{ 0, ResourceManager::Strings() }
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Item layoutItems[] =
+{	
+	{ IDC_SOUND_ENABLE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SOUNDS, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_PLAY, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_NONE, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_DEFAULT, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_PRIVATE_MESSAGE_BEEP, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, FLAG_TRANSLATE, AUTO, UNSPEC }
 };
 
 static const PropPage::Item items[] =
@@ -89,7 +92,7 @@ static const TCHAR* defaultSounds[] =
 
 LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
 	
 	ctrlSoundTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));

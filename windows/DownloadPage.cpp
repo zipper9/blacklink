@@ -20,24 +20,13 @@
 
 #include "DownloadPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 
-PropPage::TextItem DownloadPage::texts[] =
-{
-	{ IDC_SETTINGS_DIRECTORIES, ResourceManager::SETTINGS_DIRECTORIES },
-	{ IDC_SETTINGS_DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_DOWNLOAD_DIRECTORY },
-	//{ IDC_BROWSEDIR, ResourceManager::BROWSE_ACCEL }, // [~] JhaoDa, not necessary any more
-	{ IDC_SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY },
-	//{ IDC_BROWSETEMPDIR, ResourceManager::BROWSE }, // [~] JhaoDa, not necessary any more
-	{ IDC_SETTINGS_DOWNLOAD_LIMITS, ResourceManager::SETTINGS_DOWNLOAD_LIMITS },
-	{ IDC_SETTINGS_DOWNLOADS_MAX, ResourceManager::SETTINGS_DOWNLOADS_MAX },
-	{ IDC_SETTINGS_FILES_MAX, ResourceManager::SETTINGS_FILES_MAX },
-	{ IDC_EXTRA_DOWNLOADS_MAX, ResourceManager::SETTINGS_CZDC_EXTRA_DOWNLOADS },
-	{ IDC_SETTINGS_DOWNLOADS_SPEED_PAUSE, ResourceManager::SETTINGS_DOWNLOADS_SPEED_PAUSE },
-	{ IDC_SETTINGS_SPEEDS_NOT_ACCURATE, ResourceManager::SETTINGS_SPEEDS_NOT_ACCURATE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
-};
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
-PropPage::Item DownloadPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_TEMP_DOWNLOAD_DIRECTORY, SettingsManager::TEMP_DOWNLOAD_DIRECTORY, PropPage::T_STR },
 	{ IDC_DOWNLOAD_DIR, SettingsManager::DOWNLOAD_DIRECTORY, PropPage::T_STR },
@@ -48,36 +37,60 @@ PropPage::Item DownloadPage::items[] =
 	{ 0, 0, PropPage::T_END }
 };
 
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { -2, DialogLayout::SIDE_RIGHT, U_DU(4) };
+
+static const DialogLayout::Item layoutItems[] =
+{
+	{ IDC_SETTINGS_DIRECTORIES, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_DOWNLOAD_DIRECTORY, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_DIRECTORIES, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_FILES_MAX, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_SETTINGS_DOWNLOADS_MAX, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_EXTRA_DOWNLOADS_MAX, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_SETTINGS_DOWNLOADS_SPEED_PAUSE, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_FILES, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_DOWNLOADS, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_EXTRA_DOWN_SLOT, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_MAXSPEED, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_SETTINGS_HINT1, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_HINT2, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_HINT3, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_SPEEDS_NOT_ACCURATE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_DOWNLOAD_LIMITS, FLAG_TRANSLATE, UNSPEC, UNSPEC }
+};
+
 LRESULT DownloadPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
 	
-	CUpDownCtrl spin;
-	spin.Attach(GetDlgItem(IDC_FILESPIN));
-	spin.SetRange32(0, 100);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_SLOTSSPIN));
-	spin.SetRange32(0, 100);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_SPEEDSPIN));
-	spin.SetRange32(0, 10000);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_EXTRASLOTSSPIN));
-	spin.SetRange32(0, 100);
-	spin.Detach();
-	// Do specialized reading here
+	CUpDownCtrl spin1(GetDlgItem(IDC_FILESPIN));
+	spin1.SetRange32(0, 100);
+	spin1.SetBuddy(GetDlgItem(IDC_FILES));
+
+	CUpDownCtrl spin2(GetDlgItem(IDC_SLOTSSPIN));
+	spin2.SetRange32(0, 100);
+	spin2.SetBuddy(GetDlgItem(IDC_DOWNLOADS));
+
+	CUpDownCtrl spin3(GetDlgItem(IDC_SPEEDSPIN));
+	spin3.SetRange32(0, 10000);	
+	spin3.SetBuddy(GetDlgItem(IDC_MAXSPEED));
+
+	CUpDownCtrl spin4(GetDlgItem(IDC_EXTRASLOTSSPIN));
+	spin4.SetRange32(0, 100);
+	spin4.SetBuddy(GetDlgItem(IDC_EXTRA_DOWN_SLOT));
+
 	return TRUE;
 }
 
 void DownloadPage::write()
 {
 	PropPage::write(*this, items);
-	const tstring l_dir = Text::toT(SETTING(TEMP_DOWNLOAD_DIRECTORY));
-	if (!l_dir.empty())
-	{
-		File::ensureDirectory(l_dir);
-	}
+	const tstring dir = Text::toT(SETTING(TEMP_DOWNLOAD_DIRECTORY));
+	if (!dir.empty())
+		File::ensureDirectory(dir);
 }
 
 LRESULT DownloadPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

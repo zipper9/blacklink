@@ -19,22 +19,31 @@
 #include "stdafx.h"
 #include "TabsPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
+{
+	{ IDC_SETTINGS_TABS_OPTIONS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_BOLD_CONTENTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_TABSTEXT, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_SETTINGS_TAB_WIDTH, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_SETTINGS_MAX_TAB_ROWS, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_TABSCOMBO, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_TAB_WIDTH, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_MAX_TAB_ROWS, 0, UNSPEC, UNSPEC, 0, &align1 }
+};
 
 static const PropPage::Item items[] =
 {
 	{ IDC_TAB_WIDTH, SettingsManager::TAB_SIZE, PropPage::T_INT },
 	{ IDC_MAX_TAB_ROWS, SettingsManager::MAX_TAB_ROWS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
-};
-
-static const PropPage::TextItem textItem[] =
-{
-	{ IDC_SETTINGS_TABS_OPTIONS, ResourceManager::SETTINGS_TABS_OPTIONS },
-	{ IDC_SETTINGS_BOLD_CONTENTS, ResourceManager::SETTINGS_BOLD_OPTIONS },
-	{ IDC_TABSTEXT, ResourceManager::TABS_POSITION },
-	{ IDC_SETTINGS_TAB_WIDTH, ResourceManager::SETTINGS_TAB_WIDTH },
-	{ IDC_SETTINGS_MAX_TAB_ROWS, ResourceManager::SETTINGS_MAX_TAB_ROWS },
-	{ 0, ResourceManager::Strings() }
 };
 
 static const PropPage::ListItem optionItems[] =
@@ -64,16 +73,18 @@ LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ctrlOption.Attach(GetDlgItem(IDC_TABS_OPTIONS));
 	ctrlBold.Attach(GetDlgItem(IDC_BOLD_BOOLEANS));
 
-	PropPage::translate(m_hWnd, textItem);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(m_hWnd, items, optionItems, ctrlOption);
 	PropPage::read(m_hWnd, nullptr, boldItems, ctrlBold);
 	
 	CUpDownCtrl updownWidth(GetDlgItem(IDC_SPIN_TAB_WIDTH));
 	updownWidth.SetRange32(7, 80);
+	updownWidth.SetBuddy(GetDlgItem(IDC_TAB_WIDTH));
 
 	CUpDownCtrl updownRows(GetDlgItem(IDC_SPIN_MAX_TAB_ROWS));
 	updownRows.SetRange32(1, 20);
-	
+	updownRows.SetBuddy(GetDlgItem(IDC_MAX_TAB_ROWS));
+
 	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
 	tabsPosition.AddString(CTSTRING(TABS_TOP));
 	tabsPosition.AddString(CTSTRING(TABS_BOTTOM));

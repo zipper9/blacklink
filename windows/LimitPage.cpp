@@ -2,42 +2,67 @@
 #include "Resource.h"
 #include "LimitPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { -2, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align3 = { 20, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align4 = { 21, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align5 = { 22, DialogLayout::SIDE_RIGHT, U_DU(30) };
+static const DialogLayout::Align align6 = { 23, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align7 = { 24, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align8 = { 26, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align9 = { 27, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align10 = { 28, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_CZDC_TRANSFER_LIMITING, ResourceManager::SETCZDC_TRANSFER_LIMITING },
-	{ IDC_THROTTLE_ENABLE, ResourceManager::SETCZDC_ENABLE_LIMITING },
-	{ IDC_CZDC_UP_SPEEED, ResourceManager::UPLOAD },
-	{ IDC_CZDC_UP_SPEEED1, ResourceManager::UPLOAD },
-	{ IDC_SETTINGS_KBPS1, ResourceManager::KBPS },
-	{ IDC_SETTINGS_KBPS2, ResourceManager::KBPS },
-	{ IDC_SETTINGS_KBPS3, ResourceManager::KBPS },
-	{ IDC_SETTINGS_KBPS4, ResourceManager::KBPS },
-	{ IDC_SETTINGS_KBPS5, ResourceManager::KBPS_DISABLE },
-	{ IDC_SETTINGS_KBPS6, ResourceManager::KBPS },
-	{ IDC_SETTINGS_KBPS7, ResourceManager::KBPS },
-	{ IDC_SETTINGS_KBPS8, ResourceManager::KBPS },
-	{ IDC_SETTINGS_MINUTES, ResourceManager::DATETIME_SECONDS },
-	{ IDC_CZDC_DW_SPEEED, ResourceManager::DOWNLOAD },
-	{ IDC_CZDC_DW_SPEEED1, ResourceManager::DOWNLOAD },
-	{ IDC_TIME_LIMITING, ResourceManager::SETCZDC_ALTERNATE_LIMITING },
-	{ IDC_CZDC_TO, ResourceManager::SETCZDC_TO },
-	{ IDC_CZDC_SLOW_DISCONNECT, ResourceManager::SETCZDC_SLOW_DISCONNECT },
-	{ IDC_SEGMENTED_ONLY, ResourceManager::SETTINGS_AUTO_DROP_SEGMENTED_SOURCE },
-	{ IDC_CZDC_I_DOWN_SPEED, ResourceManager::SETCZDC_I_DOWN_SPEED },
-	{ IDC_CZDC_TIME_DOWN, ResourceManager::SETCZDC_TIME_DOWN },
-	{ IDC_CZDC_H_DOWN_SPEED, ResourceManager::SETCZDC_H_DOWN_SPEED },
-	{ IDC_DISCONNECTING_ENABLE, ResourceManager::SETCZDC_DISCONNECTING_ENABLE },
-	{ IDC_CZDC_MIN_FILE_SIZE, ResourceManager::SETCZDC_MIN_FILE_SIZE },
-	{ IDC_SETTINGS_MB, ResourceManager::MB },
-	{ IDC_REMOVE_IF, ResourceManager::NEW_DISCONNECT },
-	{ IDC_PER_USER_LIMIT_ENABLE, ResourceManager::SET_PER_USER_UL_LIMIT },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_DISCONNECTING_ENABLE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SEGMENTED_ONLY, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CZDC_I_DOWN_SPEED, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_CZDC_TIME_DOWN, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_CZDC_H_DOWN_SPEED, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_CZDC_MIN_FILE_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_REMOVE_IF, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_I_DOWN_SPEED, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_TIME_DOWN, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_H_DOWN_SPEED, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_MIN_FILE_SIZE, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_REMOVE_IF_BELOW, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_SETTINGS_KBPS5, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_MINUTES, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_KBPS6, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_MB, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_SETTINGS_KBPS7, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_CZDC_TRANSFER_LIMITING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_THROTTLE_ENABLE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CZDC_DW_SPEEED, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_MX_DW_SP_LMT_NORMAL, 0, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_SETTINGS_KBPS1, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align4 },
+	{ IDC_CZDC_UP_SPEEED, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align5 },
+	{ IDC_MX_UP_SP_LMT_NORMAL, 0, UNSPEC, UNSPEC, 0, &align6 },
+	{ IDC_SETTINGS_KBPS2, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align7 },
+	{ IDC_TIME_LIMITING, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_BW_START_TIME, 0, UNSPEC, UNSPEC, 0, &align8 },
+	{ IDC_CZDC_TO, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align9 },
+	{ IDC_BW_END_TIME, 0, UNSPEC, UNSPEC, 0, &align10 },
+	{ IDC_CZDC_DW_SPEEED1, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_MX_DW_SP_LMT_TIME, 0, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_SETTINGS_KBPS3, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align4 },
+	{ IDC_CZDC_UP_SPEEED1, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align5 },
+	{ IDC_MX_UP_SP_LMT_TIME, 0, UNSPEC, UNSPEC, 0, &align6 },
+	{ IDC_SETTINGS_KBPS4, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align7 },
+	{ IDC_PER_USER_LIMIT_ENABLE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_UPLOADSPEED_USER, 0, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_SETTINGS_KBPS8, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align4 }
 };
 
 static const PropPage::Item items[] =
 {
-	// [!] IRainman SpeedLimiter: to work correctly, you must first set the upload speed, and only then download speed!
 	{ IDC_MX_UP_SP_LMT_NORMAL, SettingsManager::MAX_UPLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
 	{ IDC_MX_DW_SP_LMT_NORMAL, SettingsManager::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
 	{ IDC_TIME_LIMITING, SettingsManager::TIME_DEPENDENT_THROTTLE, PropPage::T_BOOL },
@@ -58,20 +83,49 @@ static const PropPage::Item items[] =
 
 LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
-	
-	CUpDownCtrl(GetDlgItem(IDC_I_DOWN_SPEED_SPIN)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_TIME_DOWN_SPIN)).SetRange32(1, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_H_DOWN_SPEED_SPIN)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_UPLOADSPEEDSPIN)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_DOWNLOADSPEEDSPIN)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_UPLOADSPEEDSPIN_TIME)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_DOWNLOADSPEEDSPIN_TIME)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_MIN_FILE_SIZE_SPIN)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_REMOVE_SPIN)).SetRange32(0, 99999);
-	CUpDownCtrl(GetDlgItem(IDC_UPLOADSPEEDSPIN_USER)).SetRange32(0, 10240);
-	
+
+	CUpDownCtrl spin1(GetDlgItem(IDC_I_DOWN_SPEED_SPIN));
+	spin1.SetRange32(0, 99999);
+	spin1.SetBuddy(GetDlgItem(IDC_I_DOWN_SPEED));
+
+	CUpDownCtrl spin2(GetDlgItem(IDC_TIME_DOWN_SPIN));
+	spin2.SetRange32(1, 99999);
+	spin2.SetBuddy(GetDlgItem(IDC_TIME_DOWN));
+
+	CUpDownCtrl spin3(GetDlgItem(IDC_H_DOWN_SPEED_SPIN));
+	spin3.SetRange32(0, 99999);
+	spin3.SetBuddy(GetDlgItem(IDC_H_DOWN_SPEED));
+
+	CUpDownCtrl spin4(GetDlgItem(IDC_UPLOADSPEEDSPIN));
+	spin4.SetRange32(0, 99999);
+	spin4.SetBuddy(GetDlgItem(IDC_MX_UP_SP_LMT_NORMAL));
+
+	CUpDownCtrl spin5(GetDlgItem(IDC_DOWNLOADSPEEDSPIN));
+	spin5.SetRange32(0, 99999);
+	spin5.SetBuddy(GetDlgItem(IDC_MX_DW_SP_LMT_NORMAL));
+
+	CUpDownCtrl spin6(GetDlgItem(IDC_UPLOADSPEEDSPIN_TIME));
+	spin6.SetRange32(0, 99999);
+	spin6.SetBuddy(GetDlgItem(IDC_MX_UP_SP_LMT_TIME));
+
+	CUpDownCtrl spin7(GetDlgItem(IDC_DOWNLOADSPEEDSPIN_TIME));
+	spin7.SetRange32(0, 99999);
+	spin7.SetBuddy(GetDlgItem(IDC_MX_DW_SP_LMT_TIME));
+
+	CUpDownCtrl spin8(GetDlgItem(IDC_MIN_FILE_SIZE_SPIN));
+	spin8.SetRange32(0, 99999);
+	spin8.SetBuddy(GetDlgItem(IDC_MIN_FILE_SIZE));
+
+	CUpDownCtrl spin9(GetDlgItem(IDC_REMOVE_SPIN));
+	spin9.SetRange32(0, 99999);
+	spin9.SetBuddy(GetDlgItem(IDC_REMOVE_IF_BELOW));
+
+	CUpDownCtrl spin10(GetDlgItem(IDC_UPLOADSPEEDSPIN_USER));
+	spin10.SetRange32(0, 10240);
+	spin10.SetBuddy(GetDlgItem(IDC_UPLOADSPEED_USER));
+
 	timeCtrlBegin.Attach(GetDlgItem(IDC_BW_START_TIME));
 	timeCtrlEnd.Attach(GetDlgItem(IDC_BW_END_TIME));
 	
@@ -111,7 +165,7 @@ void LimitPage::fixControls()
 	BOOL state = IsDlgButtonChecked(IDC_THROTTLE_ENABLE) == BST_CHECKED;
 	GetDlgItem(IDC_TIME_LIMITING).EnableWindow(state);
 	
-	state = IsDlgButtonChecked(IDC_THROTTLE_ENABLE) == BST_CHECKED && IsDlgButtonChecked(IDC_TIME_LIMITING) == BST_CHECKED;
+	state &= IsDlgButtonChecked(IDC_TIME_LIMITING) == BST_CHECKED;
 	GetDlgItem(IDC_BW_START_TIME).EnableWindow(state);
 	GetDlgItem(IDC_BW_END_TIME).EnableWindow(state);
 	
@@ -126,6 +180,7 @@ void LimitPage::fixControls()
 	GetDlgItem(IDC_MIN_FILE_SIZE_SPIN).EnableWindow(state);
 	GetDlgItem(IDC_REMOVE_IF_BELOW).EnableWindow(state);
 	GetDlgItem(IDC_REMOVE_SPIN).EnableWindow(state);
+	GetDlgItem(IDC_SEGMENTED_ONLY).EnableWindow(state);
 
 	state = IsDlgButtonChecked(IDC_PER_USER_LIMIT_ENABLE) == BST_CHECKED;
 	GetDlgItem(IDC_UPLOADSPEED_USER).EnableWindow(state);

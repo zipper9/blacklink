@@ -53,9 +53,6 @@ class DownloadPage : public CPropertyPage<IDD_DOWNLOAD_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
-	protected:
-		static Item items[];
-		static TextItem texts[];
 };
 
 #endif //  !defined(DOWNLOAD_PAGE_H)

@@ -18,23 +18,37 @@
 
 #include "stdafx.h"
 #include "QueuePage.h"
+#include "DialogLayout.h"
 #include "../client/SettingsManager.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { -2, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align3 = { 10, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align4 = { 0, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align5 = { 13, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align6 = { 14, DialogLayout::SIDE_RIGHT, U_DU(4) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_SETTINGS_SEGMENT, ResourceManager::SETTINGS_SEGMENT },
-	{ IDC_AUTOSEGMENT, ResourceManager::SETTINGS_AUTO_SEARCH },
-	{ IDC_MULTISOURCE, ResourceManager::ENABLE_MULTI_SOURCE },
-	{ IDC_DONTBEGIN, ResourceManager::DONT_ADD_SEGMENT_TEXT },
-	{ IDC_MULTISOURCE, ResourceManager::ENABLE_MULTI_SOURCE },
-	{ IDC_MINUTES, ResourceManager::DATETIME_MINUTES },
-	{ IDC_KBPS, ResourceManager::KBPS },
-	{ IDC_CHUNKCOUNT, ResourceManager::TEXT_MANUAL },
-	{ IDC_CAPTION_TARGET_EXISTS, ResourceManager::IF_TARGET_EXISTS },
-	{ IDC_SKIP_EXISTING, ResourceManager::SETTINGS_SKIP_EXISTING },
-	{ IDC_CAPTION_COPY_FILE, ResourceManager::SETTINGS_COPY_EXISTING_FILE },
-	{ IDC_SETTINGS_MB, ResourceManager::MB },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_MULTISOURCE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AUTOSEGMENT, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_DONTBEGIN, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_CHUNKCOUNT, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_AUTO_SEARCH_EDIT, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_BEGIN_EDIT, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_SEG_NUMBER, 0, UNSPEC, UNSPEC, 2, &align1 },
+	{ IDC_MINUTES, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_KBPS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
+	{ IDC_CAPTION_TARGET_EXISTS, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_DOWNLOAD_ASK_COMBO, 0, UNSPEC, UNSPEC, 0, &align3, &align4 },
+	{ IDC_SKIP_EXISTING, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_COPY_FILE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_COPY_FILE, 0, UNSPEC, UNSPEC, 0, &align5 },
+	{ IDC_SETTINGS_MB, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align6 }
 };
 
 static const PropPage::Item items[] =
@@ -68,22 +82,21 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlList.Attach(GetDlgItem(IDC_OTHER_QUEUE_OPTIONS));
 	ctrlActionIfExists.Attach(GetDlgItem(IDC_DOWNLOAD_ASK_COMBO));
 
-	PropPage::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, optionItems, ctrlList);
+
+	CUpDownCtrl spin1(GetDlgItem(IDC_SEG_NUMBER_SPIN));
+	spin1.SetRange32(1, 200);
+	spin1.SetBuddy(GetDlgItem(IDC_SEG_NUMBER));
 	
-	CUpDownCtrl spin;
-	spin.Attach(GetDlgItem(IDC_SEG_NUMBER_SPIN));
-	spin.SetRange32(1, 200);
-	spin.Detach();
-	
-	spin.Attach(GetDlgItem(IDC_AUTO_SEARCH_SPIN));
-	spin.SetRange32(1, 60);
-	spin.Detach();
-	
-	spin.Attach(GetDlgItem(IDC_BEGIN_SPIN));
-	spin.SetRange32(2, 100000);
-	spin.Detach();
-	
+	CUpDownCtrl spin2(GetDlgItem(IDC_AUTO_SEARCH_SPIN));
+	spin2.SetRange32(1, 60);
+	spin2.SetBuddy(GetDlgItem(IDC_AUTO_SEARCH_EDIT));
+
+	CUpDownCtrl spin3(GetDlgItem(IDC_BEGIN_SPIN));
+	spin3.SetRange32(2, 100000);
+	spin3.SetBuddy(GetDlgItem(IDC_BEGIN_EDIT));
+
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_ASK));
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_REPLACE));
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_RENAME));

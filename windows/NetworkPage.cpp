@@ -23,12 +23,17 @@
 
 #include "NetworkPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 #include "../client/CryptoManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 #include "../client/NetworkUtil.h"
 #include "../client/webrtc/talk/base/winfirewall.h"
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
 NetworkPage::Settings* NetworkPage::prevSettings = nullptr;
 
@@ -46,35 +51,46 @@ enum
 	IconDisabled
 };
 
-static const PropPage::TextItem texts[] =
+static const DialogLayout::Align align1 = { 2, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 0, DialogLayout::SIDE_RIGHT, U_DU(12) };
+static const DialogLayout::Align align3 = { 12, DialogLayout::SIDE_LEFT, U_DU(6) };
+static const DialogLayout::Align align4 = { 15, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align5 = { 18, DialogLayout::SIDE_LEFT, U_DU(6) };
+static const DialogLayout::Align align6 = { 30, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_CONNECTION_DETECTION,        ResourceManager::CONNECTION_DETECTION           },
-	{ IDC_DIRECT,                      ResourceManager::SETTINGS_DIRECT                },
-	{ IDC_FIREWALL_UPNP,               ResourceManager::SETTINGS_FIREWALL_UPNP         },
-	{ IDC_FIREWALL_NAT,                ResourceManager::SETTINGS_FIREWALL_NAT          },
-	{ IDC_FIREWALL_PASSIVE,            ResourceManager::SETTINGS_FIREWALL_PASSIVE      },
-	{ IDC_WAN_IP_MANUAL,               ResourceManager::SETTINGS_WAN_IP_MANUAL         },
-	{ IDC_NO_IP_OVERRIDE,              ResourceManager::SETTINGS_NO_IP_OVERRIDE        },
-	{ IDC_SETTINGS_PORTS,              ResourceManager::SETTINGS_PORTS                 },
-	{ IDC_SETTINGS_IP,                 ResourceManager::SETTINGS_EXTERNAL_IP           },
-	{ IDC_SETTINGS_PORT_TCP,           ResourceManager::SETTINGS_TCP_PORT              },
-	{ IDC_SETTINGS_PORT_UDP,           ResourceManager::SETTINGS_UDP_PORT              },
-	{ IDC_SETTINGS_PORT_TLS,           ResourceManager::SETTINGS_TLS_PORT              },
-	{ IDC_SETTINGS_PORT_TORRENT,       ResourceManager::SETTINGS_TORRENT_PORT          },
-	{ IDC_SETTINGS_INCOMING,           ResourceManager::SETTINGS_INCOMING              },
-	{ IDC_SETTINGS_BIND_ADDRESS,       ResourceManager::SETTINGS_BIND_ADDRESS          },
-	{ IDC_SETTINGS_BIND_ADDRESS_HELP,  ResourceManager::SETTINGS_BIND_ADDRESS_HELP     },
-	{ IDC_NATT,                        ResourceManager::ALLOW_NAT_TRAVERSAL            },
-	{ IDC_AUTO_TEST_PORTS,             ResourceManager::TEST_PORTS_AUTO                },
-	{ IDC_IPUPDATE,                    ResourceManager::UPDATE_IP                      },
-	{ IDC_SETTINGS_UPDATE_IP_INTERVAL, ResourceManager::UPDATE_IP_INTERVAL             },
-	{ IDC_SETTINGS_USE_TORRENT,        ResourceManager::USE_TORRENT_SEARCH_TEXT        },
-	{ IDC_GETIP,                       ResourceManager::TEST_PORTS_AND_GET_IP          },
-	{ IDC_ADD_FIREWALL_EXCEPTION,      ResourceManager::ADD_FIREWALL_EXCEPTION         },
-	{ IDC_STATIC_GATEWAY,              ResourceManager::SETTINGS_GATEWAY               },
-	{ IDC_CAPTION_MAPPER,              ResourceManager::PREFERRED_MAPPER               },
-	{ IDC_USE_DHT,                     ResourceManager::SETTINGS_USE_DHT               },
-	{ 0,                               ResourceManager::Strings()                      }
+	{ IDC_SETTINGS_BIND_ADDRESS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_BIND_ADDRESS_HELP, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_BIND_ADDRESS, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
+	{ IDC_SETTINGS_INCOMING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CONNECTION_DETECTION, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_DIRECT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_FIREWALL_UPNP, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_FIREWALL_NAT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_FIREWALL_PASSIVE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_IP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_WAN_IP_MANUAL, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_DEFAULT_GATEWAY_IP, 0, UNSPEC, UNSPEC },
+	{ IDC_STATIC_GATEWAY, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
+	{ IDC_IPUPDATE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_UPDATE_IP_INTERVAL, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_UPDATE_IP_INTERVAL, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_SETTINGS_PORTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_PORT_TCP, 0, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_PORT_TCP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
+	{ IDC_SETTINGS_PORT_UDP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
+	{ IDC_SETTINGS_PORT_TLS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
+	{ IDC_SETTINGS_PORT_TORRENT, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
+	{ IDC_NO_IP_OVERRIDE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AUTO_TEST_PORTS, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_NATT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_USE_DHT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_USE_TORRENT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_GETIP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_ADD_FIREWALL_EXCEPTION, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_MAPPER, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_MAPPER, 0, UNSPEC, UNSPEC, 0, &align6 }
 };
 
 static const PropPage::Item items[] =
@@ -154,7 +170,7 @@ void NetworkPage::write()
 
 LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	
 	::EnableWindow(GetDlgItem(IDC_IPUPDATE), FALSE);
 

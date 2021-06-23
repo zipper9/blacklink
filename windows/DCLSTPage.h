@@ -32,14 +32,14 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP_EX(DCLSTPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_DCLS_CREATE_IN_FOLDER, OnClickedDCLSTFolder)
-		COMMAND_ID_HANDLER(IDC_DCLS_ANOTHER_FOLDER, OnClickedDCLSTFolder)
-		COMMAND_ID_HANDLER(IDC_PREVIEW_BROWSE, OnBrowseClick)
+		COMMAND_ID_HANDLER(IDC_DCLS_CREATE_IN_FOLDER, onClickedDCLSTFolder)
+		COMMAND_ID_HANDLER(IDC_DCLS_ANOTHER_FOLDER, onClickedDCLSTFolder)
+		COMMAND_ID_HANDLER(IDC_PREVIEW_BROWSE, onBrowseClick)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnClickedDCLSTFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnBrowseClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onClickedDCLSTFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onBrowseClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -52,7 +52,7 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
-		void CheckDCLSTPath(BOOL isEnabled);
+		void fixControls();
 		
 	protected:
 		CComboBox magnetClick;

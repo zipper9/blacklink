@@ -18,19 +18,30 @@
 
 #include "stdafx.h"
 #include "PriorityPage.h"
+#include "DialogLayout.h"
 #include "../client/SettingsManager.h"
 #include "../client/QueueItem.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 3, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 6, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align3 = { 7, DialogLayout::SIDE_RIGHT, U_DU(4) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_CAPTION_AUTOPRIORITY_FILENAME, ResourceManager::SETTINGS_AUTOPRIORITY_FILENAME },
-	{ IDC_AUTOPRIORITY_USE_PATTERNS, ResourceManager::SETTINGS_AUTOPRIORITY_USE_PATTERNS },
-	{ IDC_CAPTION_SET_PRIORITY1, ResourceManager::SETTINGS_AUTOPRIORITY_SET_PRIORITY },
-	{ IDC_CAPTION_AUTOPRIORITY_FILESIZE, ResourceManager::SETTINGS_AUTOPRIORITY_FILESIZE },
-	{ IDC_AUTOPRIORITY_USE_SIZE, ResourceManager::SETTINGS_AUTOPRIORITY_USE_SIZE },
-	{ IDC_CAPTION_KIB, ResourceManager::KB },
-	{ IDC_CAPTION_SET_PRIORITY2, ResourceManager::SETTINGS_AUTOPRIORITY_SET_PRIORITY },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_CAPTION_AUTOPRIORITY_FILENAME, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_AUTOPRIORITY_USE_PATTERNS, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_SET_PRIORITY1, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AUTOPRIORITY_PATTERNS_PRIO, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CAPTION_AUTOPRIORITY_FILESIZE, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_AUTOPRIORITY_USE_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AUTOPRIORITY_SIZE, 0, UNSPEC, UNSPEC, 0, &align2 },
+	{ IDC_CAPTION_KIB, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align3 },
+	{ IDC_CAPTION_SET_PRIORITY2, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_AUTOPRIORITY_SIZE_PRIO, 0, UNSPEC, UNSPEC, 0, &align1 }
 };
 
 static const PropPage::Item items[] =
@@ -64,7 +75,7 @@ static inline void clampPrio(int& prio)
 
 LRESULT PriorityPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
 	
 	CComboBox cb1(GetDlgItem(IDC_AUTOPRIORITY_PATTERNS_PRIO));
