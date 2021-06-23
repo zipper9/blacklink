@@ -27,8 +27,17 @@ bool ResourceManager::stringsChanged = true;
 wstring ResourceManager::g_wstrings[ResourceManager::LAST];
 #endif
 
+boost::unordered_map<string, int> ResourceManager::nameToIndex;
+
 bool ResourceManager::loadLanguage(const string& filePath)
 {
+	if (nameToIndex.empty())
+		for (int i = 0; i < LAST; ++i)
+		{
+			g_names[i].shrink_to_fit();
+			nameToIndex[g_names[i]] = i;
+		}
+
 	bool result = false;
 	try
 	{
@@ -36,14 +45,6 @@ bool ResourceManager::loadLanguage(const string& filePath)
 		SimpleXML xml;	
 		xml.fromXML(f.read());
 
-		boost::unordered_map<string, int> nameToIndex;
-		
-		for (int i = 0; i < LAST; ++i)
-		{
-			g_names[i].shrink_to_fit();
-			nameToIndex[g_names[i]] = i;
-		}
-		
 		if (xml.findChild("Language"))
 		{
 			xml.stepIn();
@@ -99,3 +100,9 @@ void ResourceManager::createWide()
 	stringsChanged = false;
 }
 #endif
+
+int ResourceManager::getStringByName(const string& name)
+{
+	auto i = nameToIndex.find(name);
+	return i != nameToIndex.end() ? i->second : -1;
+}

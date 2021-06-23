@@ -21,6 +21,7 @@
 
 #include "debug.h"
 #include "dcformat.h"
+#include <boost/unordered/unordered_map.hpp>
 
 #define STRING(x) ResourceManager::getString(ResourceManager::x)
 #define CSTRING(x) ResourceManager::getString(ResourceManager::x).c_str()
@@ -71,10 +72,12 @@ class ResourceManager
 			return g_wstrings[x];
 		}
 #endif
+		static int getStringByName(const string& name);
 
 	private:
 		ResourceManager() {}
 		
+		static boost::unordered_map<string, int> nameToIndex;
 		static string g_names[LAST];
 		static string g_strings[LAST];
 #ifdef _UNICODE
