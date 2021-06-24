@@ -195,11 +195,7 @@ class ConnectionManager :
 		void disconnect(const UserPtr& user, bool isDownload);
 		
 		void shutdown();
-		static bool isShuttingDown()
-		{
-			return g_shuttingDown;
-		}
-		
+
 		void startListen(int type);
 		void updateLocalIp();
 		void disconnect() noexcept;
@@ -298,7 +294,7 @@ class ConnectionManager :
 		Server* server;
 		Server* secureServer;
 		
-		static bool g_shuttingDown;
+		bool shuttingDown;
 		
 		SpeedCalc<32> uploadSpeed;
 		SpeedCalc<32> downloadSpeed;

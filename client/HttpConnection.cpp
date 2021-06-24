@@ -34,6 +34,9 @@ static const size_t MAX_HEADERS_SIZE = 32*1024;
 static const string prefixHttp  = "http://";
 static const string prefixHttps = "https://";
 
+vector<BufferedSocket*> HttpConnection::oldSockets;
+FastCriticalSection HttpConnection::csOldSockets;
+
 #if 0
 static void logMessage(const char *msg, ...)
 {
@@ -52,16 +55,9 @@ static void sanitizeUrl(string& url) noexcept
 	boost::algorithm::trim_if(url, boost::is_space() || boost::is_any_of("<>\""));
 }
 
-/**
- * Downloads a file and returns it as a string
- * @todo Report exceptions
- * @todo Abort download
- * @param aUrl Full URL of file
- * @return A string with the content, or empty if download failed
- */
-void HttpConnection::downloadFile(const string &aFile)
+void HttpConnection::downloadFile(const string &url)
 {
-	currentUrl = aFile;
+	currentUrl = url;
 	requestBody.clear();
 	prepareRequest(TYPE_GET);
 }
@@ -96,7 +92,7 @@ void HttpConnection::prepareRequest(RequestType type)
 	         Text::isAsciiPrefix2(currentUrl, prefixHttps));
 	sanitizeUrl(currentUrl);
 
-	resetSocket();
+	detachSocket();
 
 	connState = STATE_SEND_REQUEST;
 	requestType = type;
@@ -251,18 +247,18 @@ bool HttpConnection::parseResponseHeader(const string& line) noexcept
 	return true;
 }
 
-void HttpConnection::onDataLine(const string &aLine) noexcept
+void HttpConnection::onDataLine(const string &line) noexcept
 {
-	if (connState == STATE_DATA_CHUNKED && aLine.size() > 1)
+	if (connState == STATE_DATA_CHUNKED && line.size() > 1)
 	{
 		string::size_type i;
 		string chunkSizeStr;
-		if ((i = aLine.find(';')) == string::npos)
+		if ((i = line.find(';')) == string::npos)
 		{
-			chunkSizeStr = aLine.substr(0, aLine.length() - 1);
+			chunkSizeStr = line.substr(0, line.length() - 1);
 		}
 		else
-			chunkSizeStr = aLine.substr(0, i);
+			chunkSizeStr = line.substr(0, i);
 
 		unsigned long chunkSize = strtoul(chunkSizeStr.c_str(), NULL, 16);
 		if (chunkSize == 0)
@@ -283,8 +279,8 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 	}
 	if (connState == STATE_WAIT_RESPONSE)
 	{
-		receivedHeadersSize += aLine.size();
-		if (!parseStatusLine(aLine))
+		receivedHeadersSize += line.size();
+		if (!parseStatusLine(line))
 		{
 			connState = STATE_FAILED;
 			fire(HttpConnectionListener::Failed(), this, "Malformed status line (" + currentUrl + ")");
@@ -295,8 +291,8 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 	}
 	if (connState == STATE_PROCESS_HEADERS)
 	{
-		receivedHeadersSize += aLine.size();
-		if (aLine[0] == '\r')
+		receivedHeadersSize += line.size();
+		if (line[0] == '\r')
 		{
 			if (responseCode == 200)
 			{
@@ -370,16 +366,19 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 			disconnect();
 			return;
 		}
-		parseResponseHeader(aLine);
+		parseResponseHeader(line);
 		return;
 	}
 }
 
 void HttpConnection::onFailed(const string &errorText) noexcept
 {
-	connState = STATE_FAILED;
-	fire(HttpConnectionListener::Failed(), this, errorText + " (" + currentUrl + ")");
-	disconnect();
+	if (connState != STATE_FAILED)
+	{
+		connState = STATE_FAILED;
+		fire(HttpConnectionListener::Failed(), this, errorText + " (" + currentUrl + ")");
+		disconnect();
+	}
 }
 
 void HttpConnection::onModeChange() noexcept
@@ -424,13 +423,14 @@ void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 	}
 }
 
-void HttpConnection::resetSocket() noexcept
+void HttpConnection::detachSocket() noexcept
 {
 	if (socket)
 	{
 		socket->disconnect(true);
-		socket->joinThread();
-		BufferedSocket::destroyBufferedSocket(socket);
+		csOldSockets.lock();
+		oldSockets.push_back(socket);
+		csOldSockets.unlock();
 		socket = nullptr;
 	}
 }
@@ -439,4 +439,17 @@ void HttpConnection::disconnect() noexcept
 {
 	if (socket)
 		socket->disconnect(false);
+}
+
+void HttpConnection::cleanup()
+{
+	csOldSockets.lock();
+	auto sockets = std::move(oldSockets);
+	oldSockets.clear();
+	csOldSockets.unlock();
+	for (BufferedSocket* socket : sockets)
+	{
+		socket->joinThread();
+		BufferedSocket::destroyBufferedSocket(socket);
+	}
 }

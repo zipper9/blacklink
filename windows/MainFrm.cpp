@@ -687,6 +687,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 void MainFrame::onMinute(uint64_t tick)
 {
 	HublistManager::getInstance()->removeUnusedConnections();
+	HttpConnection::cleanup();
 	if (tick >= timeUsersCleanup)
 	{
 		ClientManager::usersCleanup();

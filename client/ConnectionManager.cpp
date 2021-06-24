@@ -33,13 +33,13 @@
 #include "NmdcHub.h"
 #include "NetworkUtil.h"
 #include "SimpleStringTokenizer.h"
+#include "HttpConnection.h"
 
 static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
 
-bool ConnectionManager::g_shuttingDown = false;
 TokenManager ConnectionManager::tokenManager;
 
 string TokenManager::makeToken(int type, uint64_t expires) noexcept
@@ -351,7 +351,7 @@ static void modifyFeatures(StringList& features, const string& options)
 	}
 }
 
-ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr),
+ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr), shuttingDown(false),
 	csConnections(RWLock::create()),
 	csDownloads(RWLock::create())
 {
@@ -379,7 +379,7 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), sec
 
 ConnectionManager::~ConnectionManager()
 {
-	dcassert(g_shuttingDown == true);
+	dcassert(shuttingDown);
 	dcassert(userConnections.empty());
 	dcassert(downloads.empty());
 	dcassert(uploads.empty());
@@ -477,7 +477,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 
 UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
 {
-	dcassert(!g_shuttingDown);
+	dcassert(!shuttingDown);
 	UserConnection* uc = new UserConnection;
 	{
 		WRITE_LOCK(*csConnections);
@@ -954,7 +954,7 @@ void ConnectionManager::nmdcConnect(const string& address, uint16_t port, const 
 
 void ConnectionManager::nmdcConnect(const string& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure)
 {
-	if (isShuttingDown())
+	if (shuttingDown)
 		return;
 
 	UserConnection* uc = getConnection(true, secure);
@@ -981,7 +981,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, const 
 
 void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure)
 {
-	if (isShuttingDown())
+	if (shuttingDown)
 		return;
 		
 	UserConnection* uc = getConnection(false, secure);
@@ -1397,10 +1397,11 @@ void ConnectionManager::disconnect(const UserPtr& user, bool isDownload)
 
 void ConnectionManager::shutdown()
 {
-	dcassert(!g_shuttingDown);
-	g_shuttingDown = true;
+	dcassert(!shuttingDown);
+	shuttingDown = true;
 	g_portTest.shutdown();
 	removeUnusedConnections();
+	HttpConnection::cleanup();
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	{

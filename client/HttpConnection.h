@@ -33,7 +33,8 @@ public:
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
 	
-	virtual ~HttpConnection() { resetSocket(); }
+	virtual ~HttpConnection() { detachSocket(); }
+	static void cleanup();
 
 	void downloadFile(const string& url);
 	void postData(const string& url, const StringMap& data);
@@ -100,7 +101,7 @@ private:
 	void prepareRequest(RequestType type);
 	bool parseStatusLine(const string &line) noexcept;
 	bool parseResponseHeader(const string &line) noexcept;
-	void resetSocket() noexcept;
+	void detachSocket() noexcept;
 	void disconnect() noexcept;
 	
 	// BufferedSocketListener
@@ -109,6 +110,9 @@ private:
 	void onData(const uint8_t*, size_t) noexcept override;
 	void onModeChange() noexcept override;
 	void onFailed(const string&) noexcept override;
+
+	static vector<BufferedSocket*> oldSockets;
+	static FastCriticalSection csOldSockets;
 };
 
 #endif // !defined(HTTP_CONNECTION_H)
