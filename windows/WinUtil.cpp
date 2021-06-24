@@ -598,6 +598,11 @@ bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& 
 				if (pos != tstring::npos)
 					target.erase(0, pos + 1);
 				pFileOpen->SetFileName(target.c_str());
+				if (!defExt)
+				{
+					tstring ext = Util::getFileExtWithoutDot(target);
+					if (!ext.empty()) pFileOpen->SetDefaultExtension(ext.c_str());
+				}
 			}
 			hr = pFileOpen->Show(owner);
 			if (SUCCEEDED(hr))
