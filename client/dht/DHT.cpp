@@ -548,7 +548,7 @@ namespace dht
 			xml.stepIn();
 
 			// load nodes; when file is older than 7 days, bootstrap from database later
-			if (f.getLastModified() > time(NULL) - 7 * 24 * 60 * 60)
+			if ((int64_t) ::File::timeStampToUnixTime(f.getTimeStamp()) > (int64_t) time(nullptr) - 7 * 24 * 60 * 60)
 				bucket->loadNodes(xml);
 
 			// load indexes

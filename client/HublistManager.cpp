@@ -24,7 +24,6 @@
 #include "FilteredFile.h"
 #include "SimpleXML.h"
 #include "SimpleStringTokenizer.h"
-#include "TimerManager.h"
 
 static const unsigned MAX_CACHED_AGE = 3600 * 24 * 2; // 2 days
 
@@ -184,8 +183,8 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 			try
 			{
 				File cached(path, File::READ, File::OPEN);
-				time_t cachedTime = cached.getLastModified();
-				if (cachedTime + MAX_CACHED_AGE >= GET_TIME())
+				uint64_t cachedTime = File::timeStampToUnixTime(cached.getTimeStamp());
+				if (cachedTime + MAX_CACHED_AGE >= static_cast<uint64_t>(time(nullptr)))
 				{
 					downloadBuf = cached.read();
 					lastModified = cachedTime;

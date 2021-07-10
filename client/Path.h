@@ -4,7 +4,7 @@
 #ifdef _WIN32
 #define PATH_SEPARATOR '\\'
 #define PATH_SEPARATOR_STR "\\"
-#define FULL_MAX_PATH (32760 + 255 + 255 + 8) // Maximum path name length + Maximum file name length + UNC Computer name + UNC header
+#define FULL_MAX_PATH 32768
 #else
 #define PATH_SEPARATOR '/'
 #define PATH_SEPARATOR_STR "/"

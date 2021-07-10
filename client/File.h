@@ -89,6 +89,7 @@ class File : public IOStream
 		void close() noexcept;
 		int64_t getSize() const noexcept;
 		void setSize(int64_t newSize);
+		uint64_t getTimeStamp() const noexcept;
 
 		int64_t getPos() const noexcept;
 		void setPos(int64_t pos) override;
@@ -103,12 +104,6 @@ class File : public IOStream
 		size_t write(const void* buf, size_t len);
 		size_t flushBuffers(bool force = true) override;
 		void closeStream() override;
-
-		time_t getLastModified() const noexcept;
-
-#ifdef _WIN32
-		static uint64_t convertTime(const FILETIME* f);
-#endif
 
 		static bool isExist(const string& fileName) noexcept;
 		static bool getAttributes(const string& filename, FileAttributes& attr) noexcept;
@@ -161,6 +156,8 @@ class File : public IOStream
 			return !path.empty() && path[0] == '/';
 #endif
 		}
+
+		static uint64_t timeStampToUnixTime(uint64_t ts);
 
 		virtual ~File() noexcept
 		{
@@ -219,7 +216,6 @@ class FileFindIter
 			bool isHidden() const;
 			bool isLink() const;
 			int64_t getSize() const;
-			int64_t getLastWriteTime() const; // REMOVE
 			uint64_t getTimeStamp() const;
 			bool isSystem() const;
 			bool isTemporary() const;
@@ -263,7 +259,6 @@ class FileAttributes
 		bool isVirtual() const;
 		int64_t getSize() const;
 		uint64_t getTimeStamp() const;
-		int64_t getLastWriteTime() const; // REMOVE
 
 	private:
 #ifdef _WIN32

@@ -989,7 +989,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 				if (targetExists)
 				{
 					existingFileSize = attr.getSize();
-					existingFileTime = attr.getLastWriteTime();
+					existingFileTime = File::timeStampToUnixTime(attr.getTimeStamp());
 					if (existingFileSize == size && BOOLSETTING(SKIP_EXISTING))
 					{
 						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, targetPath));

@@ -168,11 +168,11 @@ size_t File::write(const void* buf, size_t len)
 	return x;
 }
 
-time_t File::getLastModified() const noexcept
+uint64_t File::getTimeStamp() const noexcept
 {
-	FILETIME f = {0};
-	::GetFileTime(h, NULL, NULL, &f);
-	return static_cast<time_t>(convertTime(&f));
+	FILETIME ft;
+	if (!GetFileTime(h, nullptr, nullptr, &ft)) return 0;
+	return *reinterpret_cast<uint64_t*>(&ft);
 }
 
 uint64_t File::getTimeStamp(const string& fileName) noexcept
@@ -195,20 +195,9 @@ void File::setTimeStamp(const string& fileName, const uint64_t stamp)
 	CloseHandle(hCreate);
 }
 
-uint64_t File::convertTime(const FILETIME* f)
+uint64_t File::timeStampToUnixTime(uint64_t ts)
 {
-	SYSTEMTIME s = { 1970, 1, 0, 1, 0, 0, 0, 0 };
-	FILETIME f2 = {0};
-	if (::SystemTimeToFileTime(&s, &f2))
-	{
-		ULARGE_INTEGER a,b;
-		a.LowPart = f->dwLowDateTime;
-		a.HighPart = f->dwHighDateTime;
-		b.LowPart = f2.dwLowDateTime;
-		b.HighPart = f2.dwHighDateTime;
-		return (a.QuadPart - b.QuadPart) / (10000000LL); // 100ns -> s
-	}
-	return 0;
+	return ts / 10000000ull - 11644473600ull;
 }
 
 int64_t File::getSize() const noexcept
@@ -543,11 +532,6 @@ int64_t FileFindIter::DirData::getSize() const
 	return (int64_t)nFileSizeLow | ((int64_t)nFileSizeHigh) << 32;
 }
 
-int64_t FileFindIter::DirData::getLastWriteTime() const
-{
-	return File::convertTime(&ftLastWriteTime);
-}
-
 uint64_t FileFindIter::DirData::getTimeStamp() const
 {
 	return *reinterpret_cast<const uint64_t*>(&ftLastWriteTime);
@@ -613,11 +597,8 @@ uint64_t FileAttributes::getTimeStamp() const
 	return *reinterpret_cast<const uint64_t*>(&data.ftLastWriteTime);
 }
 
-int64_t FileAttributes::getLastWriteTime() const
-{
-	return File::convertTime(&data.ftLastWriteTime);
-}
 #else
+
 File::File(const string& fileName, int access, int mode, bool isAbsolutePath, int perm)
 {
 	init(fileName, access, mode, isAbsolutePath, perm);
@@ -691,12 +672,6 @@ size_t File::write(const void* buf, size_t len)
 	return len;
 }
 
-time_t File::getLastModified() const noexcept
-{
-	struct stat st;
-	return fstat(h, &st) ? 0 : st.st_mtim.tv_sec;
-}
-
 static inline uint64_t timeSpecToLinear(const struct timespec& ts)
 {
 	return (uint64_t) 1000000000 * ts.tv_sec + ts.tv_nsec;
@@ -706,6 +681,12 @@ static inline void timeSpecFromLinear(struct timespec& ts, uint64_t val)
 {
 	ts.tv_sec = val / 1000000000;
 	ts.tv_nsec = val % 1000000000;
+}
+
+uint64_t File::getTimeStamp() noexcept
+{
+	struct stat st;
+	return fstat(h, &st) ? 0 : timeSpecToLinear(st.st_mtim);
 }
 
 uint64_t File::getTimeStamp(const string& fileName) noexcept
@@ -721,6 +702,11 @@ void File::setTimeStamp(const string& fileName, const uint64_t stamp)
 	ts[1] = ts[0];
 	if (utimensat(AT_FDCWD, fileName.c_str(), ts, 0))
 		throw FileException(Util::translateError() + ": " + fileName);
+}
+
+uint64_t File::timeStampToUnixTime(uint64_t ts)
+{
+	return ts / 1000000000;
 }
 
 int64_t File::getSize() const noexcept
@@ -1014,11 +1000,6 @@ int64_t FileFindIter::DirData::getSize() const
 	return st_size;
 }
 
-int64_t FileFindIter::DirData::getLastWriteTime() const
-{
-	return st_mtim.tv_sec;
-}
-
 uint64_t FileFindIter::DirData::getTimeStamp() const
 {
 	return timeSpecToLinear(st_mtim);
@@ -1077,11 +1058,6 @@ bool FileAttributes::isVirtual() const
 int64_t FileAttributes::getSize() const
 {
 	return data.st_size;
-}
-
-int64_t FileAttributes::getLastWriteTime() const
-{
-	return data.st_mtim.tv_sec;
 }
 
 uint64_t FileAttributes::getTimeStamp() const
