@@ -137,8 +137,7 @@ static tstring getLastNickHubT(const UserPtr& user)
 	if (user->getLastNickAndHub(nick, hubUrl))
 	{
 		nick += " - ";
-		nick += hubUrl;
-		return Text::toT(nick);
+		return Text::toT(nick) + WinUtil::getHubNames(user, hubUrl).first;
 	}
 #endif
 	return Text::toT(user->getLastNick());
