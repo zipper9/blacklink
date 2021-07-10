@@ -2516,8 +2516,12 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 		if (cur == nullptr && name == sDownload)
 		{
 			int64_t size = Util::toInt64(getAttrib(attribs, sSize, 1));
-			if (size == 0)
+			if (size <= 0)
 				return;
+			const string& tthRoot = getAttrib(attribs, sTTH, 5);
+			if (tthRoot.empty())
+				return;
+
 			try
 			{
 				const string& tgt = getAttrib(attribs, sTarget, 0);
@@ -2532,12 +2536,12 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			}
 			QueueItem::Priority p = (QueueItem::Priority)Util::toInt(getAttrib(attribs, sPriority, 3));
 			time_t added = static_cast<time_t>(Util::toInt(getAttrib(attribs, sAdded, 4)));
-			const string& tthRoot = getAttrib(attribs, sTTH, 5);
-			if (tthRoot.empty())
-				return;
 				
 			const string& tempTarget = getAttrib(attribs, sTempTarget, 5);
-			const uint8_t maxSegments = (uint8_t)Util::toInt(getAttrib(attribs, sMaxSegments, 5));
+			int maxSegments = Util::toInt(getAttrib(attribs, sMaxSegments, 5));
+			if (maxSegments < 0) maxSegments = 0;
+			else if (maxSegments > 255) maxSegments = 255;
+
 			int64_t downloaded = Util::toInt64(getAttrib(attribs, sDownloaded, 5));
 			if (downloaded > size || downloaded < 0)
 				downloaded = 0;
@@ -2547,21 +2551,21 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				
 			QueueItemPtr qi = QueueManager::g_fileQueue.findTarget(target);
 			
-			if (qi == NULL)
+			if (qi == nullptr)
 			{
-				qi = QueueManager::g_fileQueue.add(target, size, 0, p, tempTarget, added, TTHValue(tthRoot), maxSegments);
+				qi = QueueManager::g_fileQueue.add(target, size, 0, p, tempTarget, added, TTHValue(tthRoot), static_cast<uint8_t>(maxSegments));
 				if (downloaded > 0)
-				{
 					qi->addSegment(Segment(0, downloaded));
-					qi->setPriority(qi->calculateAutoPriority());
-				}
-				
 				const bool ap = Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1;
 				qi->setAutoPriority(ap);
-				
 				qm->fly_fire1(QueueManagerListener::Added(), qi);
 			}
-			if (!simple)
+			if (simple)
+			{
+				qi->updateDownloadedBytes();
+				qi->setPriority(qi->calculateAutoPriority());
+			}
+			else
 				cur = qi;
 		}
 		else if (cur && name == sSegment)
@@ -2569,11 +2573,8 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			int64_t start = Util::toInt64(getAttrib(attribs, sStart, 0));
 			int64_t size = Util::toInt64(getAttrib(attribs, sSize, 1));
 			
-			if (size > 0 && start >= 0 && start + size <= cur->getSize())
-			{
+			if (size > 0 && size <= cur->getSize() && start >= 0 && start + size <= cur->getSize())
 				cur->addSegment(Segment(start, size));
-				cur->setPriority(cur->calculateAutoPriority());
-			}
 		}
 		else if (cur && name == sSource)
 		{
@@ -2617,6 +2618,7 @@ void QueueLoader::endTag(const string& name, const string&)
 			if (cur)
 			{
 				cur->updateDownloadedBytes();
+				cur->setPriority(cur->calculateAutoPriority());
 				cur = nullptr;
 			}
 		}
