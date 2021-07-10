@@ -40,11 +40,6 @@
 #include "ResourceLoader.h"
 #include "ExMessageBox.h"
 
-#ifdef FLYLINKDC_USE_TORRENT
-#include "../FlyFeatures/CFlyTorrentDialog.h"
-#include "libtorrent/hex.hpp"
-#endif
-
 static const unsigned TIMER_VAL = 1000;
 
 #ifdef _DEBUG
@@ -137,9 +132,6 @@ TransferView::~TransferView()
 	imgArrows.Destroy();
 	imgSpeedBW.Destroy();
 	imgSpeed.Destroy();
-#ifdef FLYLINKDC_USE_TORRENT
-	imgTorrent.Destroy();
-#endif
 	OperaColors::ClearCache();
 }
 
@@ -149,10 +141,6 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ResourceLoader::LoadImageList(IDR_TSPEEDS, imgSpeed, 16, 16);
 	ResourceLoader::LoadImageList(IDR_TSPEEDS_BW, imgSpeedBW, 16, 16);
 
-#ifdef FLYLINKDC_USE_TORRENT
-	ResourceLoader::LoadImageList(IDR_TORRENT_PNG, imgTorrent, 16, 16);
-#endif
-	
 	ctrlTransfers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_TRANSFERS);
 	ctrlTransfers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
@@ -178,9 +166,6 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(COPY_TTH));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
-	
-	copyTorrentMenu.CreatePopupMenu();
-	copyTorrentMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	
 	usercmdsMenu.CreatePopupMenu();
 	
@@ -272,107 +257,91 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			clearPreviewMenu();
 			OMenu transferMenu;
 			transferMenu.CreatePopupMenu();
-#ifdef FLYLINKDC_USE_TORRENT
-			if (!ii->isTorrent)
-#endif
+			clearUserMenu();
+				
+			transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
+			transferMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE));
+			transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
+			transferMenu.AppendMenu(MF_SEPARATOR);
+			appendPreviewItems(transferMenu);
+			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
+			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
+			transferMenu.AppendMenu(MF_SEPARATOR);
+				
+			if (ii->download)
 			{
-				clearUserMenu();
-				
-				transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
-				transferMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE));
-				transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
+				transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
 				transferMenu.AppendMenu(MF_SEPARATOR);
-				appendPreviewItems(transferMenu);
-				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
-				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
-				transferMenu.AppendMenu(MF_SEPARATOR);
-				
-				if (ii->download)
-				{
-					transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
-					transferMenu.AppendMenu(MF_SEPARATOR);
-				}
+			}
 #ifdef FLYLINKDC_USE_DROP_SLOW
-				transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
+			transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
-				transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP));
-				transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION));
-				transferMenu.AppendMenu(MF_SEPARATOR);
-				if (!main && (i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
-				{
-					const ItemInfo* itemI = ctrlTransfers.getItemData(i);
-					bCustomMenu = true;				
-					reinitUserMenu(itemI->hintedUser.user, itemI->hintedUser.hint);
-					if (getSelectedUser())
-						appendUcMenu(usercmdsMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
-				}
-				
-				appendAndActivateUserItems(transferMenu);
+			transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP));
+			transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION));
+			transferMenu.AppendMenu(MF_SEPARATOR);
+			if (!main && (i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
+			{
+				const ItemInfo* itemI = ctrlTransfers.getItemData(i);
+				bCustomMenu = true;				
+				reinitUserMenu(itemI->hintedUser.user, itemI->hintedUser.hint);
+				if (getSelectedUser())
+					appendUcMenu(usercmdsMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
+			}
+
+			appendAndActivateUserItems(transferMenu);
 				
 #ifdef FLYLINKDC_USE_DROP_SLOW
-				segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
-				transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
+			segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
+			transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
 #endif
-				transferMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MFS_ENABLED);
-				if (ii->download)
-				{
+			transferMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MFS_ENABLED);
+			if (ii->download)
+			{
 #ifdef FLYLINKDC_USE_DROP_SLOW
-					transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_ENABLED);
+				transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_ENABLED);
 #endif
-					transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_ENABLED);
-					if (!ii->target.empty())
+				transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_ENABLED);
+				if (!ii->target.empty())
+				{
+					const string target = Text::fromT(ii->target);
+#ifdef FLYLINKDC_USE_DROP_SLOW
+					bool slowDisconnect;
 					{
-						const string target = Text::fromT(ii->target);
-#ifdef FLYLINKDC_USE_DROP_SLOW
-						bool slowDisconnect;
-						{
-							QueueManager::LockFileQueueShared fileQueue;
-							const auto& queue = fileQueue.getQueueL();
-							const auto qi = queue.find(target);
-							if (qi != queue.cend())
-								slowDisconnect = qi->second->isAutoDrop();
-							else
-								slowDisconnect = false;
-						}
-						if (slowDisconnect)
-						{
-							segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_CHECKED);
-							transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_CHECKED);
-						}
-#endif
-						setupPreviewMenu(target);
+						QueueManager::LockFileQueueShared fileQueue;
+						const auto& queue = fileQueue.getQueueL();
+						const auto qi = queue.find(target);
+						if (qi != queue.cend())
+							slowDisconnect = qi->second->isAutoDrop();
+						else
+							slowDisconnect = false;
 					}
-				}
-				else
-				{
-#ifdef FLYLINKDC_USE_DROP_SLOW
-					transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_DISABLED);
+					if (slowDisconnect)
+					{
+						segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_CHECKED);
+						transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_CHECKED);
+					}
 #endif
-					transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED);
+					setupPreviewMenu(target);
 				}
-				
-#ifdef IRAINMAN_ENABLE_WHOIS
-				if (!ii->transferIp.empty())
-				{
-					g_sSelectedIP = ii->transferIp;  // set tstring for 'openlink function'
-					WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, true);
-				}
-#endif
-				
-				activatePreviewItems(transferMenu);
-				transferMenu.SetMenuDefaultItem(IDC_PRIVATE_MESSAGE);
-			} // DC++ stuff ends here
-#ifdef FLYLINKDC_USE_TORRENT
+			}
 			else
 			{
-				// Torrent menu
-				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyTorrentMenu, CTSTRING(COPY));
-				transferMenu.AppendMenu(MF_STRING, IDC_PAUSE_TORRENT, CTSTRING(PAUSE_TORRENT));
-				transferMenu.AppendMenu(MF_STRING, IDC_RESUME_TORRENT, CTSTRING(RESUME));
-				transferMenu.AppendMenu(MF_STRING, IDC_REMOVE_TORRENT, CTSTRING(REMOVE_TORRENT));
-				transferMenu.AppendMenu(MF_STRING, IDC_REMOVE_TORRENT_AND_FILE, CTSTRING(REMOVE_TORRENT_AND_FILE));
+#ifdef FLYLINKDC_USE_DROP_SLOW
+				transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_DISABLED);
+#endif
+				transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED);
+			}
+				
+#ifdef IRAINMAN_ENABLE_WHOIS
+			if (!ii->transferIp.empty())
+			{
+				g_sSelectedIP = ii->transferIp;  // set tstring for 'openlink function'
+				WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, true);
 			}
 #endif
+
+			activatePreviewItems(transferMenu);
+			transferMenu.SetMenuDefaultItem(IDC_PRIVATE_MESSAGE);
 
 			if (!main)
 			{
@@ -550,7 +519,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				tstring status = ii->getText(COLUMN_STATUS);
 				int shift = 0;
 				CustomDrawHelpers::startSubItemDraw(customDrawState, cd);
-				if (ii->status == ItemInfo::STATUS_RUNNING || isTorrent(*ii))
+				if (ii->status == ItemInfo::STATUS_RUNNING)
 				{
 					if (!BOOLSETTING(SHOW_PROGRESS_BARS))
 					{
@@ -676,19 +645,6 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						OperaColors::EnlightenFlood(clr, a, b);
 						OperaColors::FloodFill(cdc, rc.left + 1, rc.top + 1, right, rc.bottom - 1, a, b, BOOLSETTING(PROGRESSBAR_ODC_BUMPED));
 					}
-#ifdef FLYLINKDC_USE_TORRENT					
-					if (ii->isTorrent && ii->parent == nullptr)
-					{
-						RECT rc9 = rc2;
-						rc9.left -= 21 - shift;
-						rc9.top = (rc9.top + rc9.bottom)/2 - 8;
-						rc9.right = rc9.left + 16;
-						rc9.bottom = rc9.top + 16;
-						const int index = ii->isPaused ? 2 : (ii->isSeeding ? 1 : 0);
-						imgTorrent.DrawEx(index, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-					}
-					else
-#endif
 					if (BOOLSETTING(STEALTHY_STYLE_ICO))
 					{
 						int iconTop = (rc2.top + rc2.bottom)/2 - 8;
@@ -718,18 +674,15 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 								else
 									speedmark = ThrottleManager::getInstance()->getDownloadLimitInKBytes() / 5;
 							}
-							if (!isTorrent(*ii)) // TODO: show speed for torrents
-							{
-								//CImageList& images = HLS_S(hls) > 30 || HLS_L(hls) < 70 ? imgSpeed : imgSpeedBW;
-								CImageList& images = imgSpeedBW;
-								const int64_t speedkb = ii->speed / 1000;
-								int image;
-								if (speedkb >= speedmark*4) image = 4; else
-								if (speedkb >= speedmark*3) image = 3; else
-								if (speedkb >= speedmark*2) image = 2; else
-								if (speedkb >= (speedmark*3)/2) image = 1; else image = 0;
-								images.DrawEx(image, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-							}
+							//CImageList& images = HLS_S(hls) > 30 || HLS_L(hls) < 70 ? imgSpeed : imgSpeedBW;
+							CImageList& images = imgSpeedBW;
+							const int64_t speedkb = ii->speed / 1000;
+							int image;
+							if (speedkb >= speedmark*4) image = 4; else
+							if (speedkb >= speedmark*3) image = 3; else
+							if (speedkb >= speedmark*2) image = 2; else
+							if (speedkb >= (speedmark*3)/2) image = 1; else image = 0;
+							images.DrawEx(image, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
 						}
 					}
 
@@ -772,20 +725,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				}
 				else
 				{
-					int icon = -1;
-#ifdef FLYLINKDC_USE_TORRENT
-					if (ii->isTorrent && ii->parent == nullptr)
-					{
-						RECT rc9 = rc3;
-						rc9.top += 1;
-						rc9.right = rc9.left + 16;
-						rc9.bottom = rc9.top + 16;
-						const int index = ii->isPaused ? 2 : (ii->isSeeding ? 1 : 0);
-						imgTorrent.DrawEx(index, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-						shift += 16;
-					}
-#endif
-					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &imgSpeed, icon, status, false);
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &imgSpeed, -1, status, false);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
@@ -832,35 +772,32 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 			
 		ItemInfo* i = ctrlTransfers.getItemData(item->iItem);
 		const vector<ItemInfo*>& children = ctrlTransfers.findChildren(i->getGroupCond());
-		if (!isTorrent(*i))
+		if (i->parent != nullptr || children.size() <= 1)
 		{
-			if (i->parent != nullptr || children.size() <= 1)
+			switch (SETTING(TRANSFERLIST_DBLCLICK))
 			{
-				switch (SETTING(TRANSFERLIST_DBLCLICK))
-				{
-					case 0:
-						i->pm(i->hintedUser.hint);
-						break;
-					case 1:
-						i->getList();
-						break;
-					case 2:
-						i->matchQueue();
-					case 3:
-						i->grantSlotPeriod(i->hintedUser.hint, 600);
-						break;
-					case 4:
-						i->addFav();
-						break;
-					case 5:
-						i->statusString = TSTRING(CONNECTING_FORCED);
-						ctrlTransfers.updateItem(i);
-						ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false);
-						break;
-					case 6:
-						i->browseList();
-						break;
-				}
+				case 0:
+					i->pm(i->hintedUser.hint);
+					break;
+				case 1:
+					i->getList();
+					break;
+				case 2:
+					i->matchQueue();
+				case 3:
+					i->grantSlotPeriod(i->hintedUser.hint, 600);
+					break;
+				case 4:
+					i->addFav();
+					break;
+				case 5:
+					i->statusString = TSTRING(CONNECTING_FORCED);
+					ctrlTransfers.updateItem(i);
+					ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false);
+					break;
+				case 6:
+					i->browseList();
+					break;
 			}
 		}
 	}
@@ -928,15 +865,8 @@ TransferView::ItemInfo* TransferView::findItem(const UpdateInfo& ui, int& pos) c
 				pos = j;
 				return ii;
 			}
-			if (ui.download == ii->download && !ii->parent && isTorrent(*ii) == isTorrent(ui))
+			if (ui.download == ii->download && !ii->parent)
 			{
-#ifdef FLYLINKDC_USE_TORRENT
-				if (!ii->isTorrent)
-				{
-					dcassert(ii->sha1.is_all_zeros());
-					dcassert(ui.sha1.is_all_zeros());
-				}
-#endif
 				const auto& children = ctrlTransfers.findChildren(ii->getGroupCond()); // TODO - ссылка?
 				for (auto k = children.cbegin(); k != children.cend(); ++k)
 				{
@@ -970,16 +900,13 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 #endif
 		return;
 	}
-	if (!isTorrent(ui))
+	dcassert(!ui.token.empty());
+	if (ui.token.empty() || !ConnectionManager::tokenManager.isToken(ui.token))
 	{
-		dcassert(!ui.token.empty());
-		if (ui.token.empty() || !ConnectionManager::tokenManager.isToken(ui.token))
-		{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-			LogManager::message("[!] TRANSFER_ADD_ITEM skip missing token: " + ui.dumpInfo(ui.hintedUser.user), false);
+		LogManager::message("[!] TRANSFER_ADD_ITEM skip missing token: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
-			return;
-		}
+		return;
 	}
 	ItemInfo* ii = new ItemInfo(ui);
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
@@ -987,11 +914,6 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 		LogManager::message("[!] TRANSFER_ADD_ITEM empty token: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
 	ii->update(ui);
-#ifdef FLYLINKDC_USE_TORRENT
-	if (ii->isTorrent)
-		ctrlTransfers.insertItem(ii, IMAGE_DOWNLOAD);
-	else
-#endif
 	if (ii->download)
 		ctrlTransfers.insertGroupedItem(ii, false, false, true);
 	else
@@ -1035,28 +957,19 @@ void TransferView::processTasks()
 				for (int j = 0; j < ctrlTransfers.GetItemCount(); ++j)
 				{
 					ItemInfo* ii = ctrlTransfers.getItemData(j);
-					
-					bool found = false;
-#ifdef FLYLINKDC_USE_TORRENT
-					if (ui.isTorrent && ii->isTorrent)
-						found |= ii->sha1 == ui.sha1;
-					else
-					if (!ui.isTorrent && !ii->isTorrent)
-#endif
+
+					bool found = ii->token == ui.token;
+					if (!found)
 					{
-						found |= ii->token == ui.token;
-						if (!found)
+						if (
+						    //!ii->token.empty() && !ui.token.empty() && ConnectionManager::g_tokens_manager.isToken(ui.token) == false ||
+						    ConnectionManager::tokenManager.getTokenCount() == 0)
 						{
-							if (
-							    //!ii->token.empty() && !ui.token.empty() && ConnectionManager::g_tokens_manager.isToken(ui.token) == false ||
-							    ConnectionManager::tokenManager.getTokenCount() == 0)
-							{
-								found = true;
-								//dcassert(0);
+							found = true;
+							//dcassert(0);
 #ifdef _DEBUG
-								LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM [!] Force ui.token = " + ui.token);
+							LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM [!] Force ui.token = " + ui.token);
 #endif
-							}
 						}
 					}
 					if (found)
@@ -1081,8 +994,7 @@ void TransferView::processTasks()
 				LogManager::message("TRANSFER_REMOVE_DOWNLOAD_ITEM: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
 				dcassert(!ui.target.empty());
-				dcassert(!isTorrent(ui));
-				if (!ui.target.empty() && !isTorrent(ui))
+				if (!ui.target.empty())
 				{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
 					unsigned removedCount = 0;
@@ -1146,7 +1058,7 @@ void TransferView::processTasks()
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
 					LogManager::message("TRANSFER_UPDATE_ITEM found: " + ui.dumpInfo(ii->getUser()), false);
 #endif
-					if (ui.download && !isTorrent(ui))
+					if (ui.download)
 					{
 						const ItemInfo* parent = ii->parent ? ii->parent : ii;
 						{
@@ -1173,13 +1085,10 @@ void TransferView::processTasks()
 								// - пропадает из прогресса - не врубать
 								// TODO - ui.updateMask &= ~UpdateInfo::MASK_TOKEN;
 								ui.updateMask &= ~UpdateInfo::MASK_SIZE;
-								if (!isTorrent(ui))
-								{
-									ui.updateMask &= ~UpdateInfo::MASK_POS;
-									ui.updateMask &= ~UpdateInfo::MASK_ACTUAL;
-									ui.updateMask &= ~UpdateInfo::MASK_STATUS_STRING;
-									ui.updateMask &= ~UpdateInfo::MASK_ERROR_STATUS_STRING;
-								}
+								ui.updateMask &= ~UpdateInfo::MASK_POS;
+								ui.updateMask &= ~UpdateInfo::MASK_ACTUAL;
+								ui.updateMask &= ~UpdateInfo::MASK_STATUS_STRING;
+								ui.updateMask &= ~UpdateInfo::MASK_ERROR_STATUS_STRING;
 								ui.updateMask &= ~UpdateInfo::MASK_TIMELEFT;
 							}
 							else
@@ -1190,7 +1099,7 @@ void TransferView::processTasks()
 #endif						
 						/* if target has changed, regroup the item */
 						bool changeParent = false;
-						changeParent = !isTorrent(ui) && !isTorrent(*ii) && (ui.updateMask & UpdateInfo::MASK_FILE) && ui.target != ii->target;
+						changeParent = (ui.updateMask & UpdateInfo::MASK_FILE) && ui.target != ii->target;
 						if (changeParent)
 						{
 							ctrlTransfers.removeGroupedItem(ii, false);
@@ -1234,7 +1143,7 @@ void TransferView::processTasks()
 				if (!pp)
 					break;
 
-				if (ui.hintedUser.user || isTorrent(ui))
+				if (ui.hintedUser.user)
 				{
 					int pos = -1;
 					ItemInfo* ii = findItem(ui, pos);
@@ -1265,7 +1174,7 @@ void TransferView::processTasks()
 				for (int j = 0; j < count; ++j)
 				{
 					ItemInfo* ii = ctrlTransfers.getItemData(j);
-					if (!isTorrent(*ii) && ii->token == ui.token)
+					if (ii->token == ui.token)
 					{
 						ii->update(ui);
 						updateItem(j, ui.updateMask);
@@ -1307,13 +1216,6 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	if (ui.type != Transfer::TYPE_LAST)
 		type = ui.type;
 		
-#ifdef FLYLINKDC_USE_TORRENT
-	isTorrent = ui.isTorrent;
-	isSeeding = ui.isSeeding;
-	isPaused = ui.isPaused;
-	sha1 = ui.sha1;
-#endif
-	
 	if (ui.updateMask & UpdateInfo::MASK_STATUS)
 	{
 		status = ui.status;
@@ -1620,16 +1522,8 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 	switch (col)
 	{
 		case COLUMN_USER:
-#ifdef FLYLINKDC_USE_TORRENT
-			if (isTorrent)
-				return hits == -1 ? Util::emptyStringT : (Util::toStringT(hits) + _T(' ') + TSTRING(FILES));
-#endif
 			return hits == -1 ? nicks : (Util::toStringT(hits) + _T(' ') + TSTRING(USERS));
 		case COLUMN_HUB:
-#ifdef FLYLINKDC_USE_TORRENT
-			if (isTorrent)
-				return tstring(); // TODO: show trackers here
-#endif
 			return hits == -1 ? hubs : (Util::toStringT(running) + _T(' ') + TSTRING(NUMBER_OF_SEGMENTS));
 		case COLUMN_STATUS:
 		{
@@ -1641,19 +1535,8 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 			//dcassert(timeLeft >= 0);
 			return (status == STATUS_RUNNING && timeLeft > 0) ? Util::formatSecondsT(timeLeft) : Util::emptyStringT;
 		case COLUMN_SPEED:
-#ifdef FLYLINKDC_USE_TORRENT
-			if (isTorrent)
-			{
-				if (hits == -1 && speed)
-					return Util::formatBytesT(speed) + _T('/') + TSTRING(S);
-				return Util::emptyStringT;
-			}
-#endif
 			return status == STATUS_RUNNING ? (Util::formatBytesT(speed) + _T('/') + TSTRING(S)) : Util::emptyStringT;
 		case COLUMN_FILE:
-#ifdef FLYLINKDC_USE_TORRENT
-			if (isTorrent) return Util::getFileName(target);
-#endif
 			return getFile(type, Util::getFileName(target));
 		case COLUMN_SIZE:
 			return size >= 0 ? Util::formatBytesT(size) : Util::emptyStringT;
@@ -1666,13 +1549,6 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 			return ratioText;
 #endif
 		case COLUMN_CIPHER:
-#if defined(_DEBUG) && defined(FLYLINKDC_USE_TORRENT)
-			if (isTorrent)
-			{
-				const string sha = libtorrent::aux::to_hex(sha1);
-				return _T("SHA1: ") + Text::toT(sha);
-			}
-#endif
 			if (token.empty()) return cipher;
 			return cipher + _T(" [Token: ") + Text::toT(token) + _T("]");
 		case COLUMN_SHARE:
@@ -1853,13 +1729,7 @@ void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) no
 		{
 			for (auto j = dl.cbegin(); j != dl.cend(); ++j)
 			{
-#ifdef FLYLINKDC_USE_TORRENT
-				dcassert(!j->isTorrent);
-#endif
 				UpdateInfo* ui = new UpdateInfo(j->hintedUser, true);
-#ifdef FLYLINKDC_USE_TORRENT
-				ui->isTorrent = j->isTorrent;
-#endif
 				ui->setStatus(ItemInfo::STATUS_RUNNING);
 				ui->setActual(j->actual);
 				ui->setPos(j->pos);
@@ -1947,34 +1817,6 @@ void TransferView::onTransferComplete(const Transfer* t, const bool download, co
 		
 		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
-}
-
-void TransferView::ItemInfo::pauseTorrentFile()
-{
-#ifdef FLYLINKDC_USE_TORRENT
-	DownloadManager::getInstance()->pause_torrent_file(sha1, false);
-#endif
-}
-
-void TransferView::ItemInfo::resumeTorrentFile()
-{
-#ifdef FLYLINKDC_USE_TORRENT
-	DownloadManager::getInstance()->pause_torrent_file(sha1, true);
-#endif
-}
-
-void TransferView::ItemInfo::removeTorrentAndFile()
-{
-#ifdef FLYLINKDC_USE_TORRENT
-	DownloadManager::getInstance()->remove_torrent_file(sha1, lt::session::delete_files);
-#endif
-}
-
-void TransferView::ItemInfo::removeTorrent()
-{
-#ifdef FLYLINKDC_USE_TORRENT
-	DownloadManager::getInstance()->remove_torrent_file(sha1, { });
-#endif
 }
 
 void TransferView::ItemInfo::disconnectAndBlock()
@@ -2220,74 +2062,6 @@ void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, co
 	}
 }
 
-#ifdef FLYLINKDC_USE_TORRENT
-void TransferView::on(DownloadManagerListener::TorrentEvent, const DownloadArray& p_torrent_event) noexcept
-{
-	if (!ClientManager::isBeforeShutdown())
-	{
-		for (auto j = p_torrent_event.cbegin(); j != p_torrent_event.cend(); ++j)
-		{
-			UpdateInfo* ui = new UpdateInfo(j->hintedUser, true);
-			ui->setStatus(ItemInfo::STATUS_RUNNING);
-			ui->setActual(j->actual);
-			ui->setPos(j->pos);
-			dcassert(j->isTorrent);
-			ui->isTorrent = j->isTorrent;
-			ui->sha1 = j->sha1;
-			ui->isSeeding = j->isSeeding;
-			ui->isPaused = j->isPaused;
-			ui->setSpeed(j->speed);
-			ui->setSize(j->size);
-			ui->setTimeLeft(j->secondsLeft);
-			ui->setType(Transfer::Type(j->type)); // TODO
-			ui->setTarget(j->path);
-			//ui->setToken(j->token);
-			//dcassert(!j->token.empty());
-			addTask(TRANSFER_UPDATE_ITEM, ui);
-		}
-	}
-}
-
-void TransferView::on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& sha1) noexcept
-{
-	if (!ClientManager::isBeforeShutdown())
-	{
-		UpdateInfo* ui = new UpdateInfo(sha1);
-		addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);
-	}
-}
-
-void TransferView::on(DownloadManagerListener::SelectTorrent, const libtorrent::sha1_hash& p_sha1,
-                      CFlyTorrentFileArray& p_files, std::shared_ptr<const libtorrent::torrent_info> p_torrent_info) noexcept
-{
-	// TODO - PostMessage
-	try
-	{
-		CFlyTorrentDialog dlg(p_files, p_torrent_info);
-		if (dlg.DoModal(WinUtil::g_mainWnd) == IDOK)
-		{
-			const tstring dir = dlg.m_dir;
-			DownloadManager::getInstance()->set_file_priority(p_sha1, dlg.m_files,
-			                                                  dlg.m_selected_files, Text::fromT(dir)); // TODO - убрать m_selected_files
-			DownloadManager::getInstance()->fire_added_torrent(p_sha1);
-		}
-		else
-		{
-			DownloadManager::getInstance()->remove_torrent_file(p_sha1, lt::session::delete_files);
-		}
-	}
-	catch (const Exception &e)
-	{
-		LogManager::message("DownloadManagerListener::SelectTorrent - error " + e.getError());
-	}
-}
-
-void TransferView::on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_name) noexcept
-{
-	SHOW_POPUP(POPUP_ON_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Text::toT(p_name), TSTRING(DOWNLOAD_FINISHED_IDLE));
-}
-#endif
-
 void TransferView::on(DownloadManagerListener::RemoveToken, const string& token) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
@@ -2337,16 +2111,6 @@ LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 		if (ii)
 		{
 			tstring sdata;
-#ifdef FLYLINKDC_USE_TORRENT
-			if (ii->isTorrent)
-			{
-				if (wID == IDC_COPY_LINK)
-				{
-					sdata = Text::toT(DownloadManager::getInstance()->get_torrent_magnet(ii->sha1));
-				}
-			}
-			else
-#endif
 			if (wID == IDC_COPY_TTH || wID == IDC_COPY_LINK || wID == IDC_COPY_WMLINK)
 			{
 				TTHValue tth;
@@ -2428,22 +2192,12 @@ TransferView::ItemInfo::ItemInfo() : hintedUser(HintedUser(nullptr, Util::emptyS
 TransferView::ItemInfo::ItemInfo(const TransferView::UpdateInfo& ui) : hintedUser(ui.hintedUser), download(ui.download)
 {
 	init();
-#ifdef FLYLINKDC_USE_TORRENT
-	isTorrent = ui.isTorrent;
-	isSeeding = ui.isSeeding;
-	sha1 = ui.sha1;
-#endif
 }
 
 void TransferView::ItemInfo::init()
 {
 #ifdef _DEBUG
 	++g_count_transfer_item;
-#endif
-#ifdef FLYLINKDC_USE_TORRENT
-	isTorrent = false;
-	isSeeding = false;
-	isPaused = false;
 #endif
 	transferFailed = false;
 	status = STATUS_WAITING;
