@@ -4,6 +4,9 @@
 #ifdef _WIN32
 #include "WinEvent.h"
 typedef WinEvent<TRUE> WaitableEvent;
+#elif defined(__linux__) || defined(linux)
+#include "LinuxEvent.h"
+typedef LinuxEvent WaitableEvent;
 #else
 #include "PipeEvent.h"
 typedef PipeEvent WaitableEvent;

@@ -89,7 +89,7 @@ class PipeEvent
 		void reset() noexcept
 		{
 			dcassert(fd[0] != -1);
-			char val = 1;
+			char val;
 			while (true)
 			{
 				int res = read(fd[0], &val, 1);
