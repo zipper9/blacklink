@@ -683,7 +683,7 @@ static inline void timeSpecFromLinear(struct timespec& ts, uint64_t val)
 	ts.tv_nsec = val % 1000000000;
 }
 
-uint64_t File::getTimeStamp() noexcept
+uint64_t File::getTimeStamp() const noexcept
 {
 	struct stat st;
 	return fstat(h, &st) ? 0 : timeSpecToLinear(st.st_mtim);
