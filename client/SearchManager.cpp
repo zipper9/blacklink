@@ -211,7 +211,7 @@ void SearchManager::onData(const char* buf, int len, Ip4Address remoteIp, uint16
 {
 	if (BOOLSETTING(LOG_UDP_PACKETS) && isText(buf, len))
 		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
-			Util::printIpAddress(remoteIp) + ':' + Util::toString(remotePort));
+			Util::printIpAddress(remoteIp), remotePort);
 
 	if (processNMDC(buf, len, remoteIp)) return;
 	if (dht::DHT::getInstance()->processIncoming((const uint8_t *) buf, len, remoteIp, remotePort)) return;
@@ -691,7 +691,7 @@ void SearchManager::processSendQueue() noexcept
 		const string& data = i->data;
 		::sendto(socket->getSock(), data.data(), data.length(), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 		if (BOOLSETTING(LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
-			LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address) + ':' + Util::toString(i->port));
+			LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address), i->port);
 	}
 	sendQueue.clear();
 	csSendQueue.unlock();

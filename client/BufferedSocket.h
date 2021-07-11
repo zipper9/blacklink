@@ -70,6 +70,7 @@ class BufferedSocket : private Thread
 		{
 			return hasSocket() ? sock->getCipherName() : Util::emptyString;
 		}
+		string getRemoteIpAsString() const;
 		string getRemoteIpPort() const;
 		Ip4Address getIp4() const;
 		const uint16_t getPort() const

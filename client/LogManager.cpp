@@ -170,21 +170,23 @@ class LogMessageExpander : public Util::TimeParamExpander
 {
 		const string& msg;
 		const string& ipPort;
+		const string& ip;
 
 	public:	
-		LogMessageExpander(const string& msg, const string& ipPort, time_t t) :
-			Util::TimeParamExpander(t), msg(msg), ipPort(ipPort) {}
+		LogMessageExpander(const string& msg, const string& ipPort, const string& ip, time_t t) :
+			Util::TimeParamExpander(t), msg(msg), ipPort(ipPort), ip(ip) {}
 		virtual const string& expandBracket(const string& param) noexcept override
 		{
 			if (param == "message") return msg;
 			if (param == "ipPort") return ipPort;
+			if (param == "IP" || param == "ip") return ip;
 			return Util::emptyString;
 		}
 };
 
 void LogManager::log(int area, const string& msg) noexcept
 {
-	LogMessageExpander ex(msg, Util::emptyString, time(nullptr));
+	LogMessageExpander ex(msg, Util::emptyString, Util::emptyString, time(nullptr));
 	log(area, &ex);
 }
 
@@ -253,7 +255,7 @@ void LogManager::torrent_message(const string& message, bool addToSystem /*= tru
 }
 #endif
 
-void LogManager::commandTrace(const string& msg, int flags, const string& ipPort) noexcept
+void LogManager::commandTrace(const string& msg, int flags, const string& ip, int port) noexcept
 {
 	if (flags & FLAG_UDP)
 	{
@@ -264,10 +266,11 @@ void LogManager::commandTrace(const string& msg, int flags, const string& ipPort
 		if (!BOOLSETTING(LOG_TCP_MESSAGES)) return;
 	}
 	string msgFull = (flags & FLAG_IN)? "Recv from " : "Sent to   ";
+	string ipPort = ip + ':' + Util::toString(port);
 	msgFull += ipPort;
 	msgFull += ": ";
 	msgFull += msg;
-	LogMessageExpander ex(msgFull, ipPort, time(nullptr));
+	LogMessageExpander ex(msgFull, ipPort, ip, time(nullptr));
 	log((flags & FLAG_UDP) ? UDP_PACKETS : TCP_MESSAGES, &ex);
 }
 

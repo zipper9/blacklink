@@ -243,7 +243,7 @@ namespace dht
 		}
 
 		if (BOOLSETTING(LOG_UDP_PACKETS))
-			LogManager::commandTrace(command, LogManager::FLAG_UDP, Util::printIpAddress(address) + ':' + Util::toString(port));
+			LogManager::commandTrace(command, LogManager::FLAG_UDP, Util::printIpAddress(address), port);
 
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG(command, DebugTask::HUB_OUT, Util::printIpAddress(address) + ':' + Util::toString(port));
@@ -373,7 +373,7 @@ namespace dht
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG(s, DebugTask::HUB_IN, remoteIp + ':' + Util::toString(remotePort));
 		if (BOOLSETTING(LOG_UDP_PACKETS))
-			LogManager::commandTrace(s, LogManager::FLAG_UDP | LogManager::FLAG_IN, remoteIp + ':' + Util::toString(remotePort));
+			LogManager::commandTrace(s, LogManager::FLAG_UDP | LogManager::FLAG_IN, remoteIp, remotePort);
 		return dispatch(s, address, remotePort, isUdpKeyValid) || isCompressed || isEncrypted;
 	}
 

@@ -388,7 +388,7 @@ void BufferedSocket::parseData(Buffer& b)
 					throw SocketException(STRING(COMMAND_TOO_LONG));
 				lineBuf.assign((const char*) buf, len);
 				if (doTrace)
-					LogManager::commandTrace(lineBuf, LogManager::FLAG_IN, getRemoteIpPort());
+					LogManager::commandTrace(lineBuf, LogManager::FLAG_IN, getRemoteIpAsString(), getPort());
 				listener->onDataLine(lineBuf);
 			}
 			b.readPtr += len + 1;
@@ -497,10 +497,10 @@ void BufferedSocket::write(const void* data, size_t size)
 		{
 			string truncatedMsg((const char *) data, 512 - 11);
 			truncatedMsg.append("<TRUNCATED>", 11);
-			LogManager::commandTrace(truncatedMsg, 0, getRemoteIpPort());
+			LogManager::commandTrace(truncatedMsg, 0, getRemoteIpAsString(), getPort());
 		}
 		else
-			LogManager::commandTrace(string((const char *) data, size), 0, getRemoteIpPort());
+			LogManager::commandTrace(string((const char *) data, size), 0, getRemoteIpAsString(), getPort());
 	}
 
 	bool notify = false;
@@ -521,13 +521,17 @@ void BufferedSocket::transmitFile(InputStream* stream)
 	if (sock) sock->signalControlEvent();
 }
 
+string BufferedSocket::getRemoteIpAsString() const
+{
+	return sock ? Util::printIpAddress(sock->getIp4()) : Util::emptyString;
+}
+
 string BufferedSocket::getRemoteIpPort() const
 {
-	string s;
+	string s = getRemoteIpAsString();
+	if (s.empty()) return s;
 	if (sock)
 	{
-		auto ip4 = sock->getIp4();
-		if (ip4) s += Util::printIpAddress(ip4);
 		s += ':';
 		s += Util::toString(sock->getPort());
 	}

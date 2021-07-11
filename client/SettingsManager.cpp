@@ -847,7 +847,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_SEARCH_TRACE, "Found.log");
 	setDefault(LOG_FILE_PSR_TRACE, "psr.log");
 	setDefault(LOG_FILE_FLOOD_TRACE, "flood.log");
-	setDefault(LOG_FILE_TCP_MESSAGES, "Trace" PATH_SEPARATOR_STR "%[ipPort].log");
+	setDefault(LOG_FILE_TCP_MESSAGES, "Trace" PATH_SEPARATOR_STR "%[ip]" PATH_SEPARATOR_STR "%[ipPort].log");
 	setDefault(LOG_FILE_UDP_PACKETS, "Trace" PATH_SEPARATOR_STR "UDP-Packets.log");
 	setDefault(LOG_FORMAT_DOWNLOAD, "%Y-%m-%d %H:%M:%S: %[target] " + STRING(DOWNLOADED_FROM) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_UPLOAD, "%Y-%m-%d %H:%M:%S %[source] " + STRING(UPLOADED_TO) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");

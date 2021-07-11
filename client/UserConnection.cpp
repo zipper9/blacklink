@@ -423,11 +423,17 @@ void UserConnection::onDataLine(const string& line) noexcept
 			ClientManager::setUnknownCommand(getUser(), line);
 			
 		dcdebug("UserConnection Unknown NMDC command: %.50s\n", line.c_str());
-		string log = "UserConnection:: Unknown NMDC command: = " + line + " hub = " + getHubUrl() + " remote IP = " + getRemoteIpPort();
+		string log = "Unknown command from ";
 		if (getHintedUser().user)
-		{
-			log += " Nick = " + getHintedUser().user->getLastNick();
-		}
+			log += getHintedUser().user->getLastNick();
+		else
+			log += '?';
+		log += '@';
+		log += getHubUrl();
+		log += " (";
+		log += socket->getRemoteIpAsString();
+		log += "): ";
+		log += line;
 		LogManager::message(log, false);
 		unsetFlag(FLAG_NMDC);
 		disconnect(true); // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1684
