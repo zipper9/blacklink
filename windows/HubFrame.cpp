@@ -381,8 +381,8 @@ HubFrame* HubFrame::openHubWindow(const Settings& cs)
 			rc = rcmdiClient; // frm->rcDefault;
 		}
 		frm->Create(WinUtil::g_mdiClient, rc);
-		if (cs.windowType)
-			frm->ShowWindow(cs.windowType);
+		//if (cs.windowType)
+		//	frm->ShowWindow(cs.windowType);
 		frames.insert(make_pair(cs.server, frm));
 	}
 	else

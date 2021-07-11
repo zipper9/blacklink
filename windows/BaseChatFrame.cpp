@@ -235,7 +235,7 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 	ctrlMessage.Create(messagePanelHwnd,
 	                   messagePanelRect,
 	                   NULL,
-	                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+	                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
 	                   WS_EX_CLIENTEDGE,
 	                   IDC_CHAT_MESSAGE_EDIT);
 	if (!lastMessage.empty())

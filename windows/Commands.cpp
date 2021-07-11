@@ -1091,6 +1091,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 				_T(": Match found") : _T(": No match");
 			return true;
 		}
+		localMessage = TSTRING(COMMAND_INVALID_ACTION);
 		return true;
 	}
 #endif
