@@ -57,11 +57,9 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, onEditCopy)
 		COMMAND_ID_HANDLER(ID_EDIT_SELECT_ALL, onEditSelectAll)
 		COMMAND_ID_HANDLER(ID_EDIT_CLEAR_ALL, onEditClearAll)
-		MESSAGE_HANDLER(WM_SIZE, onSize)
 		END_MSG_MAP()
 		
 		LRESULT onMouseWheel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
-		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 #ifdef IRAINMAN_ENABLE_WHOIS
 		LRESULT onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

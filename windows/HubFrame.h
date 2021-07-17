@@ -87,8 +87,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onHubFrmCtlColor)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-		MESSAGE_HANDLER(WM_MOUSEMOVE, onMouseMove)
-		MESSAGE_HANDLER(WM_CAPTURECHANGED, onCaptureChanged)
 		MESSAGE_HANDLER(WM_WINDOWPOSCHANGING, onSizeMove)
 		MESSAGE_HANDLER(WMU_CHAT_LINK_CLICKED, onChatLinkClicked)
 
@@ -152,8 +150,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onUnBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onMouseMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onCaptureChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 
@@ -387,8 +383,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		CContainedWindow* ctrlChatContainer;
 		bool showJoins;
 		bool showFavJoins;
-
-		int prevCursorX, prevCursorY;
 
 		void updateWindowTitle();
 		void setWindowTitle(const string& text);

@@ -260,6 +260,12 @@ LRESULT UserListWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	return 0;
 }
 
+LRESULT UserListWindow::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	updateLayout();
+	return 0;
+}
+
 LRESULT UserListWindow::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	NMITEMACTIVATE* item = (NMITEMACTIVATE*)pnmh;
@@ -1023,25 +1029,27 @@ void UserListWindow::updateLayout()
 	int comboHeight = WinUtil::getComboBoxHeight(ctrlFilterSel, nullptr);
 	int editHeight = std::max(comboHeight, BUTTON_SIZE);
 	
+	HDWP dwp = BeginDeferWindowPos(4);
 	CRect rc;
 	rc.right = rect.right - 2;
 	rc.top = rect.bottom - 4 - editHeight + 1;
 	rc.bottom = rc.top + 256;
 	rc.left = rc.right - comboWidth;
-	ctrlFilterSel.MoveWindow(&rc);
+	ctrlFilterSel.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER);
 
 	rc.right = rc.left - 2;
 	rc.left = rc.right - editHeight;
 	rc.top--;
 	rc.bottom = rc.top + editHeight;
-	ctrlClearFilter.MoveWindow(&rc);
+	ctrlClearFilter.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER);
 
 	rc.right = rc.left - 2;
 	rc.left = 2;
-	ctrlFilter.MoveWindow(&rc);
+	ctrlFilter.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER);
 
 	rect.bottom = rc.top - 4;
-	ctrlUsers.MoveWindow(&rect);
+	ctrlUsers.DeferWindowPos(dwp, nullptr, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOZORDER);
+	EndDeferWindowPos(dwp);
 }
 
 bool UserListWindow::showHeaderMenu(POINT pt)

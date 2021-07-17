@@ -82,7 +82,6 @@ HubFrame::HubFrame(const Settings& cs) :
 	asyncUpdate(0),
 	asyncUpdateSaved(0)
 {
-	prevCursorX = prevCursorY = INT_MAX;
 	ctrlStatusCache.resize(5);
 	showUsersStore = !cs.hideUserList;
 	showUsers = false;
@@ -2699,29 +2698,6 @@ LRESULT HubFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 LRESULT HubFrame::onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	openFrameLog();
-	return 0;
-}
-
-LRESULT HubFrame::onMouseMove(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-{
-	int x = GET_X_LPARAM(lParam);
-	int y = GET_Y_LPARAM(lParam);
-	if (x != prevCursorX || y != prevCursorY)
-	{
-		if ((wParam & MK_LBUTTON) && ::GetCapture() == m_hWnd)
-			UpdateLayout(FALSE);
-		prevCursorX = x;
-		prevCursorY = y;
-	}
-	bHandled = FALSE;
-	return 0;
-}
-
-LRESULT HubFrame::onCaptureChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	bHandled = FALSE;
-	UpdateLayout(FALSE);
-	prevCursorX = prevCursorY = INT_MAX;
 	return 0;
 }
 

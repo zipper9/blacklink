@@ -963,33 +963,6 @@ LRESULT ChatCtrl::onMouseWheel(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 	return 1;
 }
 
-//[+] sergiy.karasov
-//фикс управления прокруткой окна чата при изменении размеров окна передач
-LRESULT ChatCtrl::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-{
-	if (wParam != SIZE_MINIMIZED && HIWORD(lParam) > 0)
-		if (IsWindow())
-		{
-			CHARRANGE l_cr;
-			GetSel(l_cr);
-			// [!] IRainman fix: 0 is valid value! Details http://msdn.microsoft.com/ru-ru/library/1z3s90k4(v=vs.90).aspx
-			// [-] if (l_cr.cpMax > 0 && l_cr.cpMin > 0) //[+]PPA
-			// [~]
-			{
-				SetSel(GetTextLengthEx(GTL_NUMCHARS), -1);
-				ScrollCaret(); // [1] https://www.box.net/shared/qve5a2y5gcg2sopjbpd5
-				const DWORD l_go = GetOptions();
-				SetOptions(ECOOP_AND, DWORD(~(ECO_AUTOVSCROLL | ECO_AUTOHSCROLL)));
-				SetSel(l_cr);
-				SetOptions(ECOOP_OR, l_go);
-				PostMessage(EM_SCROLL, SB_BOTTOM, 0);
-			}
-		}
-		
-	bHandled = FALSE;
-	return 1;
-}
-
 tstring ChatCtrl::getUrlHiddenText(LONG end)
 {
 	TCHAR sep[2] = {};
