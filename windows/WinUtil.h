@@ -80,8 +80,6 @@ COLORREF HLS2RGB(HLSCOLOR hls);
 COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S);
 HLSCOLOR HLS_TRANSFORM2(HLSCOLOR hls, int percent_L, int percent_S);
 
-extern const TCHAR* g_file_list_type;
-
 template <class T> inline void safe_unsubclass_window(T* p)
 {
 	dcassert(p->IsWindow());
@@ -366,6 +364,16 @@ class WinUtil
 			delete ptr;
 			return false;
 		}
+
+		struct FileMaskItem
+		{
+			ResourceManager::Strings stringId;
+			const TCHAR* ext;
+		};
+
+		static tstring getFileMaskString(const FileMaskItem* items);
+		static const FileMaskItem fileListsMask[];
+		static const FileMaskItem allFilesMask[];
 
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);

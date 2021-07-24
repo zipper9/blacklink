@@ -1279,7 +1279,7 @@ LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	if (selectedFile.empty())
 	{
 		tstring file;
-		if (!WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), g_file_list_type) || file.empty())
+		if (!WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), WinUtil::getFileMaskString(WinUtil::fileListsMask).c_str()) || file.empty())
 			return 0;
 		selectedFile = Text::fromT(file);
 	}

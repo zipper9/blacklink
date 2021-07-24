@@ -23,6 +23,8 @@
 #include "Commands.h"
 #include "LineDlg.h"
 #include "../client/StringTokenizer.h"
+#include <tom.h>
+#include <comdef.h>
 
 #ifdef IRAINMAN_USE_BB_CODES
 static tstring printColor(COLORREF color)
@@ -345,6 +347,49 @@ LRESULT BaseChatFrame::onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HW
 	if (!ChatCtrl::g_sSelectedText.empty())
 	{
 		searchFileOnInternet(wID, ChatCtrl::g_sSelectedText);
+	}
+	return 0;
+}
+
+LRESULT BaseChatFrame::onSaveToFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	IRichEditOle *pOle = ctrlClient.getRichEditOle();
+	if (!pOle) return 0;
+	ITextDocument *pDoc = nullptr;
+	pOle->QueryInterface(IID_ITextDocument, (void**) &pDoc);
+	if (pDoc)
+	{
+		static const WinUtil::FileMaskItem types[] =
+		{
+			{ ResourceManager::FILEMASK_TEXT, _T("*.txt") },
+			{ ResourceManager::FILEMASK_RTF,  _T("*.rtf") },
+			{ ResourceManager::FILEMASK_ALL,  _T("*.*")   },
+			{ ResourceManager::Strings(),     nullptr     }
+		};
+		tstring target;
+		WinUtil::browseFile(target, ctrlClient, true, Util::emptyStringT, WinUtil::getFileMaskString(types).c_str(), _T("txt"));
+		if (!target.empty())
+		{
+			long flags = tomCreateAlways;
+			if (Util::getFileExt(target) == _T(".rtf"))
+				flags |= tomRTF;
+			else
+				flags |= tomText;
+			VARIANT var;
+			VariantInit(&var);
+			var.bstrVal = SysAllocString(target.c_str());
+			var.vt = VT_BSTR;
+			HRESULT hr = pDoc->Save(&var, flags, 1200); // NOTE: 1208 doesn't work
+			SysFreeString(var.bstrVal);
+			if (FAILED(hr))
+			{
+				tstring errorMsg = TSTRING(ERROR_SAVING_DOCUMENT);
+				_com_error ce(hr);
+				errorMsg += ce.ErrorMessage();
+				MessageBox(ctrlClient, errorMsg.c_str(), getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
+			}
+		}
+		pDoc->Release();
 	}
 	return 0;
 }
@@ -751,6 +796,7 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 	
 	menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL));
 	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR));
+	menu.AppendMenu(MF_STRING, IDC_SAVE, CTSTRING(SAVE_TO_FILE));
 	menu.AppendMenu(MF_SEPARATOR);
 	
 	menu.AppendMenu(MF_STRING, IDC_AUTOSCROLL_CHAT, CTSTRING(ASCROLL_CHAT));

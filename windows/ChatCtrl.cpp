@@ -1049,6 +1049,12 @@ LRESULT ChatCtrl::onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	return 0;
 }
 
+IRichEditOle* ChatCtrl::getRichEditOle()
+{
+	if (!pRichEditOle) initRichEditOle();
+	return pRichEditOle;
+}
+
 #ifdef IRAINMAN_INCLUDE_SMILE
 void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 {

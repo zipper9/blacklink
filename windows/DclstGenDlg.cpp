@@ -310,7 +310,13 @@ LRESULT DclstGenDlg::onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	tstring targetOld = Text::toT(listName);
 	tstring target = targetOld;
 	static const TCHAR defaultExt[] = _T("dcls");
-	if (WinUtil::browseFile(target, *this, true, Util::emptyStringT, g_file_list_type, defaultExt)) // TODO translate
+	static const WinUtil::FileMaskItem mask[] =
+	{
+		{ ResourceManager::FILEMASK_DCLST, _T("*.dcls;*.dclst") },
+		{ ResourceManager::FILEMASK_ALL,   _T("*.*")            },
+		{ ResourceManager::Strings(),      nullptr              }
+	};
+	if (WinUtil::browseFile(target, *this, true, Util::emptyStringT, WinUtil::getFileMaskString(mask).c_str(), defaultExt))
 	{
 		if (File::renameFile(targetOld, target))
 		{

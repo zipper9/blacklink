@@ -2041,7 +2041,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir, _T("All Files\0*.*\0\0")))
+	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir, WinUtil::getFileMaskString(WinUtil::allFilesMask).c_str()))
 	{
 		FileHashDlg dlg(g_iconBitmaps.getIcon(IconBitmaps::TTH, 0));
 		dlg.filename = std::move(file);
@@ -2150,7 +2150,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		return 0;
 	}
 	
-	if (WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), g_file_list_type))//FILE_LIST_TYPE.c_str()))
+	if (WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), WinUtil::getFileMaskString(WinUtil::fileListsMask).c_str()))
 	{
 		if (Util::isTorrentFile(file))
 		{

@@ -492,13 +492,20 @@ LRESULT PropPageTextStyles::onImport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	return 0;
 }
 
-static const TCHAR types[] = _T("DC++ Theme Files\0*.dctheme;\0DC++ Settings Files\0*.xml;\0All Files\0*.*\0\0");// TODO translate
+static const WinUtil::FileMaskItem types[] =
+{
+	{ ResourceManager::FILEMASK_THEME,        _T("*.dctheme") },
+	{ ResourceManager::FILEMASK_XML_SETTINGS, _T("*.xml")     },
+	{ ResourceManager::FILEMASK_ALL,          _T("*.*")       },
+	{ ResourceManager::Strings(),             nullptr         }
+};
+
 static const TCHAR defExt[] = _T("dctheme");
 
 LRESULT PropPageTextStyles::onExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, true, Text::toT(Util::getThemesPath()), types, defExt))
+	if (WinUtil::browseFile(file, m_hWnd, true, Text::toT(Util::getThemesPath()), WinUtil::getFileMaskString(types).c_str(), defExt))
 	{
 		saveSettings();
 		SettingsManager::exportDcTheme(file);

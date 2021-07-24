@@ -56,6 +56,7 @@ extern CAppModule _Module;
 #include <atlmisc.h>
 #include <atlsplit.h>
 #include <atltheme.h>
+#include <atlctrlx.h>
 #endif // _WIN32
 
 #include "util_flylinkdc.h"

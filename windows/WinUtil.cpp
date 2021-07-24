@@ -52,7 +52,20 @@
 #include "SearchFrm.h"
 #include "DirectoryListingFrm.h"
 
-const TCHAR* g_file_list_type = L"All Lists\0*.xml.bz2;*.dcls;*.dclst\0All Files\0*.*\0\0";
+const WinUtil::FileMaskItem WinUtil::fileListsMask[] =
+{
+	{ ResourceManager::FILEMASK_FILE_LISTS, _T("*.xml.bz2;*.dcls;*.dclst") },
+	{ ResourceManager::FILEMASK_XML_BZ2,    _T("*.xml.bz2")                },
+	{ ResourceManager::FILEMASK_DCLST,      _T("*.dcls;*.dclst")           },
+	{ ResourceManager::FILEMASK_ALL,        _T("*.*")                      },
+	{ ResourceManager::Strings(),           nullptr                        }
+};
+
+const WinUtil::FileMaskItem WinUtil::allFilesMask[] =
+{
+	{ ResourceManager::FILEMASK_ALL, _T("*.*") },
+	{ ResourceManager::Strings(),    nullptr   }
+};
 
 CMenu WinUtil::g_mainMenu;
 
@@ -1901,4 +1914,19 @@ int WinUtil::getComboBoxHeight(HWND hwnd, HFONT font)
 	SelectObject(hdc, prevFont);
 	ReleaseDC(hwnd, hdc);
 	return res;	
+}
+
+tstring WinUtil::getFileMaskString(const FileMaskItem* items)
+{
+	tstring result;
+	while (items->ext)
+	{
+		result += TSTRING_I(items->stringId);
+		result += _T('\0');
+		result += items->ext;
+		result += _T('\0');
+		items++;
+	}
+	if (result.empty()) result += _T('\0');
+	return result;
 }

@@ -19,10 +19,10 @@
 #ifndef DCPLUSPLUS_WTL_FLYLINKDC_H
 #define DCPLUSPLUS_WTL_FLYLINKDC_H
 
-#include <Shellapi.h>
-#include <atlctrlx.h>
 #include "../client/w.h"
-#include "../client/SettingsManager.h"
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlctrls.h>
 #include "../client/ResourceManager.h"
 
 class CFlyToolTipCtrl : public CToolTipCtrl

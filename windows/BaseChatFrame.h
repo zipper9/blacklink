@@ -47,6 +47,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		{
 			// dcassert(0);
 		}
+		COMMAND_ID_HANDLER(IDC_SAVE, onSaveToFile)
 		COMMAND_ID_HANDLER(IDC_MESSAGEPANEL, onMultilineChatInputButton)
 		COMMAND_ID_HANDLER(ID_TEXT_TRANSCODE, OnTextTranscode)
 		COMMAND_RANGE_HANDLER(IDC_BOLD, IDC_STRIKE, onTextStyleSelect)
@@ -109,6 +110,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT OnTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSaveToFile(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);

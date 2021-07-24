@@ -158,6 +158,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		tstring getUrlHiddenText(LONG end);
 	
 	public:
+		IRichEditOle* getRichEditOle();
 		void disableChatCache() { disableChatCacheFlag = true; }
 		void restoreChatCache();
 		
