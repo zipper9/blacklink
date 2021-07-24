@@ -232,10 +232,11 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 	this->suppressChat = suppressChat;
 	dcassert(ctrlMessage == nullptr);
 	createChatCtrl();
+	ctrlMessage.setCallback(this);
 	ctrlMessage.Create(messagePanelHwnd,
 	                   messagePanelRect,
 	                   NULL,
-	                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+	                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
 	                   WS_EX_CLIENTEDGE,
 	                   IDC_CHAT_MESSAGE_EDIT);
 	if (!lastMessage.empty())
@@ -246,9 +247,6 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 	ctrlMessage.SetFont(Fonts::g_font);
 	ctrlMessage.SetLimitText(9999);
 	//ctrlMessage.SetWindowPos(ctrlClient, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE); // Set Tab order
-	ctrlMessageContainer = new CContainedWindow(WC_EDIT, messageMap, messageMapID);
-	ctrlMessageContainer->SubclassWindow(ctrlMessage);
-	
 	if (suppressChat)
 	{
 		ctrlMessage.SetReadOnly();
@@ -268,8 +266,6 @@ void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 		}
 		ctrlMessage.DestroyWindow();
 	}
-	delete ctrlMessageContainer;
-	ctrlMessageContainer = nullptr;
 }
 
 void BaseChatFrame::createMessagePanel()
@@ -315,7 +311,7 @@ void BaseChatFrame::restoreStatusFromCache()
 
 void BaseChatFrame::checkMultiLine()
 {
-	if (ctrlMessage && ctrlMessage.GetWindowTextLength() > 0)
+	if (ctrlMessage)
 	{
 		tstring fullMessageText;
 		WinUtil::getWindowText(ctrlMessage, fullMessageText);
@@ -327,25 +323,6 @@ void BaseChatFrame::checkMultiLine()
 		}
 	}
 }
-bool BaseChatFrame::adjustChatInputSize(BOOL& bHandled)
-{
-	bool needsAdjust = WinUtil::isCtrlOrAlt();
-	if (BOOLSETTING(MULTILINE_CHAT_INPUT) && BOOLSETTING(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))  // [+] SSA - Added Enter for MulticharInput
-	{
-		needsAdjust = !needsAdjust;
-	}
-	if (needsAdjust)
-	{
-		bHandled = FALSE;
-		if (!BOOLSETTING(MULTILINE_CHAT_INPUT) && !tempUseMultiChat)
-		{
-			tempUseMultiChat = true;
-			UpdateLayout();
-		}
-	}
-	checkMultiLine();
-	return needsAdjust;
-}
 
 TCHAR BaseChatFrame::getChatRefferingToNick()
 {
@@ -356,7 +333,7 @@ TCHAR BaseChatFrame::getChatRefferingToNick()
 #endif
 }
 
-void BaseChatFrame::clearMessageWindow()
+void BaseChatFrame::clearInputBox()
 {
 	if (ctrlMessage)
 		ctrlMessage.SetWindowText(_T(""));
@@ -402,181 +379,10 @@ LRESULT BaseChatFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	return FALSE;
 }
 
-void BaseChatFrame::insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHandled)
-{
-	const bool allowToInsertLineHistory = (WinUtil::isAlt() || (WinUtil::isCtrl() && BOOLSETTING(USE_CTRL_FOR_LINE_HISTORY)));
-	if (allowToInsertLineHistory)
-	{
-		switch (wParam)
-		{
-			case VK_UP:
-				//scroll up in chat command history
-				//currently beyond the last command?
-				if (ctrlMessage)
-				{
-					if (curCommandPosition > 0)
-					{
-						//check whether current command needs to be saved
-						if (curCommandPosition == prevCommands.size())
-							WinUtil::getWindowText(ctrlMessage, currentCommand);
-						//replace current chat buffer with current command
-						ctrlMessage.SetWindowText(prevCommands[--curCommandPosition].c_str());
-					}
-					// move cursor to end of line
-					ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
-				}
-				break;
-			case VK_DOWN:
-				//scroll down in chat command history
-				//currently beyond the last command?
-				if (ctrlMessage)
-				{
-					if (curCommandPosition + 1 < prevCommands.size())
-					{
-						//replace current chat buffer with current command
-						ctrlMessage.SetWindowText(prevCommands[++curCommandPosition].c_str());
-					}
-					else if (curCommandPosition + 1 == prevCommands.size())
-					{
-						//revert to last saved, unfinished command
-						ctrlMessage.SetWindowText(currentCommand.c_str());
-						++curCommandPosition;
-					}
-					// move cursor to end of line
-					ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
-				}
-				break;
-			case VK_HOME:
-				if (ctrlMessage)
-				{
-					if (!prevCommands.empty())
-					{
-						curCommandPosition = 0;
-						WinUtil::getWindowText(ctrlMessage, currentCommand);
-						ctrlMessage.SetWindowText(prevCommands[curCommandPosition].c_str());
-					}
-				}
-				break;
-			case VK_END:
-				curCommandPosition = prevCommands.size();
-				if (ctrlMessage)
-					ctrlMessage.SetWindowText(currentCommand.c_str());
-				break;
-		}
-	}
-	else bHandled = FALSE;
-}
-
 LRESULT BaseChatFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	checkMultiLine();
 	return 0;
-}
-
-bool BaseChatFrame::processControlKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	const bool isService = uMsg != WM_KEYDOWN;
-	if (isService)
-	{
-		switch (wParam)
-		{
-			case VK_RETURN:
-				adjustChatInputSize(bHandled);
-				break;
-			case VK_TAB:
-				bHandled = TRUE;
-				break;
-			case '\n':
-				if (processNextChar)
-				{
-					bHandled = TRUE;
-					break;
-				}
-			default:
-				bHandled = FALSE;
-				break;
-		}
-		processNextChar = false;
-		if (uMsg == WM_CHAR && ctrlMessage && GetFocus() == ctrlMessage.m_hWnd && wParam != VK_RETURN && wParam != VK_TAB && wParam != VK_BACK)
-		{
-			PLAY_SOUND(SOUND_TYPING_NOTIFY);
-		}
-	}
-	return isService;
-}
-
-void BaseChatFrame::processHotKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	if (wParam == VK_ESCAPE)
-	{
-		// Clear find text and give the focus back to the message box
-		if (ctrlMessage)
-			ctrlMessage.SetFocus();
-		if (ctrlClient.IsWindow())
-		{
-			ctrlClient.SetSel(-1, -1);
-			ctrlClient.SendMessage(EM_SCROLL, SB_BOTTOM, 0);
-			ctrlClient.InvalidateRect(NULL);
-		}
-		currentNeedle.clear();
-	}
-	// Processing find.
-	else if (((wParam == VK_F3 && WinUtil::isShift()) || (wParam == 'F' && WinUtil::isCtrl())) && !WinUtil::isAlt())
-	{
-		findText(findTextPopup());
-	}
-	else if (wParam == VK_F3)
-	{
-		findText(currentNeedle.empty() ? findTextPopup() : currentNeedle);
-	}
-	// ~Processing find.
-	else
-	{
-		// don't handle these keys unless the user is entering a message
-		if (ctrlMessage && GetFocus() == ctrlMessage.m_hWnd)
-		{
-			switch (wParam)
-			{
-				case 'A':
-					if (WinUtil::isCtrl() && !WinUtil::isAlt() && !WinUtil::isShift())
-						ctrlMessage.SetSelAll();
-					break;
-				case VK_RETURN:
-				{
-					if (!adjustChatInputSize(bHandled))
-					{
-						onEnter();
-						if (BOOLSETTING(MULTILINE_CHAT_INPUT) && BOOLSETTING(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))  // [+] SSA - Added Enter for MulticharInput
-						{
-							processNextChar = true;
-						}
-					}
-				}
-				break;
-				case VK_UP:
-				case VK_DOWN:
-				case VK_HOME:
-				case VK_END:
-					insertLineHistoryToChatInput(wParam, bHandled);
-					break;
-				case VK_PRIOR: // page up
-					if (ctrlClient.IsWindow())
-						ctrlClient.SendMessage(WM_VSCROLL, SB_PAGEUP);
-					break;
-				case VK_NEXT: // page down
-					if (ctrlClient.IsWindow())
-						ctrlClient.SendMessage(WM_VSCROLL, SB_PAGEDOWN);
-					break;
-				default:
-					bHandled = FALSE;
-			}
-			checkMultiLine();
-		}
-		else
-		{
-			bHandled = FALSE;
-		}
-	}
 }
 
 LRESULT BaseChatFrame::onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
@@ -589,21 +395,14 @@ LRESULT BaseChatFrame::onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 
 void BaseChatFrame::onEnter()
 {
+	bool updateLayout = false;
 	bool resetInputMessageText = true;
 	dcassert(ctrlMessage);
 	if (ctrlMessage && ctrlMessage.GetWindowTextLength() > 0)
 	{
 		tstring fullMessageText;
 		WinUtil::getWindowText(ctrlMessage, fullMessageText);
-		
-		// save command in history, reset current buffer pointer to the newest command
-		curCommandPosition = prevCommands.size();       //this places it one position beyond a legal subscript
-		if (!curCommandPosition || prevCommands[curCommandPosition - 1] != fullMessageText)
-		{
-			++curCommandPosition;
-			prevCommands.push_back(fullMessageText);
-		}
-		currentCommand.clear();
+		ctrlMessage.saveCommand(fullMessageText);
 		
 		// Process special commands
 		if (fullMessageText[0] == '/')
@@ -658,21 +457,15 @@ void BaseChatFrame::onEnter()
 		}
 		if (resetInputMessageText)
 		{
-			clearMessageWindow();
-			UpdateLayout();
-			return;
+			clearInputBox();
+			updateLayout = true;
 		}
 	}
 	else
-	{
 		MessageBeep(MB_ICONEXCLAMATION);
-	}
-	
-	if (tempUseMultiChat)
-	{
-		tempUseMultiChat = false;
+
+	if (updateLayout)
 		UpdateLayout();
-	}
 }
 
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -715,13 +508,13 @@ LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 
 tstring BaseChatFrame::findTextPopup()
 {
-	LineDlg finddlg;
-	finddlg.title = TSTRING(SEARCH);
-	finddlg.description = TSTRING(SPECIFY_SEARCH_STRING);
-	if (finddlg.DoModal() == IDOK)
-	{
-		return finddlg.line;
-	}
+	LineDlg dlg;
+	dlg.title = TSTRING(SEARCH);
+	dlg.description = TSTRING(SPECIFY_SEARCH_STRING);
+	dlg.icon = IconBitmaps::SEARCH;
+	dlg.allowEmpty = false;
+	if (dlg.DoModal() == IDOK)
+		return dlg.line;
 	return Util::emptyStringT;
 }
 
@@ -910,9 +703,9 @@ LRESULT BaseChatFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&)
 LRESULT BaseChatFrame::onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	SET_SETTING(MULTILINE_CHAT_INPUT, !BOOLSETTING(MULTILINE_CHAT_INPUT));
-	tempUseMultiChat = false;
 	UpdateLayout();
 	checkMultiLine();
+	ctrlMessage.SetFocus();
 	return 0;
 }
 
@@ -1035,14 +828,14 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	}
 }
 
-bool BaseChatFrame::isMultiChat(int& height) const
+int BaseChatFrame::getInputBoxHeight() const
 {
-	const bool useMultiChat = BOOLSETTING(MULTILINE_CHAT_INPUT) || tempUseMultiChat || /* Fonts::g_fontHeightPixl > 16 || */  multiChatLines > 1;
-	if (useMultiChat && multiChatLines)
-		height = Fonts::g_fontHeightPixl * multiChatLines;
-	else
-		height = Fonts::g_fontHeightPixl;
-	return useMultiChat;
+	const bool useMultiChat = BOOLSETTING(MULTILINE_CHAT_INPUT) || multiChatLines;
+	int lines = useMultiChat ? std::max(multiChatLines + 1, 3u) : 1;
+	int height = Fonts::g_fontHeightPixl * lines + 12;
+	if (height < MessagePanel::MIN_INPUT_BOX_HEIGHT)
+		height = MessagePanel::MIN_INPUT_BOX_HEIGHT;
+	return height;
 }
 
 OMenu* BaseChatFrame::createUserMenu()
@@ -1059,4 +852,75 @@ void BaseChatFrame::destroyUserMenu()
 {
 	delete userMenu;
 	userMenu = nullptr;
+}
+
+bool BaseChatFrame::processEnter()
+{
+	bool insertNewLine = WinUtil::isCtrlOrAlt();
+	if (BOOLSETTING(MULTILINE_CHAT_INPUT) && BOOLSETTING(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))
+		insertNewLine = !insertNewLine;
+	if (insertNewLine)
+		return false;
+	onEnter();
+	return true;
+}
+
+void BaseChatFrame::updateEditHeight()
+{
+	checkMultiLine();
+}
+
+bool BaseChatFrame::processHotKey(int key)
+{
+	if (key == VK_TAB && GetFocus() == ctrlClient)
+	{
+		HWND hWndNext = GetNextDlgTabItem(messagePanelHwnd, ctrlClient, WinUtil::isShift());
+		if (hWndNext) ::SetFocus(hWndNext);
+		return true;
+	}
+	if (key == VK_ESCAPE)
+	{
+		// Clear find text and give the focus back to the message box
+		if (ctrlMessage)
+			ctrlMessage.SetFocus();
+		if (ctrlClient.IsWindow())
+		{
+			ctrlClient.SetSel(-1, -1);
+			ctrlClient.SendMessage(EM_SCROLL, SB_BOTTOM, 0);
+			ctrlClient.InvalidateRect(NULL);
+		}
+		currentNeedle.clear();
+		return true;
+	}
+	if (((key == VK_F3 && WinUtil::isShift()) || (key == 'F' && WinUtil::isCtrl())) && !WinUtil::isAlt())
+	{
+		findText(findTextPopup());
+		return true;
+	}
+	if (key == VK_F3)
+	{
+		findText(currentNeedle.empty() ? findTextPopup() : currentNeedle);
+		return true;
+	}
+	return false;
+}
+
+bool BaseChatFrame::handleKey(int key)
+{
+	if (key == VK_PRIOR)
+	{
+		ctrlClient.SendMessage(WM_VSCROLL, SB_PAGEUP);
+		return true;
+	}
+	if (key == VK_NEXT)
+	{
+		ctrlClient.SendMessage(WM_VSCROLL, SB_PAGEDOWN);
+		return true;
+	}
+	return processHotKey(key);
+}
+
+void BaseChatFrame::typingNotification()
+{
+	PLAY_SOUND(SOUND_TYPING_NOTIFY);
 }

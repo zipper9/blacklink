@@ -1273,6 +1273,7 @@ void SettingsManager::setDefaults()
 	setDefault(STATUS_IN_CHAT, TRUE);
 	setDefault(DISPLAY_CHEATS_IN_MAIN_CHAT, TRUE);
 	setDefault(USE_CTRL_FOR_LINE_HISTORY, TRUE);
+	setDefault(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, TRUE);
 	setDefault(FORMAT_BOT_MESSAGE, TRUE);
 
 	// Search frame

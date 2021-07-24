@@ -611,7 +611,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 			
 		sayMessage += param;
 		sendMessage(sayMessage);
-		clearMessageWindow();
+		clearInputBox();
 	}
 	else
 	{
@@ -1329,11 +1329,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	}
 	if (msgPanel)
 	{
-		int h;
-		const bool useMultiChat = isMultiChat(h);
-		h += 12;
-		if (useMultiChat && h < MessagePanel::MIN_MULTI_HEIGHT)
-			h = MessagePanel::MIN_MULTI_HEIGHT;
+		const int h = getInputBoxHeight();
 		int panelHeight = msgPanel->initialized ? h + 6 : 0;
 
 		CRect rc = rect;
@@ -1883,112 +1879,96 @@ void HubFrame::runUserCommand(UserCommand& uc)
 	}
 }
 
-void HubFrame::onTab()
+bool HubFrame::handleAutoComplete()
 {
-	const HWND focus = GetFocus();
-	const bool isShift = WinUtil::isShift();
-	if (ctrlMessage && ctrlMessage.GetWindowTextLength() == 0)
+	tstring text;
+	WinUtil::getWindowText(ctrlMessage, text);
+		
+	string::size_type textStart = text.find_last_of(_T(" \n\t"));
+		
+	auto& listView = ctrlUsers.getUserList();
+	if (autoComplete.empty())
 	{
-		HWND next = GetNextDlgTabItem(focus, isShift);
-		if (next) ::SetFocus(next);
-		return;
-	}
-
-	if (ctrlMessage && focus == ctrlMessage.m_hWnd && !isShift)
-	{
-		tstring text;
-		WinUtil::getWindowText(ctrlMessage, text);
-		
-		string::size_type textStart = text.find_last_of(_T(" \n\t"));
-		
-		if (m_complete.empty())
-		{
-			if (textStart != string::npos)
-			{
-				m_complete = text.substr(textStart + 1);
-			}
-			else
-			{
-				m_complete = text;
-			}
-			if (m_complete.empty())
-			{
-				// Still empty, no text entered...
-				ctrlUsers.SetFocus();
-				return;
-			}
-			auto& listView = ctrlUsers.getUserList();
-			const int y = listView.GetItemCount();
-			for (int x = 0; x < y; ++x)
-				listView.SetItemState(x, 0, LVNI_FOCUSED | LVNI_SELECTED);
-		}
-		
-		if (textStart == string::npos)
-			textStart = 0;
+		if (textStart != string::npos)
+			autoComplete = text.substr(textStart + 1);
 		else
-			textStart++;
-			
-		auto& listView = ctrlUsers.getUserList();
-		int start = listView.GetNextItem(-1, LVNI_FOCUSED) + 1;
-		int i = start;
-		const int j = listView.GetItemCount();
-		
-		bool firstPass = i < j;
-		if (!firstPass)
-			i = 0;
-		while (firstPass || i < start)
+			autoComplete = text;
+		if (autoComplete.empty())
 		{
-			const UserInfo* ui = listView.getItemData(i);
-			const tstring nick = ui->getText(COLUMN_NICK);
-			bool found = strnicmp(nick, m_complete, m_complete.length()) == 0;
-			tstring::size_type x = 0;
-			if (!found)
+			// Still empty, no text entered...
+			ctrlUsers.SetFocus();
+			return true;
+		}
+		const int itemCount = listView.GetItemCount();
+		for (int i = 0; i < itemCount; ++i)
+			listView.SetItemState(i, 0, LVNI_FOCUSED | LVNI_SELECTED);
+	}
+	
+	if (textStart == string::npos)
+		textStart = 0;
+	else
+		textStart++;
+
+	int start = listView.GetNextItem(-1, LVNI_FOCUSED) + 1;
+	int i = start;
+	const int itemCount = listView.GetItemCount();
+		
+	bool firstPass = i < itemCount;
+	if (!firstPass) i = 0;
+	while (firstPass || i < start)
+	{
+		const UserInfo* ui = listView.getItemData(i);
+		const tstring nick = ui->getText(COLUMN_NICK);
+		bool found = strnicmp(nick, autoComplete, autoComplete.length()) == 0;
+		tstring::size_type x = 0;
+		if (!found)
+		{
+			// Check if there's one or more [ISP] tags to ignore...
+			tstring::size_type y = 0;
+			while (nick[y] == _T('['))
 			{
-				// Check if there's one or more [ISP] tags to ignore...
-				tstring::size_type y = 0;
-				while (nick[y] == _T('['))
+				x = nick.find(_T(']'), y);
+				if (x != string::npos)
 				{
-					x = nick.find(_T(']'), y);
-					if (x != string::npos)
+					if (strnicmp(nick.c_str() + x + 1, autoComplete.c_str(), autoComplete.length()) == 0)
 					{
-						if (strnicmp(nick.c_str() + x + 1, m_complete.c_str(), m_complete.length()) == 0)
-						{
-							found = true;
-							break;
-						}
-					}
-					else
-					{
+						found = true;
 						break;
 					}
-					y = x + 1; // assuming that nick[y] == '\0' is legal
 				}
-			}
-			if (found)
-			{
-				if (start != 0)
-					listView.SetItemState(start - 1, 0, LVNI_SELECTED | LVNI_FOCUSED);
-				listView.SetItemState(i, LVNI_FOCUSED | LVNI_SELECTED, LVNI_FOCUSED | LVNI_SELECTED);
-				listView.EnsureVisible(i, FALSE);
-				if (ctrlMessage)
+				else
 				{
-					ctrlMessage.SetSel(static_cast<int>(textStart), ctrlMessage.GetWindowTextLength(), TRUE);
-					ctrlMessage.ReplaceSel(nick.c_str());
+					break;
 				}
-				return;
-			}
-			i++;
-			if (i == j)
-			{
-				firstPass = false;
-				i = 0;
+				y = x + 1; // assuming that nick[y] == '\0' is legal
 			}
 		}
-		return;
+		if (found)
+		{
+			if (start != 0)
+				listView.SetItemState(start - 1, 0, LVNI_SELECTED | LVNI_FOCUSED);
+			listView.SetItemState(i, LVNI_FOCUSED | LVNI_SELECTED, LVNI_FOCUSED | LVNI_SELECTED);
+			listView.EnsureVisible(i, FALSE);
+			if (ctrlMessage)
+			{
+				ctrlMessage.SetSel(static_cast<int>(textStart), ctrlMessage.GetWindowTextLength(), TRUE);
+				ctrlMessage.ReplaceSel(nick.c_str());
+			}
+			return true;
+		}
+		i++;
+		if (i == itemCount)
+		{
+			firstPass = false;
+			i = 0;
+		}
 	}
+	return false;
+}
 
-	HWND next = GetNextDlgTabItem(focus, isShift);
-	if (next) ::SetFocus(next);
+void HubFrame::clearAutoComplete()
+{
+	autoComplete.clear();
 }
 
 LRESULT HubFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
@@ -2034,19 +2014,13 @@ LRESULT HubFrame::onDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+LRESULT HubFrame::onKeyDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	if (!m_complete.empty() && wParam != VK_TAB && uMsg == WM_KEYDOWN)
-	{
-		m_complete.clear();
-	}
-	if (!processControlKey(uMsg, wParam, lParam, bHandled))
-	{
-		if (wParam == VK_TAB)
-			onTab();
-		else
-			processHotKey(uMsg, wParam, lParam, bHandled);
-	}
+	if (!autoComplete.empty() && wParam != VK_TAB)
+		autoComplete.clear();
+
+	if (!processHotKey(wParam))
+		bHandled = FALSE;
 	return 0;
 }
 

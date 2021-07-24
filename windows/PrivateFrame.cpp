@@ -99,12 +99,6 @@ LRESULT PrivateFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	return 0;
 }
 
-void PrivateFrame::onTab()
-{
-	HWND next = GetNextDlgTabItem(GetFocus(), WinUtil::isShift());
-	if (next) ::SetFocus(next);
-}
-
 static void removeLineBreaks(string& text)
 {
 	std::replace(text.begin(), text.end(), '\r', ' ');
@@ -224,15 +218,10 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 	}
 }
 
-LRESULT PrivateFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+LRESULT PrivateFrame::onKeyDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	if (!processControlKey(uMsg, wParam, lParam, bHandled))
-	{
-		if (wParam == VK_TAB)
-			onTab();
-		else
-			processHotKey(uMsg, wParam, lParam, bHandled);
-	}
+	if (!processHotKey(wParam))
+		bHandled = FALSE;
 	return 0;
 }
 
@@ -448,11 +437,7 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			}
 		}
-		int h;
-		const bool useMultiChat = isMultiChat(h);
-		h += 12;
-		if (useMultiChat && h < MessagePanel::MIN_MULTI_HEIGHT)
-			h = MessagePanel::MIN_MULTI_HEIGHT;
+		const int h = getInputBoxHeight();
 		int panelHeight = h + 6;
 
 		CRect rc = rect;

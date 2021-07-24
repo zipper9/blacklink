@@ -821,6 +821,7 @@
     <ClCompile Include="windows\MagnetDlg.cpp" />
     <ClCompile Include="windows\main.cpp" />
     <ClCompile Include="windows\MainFrm.cpp" />
+    <ClCompile Include="windows\MessageEdit.cpp" />
     <ClCompile Include="windows\MessagePanel.cpp" />
     <ClCompile Include="windows\MessagesChatPage.cpp" />
     <ClCompile Include="windows\MessagesPage.cpp" />
@@ -964,6 +965,7 @@
     <ClInclude Include="windows\LogPage.h" />
     <ClInclude Include="windows\MagnetDlg.h" />
     <ClInclude Include="windows\MainFrm.h" />
+    <ClInclude Include="windows\MessageEdit.h" />
     <ClInclude Include="windows\MessagePanel.h" />
     <ClInclude Include="windows\MessagesChatPage.h" />
     <ClInclude Include="windows\MessagesPage.h" />

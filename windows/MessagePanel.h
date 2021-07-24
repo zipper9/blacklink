@@ -59,7 +59,7 @@ class MessagePanel
 		};
 
 	public:
-		static const int MIN_MULTI_HEIGHT = 22 + 26 + 4;
+		static const int MIN_INPUT_BOX_HEIGHT = 26;
 
 		explicit MessagePanel(CEdit& ctrlMessage);
 		void initPanel(HWND hWnd);

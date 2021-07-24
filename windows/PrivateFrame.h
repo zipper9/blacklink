@@ -77,16 +77,14 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		CHAIN_COMMANDS(uiBase)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(PM_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_CHAR, onChar)
-		MESSAGE_HANDLER(WM_KEYDOWN, onChar)
-		MESSAGE_HANDLER(WM_KEYUP, onChar)
+		MESSAGE_HANDLER(WM_KEYDOWN, onKeyDown)
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		END_MSG_MAP()
 		
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onKeyDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
@@ -184,7 +182,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool isOffline;
 
 		void updateTitle();
-		void onTab();
 		
 		// ClientManagerListener
 		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& aUser) noexcept override

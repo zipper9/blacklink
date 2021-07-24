@@ -20,12 +20,13 @@
 #define BASE_CHAT_FRAME_H_
 
 #include "ChatCtrl.h"
+#include "MessageEdit.h"
 #include "MessagePanel.h"
 #include "BaseHandlers.h"
 #include "Colors.h"
 #include "../client/ClientManager.h"
 
-class BaseChatFrame : public InternetSearchBaseHandler
+class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::Callback
 {
 		BEGIN_MSG_MAP(BaseChatFrame)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
@@ -69,16 +70,12 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		void destroyMessageCtrl(bool isShutdown);
 
 		BaseChatFrame() :
-			curCommandPosition(0),
-			tempUseMultiChat(false),
 			multiChatLines(0),
-			processNextChar(false),
 			showTimestamps(BOOLSETTING(CHAT_TIME_STAMPS)),
 			currentNeedlePos(-1),
 			msgPanel(nullptr),
 			messagePanelHwnd(nullptr),
 			messagePanelRect{},
-			ctrlMessageContainer(nullptr),
 			lastMessageSelPos(0),
 			userMenu(nullptr),
 			suppressChat(false)
@@ -98,8 +95,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		}
 
 		LRESULT onCreate(HWND hWnd, RECT &rc);
-		bool processControlKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		void processHotKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		bool processHotKey(int key);
 		LRESULT onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onSendMessage(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -140,11 +136,10 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		virtual void readFrameLog() = 0;
 		ChatCtrl ctrlClient;
 		
-		CEdit ctrlMessage;
+		MessageEdit ctrlMessage;
 		tstring lastMessage;
 		DWORD lastMessageSelPos;
 		MessagePanel* msgPanel;
-		CContainedWindow* ctrlMessageContainer;
 		CFlyToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl ctrlStatus;
 		bool suppressChat;
@@ -161,26 +156,30 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		tstring lastLines;
 		StringMap ucLineParams;
 		
-		TStringList prevCommands;
-		tstring currentCommand;
-		size_t curCommandPosition;
-		bool tempUseMultiChat;
-		bool isMultiChat(int& height) const;
-		void clearMessageWindow();
 		unsigned multiChatLines;
 
+		int getInputBoxHeight() const;
+		void clearInputBox();
+
 	private:
-		bool processNextChar;
 		bool showTimestamps;
 		tstring currentNeedle;
 		LONG currentNeedlePos;
 		RECT messagePanelRect;
 		HWND messagePanelHwnd;
-		
-		bool adjustChatInputSize(BOOL& bHandled);
+
 		void checkMultiLine();
-		void insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHandled);
 		void insertBBCode(WORD wID, HWND hwndCtl);
+
+	private:
+		bool processEnter() override;
+		void updateEditHeight() override;
+		bool handleKey(int key) override;
+		void typingNotification() override;
+
+	protected:
+		bool handleAutoComplete() override { return false; }
+		void clearAutoComplete() override {}
 };
 
 #endif // BASE_CHAT_FRAME_H_

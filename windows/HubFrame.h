@@ -116,9 +116,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(splitBase)
 		ALT_MSG_MAP(EDIT_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_CHAR, onChar)
-		MESSAGE_HANDLER(WM_KEYDOWN, onChar)
-		MESSAGE_HANDLER(WM_KEYUP, onChar)
+		MESSAGE_HANDLER(WM_KEYDOWN, onKeyDown)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowUsers)
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		ALT_MSG_MAP(FILTER_MESSAGE_MAP)
@@ -137,7 +135,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
-		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onKeyDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -185,8 +183,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void UpdateLayout(BOOL resizeBars = TRUE);
 		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
-		void onTab();
-		void runUserCommand(::UserCommand& uc);
+		void runUserCommand(UserCommand& uc);
 		void followRedirect();
 		
 		static HubFrame* openHubWindow(const Settings& cs);
@@ -262,7 +259,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void onTimerHubUpdated();
 		int infoUpdateSeconds;
 		string redirect;
-		tstring m_complete;
+		tstring autoComplete;
 		bool waitingForPassword;
 		bool showingPasswordDlg;
 		
@@ -362,6 +359,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void doDisconnected();
 		void doConnected();
 		void clearTaskAndUserList();
+
+		bool handleAutoComplete() override;
+		void clearAutoComplete() override;
 
 	public:
 		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
