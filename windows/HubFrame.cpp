@@ -1062,8 +1062,6 @@ void HubFrame::processTasks()
 						{
 							if (!redrawChat)
 							{
-								ctrlClient.EnableScrollBar(SB_VERT, ESB_ENABLE_BOTH);
-								ctrlClient.ShowScrollBar(SB_VERT, TRUE);
 								ctrlClient.SetRedraw(FALSE);
 								redrawChat = true;
 							}
@@ -1372,12 +1370,6 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		}
 		if (tooltip)
 			tooltip.Activate(TRUE);
-
-		if (ctrlClient.IsWindow())
-		{
-			//ctrlClient.EnableScrollBar(SB_VERT, ESB_ENABLE_BOTH);
-			ctrlClient.ShowScrollBar(SB_VERT, TRUE);
-		}
 	}
 	if (showUsers && ctrlUsers)
 		ctrlUsers.updateLayout();
