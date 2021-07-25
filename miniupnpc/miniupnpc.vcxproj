@@ -178,6 +178,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="addr_is_reserved.c" />
     <ClCompile Include="connecthostport.c" />
     <ClCompile Include="igd_desc_parse.c" />
     <ClCompile Include="minisoap.c" />
@@ -193,6 +194,7 @@
     <ClCompile Include="upnpreplyparse.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="addr_is_reserved.h" />
     <ClInclude Include="codelength.h" />
     <ClInclude Include="connecthostport.h" />
     <ClInclude Include="igd_desc_parse.h" />
