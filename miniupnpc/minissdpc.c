@@ -39,6 +39,10 @@ typedef unsigned short uint16_t;
 static const IN6_ADDR in6addr_any_init = {0};
 #endif
 #endif
+#if !(defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x600)
+int win32_inet_pton(int af, const char* src, void* dst);
+#define inet_pton win32_inet_pton
+#endif
 #endif /* _WIN32 */
 #if defined(__amigaos__) || defined(__amigaos4__)
 #include <sys/socket.h>
@@ -721,18 +725,11 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 #endif
 		} else {
 			struct in_addr mc_if;
-#if defined(_WIN32)
-#if defined(_WIN32_WINNT_VISTA) && (_WIN32_WINNT >= _WIN32_WINNT_VISTA)
-			InetPtonA(AF_INET, multicastif, &mc_if);
-#else
-			mc_if.s_addr = inet_addr(multicastif); /* old Windows SDK do not support InetPtoA() */
-#endif
-#else
 			/* was : mc_if.s_addr = inet_addr(multicastif); */ /* ex: 192.168.x.x */
 			if (inet_pton(AF_INET, multicastif, &mc_if.s_addr) <= 0) {
 				mc_if.s_addr = INADDR_NONE;
 			}
-#endif
+
 			if(mc_if.s_addr != INADDR_NONE)
 			{
 				((struct sockaddr_in *)&sockudp_r)->sin_addr.s_addr = mc_if.s_addr;

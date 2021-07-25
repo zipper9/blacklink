@@ -56,17 +56,9 @@ int addr_is_reserved(const char * addr_str)
 	uint32_t addr_n, address;
 	size_t i;
 
-#if defined(_WIN32) && (!defined(_WIN32_WINNT_VISTA) || (_WIN32_WINNT < _WIN32_WINNT_VISTA))
 	addr_n = inet_addr(addr_str);
 	if (addr_n == INADDR_NONE)
 		return 1;
-#else
-	/* was : addr_n = inet_addr(addr_str); */
-	if (inet_pton(AF_INET, addr_str, &addr_n) <= 0) {
-		/* error */
-		return 1;
-	}
-#endif
 
 	address = ntohl(addr_n);
 

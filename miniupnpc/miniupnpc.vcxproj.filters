@@ -57,6 +57,9 @@
     <ClCompile Include="addr_is_reserved.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="win32_inet_pton.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="codelength.h">

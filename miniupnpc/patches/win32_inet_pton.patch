@@ -1,0 +1,82 @@
+--- miniupnpc/addr_is_reserved.c
++++ miniupnpc/addr_is_reserved.c
+@@ -56,17 +56,9 @@ int addr_is_reserved(const char * addr_str)
+ 	uint32_t addr_n, address;
+ 	size_t i;
+ 
+-#if defined(_WIN32) && (!defined(_WIN32_WINNT_VISTA) || (_WIN32_WINNT < _WIN32_WINNT_VISTA))
+ 	addr_n = inet_addr(addr_str);
+ 	if (addr_n == INADDR_NONE)
+ 		return 1;
+-#else
+-	/* was : addr_n = inet_addr(addr_str); */
+-	if (inet_pton(AF_INET, addr_str, &addr_n) <= 0) {
+-		/* error */
+-		return 1;
+-	}
+-#endif
+ 
+ 	address = ntohl(addr_n);
+ 
+--- miniupnpc/minissdpc.c
++++ miniupnpc/minissdpc.c
+@@ -39,6 +39,10 @@ typedef unsigned short uint16_t;
+ static const IN6_ADDR in6addr_any_init = {0};
+ #endif
+ #endif
++#if !(defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x600)
++int win32_inet_pton(int af, const char* src, void* dst);
++#define inet_pton win32_inet_pton
++#endif
+ #endif /* _WIN32 */
+ #if defined(__amigaos__) || defined(__amigaos4__)
+ #include <sys/socket.h>
+@@ -721,18 +725,11 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
+ #endif
+ 		} else {
+ 			struct in_addr mc_if;
+-#if defined(_WIN32)
+-#if defined(_WIN32_WINNT_VISTA) && (_WIN32_WINNT >= _WIN32_WINNT_VISTA)
+-			InetPtonA(AF_INET, multicastif, &mc_if);
+-#else
+-			mc_if.s_addr = inet_addr(multicastif); /* old Windows SDK do not support InetPtoA() */
+-#endif
+-#else
+ 			/* was : mc_if.s_addr = inet_addr(multicastif); */ /* ex: 192.168.x.x */
+ 			if (inet_pton(AF_INET, multicastif, &mc_if.s_addr) <= 0) {
+ 				mc_if.s_addr = INADDR_NONE;
+ 			}
+-#endif
++
+ 			if(mc_if.s_addr != INADDR_NONE)
+ 			{
+ 				((struct sockaddr_in *)&sockudp_r)->sin_addr.s_addr = mc_if.s_addr;
+
+--- /dev/null
++++ miniupnpc/win32_inet_pton.c
+@@ -0,0 +1,25 @@
++#ifdef _WIN32
++
++#include <winsock2.h>
++#include <ws2tcpip.h>
++
++int win32_inet_pton(int af, const char* src, void* dst)
++{
++	if (af != AF_INET && af != AF_INET6) return -1;
++
++	struct sockaddr_storage ss;
++	int size = sizeof(ss);
++	int len = strlen(src);
++	char* src_copy = (char*) _alloca(len + 1);
++	memcpy(src_copy, src, len + 1);
++	memset(&ss, 0, sizeof(ss));
++	if (WSAStringToAddressA(src_copy, af, NULL, (struct sockaddr*) &ss, &size))
++		return 0;
++	if (af == AF_INET)
++		*(struct in_addr*) dst = ((struct sockaddr_in*) &ss)->sin_addr;
++	else
++		*(struct in6_addr*) dst = ((struct sockaddr_in6*) &ss)->sin6_addr;
++	return 1;
++}
++
++#endif
