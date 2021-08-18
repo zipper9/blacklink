@@ -593,7 +593,7 @@ LRESULT FavoriteHubTabAdvanced::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	for (int i = 0; i < 5; ++i)
 	{
 		ctrlRaw[i].Attach(GetDlgItem(IDC_RAW_ONE + i));
-		ctrlRaw[0].SetWindowText(Text::toT(rawCommands[i]).c_str());
+		ctrlRaw[i].SetWindowText(Text::toT(rawCommands[i]).c_str());
 	}
 
 	ctrlOpChat.Attach(GetDlgItem(IDC_OPCHAT));
