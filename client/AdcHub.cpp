@@ -1438,6 +1438,11 @@ void AdcHub::info(bool/* forceUpdate*/)
 		addInfoParam(c, "SS", "0");
 		addInfoParam(c, "SF", "0");
 	}
+	else if (fakeShareSize >= 0)
+	{
+		addInfoParam(c, "SS", Util::toString(fakeShareSize));
+		addInfoParam(c, "SF", Util::toString((fakeShareSize + averageFakeFileSize - 1)/ averageFakeFileSize));
+	}
 	else
 	{
 		int64_t size, files;
@@ -1449,7 +1454,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	
 	addInfoParam(c, "EM", SETTING(EMAIL));
 	// Exclusive hub mode
-	if (isExclusiveHub)
+	if (fakeHubCount)
 	{
 		unsigned normal, registered, op;
 		getFakeCounts(normal, registered, op);

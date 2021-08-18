@@ -60,7 +60,8 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 
 		BEGIN_MSG_MAP(FavoriteHubTabIdent)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_CLIENT_ID, onChangeId);
+		COMMAND_ID_HANDLER(IDC_CLIENT_ID, onChangeClientId);
+		COMMAND_ID_HANDLER(IDC_FAKE_SHARE, onChangeFakeShare);
 		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomNick);
 		COMMAND_HANDLER(IDC_HUBNICK, EN_CHANGE, onTextChanged)
 		COMMAND_HANDLER(IDC_HUBPASS, EN_CHANGE, onTextChanged)
@@ -69,7 +70,8 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onChangeId(WORD, WORD, HWND, BOOL&);
+		LRESULT onChangeClientId(WORD, WORD, HWND, BOOL&);
+		LRESULT onChangeFakeShare(WORD, WORD, HWND, BOOL&);
 		LRESULT onRandomNick(WORD, WORD, HWND, BOOL&);
 		LRESULT onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&);
 
@@ -82,6 +84,10 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 		CEdit ctrlAwayMsg;
 		CComboBox ctrlShareGroup;
 		CComboBox ctrlClientId;
+		CButton ctrlFakeHubCount;
+		CButton ctrlEnableFakeShare;
+		CEdit ctrlFakeShare;
+		CComboBox ctrlFakeShareUnit;
 
 		struct ShareGroupInfo
 		{
@@ -112,7 +118,6 @@ class FavoriteHubTabOptions : public CDialogImpl<FavoriteHubTabOptions>
 		CComboBox ctrlConnType;
 		CEdit ctrlIpAddress;
 		CButton ctrlExclChecks;
-		CButton ctrlExclusiveMode;
 		CButton ctrlShowJoins;
 		CButton ctrlSuppressMsg;
 		CButton ctrlSearchOverride;

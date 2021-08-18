@@ -53,7 +53,8 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	proto(proto),
 	userListLoaded(false),
 	suppressChatAndPM(false),
-	isExclusiveHub(false),
+	fakeHubCount(false),
+	fakeShareSize(-1),
 	csUserCommands(RWLock::create())
 {
 	dcassert(hubURL == Text::toLower(hubURL));
@@ -219,7 +220,13 @@ void Client::reloadSettings(bool updateNick)
 		opChat = hub->getOpChat();
 		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
 		exclChecks = hub->getExclChecks();
-		isExclusiveHub = hub->getExclusiveHub();
+		fakeHubCount = hub->getExclusiveHub();
+
+		const string& fakeShare = hub->getFakeShare();
+		if (!fakeShare.empty())
+			fakeShareSize = FavoriteHubEntry::parseSizeString(fakeShare);
+		else
+			fakeShareSize = -1;
 	}
 	else
 	{
@@ -248,7 +255,8 @@ void Client::reloadSettings(bool updateNick)
 		
 		opChat.clear();
 		exclChecks = false;
-		isExclusiveHub = false;
+		fakeHubCount = false;
+		fakeShareSize = -1;
 	}
 	fm->releaseFavoriteHubEntryPtr(hub);
 }

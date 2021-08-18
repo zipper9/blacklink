@@ -144,7 +144,8 @@ class FavoriteHubEntry
 		GETSET(bool, hideShare, HideShare);
 		GETSET(bool, showJoins, ShowJoins);
 		GETSET(bool, exclChecks, ExclChecks); // Excl. from client checking
-		GETSET(bool, exclusiveHub, ExclusiveHub); // Exclusive Hub Mod
+		GETSET(bool, exclusiveHub, ExclusiveHub); // Fake hub count
+		GETSET(string, fakeShare, FakeShare);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		GETSET(int, mode, Mode); // 0 = default, 1 = active, 2 = passive
 		GETSET(string, ip, IP);
@@ -171,6 +172,26 @@ class FavoriteHubEntry
 				rawCommands[i] = commands[i];
 		}
 		void setRawCommand(const string& command, int index) { rawCommands[index] = command; }
+		static  int64_t parseSizeString(const string& s, int64_t* origSize = nullptr, int* unit = nullptr)
+		{
+			int u = 0;
+			int64_t result = Util::toInt64(s);
+			if (origSize) *origSize = result;
+			auto pos = s.find_first_of("KMGTkmgt");
+			if (pos != string::npos)
+			{
+				switch (s[pos])
+				{
+					case 'K': case 'k': u = 1; break;
+					case 'M': case 'm': u = 2; break;
+					case 'G': case 'g': u = 3; break;
+					case 'T': case 't': u = 4;
+				}
+				result <<= 10*u;
+			}
+			if (unit) *unit = u;
+			return result;
+		}
 
 	private:
 		string rawCommands[5];

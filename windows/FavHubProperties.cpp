@@ -43,6 +43,8 @@ static const WinUtil::TextItem textsIdent[] =
 	{ IDC_FH_SHARE_GROUP,           ResourceManager::SHARE_GROUP                     },
 	{ IDC_FH_AWAY,                  ResourceManager::AWAY_MESSAGE                    },
 	{ IDC_CLIENT_ID,                ResourceManager::CLIENT_ID                       },
+	{ IDC_EXCLUSIVE_HUB,            ResourceManager::EXCLUSIVE_HUB                   },
+	{ IDC_FAKE_SHARE,               ResourceManager::FAKE_SHARE_SIZE                 },
 	{ 0,                            ResourceManager::Strings()                       }
 };
 
@@ -51,7 +53,6 @@ static const WinUtil::TextItem textsOptions[] =
 	{ IDC_CAPTION_ENCODING,         ResourceManager::FAVORITE_HUB_CHARACTER_SET      },
 	{ IDC_CAPTION_CONNECTION_TYPE,  ResourceManager::CONNECTION_TYPE                 },
 	{ IDC_SETTINGS_IP,              ResourceManager::IP_ADDRESS                      },
-	{ IDC_EXCLUSIVE_HUB,            ResourceManager::EXCLUSIVE_HUB                   },
 	{ IDC_EXCL_CHECKS,              ResourceManager::EXCL_CHECKS                     },
 	{ IDC_SHOW_JOINS,               ResourceManager::SHOW_JOINS                      },
 	{ IDC_SUPPRESS_FAV_CHAT_AND_PM, ResourceManager::SUPPRESS_FAV_CHAT_AND_PM        },
@@ -246,7 +247,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		entry->setShowJoins(tabOptions->ctrlShowJoins.GetCheck() == BST_CHECKED);
 		entry->setExclChecks(tabOptions->ctrlExclChecks.GetCheck() == BST_CHECKED);
-		entry->setExclusiveHub(tabOptions->ctrlExclusiveMode.GetCheck() == BST_CHECKED);
+		entry->setExclusiveHub(tabIdent->ctrlFakeHubCount.GetCheck() == BST_CHECKED);
 		entry->setSuppressChatAndPM(tabOptions->ctrlSuppressMsg.GetCheck() == BST_CHECKED);
 
 		for (int i = 0; i < 5; ++i)
@@ -292,6 +293,16 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		entry->setClientVersion(clientVersion);
 		entry->setOverrideId(tabIdent->IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
 		
+		tstring fakeShare;
+		if (tabIdent->ctrlEnableFakeShare.GetCheck() == BST_CHECKED)
+		{
+			static const TCHAR units[] = _T("KMGT");
+			WinUtil::getWindowText(tabIdent->ctrlFakeShare, fakeShare);
+			int unit = tabIdent->ctrlFakeShareUnit.GetCurSel();
+			if (unit > 0 && unit < 5) fakeShare += units[unit-1];
+		}
+		entry->setFakeShare(Text::fromT(fakeShare));
+
 		entry->setMode(tabOptions->ctrlConnType.GetCurSel());
 		
 		if (Util::isAdcHub(entry->getServer()))
@@ -413,6 +424,42 @@ LRESULT FavoriteHubTabIdent::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	CheckDlgButton(IDC_CLIENT_ID, entry->getOverrideId() ? BST_CHECKED : BST_UNCHECKED);
 	ctrlClientId.EnableWindow(entry->getOverrideId() ? TRUE : FALSE);
 
+	ctrlFakeHubCount.Attach(GetDlgItem(IDC_EXCLUSIVE_HUB));
+	ctrlFakeHubCount.SetCheck(entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED);
+
+	ctrlEnableFakeShare.Attach(GetDlgItem(IDC_FAKE_SHARE));
+	ctrlFakeShare.Attach(GetDlgItem(IDC_FAKE_SHARE_SIZE));
+	ctrlFakeShareUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
+
+	static const ResourceManager::Strings units[] =
+	{
+		ResourceManager::B,
+		ResourceManager::KB,
+		ResourceManager::MB,
+		ResourceManager::GB,
+		ResourceManager::TB
+	};
+	for (int i = 0; i < _countof(units); ++i)
+		ctrlFakeShareUnit.AddString(CTSTRING_I(units[i]));
+	int fakeShareUnit = 0;
+	const string& fakeShare = entry->getFakeShare();
+	BOOL useFakeShare = FALSE;
+	if (!fakeShare.empty())
+	{
+		int64_t fakeShareSize;
+		FavoriteHubEntry::parseSizeString(fakeShare, &fakeShareSize, &fakeShareUnit);
+		if (fakeShareSize >= 0)
+		{
+			useFakeShare = TRUE;
+			ctrlFakeShare.SetWindowText(Util::toStringT(fakeShareSize).c_str());
+		}
+	}
+
+	ctrlFakeShareUnit.SetCurSel(fakeShareUnit);
+	ctrlEnableFakeShare.SetCheck(useFakeShare ? BST_CHECKED : BST_UNCHECKED);
+	ctrlFakeShare.EnableWindow(useFakeShare);
+	ctrlFakeShareUnit.EnableWindow(useFakeShare);
+
 	ctrlNick.LimitText(35);
 	ctrlPassword.LimitText(64);
 	ctrlDesc.LimitText(50);
@@ -426,9 +473,17 @@ LRESULT FavoriteHubTabIdent::onRandomNick(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	return 0;
 }
 
-LRESULT FavoriteHubTabIdent::onChangeId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT FavoriteHubTabIdent::onChangeClientId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ctrlClientId.EnableWindow(IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
+	return 0;
+}
+
+LRESULT FavoriteHubTabIdent::onChangeFakeShare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	BOOL state = IsDlgButtonChecked(IDC_FAKE_SHARE) == BST_CHECKED;
+	ctrlFakeShare.EnableWindow(state);
+	ctrlFakeShareUnit.EnableWindow(state);
 	return 0;
 }
 
@@ -478,12 +533,10 @@ LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlIpAddress.SetWindowText(Text::toT(entry->getIP()).c_str());
 
 	ctrlExclChecks.Attach(GetDlgItem(IDC_EXCL_CHECKS));
-	ctrlExclusiveMode.Attach(GetDlgItem(IDC_EXCLUSIVE_HUB));
 	ctrlShowJoins.Attach(GetDlgItem(IDC_SHOW_JOINS));
 	ctrlSuppressMsg.Attach(GetDlgItem(IDC_SUPPRESS_FAV_CHAT_AND_PM));
 
 	ctrlExclChecks.SetCheck(entry->getExclChecks() ? BST_CHECKED : BST_UNCHECKED);
-	ctrlExclusiveMode.SetCheck(entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED);
 	ctrlShowJoins.SetCheck(entry->getShowJoins() ? BST_CHECKED : BST_UNCHECKED);
 	ctrlSuppressMsg.SetCheck(entry->getSuppressChatAndPM() ? BST_CHECKED : BST_UNCHECKED);
 

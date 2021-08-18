@@ -1851,7 +1851,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	}
 	
 	unsigned normal, registered, op;
-	if (isExclusiveHub)
+	if (fakeHubCount)
 	{	
 		getFakeCounts(normal, registered, op);
 	} else
@@ -1882,10 +1882,15 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	currentMyInfo += '$';
 	currentMyInfo += fromUtf8(escape(getCurrentEmail()));
 	currentMyInfo += '$';
-	                                 
+
 	int64_t bytesShared, filesShared;
 	if (hideShare)
 		bytesShared = filesShared = 0;
+	else if (fakeShareSize >= 0)
+	{
+		bytesShared = fakeShareSize;
+		filesShared = (fakeShareSize + averageFakeFileSize - 1) / averageFakeFileSize;
+	}
 	else
 		ShareManager::getInstance()->getShareGroupInfo(shareGroup, bytesShared, filesShared);
 	currentMyInfo += Util::toString(bytesShared);

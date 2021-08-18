@@ -64,7 +64,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void fireUserUpdated(const OnlineUserPtr& user);
 		void decBytesShared(int64_t bytes);
 		void changeBytesShared(Identity& id, int64_t bytes);
-	
+
+		static const int64_t averageFakeFileSize = 1536 * 1024;
+
 	public:
 		int64_t getBytesShared() const
 		{
@@ -411,10 +413,11 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		std::atomic<int64_t> bytesShared;
 
 		// set by reloadSettings
-		bool isExclusiveHub;
+		bool fakeHubCount;
 		bool hideShare;
 		bool overrideSearchInterval;
 		bool overrideSearchIntervalPassive;
+		int64_t fakeShareSize;
 		CID shareGroup;
 		
 		void updateCounts(bool remove);

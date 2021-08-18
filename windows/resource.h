@@ -280,6 +280,8 @@
 #define IDC_UDP_DHT_SSL_STAT            1124
 #define IDC_MAXSPEED                    1125
 #define IDC_SPEEDSPIN                   1126
+#define IDC_FAKE_SHARE_SIZE             1127
+#define IDC_FAKE_SHARE                  1128
 #define IDC_DEFAULT                     1129
 #define IDC_FAVUSERS                    1130
 #define IDC_ADD_TO_FAVORITES            1131

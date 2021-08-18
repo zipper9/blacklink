@@ -970,6 +970,7 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttribIfNotEmpty("ClientVersion", (*i)->getClientVersion());
 				if ((*i)->getOverrideId())
 					xml.addChildAttrib("OverrideId", true);
+				xml.addChildAttribIfNotEmpty("FakeShare", (*i)->getFakeShare());
 				xml.addChildAttribIfNotEmpty("Group", (*i)->getGroup());
 				const auto& cs = (*i)->getConnectionStatus();
 				if (cs.status != ConnectionStatus::UNKNOWN)
@@ -1229,7 +1230,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			const bool isOverrideId = Util::toInt(xml.getChildAttrib("OverrideId")) != 0;
 			string clientName = xml.getChildAttrib("ClientName");
 			string clientVersion = xml.getChildAttrib("ClientVersion");
-				
+
 			if (Util::isAdcHub(currentServerUrl))
 				e->setEncoding(Text::CHARSET_UTF8);
 			else
@@ -1289,6 +1290,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setClientName(clientName);
 			e->setClientVersion(clientVersion);
 			e->setOverrideId(isOverrideId);
+			e->setFakeShare(xml.getChildAttrib("FakeShare"));
 
 			e->setGroup(group);
 			const string& connStatusAttr = xml.getChildAttrib("Status");
