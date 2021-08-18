@@ -59,7 +59,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static string getHubName(const string& hubUrl);
 		static bool getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd);
 		static bool isConnected(const string& hubUrl);
-		static bool isOnline(const UserPtr& user);
 		static bool getSlots(const CID& cid, uint16_t& slots);
 		static void search(const SearchParamToken& sp);
 		static unsigned multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients);

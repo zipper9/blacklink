@@ -80,15 +80,6 @@ COLORREF HLS2RGB(HLSCOLOR hls);
 COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S);
 HLSCOLOR HLS_TRANSFORM2(HLSCOLOR hls, int percent_L, int percent_S);
 
-template <class T> inline void safe_unsubclass_window(T* p)
-{
-	dcassert(p->IsWindow());
-	if (p != nullptr && p->IsWindow())
-	{
-		p->UnsubclassWindow();
-	}
-}
-
 class FlatTabCtrl;
 class UserCommand;
 
