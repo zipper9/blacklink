@@ -160,7 +160,6 @@
 #define IDD_FAVUSER                     360
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
-#define IDC_COPY_HUB                    1002
 #define IDC_REMOVE_OFFLINE              1003
 #define IDC_DISABLE_SOUNDS              1004
 #define IDC_CDMDEBUG_WINDOW             1005
@@ -206,8 +205,6 @@
 #define IDC_TOPMOST                     1046
 #define IDC_LOCK_TOOLBARS               1047
 #define IDC_KICK_USERS                  1048
-#define IDC_COPY_BEGIN                  1049
-#define IDC_COPY_END                    1050
 #define IDC_BTN_ABORT                   1051
 #define IDC_BROWSE_PRIVATE_KEY          1052
 #define IDC_BROWSE_CERTIFICATE          1053

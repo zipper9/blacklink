@@ -399,8 +399,7 @@ void WinUtil::init(HWND hWnd)
 	g_copyHubMenu.CreatePopupMenu();
 	g_copyHubMenu.AppendMenu(MF_STRING, IDC_COPY_HUBNAME, CTSTRING(HUB_NAME));
 	g_copyHubMenu.AppendMenu(MF_STRING, IDC_COPY_HUBADDRESS, CTSTRING(HUB_ADDRESS));
-	g_copyHubMenu.InsertSeparatorFirst(TSTRING(COPY));
-	
+
 	UserInfoGuiTraits::init();
 }
 

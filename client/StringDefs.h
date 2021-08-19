@@ -238,7 +238,6 @@ enum Strings   // @DontAdd
 	COPY_GEO_LOCATION, // "Location"
 	COPY_EXACT_SHARE, // "Exact share"
 	COPY_FULL_MAGNET_LINK, // "Full magnet link"
-	COPY_HUB, // "Copy address to clipboard"
 	COPY_IP, // "IP"
 	COPY_LINE, // "Copy current line"
 	COPY_MAGNET, // "Magnet"

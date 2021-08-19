@@ -182,11 +182,15 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	hublistManager->getHubLists(hubLists);
 	updateDropDown();
 
+	copyMenu.CreatePopupMenu();
+	for (int i = 0; i < _countof(columnNames); i++)
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
+
 	hubsMenu.CreatePopupMenu();
 	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
 	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
 	hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
-	hubsMenu.AppendMenu(MF_STRING, IDC_COPY_HUB, CTSTRING(COPY_HUB));
+	hubsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY));
 	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
 	
 	onListSelChanged();
@@ -684,27 +688,19 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 		hubsMenu.EnableMenuItem(IDC_ADD, status);
 		hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, status);
 		tstring x;
-		if (ctrlHubs.GetSelectedCount() > 1)
+		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+		if (i == -1) return 0;
+		const HubInfo* data = ctrlHubs.getItemData(i);
+		x = data->getText(COLUMN_NAME);
+		if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(data)))
 		{
-			hubsMenu.EnableMenuItem(IDC_COPY_HUB, MFS_DISABLED);
+			hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
+			hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);
 		}
 		else
 		{
-			int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
-			if (i == -1) return 0;
-			const HubInfo* data = ctrlHubs.getItemData(i);			
-			x = data->getText(COLUMN_NAME);
-			if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(data)))
-			{
-				hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
-				hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);
-			}
-			else
-			{
-				hubsMenu.EnableMenuItem(IDC_ADD, MFS_ENABLED);
-				hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_DISABLED);
-			}
-			hubsMenu.EnableMenuItem(IDC_COPY_HUB, status);
+			hubsMenu.EnableMenuItem(IDC_ADD, MFS_ENABLED);
+			hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_DISABLED);
 		}
 		if (!x.empty())
 			hubsMenu.InsertSeparatorFirst(x);
@@ -726,15 +722,25 @@ LRESULT PublicHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 	return TRUE;
 }
 
-LRESULT PublicHubsFrame::onCopyHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT PublicHubsFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (ctrlHubs.GetSelectedCount() == 1)
+	int column = wID - IDC_COPY;
+	if (column < COLUMN_FIRST || column >= COLUMN_LAST) return 0;
+	column = columnId[column];
+	tstring result;
+	int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+	while (i != -1)
 	{
-		TCHAR buf[256];
-		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
-		ctrlHubs.GetItemText(i, COLUMN_SERVER, buf, 256);
-		WinUtil::setClipboard(buf);
+		const HubInfo* data = ctrlHubs.getItemData(i);
+		const tstring& text = data->getText(column);
+		if (!text.empty())
+		{
+			if (!result.empty()) result += _T("\r\n");
+			result += text;
+		}
+		i = ctrlHubs.GetNextItem(i, LVNI_SELECTED);
 	}
+	if (!result.empty()) WinUtil::setClipboard(result);	
 	return 0;
 }
 
