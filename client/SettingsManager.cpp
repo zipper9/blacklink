@@ -715,6 +715,9 @@ static const char* g_settingTags[] =
 	"SearchDetectHash", 
 	"OnlyFreeSlots",
 
+	// Users frame
+	"ShowIgnoredUsers",
+
 	// Upload queue frame
 	"UploadQueueFrameShowTree",
 
@@ -1281,6 +1284,9 @@ void SettingsManager::setDefaults()
 	setDefault(CLEAR_SEARCH, TRUE);	
 	setDefault(USE_SEARCH_GROUP_TREE_SETTINGS, TRUE);
 	setDefault(SEARCH_DETECT_TTH, TRUE);
+
+	// Users frame
+	setDefault(SHOW_IGNORED_USERS, -1);
 
 	// Queue frame
 	setDefault(QUEUE_FRAME_SHOW_TREE, TRUE);

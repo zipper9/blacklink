@@ -379,6 +379,9 @@
     <ClCompile Include="windows\MessageEdit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\IgnoredUsersWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -892,6 +895,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\MessageEdit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\IgnoredUsersWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

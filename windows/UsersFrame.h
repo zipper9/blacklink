@@ -22,10 +22,9 @@
 #include "FlatTabCtrl.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
-#include "ExListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
+#include "IgnoredUsersWindow.h"
 #include "../client/UserInfoBase.h"
-
 #include "../client/FavoriteManagerListener.h"
 #include "../client/UserManager.h"
 #include "../client/File.h"
@@ -34,6 +33,7 @@
 class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public StaticFrame<UsersFrame, ResourceManager::FAVORITE_USERS, IDC_FAVUSERS>,
 	public CSplitterImpl<UsersFrame>,
+	public CMessageFilter,
 	private FavoriteManagerListener,
 	private UserManagerListener,
 	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY>,
@@ -41,10 +41,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 {
 	public:	
 		UsersFrame();
-		~UsersFrame()
-		{
-			images.Destroy();
-		}
+		~UsersFrame() { images.Destroy(); }
 
 		UsersFrame(const UsersFrame&) = delete;
 		UsersFrame& operator= (const UsersFrame&) = delete;
@@ -61,27 +58,26 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		NOTIFY_HANDLER(IDC_USERS, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_USERS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClick)
-		NOTIFY_HANDLER(IDC_IGNORELIST, NM_CUSTOMDRAW, ctrlIgnored.onCustomDraw)
-		NOTIFY_HANDLER(IDC_IGNORELIST, LVN_ITEMCHANGED, onIgnoredItemChanged)
-		COMMAND_ID_HANDLER(IDC_IGNORE_ADD, onIgnoreAdd)
-		COMMAND_ID_HANDLER(IDC_IGNORE_REMOVE, onIgnoreRemove)
-		COMMAND_ID_HANDLER(IDC_IGNORE_CLEAR, onIgnoreClear)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(WM_SIZE, onSize)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVE_FROM_FAVORITES, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
+		COMMAND_HANDLER(IDC_SHOW_IGNORED, BN_CLICKED, onToggleIgnored)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(uibBase)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onRemove(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEdit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
@@ -92,6 +88,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
+		LRESULT onToggleIgnored(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -99,9 +96,15 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			return 0;
 		}
 		
+		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		{
+			updateLayout();
+			return 0;
+		}
+
 		LRESULT onIgnorePrivate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-		void UpdateLayout(BOOL bResizeBars = TRUE);
+		void updateLayout();
 		
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 		
@@ -110,10 +113,9 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			ctrlUsers.SetFocus();
 			return 0;
 		}
-		LRESULT onIgnoredItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		LRESULT onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		LRESULT onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
+
+		void GetSystemSettings(bool bUpdate);
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 
 	private:
 		enum
@@ -184,22 +186,19 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		void updateUser(const UserPtr& user);
 		void updateUser(const int i, ItemInfo* ui, const FavoriteUser& favUser);
 		void removeUser(const FavoriteUser& user);
-
-		void insertIgnoreList();
-		void updateIgnoreListButtons();
 		
 	private:
 		typedef TypedListViewCtrl<ItemInfo, IDC_USERS> UserInfoList;
 		UserInfoList ctrlUsers;
+		IgnoredUsersWindow ctrlIgnored;
 		CImageList images;
-		ExListViewCtrl ctrlIgnored;
-		CEdit ctrlIgnoreName;
-		CButton ctrlIgnoreAdd;
-		CButton ctrlIgnoreRemove;
-		CButton ctrlIgnoreClear;
-		tstring selectedIgnore;
 		bool startup;
 		OMenu copyMenu;
+		int barHeight;
+		SIZE checkBoxSize;
+		int checkBoxXOffset;
+		int checkBoxYOffset;
+		CButton ctrlShowIgnored;
 
 		static const int columnId[COLUMN_LAST];
 };

@@ -42,6 +42,7 @@ LRESULT LineDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlLine.SetFocus();
 	ctrlLine.SetWindowText(line.c_str());
 	ctrlLine.SetSelAll(TRUE);
+	if (limitText) ctrlLine.SetLimitText(limitText);
 	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
 
 	CButton ctrlCheckBox(GetDlgItem(IDC_SAVE_PASSWORD));

@@ -71,7 +71,7 @@ static int getDefaultCommand()
 	return cmd[action];
 }
 
-UsersFrame::UsersFrame() : startup(true)
+UsersFrame::UsersFrame() : startup(true), barHeight(0)
 {
 	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);	
 	ctrlUsers.setColumnFormat(COLUMN_SPEED_LIMIT, LVCFMT_RIGHT);
@@ -80,6 +80,10 @@ UsersFrame::UsersFrame() : startup(true)
 
 LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
 	ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
@@ -105,45 +109,42 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		for (auto i = favUsers.cbegin(); i != favUsers.cend(); ++i)
 			addUser(i->second);
 	}
-	
-	ctrlIgnored.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
-	                   LVS_REPORT | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
-	ctrlIgnored.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	ctrlIgnored.SetImageList(images, LVSIL_SMALL);
-	setListViewColors(ctrlIgnored);
-	
-	m_nProportionalPos = 8500;  // SETTING(USERS_FRAME_SPLIT);
-	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlIgnored.m_hWnd, false);
+
+	ctrlIgnored.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
+	ctrlShowIgnored.Create(m_hWnd, rcDefault, CTSTRING(SHOW_IGNORED_USERS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_AUTOCHECKBOX | BS_VCENTER, 0, IDC_SHOW_IGNORED);
+	ctrlShowIgnored.SetFont(Fonts::g_systemFont);
+
+	m_nProportionalPos = SETTING(USERS_FRAME_SPLIT);
+	SetSplitterPanes(ctrlUsers, ctrlIgnored, false);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
-	
-	CRect rc;
-	ctrlIgnored.GetClientRect(rc);
-	ctrlIgnored.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
-	WinUtil::setExplorerTheme(ctrlIgnored);
 
-	ctrlIgnoreAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
-	ctrlIgnoreAdd.SetWindowText(CTSTRING(ADD));
-	ctrlIgnoreAdd.SetFont(Fonts::g_systemFont);
-
-	ctrlIgnoreName.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_IGNORELIST_EDIT);
-	ctrlIgnoreName.SetLimitText(64);
-	ctrlIgnoreName.SetFont(Fonts::g_font);
-	
-	ctrlIgnoreRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_REMOVE);
-	ctrlIgnoreRemove.SetWindowText(CTSTRING(REMOVE));
-	ctrlIgnoreRemove.SetFont(Fonts::g_systemFont);
-	::EnableWindow(ctrlIgnoreRemove, FALSE);
-	
-	ctrlIgnoreClear.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_CLEAR);
-	ctrlIgnoreClear.SetWindowText(CTSTRING(IGNORE_CLEAR));
-	ctrlIgnoreClear.SetFont(Fonts::g_systemFont);
-
-	insertIgnoreList();
+	int showIgnored = SETTING(SHOW_IGNORED_USERS);
+	if (showIgnored == -1)
+		showIgnored = ctrlIgnored.getCount() ? 1 : 0;
+	ctrlShowIgnored.SetCheck(showIgnored ? BST_CHECKED : BST_UNCHECKED);
+	if (!showIgnored)
+		SetSinglePaneMode(SPLIT_PANE_LEFT);
 	
 	startup = false;
 	bHandled = FALSE;
-	UpdateLayout(); // Именно в таком порядке! Здесь второму фрейму координаты записываются.
+	updateLayout();
 	return TRUE;
+}
+
+LRESULT UsersFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+
+	bHandled = FALSE;
+	return 0;
+}
+
+void UsersFrame::GetSystemSettings(bool bUpdate)
+{
+	splitBase::GetSystemSettings(bUpdate);
+	m_cxyMin = ctrlIgnored.getMinWidth();
 }
 
 LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -232,58 +233,33 @@ LRESULT UsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 	return TRUE;
 }
 
-static int getButtonWidth(HWND hwnd, HDC dc)
+void UsersFrame::updateLayout()
 {
-	tstring text;
-	WinUtil::getWindowText(hwnd, text);
-	return std::max<int>(WinUtil::getTextWidth(text, dc) + 10, 80);
-}
+	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	if (!barHeight)
+	{
+		int xdu, ydu;
+		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+		checkBoxSize.cx = WinUtil::dialogUnitsToPixelsX(12, xdu) + WinUtil::getTextWidth(TSTRING(SHOW_IGNORED_USERS), ctrlShowIgnored);
+		checkBoxSize.cy = WinUtil::dialogUnitsToPixelsY(8, ydu);
+		checkBoxXOffset = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		checkBoxYOffset = std::max(WinUtil::dialogUnitsToPixelsY(2, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
+		barHeight = checkBoxSize.cy + 2*checkBoxYOffset;
+	}
 
-void UsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
-{
-	if (isClosedOrShutdown())
-		return;
-
-	const int barHigh = 28;
 	RECT rect, rect2;
 	GetClientRect(&rect);
 	rect2 = rect;
-	rect2.bottom = rect.bottom - barHigh;
+	rect2.bottom = rect.bottom - (barHeight - splitBarHeight);
 	
-	// position bars and offset their dimensions
-	UpdateBarsPosition(rect2, bResizeBars);
-	
-	CRect rc_l, rc_r;
-	ctrlUsers.GetClientRect(rc_l);
-	rc_l.bottom = rect2.bottom;
-	ctrlUsers.MoveWindow(rc_l);
-	
-	ctrlIgnored.GetClientRect(rc_r);
-	rc_r.bottom = rect2.bottom;
-	ctrlIgnored.MoveWindow(rc_r);
-
-	HDC dc = GetDC();
-	CRect rcControl = rect;
-	rcControl.top = rect.bottom - 24;
-	rcControl.right -= 4;
-	rcControl.left = rcControl.right - getButtonWidth(ctrlIgnoreClear, dc);
-	ctrlIgnoreClear.MoveWindow(rcControl);
-	
-	rcControl.right = rcControl.left - 12;
-	rcControl.left = rcControl.right - getButtonWidth(ctrlIgnoreRemove, dc);
-	ctrlIgnoreRemove.MoveWindow(rcControl);
-	
-	rcControl.right = rcControl.left - 4;
-	rcControl.left = rcControl.right - getButtonWidth(ctrlIgnoreAdd, dc);
-	ctrlIgnoreAdd.MoveWindow(rcControl);
-	
-	rcControl.right = rcControl.left - 4;
-	rcControl.left = rcControl.right - 150;
-	ctrlIgnoreName.MoveWindow(rcControl);
-	ReleaseDC(dc);
-
 	CRect rc = rect2;
 	SetSplitterRect(rc);
+
+	rc.left = checkBoxXOffset;
+	rc.top = rect2.bottom + checkBoxYOffset;
+	rc.right = rc.left + checkBoxSize.cx;
+	rc.bottom = rc.top + checkBoxSize.cy;
+	ctrlShowIgnored.MoveWindow(rc);
 }
 
 LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -492,9 +468,7 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		SET_SETTING(USERS_FRAME_SORT, ctrlUsers.getSortForSettings());
 		ctrlUsers.deleteAll();
 		
-		//if (m_nProportionalPos < 8000 || m_nProportionalPos > 9000)
-		//  m_nProportionalPos = 8500;
-		//SET_SETTING(USERS_FRAME_SPLIT, m_nProportionalPos); // Пока НЕ сохраняем положение сплиттера. Неясно какие габариты правильные
+		SET_SETTING(USERS_FRAME_SPLIT, m_nProportionalPos);
 		bHandled = FALSE;
 		return 0;
 	}
@@ -650,88 +624,32 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	return 0;
 }
 
-LRESULT UsersFrame::onIgnoredItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+LRESULT UsersFrame::onToggleIgnored(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	updateIgnoreListButtons();
-	return 0;
-}
-
-void UsersFrame::insertIgnoreList()
-{
-	StringSet ignoreSet;
-	UserManager::getInstance()->getIgnoreList(ignoreSet);
-	vector<tstring> sortedList;
-	sortedList.resize(ignoreSet.size());
-	size_t index = 0;
-	for (auto i = ignoreSet.cbegin(); i != ignoreSet.cend(); ++i)
-		sortedList[index++] = Text::toT(*i);
-	std::sort(sortedList.begin(), sortedList.end(),
-		[](tstring& s1, tstring& s2) { return Util::defaultSort(s1, s2, true) < 0; });
-	int selectedItem = -1;
-	for (size_t i = 0; i < sortedList.size(); i++)
-	{
-		ctrlIgnored.insert(i, sortedList[i]);
-		if (sortedList[i] == selectedIgnore)
-			selectedItem = i;
-	}
-	if (selectedItem != -1)
-		ctrlIgnored.SelectItem(selectedItem);
-	updateIgnoreListButtons();
-}
-
-void UsersFrame::updateIgnoreListButtons()
-{
-	ctrlIgnoreRemove.EnableWindow(ctrlIgnored.GetNextItem(-1, LVNI_SELECTED) != -1);
-	ctrlIgnoreClear.EnableWindow(ctrlIgnored.GetItemCount() != 0);
-}
-
-LRESULT UsersFrame::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
-{
-	tstring name;
-	WinUtil::getWindowText(ctrlIgnoreName, name);
-	if (name.empty()) return 0;
-	ctrlIgnoreName.SetWindowText(_T(""));
-	tstring prevIgnore = std::move(selectedIgnore);
-	selectedIgnore = name;
-	if (!UserManager::getInstance()->addToIgnoreList(Text::fromT(name)))
-	{
-		selectedIgnore = std::move(prevIgnore);
-		MessageBox(CTSTRING(ALREADY_IGNORED), getAppNameVerT().c_str(), MB_OK);
-		return 0;
-	}
-	return 0;
-}
-
-LRESULT UsersFrame::onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
-{
-	vector<string> userNames;
-	int i = -1;
-	while ((i = ctrlIgnored.GetNextItem(i, LVNI_SELECTED)) != -1)
-		userNames.push_back(ctrlIgnored.ExGetItemText(i, 0));
-	if (!userNames.empty())
-		UserManager::getInstance()->removeFromIgnoreList(userNames);
-	return 0;
-}
-
-LRESULT UsersFrame::onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
-{
-	if (MessageBox(CTSTRING(CLEAR_LIST_OF_IGNORED_USERS), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
-	{
-		UserManager::getInstance()->clearIgnoreList();
-	}	
+	BOOL state = CButton(hWndCtl).GetCheck() == BST_CHECKED;
+	SetSinglePaneMode(state ? SPLIT_PANE_NONE : SPLIT_PANE_LEFT);
+	SET_SETTING(SHOW_IGNORED_USERS, state ? 1 : 0);
 	return 0;
 }
 
 void UsersFrame::on(IgnoreListChanged, const string&) noexcept
 {
-	ctrlIgnored.DeleteAllItems();
-	insertIgnoreList();
+	ctrlIgnored.updateUsers();
 }
 
 void UsersFrame::on(IgnoreListCleared) noexcept
 {
-	ctrlIgnored.DeleteAllItems();
-	insertIgnoreList();
+	ctrlIgnored.updateUsers();
+}
+
+BOOL UsersFrame::PreTranslateMessage(MSG* pMsg)
+{
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
+	return IsDialogMessage(pMsg);
 }
 
 CFrameWndClassInfo& UsersFrame::GetWndClassInfo()

@@ -735,20 +735,18 @@ void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 
+	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
 		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
 		buttonHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
-		vertMarginBottom = WinUtil::dialogUnitsToPixelsY(3, ydu);
-		int splitBarHeight = GetSystemMetrics(SM_CYSIZEFRAME);
-		if (vertMarginBottom < splitBarHeight) vertMarginBottom = splitBarHeight;
+		vertMarginBottom = std::max(WinUtil::dialogUnitsToPixelsY(3, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
 		vertMarginTop = vertMarginBottom;
-		vertMarginBottom -= splitBarHeight;
 	}
 
 	CRect rc = rect;
-	rc.bottom -= buttonHeight + vertMarginTop + vertMarginBottom;
+	rc.bottom -= buttonHeight + vertMarginTop + vertMarginBottom - splitBarHeight;
 	ctrlHubs.MoveWindow(rc);
 
 	static const int bspace = 10;

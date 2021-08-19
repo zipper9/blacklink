@@ -37,6 +37,7 @@ class LineDlg : public CDialogImpl<LineDlg>
 		tstring line;
 		bool checked = false;
 		int icon = -1;
+		int limitText = 0;
 		ResourceManager::Strings checkBoxText = ResourceManager::SAVE;
 		
 		bool checkBox = false;

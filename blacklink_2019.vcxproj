@@ -790,6 +790,7 @@
     <ClCompile Include="windows\HashProgressDlg.cpp" />
     <ClCompile Include="windows\HIconWrapper.cpp" />
     <ClCompile Include="windows\HubFrame.cpp" />
+    <ClCompile Include="windows\IgnoredUsersWindow.cpp" />
     <ClCompile Include="windows\ImageButton.cpp" />
     <ClCompile Include="windows\ImageDataObject.cpp" />
     <ClCompile Include="windows\ImageLists.cpp" />
@@ -950,6 +951,7 @@
     <ClInclude Include="windows\HashProgressDlg.h" />
     <ClInclude Include="windows\HIconWrapper.h" />
     <ClInclude Include="windows\HubFrame.h" />
+    <ClInclude Include="windows\IgnoredUsersWindow.h" />
     <ClInclude Include="windows\ImageButton.h" />
     <ClInclude Include="windows\ImageDataObject.h" />
     <ClInclude Include="windows\ImageLists.h" />

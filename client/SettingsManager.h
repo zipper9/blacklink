@@ -693,6 +693,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEARCH_DETECT_TTH, // Unused
 			ONLY_FREE_SLOTS,
 
+			// Users frame
+			SHOW_IGNORED_USERS,
+
 			// Queue frame
 			QUEUE_FRAME_SHOW_TREE,
 			
