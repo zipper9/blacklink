@@ -49,11 +49,6 @@
 
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam, DatabaseManager::ErrorCallback dbErrorCallback)
 {
-#ifdef _WIN32
-	WSADATA wsaData = {0};
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-#endif
-
 #define LOAD_STEP(name, function)\
 	{\
 		pProgressCallbackProc(pProgressParam, _T(name));\

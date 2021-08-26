@@ -150,10 +150,6 @@ class CompatibilityManager
 		static constexpr DWORD compareFlags = SORT_DIGITSASNUMBERS;
 #endif
 
-		static bool g_is_teredo;
-		static bool g_is_ipv6_enabled;
-		static bool checkTeredo();
-
 	private:
 		static DWORD g_oldPriorityClass;
 		static string g_incopatibleSoftwareList;
