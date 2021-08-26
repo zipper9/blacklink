@@ -900,6 +900,9 @@
     <ClInclude Include="windows\IgnoredUsersWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\CompiledDateTime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

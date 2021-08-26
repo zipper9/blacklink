@@ -27,14 +27,11 @@
 #include <WinError.h>
 #include <winnt.h>
 #include <ImageHlp.h>
+#include <shlwapi.h>
 #ifdef OSVER_WIN_VISTA
 #define PSAPI_VERSION 1
 #endif
 #include <psapi.h>
-#if _MSC_VER >= 1700
-#include <atlbase.h>
-#include "../wtl/atlapp.h"
-#endif
 #include "Util.h"
 #include "Socket.h"
 #include "DownloadManager.h"
@@ -44,7 +41,6 @@
 #include "ShareManager.h"
 #include <iphlpapi.h>
 #include <direct.h>
-#include "CompiledDateTime.h"
 
 #pragma comment(lib, "Imagehlp.lib")
 
@@ -562,10 +558,25 @@ void CompatibilityManager::generateSystemInfoForApp()
 
 LONG CompatibilityManager::getComCtlVersionFromOS()
 {
-	DWORD dwMajor = 0, dwMinor = 0;
-	if (SUCCEEDED(ATL::AtlGetCommCtrlVersion(&dwMajor, &dwMinor)))
-		return MAKELONG(dwMinor, dwMajor);
-	return 0;
+	typedef HRESULT (CALLBACK* DLLGETVERSIONPROC)(DLLVERSIONINFO *);
+	LONG result = 0;
+	HINSTANCE hInstDLL = LoadLibrary(_T("comctl32.dll"));
+	if (hInstDLL)
+	{
+		DLLGETVERSIONPROC proc = (DLLGETVERSIONPROC) GetProcAddress(hInstDLL, "DllGetVersion");
+		if (proc)
+		{
+			DLLVERSIONINFO dvi;
+			memset(&dvi, 0, sizeof(dvi));
+			dvi.cbSize = sizeof(dvi);
+			if (SUCCEEDED(proc(&dvi)))
+				result = MAKELONG(dvi.dwMinorVersion, dvi.dwMajorVersion);
+		}
+		else
+			result = MAKELONG(0, 4);
+		FreeLibrary(hInstDLL);
+	}
+	return result;
 }
 
 bool CompatibilityManager::getFromSystemIsAppRunningIsWow64()
@@ -706,7 +717,7 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 #endif
 			          "%s",
 				getAppNameVer().c_str(),
-				Text::fromT(getCompileDate()).c_str(),
+				__DATE__,
 				CompatibilityManager::getWindowsVersionName().c_str(),
 				Util::formatBytes(g_TotalPhysMemory).c_str(),
 				Util::formatBytes(g_FreePhysMemory).c_str(),
@@ -1144,24 +1155,28 @@ tstring CompatibilityManager::diskInfo()
 string CompatibilityManager::CPUInfo()
 {
 	tstring result;
-	CRegKey key;
-	ULONG len = 255;
-	if (key.Open(HKEY_LOCAL_MACHINE, _T("Hardware\\Description\\System\\CentralProcessor\\0"), KEY_READ) == ERROR_SUCCESS)
+	HKEY key = nullptr;
+	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("Hardware\\Description\\System\\CentralProcessor\\0"), 0, KEY_READ, &key) == ERROR_SUCCESS)
 	{
-		TCHAR buf[255];
+		TCHAR buf[256];
 		buf[0] = 0;
-		if (key.QueryStringValue(_T("ProcessorNameString"), buf, &len) == ERROR_SUCCESS)
+		DWORD type;
+		DWORD size = sizeof(buf);
+		if (RegQueryValueEx(key, _T("ProcessorNameString"), nullptr, &type, (BYTE *) buf, &size) == ERROR_SUCCESS && type == REG_SZ)
 		{
-			tstring tmp = buf;
-			result = tmp.substr(tmp.find_first_not_of(_T(' ')));
+			size /= sizeof(TCHAR);
+			if (size && buf[size-1] == 0) size--;
+			result.assign(buf, size);
 		}
 		DWORD speed;
-		if (key.QueryDWORDValue(_T("~MHz"), speed) == ERROR_SUCCESS)
+		size = sizeof(DWORD);
+		if (RegQueryValueEx(key, _T("~MHz"), nullptr, &type, (BYTE *) &speed, &size) == ERROR_SUCCESS && type == REG_DWORD)
 		{
 			result += _T(" (");
-			result += Util::toStringW((uint32_t)speed);
+			result += Util::toStringT(speed);
 			result += _T(" MHz)");
 		}
+		RegCloseKey(key);
 	}
 	return result.empty() ? "Unknown" : Text::fromT(result);
 }

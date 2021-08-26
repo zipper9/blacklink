@@ -23,8 +23,8 @@
 #include "SplashWindow.h"
 #include "RichTextLabel.h"
 #include "WinUtil.h"
+#include "CompiledDateTime.h"
 #include "../client/Util.h"
-#include "../client/CompiledDateTime.h"
 
 #if _MSC_VER >= 1921
 #define MSC_RELEASE 2019
