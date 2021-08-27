@@ -410,6 +410,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 	LinkItem li;
 	li.start = tstring::npos;
 	TCHAR linkPrevChar = 0;
+	int ipv6Link = 0;
 	for (tstring::size_type i = 0; i < text.length(); ++i)
 	{
 		TCHAR c = text[i];
@@ -417,6 +418,16 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		hash = hash << 8 | (uint8_t) c;
 		if (li.start != tstring::npos)
 		{
+			if (c == _T('[') && ipv6Link == 0 && i-li.start <= 8 && text[i-1] == _T('/'))
+			{
+				ipv6Link = 1;
+				continue;
+			}
+			if (c == _T(']') && ipv6Link == 1)
+			{
+				ipv6Link = 2;
+				continue;
+			}
 			if (badUrlChars.find(c) == tstring::npos)
 				continue;
 			li.end = i;
@@ -432,6 +443,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 				--li.end;
 			links.push_back(li);
 			li.start = tstring::npos;
+			ipv6Link = 0;
 		}
 		if (c == _T('[') && formatBBCodes)
 		{
