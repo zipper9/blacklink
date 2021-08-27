@@ -40,36 +40,25 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 
 		void searchAuto(const string& tth);
 
-		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const string& hubIpPort);
+		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const IpAddress& hubIp, uint16_t hubPort);
 
-		static bool isSearchPortValid()
-		{
-			return g_search_port != 0;
-		}
-		static uint16_t getSearchPortUint()
-		{
-			dcassert(g_search_port);
-			return g_search_port;
-		}
-		static string getSearchPort()
-		{
-			return Util::toString(getSearchPortUint());
-		}
+		static uint16_t getUdpPort() { return udpPort; }
 
+		void listenUDP(int af);
 		void start();
 		void shutdown();
 
-		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, Ip4Address remoteIp);
-		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4Address remoteIp);
-		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo);
+		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, const IpAddress& remoteIp);
+		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, const IpAddress& remoteIp);
+		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo);
 
-		void onSearchResult(const string& line)
+		void onSearchResult(const string& line, const IpAddress& ip)
 		{
-			onData(line.c_str(), static_cast<int>(line.length()), 0, 0);
+			onData(line.c_str(), static_cast<int>(line.length()), ip, 0);
 		}
 
 		static const uint16_t FLAG_NO_TRACE = 1;
-		void addToSendQueue(string& data, Ip4Address address, uint16_t port, uint16_t flags = 0) noexcept;
+		void addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags = 0) noexcept;
 
 	private:
 		friend class Singleton<SearchManager>;
@@ -77,10 +66,11 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 #ifdef _WIN32
 		enum
 		{
-			EVENT_SOCKET,
+			EVENT_SOCKET_V4,
+			EVENT_SOCKET_V6,
 			EVENT_COMMAND
 		};
-		WinEvent<FALSE> events[2];
+		WinEvent<FALSE> events[3];
 #else
 		pthread_t threadId;
 #endif
@@ -88,31 +78,32 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		struct SendQueueItem
 		{
 			string data;
-			Ip4Address address;
+			IpAddress address;
 			uint16_t port;
 			uint16_t flags;
 
-			SendQueueItem(string& data, Ip4Address address, uint16_t port, uint16_t flags):
+			SendQueueItem(string& data, const IpAddress& address, uint16_t port, uint16_t flags):
 				data(std::move(data)), address(address), port(port), flags(flags) {}
 		};
 
-		unique_ptr<Socket> socket;
-		static uint16_t g_search_port;
+		unique_ptr<Socket> sockets[2];
+		bool failed[2];
+		static uint16_t udpPort;
 		std::atomic_bool stopFlag;
 		std::atomic_bool restartFlag;
-		bool failed;
 		vector<SendQueueItem> sendQueue;
 		CriticalSection csSendQueue;
 
 		SearchManager();
 
 		virtual int run() override;
+		bool receivePackets(int index);
 
-		void onData(const char* buf, int len, Ip4Address address, uint16_t remotePort);
-		bool processNMDC(const char* buf, int len, Ip4Address address);
-		bool processRES(const char* buf, int len, Ip4Address address);
-		bool processPSR(const char* buf, int len, Ip4Address address);
-		bool processPortTest(const char* buf, int len, Ip4Address address);
+		void onData(const char* buf, int len, const IpAddress& address, uint16_t remotePort);
+		bool processNMDC(const char* buf, int len, const IpAddress& address, uint16_t remotePort);
+		bool processRES(const char* buf, int len, const IpAddress& address);
+		bool processPSR(const char* buf, int len, const IpAddress& address);
+		bool processPortTest(const char* buf, int len, const IpAddress& address);
 
 		static string getPartsString(const PartsInfo& partsInfo);
 		bool isShutdown() const;

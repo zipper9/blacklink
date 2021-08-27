@@ -351,10 +351,13 @@ static void modifyFeatures(StringList& features, const string& options)
 	}
 }
 
-ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr), shuttingDown(false),
+ConnectionManager::ConnectionManager() : m_floodCounter(0), shuttingDown(false),
 	csConnections(RWLock::create()),
 	csDownloads(RWLock::create())
 {
+	servers[0] = servers[1] = servers[2] = servers[3] = nullptr;
+	ports[0] = ports[1] = 0;
+
 	nmdcFeatures.reserve(5);
 	nmdcFeatures.push_back(UserConnection::FEATURE_MINISLOTS);
 	nmdcFeatures.push_back(UserConnection::FEATURE_XML_BZLIST);
@@ -385,24 +388,27 @@ ConnectionManager::~ConnectionManager()
 	dcassert(uploads.empty());
 }
 
-void ConnectionManager::startListen(int type)
+void ConnectionManager::startListen(int af, int type)
 {
-	uint16_t port = 0;
 	string bind;
-	bool autoDetectConnection = BOOLSETTING(AUTO_DETECT_CONNECTION);
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, af == AF_INET6);
 	SettingsManager::IntSetting portSetting = type == SERVER_TYPE_SSL ? SettingsManager::TLS_PORT : SettingsManager::TCP_PORT;
-	if (!autoDetectConnection)
-	{
-		bind = SETTING(BIND_ADDRESS);
-		port = SettingsManager::get(portSetting);
-	}
+	if (!SettingsManager::get(ips.autoDetect))
+		bind = SettingsManager::get(ips.bindAddress);
+	uint16_t port = SettingsManager::get(portSetting);
 
-	auto newServer = new Server(type, port, bind);
+	IpAddress bindIp;
+	BufferedSocket::getBindAddress(bindIp, af, bind);
+	auto newServer = new Server(type, bindIp, port);
 	SettingsManager::set(portSetting, newServer->getServerPort());
-	if (type == SERVER_TYPE_SSL)
-		secureServer = newServer;
-	else
-		server = newServer;
+	int index = type == SERVER_TYPE_SSL ? SERVER_SECURE : 0;
+	ports[index] = newServer->getServerPort();
+	if (index == 0 && newServer->getType() == SERVER_TYPE_AUTO_DETECT)
+		ports[1] = ports[index];
+	if (af == AF_INET6)
+		index |= SERVER_V6;
+	servers[index] = newServer;
 }
 
 /**
@@ -783,15 +789,15 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 static const uint64_t g_FLOOD_TRIGGER = 20000;
 static const uint64_t g_FLOOD_ADD = 2000;
 
-ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr): type(type), stopFlag(false), bindIp(ipAddr)
+ConnectionManager::Server::Server(int type, const IpAddress& ip, uint16_t port): type(type), bindIp(ip), stopFlag(false)
 {
-	sock.create();
-	sock.setSocketOpt(SO_REUSEADDR, 1);
-	LogManager::message("Starting server on " + bindIp + ':' + Util::toString(port) + " type=" + Util::toString(type), false);
+	sock.create(ip.type, Socket::TYPE_TCP);
+	sock.setSocketOpt(SOL_SOCKET, SO_REUSEADDR, 1);
+	LogManager::message("Starting server on " + Util::printIpAddress(ip, true) + ':' + Util::toString(port) + " type=" + Util::toString(type), false);
 	serverPort = sock.bind(port, bindIp);
 	sock.listen();
 	char threadName[64];
-	sprintf(threadName, "Server-%d", type);
+	sprintf(threadName, "Server-%d-v%d", type, ip.type == AF_INET6 ? 6 : 4);
 	start(64, threadName);
 }
 
@@ -821,14 +827,15 @@ int ConnectionManager::Server::run() noexcept
 		{
 			try
 			{
+				dcassert(bindIp.type == AF_INET || bindIp.type == AF_INET6);
 				sock.disconnect();
-				sock.create();
+				sock.create(bindIp.type, Socket::TYPE_TCP);
 				serverPort = sock.bind(serverPort, bindIp);
 				dcassert(serverPort);
-				LogManager::message("Starting to listen " + bindIp + ':' + Util::toString(serverPort) + " type=" + Util::toString(type));
+				LogManager::message("Starting to listen " + Util::printIpAddress(bindIp, true) + ':' + Util::toString(serverPort) + " type=" + Util::toString(type));
 				sock.listen();
 				if (type != SERVER_TYPE_SSL)
-					ConnectionManager::getInstance()->updateLocalIp();
+					ConnectionManager::getInstance()->updateLocalIp(bindIp.type);
 				if (failed)
 				{
 					LogManager::message(STRING(CONNECTIVITY_RESTORED));
@@ -939,26 +946,28 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 	uc->addAcceptedSocket(newSock, port);
 }
 
-void ConnectionManager::updateLocalIp()
+void ConnectionManager::updateLocalIp(int af)
 {
-	string localIp = server ? server->getServerIP() : Util::emptyString;
-	uint32_t addr;
-	if (!(Util::parseIpAddress(addr, localIp) && addr)) localIp = Util::getLocalIp();
-	ConnectivityManager::getInstance()->setLocalIP(localIp);
+	int index = af == AF_INET6 ? SERVER_V6 : 0;
+	string localIp = servers[index] ? servers[index]->getServerIP() : Util::emptyString;
+	IpAddress addr;
+	if (localIp.empty() || !(Util::parseIpAddress(addr, localIp) && addr.type == af && Util::isValidIp(addr)))
+		localIp = Util::getLocalIp(af);
+	ConnectivityManager::getInstance()->setLocalIP(af, localIp);
 }
 
-void ConnectionManager::nmdcConnect(const string& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure)
+void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure)
 {
 	nmdcConnect(address, port, 0, BufferedSocket::NAT_NONE, myNick, hubUrl, encoding, secure);
 }
 
-void ConnectionManager::nmdcConnect(const string& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure)
+void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure)
 {
 	if (shuttingDown)
 		return;
 
 	UserConnection* uc = getConnection(true, secure);
-	uc->setServerPort(address + ':' + Util::toString(port));
+	uc->setServerPort(Util::printIpAddress(address, true) + ':' + Util::toString(port));
 	uc->setUserConnectionToken(myNick);
 	uc->setHubUrl(hubUrl);
 	uc->setEncoding(encoding);
@@ -991,7 +1000,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16
 	uc->setHubUrl(&user.getClient() == nullptr ? "DHT" : user.getClient().getHubUrl());
 	try
 	{
-		uc->connect(user.getIdentity().getIpAsString(), port, localPort, natRole);
+		uc->connect(user.getIdentity().getConnectIP(), port, localPort, natRole);
 	}
 	catch (const Exception&)
 	{
@@ -999,13 +1008,23 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16
 	}
 }
 
-void ConnectionManager::disconnect() noexcept
+void ConnectionManager::stopServer(int af) noexcept
 {
-	delete server;
-	server = nullptr;
-	
-	delete secureServer;
-	secureServer = nullptr;
+	int index = af == AF_INET6 ? SERVER_V6 : 0;
+	for (int i = 0; i < 2; ++i)
+	{
+		delete servers[index + i];
+		servers[index + i] = nullptr;
+	}
+	bool hasServer = false;
+	for (int i = 0; i < 4; ++i)
+		if (servers[i])
+		{
+			hasServer = true;
+			break;
+		}
+	if (!hasServer)
+		ports[0] = ports[1] = 0;
 }
 
 void ConnectionManager::processMyNick(UserConnection* source, const string& nick) noexcept
@@ -1077,7 +1096,7 @@ void ConnectionManager::processMyNick(UserConnection* source, const string& nick
 		source->setFlag(UserConnection::FLAG_UPLOAD);
 	}
 	
-	ClientManager::setUserIP(source->getUser(), Util::printIpAddress(source->getRemoteIp()));
+	ClientManager::setUserIP(source->getUser(), source->getRemoteIp());
 
 	if (source->isSet(UserConnection::FLAG_INCOMING))
 	{
@@ -1093,7 +1112,7 @@ void ConnectionManager::setIP(UserConnection* conn, const ConnectionQueueItemPtr
 	dcassert(conn);
 	dcassert(conn->getUser());
 	dcassert(qi);
-	conn->getUser()->setIP(Util::printIpAddress(conn->getSocket()->getIp4()));
+	conn->getUser()->setIP(conn->getSocket()->getIp());
 }
 
 void ConnectionManager::addDownloadConnection(UserConnection* conn)
@@ -1409,7 +1428,8 @@ void ConnectionManager::shutdown()
 		updatedUsers.clear();
 	}
 	
-	disconnect();
+	stopServer(AF_INET);
+	stopServer(AF_INET6);
 	{
 		READ_LOCK(*csConnections);
 		for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
@@ -1567,9 +1587,9 @@ void ConnectionManager::fireListenerStarted() noexcept
 	fly_fire(ConnectionManagerListener::ListenerStarted());
 }
 
-void ConnectionManager::fireListenerFailed(const char* type, int errorCode) noexcept
+void ConnectionManager::fireListenerFailed(const char* type, int af, int errorCode) noexcept
 {
-	fly_fire2(ConnectionManagerListener::ListenerFailed(), type, errorCode);
+	fly_fire2(ConnectionManagerListener::ListenerFailed(), type, af, errorCode);
 }
 
 StringList ConnectionManager::getNmdcFeatures() const

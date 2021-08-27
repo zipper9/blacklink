@@ -35,7 +35,7 @@ using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;
 
-NetworkPage::Settings* NetworkPage::prevSettings = nullptr;
+NetworkSettings* NetworkPage::prevSettings = nullptr;
 
 extern bool g_DisableTestPort;
 extern int g_tlsOption;
@@ -52,13 +52,11 @@ enum
 };
 
 static const DialogLayout::Align align1 = { 2, DialogLayout::SIDE_RIGHT, U_DU(6) };
-static const DialogLayout::Align align2 = { 0, DialogLayout::SIDE_RIGHT, U_DU(12) };
-static const DialogLayout::Align align3 = { 12, DialogLayout::SIDE_LEFT, U_DU(6) };
-static const DialogLayout::Align align4 = { 15, DialogLayout::SIDE_RIGHT, U_DU(6) };
-static const DialogLayout::Align align5 = { 18, DialogLayout::SIDE_LEFT, U_DU(6) };
-static const DialogLayout::Align align6 = { 30, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align3 = { 16, DialogLayout::SIDE_LEFT, U_DU(6) };
+static const DialogLayout::Align align4 = { 20, DialogLayout::SIDE_RIGHT, U_DU(6) };
 
-static const DialogLayout::Item layoutItems[] =
+static const DialogLayout::Item layoutItems1[] =
 {
 	{ IDC_SETTINGS_BIND_ADDRESS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_SETTINGS_BIND_ADDRESS_HELP, FLAG_TRANSLATE, AUTO, UNSPEC },
@@ -71,120 +69,73 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_FIREWALL_PASSIVE, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_SETTINGS_IP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_WAN_IP_MANUAL, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_NO_IP_OVERRIDE, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_DEFAULT_GATEWAY_IP, 0, UNSPEC, UNSPEC },
-	{ IDC_STATIC_GATEWAY, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
-	{ IDC_IPUPDATE, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_SETTINGS_UPDATE_IP_INTERVAL, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_UPDATE_IP_INTERVAL, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_STATIC_GATEWAY, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_SETTINGS_PORTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_PORT_TCP, 0, UNSPEC, UNSPEC },
-	{ IDC_SETTINGS_PORT_TCP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
-	{ IDC_SETTINGS_PORT_UDP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
-	{ IDC_SETTINGS_PORT_TLS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
-	{ IDC_SETTINGS_PORT_TORRENT, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align5 },
-	{ IDC_NO_IP_OVERRIDE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_PORT_TCP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
+	{ IDC_SETTINGS_PORT_UDP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
+	{ IDC_SETTINGS_PORT_TLS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
+	{ IDC_CAPTION_MAPPER, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_MAPPER, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_GETIP, FLAG_TRANSLATE, UNSPEC, UNSPEC }
+};
+
+static const DialogLayout::Item layoutItems2[] =
+{
 	{ IDC_AUTO_TEST_PORTS, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_NATT, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_USE_DHT, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_SETTINGS_USE_TORRENT, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_GETIP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_ADD_FIREWALL_EXCEPTION, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_CAPTION_MAPPER, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_MAPPER, 0, UNSPEC, UNSPEC, 0, &align6 }
+	{ IDC_USE_DHT, FLAG_TRANSLATE, AUTO, UNSPEC }
 };
 
-static const PropPage::Item items[] =
+static const struct
 {
-	{ IDC_CONNECTION_DETECTION,  SettingsManager::AUTO_DETECT_CONNECTION, PropPage::T_BOOL },
-	{ IDC_PORT_TCP,              SettingsManager::TCP_PORT,               PropPage::T_INT  },
-	{ IDC_PORT_UDP,              SettingsManager::UDP_PORT,               PropPage::T_INT  },
-	{ IDC_PORT_TLS,              SettingsManager::TLS_PORT,               PropPage::T_INT  },
-	{ IDC_NO_IP_OVERRIDE,        SettingsManager::NO_IP_OVERRIDE,         PropPage::T_BOOL },
-//	{ IDC_IP_GET_IP,             SettingsManager::URL_GET_IP,             PropPage::T_STR  },
-	{ IDC_IPUPDATE,              SettingsManager::IPUPDATE,               PropPage::T_BOOL },
-	{ IDC_WAN_IP_MANUAL,         SettingsManager::WAN_IP_MANUAL,          PropPage::T_BOOL },
-	{ IDC_UPDATE_IP_INTERVAL,    SettingsManager::IPUPDATE_INTERVAL,      PropPage::T_INT  },
-	{ IDC_AUTO_TEST_PORTS,       SettingsManager::AUTO_TEST_PORTS,        PropPage::T_BOOL },
-	{ IDC_NATT,                  SettingsManager::ALLOW_NAT_TRAVERSAL,    PropPage::T_BOOL },
-	{ IDC_PORT_TORRENT,          SettingsManager::DHT_PORT,               PropPage::T_INT  },
-	{ IDC_SETTINGS_USE_TORRENT,  SettingsManager::USE_TORRENT_SEARCH,     PropPage::T_BOOL },
-	{ IDC_USE_DHT,               SettingsManager::USE_DHT,                PropPage::T_BOOL },
-	{ 0,                         0,                                       PropPage::T_END  }
+	int id;
+	SettingsManager::IntSetting setting;
+} portSettings[] =
+{
+	{ IDC_PORT_TCP, SettingsManager::TCP_PORT },
+	{ IDC_PORT_UDP, SettingsManager::UDP_PORT },
+	{ IDC_PORT_TLS, SettingsManager::TLS_PORT }
 };
 
-LRESULT NetworkPage::OnKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+static const struct
 {
-	tstring tmp;
-	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
-	WinUtil::getWindowText(externalIp, tmp);
-	string ipStr = Text::fromT(tmp);
-	if (!ipStr.empty())
-	{
-		Ip4Address ip;
-		if (!Util::parseIpAddress(ip, ipStr))
-		{
-			ipStr = SETTING(EXTERNAL_IP);
-			MessageBox(CTSTRING(BAD_IP_ADDRESS), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
-			externalIp.SetWindowText(Text::toT(ipStr).c_str());
-		}
-	}
-	return 0;
-}
+	SettingsManager::IntSetting setting;
+	int edit;
+	int protoIcon;
+	int upnpIcon;
+} controlInfo[] =
+{
+	{ SettingsManager::UDP_PORT, IDC_PORT_UDP, IDC_NETWORK_TEST_PORT_UDP_ICO, IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP },
+	{ SettingsManager::TCP_PORT, IDC_PORT_TCP, IDC_NETWORK_TEST_PORT_TCP_ICO, IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP },
+	{ SettingsManager::TLS_PORT, IDC_PORT_TLS, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP },
+};
 
-int NetworkPage::getConnectionType() const
+LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
-	int ct = SettingsManager::INCOMING_DIRECT;
-	if (IsDlgButtonChecked(IDC_FIREWALL_UPNP))
-		ct = SettingsManager::INCOMING_FIREWALL_UPNP;
-	else if (IsDlgButtonChecked(IDC_FIREWALL_NAT))
-		ct = SettingsManager::INCOMING_FIREWALL_NAT;
-	else if (IsDlgButtonChecked(IDC_FIREWALL_PASSIVE))
-		ct = SettingsManager::INCOMING_FIREWALL_PASSIVE;
-	return ct;
-}
-
-void NetworkPage::write()
-{
-	PropPage::write(*this, items);
+	DialogLayout::layout(m_hWnd, layoutItems1, _countof(layoutItems1));
 	
-	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
-	if (externalIp.IsWindowEnabled())
+	for (int i = 0; i < _countof(portSettings); ++i)
+		SetDlgItemInt(portSettings[i].id, SettingsManager::get(portSettings[i].setting));
+
+	int af;
+	ResourceManager::Strings enableStr;
+	if (v6)
 	{
-		tstring str;
-		WinUtil::getWindowText(externalIp, str);
-		g_settings->set(SettingsManager::EXTERNAL_IP, Text::fromT(str));
+		enableStr = ResourceManager::ENABLE_IPV6;
+		af = AF_INET6;
 	}
 	else
-		g_settings->set(SettingsManager::EXTERNAL_IP, Util::emptyString);
-	
-	g_settings->set(SettingsManager::BIND_ADDRESS, WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS))));
-	g_settings->set(SettingsManager::INCOMING_CONNECTIONS, getConnectionType());
+	{
+		enableStr = ResourceManager::ENABLE_IPV4;
+		af = AF_INET;
+	}
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, v6);
 
-	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
-	int selIndex = mapperCombo.GetCurSel();
-	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
-	if (selIndex >= 0 && selIndex < (int) mappers.size())
-		g_settings->set(SettingsManager::MAPPER, mappers[selIndex]);
-	g_settings->set(SettingsManager::USE_TLS, useTLS);
-}
-
-LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
-	
-	::EnableWindow(GetDlgItem(IDC_IPUPDATE), FALSE);
-
-#ifdef FLYLINKDC_USE_TORRENT
-	SET_SETTING(DHT_PORT, DownloadManager::getInstance()->listen_torrent_port());
-#else
-	GetDlgItem(IDC_SETTINGS_PORT_TORRENT).ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_PORT_TORRENT).ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO).ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP).ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_SETTINGS_USE_TORRENT).ShowWindow(SW_HIDE);
-#endif
-	
-	switch (SETTING(INCOMING_CONNECTIONS))
+	switch (SettingsManager::get(ips.incomingConnections))
 	{
 		case SettingsManager::INCOMING_DIRECT:
 			CheckDlgButton(IDC_DIRECT, BST_CHECKED);
@@ -202,313 +153,171 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 			CheckDlgButton(IDC_DIRECT, BST_CHECKED);
 			break;
 	}
-	
-	PropPage::read(*this, items);
-	useTLS = BOOLSETTING(USE_TLS);
-	GetDlgItem(IDC_EXTERNAL_IP).SetWindowText(Text::toT(SETTING(EXTERNAL_IP)).c_str());
-	
-	fixControls();
-	
-	CEdit(GetDlgItem(IDC_PORT_TCP)).LimitText(5);
-	CEdit(GetDlgItem(IDC_PORT_UDP)).LimitText(5);
-	CEdit(GetDlgItem(IDC_PORT_TLS)).LimitText(5);
-	
+
+	CButton ctrlEnable(GetDlgItem(IDC_ENABLE));
+	ctrlEnable.SetWindowText(CTSTRING_I(enableStr));
+	if (v6)
+		ctrlEnable.SetCheck(BOOLSETTING(ENABLE_IP6) ? BST_CHECKED : BST_UNCHECKED);
+	else
+	{
+		ctrlEnable.SetCheck(BST_CHECKED);
+		ctrlEnable.EnableWindow(FALSE);
+	}
+
+	CButton(GetDlgItem(IDC_CONNECTION_DETECTION)).SetCheck(SettingsManager::get(ips.autoDetect) ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_WAN_IP_MANUAL)).SetCheck(SettingsManager::get(ips.manualIp) ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_NO_IP_OVERRIDE)).SetCheck(SettingsManager::get(ips.noIpOverride) ? BST_CHECKED : BST_UNCHECKED);
+
+	for (int i = 0; i < 3; ++i)
+		CEdit(GetDlgItem(controlInfo[i].edit)).LimitText(5);
+
 	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
-	WinUtil::fillAdapterList(false, bindCombo, SETTING(BIND_ADDRESS));
+	WinUtil::fillAdapterList(af, bindCombo, SettingsManager::get(ips.bindAddress));
+
+	CEdit ctrlExternalIP(GetDlgItem(IDC_EXTERNAL_IP));
+	ctrlExternalIP.SetWindowText(Text::toT(SettingsManager::get(ips.externalIp)).c_str());
+	CRect rc;
+	if (v6)
+	{
+		ctrlExternalIP.GetWindowRect(&rc);
+		ctrlExternalIP.SetWindowPos(nullptr, 0, 0, rc.Width()*2, rc.Height(), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	}
+
+	CEdit ctrlGatewayIP(GetDlgItem(IDC_DEFAULT_GATEWAY_IP));
+	if (v6)
+		ctrlGatewayIP.SetWindowPos(nullptr, 0, 0, rc.Width()*2, rc.Height(), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	string gateway = Util::getDefaultGateway(af);
+	ctrlGatewayIP.SetWindowText(Text::toT(gateway).c_str());
 
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
-	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
+	StringList mappers = ConnectivityManager::getInstance()->getMapper(af).getMappers();
 	int selIndex = 0;
 	for (size_t i = 0; i < mappers.size(); ++i)
 	{
 		mapperCombo.AddString(Text::toT(mappers[i]).c_str());
-		if (mappers[i] == SETTING(MAPPER))
+		if (mappers[i] == SettingsManager::get(ips.mapper))
 			selIndex = i;
 	}
 	mapperCombo.SetCurSel(selIndex);
 
-	updatePortState();
-	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
-	//SetButtonElevationRequiredState(IDC_ADD_FLYLINKDC_WINFIREWALL,);
-	
-	string gateway = Util::getDefaultGateway();
-	GetDlgItem(IDC_DEFAULT_GATEWAY_IP).SetWindowText(Text::toT(gateway).c_str());
-	return TRUE;
-}
+	if (v6)
+	{
+		GetDlgItem(IDC_GETIP).ShowWindow(SW_HIDE);
+		for (int i = 0; i < 3; ++i)
+		{
+			CWindow wndIcon(GetDlgItem(controlInfo[i].protoIcon));
+			CWindow wndEdit(GetDlgItem(controlInfo[i].edit));
+			CRect rc1, rc2;
+			wndIcon.GetWindowRect(&rc1);
+			wndEdit.GetWindowRect(&rc2);
+			wndIcon.ShowWindow(SW_HIDE);
+			wndEdit.SetWindowPos(nullptr, 0, 0, rc1.left + 16 - rc2.left, rc2.Height(), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+		}
+	}
 
-static int getIconForState(boost::logic::tribool state)
-{
-	if (boost::logic::indeterminate(state)) return IconUnknown;
-	if (state) return IconSuccess;
-	return IconFailure;
-}
-
-void NetworkPage::onShow()
-{
-	if (!g_tlsOption) return;
-	useTLS = g_tlsOption == 1;
-	const BOOL autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
-	::EnableWindow(GetDlgItem(IDC_PORT_TLS), !autoDetect && useTLS);
-	updatePortState();
-}
-
-void NetworkPage::fixControls()
-{
-	const BOOL autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
-	//const BOOL direct = IsDlgButtonChecked(IDC_DIRECT) == BST_CHECKED;
-	const BOOL upnp = IsDlgButtonChecked(IDC_FIREWALL_UPNP) == BST_CHECKED;
-	const BOOL nat = IsDlgButtonChecked(IDC_FIREWALL_NAT) == BST_CHECKED;
-	//const BOOL nat_traversal = IsDlgButtonChecked(IDC_NATT) == BST_CHECKED;
-	
-	const BOOL passive = IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;	
-	const BOOL manualIP = IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
-	
-	::EnableWindow(GetDlgItem(IDC_DIRECT), !autoDetect);
-	::EnableWindow(GetDlgItem(IDC_FIREWALL_UPNP), !autoDetect);
-	::EnableWindow(GetDlgItem(IDC_FIREWALL_NAT), !autoDetect);
-	::EnableWindow(GetDlgItem(IDC_FIREWALL_PASSIVE), !autoDetect);
-	
-#ifdef FLYLINKDC_USE_TORRENT
-	const BOOL torrent = IsDlgButtonChecked(IDC_SETTINGS_USE_TORRENT) == BST_CHECKED;
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_PORT_TORRENT), torrent);
-	::EnableWindow(GetDlgItem(IDC_PORT_TORRENT), torrent);
-#endif
-	
-	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), manualIP);
-	
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_IP), !autoDetect);
-	
-	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !autoDetect && (upnp || nat) && !m_is_manual);
-	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), FALSE); // !autoDetect && (direct || upnp || nat || nat_traversal));
-	const BOOL ipupdate = (upnp || nat) && (IsDlgButtonChecked(IDC_IPUPDATE) == BST_CHECKED);
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_UPDATE_IP_INTERVAL), ipupdate);
-	::EnableWindow(GetDlgItem(IDC_UPDATE_IP_INTERVAL), ipupdate);
-	const BOOL portEnabled = !autoDetect;// && (upnp || nat);
-	::EnableWindow(GetDlgItem(IDC_PORT_TCP), portEnabled);
-	::EnableWindow(GetDlgItem(IDC_PORT_UDP), portEnabled);
-	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && useTLS);
-	::EnableWindow(GetDlgItem(IDC_BIND_ADDRESS), !autoDetect);
-	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !autoDetect);
-	//::EnableWindow(GetDlgItem(IDC_SETTINGS_PORTS_UPNP), upnp);
-	
-	testWinFirewall();
-#ifdef FLYLINKDC_USE_TORRENT
-	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP, getIconForState(SettingsManager::g_upnpTorrentLevel));
-#endif
-}
-
-LRESULT NetworkPage::onWANIPManualClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
 	fixControls();
 	return 0;
 }
 
-LRESULT NetworkPage::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT NetworkIPTab::onEnable(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	fixControls();
-	return 0;
-}
-
-static int getIconForPortState(int state)
-{
-	if (g_DisableTestPort) return IconDisabled;
-	if (state == PortTest::STATE_SUCCESS) return IconSuccess;
-	if (state == PortTest::STATE_FAILURE) return IconFailure;
-	if (state == PortTest::STATE_RUNNING) return IconWaiting;
-	return IconQuestion;
-}
-
-static int getIconForMappingState(int state)
-{
-	if (state == MappingManager::STATE_SUCCESS) return IconSuccess;
-	if (state == MappingManager::STATE_FAILURE) return IconFailure;
-	if (state == MappingManager::STATE_RENEWAL_FAILURE) return IconWarning;
-	if (state == MappingManager::STATE_RUNNING) return IconWaiting;
-	return IconQuestion;
-}
-
-static const struct
-{
-	SettingsManager::IntSetting setting;
-	int edit;
-	int protoIcon;
-	int upnpIcon;
-} controlInfo[] =
-{
-	{ SettingsManager::UDP_PORT, IDC_PORT_UDP, IDC_NETWORK_TEST_PORT_UDP_ICO, IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP },
-	{ SettingsManager::TCP_PORT, IDC_PORT_TCP, IDC_NETWORK_TEST_PORT_TCP_ICO, IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP },
-	{ SettingsManager::TLS_PORT, IDC_PORT_TLS, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP },
-};
-
-void NetworkPage::updatePortState()
-{
-	static_assert(PortTest::PORT_UDP == 0 && PortTest::PORT_TCP == 1 && PortTest::PORT_TLS == 2, "PortTest constants mismatch");
-	const MappingManager& mapperV4 = ConnectivityManager::getInstance()->getMapperV4();
-	bool running = false;
-	bool updatePrevSettings = false;
-	tstring oldText;
-	tstring newText;
-	for (int type = 0; type < PortTest::MAX_PORTS; type++)
+	if (v6)
 	{
-		const auto& ci = controlInfo[type];
-		int port, portIcon, mappingIcon;
-		int portState = g_portTest.getState(type, port, nullptr);
-		int mappingState = mapperV4.getState(type);
-		if (portState == PortTest::STATE_RUNNING) running = true;
-		if (type == PortTest::PORT_TLS && !useTLS)
+		CButton cb(hWndCtl);
+		if (cb.GetCheck() == BST_CHECKED && !ConnectivityManager::isIP6Supported())
 		{
-			portIcon = IconDisabled;
-			mappingIcon = IconDisabled;
-		}
-		else
-		{
-			portIcon = getIconForPortState(portState);
-			mappingIcon = getIconForMappingState(mappingState);
-			if (mappingIcon == IconFailure && portIcon == IconSuccess)
-				mappingIcon = IconUnknown;
-		}
-		setIcon(ci.protoIcon, portIcon);
-		setIcon(ci.upnpIcon, mappingIcon);
-		CEdit edit(GetDlgItem(ci.edit));
-		if (!edit.IsWindowEnabled())
-		{
-			WinUtil::getWindowText(edit, oldText);
-			newText = Util::toStringT(g_settings->get(ci.setting));
-			if (oldText != newText)
-			{
-				edit.SetWindowText(newText.c_str());
-				updatePrevSettings = true;
-			}
-		}
-	}
-
-	CButton ctrl(GetDlgItem(IDC_GETIP));
-	if (running)
-	{
-		ctrl.SetWindowText(CTSTRING(TESTING_PORTS));
-		ctrl.EnableWindow(FALSE);
-	}
-	else if (ConnectivityManager::getInstance()->isSetupInProgress())
-	{
-		ctrl.SetWindowText(CTSTRING(APPLYING_SETTINGS));
-		ctrl.EnableWindow(FALSE);
-	}
-	else
-	{
-		ctrl.SetWindowText(CTSTRING(TEST_PORTS_AND_GET_IP));
-		ctrl.EnableWindow(TRUE);
-	}
-
-	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
-	if (!externalIp.IsWindowEnabled())
-	{
-		string ipAddr = ConnectivityManager::getInstance()->getReflectedIP();
-		externalIp.SetWindowText(Text::toT(ipAddr).c_str());
-	}
-	
-#ifdef FLYLINKDC_USE_TORRENT
-	// Testing DHT port is not supported
-	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO, IconUnknown);
-#endif
-
-	if (updatePrevSettings && prevSettings)
-		prevSettings->get();
-}
-
-LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
-{
-	const tstring appPath = Util::getModuleFileName();
-	talk_base::WinFirewall fw;
-	HRESULT hr;
-	fw.Initialize(&hr);
-	const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
-	if (res)
-	{
-		MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
-	}
-	else
-	{
-		_com_error msg(hr);
-		MessageBox(CTSTRING_F(FIREWALL_EXCEPTION_ERROR, msg.ErrorMessage() % Util::toHexStringT(hr)),
-			getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
-	}
-	testWinFirewall();
-	return 0;
-}
-
-void NetworkPage::testWinFirewall()
-{
-	CButton btn(GetDlgItem(IDC_ADD_FIREWALL_EXCEPTION));
-	const tstring appPath = Util::getModuleFileName();
-	
-	talk_base::WinFirewall fw;
-	HRESULT hr;
-	fw.Initialize(&hr);
-	if (!fw.Enabled())
-	{
-		btn.SetWindowTextW(CTSTRING(WINDOWS_FIREWALL_DISABLED));
-		btn.EnableWindow(FALSE);
-		GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO).ShowWindow(SW_HIDE);
-		return;
-	}
-
-	bool authorized = false;
-	bool res = fw.QueryAuthorizedW(appPath.c_str(), &authorized);
-	if (res)
-	{
-		if (authorized)
-			setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconSuccess);
-		else
-			setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconFailure);
-	}
-	else
-		setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconQuestion);
-	btn.SetWindowTextW(CTSTRING(ADD_FIREWALL_EXCEPTION));
-	btn.EnableWindow(TRUE);
-	GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO).ShowWindow(SW_SHOW);
-}
-
-bool NetworkPage::runPortTest()
-{
-	int portTCP = SETTING(TCP_PORT);
-	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-	int portUDP = SETTING(UDP_PORT);
-	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
-	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
-	if (useTLS)
-	{
-		int portTLS = SETTING(TLS_PORT);
-		g_portTest.setPort(PortTest::PORT_TLS, portTLS);
-		mask |= 1<<PortTest::PORT_TLS;
-	}
-	if (!g_portTest.runTest(mask)) return false;
-	updatePortState();
-	return true;
-}
-
-LRESULT NetworkPage::onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
-{
-	testWinFirewall();
-	updatePortState();
-	Settings currentSettings;
-	currentSettings.get();
-	Settings newSettings;
-	getFromUI(newSettings);
-	if (!currentSettings.compare(newSettings))
-	{
-	    if (MessageBox(CTSTRING(NETWORK_SETTINGS_CHANGED), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
+			MessageBox(CTSTRING(IPV6_NOT_DETECTED), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+			cb.SetCheck(BST_UNCHECKED);
 			return 0;
-		write();
-		ConnectivityManager::getInstance()->setupConnections(true);
-		if (prevSettings)
-			prevSettings->get(); // save current settings so we don't call setupConnections twice
+		}
 	}
-	if (!ConnectivityManager::getInstance()->isSetupInProgress())
-		runPortTest();
+	fixControls();
 	return 0;
 }
 
-void NetworkPage::setIcon(int id, int stateIcon)
+LRESULT NetworkIPTab::onTestPorts(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	parent->testPorts();
+	return 0;
+}
+
+void NetworkIPTab::copyPortSettings(NetworkIPTab& copyTo) const
+{
+	tstring s;
+	for (int i = 0; i < 3; ++i)
+	{
+		WinUtil::getWindowText(GetDlgItem(controlInfo[i].edit), s);
+		copyTo.GetDlgItem(controlInfo[i].edit).SetWindowText(s.c_str());
+	}
+}
+
+void NetworkIPTab::fixControls()
+{
+	const bool useTLS = parent->useTLS;
+	const BOOL enabled = IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED;
+	const BOOL autoDetect = enabled && IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
+	const BOOL upnp = enabled && IsDlgButtonChecked(IDC_FIREWALL_UPNP) == BST_CHECKED;
+	const BOOL nat = enabled && IsDlgButtonChecked(IDC_FIREWALL_NAT) == BST_CHECKED;
+	const BOOL passive = enabled && IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;	
+	const BOOL manualIP = enabled && IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
+
+	GetDlgItem(IDC_DIRECT).EnableWindow(enabled && !autoDetect);
+	GetDlgItem(IDC_FIREWALL_UPNP).EnableWindow(enabled && !autoDetect);
+	GetDlgItem(IDC_FIREWALL_NAT).EnableWindow(enabled && !autoDetect);
+	GetDlgItem(IDC_FIREWALL_PASSIVE).EnableWindow(enabled && !autoDetect);
+
+	GetDlgItem(IDC_EXTERNAL_IP).EnableWindow(manualIP);
+	GetDlgItem(IDC_SETTINGS_IP).EnableWindow(enabled && !autoDetect);
+
+	GetDlgItem(IDC_NO_IP_OVERRIDE).EnableWindow(manualIP);
+#if 0
+	const BOOL portEnabled = enabled && !autoDetect;
+#else
+	const BOOL portEnabled = enabled && !parent->applyingSettings;
+#endif
+	GetDlgItem(IDC_PORT_TCP).EnableWindow(portEnabled);
+	GetDlgItem(IDC_PORT_UDP).EnableWindow(portEnabled);
+	GetDlgItem(IDC_PORT_TLS).EnableWindow(portEnabled && useTLS);
+	GetDlgItem(IDC_BIND_ADDRESS).EnableWindow(enabled && !autoDetect);
+
+	GetDlgItem(IDC_CONNECTION_DETECTION).EnableWindow(enabled);
+	GetDlgItem(IDC_WAN_IP_MANUAL).EnableWindow(enabled);
+	GetDlgItem(IDC_DEFAULT_GATEWAY_IP).EnableWindow(enabled);
+	GetDlgItem(IDC_MAPPER).EnableWindow(enabled);
+}
+
+LRESULT NetworkIPTab::onKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	tstring tmp;
+	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
+	WinUtil::getWindowText(externalIp, tmp);
+	string ipStr = Text::fromT(tmp);
+	if (!ipStr.empty())
+	{
+		IpAddress ip;
+		if (!Util::parseIpAddress(ip, ipStr) || ip.type != (v6 ? AF_INET6 : AF_INET))
+		{
+			ipStr = v6 ? SETTING(EXTERNAL_IP6) : SETTING(EXTERNAL_IP);
+			MessageBox(CTSTRING(BAD_IP_ADDRESS), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+			externalIp.SetWindowText(Text::toT(ipStr).c_str());
+		}
+	}
+	return 0;
+}
+
+int NetworkIPTab::getConnectionType() const
+{
+	int ct = SettingsManager::INCOMING_DIRECT;
+	if (IsDlgButtonChecked(IDC_FIREWALL_UPNP))
+		ct = SettingsManager::INCOMING_FIREWALL_UPNP;
+	else if (IsDlgButtonChecked(IDC_FIREWALL_NAT))
+		ct = SettingsManager::INCOMING_FIREWALL_NAT;
+	else if (IsDlgButtonChecked(IDC_FIREWALL_PASSIVE))
+		ct = SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	return ct;
+}
+
+static void setIcon(HWND hwnd, int stateIcon)
 {
 	static HIconWrapper g_hModeActiveIco(IDR_ICON_SUCCESS_ICON);
 	static HIconWrapper g_hModePassiveIco(IDR_ICON_WARN_ICON);
@@ -543,7 +352,7 @@ void NetworkPage::setIcon(int id, int stateIcon)
 		default:
 			icon = (HICON) g_hModeProcessIco;
 	}
-	CWindow wnd(GetDlgItem(id));
+	CWindow wnd(hwnd);
 	if (icon)
 	{
 		wnd.SendMessage(STM_SETICON, (WPARAM) icon, 0);
@@ -553,14 +362,160 @@ void NetworkPage::setIcon(int id, int stateIcon)
 		wnd.ShowWindow(SW_HIDE);
 }
 
-void NetworkPage::getFromUI(Settings& settings) const
+static int getIconForPortState(int state)
 {
-	settings.autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
-	settings.incomingConn = getConnectionType();
+	if (g_DisableTestPort) return IconDisabled;
+	if (state == PortTest::STATE_SUCCESS) return IconSuccess;
+	if (state == PortTest::STATE_FAILURE) return IconFailure;
+	if (state == PortTest::STATE_RUNNING) return IconWaiting;
+	return IconQuestion;
+}
+
+static int getIconForMappingState(int state)
+{
+	if (state == MappingManager::STATE_SUCCESS) return IconSuccess;
+	if (state == MappingManager::STATE_FAILURE) return IconFailure;
+	if (state == MappingManager::STATE_RENEWAL_FAILURE) return IconWarning;
+	if (state == MappingManager::STATE_RUNNING) return IconWaiting;
+	return IconQuestion;
+}
+
+void NetworkIPTab::updateState()
+{
+	static_assert(PortTest::PORT_UDP == 0 && PortTest::PORT_TCP == 1 && PortTest::PORT_TLS == 2, "PortTest constants mismatch");
+	int af = v6 ? AF_INET6 : AF_INET;
+	const MappingManager& mapper = ConnectivityManager::getInstance()->getMapper(af);
+	bool running = false;
+	for (int type = 0; type < PortTest::MAX_PORTS; type++)
+	{
+		const auto& ci = controlInfo[type];
+		int port, portIcon, mappingIcon;
+		int mappingState = mapper.getState(type);
+		int portState = v6 ? PortTest::STATE_UNKNOWN : g_portTest.getState(type, port, nullptr);
+		if (portState == PortTest::STATE_RUNNING) running = true;
+		if (type == PortTest::PORT_TLS && !parent->useTLS)
+		{
+			portIcon = IconDisabled;
+			mappingIcon = IconDisabled;
+		}
+		else
+		{
+			portIcon = getIconForPortState(portState);
+			mappingIcon = getIconForMappingState(mappingState);
+			if (mappingIcon == IconFailure && portIcon == IconSuccess)
+				mappingIcon = IconUnknown;
+		}
+		if (!v6) setIcon(GetDlgItem(ci.protoIcon), portIcon);
+		setIcon(GetDlgItem(ci.upnpIcon), mappingIcon);
+	}
+
+	if (!v6)
+	{
+		CButton ctrl(GetDlgItem(IDC_GETIP));
+		if (running)
+		{
+			ctrl.SetWindowText(CTSTRING(TESTING_PORTS));
+			ctrl.EnableWindow(FALSE);
+		}
+		else if (ConnectivityManager::getInstance()->isSetupInProgress())
+		{
+			ctrl.SetWindowText(CTSTRING(APPLYING_SETTINGS));
+			ctrl.EnableWindow(FALSE);
+		}
+		else
+		{
+			ctrl.SetWindowText(CTSTRING(TEST_PORTS_AND_GET_IP));
+			ctrl.EnableWindow(TRUE);
+		}
+	}
+
+	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
+	if (!externalIp.IsWindowEnabled())
+	{
+		string ipAddr = ConnectivityManager::getInstance()->getReflectedIP(af);
+		externalIp.SetWindowText(Text::toT(ipAddr).c_str());
+	}
+}
+
+void NetworkIPTab::updatePortNumbers()
+{
+	bool updatePrevSettings = false;
+	tstring oldText, newText;
+	for (int type = 0; type < PortTest::MAX_PORTS; type++)
+	{
+		const auto& ci = controlInfo[type];
+		CEdit edit(GetDlgItem(ci.edit));
+		WinUtil::getWindowText(edit, oldText);
+		newText = Util::toStringT(SettingsManager::get(ci.setting));
+		if (oldText != newText)
+		{
+			edit.SetWindowText(newText.c_str());
+			updatePrevSettings = true;
+		}
+	}
+	if (updatePrevSettings && NetworkPage::prevSettings)
+		NetworkPage::prevSettings->get();
+}
+
+void NetworkIPTab::updateTLSOption()
+{
+	const BOOL enabled = IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED;
+#if 0
+	const BOOL autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
+	GetDlgItem(IDC_PORT_TLS).EnableWindow(enabled && !autoDetect && parent->useTLS);
+#else
+	GetDlgItem(IDC_PORT_TLS).EnableWindow(enabled && parent->useTLS);
+#endif
+	updateState();
+}
+
+void NetworkIPTab::writePortSettings()
+{
+	tstring buf;
+	for (int i = 0; i < 3; ++i)
+	{
+		WinUtil::getWindowText(GetDlgItem(portSettings[i].id), buf);
+		SettingsManager::set(portSettings[i].setting, Util::toInt(buf));
+	}
+}
+
+void NetworkIPTab::writeOtherSettings()
+{
+	int af = v6 ? AF_INET6 : AF_INET;
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, v6);
+
+	if (v6) SettingsManager::set(SettingsManager::ENABLE_IP6, IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED);
+	SettingsManager::set(ips.autoDetect, IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED);
+	SettingsManager::set(ips.manualIp, IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED);
+	SettingsManager::set(ips.noIpOverride, IsDlgButtonChecked(IDC_NO_IP_OVERRIDE) == BST_CHECKED);
+
+	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
+	if (externalIp.IsWindowEnabled())
+	{
+		tstring str;
+		WinUtil::getWindowText(externalIp, str);
+		SettingsManager::set(ips.externalIp, Text::fromT(str));
+	}
+	else
+		SettingsManager::set(ips.externalIp, Util::emptyString);
+
+	SettingsManager::set(ips.bindAddress, WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS))));
+	SettingsManager::set(ips.incomingConnections, getConnectionType());
+
+	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
+	int selIndex = mapperCombo.GetCurSel();
+	StringList mappers = ConnectivityManager::getInstance()->getMapper(af).getMappers();
+	if (selIndex >= 0 && selIndex < (int) mappers.size())
+		SettingsManager::set(ips.mapper, mappers[selIndex]);
+}
+
+void NetworkIPTab::getPortSettingsFromUI(NetworkSettings& settings) const
+{
 	tstring buf;
 	WinUtil::getWindowText(GetDlgItem(IDC_PORT_TCP), buf);
 	settings.portTCP = Util::toInt(buf);
-	if (useTLS)
+	if (parent->useTLS)
 	{
 		WinUtil::getWindowText(GetDlgItem(IDC_PORT_TLS), buf);
 		settings.portTLS = Util::toInt(buf);
@@ -569,33 +524,302 @@ void NetworkPage::getFromUI(Settings& settings) const
 		settings.portTLS = -1;
 	WinUtil::getWindowText(GetDlgItem(IDC_PORT_UDP), buf);
 	settings.portUDP = Util::toInt(buf);
-	settings.bindAddr = WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS)));
-	
-	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
-	int selIndex = mapperCombo.GetCurSel();
-	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
-	if (selIndex >= 0 && selIndex < (int) mappers.size())
-		settings.mapper = mappers[selIndex];
 }
 
-void NetworkPage::Settings::get()
+void NetworkIPTab::getOtherSettingsFromUI(NetworkSettings& settings) const
 {
-	autoDetect = BOOLSETTING(AUTO_DETECT_CONNECTION);
-	incomingConn = SETTING(INCOMING_CONNECTIONS);
+	int index = v6 ? 1 : 0;
+	if (v6) settings.enableV6 = IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED;
+	settings.autoDetect[index] = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
+	settings.incomingConn[index] = getConnectionType();
+	settings.bindAddr[index] = WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS)));
+
+	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
+	int selIndex = mapperCombo.GetCurSel();
+	StringList mappers = ConnectivityManager::getInstance()->getMapper(v6 ? AF_INET6 : AF_INET).getMappers();
+	if (selIndex >= 0 && selIndex < (int) mappers.size())
+		settings.mapper[index] = mappers[selIndex];
+}
+
+LRESULT NetworkFirewallTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	appPath = Util::getModuleFileName();
+	ctrlButton.Attach(GetDlgItem(IDC_ADD_FIREWALL_EXCEPTION));
+	ctrlButton.SetWindowText(CTSTRING(ADD_FIREWALL_EXCEPTION));
+	ctrlText.Attach(GetDlgItem(IDC_FIREWALL_STATUS));
+	ctrlIcon.Attach(GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO));
+	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
+	//SetButtonElevationRequiredState(IDC_ADD_FLYLINKDC_WINFIREWALL,);
+	testWinFirewall();
+	return 0;
+}
+
+LRESULT NetworkFirewallTab::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
+{
+	const tstring appPath = Util::getModuleFileName();
+	talk_base::WinFirewall fw;
+	HRESULT hr;
+	fw.Initialize(&hr);
+	const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
+	if (res)
+	{
+		MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
+	}
+	else
+	{
+		_com_error msg(hr);
+		MessageBox(CTSTRING_F(FIREWALL_EXCEPTION_ERROR, msg.ErrorMessage() % Util::toHexStringT(hr)),
+			getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+	}
+	testWinFirewall();
+	return 0;
+}
+
+void NetworkFirewallTab::testWinFirewall()
+{
+	talk_base::WinFirewall fw;
+	HRESULT hr;
+	fw.Initialize(&hr);
+	if (!fw.Enabled())
+	{
+		ctrlText.SetWindowText(CTSTRING(WINDOWS_FIREWALL_DISABLED));
+		ctrlButton.EnableWindow(FALSE);
+		setIcon(ctrlIcon, IconUnknown);
+		return;
+	}
+
+	bool authorized = false;
+	bool res = fw.QueryAuthorizedW(appPath.c_str(), &authorized);
+	if (res)
+	{
+		if (authorized)
+		{
+			ctrlText.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_ADDED));
+			setIcon(ctrlIcon, IconSuccess);
+		}
+		else
+		{
+			ctrlText.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_NOT_ADDED));
+			setIcon(ctrlIcon, IconFailure);
+		}
+	}
+	else
+	{
+		ctrlText.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_NOT_ADDED));
+		setIcon(ctrlIcon, IconQuestion);
+	}
+	ctrlButton.EnableWindow(TRUE);
+}
+
+static const PropPage::Item items[] =
+{
+	{ IDC_AUTO_TEST_PORTS, SettingsManager::AUTO_TEST_PORTS,     PropPage::T_BOOL },
+	{ IDC_NATT,            SettingsManager::ALLOW_NAT_TRAVERSAL, PropPage::T_BOOL },
+	{ IDC_USE_DHT,         SettingsManager::USE_DHT,             PropPage::T_BOOL },
+	{ 0,                   0,                                    PropPage::T_END  }
+};
+
+#define ADD_TAB(name, type, text) \
+	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(text)); \
+	name.Create(m_hWnd, type::IDD); \
+	ctrlTabs.InsertItem(n++, &tcItem);
+
+LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	useTLS = BOOLSETTING(USE_TLS);
+	applyingSettings = ConnectivityManager::getInstance()->isSetupInProgress();
+	DialogLayout::layout(m_hWnd, layoutItems2, _countof(layoutItems2));
+	
+	ctrlTabs.Attach(GetDlgItem(IDC_TABS));
+	TCITEM tcItem;
+	tcItem.mask = TCIF_TEXT | TCIF_PARAM;
+	tcItem.iImage = -1;
+
+	int n = 0;
+	ADD_TAB(tabIP[0], NetworkIPTab, IPV4);
+	ADD_TAB(tabIP[1], NetworkIPTab, IPV6);
+	ADD_TAB(tabFirewall, NetworkFirewallTab, WINDOWS_FIREWALL);
+
+	ctrlTabs.SetCurSel(0);
+	changeTab();
+	updatePortState();
+
+	PropPage::read(*this, items);
+
+	return TRUE;
+}
+
+void NetworkPage::write()
+{
+	PropPage::write(*this, items);
+	int currentTab = ctrlTabs.GetCurSel();
+	if (!(currentTab == 0 || currentTab == 1)) currentTab = 0;
+	tabIP[currentTab].writePortSettings();
+	tabIP[0].writeOtherSettings();
+	tabIP[1].writeOtherSettings();
+	SET_SETTING(USE_TLS, useTLS);
+}
+
+void NetworkPage::updatePortState()
+{
+	tabIP[0].updateState();
+	tabIP[1].updateState();
+	applyingSettings = ConnectivityManager::getInstance()->isSetupInProgress();
+	if (applyingSettings)
+	{
+		int currentTab = ctrlTabs.GetCurSel();
+		if (!(currentTab == 0 || currentTab == 1)) currentTab = 0;
+		tabIP[currentTab].updatePortNumbers();
+	}
+}
+
+void NetworkPage::changeTab()
+{
+	int pos = ctrlTabs.GetCurSel();
+	tabIP[0].ShowWindow(SW_HIDE);
+	tabIP[1].ShowWindow(SW_HIDE);
+	tabFirewall.ShowWindow(SW_HIDE);
+
+	CRect rc;
+	ctrlTabs.GetClientRect(&rc);
+	ctrlTabs.AdjustRect(FALSE, &rc);
+	ctrlTabs.MapWindowPoints(m_hWnd, &rc);
+	HWND hwnd;
+
+	switch (pos)
+	{
+		case 0:
+		case 1:
+			hwnd = tabIP[pos];
+			if (prevTab == 0 || prevTab == 1)
+				tabIP[prevTab].copyPortSettings(tabIP[pos]);
+			break;
+		case 2:
+			hwnd = tabFirewall;
+			break;
+		default:
+			return;
+	}
+
+	CWindow wnd(hwnd);
+	wnd.MoveWindow(&rc);
+	wnd.ShowWindow(SW_SHOW);
+	prevTab = pos;
+}
+
+void NetworkPage::onShow()
+{
+	if (!g_tlsOption) return;
+	useTLS = g_tlsOption == 1;
+	tabIP[0].updateTLSOption();	
+	tabIP[1].updateTLSOption();
+	Invalidate();
+}
+
+bool NetworkPage::runPortTest()
+{
+	int portTCP = SETTING(TCP_PORT);
+	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
+	int portUDP = SETTING(UDP_PORT);
+	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
+	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
+	if (useTLS)
+	{
+		int portTLS = SETTING(TLS_PORT);
+		g_portTest.setPort(PortTest::PORT_TLS, portTLS);
+		mask |= 1<<PortTest::PORT_TLS;
+	}
+	if (!g_portTest.runTest(mask)) return false;
+	tabIP[0].updateState();
+	return true;
+}
+
+void NetworkPage::testPorts()
+{
+	tabFirewall.testWinFirewall();
+	updatePortState();
+	NetworkSettings currentSettings;
+	currentSettings.get();
+	NetworkSettings newSettings;
+	getFromUI(newSettings);
+	if (!currentSettings.compare(newSettings))
+	{
+	    if (MessageBox(CTSTRING(NETWORK_SETTINGS_CHANGED), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
+			return;
+		write();
+		ConnectivityManager::getInstance()->setupConnections(true);
+		if (prevSettings)
+			prevSettings->get(); // save current settings so we don't call setupConnections twice
+	}
+	if (!ConnectivityManager::getInstance()->isSetupInProgress())
+		runPortTest();
+}
+
+void NetworkPage::getFromUI(NetworkSettings& settings) const
+{
+	int currentTab = ctrlTabs.GetCurSel();
+	if (!(currentTab == 0 || currentTab == 1)) currentTab = 0;
+	tabIP[currentTab].getPortSettingsFromUI(settings);
+	tabIP[0].getOtherSettingsFromUI(settings);
+	tabIP[1].getOtherSettingsFromUI(settings);
+}
+
+void NetworkSettings::get()
+{
 	portTCP = SETTING(TCP_PORT);
 	portTLS = BOOLSETTING(USE_TLS) ? SETTING(TLS_PORT) : -1;
 	portUDP = SETTING(UDP_PORT);
-	bindAddr = SETTING(BIND_ADDRESS);
-	mapper = SETTING(MAPPER);
+	enableV6 = BOOLSETTING(ENABLE_IP6);
+	autoDetect[0] = BOOLSETTING(AUTO_DETECT_CONNECTION);
+	autoDetect[1] = BOOLSETTING(AUTO_DETECT_CONNECTION6);
+	incomingConn[0] = SETTING(INCOMING_CONNECTIONS);
+	incomingConn[1] = SETTING(INCOMING_CONNECTIONS6);
+	bindAddr[0] = SETTING(BIND_ADDRESS);
+	bindAddr[1] = SETTING(BIND_ADDRESS6);
+	mapper[0] = SETTING(MAPPER);
+	mapper[1] = SETTING(MAPPER6);
 }
 
-bool NetworkPage::Settings::compare(const NetworkPage::Settings& other) const
+static bool isEmptyAddress(const string& s, int af)
 {
-	return autoDetect == other.autoDetect &&
-		incomingConn == other.incomingConn &&
-		portTCP == other.portTCP &&
-		portTLS == other.portTLS &&
-		portUDP == other.portUDP &&
-		bindAddr == other.bindAddr &&
-		mapper == other.mapper;
+	switch (af)
+	{
+		case AF_INET:
+		{
+			Ip4Address ip;
+			return Util::parseIpAddress(ip, s) && ip == 0;
+		}
+		case AF_INET6:
+		{
+			Ip6Address ip;
+			return Util::parseIpAddress(ip, s) && Util::isEmpty(ip);
+		}
+	}
+	return false;
+}
+
+static bool compareBindAddress(const string& s1, const string& s2, int af)
+{
+	if (s1 == s2) return true;
+	if (s1.empty() && isEmptyAddress(s2, af)) return true;
+	if (s2.empty() && isEmptyAddress(s1, af)) return true;
+	return false;
+}
+
+bool NetworkSettings::compare(const NetworkSettings& other) const
+{
+	if (!(portTCP == other.portTCP &&
+          portTLS == other.portTLS &&
+          portUDP == other.portUDP &&
+          enableV6 == other.enableV6 &&
+          autoDetect[0] == other.autoDetect[0] &&
+          incomingConn[0] == other.incomingConn[0] &&
+          compareBindAddress(bindAddr[0],  other.bindAddr[0], AF_INET) &&
+          mapper[0] == other.mapper[0])) return false;
+	if (enableV6 &&
+	    !(autoDetect[1] == other.autoDetect[1] &&
+          incomingConn[1] == other.incomingConn[1] &&
+          compareBindAddress(bindAddr[1],  other.bindAddr[1], AF_INET6) &&
+          mapper[1] == other.mapper[1])) return false;
+	return true;
 }

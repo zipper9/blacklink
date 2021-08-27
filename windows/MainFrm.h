@@ -68,6 +68,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		struct ListenerError
 		{
 			const char* type;
+			int af;
 			int errorCode;
 		};
 

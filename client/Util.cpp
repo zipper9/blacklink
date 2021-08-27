@@ -684,8 +684,19 @@ void Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
 	}
 	else
 	{
-		ip = ipPort.substr(0, i);
-		port = Util::toInt(ipPort.c_str() + i + 1);
+		string::size_type j = ipPort[0] == '[' ? ipPort.rfind(']') : string::npos;
+		if (j == string::npos || j < i)
+		{
+			ip = ipPort.substr(0, i);
+			port = Util::toInt(ipPort.c_str() + i + 1);
+		}
+		else
+			ip = ipPort;
+	}
+	if (ip.length() > 2 && ip[0] == '[' && ip.back() == ']')
+	{
+		ip.erase(0, 1);
+		ip.erase(ip.length()-1);
 	}
 }
 	
@@ -821,7 +832,12 @@ class UserParamExpander : public Util::TimeParamExpander
 				}
 				if (param == "userI4")
 				{
-					value = Util::printIpAddress(user->getIP());
+					value = Util::printIpAddress(user->getIP4());
+					return value;
+				}
+				if (param == "userI6")
+				{
+					value = Util::printIpAddress(user->getIP6());
 					return value;
 				}
 			}
@@ -1413,7 +1429,10 @@ string Util::formatDchubUrl(const string& proto, const string& host, uint16_t po
 		if (proto == "dchub") isNmdc = true;
 	}
 	result += "://";
-	result += host;
+	if (host.find(':') != string::npos)
+		result += "[" + host + "]";
+	else
+		result += host;
 	if (port && !(port == 411 && isNmdc))
 	{
 		result += ':';
@@ -1566,12 +1585,6 @@ bool Util::isHttpLink(const wstring& url)
 {
 	return strnicmp(url.c_str(), L"http://", 7) == 0 ||
 	       strnicmp(url.c_str(), L"https://", 8) == 0;
-}
-
-uint32_t Util::getNumericIp4(const tstring& s)
-{
-	uint32_t result;
-	return (parseIpAddress(result, s, 0, s.length()) && result != 0xFFFFFFFF) ? result : 0;
 }
 
 void Util::readTextFile(File& file, std::function<bool(const string&)> func)

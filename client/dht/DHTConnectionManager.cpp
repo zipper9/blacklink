@@ -43,12 +43,12 @@ namespace dht
 		if (!node->isOnline())
 		{
 			// do handshake at first
-			DHT::getInstance()->info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->info(node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				DHT::PING | DHT::MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
 
-		bool active = ClientManager::isActive(0);
+		bool active = ClientManager::isActive(AF_INET, 0);
 
 		// if I am not active, send reverse connect to me request
 		AdcCommand cmd(active ? AdcCommand::CMD_CTM : AdcCommand::CMD_RCM, AdcCommand::TYPE_UDP);
@@ -64,7 +64,7 @@ namespace dht
 
 		cmd.addParam(token);
 
-		DHT::getInstance()->send(cmd, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+		DHT::getInstance()->send(cmd, node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 			node->getUser()->getCID(), node->getUdpKey());
 	}
 
@@ -77,7 +77,7 @@ namespace dht
 		if (!node->isOnline())
 		{
 			// do handshake at first
-			DHT::getInstance()->info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->info(node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				DHT::PING | DHT::MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -101,7 +101,7 @@ namespace dht
 			response.addParam("PR", protocol);
 			response.addParam("TO", token);
 
-			DHT::getInstance()->send(response, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->send(response, node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -109,7 +109,7 @@ namespace dht
 		if (!node->getIdentity().isTcpActive())
 		{
 			AdcCommand err(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "IP unknown", AdcCommand::TYPE_UDP);
-			DHT::getInstance()->send(err, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->send(err, node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -127,7 +127,7 @@ namespace dht
 		//	return;
 
 		// this is valid for active-passive connections only
-		if (!ClientManager::isActive(0))
+		if (!ClientManager::isActive(AF_INET, 0))
 			return;
 
 		const string& protocol = cmd.getParam(1);
@@ -148,7 +148,7 @@ namespace dht
 			sta.addParam("PR", protocol);
 			sta.addParam("TO", token);
 
-			DHT::getInstance()->send(sta, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->send(sta, node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}

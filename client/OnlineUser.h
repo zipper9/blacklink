@@ -43,9 +43,8 @@ class Identity
 			CT_OWNER   = 0x10,
 			CT_HUB     = 0x20,
 #ifdef IRAINMAN_USE_HIDDEN_USERS
-			CT_HIDDEN  = 0x40,
+			CT_HIDDEN  = 0x40
 #endif
-			CT_USE_IP6 = 0x80
 		};
 
 		enum StatusFlag
@@ -63,7 +62,8 @@ class Identity
 			p2pGuardInfoKnown = false;
 			hasExtJson = false;
 			changes = 0;
-			ip = 0;
+			ip4 = 0;
+			memset(&ip6, 0, sizeof(ip6));
 		}
 		
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
@@ -74,7 +74,8 @@ class Identity
 			p2pGuardInfoKnown = false;
 			hasExtJson = false;
 			changes = 0;
-			ip = 0;
+			ip4 = 0;
+			memset(&ip6, 0, sizeof(ip6));
 			setSID(aSID);
 		}
 		
@@ -97,16 +98,15 @@ class Identity
 		Identity& operator= (const Identity&) = delete;
 		
 #define GSMC(n, x, c)\
-	string get##n() const { return getStringParam(x); }\
-	void set##n(const string& v) { setStringParam(x, v); change(c); }
+		string get##n() const { return getStringParam(x); }\
+		void set##n(const string& v) { setStringParam(x, v); change(c); }
 
 #define GSM(n, x)\
-	string get##n() const { return getStringParam(x); }\
-	void set##n(const string& v) { setStringParam(x, v); }
+		string get##n() const { return getStringParam(x); }\
+		void set##n(const string& v) { setStringParam(x, v); }
 
 		GSMC(Description, "DE", 1<<COLUMN_DESCRIPTION)
 		GSMC(Email, "EM", 1<<COLUMN_EMAIL)
-		GSMC(IP6, "I6", 1<<COLUMN_IP)
 		GSMC(P2PGuard, "P2", 1<<COLUMN_DESCRIPTION)
 		void setNick(const string& newNick) // "NI"
 		{
@@ -165,26 +165,19 @@ class Identity
 		{
 			return bytesShared;
 		}
-		
-		void setIp(const string& ip);
-		void setIp(Ip4Address ip);
-		bool isPhantomIP() const;
-		Ip4Address getIp() const
-		{
-			if (ip)
-				return ip;
-			else
-				return getUser()->getIP();
-		}
-		bool isIPValid() const
-		{
-			return Util::isValidIp4(ip);
-		}
-		string getIpAsString() const;
+
+		void setIP4(Ip4Address ip) noexcept;
+		void setIP6(const Ip6Address& ip) noexcept;
+		Ip4Address getIP4() const noexcept;
+		Ip6Address getIP6() const noexcept;
+		IpAddress getConnectIP() const;
+		bool getUdpAddress(IpAddress& ip, uint16_t& port) const;
+		bool isIPCached(int af) const;
 
 	private:
 		string nick;
-		Ip4Address ip; // "I4"
+		Ip4Address ip4; // "I4"
+		Ip6Address ip6; // "I6"
 		int64_t bytesShared;
 		uint16_t slots;
 
@@ -309,15 +302,6 @@ class Identity
 			return getClientTypeBit(CT_BOT | CT_HUB);
 		}
 		
-		void setUseIP6() // "CT"
-		{
-			return setClientTypeBit(CT_USE_IP6, true);
-		}
-		bool isUseIP6() const // "CT"
-		{
-			return getClientTypeBit(CT_USE_IP6);
-		}
-		
 		void setOp(bool op) // "CT"
 		{
 			return setClientTypeBit(CT_OP, op);
@@ -358,7 +342,7 @@ class Identity
 	private:
 		enum eTypeUint16Attr
 		{
-			e_UdpPort,
+			e_Udp4Port,
 			e_Udp6Port,
 			e_FreeSlots,
 			e_TypeUInt16AttrLast
@@ -366,7 +350,7 @@ class Identity
 		GSUINTBITS(16);
 
 	public:
-		GSUINT(16, UdpPort); // "U4"
+		GSUINT(16, Udp4Port); // "U4"
 		GSUINT(16, Udp6Port); // "U6"
 		GSUINT(16, FreeSlots); // "FS"
 		
@@ -624,7 +608,7 @@ class Identity
 #endif // EXT_JSON
 		
 		static string formatShareBytes(uint64_t bytes);
-		static string formatIpString(const string& value);
+		static string formatIpString(const IpAddress& ip);
 		static string formatSpeedLimit(const uint32_t limit);
 		
 		//bool isTcpActive(const Client* client) const;

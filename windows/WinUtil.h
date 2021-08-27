@@ -305,7 +305,7 @@ class WinUtil
 		static bool processWhoisMenu(WORD wID, const tstring& ip);
 		static void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
 #endif
-		static void fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindAddress);
+		static void fillAdapterList(int af, CComboBox& bindCombo, const string& bindAddress);
 		static string getSelectedAdapter(const CComboBox& bindCombo);
 		static bool isTeredo();
 		

@@ -58,7 +58,7 @@ namespace dht
 			auto cm = ConnectivityManager::getInstance();
 			if (cm->isSetupInProgress())
 				return;
-			string reflectedIP = cm->getReflectedIP();
+			string reflectedIP = cm->getReflectedIP(AF_INET);
 			if (!reflectedIP.empty())
 				d->setExternalIP(reflectedIP);
 			int port = DHT::getPort();

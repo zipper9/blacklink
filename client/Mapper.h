@@ -28,7 +28,7 @@ using std::string;
 class Mapper
 {
 	public:
-		Mapper(const string &localIp, bool v6);
+		Mapper(const string &localIp, int af);
 		virtual ~Mapper() {}
 
 		Mapper(const Mapper&) = delete;
@@ -62,11 +62,11 @@ class Mapper
 
 		/** user-friendly name for this implementation. */
 		virtual const string &getName() const = 0;
-		virtual bool supportsProtocol(bool v6) const = 0;
+		virtual bool supportsProtocol(int af) const = 0;
 
 	protected:
 		string localIp;
-		const bool v6;
+		const int af;
 };
 
 #endif // MAPPER_H

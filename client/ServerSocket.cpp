@@ -21,15 +21,17 @@
 
 #include "SettingsManager.h"
 
-void ServerSocket::listen(uint16_t aPort, const string& aIp = SETTING(BIND_ADDRESS))
+void ServerSocket::listen(uint16_t port, const string& ip = SETTING(BIND_ADDRESS))
 {
-	if (socket.sock != INVALID_SOCKET)
+	if (socket.isValid())
 	{
 		socket.disconnect();
 	}
-	socket.create(Socket::TYPE_TCP);
+	IpAddress addr;
+	Util::parseIpAddress(addr, ip);
+	socket.create(addr.type, Socket::TYPE_TCP);
 	// Set reuse address option...
-	socket.setSocketOpt(SO_REUSEADDR, 1);
-	socket.bind(aPort, aIp);
+	socket.setSocketOpt(SOL_SOCKET, SO_REUSEADDR, 1);
+	socket.bind(port, addr);
 	socket.listen();
 }

@@ -532,7 +532,10 @@
     <ClCompile Include="client\HashUtil.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
+    <ClCompile Include="client\inet_compat.cpp" />
     <ClCompile Include="client\Ip4Address.cpp" />
+    <ClCompile Include="client\Ip6Address.cpp" />
+    <ClCompile Include="client\IpAddress.cpp" />
     <ClCompile Include="client\IPStat.cpp" />
     <ClCompile Include="client\JobExecutor.cpp" />
     <ClCompile Include="client\LocationUtil.cpp" />
@@ -710,7 +713,10 @@
     <ClInclude Include="client\HublistManagerListener.h" />
     <ClInclude Include="client\idna\idna.h" />
     <ClInclude Include="client\idna\punycode.h" />
+    <ClInclude Include="client\inet_compat.h" />
     <ClInclude Include="client\Ip4Address.h" />
+    <ClInclude Include="client\Ip6Address.h" />
+    <ClInclude Include="client\IpAddress.h" />
     <ClInclude Include="client\IpGrant.h" />
     <ClInclude Include="client\IPInfo.h" />
     <ClInclude Include="client\IpList.h" />
@@ -737,6 +743,7 @@
     <ClInclude Include="client\SettingsManagerListener.h" />
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
+    <ClInclude Include="client\SockDefs.h" />
     <ClInclude Include="client\SpeedCalc.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />
     <ClInclude Include="client\sqlite\sqlite3ext.h" />

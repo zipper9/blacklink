@@ -209,7 +209,11 @@ int BufferedSocket::run()
 		catch (const Exception& e)
 		{
 			if (doLog)
-				LogManager::message("Socket " + Util::toHexString(hasSocket() ? sock->sock : 0) + ": " + e.getError(), false);
+			{
+				string sockName;
+				printSockName(sockName);
+				LogManager::message(sockName + ": " + e.getError(), false);
+			}
 			if (sock)
 				sock->disconnect();
 			if (state != FAILED)
@@ -521,14 +525,14 @@ void BufferedSocket::transmitFile(InputStream* stream)
 	if (sock) sock->signalControlEvent();
 }
 
-string BufferedSocket::getRemoteIpAsString() const
+string BufferedSocket::getRemoteIpAsString(bool brackets) const
 {
-	return sock ? Util::printIpAddress(sock->getIp4()) : Util::emptyString;
+	return sock ? Util::printIpAddress(sock->getIp(), brackets) : Util::emptyString;
 }
 
 string BufferedSocket::getRemoteIpPort() const
 {
-	string s = getRemoteIpAsString();
+	string s = getRemoteIpAsString(true);
 	if (s.empty()) return s;
 	if (sock)
 	{
@@ -561,7 +565,7 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 	sock = move(s);
 	if (doLog)
 		LogManager::message("BufferedSocket " + Util::toHexString(this) +
-			": Assigned socket " + Util::toHexString(sock.get() ? sock->sock : 0), false);
+			": Assigned socket " + Util::toHexString(sock.get() ? sock->getSock() : 0), false);
 }
 
 void BufferedSocket::addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port)
@@ -592,15 +596,6 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 	Socket::ProxyConfig proxy;
 	if (useProxy && !Socket::getProxyConfig(proxy))
 		useProxy = false;
-
-	std::unique_ptr<Socket> s(secure && !useProxy ? (natRole == NAT_SERVER ? 
-		CryptoManager::getInstance()->getServerSocket(allowUntrusted) : 
-		CryptoManager::getInstance()->getClientSocket(allowUntrusted, expKP, proto)) : new Socket);
-
-	s->create();
-
-	setSocket(move(s));
-	sock->bind(localPort, SETTING(BIND_ADDRESS));
 
 	protocol = proto;
 
@@ -667,7 +662,7 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 			size = 3 + userLen + passwordLen;
 			break;
 		case PROXY_STAGE_CONNECT:
-			size = resolveNames ? ci->addr.length() + 7 : 10;
+			size = resolveNames ? ci->addr.length() + 7 : 22;
 			break;
 		default:
 			return;
@@ -706,21 +701,36 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 			}
 			else
 			{
+				IpAddress addr;
 				bool isNumeric;
-				Ip4Address address = Socket::resolveHost(ci->addr, &isNumeric);
-				if (doLog && !isNumeric)
-				if (!address)
-					LogManager::message("Socket " + Util::toHexString(sock->getSock()) + ": Error resolving " + ci->addr, false);
-				else
-					LogManager::message("Socket " + Util::toHexString(sock->getSock()) + ": Host " + ci->addr + " resolved to " + Util::printIpAddress(address), false);
-				if (!address)
+				if (!Socket::resolveHost(addr, getIp().type, ci->addr, &isNumeric)) // FIXME
+				{
+					if (doLog)
+						LogManager::message("Error resolving " + ci->addr, false);
 					throw SocketException(STRING(RESOLVE_FAILED));
-				wb.buf[3] = 1; // Address type: IPv4
-				wb.buf[4] = (uint8_t) (address >> 24);
-				wb.buf[5] = (uint8_t) (address >> 16);
-				wb.buf[6] = (uint8_t) (address >> 8);
-				wb.buf[7] = (uint8_t) address;
-				size = 8;
+				}
+				else if (doLog)
+				{
+					string sockName;
+					printSockName(sockName);
+					LogManager::message(sockName + ": Host " + ci->addr + " resolved to " + Util::printIpAddress(addr, true), false);
+				}
+				if (addr.type == AF_INET)
+				{
+					uint32_t address = addr.data.v4;
+					wb.buf[3] = 1;
+					wb.buf[4] = (uint8_t) (address >> 24);
+					wb.buf[5] = (uint8_t) (address >> 16);
+					wb.buf[6] = (uint8_t) (address >> 8);
+					wb.buf[7] = (uint8_t) address;
+					size = 8;
+				}
+				else
+				{
+					wb.buf[3] = 4;
+					memcpy(wb.buf + 4, &addr.data.v6, 16);
+					size = 20;
+				}
 			}
 			wb.buf[size++] = ci->port >> 8;
 			wb.buf[size++] = ci->port & 0xFF;
@@ -756,12 +766,14 @@ void BufferedSocket::checkSocksReply()
 	rb.clear();
 	proxyStage = PROXY_STAGE_NONE;
 	mode = MODE_LINE;
-	sock->setIp4(Socket::resolveHost(connectInfo->addr));
+	IpAddress ip;
+	Socket::resolveHost(ip, getIp().type, connectInfo->addr);
+	sock->setIp(ip);
 	sock->setPort(connectInfo->port);
 	if (connectInfo->secure)
 	{
 		SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(connectInfo->allowUntrusted, connectInfo->expKP, protocol);
-		newSock->setIp4(sock->getIp4());
+		newSock->setIp(sock->getIp());
 		newSock->setPort(sock->getPort());
 		newSock->attachSock(sock->detachSock());
 		newSock->setConnected();
@@ -795,6 +807,9 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 		{
 			if (!sslSocks)
 			{
+				const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+				const string* host;
+				uint16_t port;
 				if (ci->useProxy)
 				{
 					if (ci->proxy.host.empty() || ci->proxy.port == 0)
@@ -803,10 +818,41 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 					proxyStage = PROXY_STAGE_NEGOTIATE;
 					createSocksMessage(ci);
 					state = CONNECT_PROXY;
-					sock->connect(ci->proxy.host, ci->proxy.port);
+					
+					host = &ci->proxy.host;
+					port = ci->proxy.port;
 				}
 				else
-					sock->connect(ci->addr, ci->port);
+				{
+					host = &ci->addr;
+					port = ci->port;
+				}
+				IpAddress ip;
+				bool isNumeric;
+				if (!Socket::resolveHost(ip, 0, *host, &isNumeric))
+				{
+					if (doLog)
+						LogManager::message("Error resolving " + *host, false);
+					throw SocketException(STRING(RESOLVE_FAILED));
+				}
+				if (!sock)
+				{
+					std::unique_ptr<Socket> s(ci->secure && !ci->useProxy ? (ci->natRole == NAT_SERVER ? 
+						CryptoManager::getInstance()->getServerSocket(ci->allowUntrusted) : 
+						CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol)) : new Socket);
+					s->create(ip.type, Socket::TYPE_TCP);
+					setSocket(move(s));
+					IpAddress bindAddr;
+					getBindAddress(bindAddr, ip.type);
+					sock->bind(ci->localPort, bindAddr);
+				}
+				if (doLog && !isNumeric)
+				{
+					string sockName;
+					printSockName(sockName);
+					LogManager::message(sockName + ": Host " + *host + " resolved to " + Util::printIpAddress(ip, true), false);
+				}
+				sock->connect(ip, port, isNumeric ? Util::emptyString : *host);
 				setOptions();
 			}
 			while (true)
@@ -875,7 +921,7 @@ void BufferedSocket::doAccept()
 		{
 			SSLSocket* newSocket = new SSLSocket(CryptoManager::SSL_SERVER, true, Util::emptyString);
 			newSocket->attachSock(sock->detachSock());
-			newSocket->setIp4(sock->getIp4());
+			newSocket->setIp(sock->getIp());
 			newSocket->setPort(sock->getPort());
 			sock.reset(newSocket);
 			setOptions();
@@ -936,8 +982,44 @@ void BufferedSocket::updated()
 	if (sock) sock->signalControlEvent();
 }
 
-Ip4Address BufferedSocket::getIp4() const
+const IpAddress& BufferedSocket::getIp() const
 {
-	if (sock) return sock->getIp4();
-	return 0;
+	static IpAddress empty{0};
+	if (sock) return sock->getIp();
+	return empty;
+}
+
+void BufferedSocket::printSockName(string& sockName) const
+{
+	if (sock)
+		sock->printSockName(sockName);
+	else
+		sockName = "Socket 0";
+}
+
+void BufferedSocket::getBindAddress(IpAddress& ip, int af, const string& s)
+{
+	if (af == AF_INET6)
+	{
+		Ip6Address v6;
+		if (!s.empty() && Util::parseIpAddress(v6, s))
+			ip.data.v6 = v6;
+		else
+			memset(&ip.data.v6, 0, sizeof(ip.data.v6));
+		ip.type = AF_INET6;
+	}
+	else
+	{
+		Ip4Address v4;
+		if (!s.empty() && Util::parseIpAddress(v4, s))
+			ip.data.v4 = v4;
+		else
+			ip.data.v4 = 0;
+		ip.type = AF_INET;
+	}
+}
+
+void BufferedSocket::getBindAddress(IpAddress& ip, int af)
+{
+	getBindAddress(ip, af, af == AF_INET6 ? SETTING(BIND_ADDRESS6) : SETTING(BIND_ADDRESS));
 }

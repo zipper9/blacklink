@@ -43,7 +43,7 @@ LRESULT WebServerPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	PropPage::read(*this, items);
 	
 	CComboBox bindCombo(GetDlgItem(IDC_WEB_BIND_ADDRESS));
-	WinUtil::fillAdapterList(false, bindCombo, SETTING(WEBSERVER_BIND_ADDRESS));
+	WinUtil::fillAdapterList(AF_INET, bindCombo, SETTING(WEBSERVER_BIND_ADDRESS));
 	return TRUE;
 }
 

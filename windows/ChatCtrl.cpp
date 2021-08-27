@@ -1160,9 +1160,11 @@ LRESULT ChatCtrl::onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 
 LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!g_sSelectedIP.empty())
+	IpAddress ip;
+	if (!g_sSelectedIP.empty() && Util::parseIpAddress(ip, Text::fromT(g_sSelectedIP)))
 	{
-		const string report = "IPv4 Info: " + Identity::formatIpString(Text::fromT(g_sSelectedIP));
+		string report = ip.type == AF_INET6 ? "IPv6 Info: " : "IPv4 Info: ";
+		report += Identity::formatIpString(ip);
 		ClientManager::LockInstanceClients l;
 		const auto& clients = l.getData();
 		auto i = clients.find(hubHint);

@@ -2197,8 +2197,9 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 	if (!isTorrent(si))
 	{
 		const auto user = sr.getUser();
-		if (sr.getIP())
-			user->setIP(sr.getIP());
+		const IpAddress& ip = sr.getIP();
+		if (ip.type)
+			user->setIP(ip);
 		// Check previous search results for dupes
 		if (!si->getText(COLUMN_TTH).empty())
 		{
@@ -3118,8 +3119,8 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 					if (!si->ipUpdated && storeIP && si->getUser())
 					{
-						Ip4Address ip = si->sr.getIP();
-						if (ip)
+						const IpAddress& ip = si->sr.getIP();
+						if (ip.type)
 						{
 							si->ipUpdated = true;
 							si->getUser()->setIP(ip);

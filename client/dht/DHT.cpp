@@ -87,7 +87,7 @@ namespace dht
 		myUdpKey = CID(SETTING(DHT_KEY));
 
 		// start with global firewalled status
-		firewalled = !ClientManager::isActive(0);
+		firewalled = !ClientManager::isActive(AF_INET, 0);
 		requestFWCheck = true;
 
 		if (!bucket)
@@ -288,7 +288,10 @@ namespace dht
 		}
 
 		string data((const char *) destBuf, destLen);
-		::SearchManager::getInstance()->addToSendQueue(data, address, port, ::SearchManager::FLAG_NO_TRACE);
+		IpAddress ip;
+		ip.type = AF_INET;
+		ip.data.v4 = address;
+		::SearchManager::getInstance()->addToSendQueue(data, ip, port, ::SearchManager::FLAG_NO_TRACE);
 	}
 
 	bool DHT::processIncoming(const uint8_t* data, size_t size, Ip4Address address, uint16_t remotePort)
@@ -493,7 +496,7 @@ namespace dht
 			su = AdcSupports::ADCS_FEATURE;
 
 		// TCP status according to global status
-		if (ClientManager::isActive(0))
+		if (ClientManager::isActive(AF_INET, 0))
 		{
 			if (!su.empty()) su += ',';
 			su += AdcSupports::TCP4_FEATURE;
@@ -531,7 +534,7 @@ namespace dht
 		//if (thirdPerson)
 		//	cmd.addParam("ME", "1");
 		//
-		//send(cmd, ou.getIdentity().getIp(), static_cast<uint16_t>(Util::toInt(ou.getIdentity().getUdpPort())));
+		//send(cmd, ou.getIdentity().getIP4(), static_cast<uint16_t>(Util::toInt(ou.getIdentity().getUdp4Port())));
 	}
 
 	/*
@@ -609,7 +612,7 @@ namespace dht
 	bool DHT::handle(AdcCommand::INF, const Node::Ptr& node, AdcCommand& c) noexcept
 	{
 		Identity& id = node->getIdentity();
-		uint16_t udpPort = id.getUdpPort();
+		uint16_t udpPort = id.getUdp4Port();
 
 		InfType it = NONE;
 		for (auto i = c.getParameters().begin() + 1; i != c.getParameters().end(); ++i)
@@ -695,7 +698,7 @@ namespace dht
 		if (it & PING)
 		{
 			// remove ping flag to avoid ping-pong-ping-pong-ping...
-			info(node->getIdentity().getIp(), udpPort, it & ~PING, node->getUser()->getCID(), node->getUdpKey());
+			info(node->getIdentity().getIP4(), udpPort, it & ~PING, node->getUser()->getCID(), node->getUdpKey());
 		}
 		return true;
 	}
@@ -741,7 +744,7 @@ namespace dht
 		if (c.getParameters().size() < 3)
 			return true;
 
-		Ip4Address fromIP = node->getIdentity().getIp();
+		Ip4Address fromIP = node->getIdentity().getIP4();
 		int code = Util::toInt(c.getParam(1).substr(1));
 
 		if (code == 0)
@@ -856,7 +859,10 @@ namespace dht
 	// partial file request
 	bool DHT::handle(AdcCommand::PSR, const Node::Ptr& node, AdcCommand& c) noexcept
 	{
-		::SearchManager::getInstance()->onPSR(c, true, node->getUser(), node->getIdentity().getIp());
+		IpAddress ip;
+		ip.type = AF_INET;
+		ip.data.v4 = node->getIdentity().getIP4();
+		::SearchManager::getInstance()->onPSR(c, true, node->getUser(), ip);
 		return true;
 	}
 
@@ -891,8 +897,8 @@ namespace dht
 			{
 				xml.addTag("Node");
 				xml.addChildAttrib("CID", i->second->getUser()->getCID().toBase32());
-				xml.addChildAttrib("I4", i->second->getIdentity().getIpAsString());
-				xml.addChildAttrib("U4", i->second->getIdentity().getUdpPort());
+				xml.addChildAttrib("I4", Util::printIpAddress(i->second->getIdentity().getIP4()));
+				xml.addChildAttrib("U4", i->second->getIdentity().getUdp4Port());
 			}
 
 			xml.stepOut();
@@ -903,8 +909,8 @@ namespace dht
 
 			cmd.addParam(Utils::compressXML(nodesXML));
 
-			send(cmd, node->getIdentity().getIp(),
-				node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
+			send(cmd, node->getIdentity().getIP4(),
+				node->getIdentity().getUdp4Port(), node->getUser()->getCID(), node->getUdpKey());
 		}
 		return true;
 	}
@@ -971,7 +977,7 @@ namespace dht
 
 	uint16_t DHT::getPort()
 	{
-		return ::SearchManager::getSearchPortUint();
+		return ::SearchManager::getUdpPort();
 	}
 
 	void DHT::setRequestFWCheck()
@@ -1044,7 +1050,7 @@ namespace dht
 		}
 		if (!node) return false;
 		node->setTimeout();
-		info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
+		info(node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 			PING | MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 		return true;
 	}

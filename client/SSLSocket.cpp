@@ -47,9 +47,9 @@ SSLSocket::SSLSocket(CryptoManager::SSLContext context) noexcept : ctx(nullptr),
 	ctx = CryptoManager::getInstance()->getSSLContext(context);
 }
 
-void SSLSocket::connect(const string& ip, uint16_t port)
+void SSLSocket::connect(const IpAddress& ip, uint16_t port, const string& host)
 {
-	Socket::connect(ip, port);
+	Socket::connect(ip, port, host);
 	waitConnected(0);
 }
 
@@ -453,7 +453,7 @@ void SSLSocket::logInfo(bool isServer) const
 	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 	{
 		string logText;
-		string ip = Util::printIpAddress(getIp4());
+		string ip = Util::printIpAddress(getIp(), true);
 		if (isServer)
 			logText = "SSL: accepted connection from " + ip + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
 		else

@@ -31,7 +31,7 @@
 #include "NetworkUtil.h"
 #include "dht/DHT.h"
 
-uint16_t SearchManager::g_search_port = 0;
+uint16_t SearchManager::udpPort = 0;
 
 #ifndef _WIN32
 static void signalHandler(int sig, siginfo_t* inf, void* param)
@@ -60,76 +60,95 @@ ResourceManager::Strings SearchManager::getTypeStr(int type)
 	return types[type];
 }
 
-SearchManager::SearchManager(): stopFlag(false), failed(false)
+SearchManager::SearchManager(): stopFlag(false), failed{false, false}
 {
 #ifdef _WIN32
-	events[EVENT_SOCKET].create();
 	events[EVENT_COMMAND].create();
 #else
 	threadId = 0;
 #endif
 }
 
-void SearchManager::start()
+void SearchManager::listenUDP(int af)
 {
-	stopFlag = false;
+	int index = af == AF_INET6 ? 1 : 0;
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, af == AF_INET6);
+	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
 #ifdef _WIN32
-	events[EVENT_COMMAND].reset();
+	events[index].create();
 #endif
 	try
 	{
-		socket.reset(new Socket);
-		socket->create(Socket::TYPE_UDP);
-		socket->setInBufSize();
-		if (BOOLSETTING(AUTO_DETECT_CONNECTION))
+		sockets[index].reset(new Socket);
+		sockets[index]->create(af, Socket::TYPE_UDP);
+		sockets[index]->setInBufSize();
+
+		IpAddress bindIp;
+		if (autoDetectFlag)
 		{
-			g_search_port = socket->bind(0, Util::emptyString);
+			memset(&bindIp, 0, sizeof(bindIp));
+			bindIp.type = af;
+			int port = SETTING(UDP_PORT);
+			udpPort = sockets[index]->bind(static_cast<uint16_t>(port), bindIp);
 		}
 		else
 		{
-			string ip = SETTING(BIND_ADDRESS);
+			if (!(Util::parseIpAddress(bindIp, SettingsManager::get(ips.bindAddress)) &&
+			      bindIp.type == af && Util::isValidIp(bindIp)))
+			{
+				memset(&bindIp, 0, sizeof(bindIp));
+				bindIp.type = af;
+			}
 			int port = SETTING(UDP_PORT);
-			g_search_port = socket->bind(static_cast<uint16_t>(port), ip);
+			udpPort = sockets[index]->bind(static_cast<uint16_t>(port), bindIp);
 		}
 
-		uint16_t unused;
-		string localIp;
-		socket->getLocalIPPort(unused, localIp, true);
-		uint32_t addr;
-		if (!(Util::parseIpAddress(addr, localIp) && addr)) localIp = Util::getLocalIp();
+		if (af == AF_INET)
+		{
+			string localIp;
+			bindIp = sockets[index]->getLocalIp();
+			if (Util::isValidIp(bindIp))
+				localIp = Util::printIpAddress(bindIp);
+			else
+				localIp = Util::getLocalIp(af);
 			dht::DHT::getInstance()->updateLocalIP(localIp);
+		}
 
 #ifdef _WIN32
-		socket_t nativeSocket = socket->getSock();
-		WSAEventSelect(nativeSocket, events[EVENT_SOCKET].getHandle(), FD_READ);
+		socket_t nativeSocket = sockets[index]->getSock();
+		WSAEventSelect(nativeSocket, events[index].getHandle(), FD_READ);
 #else
-		socket->setBlocking(false);
+		sockets[index]->setBlocking(false);
 #endif
-		SET_SETTING(UDP_PORT, g_search_port);
-		Thread::start(64, "SearchManager");
-		if (failed)
+		SET_SETTING(UDP_PORT, udpPort);
+		if (failed[index])
 		{
 			LogManager::message(STRING(SEARCH_ENABLED));
-			failed = false;
+			failed[index] = false;
 		}
-
-#if 0 // superseded by ConnectivityManager::testPorts
-		int unusedPort;
-		if (g_portTest.getState(PortTest::PORT_UDP, unusedPort, nullptr) == PortTest::STATE_UNKNOWN)
-		{
-			g_portTest.setPort(PortTest::PORT_UDP, g_search_port);
-			g_portTest.runTest(1<<PortTest::PORT_UDP);
-		}
-#endif
 	}
 	catch (const Exception& e)
 	{
-		socket.reset();
-		if (!failed)
+		sockets[index].reset();
+		if (!failed[index])
 		{
 			LogManager::message(STRING(SEARCH_DISABLED) + ": " + e.getError());
-			failed = true;
+			failed[index] = true;
 		}
+		throw;
+	}
+}
+
+void SearchManager::start()
+{
+	stopFlag = false;
+	if (sockets[0].get() || sockets[1].get())
+	{
+#ifdef _WIN32
+		events[EVENT_COMMAND].reset();
+#endif
+		Thread::start(64, "SearchManager");
 	}
 }
 
@@ -138,63 +157,97 @@ void SearchManager::shutdown()
 	stopFlag = true;
 	sendNotif();
 	join();
-	if (socket.get())
+	for (int i = 0; i < 2; ++i)
 	{
-		socket->disconnect();
-		socket.reset();
+		if (sockets[i])
+		{
+			sockets[i]->disconnect();
+			sockets[i].reset();
+		}
 	}
-	g_search_port = 0;
+	udpPort = 0;
 	LogManager::message("SearchManager: shutdown completed", false);
 }
 
 int SearchManager::run()
 {
-	static const int BUFSIZE = 8192;
-	char buf[BUFSIZE];
-
-#ifndef _WIN32
+	int numEvents = 0;
+#ifdef _WIN32
+	HANDLE handle[3];
+	int eventInfo[3];
+	for (int i = 0; i < 3; ++i)
+	{
+		HANDLE h = events[i].getHandle();
+		if (h)
+		{
+			handle[numEvents] = h;
+			eventInfo[numEvents++] = i;
+		}
+	}
+#else
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_sigaction = signalHandler;
 	sa.sa_flags = SA_SIGINFO;
 	sigaction(SIGUSR1, &sa, nullptr);
 	threadId = pthread_self();
+
+	pollfd pfd[2];
+	int eventInfo[2];
+	for (int i = 0; i < 2; ++i)
+		if (sockets[i])
+		{
+			pfd[numEvents].fd = sockets[i]->getSock();
+			pfd[numEvents].events = POLLIN;
+			pfd[numEvents].revents = 0;
+			eventInfo[numEvents++] = i;
+		}
 #endif
+	dcassert(numEvents);
+
 	while (!isShutdown())
 	{
-		socket_t nativeSocket = socket->getSock();
 #ifdef _WIN32
-		WaitForMultipleObjects(2, (HANDLE *) events, FALSE, INFINITE);
-#else
-		pollfd pfd;
-		pfd.fd = nativeSocket;
-		pfd.events = POLLIN;
-		pfd.revents = 0;
-		poll(&pfd, 1, -1);
-#endif
-		for (;;)
+		int result = (int) WaitForMultipleObjects(numEvents, handle, FALSE, INFINITE) - (int) WAIT_OBJECT_0;
+		if (result >= 0 && result < numEvents)
 		{
-			sockaddr_in remoteAddr;
-			socklen_t addrLen = sizeof(remoteAddr);
-			int len = ::recvfrom(nativeSocket, buf, BUFSIZE, 0, (struct sockaddr*) &remoteAddr, &addrLen);
-			if (isShutdown()) goto terminate;
-			if (len < 0)
-			{
-				if (Socket::getLastError() == SE_EWOULDBLOCK)
-				{
-					processSendQueue();
-					break;
-				}
-			}
-			if (len >= 4)
-			{
-				onData(buf, len, ntohl(remoteAddr.sin_addr.s_addr), ntohs(remoteAddr.sin_port));
-			}
+			int index = eventInfo[result];
+			if ((index == 0 || index == 1) && receivePackets(index)) goto terminate;
 		}
+#else
+		poll(pfd, numEvents, -1);
+		for (int i = 0; i < numEvents; ++i)
+			if (pfd[i].revents & POLLIN)
+			{
+				if (receivePackets(eventInfo[i])) goto terminate;
+			}
+#endif
+		processSendQueue();
 	}
+
 	terminate:
 	g_portTest.resetState(1<<PortTest::PORT_UDP);
 	return 0;
+}
+
+bool SearchManager::receivePackets(int index)
+{
+	static const int BUFSIZE = 8192;
+	char buf[BUFSIZE];
+	IpAddress remoteIp;
+	uint16_t remotePort;
+	Socket& socket = *sockets[index].get();
+	for (;;)
+	{
+		int len = socket.receivePacket(buf, BUFSIZE, remoteIp, remotePort);
+		if (isShutdown())
+			return true;
+		if (len < 0 && Socket::getLastError() == SE_EWOULDBLOCK)
+			break;
+		if (len >= 4)
+			onData(buf, len, remoteIp, remotePort);
+	}
+	return false;
 }
 
 static inline bool isText(char ch)
@@ -207,20 +260,21 @@ static inline bool isText(const char* buf, int len)
 	return len > 4 && isText(buf[0]) && isText(buf[1]) && isText(buf[2]) && isText(buf[3]);
 }
 
-void SearchManager::onData(const char* buf, int len, Ip4Address remoteIp, uint16_t remotePort)
+void SearchManager::onData(const char* buf, int len, const IpAddress& remoteIp, uint16_t remotePort)
 {
 	if (BOOLSETTING(LOG_UDP_PACKETS) && isText(buf, len))
 		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
-			Util::printIpAddress(remoteIp), remotePort);
+			Util::printIpAddress(remoteIp, true), remotePort);
 
-	if (processNMDC(buf, len, remoteIp)) return;
-	if (dht::DHT::getInstance()->processIncoming((const uint8_t *) buf, len, remoteIp, remotePort)) return;
+	if (processNMDC(buf, len, remoteIp, remotePort)) return;
+	if (remoteIp.type == AF_INET &&
+	    dht::DHT::getInstance()->processIncoming((const uint8_t *) buf, len, remoteIp.data.v4, remotePort)) return;
 	if (processRES(buf, len, remoteIp)) return;
 	if (processPSR(buf, len, remoteIp)) return;
 	processPortTest(buf, len, remoteIp);
 }
 
-bool SearchManager::processNMDC(const char* buf, int len, Ip4Address remoteIp)
+bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remoteIp, uint16_t remotePort)
 {
 	if (!memcmp(buf, "$SR ", 4))
 	{
@@ -311,7 +365,7 @@ bool SearchManager::processNMDC(const char* buf, int len, Ip4Address remoteIp)
 				return true;
 			}
 		}
-		if (remoteIp)
+		if (remotePort && Util::isValidIp(remoteIp))
 		{
 			user->setIP(remoteIp);
 #ifdef _DEBUG
@@ -339,7 +393,7 @@ bool SearchManager::processNMDC(const char* buf, int len, Ip4Address remoteIp)
 	return false;
 }
 
-bool SearchManager::processRES(const char* buf, int len, Ip4Address remoteIp)
+bool SearchManager::processRES(const char* buf, int len, const IpAddress& remoteIp)
 {
 	if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
 	{
@@ -363,7 +417,7 @@ bool SearchManager::processRES(const char* buf, int len, Ip4Address remoteIp)
 	return false;
 }
 
-bool SearchManager::processPSR(const char* buf, int len, Ip4Address remoteIp)
+bool SearchManager::processPSR(const char* buf, int len, const IpAddress& remoteIp)
 {
 	if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
 	{
@@ -387,7 +441,7 @@ bool SearchManager::processPSR(const char* buf, int len, Ip4Address remoteIp)
 	return false;
 }
 
-bool SearchManager::processPortTest(const char* buf, int len, Ip4Address address)
+bool SearchManager::processPortTest(const char* buf, int len, const IpAddress& address)
 {
 	if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
 	{
@@ -418,7 +472,7 @@ void SearchManager::searchAuto(const string& tth)
 	ClientManager::search(sp);
 }
 
-void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, Ip4Address remoteIp)
+void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, const IpAddress& remoteIp)
 {
 	uint16_t freeSlots = SearchResult::SLOTS_UNKNOWN;
 	int64_t size = -1;
@@ -469,9 +523,10 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 	}
 }
 
-void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4Address remoteIp)
+void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, const IpAddress& remoteIp)
 {
-	uint16_t udpPort = 0;
+	uint16_t udp4Port = 0;
+	uint16_t udp6Port = 0;
 	uint32_t partialCount = 0;
 	string tth;
 	string hubIpPort;
@@ -484,7 +539,11 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4
 		const string& str = params[i];
 		if (str.compare(0, 2, "U4", 2) == 0)
 		{
-			udpPort = static_cast<uint16_t>(Util::toInt(str.substr(2)));
+			udp4Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));
+		}
+		if (str.compare(0, 2, "U6", 2) == 0)
+		{
+			udp6Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));
 		}
 		else if (str.compare(0, 2, "NI", 2) == 0)
 		{
@@ -544,19 +603,20 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4
 	}
 	
 	// TODO »щем в OnlineUser а чуть выше ищем в UserPtr може тожно схлопнуть в один поиск дл€ апдейта IP
-	
+
+	uint16_t udpPort = remoteIp.type == AF_INET6 ? udp6Port : udp4Port;
 	PartsInfo outPartialInfo;
 	QueueItem::PartialSource ps((from->getFlags() & User::NMDC) ? ClientManager::findMyNick(url) : Util::emptyString, hubIpPort, remoteIp, udpPort, 0);
 	ps.setPartialInfo(partialInfo);
 	
 	QueueManager::getInstance()->handlePartialResult(from, TTHValue(tth), ps, outPartialInfo);
-	
-	if (udpPort > 0 && !outPartialInfo.empty())
+
+	if (udpPort && !outPartialInfo.empty())
 	{
 		try
 		{
 			AdcCommand reply(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-			toPSR(reply, false, ps.getMyNick(), hubIpPort, tth, outPartialInfo);
+			toPSR(reply, false, ps.getMyNick(), remoteIp.type, hubIpPort, tth, outPartialInfo);
 			ClientManager::sendAdcCommand(reply, from->getCID());
 			LogManager::psr_message(
 			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
@@ -575,7 +635,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4
 	
 }
 
-ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const string& hubIpPort)
+ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const IpAddress& hubIp, uint16_t hubPort)
 {
 	// Filter own searches
 	const CID& from = ou->getUser()->getCID();
@@ -602,7 +662,8 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			string tth = param.root.toBase32();
-			toPSR(cmd, true, Util::emptyString, hubIpPort, tth, partialInfo);
+			string hubIpPort = Util::printIpAddress(hubIp, true) + ":" + Util::toString(hubPort);
+			toPSR(cmd, true, Util::emptyString, hubIp.type, hubIpPort, tth, partialInfo);
 			ClientManager::sendAdcCommand(cmd, from);
 			sr = ClientManagerListener::SEARCH_PARTIAL_HIT;
 			LogManager::psr_message(
@@ -650,14 +711,14 @@ string SearchManager::getPartsString(const PartsInfo& partsInfo)
 	return ret;
 }
 
-void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo)
+void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo)
 {
 	cmd.getParameters().reserve(6);
 	if (!myNick.empty())
 		cmd.addParam("NI", myNick);
 	
 	cmd.addParam("HI", hubIpPort);
-	cmd.addParam("U4", Util::toString(wantResponse ? getSearchPortUint() : 0));
+	cmd.addParam(af == AF_INET6 ? "U6" : "U4", Util::toString(wantResponse ? getUdpPort() : 0));
 	cmd.addParam("TR", tth);
 	cmd.addParam("PC", Util::toString(partialInfo.size() / 2));
 	cmd.addParam("PI", getPartsString(partialInfo));
@@ -670,7 +731,7 @@ bool SearchManager::isShutdown() const
 	return g_isBeforeShutdown;
 }
 
-void SearchManager::addToSendQueue(string& data, Ip4Address address, uint16_t port, uint16_t flags) noexcept
+void SearchManager::addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags) noexcept
 {
 	csSendQueue.lock();
 	sendQueue.emplace_back(data, address, port, flags);
@@ -680,18 +741,17 @@ void SearchManager::addToSendQueue(string& data, Ip4Address address, uint16_t po
 
 void SearchManager::processSendQueue() noexcept
 {
-	sockaddr_in sockAddr;
-	memset(&sockAddr, 0, sizeof(sockAddr));
 	csSendQueue.lock();
 	for (auto i = sendQueue.cbegin(); i != sendQueue.cend(); ++i)
 	{
-		sockAddr.sin_family = AF_INET;
-		sockAddr.sin_port = htons(i->port);
-		sockAddr.sin_addr.s_addr = htonl(i->address);
-		const string& data = i->data;
-		::sendto(socket->getSock(), data.data(), data.length(), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
-		if (BOOLSETTING(LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
-			LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address), i->port);
+		int index = i->address.type == AF_INET6 ? 1 : 0;
+		if (sockets[index])
+		{
+			const string& data = i->data;
+			sockets[index]->sendPacket(data.data(), data.length(), i->address, i->port);
+			if (BOOLSETTING(LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
+				LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address, true), i->port);
+		}
 	}
 	sendQueue.clear();
 	csSendQueue.unlock();

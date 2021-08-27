@@ -605,12 +605,11 @@ LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 			}
 			else if (column == COLUMN_IP)
 			{
-				const tstring ip = ui->getText(COLUMN_IP);
-				if (!ip.empty())
+				const IpAddress ip = ui->getIp();
+				if (ip.type)
 				{
-					string ip2 = ui->getIdentity().getIpAsString();
-					const bool isPhantomIP = ui->getIdentity().isPhantomIP();
-					CustomDrawHelpers::drawIPAddress(customDrawState, cd, isPhantomIP, ip);
+					const bool isPhantomIP = ui->getIdentity().isIPCached(ip.type);
+					CustomDrawHelpers::drawIPAddress(customDrawState, cd, isPhantomIP, Util::printIpAddressT(ip));
 					return CDRF_SKIPDEFAULT;
 				}
 			}
@@ -648,7 +647,8 @@ LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 					ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_INITIAL;
 				if (ui->stateLocation == UserInfo::STATE_INITIAL || ui->stateP2PGuard == UserInfo::STATE_INITIAL)
 				{
-					if (ui->getIp() && hubFrame)
+					IpAddress ip = ui->getIp();
+					if (ip.type == AF_INET && hubFrame)
 					{
 						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_IN_PROGRESS;
 						// FIXME: use background thread instead of the UI thread
@@ -1096,17 +1096,19 @@ bool UserListWindow::selectNick(const tstring& nick)
 void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, vector<std::pair<tstring, UINT>>& menuStrings) const
 {
 	auto fm = FavoriteManager::getInstance();
+	bool hasIP6 = !Util::isEmpty(param.ip6);
 	READ_LOCK(*csUserMap);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		const auto& id = i->second->getIdentity();
-		const auto currentIp = Util::printIpAddress(id.getUser()->getIP());
-		if (/*(param.bytesShared && id.getBytesShared() == param.bytesShared) ||*/
-		    (param.nick == id.getNick()) ||
-		    (!param.ip.empty() && param.ip == currentIp))
+		const Ip4Address currentIp4 = id.getUser()->getIP4();
+		const Ip6Address currentIp6 = id.getUser()->getIP6();
+		bool nickMatches = param.nick == id.getNick();
+		bool ipMatches = (param.ip4 && param.ip4 == currentIp4) || (hasIP6 && param.ip6 == currentIp6);
+		if (nickMatches || ipMatches)
 		{
 			tstring info = hubTitle + _T(" - ") + i->second->getText(COLUMN_NICK);
-			const UINT flags = (!param.ip.empty() && param.ip == currentIp) ? MF_CHECKED : 0;
+			const UINT flags = ipMatches ? MF_CHECKED : 0;
 			FavoriteUser favUser;
 			if (fm->getFavoriteUser(i->second->getUser(), favUser))
 			{
@@ -1123,10 +1125,7 @@ void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const t
 					info += _T(", FavInfo: ") + Text::toT(favInfo);
 			}
 			menuStrings.push_back(make_pair(info, flags));
-			if (!id.getApplication().empty() || !currentIp.empty())
-				menuStrings.push_back(make_pair(UserInfoSimple::getTagIP(id.getTag(), currentIp), 0));
-			else
-				menuStrings.push_back(make_pair(_T(""), 0));
+			menuStrings.push_back(make_pair(UserInfoSimple::getTagIP(id.getTag(), currentIp4, currentIp6), 0));
 		}
 	}
 }

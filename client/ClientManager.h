@@ -88,7 +88,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			int64_t bytesShared;
 			int slots;
 			int limit;
-			std::string ip;
+			Ip4Address ip4;
+			Ip6Address ip6;
 			std::string tag;
 			std::string nick;
 		};
@@ -115,10 +116,10 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		CREATE_LOCK_INSTANCE_CM(g_clients, Clients);
 		CREATE_LOCK_INSTANCE_CM(g_onlineUsers, OnlineUsers);
 #undef CREATE_LOCK_INSTANCE_CM
-		
-		static void setUserIP(const UserPtr& user, const string& ip);
-		
-		static StringList getNicksByIp(Ip4Address ip);
+
+		static void setUserIP(const UserPtr& user, const IpAddress& ip);
+
+		static StringList getNicksByIp(const IpAddress& ip);
 		static OnlineUserPtr getOnlineUserL(const UserPtr& p);
 		static bool isOp(const string& hubUrl);
 		/** Constructs a synthetic, hopefully unique CID */
@@ -145,8 +146,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
 		static void userCommand(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		
-		static int getMode(int favHubMode);
-		static bool isActive(int favHubMode);
+		static int getConnectivityMode(int af, int favHubMode);
+		static bool isActive(int af, int favHubMode);
 		static const CID& getMyCID();
 		static const CID& getMyPID();
 		static void setMyPID(const string& pid);

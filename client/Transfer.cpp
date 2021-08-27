@@ -56,7 +56,16 @@ void Transfer::getParams(const UserConnection* source, StringMap& params) const
 		const string nick = user->getLastNick();
 		params["userCID"] = user->getCID().toBase32();
 		params["userNI"] = !nick.empty() ? nick : Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString, false));
-		params["userI4"] = source->getRemoteIp();
+		IpAddress ip = source->getRemoteIp();
+		switch (ip.type)
+		{
+			case AF_INET:
+				params["userI4"] = Util::printIpAddress(ip.data.v4);
+				break;
+			case AF_INET6:
+				params["userI6"] = Util::printIpAddress(ip.data.v6);
+				break;
+		}
 		
 		StringList hubNames = ClientManager::getHubNames(user->getCID(), hint);
 		if (hubNames.empty())

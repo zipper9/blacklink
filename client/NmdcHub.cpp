@@ -434,10 +434,13 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 			dcassert(searchParam.seeker == ip + ':' + Util::toString(port));
 			if (port == 0)
 				return false;
+			IpAddress addr;
+			if (!Util::parseIpAddress(addr, ip))
+				return false;
 			try
 			{
 				AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-				SearchManager::toPSR(cmd, true, getMyNick(), getIpPort(), tth.toBase32(), partialInfo);
+				SearchManager::toPSR(cmd, true, getMyNick(), addr.type, getIpPort(), tth.toBase32(), partialInfo);
 				string str = cmd.toString(ClientManager::getMyCID());
 				sendUDP(ip, port, str);
 				LogManager::psr_message(
@@ -467,22 +470,43 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 void NmdcHub::sendUDP(const string& ip, uint16_t port, string& sr)
 {
 	if (!port) return;
-	Ip4Address address;
-	if (!(Util::parseIpAddress(address, ip) && Util::isValidIp4(address))) return;
-	SearchManager::getInstance()->addToSendQueue(sr, address, port);
+	IpAddress addr;
+	if (!(Util::parseIpAddress(addr, ip) && Util::isValidIp(addr))) return;
+	SearchManager::getInstance()->addToSendQueue(sr, addr, port);
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG("[Active-Search]" + sr, DebugTask::CLIENT_OUT, ip + ':' + Util::toString(port));
 }
 
-string NmdcHub::calcExternalIP() const
+string NmdcHub::getMyExternalIP() const
 {
-	string result;
-	if (getFavIp().empty())
-		result = getLocalIp();
-	else
-		result = getFavIp();
-	result += ':' + SearchManager::getSearchPort();
-	return result;
+	Ip4Address ip4;
+	Ip6Address ip6;
+	getLocalIp(ip4, ip6);
+	if (Util::isValidIp4(ip4))
+		return Util::printIpAddress(ip4);
+	if (Util::isValidIp6(ip6))
+		return Util::printIpAddress(ip6);
+	return "0.0.0.0";
+}
+
+void NmdcHub::getMyUDPAddr(string& ip, uint16_t& port) const
+{
+	Ip4Address ip4;
+	Ip6Address ip6;
+	getLocalIp(ip4, ip6);
+	port = SearchManager::getUdpPort();
+	if (Util::isValidIp4(ip4))
+	{
+		ip = Util::printIpAddress(ip4);
+		return;
+	}
+	if (Util::isValidIp6(ip6))
+	{
+		ip = Util::printIpAddress(ip6);
+		return;
+	}
+	ip = "0.0.0.0";
+	port = 0;
 }
 
 bool NmdcHub::getShareGroup(const string& seeker, CID& shareGroup) const
@@ -530,9 +554,12 @@ void NmdcHub::searchParse(const string& param, int type)
 		}
 		else if (isActive())
 		{
-			if (!SearchManager::isSearchPortValid())
+			string myIP;
+			uint16_t myPort;
+			getMyUDPAddr(myIP, myPort);
+			if (!myPort)
 				return;
-			if (searchParam.seeker == calcExternalIP())
+			if (searchParam.seeker == myIP + ":" + Util::toString(myPort))
 				return;
 		}
 		i = j + 1;
@@ -684,7 +711,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		}
 		else
 		{
-			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getLocalIp() + ':' +
+			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getMyExternalIP() + ':' +
 				Util::toString(localPort) +
 				(secure ? "NS " : "N ") + fromUtf8(myNick) + '|');
 		}
@@ -771,7 +798,14 @@ void NmdcHub::connectToMeParse(const string& param)
 				secure = true;
 			}
 		}
-		
+
+		IpAddress ip;
+		if (!(Util::parseIpAddress(ip, server) && Util::isValidIp(ip)))
+			break;
+
+		if (port.empty())
+			break;
+
 		if (BOOLSETTING(ALLOW_NAT_TRAVERSAL))
 		{
 			if (port[port.size() - 1] == 'N')
@@ -780,9 +814,11 @@ void NmdcHub::connectToMeParse(const string& param)
 					break;
 					
 				port.erase(port.size() - 1);
+				if (port.empty())
+					break;
 				
 				// Trigger connection attempt sequence locally ...
-				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), localPort,
+				ConnectionManager::getInstance()->nmdcConnect(ip, static_cast<uint16_t>(Util::toInt(port)), localPort,
 				                                              BufferedSocket::NAT_CLIENT, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
@@ -793,28 +829,27 @@ void NmdcHub::connectToMeParse(const string& param)
 				}
 				else
 				{
-					send("$ConnectToMe " + senderNick + ' ' + getLocalIp() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
+					send("$ConnectToMe " + senderNick + ' ' + getMyExternalIP() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
 				}
 				break;
 			}
 			else if (port[port.size() - 1] == 'R')
 			{
 				port.erase(port.size() - 1);
-				
+				if (port.empty())
+					break;
+
 				// Trigger connection attempt sequence locally
-				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), localPort,
+				ConnectionManager::getInstance()->nmdcConnect(ip, static_cast<uint16_t>(Util::toInt(port)), localPort,
 				                                              BufferedSocket::NAT_SERVER, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
 				break;
 			}
 		}
-		
-		if (port.empty())
-			break;
-			
+
 		// For simplicity, we make the assumption that users on a hub have the same character encoding
-		ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), myNick, getHubUrl(),
+		ConnectionManager::getInstance()->nmdcConnect(ip, static_cast<uint16_t>(Util::toInt(port)), myNick, getHubUrl(),
 		                                              getEncoding(),
 		                                              secure);
 		break; // OK
@@ -1141,7 +1176,7 @@ void NmdcHub::userIPParse(const string& param)
 {
 	if (!param.empty())
 	{
-		const StringTokenizer<string> t(param, "$$", param.size() / 30);
+		const StringTokenizer<string> t(param, "$$");
 		const StringList& sl = t.getTokens();
 		{
 			for (auto it = sl.cbegin(); it != sl.cend(); ++it)
@@ -1151,23 +1186,26 @@ void NmdcHub::userIPParse(const string& param)
 					continue;
 				if ((j + 1) == it->length())
 					continue;
-					
-				const string ip = it->substr(j + 1);
+
+				const string ipStr = it->substr(j + 1);
 				const string user = it->substr(0, j);
 				OnlineUserPtr ou = findUser(user);
-				
+
 				if (!ou)
 					continue;
-					
-				if (ip.find(':') != string::npos)
+	
+				IpAddress ip;
+				if (Util::parseIpAddress(ip, ipStr))
 				{
-					ou->getIdentity().setIP6(ip);
-					ou->getIdentity().setUseIP6();
-				}
-				else
-				{
-					dcassert(!ip.empty());
-					ou->getIdentity().setIp(ip);
+					switch (ip.type)
+					{
+						case AF_INET:
+							ou->getIdentity().setIP4(ip.data.v4);
+							break;
+						case AF_INET6:
+							ou->getIdentity().setIP6(ip.data.v6);
+							break;
+					}
 				}
 			}
 		}
@@ -1456,7 +1494,7 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "SR")
 	{
-		SearchManager::getInstance()->onSearchResult(aLine);
+		SearchManager::getInstance()->onSearchResult(aLine, getIp());
 	}
 	else if (cmd == "HubName")
 	{
@@ -1709,7 +1747,7 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 	uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
 	if (port == 0)
 	{
-		LogManager::message("Error [2] $ConnectToMe port = 0 :");
+		LogManager::message(STRING(NOT_LISTENING));
 		dcassert(0);
 		return;
 	}
@@ -1721,7 +1759,7 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 		return;
 
 	ConnectionManager::g_ConnToMeCount++;
-	send("$ConnectToMe " + nick + ' ' + getLocalIp() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
+	send("$ConnectToMe " + nick + ' ' + getMyExternalIP() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
 }
 
 void NmdcHub::revConnectToMe(const OnlineUser& aUser)
@@ -2026,17 +2064,25 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 		active = isActive();
 	else
 		active = sp.searchMode != SearchParamBase::MODE_PASSIVE;
-	if (SearchManager::getSearchPortUint() == 0)
+	string myUDPAddr;
+	if (active)
 	{
-		active = false;
-		LogManager::message("Error: UDP port is zero");
+		uint16_t port;
+		getMyUDPAddr(myUDPAddr, port);
+		if (!port)
+		{
+			active = false;
+			LogManager::message("Error: UDP port is zero");
+		}
+		else
+			myUDPAddr += ":" + Util::toString(port);
 	}
 	string cmd;
 	if ((supportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && sp.fileType == FILE_TYPE_TTH)
 	{
 		dcassert(sp.filter == TTHValue(sp.filter).toBase32());
 		if (active)
-			cmd = "$SA " + sp.filter + ' ' + calcExternalIP() + '|';
+			cmd = "$SA " + sp.filter + ' ' + myUDPAddr + '|';
 		else
 			cmd = "$SP " + sp.filter + ' ' + fromUtf8(myNick) + '|';
 	}
@@ -2059,7 +2105,7 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 		}
 		cmd = "$Search ";
 		if (active)
-			cmd += calcExternalIP();
+			cmd += myUDPAddr;
 		else
 			cmd += "Hub:" + fromUtf8(myNick);
 		cmd += ' ';

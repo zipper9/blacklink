@@ -133,8 +133,8 @@ namespace dht
 				// fine, node found, update it and return it
 				if (update)
 				{
-					Ip4Address oldIp = node->getIdentity().getIp();
-					uint16_t oldPort = node->getIdentity().getUdpPort();
+					Ip4Address oldIp = node->getIdentity().getIP4();
+					uint16_t oldPort = node->getIdentity().getUdp4Port();
 					if (ip != oldIp || oldPort != port)
 					{
 						node->setIpVerified(false);
@@ -150,8 +150,8 @@ namespace dht
 						node->setIpVerified(isUdpKeyValid);
 
 					node->setAlive();
-					node->getIdentity().setIp(ip);
-					node->getIdentity().setUdpPort(port);
+					node->getIdentity().setIP4(ip);
+					node->getIdentity().setUdp4Port(port);
 
 					DHT::getInstance()->setDirty();
 				}
@@ -163,8 +163,8 @@ namespace dht
 		u->setFlag(User::DHT);
 
 		Node::Ptr node = std::make_shared<Node>(u);
-		node->getIdentity().setIp(ip);
-		node->getIdentity().setUdpPort(port);
+		node->getIdentity().setIP4(ip);
+		node->getIdentity().setUdp4Port(port);
 		node->setIpVerified(isUdpKeyValid);
 		return node;
 	}
@@ -177,8 +177,8 @@ namespace dht
 		if (node->isInList)
 			return true;	// node is already in the table
 
-		Ip4Address ip = node->getIdentity().getIp();
-		uint16_t port = node->getIdentity().getUdpPort();
+		Ip4Address ip = node->getIdentity().getIP4();
+		uint16_t port = node->getIdentity().getUdp4Port();
 		NodeAddress na(ip, port);
 
 		// allow only one same IP:port
@@ -250,8 +250,8 @@ namespace dht
 			if (node->getType() == 4 && node->expires > 0 && node->expires <= currentTime)
 			{
 				// node is dead, remove it
-				Ip4Address ip = node->getIdentity().getIp();
-				uint16_t port = node->getIdentity().getUdpPort();
+				Ip4Address ip = node->getIdentity().getIP4();
+				uint16_t port = node->getIdentity().getUdp4Port();
 				ipMap.erase(NodeAddress(ip, port));
 				if (node->isOnline())
 					removedList.push_back(node);
@@ -270,7 +270,7 @@ namespace dht
 			{
 				// ping the oldest (expired) node
 				node->setTimeout(currentTime);
-				DHT::getInstance()->info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(), DHT::PING, node->getUser()->getCID(), node->getUdpKey());
+				DHT::getInstance()->info(node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(), DHT::PING, node->getUser()->getCID(), node->getUdpKey());
 				pinged++;
 			}
 

@@ -704,7 +704,7 @@ int WaitingUsersFrame::UploadQueueItem::compareItems(const UploadQueueItem* a, c
 		case COLUMN_SHARE:
 			return compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared());
 		case COLUMN_IP:
-			return compare(Util::getNumericIp4(a->getText(COLUMN_IP)), Util::getNumericIp4(b->getText(COLUMN_IP)));
+			return compare(a->ip, b->ip);
 	}
 	return stricmp(a->getText(col), b->getText(col));
 }
@@ -713,10 +713,11 @@ void WaitingUsersFrame::UploadQueueItem::update()
 {
 	const auto& user = getUser();
 	string nick;
-	Ip4Address ip;
+	Ip4Address ip4;
+	Ip6Address ip6;
 	int64_t bytesShared;
 	int slots;
-	user->getInfo(nick, ip, bytesShared, slots);
+	user->getInfo(nick, ip4, ip6, bytesShared, slots);
 
 	const string& filename = file->getFile();
 	if (!filename.empty())
@@ -746,14 +747,27 @@ void WaitingUsersFrame::UploadQueueItem::update()
 	setText(COLUMN_WAITING, Util::formatSecondsT(GET_TIME() - file->getTime()));
 	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
 	setText(COLUMN_SLOTS, Util::toStringT(slots));
-	if (ip)
+	if (Util::isValidIp4(ip4))
 	{
-		tstring ipStr = Text::toT(Util::printIpAddress(ip));
+		ip.type = AF_INET;
+		ip.data.v4 = ip4;
+	}
+	else if (Util::isValidIp6(ip6))
+	{
+		ip.type = AF_INET6;
+		ip.data.v6 = ip6;
+	}
+	if (ip.type)
+	{
+		tstring ipStr = Util::printIpAddressT(ip);
 		if (text[COLUMN_IP] != ipStr)
 		{
 			text[COLUMN_IP] = std::move(ipStr);
-			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
-			setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
+			if (ip.type == AF_INET)
+			{
+				Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
+			}
 		}
 	}
 }

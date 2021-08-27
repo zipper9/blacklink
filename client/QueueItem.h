@@ -96,7 +96,7 @@ class QueueItem
 		class PartialSource
 		{
 			public:
-				PartialSource(const string& myNick, const string& hubIpPort, Ip4Address ip, uint16_t udp, int64_t blockSize) :
+				PartialSource(const string& myNick, const string& hubIpPort, const IpAddress& ip, uint16_t udp, int64_t blockSize) :
 					myNick(myNick), hubIpPort(hubIpPort), ip(ip), udpPort(udp), nextQueryTime(0), pendingQueryCount(0), blockSize(blockSize) { }
 
 				typedef std::shared_ptr<PartialSource> Ptr;
@@ -108,7 +108,7 @@ class QueueItem
 				GETSET(PartsInfo, partialInfo, PartialInfo);
 				GETSET(string, myNick, MyNick);         // for NMDC support only
 				GETSET(string, hubIpPort, HubIpPort);
-				GETSET(Ip4Address, ip, Ip);
+				GETSET(IpAddress, ip, Ip);
 				GETSET(uint64_t, nextQueryTime, NextQueryTime);
 				GETSET(uint16_t, udpPort, UdpPort);
 				GETSET(uint8_t, pendingQueryCount, PendingQueryCount);

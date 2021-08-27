@@ -634,18 +634,18 @@ void BaseChatFrame::addSystemMessage(const tstring& line, CHARFORMAT2& cf)
 	addLine(_T("*** ") + line, 1, cf);
 }
 
-tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat)
+tstring BaseChatFrame::getIpCountry(const IpAddress& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat)
 {
 	tstring result;
-	if (!ip.empty())
+	if (Util::isValidIp(ip))
 	{
 		result = ts ? _T(" | ") : _T(" ");
 		if (ipInChat)
-			result += Text::toT(ip);
-		if (countryInChat || locationInChat)
+			result += Util::printIpAddressT(ip);
+		if ((countryInChat || locationInChat) && ip.type == AF_INET)
 		{
 			IPInfo ipInfo;
-			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 			if (countryInChat)
 			{
 				if (!ipInfo.country.empty())
@@ -704,11 +704,9 @@ void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bo
 	const bool ISPInChat = BOOLSETTING(ISP_IN_CHAT);
 	if (ipInChat || countryInChat || ISPInChat)
 	{
-		if (!from.isPhantomIP())
-		{
-			const string ip = from.getIpAsString();
+		IpAddress ip = from.getConnectIP();
+		if (ip.type && !from.isIPCached(ip.type))
 			extra = getIpCountry(ip, showTimestamps, ipInChat, countryInChat, ISPInChat);
-		}
 	}
 	if (showTimestamps)
 	{

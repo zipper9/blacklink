@@ -38,7 +38,7 @@ class UserInfoSimple: public UserInfoBase
 		void addSummaryMenu();
 		static tstring getBroadcastPrivateMessage();
 		static uint64_t inputSlotTime();
-		static tstring getTagIP(const string& tag, const string& ip);
+		static tstring getTagIP(const string& tag, Ip4Address ip4, const Ip6Address& ip6);
 		static tstring getTagIP(const ClientManager::UserParams& params);
 		
 		const UserPtr& getUser() const

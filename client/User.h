@@ -23,7 +23,7 @@
 #include "BaseUtil.h"
 #include "CID.h"
 #include "Flags.h"
-#include "Ip4Address.h"
+#include "IpAddress.h"
 #include "forward.h"
 #include "Thread.h"
 
@@ -165,8 +165,9 @@ class User final
 		bool hasNick() const;
 		void setLastNick(const string& nick);
 		void updateNick(const string& nick);
-		void setIP(const string& ipStr);
-		void setIP(Ip4Address ip);
+		void setIP4(Ip4Address ip);
+		void setIP6(const Ip6Address& ip);
+		void setIP(const IpAddress& ip);
 
 		void setBytesShared(int64_t bytesShared)
 		{
@@ -258,8 +259,9 @@ class User final
 			return (getFlags() & MYSELF) != 0;
 		}
 
-		Ip4Address getIP() const;
-		void getInfo(string& nick, Ip4Address& ip, int64_t& bytesShared, int& slots) const;
+		Ip4Address getIP4() const;
+		Ip6Address getIP6() const;
+		void getInfo(string& nick, Ip4Address& ip4, Ip6Address& ip6, int64_t& bytesShared, int& slots) const;
 		void addNick(const string& nick, const string& hub);
 
 		void modifyUploadCount(int delta)
@@ -283,8 +285,8 @@ class User final
 		uint64_t getBytesUploaded() const;
 		uint64_t getBytesDownloaded() const;
 		void getBytesTransfered(uint64_t out[]) const;
-		void addBytesUploaded(Ip4Address ip, uint64_t size);
-		void addBytesDownloaded(Ip4Address ip, uint64_t size);
+		void addBytesUploaded(const IpAddress& ip, uint64_t size);
+		void addBytesDownloaded(const IpAddress& ip, uint64_t size);
 		void incMessageCount();
 		unsigned getMessageCount() const;
 		void loadUserStat();
@@ -305,7 +307,8 @@ class User final
 		uint32_t limit;
 		int slots;
 		int uploadCount;
-		Ip4Address lastIp;
+		Ip4Address lastIp4;
+		Ip6Address lastIp6;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		UserStatItem userStat;
 		IPStatMap* ipStat;

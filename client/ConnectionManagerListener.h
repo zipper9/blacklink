@@ -58,7 +58,7 @@ class ConnectionManagerListener
 		virtual void on(Forced, const ConnectionQueueItemPtr&) noexcept { }
 #endif
 		virtual void on(ListenerStarted) noexcept { }
-		virtual void on(ListenerFailed, const char* type, int errorCode) noexcept { }
+		virtual void on(ListenerFailed, const char* type, int af, int errorCode) noexcept { }
 };
 
 #endif // !defined(CONNECTION_MANAGER_LISTENER_H)

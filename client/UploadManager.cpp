@@ -260,7 +260,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (newLeecher->getSocket())
 	{
-		const auto newLeecherIp = newLeecher->getSocket()->getIp4();
+		const auto newLeecherIp = newLeecher->getSocket()->getIp();
 		const auto newLeecherShare = newLeecher->getUser()->getBytesShared();
 		const auto newLeecherNick = newLeecher->getUser()->getLastNick();
 		
@@ -271,7 +271,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 			const auto u = *i;
 			dcassert(u);
 			dcassert(u->getUser());
-			const auto uploadUserIp = u->getUserConnection()->getSocket()->getIp4();
+			const auto uploadUserIp = u->getUserConnection()->getSocket()->getIp();
 			const auto uploadUserShare = u->getUser()->getBytesShared();
 			const auto uploadUserNick = u->getUser()->getLastNick();
 			
@@ -581,8 +581,9 @@ ok:
 		{
 			if (!(hasReserved || isFavorite || isAutoSlot || hasFreeSlot || isHasUpload))
 			{
-				Ip4Address addr = source->getRemoteIp();
-				if (addr) hasSlotByIP = ipGrant.check(addr);
+				IpAddress addr = source->getRemoteIp();
+				if (addr.type == AF_INET && addr.data.v4)
+					hasSlotByIP = ipGrant.check(addr.data.v4);
 			}
 		}
 #endif // SSA_IPGRANT_FEATURE

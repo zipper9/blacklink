@@ -84,8 +84,8 @@ namespace dht
 			cmd.addParam("TO", Util::toString(token));
 
 			//node->setTimeout();
-			DHT::getInstance()->send(cmd, node->getIdentity().getIp(),
-				node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
+			DHT::getInstance()->send(cmd, node->getIdentity().getIP4(),
+				node->getIdentity().getUdp4Port(), node->getUser()->getCID(), node->getUdpKey());
 		}
 	}
 
@@ -144,7 +144,7 @@ namespace dht
 		//		u->setFlag(User::DHT);
 		//
 		//		// contact node that we are online and we want his info
-		//		DHT::getInstance()->info(i->getIp(), i->getUdpPort(), true);
+		//		DHT::getInstance()->info(i->getIp(), i->getUdp4Port(), true);
 		//
 		//		SearchResultPtr sr(new SearchResult(u, SearchResult::TYPE_FILE, 0, 0, i->getSize(), tth, "DHT", Util::emptyString, i->getIp(), TTHValue(tth), token));
 		//		dcpp::SearchManager::getInstance()->fire(SearchManagerListener::SR(), sr);
@@ -316,8 +316,8 @@ namespace dht
 				{
 					xml.addTag("Node");
 					xml.addChildAttrib("CID", i->second->getUser()->getCID().toBase32());
-					xml.addChildAttrib("I4", i->second->getIdentity().getIpAsString());
-					xml.addChildAttrib("U4", i->second->getIdentity().getUdpPort());
+					xml.addChildAttrib("I4", Util::printIpAddress(i->second->getIdentity().getIP4()));
+					xml.addChildAttrib("U4", i->second->getIdentity().getUdp4Port());
 
 					empty = false;
 				}
@@ -338,8 +338,8 @@ namespace dht
 		res.addParam("NX", Utils::compressXML(nodes));
 
 		// send search result
-		DHT::getInstance()->send(res, node->getIdentity().getIp(),
-			node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
+		DHT::getInstance()->send(res, node->getIdentity().getIP4(),
+			node->getIdentity().getUdp4Port(), node->getUser()->getCID(), node->getUdpKey());
 	}
 
 
@@ -388,31 +388,32 @@ namespace dht
 					int64_t size = xml.getInt64ChildAttrib("SI");
 					bool partial = xml.getBoolChildAttrib("PF");
 
-					Ip4Address address;
-					if (!Util::parseIpAddress(address, i4))
+					IpAddress address;
+					if (!Util::parseIpAddress(address.data.v4, i4))
 						continue;
+					address.type = AF_INET;
 
 					// don't bother with invalid sources and private IPs
-					if (cid.isZero() || ClientManager::getMyCID() == cid || !Utils::isGoodIPPort(address, u4))
+					if (cid.isZero() || ClientManager::getMyCID() == cid || !Utils::isGoodIPPort(address.data.v4, u4))
 						continue;
 
 					// create user as offline (only TCP connected users will be online)
-					Node::Ptr source = DHT::getInstance()->createNode(cid, address, u4, false, false);
+					Node::Ptr source = DHT::getInstance()->createNode(cid, address.data.v4, u4, false, false);
 
 					if (partial)
 					{
 						if (!source->isOnline())
 						{
-							// node is not online, try to contact him
-							DHT::getInstance()->info(address, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
+							// node is not online, try to contact it
+							DHT::getInstance()->info(address.data.v4, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
 						}
 
 						// ask for partial file
 						AdcCommand request(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-						request.addParam("U4", Util::toString(::SearchManager::getInstance()->getSearchPortUint()));
+						request.addParam("U4", Util::toString(::SearchManager::getInstance()->getUdpPort()));
 						request.addParam("TR", s->term);
 
-						DHT::getInstance()->send(request, address, u4, cid, source->getUdpKey());
+						DHT::getInstance()->send(request, address.data.v4, u4, cid, source->getUdpKey());
 					}
 					else
 					{
@@ -420,9 +421,9 @@ namespace dht
 						SearchResult sr(source->getUser(), SearchResult::TYPE_FILE, 0, SearchResult::SLOTS_UNKNOWN, size, s->term, dht::NetworkName, address, TTHValue(s->term), intToken);
 						if (!source->isOnline())
 						{
-							// node is not online, try to contact him if we didn't contact him recently
+							// node is not online, try to contact it if we didn't contact it recently
 							if (searchResults.find(source->getUser()->getCID()) != searchResults.end())
-								DHT::getInstance()->info(address, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
+								DHT::getInstance()->info(address.data.v4, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
 
 							searchResults.insert(std::make_pair(source->getUser()->getCID(), std::make_pair(GET_TICK(), sr)));
 						}
@@ -516,8 +517,8 @@ namespace dht
 				cmd.addParam("PF", "1");
 
 			//i->second->setTimeout();
-			DHT::getInstance()->send(cmd, node->getIdentity().getIp(),
-				node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
+			DHT::getInstance()->send(cmd, node->getIdentity().getIP4(),
+				node->getIdentity().getUdp4Port(), node->getUser()->getCID(), node->getUdpKey());
 		}
 	}
 

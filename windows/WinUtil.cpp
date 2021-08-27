@@ -1473,15 +1473,15 @@ tstring WinUtil::getNicks(const HintedUser& user)
 	return getNicks(user.user, user.hint);
 }
 
-void WinUtil::fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindAddress)
+void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAddress)
 {
 	vector<Util::AdapterInfo> adapters;
-	Util::getNetworkAdapters(v6, adapters);
-	const string defaultAdapter("0.0.0.0");
+	Util::getNetworkAdapters(af, adapters);
+	const string defaultAdapter(af == AF_INET6 ? "::" : "0.0.0.0");
 	if (std::find_if(adapters.cbegin(), adapters.cend(),
 		[&defaultAdapter](const auto &v) { return v.ip == defaultAdapter; }) == adapters.cend())
 	{
-		adapters.insert(adapters.begin(), Util::AdapterInfo(TSTRING(DEFAULT_ADAPTER), defaultAdapter, 0));
+		adapters.insert(adapters.begin(), Util::AdapterInfo(TSTRING(DEFAULT_ADAPTER), defaultAdapter, 0, 0));
 	}
 	int selected = -1;
 	for (size_t i = 0; i < adapters.size(); ++i)

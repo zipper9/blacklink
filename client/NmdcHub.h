@@ -169,7 +169,8 @@ class NmdcHub : public Client, private Flags
 		static void sendUDP(const string& address, uint16_t port, string& sr);
 		void handleSearch(const NmdcSearchParam& searchParam);
 		bool handlePartialSearch(const NmdcSearchParam& searchParam);
-		string calcExternalIP() const;
+		string getMyExternalIP() const;
+		void getMyUDPAddr(string& ip, uint16_t& port) const;
 		void revConnectToMe(const OnlineUser& aUser);
 		bool resendMyINFO(bool alwaysSend, bool forcePassive);
 		void myInfo(bool alwaysSend, bool forcePassive = false);

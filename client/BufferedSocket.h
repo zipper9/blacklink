@@ -36,11 +36,14 @@ class BufferedSocket : private Thread
 			dcassert(!sock || !sock->isRunning());
 			delete sock;
 		}
-		
+
+		static void getBindAddress(IpAddress& ip, int af, const string& s);
+		static void getBindAddress(IpAddress& ip, int af);
+
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		static void waitShutdown();
 #endif
-		
+
 		void addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port);
 		void connect(const string& address, uint16_t port, bool secure, 
 			bool allowUntrusted, bool useProxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
@@ -70,9 +73,9 @@ class BufferedSocket : private Thread
 		{
 			return hasSocket() ? sock->getCipherName() : Util::emptyString;
 		}
-		string getRemoteIpAsString() const;
+		string getRemoteIpAsString(bool brackets = false) const;
 		string getRemoteIpPort() const;
-		Ip4Address getIp4() const;
+		const IpAddress& getIp() const;
 		const uint16_t getPort() const
 		{
 			return hasSocket() ? sock->getPort() : 0;
@@ -222,6 +225,7 @@ class BufferedSocket : private Thread
 		void doAccept();
 		void createSocksMessage(const ConnectInfo* ci);
 		void checkSocksReply();
+		void printSockName(string& sockName) const;
 
 	protected:
 		virtual int run() override;

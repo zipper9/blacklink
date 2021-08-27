@@ -21,6 +21,6 @@
 
 const char *Mapper::protocols[PROTOCOL_LAST] = { "TCP", "UDP" };
 
-Mapper::Mapper(const string &localIp, bool v6) : localIp(localIp), v6(v6)
+Mapper::Mapper(const string &localIp, int af) : localIp(localIp), af(af)
 {
 }

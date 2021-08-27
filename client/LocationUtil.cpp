@@ -286,14 +286,6 @@ void Util::getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached)
 	DatabaseManager::getInstance()->getIPInfo(ip, result, what, onlyCached);
 }
 
-bool Util::getIpInfo(const string& ip, IPInfo& result, int what, bool onlyCached)
-{
-	Ip4Address addr;
-	if (!Util::parseIpAddress(addr, ip)) return false;
-	getIpInfo(addr, result, what, onlyCached);
-	return true;
-}
-
 const string& Util::getDescription(const IPInfo& ipInfo)
 {
 	if (!ipInfo.location.empty()) return ipInfo.location;

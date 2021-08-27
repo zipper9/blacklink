@@ -1387,7 +1387,6 @@ void DirectoryListingFrame::appendFavTargets(OMenu& menu, const int idc)
 void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 {
 	User* user = dl->getUser().get();
-	Ip4Address ip = user->getIP();
 	string downloadDir = Util::getDownloadDir(dl->getUser());
 	string nick = user->getLastNick();
 	if (!nick.empty())
@@ -1398,13 +1397,26 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 		menu.AppendMenu(MF_STRING, idc, tmp.c_str());
 		Util::appendPathSeparator(downloadDirNick);
 	}
-	if (ip)
+	Ip4Address ip4 = user->getIP4();
+	if (ip4)
 	{
-		downloadDirIP = downloadDir + Util::printIpAddress(ip);
+		downloadDirIP = downloadDir + Util::printIpAddress(ip4);
 		tstring tmp = Text::toT(downloadDirIP);
 		WinUtil::escapeMenu(tmp);
 		menu.AppendMenu(MF_STRING, idc + 1, tmp.c_str());
 		Util::appendPathSeparator(downloadDirIP);
+	}
+	else
+	{
+		Ip6Address ip6 = user->getIP6();
+		if (!Util::isEmpty(ip6))
+		{
+			downloadDirIP = downloadDir + Util::printIpAddress(ip6);
+			tstring tmp = Text::toT(downloadDirIP);
+			WinUtil::escapeMenu(tmp);
+			menu.AppendMenu(MF_STRING, idc + 1, tmp.c_str());
+			Util::appendPathSeparator(downloadDirIP);
+		}
 	}
 }
 

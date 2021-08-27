@@ -22,6 +22,7 @@
 #include "ClientManager.h"
 #include "LocationUtil.h"
 #include "UserConnection.h"
+#include "ConnectivityManager.h"
 
 #ifdef _DEBUG
 std::atomic_int OnlineUser::g_online_user_counts(0);
@@ -38,16 +39,111 @@ bool Identity::isTcpActive() const
 	auto flags = user->getFlags();
 	if (flags & User::NMDC)
 		return !(flags & User::NMDC_FILES_PASSIVE);
-	else
-		return Util::isValidIp4(getIp()) && (flags & User::TCP4) != 0;
+	if (flags & User::TCP4)
+	{
+		if (Util::isValidIp4(getIP4()))
+			return true;
+	}
+	if (flags & User::TCP6)
+	{
+		if (Util::isValidIp6(getIP6()))
+			return true;
+	}
+	return false;
 }
 
 bool Identity::isUdpActive() const
 {
-	if (!Util::isValidIp4(getIp()) || !getUdpPort())
-		return false;
-	else
-		return (user->getFlags() & User::UDP4) != 0;
+	auto flags = user->getFlags();
+	if (flags & User::UDP4)
+	{
+		if (getUdp4Port() && Util::isValidIp4(getIP4()))
+			return true;
+	}
+	if (flags & User::UDP6) // TODO: check if IPv6 is enabled
+	{
+		if (getUdp6Port() && Util::isValidIp6(getIP6()))
+			return true;
+	}
+	return false;
+}
+
+bool Identity::getUdpAddress(IpAddress& ip, uint16_t& port) const
+{
+	auto flags = user->getFlags();
+	if (flags & User::UDP4)
+	{
+		port = getUdp4Port();
+		ip.type = AF_INET;
+		ip.data.v4 = getIP4();
+		if (port != 0 && Util::isValidIp4(ip.data.v4))
+			return true;
+	}
+	if ((flags & User::UDP6) && ConnectivityManager::hasIP6())
+	{
+		port = getUdp6Port();
+		ip.type = AF_INET6;
+		ip.data.v6 = getIP6();
+		if (port != 0 && Util::isValidIp6(ip.data.v6))
+			return true;
+	}
+	ip.type = 0;
+	port = 0;
+	return false;
+}
+
+#if 0 // Prefer IPv6
+IpAddress Identity::getConnectIP() const
+{
+	IpAddress ip;
+	ip.data.v6 = getIP6();
+	if (ConnectivityManager::hasIP6() && Util::isValidIp6(ip.data.v6))
+	{
+		ip.type = AF_INET6;
+		return ip;
+	}
+	ip.data.v4 = getIP4();
+	if (Util::isValidIp4(ip.data.v4))
+	{
+		ip.type = AF_INET;
+		return ip;
+	}
+	ip.type = 0;
+	return ip;
+}
+#else // Prefer IPv4
+IpAddress Identity::getConnectIP() const
+{
+	IpAddress ip;
+	ip.data.v4 = getIP4();
+	if (Util::isValidIp4(ip.data.v4))
+	{
+		ip.type = AF_INET;
+		return ip;
+	}
+	ip.data.v6 = getIP6();
+	if (ConnectivityManager::hasIP6() && Util::isValidIp6(ip.data.v6))
+	{
+		ip.type = AF_INET6;
+		return ip;
+	}
+	ip.type = 0;
+	return ip;
+}
+#endif
+
+bool Identity::isIPCached(int af) const
+{
+	switch (af)
+	{
+		case AF_INET:
+			if (!Util::isValidIp4(ip4)) return true;
+			break;
+		case AF_INET6:
+			if (!Util::isValidIp6(ip6)) return true;
+			break;
+	}
+	return false;
 }
 
 void Identity::setExtJSON()
@@ -95,8 +191,8 @@ void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility
 	}
 	else
 	{
-		sm["I4"] = getIpAsString();
-		sm["U4"] = Util::toString(getUdpPort());
+		sm["I4"] = Util::printIpAddress(getIP4());
+		sm["U4"] = Util::toString(getUdp4Port());
 	}
 
 	string tag = getTag();
@@ -113,7 +209,7 @@ void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility
 		{
 			sm["nick"] = nick;
 			sm["cid"] = cid;
-			sm["ip"] = getIpAsString();
+			sm["ip"] = Util::printIpAddress(getConnectIP());
 			sm["tag"] = tag;
 			sm["description"] = getDescription();
 			sm["email"] = getEmail();
@@ -142,7 +238,7 @@ void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility
 
 string Identity::getTag() const
 {
-	LOCK(cs);
+	cs.lock();
 	auto itAP = stringInfo.find(TAG('A', 'P'));
 	auto itVE = stringInfo.find(TAG('V', 'E'));
 	if (itAP != stringInfo.cend() || itVE != stringInfo.cend())
@@ -159,11 +255,13 @@ string Identity::getTag() const
 		{
 			result = '<' + itVE->second;
 		}
+		cs.unlock();
 		snprintf(tagItem, sizeof(tagItem), ",M:%c,H:%u/%u/%u,S:%u>",
 			isTcpActive() ? 'A' : 'P', getHubsNormal(), getHubsRegistered(), getHubsOperator(), getSlots());
 		result += tagItem;
 		return result;
 	}
+	cs.unlock();
 	return Util::emptyString;
 }
 
@@ -319,7 +417,7 @@ void Identity::loadP2PGuard()
 {
 	if (!p2pGuardInfoKnown)
 	{
-		auto addr = getIp();
+		Ip4Address addr = getIP4();
 		if (addr)
 		{
 			IPInfo ipInfo;
@@ -357,14 +455,15 @@ string Identity::formatShareBytes(uint64_t bytes)
 	return bytes ? Util::formatBytes(bytes) + " (" + Util::formatExactSize(bytes) + ")" : Util::emptyString;
 }
 
-string Identity::formatIpString(const string& value)
+string Identity::formatIpString(const IpAddress& ip)
 {
-	if (!value.empty())
+	if (Util::isValidIp(ip))
 	{
 		string desc;
-		string hostname = Socket::getRemoteHost(value);
+		string hostname = Socket::getRemoteHost(ip);
 		IPInfo loc;
-		Util::getIpInfo(value, loc, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+		if (ip.type == AF_INET)
+			Util::getIpInfo(ip.data.v4, loc, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 		const string& location = Util::getDescription(loc);
 		if (!hostname.empty() && !location.empty())
 			desc = hostname + " - " + location;
@@ -372,8 +471,8 @@ string Identity::formatIpString(const string& value)
 			desc = std::move(hostname);
 		else if (!location.empty())
 			desc = std::move(location);
-		if (desc.empty()) return value;
-		return value + " (" + desc + ')';
+		if (desc.empty()) return Util::printIpAddress(ip);
+		return Util::printIpAddress(ip) + " (" + desc + ')';
 	}
 	return Util::emptyString;
 };
@@ -438,7 +537,7 @@ void Identity::getReport(string& report)
 			appendIfValueNotEmpty("Other nicks", otherNicks);
 		}
 
-		string ipv6, keyPrint;
+		string keyPrint;
 		{
 			LOCK(cs);
 			for (auto i = stringInfo.cbegin(); i != stringInfo.cend(); ++i)
@@ -464,10 +563,6 @@ void Identity::getReport(string& report)
 						break;
 					case TAG('L', 'C'):
 						name = STRING(LOCALE);
-						break;
-					case TAG('I', '6'):
-						ipv6 = value;
-						append = false;
 						break;
 					case TAG('V', 'E'):
 					case TAG('A', 'P'):
@@ -548,8 +643,19 @@ void Identity::getReport(string& report)
 			appendBoolValue("DHT mode", (flags & User::PASSIVE) != 0, "Passive", "Active");
 		appendIfValueNotEmpty("Known supports", getSupports());
 
-		appendIfValueNotEmpty("IPv4 address", formatIpString(getIpAsString()));
-		appendIfValueNotEmpty("IPv6 address", ipv6);
+		IpAddress ip;
+		ip.data.v4 = getIP4();
+		if (ip.data.v4)
+		{
+			ip.type = AF_INET;
+			appendIfValueNotEmpty("IPv4 address", formatIpString(ip));
+		}
+		ip.data.v6 = getIP6();
+		if (!Util::isEmpty(ip.data.v6))
+		{
+			ip.type = AF_INET6;
+			appendIfValueNotEmpty("IPv6 address", formatIpString(ip));
+		}
 
 		// "AP" and "VE" are not stored in stringInfo
 		appendIfValueNotEmpty("DC client", getStringParam("AP"));
@@ -596,54 +702,31 @@ string Identity::getSupports() const
 	return tmp;
 }
 
-string Identity::getIpAsString() const
+void Identity::setIP4(Ip4Address ip) noexcept
 {
-	if (Util::isValidIp4(ip))
-		return Util::printIpAddress(ip);
-	if (isUseIP6())
-		return getIP6();
-	if (user)
-	{
-		auto ip = user->getIP();
-		if (Util::isValidIp4(ip))
-			return Util::printIpAddress(ip);
-	}
-	return Util::emptyString;
-}
-
-void Identity::setIp(const string& ip) // "I4"
-{
-	if (ip.empty())
-		return;
-
-	Ip4Address addr;
-	if (ip[0] == ' ' || ip.back() == ' ')
-	{
-		string temp = ip;
-		boost::algorithm::trim(temp);
-		if (!(Util::parseIpAddress(addr, temp) && Util::isValidIp4(addr))) return;
-	}
-	else
-	{
-		if (!(Util::parseIpAddress(addr, ip) && Util::isValidIp4(addr))) return;
-	}
-	this->ip = addr;
-	getUser()->setIP(addr);
+	this->ip4 = ip;
+	getUser()->setIP4(ip);
 	change(1<<COLUMN_IP);
 }
 
-void Identity::setIp(Ip4Address ip)
+Ip4Address Identity::getIP4() const noexcept
 {
-	this->ip = ip;
-	getUser()->setIP(ip);
+	if (ip4) return ip4;
+	return getUser()->getIP4();
+}
+
+void Identity::setIP6(const Ip6Address& ip) noexcept
+{
+	this->ip6 = ip;
+	getUser()->setIP6(ip);
 	change(1<<COLUMN_IP);
 }
 
-bool Identity::isPhantomIP() const
+Ip6Address Identity::getIP6() const noexcept
 {
-	if (Util::isValidIp4(ip))
-		return false;
-	if (isUseIP6())
-		return false;
-	return true;
+	{
+		LOCK(cs);
+		if (!Util::isEmpty(ip6)) return ip6;
+	}
+	return getUser()->getIP6();
 }

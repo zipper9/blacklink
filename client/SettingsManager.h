@@ -24,7 +24,6 @@
 #include "Util.h"
 #include "Speaker.h"
 #include "Singleton.h"
-#include <boost/logic/tribool.hpp>
 
 #define MAX_SOCKET_BUFFER_SIZE (64 * 1024)
 
@@ -37,12 +36,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		typedef SearchTypes::iterator SearchTypesIter;
 		
 		static StringList g_connectionSpeeds;
-		static boost::logic::tribool g_upnpTorrentLevel;
-		
-		static void upnpPortLevelInit()
-		{
-			g_upnpTorrentLevel = boost::logic::indeterminate;
-		}
 		
 		enum StrSetting
 		{
@@ -65,8 +58,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 
 			// Network settings
 			BIND_ADDRESS,
+			BIND_ADDRESS6,
 			EXTERNAL_IP,
+			EXTERNAL_IP6,
 			MAPPER,
+			MAPPER6,
 			SOCKS_SERVER, SOCKS_USER, SOCKS_PASSWORD,
 			HTTP_PROXY, // Unused
 
@@ -228,20 +224,25 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			AUTO_CHANGE_NICK,
 
 			// Network settings (Ints)
+			ENABLE_IP6,
 			TCP_PORT,
 			UDP_PORT, 
 			TLS_PORT,
 			USE_TLS,
 			DHT_PORT,
 			INCOMING_CONNECTIONS,
+			INCOMING_CONNECTIONS6,
 			AUTO_PASSIVE_INCOMING_CONNECTIONS,
 			OUTGOING_CONNECTIONS,
 			AUTO_DETECT_CONNECTION,
+			AUTO_DETECT_CONNECTION6,
 			ALLOW_NAT_TRAVERSAL,
 			IPUPDATE,
 			WAN_IP_MANUAL,
-			IPUPDATE_INTERVAL,
-			NO_IP_OVERRIDE, // Unused, visible in UI
+			WAN_IP_MANUAL6,
+			IPUPDATE_INTERVAL, // Unused, visible in UI
+			NO_IP_OVERRIDE,
+			NO_IP_OVERRIDE6,
 			AUTO_TEST_PORTS,
 			SOCKS_PORT, SOCKS_RESOLVE,
 			USE_DHT,
@@ -822,6 +823,19 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		static string getSoundFilename(const SettingsManager::StrSetting sound);
 		static bool getBeepEnabled(const SettingsManager::IntSetting sound);
 		static bool getPopupEnabled(const SettingsManager::IntSetting popup);
+
+		struct IPSettings
+		{
+			IntSetting autoDetect;
+			IntSetting incomingConnections;
+			IntSetting manualIp;
+			IntSetting noIpOverride;
+			StrSetting bindAddress;
+			StrSetting externalIp;
+			StrSetting mapper;
+		};
+
+		static void getIPSettings(IPSettings& s, bool v6);
 
 	private:
 		friend class Singleton<SettingsManager>;

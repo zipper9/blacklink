@@ -517,7 +517,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	}
 	else if (stricmp(cmd.c_str(), _T("connection")) == 0 || stricmp(cmd.c_str(), _T("con")) == 0)
 	{
-		const string desc = ConnectivityManager::getInstance()->getPortmapInfo(true);
+		const string desc = ConnectivityManager::getInstance()->getInformation();
 		string ipAddress;
 		if (isDHT)
 		{
@@ -525,7 +525,18 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 			dht::DHT::getInstance()->getPublicIPInfo(ipAddress, isFirewalled);
 		}
 		else if (client)
-			ipAddress = client->getLocalIp();
+		{
+			Ip4Address ip4;
+			Ip6Address ip6;
+			client->getLocalIp(ip4, ip6);
+			if (Util::isValidIp4(ip4))
+				ipAddress = Util::printIpAddress(ip4);
+			if (Util::isValidIp6(ip6))
+			{
+				if (!ipAddress.empty()) ipAddress += ", ";
+				ipAddress += Util::printIpAddress(ip6);
+			}
+		}
 		else
 			ipAddress = "?";
 		tstring conn = _T("\r\n") + TSTRING(IP) + _T(": ") + Text::toT(ipAddress) + _T("\r\n") + Text::toT(desc);
@@ -762,7 +773,6 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 
 LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	// !SMT!-S
 	const auto su = getSelectedUser();
 	if (su)
 	{
@@ -795,31 +805,42 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			case IDC_COPY_GEO_LOCATION:
 			{
 				IPInfo ipInfo;
-				Util::getIpInfo(id.getIp(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				Util::getIpInfo(id.getIP4(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				sCopy += Util::getDescription(ipInfo);
 				break;
 			}
 			case IDC_COPY_IP:
-				sCopy += id.getIpAsString();
+				sCopy += Util::printIpAddress(id.getConnectIP());
 				break;
 			case IDC_COPY_NICK_IP:
 			{
 				// TODO translate
 				sCopy += "User Info:\r\n"
-				         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n" +
-				         "\tIP: " + Identity::formatIpString(id.getIpAsString());
+				         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n";
+				Ip4Address ip4 = id.getIP4();
+				if (Util::isValidIp4(ip4))
+				{
+					IpAddress ip;
+					ip.type = AF_INET;
+					ip.data.v4 = ip4;
+					sCopy += "\tIPv4: " + Identity::formatIpString(ip) + "\r\n";
+				}
+				Ip6Address ip6 = id.getIP6();
+				if (Util::isValidIp6(ip6))
+				{
+					IpAddress ip;
+					ip.type = AF_INET6;
+					ip.data.v6 = ip6;
+					sCopy += "\tIPv6: " + Identity::formatIpString(ip) + "\r\n";
+				}
 				break;
 			}
 			case IDC_COPY_ALL:
 			{
 				// TODO: Use Identity::getReport ?
-				IPInfo ipInfo;
-				Util::getIpInfo(id.getIp(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
-				sCopy += Util::getDescription(ipInfo);
 				bool isNMDC = (u->getFlags() & User::NMDC) != 0;
 				sCopy += "User info:\r\n"
 				         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n" +
-				         "\tLocation: " + Util::getDescription(ipInfo) + "\r\n" +
 				         "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
 				         "\tTag: " + id.getTag() + "\r\n" +
 				         "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
@@ -842,8 +863,23 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				sCopy += "\tE-Mail: " + id.getEmail() + "\r\n" +
 				         "\tClient Type: " + Util::toString(id.getClientType()) + "\r\n" +
 				         "\tMode: " + (id.isTcpActive() ? 'A' : 'P') + "\r\n" +
-				         "\t" + STRING(SLOTS) + ": " + Util::toString(id.getSlots()) + "\r\n" +
-				         "\tIP: " + Identity::formatIpString(id.getIpAsString()) + "\r\n";
+				         "\t" + STRING(SLOTS) + ": " + Util::toString(id.getSlots()) + "\r\n";
+				Ip4Address ip4 = id.getIP4();
+				if (Util::isValidIp4(ip4))
+				{
+					IpAddress ip;
+					ip.type = AF_INET;
+					ip.data.v4 = ip4;
+					sCopy += "\tIPv4: " + Identity::formatIpString(ip) + "\r\n";
+				}
+				Ip6Address ip6 = id.getIP6();
+				if (Util::isValidIp6(ip6))
+				{
+					IpAddress ip;
+					ip.type = AF_INET6;
+					ip.data.v6 = ip6;
+					sCopy += "\tIPv6: " + Identity::formatIpString(ip) + "\r\n";
+				}
 				const auto su = id.getSupports();
 				if (!su.empty())
 				{

@@ -124,7 +124,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		{
 			public:
 				UploadQueueItem(const HintedUser& hintedUser, const UploadQueueFilePtr& file) :
-					file(file), hintedUser(hintedUser), iconIndex(-1) {}
+					file(file), hintedUser(hintedUser), iconIndex(-1), ip{0} {}
 				void update();
 				const UserPtr& getUser() const { return hintedUser.user; }
 				const string& getHint() const { return hintedUser.hint; }
@@ -162,7 +162,8 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 					COLUMN_SHARE,
 					COLUMN_LAST
 				};
-		
+	
+				IpAddress ip;
 				IPInfo ipInfo;
 
 			private:

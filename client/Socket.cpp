@@ -62,7 +62,85 @@ SocketException::SocketException(int error) noexcept :
 
 Socket::Stats Socket::g_stats;
 
-const unsigned SOCKS_TIMEOUT = 30000;
+static const unsigned SOCKS_TIMEOUT = 30000;
+
+union sockaddr_u
+{
+	sockaddr_in v4;
+	sockaddr_in6 v6;
+};
+
+static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uint16_t port)
+{
+	memset(&sa, 0, sizeof(sa));
+	switch (ip.type)
+	{
+		case AF_INET:
+			sa.v4.sin_family = AF_INET;
+			sa.v4.sin_addr.s_addr = htonl(ip.data.v4);
+			sa.v4.sin_port = htons(port);
+			size = sizeof(sa.v4);
+			break;
+
+		case AF_INET6:
+			sa.v6.sin6_family = AF_INET6;
+			memcpy(&sa.v6.sin6_addr, &ip.data.v6, sizeof(in6_addr));
+			sa.v6.sin6_port = htons(port);
+			size = sizeof(sa.v6);
+			break;
+	
+		default:
+			size = 0;
+	}
+}
+
+static void fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa)
+{
+	memset(&ip, 0, sizeof(ip));
+	switch (((const sockaddr*) &sa)->sa_family)
+	{
+		case AF_INET:
+			ip.type = AF_INET;
+			ip.data.v4 = htonl(sa.v4.sin_addr.s_addr);
+			port = ntohs(sa.v4.sin_port);
+			break;
+
+		case AF_INET6:
+			ip.type = AF_INET6;
+			memcpy(&ip.data.v6, &sa.v6.sin6_addr, sizeof(in6_addr));
+			port = ntohs(sa.v6.sin6_port);
+			break;
+	}
+}
+
+static bool isAnyAddr(const sockaddr_u& sa)
+{
+	switch (((const sockaddr*) &sa)->sa_family)
+	{
+		case AF_INET:
+			return sa.v4.sin_addr.s_addr == INADDR_ANY;
+
+		case AF_INET6:
+			return IN6_IS_ADDR_UNSPECIFIED(&sa.v6.sin6_addr);
+	
+		default:
+			return false;
+	}
+}
+
+static void setAnyAddr(sockaddr_u& sa)
+{
+	switch (((const sockaddr*) &sa)->sa_family)
+	{
+		case AF_INET:
+			sa.v4.sin_addr.s_addr = INADDR_ANY;
+			break;
+
+		case AF_INET6:
+			memset(&sa.v6.sin6_addr, 0, sizeof(sa.v6.sin6_addr));
+			break;
+	}
+}
 
 string SocketException::errorToString(int error) noexcept
 {
@@ -83,7 +161,7 @@ socket_t Socket::getSock() const
 	return sock;
 }
 
-void Socket::create(SocketType type /* = TYPE_TCP */)
+void Socket::create(int af, SocketType type)
 {
 	if (sock != INVALID_SOCKET)
 		disconnect();
@@ -91,10 +169,10 @@ void Socket::create(SocketType type /* = TYPE_TCP */)
 	switch (type)
 	{
 		case TYPE_TCP:
-			sock = checksocket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+			sock = checksocket(socket(af, SOCK_STREAM, IPPROTO_TCP));
 			break;
 		case TYPE_UDP:
-			sock = checksocket(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+			sock = checksocket(socket(af, SOCK_DGRAM, IPPROTO_UDP));
 			break;
 		default:
 			dcassert(0);
@@ -106,15 +184,16 @@ void Socket::create(SocketType type /* = TYPE_TCP */)
 uint16_t Socket::accept(const Socket& listeningSocket)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
-	
+	string sockName;
+
 	if (sock != INVALID_SOCKET)
-	{
 		disconnect();
-	}
-	
-	sockaddr_in sockAddr;
+
+	if (doLog) listeningSocket.printSockName(sockName);
+
+	sockaddr_u sockAddr;
 	socklen_t sockLen = sizeof(sockAddr);
-	
+
 #ifdef _WIN32
 	sock = ::accept(listeningSocket.sock, (struct sockaddr*) &sockAddr, &sockLen);
 #else
@@ -128,14 +207,16 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	if (sock == INVALID_SOCKET)
 	{
 		if (doLog)
-			LogManager::message("Socket " + Util::toHexString(listeningSocket.sock) +
+			LogManager::message(sockName +
 				": Accept error #" + Util::toString(getLastError()), false);
 		throw SocketException(getLastError());
 	}
 	
-	const Ip4Address remoteIp = ntohl(sockAddr.sin_addr.s_addr);
-	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(ntohl(sockAddr.sin_addr.s_addr)))		
-		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(remoteIp)));
+	IpAddress remoteIp;
+	uint16_t port;
+	fromSockAddr(remoteIp, port, sockAddr);
+	if (BOOLSETTING(ENABLE_IPGUARD) && remoteIp.type == AF_INET && ipGuard.isBlocked(remoteIp.data.v4))
+		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(remoteIp.data.v4)));
 
 #ifdef _WIN32
 	// Make sure we disable any inherited windows message things for this socket.
@@ -144,58 +225,69 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 
 	type = TYPE_TCP;
 
-	uint16_t port = ntohs(sockAddr.sin_port);
 	if (doLog)
-		LogManager::message("Socket " + Util::toHexString(listeningSocket.sock) +
-			": Accepted connection from " + Util::printIpAddress(remoteIp) + ":" + Util::toString(port), false);
+	{
+		string newSockName;
+		printSockName(newSockName);
+		LogManager::message(sockName +
+			": Accepted (" + newSockName + ") from " +
+			Util::printIpAddress(remoteIp, true) + ":" + Util::toString(port), false);
+	}
 
 	// remote IP
-	setIp4(remoteIp);
+	setIp(remoteIp);
 	setBlocking(false);
-	
+
 	// return the remote port
 	return port;
 }
 
-uint16_t Socket::bind(uint16_t port, const string& address /* = 0.0.0.0 */)
+uint16_t Socket::bind(uint16_t port, const IpAddress& addr)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	string sockName;
+	if (doLog) printSockName(sockName);
 
-	sockaddr_in sockAddr;
-	memset(&sockAddr, 0, sizeof(sockAddr));
-	sockAddr.sin_family = AF_INET;
-	sockAddr.sin_port = htons(port);
-	sockAddr.sin_addr.s_addr = address.empty() ? INADDR_ANY : inet_addr(address.c_str());
+	sockaddr_u sockAddr;
+	socklen_t sockAddrSize;
+	toSockAddr(sockAddr, sockAddrSize, addr, port);
 
-	if (::bind(sock, (sockaddr *) &sockAddr, sizeof(sockAddr)) == SOCKET_ERROR)
+#ifdef OSVER_WIN_XP
+	if (CompatibilityManager::isOsVistaPlus())
+#endif
+	if (addr.type == AF_INET6)
+		setSocketOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
+
+	if (::bind(sock, (sockaddr*) &sockAddr, sockAddrSize) == SOCKET_ERROR)
 	{
-		if (sockAddr.sin_addr.s_addr == INADDR_ANY)
+		if (isAnyAddr(sockAddr))
 		{
 			if (doLog)
-				LogManager::message("Socket " + Util::toHexString(sock) +
+				LogManager::message(sockName +
 					": Error #" + Util::toString(getLastError()) +
-					" binding to " + address + ":" + Util::toString(port), false);
+					" binding to :" + Util::toString(port), false);
 			throw SocketException(getLastError());
 		}
 		if (doLog)
-			LogManager::message("Socket " + Util::toHexString(sock) +
+			LogManager::message(sockName +
 				": Error #" + Util::toString(getLastError()) +
-				" binding to " + address + ":" + Util::toString(port) + ", retrying with INADDR_ANY", false);
-		sockAddr.sin_addr.s_addr = INADDR_ANY;
-		if (::bind(sock, (sockaddr *) &sockAddr, sizeof(sockAddr)) == SOCKET_ERROR)
+				" binding to " + Util::printIpAddress(addr, true) + ":" + Util::toString(port) + ", retrying with " +
+				string(addr.type == AF_INET6 ? "INADDR6_ANY" : "INADDR_ANY"), false);
+		setAnyAddr(sockAddr);
+		if (::bind(sock, (sockaddr*) &sockAddr, sockAddrSize) == SOCKET_ERROR)
 		{
 			if (doLog)
-				LogManager::message("Socket " + Util::toHexString(sock) +
+				LogManager::message(sockName +
 					": Error #" + Util::toString(getLastError()) +
-					" binding to 0.0.0.0:" + Util::toString(port), false);
+					" binding to :" + Util::toString(port), false);
 			throw SocketException(getLastError());
 		}
 	}
 
 	uint16_t localPort = getLocalPort();
 	if (doLog)
-		LogManager::message("Socket " + Util::toHexString(sock) +
-			": Bound to " + address + ":" + Util::toString(localPort) +
+		LogManager::message(sockName +
+			": Bound to " + Util::printIpAddress(addr, true) + ":" + Util::toString(localPort) +
 			(type == TYPE_TCP ? " (TCP)" : " (UDP)"), false);
 	return localPort;
 }
@@ -208,224 +300,76 @@ void Socket::listen()
 void Socket::connect(const string& host, uint16_t port)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	IpAddress ip;
+	bool isNumeric;
+	if (!resolveHost(ip, 0, host, &isNumeric))
+	{
+		if (doLog)
+			LogManager::message("Error resolving " + host, false);
+		throw SocketException(STRING(RESOLVE_FAILED));
+	}
+
 	if (sock == INVALID_SOCKET)
-		create(TYPE_TCP);
+		create(ip.type, TYPE_TCP);
+
+	if (doLog && !isNumeric)
+	{
+		string sockName;
+		printSockName(sockName);
+		LogManager::message(sockName + ": Host " + host + " resolved to " + Util::printIpAddress(ip, true), false);
+	}
+
+	connect(ip, port, isNumeric ? Util::emptyString : host);
+}
+
+void Socket::connect(const IpAddress& ip, uint16_t port, const string& host)
+{
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+
+	if (sock == INVALID_SOCKET)
+		create(ip.type, TYPE_TCP);
 
 	if (doLog)
-		LogManager::message("Socket " + Util::toHexString(sock) + ": Connecting to " +
-			host + ":" + Util::toString(port) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
-	
-	bool isNumeric;
-	Ip4Address address = resolveHost(host, &isNumeric);
-	if (doLog && !isNumeric)
-		if (!address)
-			LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
-		else
-			LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + Util::printIpAddress(address), false);
-
-	if (!address)
-		throw SocketException(STRING(RESOLVE_FAILED));
-
-	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(address))
 	{
-		string error = STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(address));
-		if (!isNumeric) error += " (" + host + ")";
+		string sockName;
+		printSockName(sockName);
+		LogManager::message(sockName + ": Connecting to " +
+			(host.empty() ? Util::printIpAddress(ip, true) : host) +
+			":" + Util::toString(port) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
+	}
+
+	if (BOOLSETTING(ENABLE_IPGUARD) && ip.type == AF_INET && ipGuard.isBlocked(ip.data.v4))
+	{
+		string error = STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(ip.data.v4));
+		if (!host.empty()) error += " (" + host + ")";
 		throw SocketException(error);
 	}
 
-	sockaddr_in addr;
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_port = htons(port);
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(address);
+	sockaddr_u sockAddr;
+	socklen_t sockAddrSize;
+	toSockAddr(sockAddr, sockAddrSize, ip, port);
 
 	int result;
 #ifdef _WIN32
-	result = ::connect(sock, (struct sockaddr*) &addr, sizeof(addr));
+	result = ::connect(sock, (struct sockaddr*) &sockAddr, sockAddrSize);
 #else
 	do
 	{
-		result = ::connect(sock, (struct sockaddr*) &addr, sizeof(addr));
+		result = ::connect(sock, (struct sockaddr*) &sockAddr, sockAddrSize);
 	}
 	while (result < 0 && getLastError() == EINTR);
 #endif
 	check(result, true);
 	
-	setIp4(address);
+	setIp(ip);
 	setPort(port);
 }
 
-static uint64_t timeLeft(uint64_t start, uint64_t timeout)
-{
-	if (timeout == 0)
-	{
-		return 0;
-	}
-	uint64_t now = GET_TICK();
-	if (start + timeout < now)
-		throw SocketException(STRING(CONNECTION_TIMEOUT));
-	return start + timeout - now;
-}
-
-void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, unsigned timeout)
-{
-	if (proxy.host.empty() || proxy.port == 0)
-		throw SocketException(STRING(SOCKS_FAILED));
-	
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
-	bool resolved = false;
-	Ip4Address address = 0;
-	if (BOOLSETTING(ENABLE_IPGUARD))
-	{
-		bool isNumeric;
-		address = resolveHost(host, &isNumeric);
-		if (doLog && !isNumeric)
-			if (!address)
-				LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
-			else
-				LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + Util::printIpAddress(address), false);
-		if (!address)
-			throw SocketException(STRING(RESOLVE_FAILED));
-		if (ipGuard.isBlocked(address))
-		{
-			string error = STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(address));
-			if (!isNumeric) error += " (" + host + ")";
-			throw SocketException(error);
-		}
-		resolved = true;
-	}
-
-	uint64_t start = GET_TICK();
-	connect(proxy.host, proxy.port);
-	if (wait(timeLeft(start, timeout), WAIT_CONNECT) != WAIT_CONNECT)
-		throw SocketException(STRING(SOCKS_FAILED));
-	
-	socksAuth(proxy, timeLeft(start, timeout));
-	
-	ByteVector connStr;
-	connStr.push_back(5); // SOCKSv5
-	connStr.push_back(1); // Connect
-	connStr.push_back(0); // Reserved
-	
-	if (proxy.resolveNames && !resolved && host.length() <= 255)
-	{
-		connStr.push_back(3); // Address type: domain name
-		connStr.push_back((uint8_t) host.length());
-		connStr.insert(connStr.end(), host.begin(), host.end());
-	}
-	else
-	{
-		if (!resolved)
-		{
-			bool isNumeric;
-			address = resolveHost(host, &isNumeric);
-			if (doLog && !isNumeric)
-				if (!address)
-					LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
-				else
-					LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + Util::printIpAddress(address), false);
-			if (!address)
-				throw SocketException(STRING(RESOLVE_FAILED));
-		}
-		connStr.push_back(1); // Address type: IPv4
-		connStr.push_back((uint8_t) (address >> 24));
-		connStr.push_back((uint8_t) (address >> 16));
-		connStr.push_back((uint8_t) (address >> 8));
-		connStr.push_back((uint8_t) address);
-	}
-	
-	connStr.push_back(port >> 8);
-	connStr.push_back(port & 0xFF);
-	
-	writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout));
-	
-	// We assume we'll get a ipv4 address back...therefore, 10 bytes...
-	/// @todo add support for ipv6
-	if (readAll(&connStr[0], 10, timeLeft(start, timeout)) != 10)
-		throw SocketException(STRING(SOCKS_FAILED));
-	
-	if (connStr[0] != 5 || connStr[1] != 0)
-		throw SocketException(STRING(SOCKS_FAILED));
-	
-	setIp4(address);
-	setPort(port);
-}
-
-void Socket::socksAuth(const ProxyConfig& proxy, unsigned timeout)
-{
-	vector<uint8_t> connStr;
-	
-	uint64_t start = GET_TICK();
-	
-	if (proxy.user.empty() && proxy.password.empty())
-	{
-		// No username and pw, easier...=)
-		connStr.push_back(5); // SOCKSv5
-		connStr.push_back(1); // 1 method
-		connStr.push_back(0); // Method 0: No auth...
-		
-		writeAll(&connStr[0], 3, timeLeft(start, timeout));
-		
-		if (readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2)
-		{
-			throw SocketException(STRING(SOCKS_FAILED));
-		}
-		
-		if (connStr[1] != 0)
-		{
-			throw SocketException(STRING(SOCKS_NEEDS_AUTH));
-		}
-	}
-	else
-	{
-		// We try the username and password auth type (no, we don't support gssapi)
-		
-		connStr.push_back(5); // SOCKSv5
-		connStr.push_back(1); // 1 method
-		connStr.push_back(2); // Method 2: Name/Password...
-		writeAll(&connStr[0], 3, timeLeft(start, timeout));
-		
-		if (readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2)
-		{
-			throw SocketException(STRING(SOCKS_FAILED));
-		}
-		if (connStr[1] != 2)
-		{
-			throw SocketException(STRING(SOCKS_AUTH_UNSUPPORTED));
-		}
-		
-		connStr.clear();
-		// Now we send the username / pw...
-		connStr.push_back(1);
-		connStr.push_back((uint8_t) proxy.user.length());
-		connStr.insert(connStr.end(), proxy.user.begin(), proxy.user.end());
-		connStr.push_back((uint8_t) proxy.password.length());
-		connStr.insert(connStr.end(), proxy.password.begin(), proxy.password.end());
-		
-		writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout));
-		
-		if (readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2 || connStr[1] != 0)
-		{
-			throw SocketException(STRING(SOCKS_AUTH_FAILED));
-		}
-	}
-}
-
-int Socket::getSocketOptInt(int option) const
+int Socket::getSocketOptInt(int level, int option) const
 {
 	int val = 0;
 	socklen_t len = sizeof(val);
-	check(::getsockopt(sock, SOL_SOCKET, option, (char*)&val, &len)); // [2] https://www.box.net/shared/3ad49dfa7f44028a7467
-	/* [-] IRainman fix:
-	Please read http://msdn.microsoft.com/en-us/library/windows/desktop/ms740532(v=vs.85).aspx
-	and explain on what basis to audit  has been added to the magic check l_val <= 0,
-	and the error in the log is sent to another condition l_val == 0.
-	Just ask them to explain on what basis we do not trust the system,
-	and why the system could restore us to waste in these places, but the api does not contain the test function of range.
-	Once again I ask, please - if that's where you fell, you have to find real bugs in our code and not to mask them is not clear what the basis of checks.
-	  [-] if (l_val <= 0)
-	  [-]    throw SocketException("[Error] getSocketOptInt() <= 0");
-	  [~] IRainman fix */
+	check(::getsockopt(sock, level, option, (char*)&val, &len));
 	return val;
 }
 
@@ -437,7 +381,7 @@ void Socket::setInBufSize()
 	{
 		const int sockInBuf = SETTING(SOCKET_IN_BUFFER);
 		if (sockInBuf > 0)
-			setSocketOpt(SO_RCVBUF, sockInBuf);
+			setSocketOpt(SOL_SOCKET, SO_RCVBUF, sockInBuf);
 	}
 }
 
@@ -449,15 +393,14 @@ void Socket::setOutBufSize()
 	{
 		const int sockOutBuf = SETTING(SOCKET_OUT_BUFFER);
 		if (sockOutBuf > 0)
-			setSocketOpt(SO_SNDBUF, sockOutBuf);
+			setSocketOpt(SOL_SOCKET, SO_SNDBUF, sockOutBuf);
 	}
 }
 
-void Socket::setSocketOpt(int option, int val)
+void Socket::setSocketOpt(int level, int option, int val)
 {
-	dcassert(val > 0);
 	int len = sizeof(val);
-	check(::setsockopt(sock, SOL_SOCKET, option, (char*)&val, len));
+	check(::setsockopt(sock, level, option, (char*)&val, len));
 }
 
 int Socket::read(void* aBuffer, int aBufLen)
@@ -504,34 +447,6 @@ int Socket::read(void* aBuffer, int aBufLen)
 	return len;
 }
 
-int Socket::readPacket(void* aBuffer, int aBufLen, sockaddr_in &remote)
-{
-	dcassert(type == TYPE_UDP);
-	dcassert(sock != INVALID_SOCKET);
-	
-	sockaddr_in remote_addr = { 0 };
-	socklen_t addr_length = sizeof(remote_addr);
-	
-	int len = 0;
-#ifdef _WIN32
-	lastWaitResult &= ~WAIT_READ;
-	len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) &remote_addr, &addr_length);
-#else
-	do
-	{
-		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) &remote_addr, &addr_length);
-	}
-	while (len < 0 && getLastError() == EINTR);
-#endif
-	
-	check(len, true);
-	if (len > 0)
-		g_stats.udp.downloaded += len;
-	remote = remote_addr;
-	
-	return len;
-}
-
 int Socket::readAll(void* aBuffer, int aBufLen, unsigned timeout)
 {
 	uint8_t* buf = (uint8_t*)aBuffer;
@@ -563,7 +478,7 @@ int Socket::writeAll(const void* aBuffer, int aLen, unsigned timeout)
 	int pos = 0;
 	// No use sending more than this at a time...
 #if 0
-	const int sendSize = getSocketOptInt(SO_SNDBUF);
+	const int sendSize = getSocketOptInt(SOL_SOCKET, SO_SNDBUF);
 #else
 	const int sendSize = MAX_SOCKET_BUFFER_SIZE;
 #endif
@@ -586,17 +501,17 @@ int Socket::writeAll(const void* aBuffer, int aLen, unsigned timeout)
 	return pos;
 }
 
-int Socket::write(const void* aBuffer, int aLen)
+int Socket::write(const void* buffer, int len)
 {
 	dcassert(sock != INVALID_SOCKET);
 	
 	int sent = 0;
 #ifdef _WIN32
-	sent = ::send(sock, (const char*)aBuffer, aLen, 0);
+	sent = ::send(sock, (const char*)buffer, len, 0);
 #else
 	do
 	{
-		sent = ::send(sock, (const char*)aBuffer, aLen, 0);
+		sent = ::send(sock, (const char*)buffer, len, 0);
 	}
 	while (sent < 0 && getLastError() == EINTR);
 #endif
@@ -616,7 +531,8 @@ int Socket::write(const void* aBuffer, int aLen)
 	return sent;
 }
 
-int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int len, bool useProxy)
+#if 0
+int Socket::writeTo(const IpAddress& addr, uint16_t port, const void* buffer, int len, bool useProxy)
 {
 	if (len <= 0)
 	{
@@ -624,16 +540,16 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 		return 0;
 	}
 	
+	if (!addr.type || port == 0)
+		throw SocketException(EADDRNOTAVAIL);
+
 	const uint8_t* buf = static_cast<const uint8_t*>(buffer);
 	if (sock == INVALID_SOCKET)
 	{
-		create(TYPE_UDP);
+		create(addr.type, TYPE_UDP);
 		setSocketOpt(SO_SNDTIMEO, 250);
 	}
 	dcassert(type == TYPE_UDP);
-	
-	if (host.empty() || port == 0)
-		throw SocketException(EADDRNOTAVAIL);
 
 	sockaddr_in sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));
@@ -718,6 +634,26 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 	else
 		g_stats.tcp.uploaded += sent;
 	return sent;
+}
+#endif
+
+int Socket::sendPacket(const void* buffer, int bufLen, const IpAddress& ip, uint16_t port) noexcept
+{
+	dcassert(type == TYPE_UDP);
+	sockaddr_u sockAddr;
+	socklen_t sockLen;
+	toSockAddr(sockAddr, sockLen, ip, port);
+	return sendto(sock, static_cast<const char*>(buffer), bufLen, 0, (const sockaddr*) &sockAddr, sockLen);
+}
+
+int Socket::receivePacket(void* buffer, int bufLen, IpAddress& ip, uint16_t& port) noexcept
+{
+	dcassert(type == TYPE_UDP);
+	sockaddr_u sockAddr;	
+	socklen_t sockLen = sizeof(sockAddr);
+	int res = recvfrom(sock, static_cast<char*>(buffer), bufLen, 0, (sockaddr*) &sockAddr, &sockLen);
+	if (res > 0) fromSockAddr(ip, port, sockAddr);
+	return res;
 }
 
 /**
@@ -902,64 +838,173 @@ bool Socket::waitAccepted(unsigned /*millis*/)
 	return true;
 }
 
-Ip4Address Socket::resolveHost(const string& host, bool* isNumeric) noexcept
+int Socket::resolveHost(Ip4Address* v4, Ip6Address* v6, int af, const string& host, bool* isNumeric) noexcept
 {
-	Ip4Address result;
-	if (Util::parseIpAddress(result, host))
+	if (v4) *v4 = 0;
+	if (v6) memset(v6, 0, sizeof(*v6));
+	if (host.find(':') != string::npos)
 	{
-		if (isNumeric) *isNumeric = true;
-		return result;
-	}
-	if (isNumeric) *isNumeric = false;
-	const hostent* he = gethostbyname(host.c_str());
-	if (!(he && he->h_addr)) return 0;
-	return ntohl(((in_addr*) he->h_addr)->s_addr);
-}
-
-bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const
-{
-	port = 0;
-	ip.clear();
-	if (sock == INVALID_SOCKET)
-	{
-		dcassert(sock != INVALID_SOCKET);
-		return false;
-	}
-	sockaddr_in sock_addr;
-	socklen_t len = sizeof(sock_addr);
-	if (getsockname(sock, (struct sockaddr*)&sock_addr, &len) == 0)
-	{
-		if (getIp)
+		if (!(af == 0 || af == AF_INET6)) return 0;
+		Ip6Address ip6;
+		if (Util::parseIpAddress(ip6, host))
 		{
-			ip = inet_ntoa(sock_addr.sin_addr);
-			dcassert(!ip.empty());
+			if (v6) *v6 = ip6;
+			if (isNumeric) *isNumeric = true;
+			return RESOLVE_RESULT_V6;
 		}
-		else
-		{
-			port = ntohs(sock_addr.sin_port);
-			dcassert(port);
-		}
-		return true;
 	}
 	else
 	{
-		const string error = "Socket::getLocalIPPort() error = " + Util::toString(getLastError());
-		LogManager::message(error, false);
+		Ip4Address ip4;
+		if (Util::parseIpAddress(ip4, host))
+		{
+			if (!(af == 0 || af == AF_INET)) return false;
+			if (v4) *v4 = ip4;
+			if (isNumeric) *isNumeric = true;
+			return RESOLVE_RESULT_V4;
+		}
 	}
-	dcassert(0);
+	addrinfo hints;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = af;
+	if (!af) hints.ai_flags = AI_V4MAPPED | AI_ALL;
+	addrinfo* result = nullptr;
+	if (getaddrinfo(host.c_str(), nullptr, &hints, &result))
+		return 0;
+	const addrinfo* ai = result;
+	const sockaddr* v4Result = nullptr;
+	const sockaddr* v6Result = nullptr;
+	int outFlags = 0;
+	while (ai)
+	{
+		if (ai->ai_family == AF_INET)
+		{
+			if ((af == 0 || af == AF_INET) && !v4Result)
+				v4Result = ai->ai_addr;
+		}
+		else if (ai->ai_family == AF_INET6)
+		{
+			const sockaddr_in6* sa = (const sockaddr_in6*) ai->ai_addr;
+			if (IN6_IS_ADDR_V4MAPPED(&sa->sin6_addr))
+			{
+				if ((af == 0 || af == AF_INET) && !v4Result)
+					v4Result = ai->ai_addr;
+			}
+			else
+			{
+				if ((af == 0 || af == AF_INET6) && !v6Result)
+					v6Result = ai->ai_addr;
+			}
+		}
+		ai = ai->ai_next;
+	}
+	if (v4Result)
+	{
+		outFlags |= RESOLVE_RESULT_V4;
+		if (v4)
+		{
+			if (v4Result->sa_family == AF_INET6)
+			{
+				const sockaddr_in6* sa = (const sockaddr_in6*) v4Result;
+				uint32_t val = *(const uint32_t *) (((const uint8_t *) &sa->sin6_addr) + 12);
+				*v4 = ntohl(val);
+			}
+			else
+			{
+				const sockaddr_in* sa = (const sockaddr_in*) v4Result;
+				*v4 = ntohl(sa->sin_addr.s_addr);
+			}
+		}
+	}
+	if (v6Result)
+	{
+		outFlags |= RESOLVE_RESULT_V6;
+		if (v6)
+		{
+			const sockaddr_in6* sa = (const sockaddr_in6*) v4Result;
+			memcpy(v6, &sa->sin6_addr, sizeof(*v6));
+		}
+	}
+	freeaddrinfo(result);
+	return outFlags;
+}
+
+bool Socket::resolveHost(IpAddress& addr, int af, const string& host, bool* isNumeric) noexcept
+{
+	Ip4Address v4;
+	Ip6Address v6;
+	int result = resolveHost(&v4, &v6, af, host, isNumeric);
+	if (!result) return false;
+	// Prefer IPv4
+	if (result & RESOLVE_RESULT_V4)
+	{
+		addr.type = AF_INET;
+		addr.data.v4 = v4;
+		return true;
+	}
+	if (result & RESOLVE_RESULT_V6)
+	{
+		addr.type = AF_INET6;
+		addr.data.v6 = v6;
+		return true;
+	}
 	return false;
 }
 
 uint16_t Socket::getLocalPort() const
 {
-	uint16_t port;
-	string unused;
-	getLocalIPPort(port, unused, false);
-	return port;
+	if (sock == INVALID_SOCKET)
+	{
+		dcassert(sock != INVALID_SOCKET);
+		return 0;
+	}
+	sockaddr_u sockAddr;
+	socklen_t len = sizeof(sockAddr);
+	if (getsockname(sock, (struct sockaddr*) &sockAddr, &len) == 0)
+	{
+		switch (((const sockaddr*) &sockAddr)->sa_family)
+		{
+			case AF_INET:
+				return ntohs(((const sockaddr_in*) &sockAddr)->sin_port);
+
+			case AF_INET6:
+				return ntohs(((const sockaddr_in6*) &sockAddr)->sin6_port);
+		}
+	}
+	return 0;
+}
+
+IpAddress Socket::getLocalIp() const
+{
+	IpAddress ip{0};
+	if (sock == INVALID_SOCKET)
+	{
+		dcassert(sock != INVALID_SOCKET);
+		return ip;
+	}
+	sockaddr_u sockAddr;
+	socklen_t len = sizeof(sockAddr);
+	if (getsockname(sock, (struct sockaddr*) &sockAddr, &len) == 0)
+	{
+		switch (((const sockaddr*) &sockAddr)->sa_family)
+		{
+			case AF_INET:
+				ip.type = AF_INET;
+				ip.data.v4 = ntohl(((const sockaddr_in*) &sockAddr)->sin_addr.s_addr);
+				break;
+
+			case AF_INET6:
+				ip.type = AF_INET6;
+				memcpy(&ip.data.v6, &((const sockaddr_in6*) &sockAddr)->sin6_addr, sizeof(ip.data.v6));
+				break;
+		}
+	}
+	return ip;
 }
 
 void Socket::socksUpdated(const ProxyConfig* proxy)
 {
+#if 0 // FIXME
 	g_udpServer.clear();
 	g_udpPort = 0;
 	
@@ -1005,6 +1050,7 @@ void Socket::socksUpdated(const ProxyConfig* proxy)
 			dcdebug("Socket: Failed to register with socks server\n");
 		}
 	}
+#endif
 }
 
 void Socket::shutdown() noexcept
@@ -1032,16 +1078,30 @@ void Socket::disconnect() noexcept
 	close();
 }
 
-string Socket::getRemoteHost(const string& ip)
+string Socket::getRemoteHost(const IpAddress& ip)
 {
-	dcassert(!ip.empty());
-	if (ip.empty())
-		return Util::emptyString;
+	uint32_t ip4;
+	const char* paddr;
+	int addrSize;
+	switch (ip.type)
+	{
+		case AF_INET:
+			ip4 = htonl(ip.data.v4);
+			paddr = reinterpret_cast<const char*>(&ip4);
+			addrSize = sizeof(ip4);
+			break;
 
-	const unsigned long addr = inet_addr(ip.c_str());
-	hostent *h = gethostbyaddr(reinterpret_cast<const char *>(&addr), 4, AF_INET);
-	if (h) return h->h_name;
-	return Util::emptyString;
+		case AF_INET6:
+			paddr = reinterpret_cast<const char*>(&ip.data.v6);
+			addrSize = sizeof(ip.data.v6);
+			break;
+
+		default:
+			return Util::emptyString;
+	}
+
+	hostent* h = gethostbyaddr(paddr, addrSize, ip.type);
+	return h ? h->h_name : Util::emptyString;
 }
 
 bool Socket::getProxyConfig(Socket::ProxyConfig& proxy)
@@ -1072,4 +1132,25 @@ void Socket::signalControlEvent()
 {
 	if (!controlEvent.empty())
 		controlEvent.notify();
+}
+
+void Socket::setBlocking(bool block) noexcept
+{
+#ifdef _WIN32
+	u_long b = block ? 0 : 1;
+	ioctlsocket(sock, FIONBIO, &b);
+#else
+	int newFlags, flags = fcntl(sock, F_GETFL, 0);
+	if (block)
+		newFlags &= ~O_NONBLOCK;
+	else
+		newFlags |= O_NONBLOCK;
+	if (newFlags != flags)
+		fcntl(sock, F_SETFL, newFlags);
+#endif
+}
+
+void Socket::printSockName(string& s) const
+{
+	s = "Socket " + Util::toHexString(sock);
 }

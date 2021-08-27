@@ -96,7 +96,7 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		case COLUMN_IP:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_IP")
-			return compare(a->getIdentity().getIp(), b->getIdentity().getIp());
+			return compare(a->getIdentity().getConnectIP(), b->getIdentity().getConnectIP());
 		}
 		case COLUMN_GEO_LOCATION:
 		{
@@ -208,7 +208,7 @@ tstring UserInfo::getText(int col) const
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		case COLUMN_IP:
 		{
-			return Text::toT(getIdentity().getIpAsString());
+			return Util::printIpAddressT(getIdentity().getConnectIP());
 		}
 		case COLUMN_GEO_LOCATION:
 		{
@@ -325,9 +325,9 @@ void UserInfo::loadP2PGuard()
 
 void UserInfo::loadLocation()
 {
-	Ip4Address ip = getIp();
-	if (ip)
-		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+	IpAddress ip = getIp();
+	if (ip.type == AF_INET && Util::isValidIp4(ip.data.v4))
+		Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 	else
 	{
 		ipInfo.clearCountry();

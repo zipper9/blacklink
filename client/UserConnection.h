@@ -167,7 +167,7 @@ class UserConnection :
 				socket->setMode(BufferedSocket::MODE_LINE);
 		}
 		
-		void connect(const string& address, uint16_t port, uint16_t localPort, const BufferedSocket::NatRoles natRole);
+		void connect(const IpAddress& address, uint16_t port, uint16_t localPort, const BufferedSocket::NatRoles natRole);
 		void addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port);
 		
 		void updated()
@@ -227,10 +227,10 @@ class UserConnection :
 			return socket ? socket->getRemoteIpPort() : Util::emptyString;
 		}
 		
-		Ip4Address getRemoteIp() const
+		IpAddress getRemoteIp() const
 		{
 			dcassert(socket); 
-			return socket ? socket->getIp4() : 0;
+			return socket ? socket->getIp() : IpAddress{0};
 		}
 
 		DownloadPtr& getDownload()

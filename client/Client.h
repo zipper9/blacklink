@@ -45,7 +45,6 @@ class ClientBase
 		ClientBase& operator= (const ClientBase&) = delete;
 		
 	public:
-		bool isActive() const;
 		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
 		virtual const string& getHubUrl() const = 0;
 		virtual string getHubName() const = 0;
@@ -74,6 +73,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 
 	public:
+		bool isActive() const;
 		virtual void connect();
 		virtual void disconnect(bool graceless);
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
@@ -145,7 +145,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return address;
 		}
-		Ip4Address getIp() const
+		const IpAddress& getIp() const
 		{
 			return ip;
 		}
@@ -157,7 +157,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return "[Hub: " + getHubUrl() + ", " + getIpPort() + "]";
 		}
-		string getLocalIp() const;
+		void getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const;
 		
 		static int getTotalCounts()
 		{
@@ -294,6 +294,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		GETSET(string, name, Name)
 		GETSET(string, favIp, FavIp);
+		GETSET(int, favMode, FavMode);
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		
@@ -452,7 +453,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		const string hubURL;
 		const string address;
 		const uint16_t port;
-		Ip4Address ip;
+		IpAddress ip;
 		uint64_t lastActivity;
 		
 		string keyprint;

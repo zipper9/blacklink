@@ -75,11 +75,11 @@ void SearchResultCore::toRES(AdcCommand& cmd, unsigned freeSlots) const
 
 SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
                            int64_t size, const string& file, const string& hubURL,
-						   Ip4Address ip4, const TTHValue& tth, uint32_t token) :
+						   const IpAddress& ip, const TTHValue& tth, uint32_t token) :
 	SearchResultCore(type, size, file, tth),
 	hubURL(hubURL),
 	user(user),
-	ip(ip4),
+	ip(ip),
 	flags(0),
 	token(token),
 	freeSlots(freeSlots),
@@ -92,8 +92,8 @@ void SearchResult::loadLocation()
 	static const int flags = IPInfo::FLAG_LOCATION | IPInfo::FLAG_COUNTRY;
 	if ((ipInfo.known & flags) != flags)
 	{
-		if (ip)
-			Util::getIpInfo(ip, ipInfo, flags);
+		if (ip.type == AF_INET)
+			Util::getIpInfo(ip.data.v4, ipInfo, flags);
 	}
 }
 
@@ -101,8 +101,8 @@ void SearchResult::loadP2PGuard()
 {
 	if (!(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
 	{
-		if (ip)
-			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
+		if (ip.type == AF_INET)
+			Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_P2P_GUARD);
 	}
 }
 

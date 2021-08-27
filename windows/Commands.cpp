@@ -907,9 +907,9 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 				string nick = id.getNick();
 				result += nick.empty() ? "<empty>" : nick;
 				result += ' ';
-				result += id.getIpAsString();
+				result += Util::printIpAddress(id.getIP4());
 				result += ':';
-				result += Util::toString(id.getUdpPort());
+				result += Util::toString(id.getUdp4Port());
 				uint64_t expires = node->getExpires();
 				if (expires)
 				{

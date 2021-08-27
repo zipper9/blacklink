@@ -333,9 +333,9 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			}
 				
 #ifdef IRAINMAN_ENABLE_WHOIS
-			if (!ii->transferIp.empty())
+			if (ii->transferIp.type)
 			{
-				g_sSelectedIP = ii->transferIp;  // set tstring for 'openlink function'
+				g_sSelectedIP = Util::printIpAddressT(ii->transferIp);  // set tstring for 'openlink function'
 				WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, true);
 			}
 #endif
@@ -742,8 +742,10 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			else if (colIndex == COLUMN_LOCATION)
 			{
 				IPInfo& ipInfo = ii->ipInfo;
-				if (!(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)) && !ii->transferIp.empty())
-					Util::getIpInfo(Text::fromT(ii->transferIp), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				if (ii->transferIp.type == AF_INET && !(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)))
+				{
+					Util::getIpInfo(ii->transferIp.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				}
 				if (!ipInfo.country.empty() || !ipInfo.location.empty())
 				{
 					CustomDrawHelpers::drawLocation(customDrawState, cd, ipInfo);
@@ -845,7 +847,7 @@ int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, u
 		case COLUMN_SLOTS:
 			return compare(Util::toInt(a->getText(col)), Util::toInt(b->getText(col)));
 		case COLUMN_IP:
-			return compare(Util::getNumericIp4(a->transferIp), Util::getNumericIp4(b->transferIp));
+			return compare(a->transferIp, b->transferIp);
 		default:
 			return Util::defaultSort(a->getText(col), b->getText(col));
 	}
@@ -1262,11 +1264,15 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	if (ui.updateMask & UpdateInfo::MASK_IP)
 	{
 		dcassert(!ui.m_ip.empty());
-		if (transferIp.empty()) // [+] IRainman fix: if IP is set already, not try to set twice. IP can not change during a single connection.
+		if (!transferIp.type)
 		{
-			transferIp = ui.m_ip;
-			if (!transferIp.empty() && !(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
-				Util::getIpInfo(Util::getNumericIp4(transferIp), ipInfo, IPInfo::FLAG_P2P_GUARD);
+			IpAddress ip;
+			if (Util::parseIpAddress(ip, Text::fromT(ui.m_ip)))
+			{
+				transferIp = ip;
+				if (transferIp.type == AF_INET && !(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
+					Util::getIpInfo(transferIp.data.v4, ipInfo, IPInfo::FLAG_P2P_GUARD);
+			}
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			ratioText.clear();
 			ui.hintedUser.user->loadIPStat();
@@ -1478,10 +1484,11 @@ void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
 	::PostMessage(*MainFrame::getMainFrame(), WMU_LISTENER_INIT, 0, 0);
 }
 
-void TransferView::on(ConnectionManagerListener::ListenerFailed, const char* type, int errorCode) noexcept
+void TransferView::on(ConnectionManagerListener::ListenerFailed, const char* type, int af, int errorCode) noexcept
 {
 	MainFrame::ListenerError* error = new MainFrame::ListenerError;
 	error->type = type;
+	error->af = af;
 	error->errorCode = errorCode;
 	::PostMessage(*MainFrame::getMainFrame(), WMU_LISTENER_INIT, 1, reinterpret_cast<LPARAM>(error));
 }
@@ -1543,7 +1550,7 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 		case COLUMN_PATH:
 			return Util::getFilePath(target);
 		case COLUMN_IP:
-			return transferIp;
+			return Util::printIpAddressT(transferIp);
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 		case COLUMN_RATIO:
 			return ratioText;
@@ -1821,12 +1828,11 @@ void TransferView::onTransferComplete(const Transfer* t, const bool download, co
 
 void TransferView::ItemInfo::disconnectAndBlock()
 {
-	uint32_t ip = Util::getNumericIp4(transferIp);
-	if (ip)
+	if (transferIp.type == AF_INET)
 	{
 		auto databaseManager = DatabaseManager::getInstance();
-		databaseManager->clearCachedP2PGuardData(ip);
-		vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), ip, ip) };
+		databaseManager->clearCachedP2PGuardData(transferIp.data.v4);
+		vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), transferIp.data.v4, transferIp.data.v4) };
 		databaseManager->saveP2PGuardData(data, DatabaseManager::PG_DATA_MANUAL, false);
 	}
 	disconnect();
@@ -2211,6 +2217,7 @@ void TransferView::ItemInfo::init()
 	hits = -1;
 	running = 0;
 	type = Transfer::TYPE_FILE;
+	transferIp.type = 0;
 	updateNicks();
 }
 

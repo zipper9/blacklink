@@ -21,51 +21,52 @@
 
 #include "Singleton.h"
 #include "MappingManager.h"
+#include <atomic>
 
 class ConnectivityManager : public Singleton<ConnectivityManager>
 {
 	public:
-		enum
-		{
-			TYPE_V4 = 4,
-			TYPE_V6 = 6
-		};
-
-		bool setupConnections(bool forcePortTest = false);
-		bool isSetupInProgress() const noexcept;
+		void setupConnections(bool forcePortTest = false);
+		bool isSetupInProgress() const noexcept { return getRunningFlags() != 0; }
 		void processPortTestResult();
-		void setReflectedIP(const string& ip) noexcept;
-		string getReflectedIP() const noexcept;
-		void setLocalIP(const string& ip) noexcept;
-		string getLocalIP() const noexcept;
-		const MappingManager& getMapperV4() const { return mapperV4; }
-		string getPortmapInfo(bool showPublicIp) const;
-		
+		void setReflectedIP(int af, const string& ip) noexcept;
+		string getReflectedIP(int af) const noexcept;
+		void setLocalIP(int af, const string& ip) noexcept;
+		string getLocalIP(int af) const noexcept;
+		const MappingManager& getMapper(int af) const;
+		string getInformation() const;
+		static bool isIP6Supported() { return ipv6Supported; }
+		static void checkIP6();
+		static bool hasIP6() { return ipv6Enabled; }
+
 	private:
 		friend class Singleton<ConnectivityManager>;
 		friend class MappingManager;
 		
 		ConnectivityManager();
 		virtual ~ConnectivityManager();
+
+		void mappingFinished(const string& mapper, int af);
+		void log(const string& msg, Severity sev, int af);
 		
-		void mappingFinished(const string& mapper, bool v6);
-		void log(const string& msg, Severity sev, int type);
-		
-		string getInformation() const;
-		void detectConnection();
-		void startSocket();
-		void listen();
-		void disconnect();
-		void setPassiveMode();
+		void detectConnection(int af);
+		void listenTCP(int af);
+		void listenUDP(int af);
+		void setPassiveMode(int af);
 		void testPorts();
-		
-		string reflectedIP;
-		string localIP;
-		MappingManager mapperV4;
+		bool setup(int af);
+		void disconnect();
+		unsigned getRunningFlags() const noexcept;
+
+		string reflectedIP[2];
+		string localIP[2];
+		MappingManager mappers[2];
 		mutable FastCriticalSection cs;
-		bool running;
-		bool autoDetect;
+		unsigned running;
 		bool forcePortTest;
+		bool autoDetect[2];
+		static std::atomic_bool ipv6Supported;
+		static std::atomic_bool ipv6Enabled;
 };
 
 #endif // !defined(CONNECTIVITY_MANAGER_H)

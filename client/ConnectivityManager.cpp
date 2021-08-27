@@ -30,6 +30,16 @@
 #include "NetworkUtil.h"
 #include "dht/DHT.h"
 
+std::atomic_bool ConnectivityManager::ipv6Supported = false;
+std::atomic_bool ConnectivityManager::ipv6Enabled = false;
+
+enum
+{
+	RUNNING_IPV4  = 1,
+	RUNNING_IPV6  = 2,
+	RUNNING_OTHER = 4
+};
+
 class ListenerException : public Exception
 {
 	public:
@@ -38,40 +48,53 @@ class ListenerException : public Exception
 		int errorCode;
 };
 
-ConnectivityManager::ConnectivityManager() : mapperV4(false), running(false), autoDetect(false), forcePortTest(false) {}
+ConnectivityManager::ConnectivityManager() : running(0), autoDetect{false, false}, forcePortTest(false)
+{
+	mappers[0].init(AF_INET);
+	mappers[1].init(AF_INET6);
+	checkIP6();
+}
 
 ConnectivityManager::~ConnectivityManager()
 {
-	mapperV4.close();
+	mappers[0].close();
+	mappers[1].close();
 }
 
-void ConnectivityManager::startSocket()
+void ConnectivityManager::detectConnection(int af)
 {
-	disconnect();
-	listen();
-}
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, af == AF_INET6);
 
-void ConnectivityManager::detectConnection()
-{
 	// restore connectivity settings to their default value.
-	SettingsManager::unset(SettingsManager::BIND_ADDRESS);
-	
-	disconnect();
-	
-	log(STRING(CONN_DETECT_START), SEV_INFO, TYPE_V4);
-	SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
-	listen();
+	SettingsManager::unset(ips.bindAddress);
 
-	const string ip = getLocalIP();
-	if (Util::isPrivateIp(ip))
+	log(STRING(CONN_DETECT_START), SEV_INFO, af);
+	SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
+	listenTCP(af);
+
+	const string ipStr = getLocalIP(af);
+	IpAddress ip;
+	Util::parseIpAddress(ip, ipStr);
+	bool isPrivate = false;
+	switch (ip.type)
 	{
-		SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_UPNP);
-		log(STRING(CONN_DETECT_LOCAL), SEV_INFO, TYPE_V4);
+		case AF_INET:
+			isPrivate = Util::isPrivateIp(ip.data.v4);
+			break;
+		case AF_INET6:
+			isPrivate = Util::isPrivateIp(ip.data.v6);
+			break;
+	}
+	if (isPrivate)
+	{
+		SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_UPNP);
+		log(STRING(CONN_DETECT_LOCAL), SEV_INFO, af);
 	}
 	else
 	{
-		SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_DIRECT);
-		log(STRING_F(CONN_DETECT_PUBLIC, ip), SEV_INFO, TYPE_V4);
+		SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_DIRECT);
+		log(STRING_F(CONN_DETECT_PUBLIC, ipStr), SEV_INFO, af);
 	}
 }
 
@@ -96,145 +119,203 @@ void ConnectivityManager::testPorts()
 	g_portTest.runTest(mask);
 }
 
-bool ConnectivityManager::setupConnections(bool forcePortTest)
+void ConnectivityManager::setupConnections(bool forcePortTest)
 {
-	bool autoDetectFlag = BOOLSETTING(AUTO_DETECT_CONNECTION);
 	cs.lock();
 	if (running)
 	{
 		cs.unlock();
-		return false;
+		return;
 	}
 	this->forcePortTest = forcePortTest;
-	running = true;
-	autoDetect = autoDetectFlag;
+	running = RUNNING_OTHER;
 	cs.unlock();
 
-	bool mapperRunning = false;
-	const string savedBindAddress = SETTING(BIND_ADDRESS);
+	disconnect();
+	bool hasIP4 = setup(AF_INET);
+	bool hasIP6 = false;
+	if (BOOLSETTING(ENABLE_IP6) && ipv6Supported)
+		hasIP6 = setup(AF_INET6);
+	ipv6Enabled = hasIP6;
+	if (!hasIP4 && !hasIP6) return;
+
+	dht::DHT::getInstance()->start();
+	SearchManager::getInstance()->start();
+	ConnectionManager::getInstance()->fireListenerStarted();
+	if (!(getRunningFlags() & (RUNNING_IPV4 | RUNNING_IPV6)))
+	{
+		testPorts();
+		if (!g_portTest.isRunning())
+		{
+			cs.lock();
+			running = 0;
+			cs.unlock();
+			log(getInformation(), SEV_INFO, 0);
+		}
+	}
+}
+
+bool ConnectivityManager::setup(int af)
+{
+	int index = af == AF_INET6 ? 1 : 0;
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, af == AF_INET6);
+	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+
+	cs.lock();
+	autoDetect[index] = autoDetectFlag;
+	cs.unlock();
+
+	const string savedBindAddress = SettingsManager::get(ips.bindAddress);
 	try
 	{
 		if (autoDetectFlag)
-			detectConnection();
+			detectConnection(af);
 		else
-			startSocket();
-		if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
-			mapperRunning = mapperV4.open();
+			listenTCP(af);
+		listenUDP(af);
+		if (SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_UPNP && mappers[index].open())
+		{
+			cs.lock();
+			running |= af == AF_INET6 ? RUNNING_IPV6 : RUNNING_IPV4;
+			cs.unlock();
+		}
 	}
 	catch (const ListenerException& e)
 	{
 		if (autoDetectFlag)
 		{
 			SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-			SET_SETTING(BIND_ADDRESS, savedBindAddress);
-			log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, TYPE_V4);
+			SettingsManager::set(ips.bindAddress, savedBindAddress);
+			SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
+			log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, af);
 		}
-		cs.lock();
-		running = false;
-		cs.unlock();
-		ConnectionManager::getInstance()->fireListenerFailed(e.type, e.errorCode);
+		ConnectionManager::getInstance()->fireListenerFailed(e.type, af, e.errorCode);
 		return false;
 	}
-	ConnectionManager::getInstance()->fireListenerStarted();
-	if (mapperRunning) return true;
-	testPorts();
-	if (!g_portTest.isRunning())
-	{
-		cs.lock();
-		running = false;
-		cs.unlock();
-		log(getInformation(), SEV_INFO, TYPE_V4);
-	}
 	return true;
+}
+
+static string getModeString(int af)
+{
+	int ic = SettingsManager::get(af == AF_INET6 ? SettingsManager::INCOMING_CONNECTIONS6 : SettingsManager::INCOMING_CONNECTIONS);
+	ResourceManager::Strings str;
+	switch (ic)
+	{
+		case SettingsManager::INCOMING_DIRECT:
+			str = ResourceManager::CONNECTIVITY_MODE_ACTIVE;
+			break;
+		case SettingsManager::INCOMING_FIREWALL_UPNP:
+			str = ResourceManager::CONNECTIVITY_MODE_AUTO_FORWARDING;
+			break;
+		case SettingsManager::INCOMING_FIREWALL_NAT:
+			str = ResourceManager::CONNECTIVITY_MODE_MANUAL_FORWARDING;
+			break;
+		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
+			str = ResourceManager::CONNECTIVITY_MODE_PASSIVE;
+			break;
+		default:
+			return Util::emptyString;
+	}
+
+	int v = af == AF_INET6 ? 6 : 4;
+	string mode = STRING_I(str);
+	return STRING_F(CONNECTIVITY_MODE, v % mode);
 }
 
 string ConnectivityManager::getInformation() const
 {
 	if (isSetupInProgress())
-		return "Connectivity settings are being configured; try again later";
+		return STRING(CONNECTIVITY_RUNNING);
 	
-	string mode;
-	switch (SETTING(INCOMING_CONNECTIONS))
+	string s = STRING(CONNECTIVITY_TITLE);
+	s += "\n\t";
+	string mode = getModeString(AF_INET);
+	s += mode;
+	s += '\n';
+	string externalIP = getReflectedIP(AF_INET);
+	if (!externalIP.empty())
 	{
-		case SettingsManager::INCOMING_DIRECT:
-			mode = "Active mode (direct)";
-			break;
-		case SettingsManager::INCOMING_FIREWALL_UPNP:
-			mode = "Active mode (automatic port forwarding)";
-			break;
-		case SettingsManager::INCOMING_FIREWALL_NAT:
-			mode = "Active mode (manual port forwarding)";
-			break;
-		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
-			mode = "Passive mode";
-			break;
+		s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 4 % externalIP);
+		s += '\n';
 	}
-	
-	auto field = [](const string& s) -> const string&
+	const string& bindV4 = SETTING(BIND_ADDRESS);
+	if (!bindV4.empty())
 	{
-		static const string undefined("undefined");
-		return s.empty() ? undefined : s;
-	};
-	
-	string externalIP = getReflectedIP();
-	return str(dcpp_fmt(
-	               "Connectivity information:\n"
-				   "\tMode: %1%\n"
-	               "\tExternal IP (v4): %2%\n"
-	               "\tBound interface (v4): %3%\n"
-	               "\tTransfer port: %4%\n"
-	               "\tEncrypted transfer port: %5%\n"
-	               "\tSearch port: %6%\n"
-#ifdef FLYLINKDC_USE_TORRENT
-	               "\tTorrent port: %7%\n"
-	               "\tTorrent SSL port: %8%\n"
-#endif
-	           ) %
-	           field(mode) %
-			   field(externalIP) %
-	           field(SETTING(BIND_ADDRESS)) %
-	           field(Util::toString(ConnectionManager::getInstance()->getPort())) %
-	           field(Util::toString(ConnectionManager::getInstance()->getSecurePort())) %
-	           field(SearchManager::getSearchPort())
-#ifdef FLYLINKDC_USE_TORRENT
-	           % field(Util::toString(DownloadManager::getInstance()->listen_torrent_port()))
-	           % field(Util::toString(DownloadManager::getInstance()->ssl_listen_torrent_port()))
-#endif
-	          );
+		s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 4 % bindV4);
+		s += '\n';
+	}
+	if (ipv6Enabled)
+	{
+		mode = getModeString(AF_INET6);
+		s += "\t" + mode;
+		s += '\n';
+		externalIP = getReflectedIP(AF_INET6);
+		if (!externalIP.empty())
+		{
+			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 6 % externalIP);
+			s += '\n';
+		}
+		const string& bindV6 = SETTING(BIND_ADDRESS6);
+		if (!bindV6.empty())
+		{
+			s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 6 % bindV6);
+			s += '\n';
+		}
+	}
+	int port = ConnectionManager::getInstance()->getPort();
+	s += "\t" + STRING_F(CONNECTIVITY_TRANSFER_PORT, port);
+	s += '\n';
+	port = ConnectionManager::getInstance()->getSecurePort();
+	if (port)
+	{
+		s += "\t" + STRING_F(CONNECTIVITY_ENCRYPTED_TRANSFER_PORT, port);
+		s += '\n';
+	}
+	port = SearchManager::getUdpPort();
+	s += "\t" + STRING_F(CONNECTIVITY_SEARCH_PORT, port);
+	s += '\n';
+	return s;
 }
 
-void ConnectivityManager::mappingFinished(const string& mapper, bool /*v6*/)
+void ConnectivityManager::mappingFinished(const string& mapper, int af)
 {
-	bool portTestRunning = false;
 	if (!ClientManager::isBeforeShutdown())
 	{
 		cs.lock();
-		bool autoDetectFlag = autoDetect;
+		bool autoDetectFlag = autoDetect[af == AF_INET6 ? 1 : 0];
+		running &= ~(af == AF_INET6 ? RUNNING_IPV6 : RUNNING_IPV4);
+		unsigned runningFlags = running;
 		cs.unlock();
-		// FIXME: we should perform a port test event when UPnP fails
 		if (autoDetectFlag && mapper.empty())
-			setPassiveMode();
+			setPassiveMode(af);
 		if (!mapper.empty())
+			SettingsManager::set(af == AF_INET6 ? SettingsManager::MAPPER6 : SettingsManager::MAPPER, mapper);
+		if (!(runningFlags & (RUNNING_IPV4 | RUNNING_IPV6)))
 		{
-			SET_SETTING(MAPPER, mapper);
 			testPorts();
-			portTestRunning = g_portTest.isRunning();
+			if (!g_portTest.isRunning())
+			{
+				cs.lock();
+				running = 0;
+				cs.unlock();
+				log(getInformation(), SEV_INFO, 0);
+			}
 		}
 	}
-	if (!portTestRunning)
+	else
 	{
 		cs.lock();
-		running = false;
+		running = 0;
 		cs.unlock();
-		log(getInformation(), SEV_INFO, TYPE_V4);
 	}
 }
 
-void ConnectivityManager::setPassiveMode()
+void ConnectivityManager::setPassiveMode(int af)
 {
-	SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
+	SettingsManager::set(af == AF_INET6 ? SettingsManager::INCOMING_CONNECTIONS6 : SettingsManager::INCOMING_CONNECTIONS,	SettingsManager::INCOMING_FIREWALL_PASSIVE);
 	SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-	log(STRING(CONN_DETECT_NO_ACTIVE_MODE), SEV_WARNING, TYPE_V4);
+	log(STRING(CONN_DETECT_NO_ACTIVE_MODE), SEV_WARNING, af);
 }
 
 void ConnectivityManager::processPortTestResult()
@@ -246,9 +327,9 @@ void ConnectivityManager::processPortTestResult()
 		cs.unlock();
 		return;
 	}
-	bool autoDetectFlag = autoDetect;
-	autoDetect = false;
-	running = false;
+	bool autoDetectFlag = autoDetect[0];
+	autoDetect[0] = false;
+	unsigned runningFlags = running;
 	cs.unlock();
 	if (autoDetectFlag)
 	{
@@ -256,18 +337,28 @@ void ConnectivityManager::processPortTestResult()
 		if (g_portTest.getState(PortTest::PORT_TCP, unused, nullptr) != PortTest::STATE_SUCCESS ||
 		    g_portTest.getState(PortTest::PORT_UDP, unused, nullptr) != PortTest::STATE_SUCCESS)
 		{
-			setPassiveMode();
+			setPassiveMode(AF_INET);
 		}
 	}
-	log(getInformation(), SEV_INFO, TYPE_V4);
+	if (!(runningFlags & (RUNNING_IPV4 | RUNNING_IPV6)))
+	{
+		cs.lock();
+		running = 0;
+		cs.unlock();
+		log(getInformation(), SEV_INFO, 0);
+	}
 }
 
-void ConnectivityManager::listen()
+void ConnectivityManager::listenTCP(int af)
 {
-	bool fixedPort = !BOOLSETTING(AUTO_DETECT_CONNECTION) && SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_NAT;
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, af == AF_INET6);
+	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+
+	bool fixedPort = af == AF_INET6 || (!autoDetectFlag && SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_NAT);
 	auto cm = ConnectionManager::getInstance();
-	cm->disconnect();
-	
+	cm->stopServer(af);
+
 	bool useTLS = CryptoManager::TLSOk();
 	int type = (useTLS && fixedPort && SETTING(TLS_PORT) == SETTING(TCP_PORT)) ?
 		ConnectionManager::SERVER_TYPE_AUTO_DETECT : ConnectionManager::SERVER_TYPE_TCP;
@@ -275,12 +366,13 @@ void ConnectivityManager::listen()
 	{
 		try
 		{
-			cm->startListen(type);
-			cm->updateLocalIp();
+			cm->startListen(af, type);
+			cm->updateLocalIp(af);
 		}
 		catch (const SocketException& e)
 		{
-			LogManager::message("Could not start TCP listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+			LogManager::message("Could not start TCPv" + Util::toString(af == AF_INET6 ? 6 : 4) +
+				" listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
 			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 				throw ListenerException("TCP", e.getErrorCode());
 			SET_SETTING(TCP_PORT, 0);
@@ -296,11 +388,12 @@ void ConnectivityManager::listen()
 		{
 			try
 			{
-				cm->startListen(ConnectionManager::SERVER_TYPE_SSL);
+				cm->startListen(af, ConnectionManager::SERVER_TYPE_SSL);
 			}
 			catch (const SocketException& e)
 			{
-				LogManager::message("Could not start TLS listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+				LogManager::message("Could not start TLSv" + Util::toString(af == AF_INET6 ? 6 : 4) +
+					" listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
 				if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 					throw ListenerException("TLS", e.getErrorCode());
 				SET_SETTING(TLS_PORT, 0);
@@ -309,16 +402,25 @@ void ConnectivityManager::listen()
 			break;
 		}
 	}
+}
+
+void ConnectivityManager::listenUDP(int af)
+{
+	SettingsManager::IPSettings ips;
+	SettingsManager::getIPSettings(ips, af == AF_INET6);
+	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+
+	bool fixedPort = af == AF_INET6 || (!autoDetectFlag && SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_NAT);
 	for (int i = 0; i < 2; ++i)
 	{
 		try
 		{
-			SearchManager::getInstance()->start();
-			dht::DHT::getInstance()->start();
+			SearchManager::getInstance()->listenUDP(af);
 		}
 		catch (const SocketException& e)
 		{
-			LogManager::message("Could not start UDP listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+			LogManager::message("Could not start UDPv" + Util::toString(af == AF_INET6 ? 6 : 4) +
+				" listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
 			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 				throw ListenerException("UDP", e.getErrorCode());
 			SET_SETTING(UDP_PORT, 0);
@@ -330,118 +432,83 @@ void ConnectivityManager::listen()
 
 void ConnectivityManager::disconnect()
 {
-	mapperV4.close();
+	mappers[0].close();
+	mappers[1].close();
 	SearchManager::getInstance()->shutdown();
-	ConnectionManager::getInstance()->disconnect();
+	auto cm = ConnectionManager::getInstance();
+	cm->stopServer(AF_INET);
+	cm->stopServer(AF_INET6);
 }
 
-void ConnectivityManager::log(const string& message, Severity sev, int type)
+void ConnectivityManager::log(const string& message, Severity sev, int af)
 {
 	// TODO: show connectivity information to the user
-	LogManager::message(message, false);
-}
-
-bool ConnectivityManager::isSetupInProgress() const noexcept
-{
-	cs.lock();
-	bool result = running;
-	cs.unlock();
-	return result;
-}
-
-static string getTestResult(const string& name, int state, int port)
-{
-	string result = "," + name + ":" + Util::toString(port);
-	if (state == PortTest::STATE_SUCCESS)
-		result += "(+)";
-	else if (state == PortTest::STATE_FAILURE)
-		result += "(-)";
+	if (af)
+	{
+		string ipv = af == AF_INET6 ? "IPv6: " : "IPv4: ";
+		LogManager::message(ipv + message, false);
+	}
 	else
-		result.clear();
+		LogManager::message(message, false);
+}
+
+unsigned ConnectivityManager::getRunningFlags() const noexcept
+{
+	cs.lock();
+	unsigned result = running;
+	cs.unlock();
 	return result;
 }
 
-string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
-{
-	string description;
-	description = "Mode:";
-	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
-	{
-		description = "+Auto";
-	}
-	switch (SETTING(INCOMING_CONNECTIONS))
-	{
-		case SettingsManager::INCOMING_DIRECT:
-			description += "+Direct";
-			break;
-		case SettingsManager::INCOMING_FIREWALL_UPNP:
-			description += "+UPnP";
-			break;
-		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
-			description += "+Passive";
-			break;
-		case SettingsManager::INCOMING_FIREWALL_NAT:
-			description += "+NAT+Manual";
-			break;
-		default:
-			dcassert(0);
-	}
-	/*
-	if (isRouter())
-	{
-		description += "+Router";
-	}
-	*/
-	cs.lock();
-	if (!reflectedIP.empty())
-	{
-		if (Util::isPrivateIp(reflectedIP))
-		{
-			description += "+Private IP";
-		}
-		else
-		{
-			description += "+Public IP";
-		}
-		if (showPublicIp)
-		{
-			description += ": " + reflectedIP;
-		}
-	}
-	cs.unlock();
-	int port;
-	int state = g_portTest.getState(PortTest::PORT_UDP, port, nullptr);
-	description += getTestResult("UDP", state, port);
-	state = g_portTest.getState(PortTest::PORT_TCP, port, nullptr);
-	description += getTestResult("TCP", state, port);
-	if (CryptoManager::TLSOk() && SETTING(TLS_PORT) > 1024)
-	{
-		state = g_portTest.getState(PortTest::PORT_TLS, port, nullptr);
-		description += getTestResult("TLS", state, port);
-	}
-	return description;
-}
-
-void ConnectivityManager::setReflectedIP(const string& ip) noexcept
+void ConnectivityManager::setReflectedIP(int af, const string& ip) noexcept
 {
 	LOCK(cs);
-	reflectedIP = ip;
+	reflectedIP[af == AF_INET6 ? 1 : 0] = ip;
 }
 
-string ConnectivityManager::getReflectedIP() const noexcept
+string ConnectivityManager::getReflectedIP(int af) const noexcept
 {
 	LOCK(cs);
-	return reflectedIP;
+	return reflectedIP[af == AF_INET6 ? 1 : 0];
 }
 
-void ConnectivityManager::setLocalIP(const string& ip) noexcept
+void ConnectivityManager::setLocalIP(int af, const string& ip) noexcept
 {
 	LOCK(cs);
-	localIP = ip;
+	localIP[af == AF_INET6 ? 1 : 0] = ip;
 }
 
-string ConnectivityManager::getLocalIP() const noexcept
+string ConnectivityManager::getLocalIP(int af) const noexcept
 {
 	LOCK(cs);
-	return localIP;
+	return localIP[af == AF_INET6 ? 1 : 0];
+}
+
+const MappingManager& ConnectivityManager::getMapper(int af) const
+{
+	return mappers[af == AF_INET6 ? 1 : 0];
+}
+
+void ConnectivityManager::checkIP6()
+{
+	bool result = false;
+	socket_t sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	if (sock != INVALID_SOCKET)
+	{
+#ifdef _WIN32
+		::closesocket(sock);
+#else
+		::close(sock);
+#endif
+		vector<Util::AdapterInfo> adapters;
+		Util::getNetworkAdapters(AF_INET6, adapters);
+		Ip6Address ip;
+		for (const auto& ai : adapters)
+			if (Util::parseIpAddress(ip, ai.ip) && !Util::isReservedIp(ip) && !Util::isLinkScopedIp(ip))
+			{
+				result = true;
+				break;
+			}
+	}
+	ipv6Supported = result;
 }

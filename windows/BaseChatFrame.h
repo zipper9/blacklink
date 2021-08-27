@@ -128,7 +128,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addSystemMessage(const tstring& line, CHARFORMAT2& cf);
 		
-		static tstring getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
+		static tstring getIpCountry(const IpAddress& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
 		static TCHAR getChatRefferingToNick();
 		
 		void appendChatCtrlItems(OMenu& menu, bool isOp);

@@ -293,8 +293,8 @@ void SpyFrame::processTasks()
 						if (pos != string::npos)
 						{
 							const string ipStr = si->seeker.substr(0, pos);
-							Ip4Address ip;
-							if (Util::parseIpAddress(ip, ipStr) && Util::isValidIp4(ip))
+							IpAddress ip;
+							if (Util::parseIpAddress(ip, ipStr) && Util::isValidIp(ip))
 							{
 								const StringList users = ClientManager::getNicksByIp(ip);
 								if (!users.empty())
@@ -556,10 +556,11 @@ void SpyFrame::ItemInfo::updateNickList()
 			{
 				nickList += Text::toT(seekers[i]);
 				const string ip = seekers[i].substr(0, pos);
-				if (!ip.empty() && Util::isValidIp4(ip))
+				Ip4Address addr;
+				if (!ip.empty() && Util::parseIpAddress(addr, ip))
 				{
 					IPInfo ipInfo;
-					Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY);
+					Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_COUNTRY);
 					if (ipInfo.countryImage > 0)
 					{
 						nickList += _T(" [");

@@ -25,7 +25,7 @@
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "IPInfo.h"
-#include "Ip4Address.h"
+#include "IpAddress.h"
 
 class Client;
 class AdcCommand;
@@ -126,13 +126,13 @@ class SearchResult : public SearchResultCore
 			FLAG_DOWNLOAD_CANCELED = 0x10
 		};
 
-		SearchResult() : flags(0), token(uint32_t (-1)), ip(0)
+		SearchResult() : flags(0), token(uint32_t (-1)), ip{0}
 		{
 		}
 
 		SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
 		             int64_t size, const string& file, const string& hubURL,
-					 Ip4Address ip4, const TTHValue& tth, uint32_t token);
+					 const IpAddress& ip, const TTHValue& tth, uint32_t token);
 		             
 		string getFileName() const;
 		string getFilePath() const;
@@ -152,12 +152,9 @@ class SearchResult : public SearchResultCore
 		
 		string getIPAsString() const
 		{
-			if (ip)
-				return Util::printIpAddress(ip);
-			else
-				return Util::emptyString;
+			return Util::printIpAddress(ip);
 		}
-		Ip4Address getIP() const
+		const IpAddress& getIP() const
 		{
 			return ip;
 		}
@@ -184,7 +181,7 @@ class SearchResult : public SearchResultCore
 		const string hubURL;
 		const uint32_t token;
 		const UserPtr user;
-		const Ip4Address ip;
+		const IpAddress ip;
 		IPInfo ipInfo;
 };
 

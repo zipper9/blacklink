@@ -31,7 +31,8 @@ User::User(const CID& cid, const string& nick) : cid(cid),
 	limit(0),
 	slots(0),
 	uploadCount(0),
-	lastIp(0)
+	lastIp4(0),
+	lastIp6{}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	, ipStat(nullptr)
 #endif
@@ -80,23 +81,14 @@ void User::updateNick(const string& newNick)
 		nick = newNick;
 }
 
-void User::setIP(const string& ipStr)
-{
-	Ip4Address ip;
-	if (Util::parseIpAddress(ip, ipStr) && Util::isValidIp4(ip))
-		setIP(ip);
-	else
-		dcassert(0);
-}
-
-void User::setIP(Ip4Address ip)
+void User::setIP4(Ip4Address ip)
 {
 	if (!Util::isValidIp4(ip))
 		return;
 	LOCK(cs);
-	if (lastIp == ip)
+	if (lastIp4 == ip)
 		return;
-	lastIp = ip;
+	lastIp4 = ip;
 	flags |= LAST_IP_CHANGED;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	userStat.setIP(Util::printIpAddress(ip));
@@ -108,17 +100,51 @@ void User::setIP(Ip4Address ip)
 #endif
 }
 
-Ip4Address User::getIP() const
+void User::setIP6(const Ip6Address& ip)
 {
+	if (!Util::isValidIp6(ip))
+		return;
 	LOCK(cs);
-	return lastIp;
+	if (lastIp6 == ip)
+		return;
+	lastIp6 = ip;
+	flags |= LAST_IP_CHANGED;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	userStat.setIP(Util::printIpAddress(ip));
+	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
+	{
+		dcassert(flags & USER_STAT_LOADED);
+		flags |= SAVE_USER_STAT;
+	}
+#endif
 }
 
-void User::getInfo(string& nick, Ip4Address& ip, int64_t& bytesShared, int& slots) const
+void User::setIP(const IpAddress& ip)
+{
+	if (ip.type == AF_INET)
+		setIP4(ip.data.v4);
+	else if (ip.type == AF_INET6)
+		setIP6(ip.data.v6);
+}
+
+Ip4Address User::getIP4() const
+{
+	LOCK(cs);
+	return lastIp4;
+}
+
+Ip6Address User::getIP6() const
+{
+	LOCK(cs);
+	return lastIp6;
+}
+
+void User::getInfo(string& nick, Ip4Address& ip4, Ip6Address& ip6, int64_t& bytesShared, int& slots) const
 {
 	LOCK(cs);
 	nick = this->nick;
-	ip = lastIp;
+	ip4 = lastIp4;
+	ip6 = lastIp6;
 	bytesShared = this->bytesShared;
 	slots = this->slots;
 }
@@ -154,7 +180,7 @@ void User::getBytesTransfered(uint64_t out[]) const
 		out[0] = out[1] = 0;
 }
 
-void User::addBytesUploaded(Ip4Address ip, uint64_t size)
+void User::addBytesUploaded(const IpAddress& ip, uint64_t size)
 {
 	LOCK(cs);
 	if (flags & IP_STAT_LOADED)
@@ -168,7 +194,7 @@ void User::addBytesUploaded(Ip4Address ip, uint64_t size)
 	}
 }
 
-void User::addBytesDownloaded(Ip4Address ip, uint64_t size)
+void User::addBytesDownloaded(const IpAddress& ip, uint64_t size)
 {
 	LOCK(cs);
 	if (flags & IP_STAT_LOADED)
@@ -214,13 +240,24 @@ void User::loadUserStatFromDB()
 	if (!userStat.lastIp.empty())
 		dbStat.setIP(userStat.lastIp);
 	userStat = std::move(dbStat);
-	if (Util::isValidIp4(lastIp))
+	IpAddress ip;
+	if (Util::parseIpAddress(ip, userStat.lastIp) && Util::isValidIp(ip))
 	{
-		Ip4Address ip;
-		if (Util::parseIpAddress(ip, userStat.lastIp) && Util::isValidIp4(ip))
-		{		
-			lastIp = ip;
-			flags |= LAST_IP_CHANGED;
+		if (ip.type == AF_INET)
+		{
+			if (lastIp4 == 0)
+			{
+				lastIp4 = ip.data.v4;
+				flags |= LAST_IP_CHANGED;
+			}
+		}
+		else
+		{
+			if (Util::isEmpty(lastIp6))
+			{
+				lastIp6 = ip.data.v6;
+				flags |= LAST_IP_CHANGED;
+			}
 		}
 	}
 }

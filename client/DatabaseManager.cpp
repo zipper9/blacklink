@@ -534,7 +534,7 @@ void DatabaseManager::loadCountry(uint32_t ip, IPInfo& result)
 	result.clearCountry();
 	dcassert(ip);
 
-	if (Util::isPrivateIp(ip))
+	if (!Util::isPublicIp(ip))
 	{
 		result.known |= IPInfo::FLAG_COUNTRY;
 		return;

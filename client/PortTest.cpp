@@ -4,6 +4,7 @@
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
+#include "SockDefs.h"
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
@@ -360,7 +361,7 @@ void PortTest::on(Second, uint64_t tick) noexcept
 		if (hasFailed)
 		{
 			auto cm = ConnectivityManager::getInstance();
-			if (!reflectedAddress.empty()) cm->setReflectedIP(reflectedAddress);
+			if (!reflectedAddress.empty()) cm->setReflectedIP(AF_INET, reflectedAddress);
 			cm->processPortTestResult();
 		}
 	}

@@ -456,8 +456,6 @@ namespace Util
 
 	string getLang();
 
-	uint32_t getNumericIp4(const tstring& s);
-
 	void readTextFile(File& file, std::function<bool(const string&)> func);
 
 	static inline bool isTTHBase32(const string& str)

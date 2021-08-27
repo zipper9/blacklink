@@ -25,27 +25,25 @@
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
 
-tstring UserInfoSimple::getTagIP(const string& tag, const string& ip)
+tstring UserInfoSimple::getTagIP(const string& tag, Ip4Address ip4, const Ip6Address& ip6)
 {
-	if (!ip.empty() && ip != "0.0.0.0")
+	string out = tag;
+	if (ip4)
 	{
-#ifdef FLYLINKDC_USE_DNS
-		string dns = Socket::nslookup(ip);
-		if (ip == dns)
-			dns = "no DNS"; // TODO translate
-		if (!dns.empty())
-			dns = " / " + dns;
-		return Text::toT(tag + " IP: " + ip + dns);
-#else
-		return Text::toT(tag + " IP: " + ip);
-#endif
+		if (!out.empty()) out += ' ';
+		out += Util::printIpAddress(ip4);
 	}
-	return Text::toT(tag);
+	if (!Util::isEmpty(ip6))
+	{
+		if (!out.empty()) out += ' ';
+		out += Util::printIpAddress(ip6);
+	}
+	return Text::toT(out);
 }
 
 tstring UserInfoSimple::getTagIP(const ClientManager::UserParams& params)
 {
-	return getTagIP(params.tag, params.ip);
+	return getTagIP(params.tag, params.ip4, params.ip6);
 }
 
 void UserInfoSimple::addSummaryMenu()
@@ -77,11 +75,11 @@ void UserInfoSimple::addSummaryMenu()
 			}
 		}
 		
-		if (!params.ip.empty())
+		if (params.ip4)
 		{
 			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, getTagIP(params).c_str());
 			IPInfo ipInfo;
-			Util::getIpInfo(params.ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
+			Util::getIpInfo(params.ip4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
 			if (!ipInfo.country.empty() || !ipInfo.location.empty())
 			{
 				tstring text = TSTRING(LOCATION_BARE) + _T(": ");

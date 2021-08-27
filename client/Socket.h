@@ -50,7 +50,7 @@ static const int INVALID_SOCKET = -1;
 
 #include "Exception.h"
 #include "BaseUtil.h"
-#include "Ip4Address.h"
+#include "IpAddress.h"
 
 class SocketException : public Exception
 {
@@ -87,13 +87,13 @@ class Socket
 			WAIT_ACCEPT  = 0x08,
 			WAIT_CONTROL = 0x10
 		};
-		
+
 		enum SocketType
 		{
 			TYPE_TCP = 0, // IPPROTO_TCP
 			TYPE_UDP = 1  // IPPROTO_UDP
 		};
-		
+
 		enum Protocol
 		{
 			PROTO_DEFAULT = 0,
@@ -101,14 +101,14 @@ class Socket
 			PROTO_ADC     = 2,
 			PROTO_HTTP    = 3
 		};
-		
+
 		enum SecureTransport
 		{
 			SECURE_TRANSPORT_NONE,
 			SECURE_TRANSPORT_SSL,
 			SECURE_TRANSPORT_DETECT
 		};
-		
+
 		struct ProxyConfig
 		{
 			string host;
@@ -120,8 +120,9 @@ class Socket
 
 		Socket() : sock(INVALID_SOCKET), connected(false),
 			maxSpeed(0), currentBucket(0), bucketUpdateTick(0),
-			type(TYPE_TCP), ip(0), port(0), proto(PROTO_DEFAULT)
+			type(TYPE_TCP), port(0), proto(PROTO_DEFAULT)
 		{
+			ip.type = 0;
 #ifdef _WIN32
 			currentMask = 0;
 			lastWaitResult = WAIT_WRITE;
@@ -167,20 +168,10 @@ class Socket
 			return res;
 		}
 
-		/**
-		 * Connects a socket to an address/ip, closing any other connections made with
-		 * this instance.
-		 * @param aAddr Server address, in dns or xxx.xxx.xxx.xxx format.
-		 * @param aPort Server port.
-		 * @throw SocketException If any connection error occurs.
-		 */
-		virtual void connect(const string& host, uint16_t port);
+		// host is used only for logging (empty for literal IPs)
+		virtual void connect(const IpAddress& ip, uint16_t port, const string& host);
+		void connect(const string& host, uint16_t port);
 
-		/**
-		 * Same as connect(), but through the SOCKS5 server
-		 */
-		void socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, unsigned timeout = 0);
-		
 		/**
 		 * Sends data, will block until all data has been sent or an exception occurs
 		 * @param buffer Buffer with data
@@ -192,12 +183,6 @@ class Socket
 		int write(const string& data)
 		{
 			return write(data.data(), (int) data.length());
-		}
-		virtual int writeTo(const string& host, uint16_t port, const void* buffer, int len, bool proxy = true);
-		int writeTo(const string& host, uint16_t port, const string& data)
-		{
-			dcassert(data.length());
-			return writeTo(host, port, data.data(), (int) data.length());
 		}
 		virtual void shutdown() noexcept;
 		virtual void close() noexcept;
@@ -215,9 +200,6 @@ class Socket
 		 */
 		virtual int read(void* buffer, int bufLen);
 
-		// UDP
-		int readPacket(void* buffer, int bufLen, sockaddr_in& remote);
-
 		/**
 		 * Reads data until bufLen bytes have been read or an error occurs.
 		 * If the socket is closed, or the timeout is reached, the number of bytes read
@@ -225,46 +207,39 @@ class Socket
 		 * On exception, an unspecified amount of bytes might have already been read.
 		 */
 		int readAll(void* buffer, int bufLen, unsigned timeout = 0);
-		
+
+		virtual int sendPacket(const void* buffer, int bufLen, const IpAddress& ip, uint16_t port) noexcept;
+		int sendPacket(const IpAddress& addr, uint16_t port, const string& data)
+		{
+			dcassert(data.length());
+			return sendPacket(data.data(), (int) data.length(), addr, port);
+		}
+		int receivePacket(void* buffer, int bufLen, IpAddress& ip, uint16_t& port) noexcept;
+
 		virtual int wait(int millis, int waitFor);
-		
-		static Ip4Address resolveHost(const string& host, bool* isNumeric = nullptr) noexcept;
-		
-#ifdef _WIN32
-		void setBlocking(bool block) noexcept
-		{
-			u_long b = block ? 0 : 1;
-			ioctlsocket(sock, FIONBIO, &b);
-		}
-#else
-		void setBlocking(bool block) noexcept
-		{
-			int flags = fcntl(sock, F_GETFL, 0);
-			if (block)
-			{
-				fcntl(sock, F_SETFL, flags & (~O_NONBLOCK));
-			}
-			else
-			{
-				fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-			}
-		}
-#endif
-		bool getLocalIPPort(uint16_t& port, string& ip, bool getIp) const;
+
+		static int resolveHost(Ip4Address* v4, Ip6Address* v6, int af, const string& host, bool* isNumeric = nullptr) noexcept;		
+		static const int RESOLVE_RESULT_V4 = 1;
+		static const int RESOLVE_RESULT_V6 = 2;
+
+		static bool resolveHost(IpAddress& addr, int af, const string& host, bool* isNumeric = nullptr) noexcept;
+
+		void setBlocking(bool block) noexcept;
 		uint16_t getLocalPort() const;
+		IpAddress getLocalIp() const;
 		
 		// Low level interface
-		virtual void create(SocketType aType = TYPE_TCP);
+		virtual void create(int af, SocketType type);
 		
 		/** Binds a socket to a certain local port and possibly IP. */
-		virtual uint16_t bind(uint16_t port = 0, const string& address = "0.0.0.0");
+		virtual uint16_t bind(uint16_t port, const IpAddress& addr);
 		virtual void listen();
 		/** Accept a socket.
 		@return remote port */
 		virtual uint16_t accept(const Socket& listeningSocket);
 		
-		int getSocketOptInt(int option) const;
-		void setSocketOpt(int option, int value);
+		int getSocketOptInt(int level, int option) const;
+		void setSocketOpt(int level, int option, int value);
 		void setInBufSize();
 		void setOutBufSize();
 
@@ -291,17 +266,14 @@ class Socket
 		
 		/** When socks settings are updated, this has to be called... */
 		static void socksUpdated(const ProxyConfig* proxy);
-		static string getRemoteHost(const string& aIp);
+		static string getRemoteHost(const IpAddress& ip);
 		
-		void setIp4(Ip4Address ip) { this->ip = ip; }
-		Ip4Address getIp4() const { return ip; }
+		void setIp(const IpAddress& ip) { this->ip = ip; }
+		const IpAddress& getIp() const { return ip; }
 		
 		void setPort(uint16_t port) { this->port = port; }
 		uint16_t getPort() const { return port; }
 
-		socket_t sock;
-		Protocol proto;
-		
 		void setMaxSpeed(int64_t maxSpeed) { this->maxSpeed = maxSpeed; }
 		int64_t getMaxSpeed() const { return maxSpeed; }
 
@@ -325,11 +297,14 @@ class Socket
 		void createControlEvent();
 		void signalControlEvent();
 		void setConnected() { connected = true; }
-		
+		void printSockName(string& s) const;
+
 	protected:
+		socket_t sock;
+		Protocol proto;
 		SocketType type;
 		bool connected;
-		Ip4Address ip;
+		IpAddress ip;
 		uint16_t port;
 		int64_t maxSpeed;
 		int64_t currentBucket;
@@ -366,7 +341,6 @@ class Socket
 		}
 
 	private:
-		void socksAuth(const ProxyConfig& proxy, unsigned timeout);
 		static socket_t checksocket(socket_t ret)
 		{
 			if (ret == INVALID_SOCKET)

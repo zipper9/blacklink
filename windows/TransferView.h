@@ -286,7 +286,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				int64_t actual;
 				int64_t speed;
 				int64_t timeLeft;
-				tstring transferIp;
+				IpAddress transferIp;
 				tstring statusString;
 				tstring errorStatusString;
 				tstring cipher;
@@ -551,7 +551,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(ConnectionManagerListener::UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
 		void on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
 		void on(ConnectionManagerListener::ListenerStarted) noexcept override;
-		void on(ConnectionManagerListener::ListenerFailed, const char* type, int errorCode) noexcept override;
+		void on(ConnectionManagerListener::ListenerFailed, const char* type, int af, int errorCode) noexcept override;
 
 		void on(DownloadManagerListener::RemoveToken, const string& token) noexcept override;
 		void on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept override;

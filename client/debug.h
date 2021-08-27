@@ -16,18 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPP_DCPLUSPLUS_DEBUG_H_
 #define DCPP_DCPLUSPLUS_DEBUG_H_
 
 #ifdef _DEBUG
 
-#include <cassert>
+#include <assert.h>
 #include <stdarg.h>
 
 #ifdef _WIN32
+#include "w.h"
 void DumpDebugMessage(const TCHAR *filename, const char *msg, size_t msgSize, bool appendNL);
 #endif
 
@@ -50,14 +48,17 @@ static inline void debugTrace(const char* format, ...)
 }
 
 #define dcdebug debugTrace
+
 #ifdef _MSC_VER
-
-
 #define dcassert(exp) \
-	{ if (!(exp)) { \
+	{ \
+		if (!(exp)) \
+		{ \
 			dcdebug("Assertion hit in %s(%d): " #exp "\n", __FILE__, __LINE__); \
-			if(1 == _CrtDbgReport(_CRT_ASSERT, __FILE__, __LINE__, NULL, #exp)) \
-				_CrtDbgBreak(); } }
+			if (_CrtDbgReport(_CRT_ASSERT, __FILE__, __LINE__, NULL, #exp) == 1) \
+				_CrtDbgBreak(); \
+		} \
+	} while (0)
 #else
 #define dcassert(exp) assert(exp)
 #endif

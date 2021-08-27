@@ -48,13 +48,14 @@ class MappingManager : private Thread, private TimerManagerListener
 			STATE_RUNNING
 		};
 
-		MappingManager(bool v6);
+		MappingManager();
+		void init(int af);
 		
 		/** add an implementation derived from the base Mapper class, passed as template parameter.
 		the first added mapper will be tried first, unless the "MAPPER" setting is not empty. */
 		template <typename T> void addMapper()
 		{
-			mappers.emplace_back(T::name, [](const string &localIp, bool aV6) { return new T(localIp, aV6); });
+			mappers.emplace_back(T::name, [](const string &localIp, int af) { return new T(localIp, af); });
 		}
 		StringList getMappers() const;
 
@@ -74,11 +75,11 @@ class MappingManager : private Thread, private TimerManagerListener
 			int state = STATE_UNKNOWN;
 		};
 
-		const bool v6;
+		int af;
 		mutable CriticalSection cs;
 		Mapping mappings[MAX_PORTS];
 
-		vector<pair<string, std::function<Mapper *(const string &, bool)>>> mappers;
+		vector<pair<string, std::function<Mapper *(const string &, int)>>> mappers;
 		std::unique_ptr<Mapper> working; // currently working implementation.
 		
 		uint64_t renewal = 0; // when the next renewal should happen, if requested by the mapper.

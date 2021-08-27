@@ -311,7 +311,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('U', '4'):
 			{
-				id.setUdpPort(Util::toInt(i->c_str() + 2));
+				id.setUdp4Port(Util::toInt(i->c_str() + 2));
 				break;
 			}
 			case TAG('I', '6'):
@@ -411,12 +411,15 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	}
 	if (!ip4.empty())
 	{
-		id.setIp(ip4);
+		Ip4Address ip;
+		if (Util::parseIpAddress(ip, ip4) && Util::isValidIp4(ip))
+			id.setIP4(ip);
 	}
 	if (!ip6.empty())
 	{
-		id.setIP6(ip6);
-		id.setUseIP6();
+		Ip6Address ip;
+		if (Util::parseIpAddress(ip, ip6) && Util::isValidIp6(ip))
+			id.setIP6(ip);
 	}
 	
 	if (isMe(ou))
@@ -771,7 +774,7 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 {
 	string command;
-	string ip;
+	IpAddress ip;
 	uint16_t port;
 	{
 		READ_LOCK(*csUsers);
@@ -786,16 +789,14 @@ void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 		{
 			return;
 		}
-		ip = ou->getIdentity().getIpAsString();
-		port = ou->getIdentity().getUdpPort();
+		ip = ou->getIdentity().getConnectIP();
+		port = ou->getIdentity().getUdp4Port();
 		command = cmd.toString(ou->getUser()->getCID());
 	}
-	if (!port) return;
-	Ip4Address address;
-	if (!(Util::parseIpAddress(address, ip) && Util::isValidIp4(address))) return;
-	SearchManager::getInstance()->addToSendQueue(command, address, port);
+	if (!port || !Util::isValidIp(ip)) return;
+	SearchManager::getInstance()->addToSendQueue(command, ip, port);
 	if (CMD_DEBUG_ENABLED())
-		COMMAND_DEBUG("[ADC UDP][" + ip + ':' + Util::toString(port) + "] " + command, DebugTask::CLIENT_OUT, getIpPort());
+		COMMAND_DEBUG("[ADC UDP][" + Util::printIpAddress(ip, true) + ':' + Util::toString(port) + "] " + command, DebugTask::CLIENT_OUT, getIpPort());
 }
 
 void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
@@ -899,7 +900,7 @@ void AdcHub::handle(AdcCommand::RES, const AdcCommand& c) noexcept
 		dcdebug("Invalid user in AdcHub::onRES\n");
 		return;
 	}
-	SearchManager::getInstance()->onRES(c, false, ou->getUser(), 0);
+	SearchManager::getInstance()->onRES(c, false, ou->getUser(), IpAddress{0});
 }
 
 void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
@@ -911,7 +912,7 @@ void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
 		LogManager::psr_message("Invalid user in AdcHub::onPSR = " + c.toString(c.getFrom()));
 		return;
 	}
-	SearchManager::getInstance()->onPSR(c, false, ou->getUser(), 0);
+	SearchManager::getInstance()->onPSR(c, false, ou->getUser(), IpAddress{0});
 }
 
 void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
@@ -1012,7 +1013,7 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	}
 	
 	// Trigger connection attempt sequence locally ...
-	dcdebug("triggering connecting attempt in NAT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), localPort);
+	dcdebug("triggering connecting attempt in NAT: remote port = %s, local port = %d\n", port.c_str(), localPort);
 	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_CLIENT, token, secure);
 	
 	// ... and signal other client to do likewise.
@@ -1059,7 +1060,7 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	}
 	
 	// Trigger connection attempt sequence locally
-	dcdebug("triggering connecting attempt in RNT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), localPort);
+	dcdebug("triggering connecting attempt in RNT: remote port = %s, local port = %d\n", port.c_str(), localPort);
 	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
 }
 
@@ -1512,60 +1513,54 @@ void AdcHub::info(bool/* forceUpdate*/)
 		featureFlags &= ~FEATURE_FLAG_ALLOW_NAT_TRAVERSAL;
 	csState.unlock();
 
-	if (isActive() || optionNatTraversal)
+	bool active = isActive();
+	bool hasIP = false;
+	Ip4Address ip4;
+	Ip6Address ip6;
+	getLocalIp(ip4, ip6);
+
+	uint16_t udpPort = SearchManager::getUdpPort();
+	if (ip4)
 	{
-		if (getMyIdentity().isIPValid())
+		hasIP = true;
+		addInfoParam(c, "I4", Util::printIpAddress(ip4));
+		if (active)
 		{
-			const string& myUserIp = getMyIdentity().getIpAsString();
-			addInfoParam(c, "I4", myUserIp);
-		}
-		else if (!getFavIp().empty())
-		{
-			addInfoParam(c, "I4", getFavIp());
-		}
-		// Fix http://dchublist.ru/forum/viewtopic.php?f=15&t=1224
-		//else if (!SETTING(EXTERNAL_IP).empty())
-		//{
-		//  addInfoParam(c, "I4", Socket::resolve(SETTING(EXTERNAL_IP)));
-		//}
-		else
-		{
-			addInfoParam(c, "I4", "0.0.0.0");
+			su += "," + AdcSupports::TCP4_FEATURE;
+			if (udpPort)
+			{
+				addInfoParam(c, "U4", Util::toString(udpPort));
+				su += "," + AdcSupports::UDP4_FEATURE;
+			}
 		}
 	}
-	
-	if (isActive() && SearchManager::isSearchPortValid())
+	if (!Util::isEmpty(ip6))
 	{
-		addInfoParam(c, "U4", SearchManager::getSearchPort());
-		su += "," + AdcSupports::TCP4_FEATURE;
-		su += "," + AdcSupports::UDP4_FEATURE;
-	}
-	else
-	{
-		if (optionNatTraversal)
+		hasIP = true;
+		addInfoParam(c, "I6", Util::printIpAddress(ip6));
+		if (active)
 		{
-			su += "," + AdcSupports::NAT0_FEATURE;
+			su += "," + AdcSupports::TCP6_FEATURE;
+			if (udpPort)
+			{
+				addInfoParam(c, "U6", Util::toString(udpPort));
+				su += "," + AdcSupports::UDP6_FEATURE;
+			}
 		}
-		else
-		{
-			addInfoParam(c, "I4", "");
-		}
-		addInfoParam(c, "U4", "");
 	}
-	
+	if (!active && hasIP && optionNatTraversal)
+		su += "," + AdcSupports::NAT0_FEATURE;
+
 	addInfoParam(c, "SU", su);
-	
+
 	if (!c.getParameters().empty())
-	{
 		send(c);
-	}
 }
 
 void AdcHub::refreshUserList(bool)
 {
 	OnlineUserList v;
 	{
-		// [!] IRainman fix potential deadlock.
 		READ_LOCK(*csUsers);
 		for (auto i = users.cbegin(); i != users.cend(); ++i)
 		{

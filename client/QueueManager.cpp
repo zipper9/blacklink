@@ -715,12 +715,12 @@ void QueueManager::deleteFileLists()
 
 struct PartsInfoReqParam
 {
-	PartsInfo   parts;
-	string      tth;
-	string      myNick;
-	string      hubIpPort;
-	Ip4Address  ip;
-	uint16_t    udpPort;
+	PartsInfo parts;
+	string    tth;
+	string    myNick;
+	string    hubIpPort;
+	IpAddress ip;
+	uint16_t  udpPort;
 };
 
 void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
@@ -809,7 +809,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		try
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-			SearchManager::toPSR(cmd, true, param->myNick, param->hubIpPort, param->tth, param->parts);
+			SearchManager::toPSR(cmd, true, param->myNick, param->ip.type, param->hubIpPort, param->tth, param->parts);
 			string data = cmd.toString(ClientManager::getMyCID());
 			if (CMD_DEBUG_ENABLED())
 				COMMAND_DEBUG("[Partial-Search]" + data, DebugTask::CLIENT_OUT, Util::printIpAddress(param->ip) + ':' + Util::toString(param->udpPort));

@@ -41,8 +41,8 @@ namespace dht
 	{
 		Source source;
 		source.setCID(node->getUser()->getCID());
-		source.setIp(node->getIdentity().getIpAsString());
-		source.setUdpPort(node->getIdentity().getUdpPort());
+		source.setIp(node->getIdentity().getIP4());
+		source.setUdpPort(node->getIdentity().getUdp4Port());
 		source.setSize(size);
 		source.setExpires(GET_TICK() + (partial ? PFS_REPUBLISH_TIME : REPUBLISH_TIME));
 		source.setPartial(partial);
@@ -134,14 +134,17 @@ namespace dht
 				xml.stepIn();
 				while (xml.findChild("Source"))
 				{
+					const string& ipStr = xml.getChildAttrib("I4");
+					Ip4Address ip;
+					if (!Util::parseIpAddress(ip, ipStr)) continue;
+
 					Source source;
 					source.setCID(CID(xml.getChildAttrib("CID")));
-					source.setIp(xml.getChildAttrib("I4"));
+					source.setIp(ip);
 					source.setUdpPort(static_cast<uint16_t>(xml.getIntChildAttrib("U4")));
 					source.setSize(xml.getInt64ChildAttrib("SI"));
 					source.setExpires(xml.getInt64ChildAttrib("EX"));
 					source.setPartial(false);
-
 					sources.push_back(source);
 				}
 
@@ -213,8 +216,8 @@ namespace dht
 		AdcCommand res(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, "File published", AdcCommand::TYPE_UDP);
 		res.addParam("FC", "PUB");
 		res.addParam("TR", tth);
-		DHT::getInstance()->send(res, node->getIdentity().getIp(),
-			node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
+		DHT::getInstance()->send(res, node->getIdentity().getIP4(),
+			node->getIdentity().getUdp4Port(), node->getUser()->getCID(), node->getUdpKey());
 	}
 
 	/*

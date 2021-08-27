@@ -63,10 +63,7 @@ namespace dht
 			return false;
 
 		// don't allow private IPs
-		if (Util::isPrivateIp(ip))
-			return false;
-
-		return true;
+		return Util::isPublicIp(ip);
 	}
 
 	/*

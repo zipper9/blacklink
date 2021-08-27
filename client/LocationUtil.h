@@ -33,7 +33,6 @@ namespace Util
 	void loadIBlockList();
 
 	void getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached = false);
-	bool getIpInfo(const string& ip, IPInfo& result, int what, bool onlyCached = false);
 	const string& getDescription(const IPInfo& ipInfo);
 }
 

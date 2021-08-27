@@ -24,7 +24,7 @@
 class Mapper_MiniUPnPc : public Mapper
 {
 	public:
-		Mapper_MiniUPnPc(const string& localIp, bool v6);
+		Mapper_MiniUPnPc(const string& localIp, int af);
 
 		static const string name;
 
@@ -34,7 +34,7 @@ class Mapper_MiniUPnPc : public Mapper
 
 		bool addMapping(int port, Protocol protocol, const string& description);
 		bool removeMapping(int port, Protocol protocol);
-		bool supportsProtocol(bool v6) const;
+		bool supportsProtocol(int af) const;
 
 		int renewal() const { return 0; }
 

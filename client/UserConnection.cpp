@@ -101,8 +101,8 @@ void UserConnection::updateLastActivity()
 
 bool UserConnection::isIpBlocked(bool isDownload)
 {
-	Ip4Address addr = getRemoteIp();
-	if (!addr) return false;
+	IpAddress ip = getRemoteIp();
+	if (ip.type != AF_INET) return false;
 
 /*
 	if (ipGuard.isBlocked(addr.to_ulong()))
@@ -115,9 +115,9 @@ bool UserConnection::isIpBlocked(bool isDownload)
 */
 
 #ifdef FLYLINKDC_USE_IPFILTER
-	if (ipTrust.isBlocked(addr))
+	if (ipTrust.isBlocked(ip.data.v4))
 	{
-		LogManager::message(STRING_F(IP_BLOCKED, "IPTrust" % Util::printIpAddress(addr)));
+		LogManager::message(STRING_F(IP_BLOCKED, "IPTrust" % Util::printIpAddress(ip.data.v4)));
 		yourIpIsBlocked();
 		getUser()->setFlag(User::PG_IPTRUST_BLOCK);
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
@@ -126,10 +126,10 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
 	{
 		IPInfo ipInfo;
-		Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
+		Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_P2P_GUARD);
 		if (!ipInfo.p2pGuard.empty())
 		{
-			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % Util::printIpAddress(addr) % ipInfo.p2pGuard));
+			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % Util::printIpAddress(ip.data.v4) % ipInfo.p2pGuard));
 			yourIpIsBlocked();
 			getUser()->setFlag(User::PG_P2PGUARD_BLOCK);
 			QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
@@ -235,12 +235,12 @@ void UserConnection::onDataLine(const string& line) noexcept
 			}
 			
 			int unused;
-			if (g_portTest.processInfo(PortTest::PORT_TCP, PortTest::PORT_TLS, 0, reflectedAddress, param.substr(0, 39)) &&
+			if (g_portTest.processInfo(PortTest::PORT_TCP, PortTest::PORT_TLS, ConnectionManager::getInstance()->getPort(), reflectedAddress, param.substr(0, 39)) &&
 			    g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
 			{
 				Util::parseIpPort(reflectedAddress, ip, port);
 				if (Util::isValidIp4(ip))
-					ConnectivityManager::getInstance()->setReflectedIP(ip);
+					ConnectivityManager::getInstance()->setReflectedIP(AF_INET, ip);
 			}
 			ConnectivityManager::getInstance()->processPortTestResult();
 		}
@@ -339,8 +339,8 @@ void UserConnection::onDataLine(const string& line) noexcept
 		if (!checkState(STATE_KEY, cmd)) return;
 		if (!param.empty())
 		{
-			Ip4Address addr = getRemoteIp();
-			if (addr && ipGuard.isBlocked(addr))
+			IpAddress addr = getRemoteIp();
+			if (addr.type == AF_INET && ipGuard.isBlocked(addr.data.v4))
 			{
 				LogManager::message(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(addr)));
 				yourIpIsBlocked();
@@ -446,7 +446,7 @@ void UserConnection::onUpgradedToSSL() noexcept
 	setFlag(FLAG_SECURE);
 }
 
-void UserConnection::connect(const string& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole)
+void UserConnection::connect(const IpAddress& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole)
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
@@ -454,7 +454,7 @@ void UserConnection::connect(const string& address, uint16_t port, uint16_t loca
 	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
 			Util::toHexString(socket) + ", secure=" + Util::toString((int) secure), false);
-	socket->connect(address, port, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
+	socket->connect(Util::printIpAddress(address), port, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
 	socket->start();
 }
 
@@ -638,7 +638,7 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 	if (len)
 	{
 		getUser()->loadIPStat();
-		getUser()->addBytesDownloaded(getSocket()->getIp4(), len);
+		getUser()->addBytesDownloaded(getSocket()->getIp(), len);
 	}
 #endif
 	DownloadManager::getInstance()->onData(this, data, len);
@@ -651,7 +651,7 @@ void UserConnection::onBytesSent(size_t bytes, size_t actual)
 	if (actual)
 	{
 		getUser()->loadIPStat();
-		getUser()->addBytesUploaded(getSocket()->getIp4(), actual);
+		getUser()->addBytesUploaded(getSocket()->getIp(), actual);
 	}
 #endif
 	dcassert(getState() == UserConnection::STATE_RUNNING);

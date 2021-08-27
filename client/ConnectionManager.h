@@ -182,8 +182,8 @@ class ConnectionManager :
 			expectedAdc.add(token, cid, hubUrl, expires);
 		}
 		
-		void nmdcConnect(const string& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);
-		void nmdcConnect(const string& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure);
+		void nmdcConnect(const IpAddress& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);
+		void nmdcConnect(const IpAddress& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure);
 		void adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure);
 		void adcConnect(const OnlineUser& user, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
 		
@@ -196,23 +196,15 @@ class ConnectionManager :
 		
 		void shutdown();
 
-		void startListen(int type);
-		void updateLocalIp();
-		void disconnect() noexcept;
+		void startListen(int af, int type);
+		void updateLocalIp(int af);
+		void stopServer(int af) noexcept;
 		void fireListenerStarted() noexcept;
-		void fireListenerFailed(const char* type, int errorCode) noexcept;
+		void fireListenerFailed(const char* type, int af, int errorCode) noexcept;
 		
-		uint16_t getPort() const
-		{
-			return server ? server->getServerPort() : 0;
-		}
-		uint16_t getSecurePort() const
-		{
-			if (server && server->getType() == SERVER_TYPE_AUTO_DETECT)
-				return server->getServerPort();
-			return secureServer ? secureServer->getServerPort() : 0;
-		}
-		
+		uint16_t getPort() const { return ports[0]; }
+		uint16_t getSecurePort() const { return ports[1]; }
+
 		string getUserConnectionInfo() const;
 		string getExpectedInfo() const;
 
@@ -228,11 +220,11 @@ class ConnectionManager :
 		StringList getNmdcFeatures() const;
 		StringList getAdcFeatures() const;
 
-	private:		
+	private:
 		class Server : public Thread
 		{
 			public:
-				Server(int type, uint16_t port, const string& ipAddr);
+				Server(int type, const IpAddress& ip, uint16_t port);
 				uint16_t getServerPort() const
 				{
 					dcassert(serverPort);
@@ -240,10 +232,7 @@ class ConnectionManager :
 				}
 				string getServerIP() const
 				{
-					string ip;
-					uint16_t port;
-					sock.getLocalIPPort(port, ip, true);
-					return ip;
+					return Util::printIpAddress(sock.getLocalIp());
 				}
 				~Server()
 				{
@@ -258,8 +247,8 @@ class ConnectionManager :
 
 				Socket sock;
 				uint16_t serverPort;
-				const string bindIp;
 				const int type;
+				IpAddress bindIp;
 		};
 
 		mutable std::unique_ptr<RWLock> csConnections;
@@ -274,6 +263,9 @@ class ConnectionManager :
 		boost::unordered_set<UserConnection*> userConnections;
 		
 	private:
+		static const int SERVER_SECURE = 1;
+		static const int SERVER_V6     = 2;
+
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		UserList checkIdle;
 #endif
@@ -291,8 +283,8 @@ class ConnectionManager :
 		
 		uint64_t m_floodCounter;
 		
-		Server* server;
-		Server* secureServer;
+		Server* servers[4];
+		uint16_t ports[2];
 		
 		bool shuttingDown;
 		

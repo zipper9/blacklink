@@ -78,13 +78,9 @@ class UserInfo : public UserInfoBase
 		{
 			return getIdentity().isOp();
 		}
-		string getIpAsString() const
+		IpAddress getIp() const
 		{
-			return getIdentity().getIpAsString();
-		}
-		Ip4Address getIp() const
-		{
-			return getIdentity().getIp();
+			return getIdentity().getConnectIP();
 		}
 		uint8_t getImageIndex() const;
 		static int getStateImageIndex() { return 0; }

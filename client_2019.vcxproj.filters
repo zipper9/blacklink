@@ -340,6 +340,15 @@
     <ClCompile Include="client\OnlineUser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\Ip6Address.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\IpAddress.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\inet_compat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -910,6 +919,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\BusyCounter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Ip6Address.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\IpAddress.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\SockDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\inet_compat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

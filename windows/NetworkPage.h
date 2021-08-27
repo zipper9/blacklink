@@ -20,54 +20,115 @@
 #define NETWORK_PAGE_H
 
 #include "PropPage.h"
+#include "../client/typedefs.h"
+
+class NetworkPage;
+
+struct NetworkSettings
+{
+	int portTCP;
+	int portTLS;
+	int portUDP;
+	bool enableV6;
+	bool autoDetect[2];
+	int incomingConn[2];
+	string bindAddr[2];
+	string mapper[2];
+
+	void get();
+	bool compare(const NetworkSettings& other) const;
+};
+
+class NetworkIPTab : public CDialogImpl<NetworkIPTab>
+{
+	public:
+		enum { IDD = IDD_IP_TAB };
+
+		NetworkIPTab(bool v6, NetworkPage* parent) : parent(parent), v6(v6) {}
+
+		BEGIN_MSG_MAP(NetworkIPTab)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_HANDLER(IDC_EXTERNAL_IP, EN_KILLFOCUS, onKillFocusExternalIp)
+		COMMAND_ID_HANDLER(IDC_ENABLE, onEnable)
+		COMMAND_ID_HANDLER(IDC_CONNECTION_DETECTION, onChange)
+		COMMAND_ID_HANDLER(IDC_DIRECT, onChange)
+		COMMAND_ID_HANDLER(IDC_FIREWALL_PASSIVE, onChange)
+		COMMAND_ID_HANDLER(IDC_FIREWALL_UPNP, onChange)
+		COMMAND_ID_HANDLER(IDC_FIREWALL_NAT, onChange)
+		COMMAND_ID_HANDLER(IDC_WAN_IP_MANUAL, onChange)
+		COMMAND_ID_HANDLER(IDC_GETIP, onTestPorts)
+		END_MSG_MAP()
+
+		int getConnectionType() const;
+		void updateState();
+		void updatePortNumbers();
+		void updateTLSOption();
+		void copyPortSettings(NetworkIPTab& copyTo) const;
+		void writePortSettings();
+		void writeOtherSettings();
+		void getPortSettingsFromUI(NetworkSettings& settings) const;
+		void getOtherSettingsFromUI(NetworkSettings& settings) const;
+
+	private:
+		void fixControls();
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			fixControls();
+			return 0;
+		}
+		LRESULT onEnable(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onTestPorts(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+		NetworkPage* const parent;
+		const bool v6;
+};
+
+class NetworkFirewallTab : public CDialogImpl<NetworkFirewallTab>
+{
+	public:
+		enum { IDD = IDD_FIREWALL_TAB };
+
+		NetworkFirewallTab() {}
+		void testWinFirewall();
+
+		BEGIN_MSG_MAP(NetworkFirewallTab)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ADD_FIREWALL_EXCEPTION, onAddWinFirewallException)
+		END_MSG_MAP()
+
+	private:
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
+
+		CButton ctrlButton;
+		CStatic ctrlText;
+		CStatic ctrlIcon;
+		tstring appPath;
+};
 
 class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 {
+		friend class NetworkIPTab;
+	
 	public:
-		struct Settings
-		{
-			bool autoDetect;
-			int incomingConn;
-			int portTCP;
-			int portTLS;
-			int portUDP;
-			string bindAddr;
-			string mapper;
-		
-			void get();
-			bool compare(const Settings& other) const;
-		};
-
-		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)), useTLS(false)
+		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)),
+			useTLS(false), applyingSettings(false), tabIP{{false, this}, {true, this}}, prevTab(-1)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP(NetworkPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		
-		COMMAND_HANDLER(IDC_EXTERNAL_IP, EN_KILLFOCUS, OnKillFocusExternalIp)
-		COMMAND_ID_HANDLER(IDC_CONNECTION_DETECTION, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_DIRECT, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_FIREWALL_PASSIVE, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_FIREWALL_UPNP, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_FIREWALL_NAT, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_IPUPDATE, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_NATT, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_WAN_IP_MANUAL, onWANIPManualClickedActive)
-		COMMAND_ID_HANDLER(IDC_GETIP, onTestPorts)
-		COMMAND_ID_HANDLER(IDC_ADD_FIREWALL_EXCEPTION, onAddWinFirewallException)
-		
+		NOTIFY_HANDLER(IDC_TABS, TCN_SELCHANGE, onChangeTab)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onWANIPManualClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		LRESULT onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		LRESULT OnKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
+
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -81,21 +142,25 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 			cancel_check();
 		}
 		void updatePortState();
-		static void setPrevSettings(Settings* settings)
+		void testPorts();
+		static void setPrevSettings(NetworkSettings* settings)
 		{
 			prevSettings = settings;
 		}
 
 	private:
 		bool useTLS;
-		static Settings* prevSettings;
+		bool applyingSettings;
+		static NetworkSettings* prevSettings;
+		CTabCtrl ctrlTabs;
+		NetworkIPTab tabIP[2];
+		NetworkFirewallTab tabFirewall;
+		int prevTab;
 
+		void changeTab();
 		void setIcon(int id, int stateIcon);
-		void testWinFirewall();
-		void fixControls();
 		bool runPortTest();
-		void getFromUI(Settings& settings) const;
-		int getConnectionType() const;
+		void getFromUI(NetworkSettings& settings) const;
 };
 
 #endif // !defined(NETWORK_PAGE_H)

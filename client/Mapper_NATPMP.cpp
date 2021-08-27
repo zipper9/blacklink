@@ -41,13 +41,13 @@ const string Mapper_NATPMP::name = "NAT-PMP";
 
 static const int DEFAULT_LIFETIME = 3600;
 
-Mapper_NATPMP::Mapper_NATPMP(const string &localIp, bool v6) : Mapper(localIp, v6), lifetime(0)
+Mapper_NATPMP::Mapper_NATPMP(const string &localIp, int af) : Mapper(localIp, af), lifetime(0)
 {
 }
 
-bool Mapper_NATPMP::supportsProtocol(bool v6) const
+bool Mapper_NATPMP::supportsProtocol(int af) const
 {
-	return !v6;
+	return af == AF_INET;
 }
 
 static natpmp_t nat;

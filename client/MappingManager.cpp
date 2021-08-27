@@ -38,11 +38,18 @@ static inline Mapper::Protocol getProtocol(int port)
 	return Mapper::PROTOCOL_TCP;
 }
 
-MappingManager::MappingManager(bool v6) : renewal(0), v6(v6)
+MappingManager::MappingManager() : renewal(0), af(0)
 {
 	threadRunning.clear();
+}
+
+void MappingManager::init(int af)
+{
+	dcassert(this->af == 0);
+	dcassert(af == AF_INET || af == AF_INET6);
+	this->af = af;
 #ifdef HAVE_NATPMP_H
-	if (!v6) addMapper<Mapper_NATPMP>();
+	if (af == AF_INET) addMapper<Mapper_NATPMP>();
 #endif
 	addMapper<Mapper_MiniUPnPc>();
 }
@@ -106,7 +113,7 @@ int MappingManager::run()
 {
 	int portTCP = ConnectionManager::getInstance()->getPort();
 	int portTLS = ConnectionManager::getInstance()->getSecurePort();
-	int portUDP = SearchManager::getInstance()->getSearchPortUint();
+	int portUDP = SearchManager::getInstance()->getUdpPort();
 	cs.lock();
 	if (portTLS && portTLS == portTCP)
 	{
@@ -139,7 +146,7 @@ int MappingManager::run()
 	}
 
 	// move the preferred mapper to front
-	const auto &mapperName = SETTING(MAPPER);
+	const auto &mapperName = SettingsManager::get(af == AF_INET6 ? SettingsManager::MAPPER6 : SettingsManager::MAPPER);
 	for (auto i = mappers.begin(); i != mappers.end(); ++i)
 	{
 		if (i->first == mapperName)
@@ -156,11 +163,10 @@ int MappingManager::run()
 
 	for (auto &i : mappers)
 	{
-		//auto setting = v6 ? SettingsManager::BIND_ADDRESS6 : SettingsManager::BIND_ADDRESS;
-		auto setting = SettingsManager::BIND_ADDRESS;
+		auto setting = af == AF_INET6 ? SettingsManager::BIND_ADDRESS6 : SettingsManager::BIND_ADDRESS;
 		unique_ptr<Mapper> pMapper(i.second(SettingsManager::getInstance()->isDefault(setting) ?
 		                           Util::emptyString : SettingsManager::getInstance()->get(setting),
-		                           v6));
+		                           af));
 		Mapper &mapper = *pMapper;
 
 		if (!mapper.init())
@@ -185,7 +191,7 @@ int MappingManager::run()
 		string externalIP = mapper.getExternalIP();
 		if (!externalIP.empty())
 		{
-			ConnectivityManager::getInstance()->setReflectedIP(externalIP);
+			ConnectivityManager::getInstance()->setReflectedIP(af, externalIP);
 		}
 		else
 		{
@@ -193,7 +199,7 @@ int MappingManager::run()
 			log(STRING(MAPPER_IP_FAILED), SEV_WARNING);
 		}
 
-		ConnectivityManager::getInstance()->mappingFinished(mapper.getName(), v6);
+		ConnectivityManager::getInstance()->mappingFinished(mapper.getName(), af);
 
 		renewLater(mapper);
 		break;
@@ -206,7 +212,7 @@ int MappingManager::run()
 			mappings[i].state = STATE_FAILURE;
 		cs.unlock();
 		log(STRING(MAPPER_CREATING_FAILED), SEV_ERROR);
-		ConnectivityManager::getInstance()->mappingFinished(Util::emptyString, v6);
+		ConnectivityManager::getInstance()->mappingFinished(Util::emptyString, af);
 	}
 	
 	threadRunning.clear();
@@ -242,8 +248,7 @@ void MappingManager::close(Mapper &mapper, bool quiet) noexcept
 
 void MappingManager::log(const string &message, Severity sev)
 {
-	ConnectivityManager::getInstance()->log(STRING(PORT_MAPPING) + ": " + message, sev,
-		v6 ? ConnectivityManager::TYPE_V6 : ConnectivityManager::TYPE_V4);
+	ConnectivityManager::getInstance()->log(STRING(PORT_MAPPING) + ": " + message, sev, af);
 }
 
 string MappingManager::deviceString(Mapper &mapper) const

@@ -1172,7 +1172,9 @@ LRESULT MainFrame::onListenerInit(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	if (wParam)
 	{
 		ListenerError* error = reinterpret_cast<ListenerError*>(lParam);
-		MessageBox(CTSTRING_F(LISTENING_SOCKET_ERROR, error->type % error->errorCode),
+		string type = error->type;
+		type += error->af == AF_INET6 ? "v6" : "v4";
+		MessageBox(CTSTRING_F(LISTENING_SOCKET_ERROR, type.c_str() % error->errorCode),
 			getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
 		delete error;
 		ClientManager::stopStartup();
@@ -1541,7 +1543,7 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	{
 		PropertiesDlg dlg(m_hWnd, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
 		
-		NetworkPage::Settings prevNetworkSettings;
+		NetworkSettings prevNetworkSettings;
 		prevNetworkSettings.get();
 		NetworkPage::setPrevSettings(&prevNetworkSettings);
 
@@ -1557,7 +1559,7 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		{
 			SettingsManager::getInstance()->save();
 
-			NetworkPage::Settings currentNetworkSettings;
+			NetworkSettings currentNetworkSettings;
 			currentNetworkSettings.get();
 			if (ConnectionManager::getInstance()->getPort() == 0 || !currentNetworkSettings.compare(prevNetworkSettings))
 				ConnectivityManager::getInstance()->setupConnections();
@@ -2002,7 +2004,9 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				UserManager::getInstance()->removeListener(this);
 				QueueManager::getInstance()->removeListener(this);
 
-				ConnectionManager::getInstance()->disconnect();
+				auto cm = ConnectionManager::getInstance();
+				cm->stopServer(AF_INET);
+				cm->stopServer(AF_INET6);
 					
 				ToolbarManager::getInstance()->getFrom(m_hWndToolBar, "MainToolBar");
 					

@@ -35,13 +35,13 @@ extern "C"
 
 const string Mapper_MiniUPnPc::name = "MiniUPnP";
 
-Mapper_MiniUPnPc::Mapper_MiniUPnPc(const string &localIp, bool v6) : Mapper(localIp, v6)
+Mapper_MiniUPnPc::Mapper_MiniUPnPc(const string &localIp, int af) : Mapper(localIp, af)
 {
 }
 
-bool Mapper_MiniUPnPc::supportsProtocol(bool /*v6*/) const
+bool Mapper_MiniUPnPc::supportsProtocol(int af) const
 {
-	return true;
+	return af == AF_INET || af == AF_INET6;
 }
 
 bool Mapper_MiniUPnPc::init()
@@ -49,9 +49,9 @@ bool Mapper_MiniUPnPc::init()
 	if (!url.empty()) return true;
 
 #if MINIUPNPC_API_VERSION < 14
-	UPNPDev *devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), nullptr, 0, v6, nullptr);
+	UPNPDev *devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), nullptr, 0, af == AF_INET6, nullptr);
 #else
-	UPNPDev *devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), nullptr, 0, v6, 2, nullptr);
+	UPNPDev *devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), nullptr, 0, af == AF_INET6, 2, nullptr);
 #endif
 	if (!devices) return false;
 
@@ -63,7 +63,7 @@ bool Mapper_MiniUPnPc::init()
 	bool ok = ret == 1;
 	if (ok)
 	{
-		if (!Util::isValidIp4(localIp))
+		if (!(af == AF_INET6 ? Util::isValidIp6(localIp) : Util::isValidIp4(localIp)))
 		{
 			// We have no bind address configured in settings
 			// Try to avoid choosing a random adapter for port mapping
@@ -76,18 +76,18 @@ bool Mapper_MiniUPnPc::init()
 			uint16_t portTmp = 0;
 			Util::decodeUrl(controlUrl, protoTmp, routerIp, portTmp, pathTmp, queryTmp, fragmentTmp);
 
-			auto addr = Socket::resolveHost(routerIp/*, v6 ? AF_INET6 : AF_INET*/);
-			if (addr)
+			IpAddress addr;
+			if (Socket::resolveHost(addr, af, routerIp))
 			{
 				routerIp = Util::printIpAddress(addr);
 				vector<Util::AdapterInfo> adapters;
-				Util::getNetworkAdapters(v6, adapters);
+				Util::getNetworkAdapters(af, adapters);
 
 				// Find a local IP that is within the same subnet
 				auto p = std::find_if(adapters.cbegin(), adapters.cend(),
 					[&routerIp, this](const Util::AdapterInfo &ai)
 					{
-						return Util::isSameNetwork(ai.ip, routerIp, ai.prefix, v6);
+						return Util::isSameNetwork(ai.ip, routerIp, ai.prefix, af);
 					});
 				if (p != adapters.end())
 					localIp = p->ip;

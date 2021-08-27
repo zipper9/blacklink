@@ -88,11 +88,11 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 		const bool isFile = !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
 		if (isFile || (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 		{
-			auto ip = d->getUser()->getIP();
+			auto ip = d->getIP();
 			auto item = std::make_shared<FinishedItem>(qi->getTarget(), d->getHintedUser(),
 			                                           qi->getSize(), d->getRunningAverage(),
 			                                           GET_TIME(), qi->getTTH(),
-			                                           ip == 0 ? Util::emptyString : Util::printIpAddress(ip), d->getActual());
+			                                           ip, d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
 				DatabaseManager::getInstance()->addTransfer(e_TransferDownload, item);
@@ -116,11 +116,11 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 	const bool isFile = u->getType() == Transfer::TYPE_FILE;
 	if (isFile || (u->getType() == Transfer::TYPE_FULL_LIST && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 	{
-		auto ip = u->getUser()->getIP();
+		auto ip = u->getIP();
 		auto item = std::make_shared<FinishedItem>(u->getPath(), u->getHintedUser(),
 		                                           u->getFileSize(), u->getRunningAverage(),
 		                                           GET_TIME(), u->getTTH(),
-		                                           ip == 0 ? Util::emptyString : Util::printIpAddress(ip), u->getActual());
+		                                           ip, u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
 			DatabaseManager::getInstance()->addTransfer(e_TransferUpload, item);

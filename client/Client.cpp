@@ -40,7 +40,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	clientSock(nullptr),
 	hubURL(hubURL),
 	address(address),
-	ip(0),
+	ip{0},
 	port(port),
 	separator(separator),
 	secure(secure),
@@ -55,6 +55,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	suppressChatAndPM(false),
 	fakeHubCount(false),
 	fakeShareSize(-1),
+	favMode(0),
 	csUserCommands(RWLock::create())
 {
 	dcassert(hubURL == Text::toLower(hubURL));
@@ -198,6 +199,7 @@ void Client::reloadSettings(bool updateNick)
 		shareGroup = hub->getShareGroup();
 
 		setFavIp(hub->getIP());
+		favMode = hub->getMode();
 		
 		int hubEncoding = hub->getEncoding();
 		if (hubEncoding)
@@ -248,6 +250,7 @@ void Client::reloadSettings(bool updateNick)
 		hideShare = false;
 		shareGroup.init();
 		setFavIp(Util::emptyString);
+		favMode = 0;
 		
 		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000);
 		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000);
@@ -321,17 +324,11 @@ void Client::connectIfNetworkOk()
 	connect();
 }
 
-bool ClientBase::isActive() const
+bool Client::isActive() const
 {
 	extern bool g_DisableTestPort;
 	if (!g_DisableTestPort)
-	{
-		auto fm = FavoriteManager::getInstance();
-		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(getHubUrl());
-		int favHubMode = fhe ? fhe->getMode() : 0;
-		fm->releaseFavoriteHubEntryPtr(fhe);
-		return ClientManager::isActive(favHubMode);
-	}
+		return ClientManager::isActive(ip.type, favMode);
 	return true; // Manual active
 }
 
@@ -355,7 +352,7 @@ void Client::onConnected() noexcept
 	clearUserCommands(UserCommand::CONTEXT_MASK);
 	csState.lock();
 	updateActivityL();
-	ip = clientSock->getIp4();
+	ip = clientSock->getIp();
 	if (clientSock->isSecure() && keyprint.compare(0, 7, "SHA256/", 7) == 0)
 	{
 		const auto kp = clientSock->getKeyprint();
@@ -482,34 +479,65 @@ void Client::fireUserUpdated(const OnlineUserPtr& aUser)
 	}
 }
 
-string Client::getLocalIp() const
+void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 {
-	// [!] IRainman fix:
-	// [!] If possible, always return the hub that IP, which he identified with us when you connect.
-	// [!] This saves the user from a variety of configuration problems.
-	if (getMyIdentity().isIPValid())
-	{
-		const string myUserIp = getMyIdentity().getIpAsString();
-		if (!myUserIp.empty())
-		{
-			return myUserIp; // [!] Best case - the server detected it.
-		}
-	}
-	// Favorite hub Ip
 	if (!getFavIp().empty())
 	{
-		Ip4Address addr = Socket::resolveHost(getFavIp());
-		if (addr) return Util::printIpAddress(addr);
+		IpAddress ip;
+		if (Util::parseIpAddress(ip, getFavIp()))
+		{
+			if (ip.type == AF_INET)
+			{
+				ip4 = ip.data.v4;
+				memset(&ip6, 0, sizeof(ip6));
+				return;
+			}
+			if (ip.type == AF_INET6)
+			{
+				ip6 = ip.data.v6;
+				ip4 = 0;
+				return;
+			}
+		}
 	}
-	string externalIp = BOOLSETTING(WAN_IP_MANUAL) ? SETTING(EXTERNAL_IP) : Util::emptyString;
-	if (!externalIp.empty() && BOOLSETTING(NO_IP_OVERRIDE))
+
+	const Identity& id = getMyIdentity();
+	ip4 = id.getIP4();
+	ip6 = id.getIP6();
+
+	if (ip4 == 0)
 	{
-		if (Util::isValidIp4(externalIp)) return externalIp;
+		string externalIP;
+		if (BOOLSETTING(WAN_IP_MANUAL))
+		{
+			externalIP = SETTING(EXTERNAL_IP);
+			if (!Util::isValidIp4(externalIP)) externalIP.clear();
+		}
+		if (externalIP.empty() || !BOOLSETTING(NO_IP_OVERRIDE))
+		{
+			string ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET);
+			if (!ip.empty()) externalIP = std::move(ip);
+		}
+		if (externalIP.empty()) externalIP = ConnectivityManager::getInstance()->getLocalIP(AF_INET);
+		Util::parseIpAddress(ip4, externalIP);
 	}
-	string ip = ConnectivityManager::getInstance()->getReflectedIP();
-	if (!ip.empty()) return ip;
-	if (!externalIp.empty() && Util::isValidIp4(externalIp)) return externalIp;
-	return ConnectivityManager::getInstance()->getLocalIP();
+
+	if (Util::isEmpty(ip6))
+	{
+		string externalIP;
+		if (BOOLSETTING(WAN_IP_MANUAL6))
+		{
+			externalIP = SETTING(EXTERNAL_IP6);
+			if (!Util::isValidIp6(externalIP)) externalIP.clear();
+		}
+		if (externalIP.empty() || !BOOLSETTING(NO_IP_OVERRIDE6))
+		{
+			string ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET6);
+			if (!ip.empty()) externalIP = std::move(ip);
+		}
+		if (externalIP.empty()) externalIP = ConnectivityManager::getInstance()->getLocalIP(AF_INET6);
+		Util::parseIpAddress(ip6, externalIP);
+	}
 }
 
 unsigned Client::searchInternal(const SearchParamToken& sp)

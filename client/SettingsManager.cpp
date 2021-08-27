@@ -55,8 +55,6 @@ static const int MIN_SPEED_LIMIT = 32;
 
 StringList SettingsManager::g_connectionSpeeds;
 
-boost::logic::tribool SettingsManager::g_upnpTorrentLevel = boost::logic::indeterminate;
-
 string SettingsManager::strSettings[STR_LAST - STR_FIRST];
 int    SettingsManager::intSettings[INT_LAST - INT_FIRST];
 
@@ -89,8 +87,11 @@ static const char* g_settingTags[] =
 	
 	// Network settings
 	"BindAddress",
+	"BindAddress6",
 	"ExternalIp",
+	"ExternalIp6",
 	"Mapper",
+	"Mapper6",
 	"SocksServer", "SocksUser", "SocksPassword",
 	"HttpProxy",
 	
@@ -249,20 +250,25 @@ static const char* g_settingTags[] =
 	"AutoChangeNick",
 	
 	// Network settings (Ints)
+	"EnableIP6",
 	"InPort",
 	"UDPPort",
 	"TLSPort",
 	"UseTLS", 
 	"DHTPort",
 	"IncomingConnections",
+	"IncomingConnections6",
 	"AutoPassiveIncomingConnections",
 	"OutgoingConnections",
 	"AutoDetectIncomingConnection",
+	"AutoDetectIncomingConnection6",
 	"AllowNATTraversal",
 	"AutoUpdateIP",
 	"WANIPManual",
+	"WANIPManual6",
 	"AutoUpdateIPInterval",
 	"NoIPOverride",
+	"NoIPOverride6",
 	"AutoTestPorts",
 	"SocksPort", "SocksResolve",
 	"UseDHT",
@@ -921,6 +927,7 @@ void SettingsManager::setDefaults()
 	setDefault(INCOMING_CONNECTIONS, INCOMING_FIREWALL_UPNP); // [!] IRainman default passive -> incoming firewall upnp
 	setDefault(OUTGOING_CONNECTIONS, OUTGOING_DIRECT);
 	setDefault(AUTO_DETECT_CONNECTION, TRUE);
+	setDefault(AUTO_DETECT_CONNECTION6, TRUE);
 	setDefault(ALLOW_NAT_TRAVERSAL, TRUE);	
 	setDefault(AUTO_TEST_PORTS, TRUE);
 	setDefault(SOCKS_PORT, 1080);
@@ -1455,15 +1462,10 @@ void SettingsManager::load(const string& aFileName)
 		set(WEBSERVER_PORT, port);
 	}
 
-	excludeCount = 0;
-	port = get(UDP_PORT);
-	if (port) excludePorts[excludeCount++] = port;
-
 	if (get(UDP_PORT) == 0)
 	{
-		port = generateRandomPort(excludePorts, excludeCount);
+		port = generateRandomPort(excludePorts, 0);
 		set(UDP_PORT, port);
-		excludePorts[excludeCount++] = port;
 	}
 
 	if (SETTING(PRIVATE_ID).length() != 39 || CID(SETTING(PRIVATE_ID)).isZero())
@@ -2161,6 +2163,30 @@ void SettingsManager::pathFromRelative(string& path, const string& prefix)
 	if (path.empty() || File::isAbsolute(path) || path[0] == PATH_SEPARATOR || prefix.empty()) return;
 	if (prefix.back() != PATH_SEPARATOR) path.insert(0, PATH_SEPARATOR_STR);
 	path.insert(0, prefix);
+}
+
+void SettingsManager::getIPSettings(IPSettings& s, bool v6)
+{
+	if (v6)
+	{
+		s.autoDetect = AUTO_DETECT_CONNECTION6;
+		s.manualIp = WAN_IP_MANUAL6;
+		s.noIpOverride = NO_IP_OVERRIDE6;
+		s.incomingConnections = INCOMING_CONNECTIONS6;
+		s.bindAddress = BIND_ADDRESS6;
+		s.externalIp = EXTERNAL_IP6;
+		s.mapper = MAPPER6;
+	}
+	else
+	{
+		s.autoDetect = AUTO_DETECT_CONNECTION;
+		s.manualIp = WAN_IP_MANUAL;
+		s.noIpOverride = NO_IP_OVERRIDE;
+		s.incomingConnections = INCOMING_CONNECTIONS;
+		s.bindAddress = BIND_ADDRESS;
+		s.externalIp = EXTERNAL_IP;
+		s.mapper = MAPPER;
+	}
 }
 
 void SettingsManager::importDcTheme(const tstring& file)

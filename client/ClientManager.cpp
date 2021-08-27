@@ -156,15 +156,21 @@ size_t ClientManager::getTotalUsers()
 	return users;
 }
 
-void ClientManager::setUserIP(const UserPtr& user, const string& ip)
+void ClientManager::setUserIP(const UserPtr& user, const IpAddress& ip)
 {
-	if (ip.empty())
+	if (ip.type != AF_INET && ip.type != AF_INET6)
+	{
+		dcassert(0);
 		return;
+	}
 
 	WRITE_LOCK(*g_csOnlineUsers);
 	const auto p = g_onlineUsers.equal_range(user->getCID());
 	for (auto i = p.first; i != p.second; ++i)
-		i->second->getIdentity().setIp(ip);
+		if (ip.type == AF_INET)
+			i->second->getIdentity().setIP4(ip.data.v4);
+		else
+			i->second->getIdentity().setIP6(ip.data.v6);
 }
 
 bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
@@ -177,7 +183,8 @@ bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
 		params.bytesShared = i.getBytesShared();
 		params.slots = i.getSlots();
 		params.limit = i.getLimit();
-		params.ip = i.getIpAsString();
+		params.ip4 = i.getIP4();
+		params.ip6 = i.getIP6();
 		params.tag = i.getTag();
 		params.nick = i.getNick();
 		return true;
@@ -482,7 +489,7 @@ string ClientManager::findHub(const string& ipPort, int type)
 	uint16_t port = 411;
 	Util::parseIpPort(ipPort, ipOrHost, port);
 	string url, fallbackUrl;
-	Ip4Address ip;
+	IpAddress ip;
 	bool parseResult = Util::parseIpAddress(ip, ipOrHost);
 	READ_LOCK(*g_csClients);
 	for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
@@ -800,9 +807,10 @@ void ClientManager::getUserCommandParams(const OnlineUserPtr& ou, const UserComm
 
 void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 {
-	Ip4Address ip = 0;
+	IpAddress ip;
 	uint16_t port = 0;
 	bool sendToClient = false;
+	bool sendUDP = false;
 	OnlineUserPtr u;
 	{
 		READ_LOCK(*g_csOnlineUsers);
@@ -820,10 +828,7 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 				sendToClient = true;
 			}
 			else
-			{
-				ip = u->getIdentity().getIp();
-				port = u->getIdentity().getUdpPort();
-			}
+				sendUDP = u->getIdentity().getUdpAddress(ip, port);
 		}
 	}
 	if (sendToClient)
@@ -831,7 +836,7 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 		u->getClient().send(cmd);
 		return;
 	}
-	if (port && Util::isValidIp4(ip))
+	if (sendUDP)
 	{
 		string cmdStr = cmd.toString(getMyCID());
 		SearchManager::getInstance()->addToSendQueue(cmdStr, ip, port);
@@ -886,7 +891,8 @@ static void getShareGroup(const OnlineUserPtr& ou, CID& shareGroup)
 void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept
 {
 	bool isUdpActive = ou->getIdentity().isUdpActive();
-	const string hubIpPort = c->getIpPort();
+	const IpAddress hubIp = c->getIp();
+	int hubPort = c->getPort();
 	CID shareGroup;
 	getShareGroup(ou, shareGroup);
 	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE, shareGroup);
@@ -894,7 +900,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 		re = ClientManagerListener::SEARCH_MISS;
 	else
-		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIpPort);
+		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIp, hubPort);
 	if (g_isSpyFrame)
 	{
 		string description = param.getDescription();
@@ -1080,26 +1086,37 @@ const string ClientManager::findMyNick(const string& hubUrl)
 	return Util::emptyString;
 }
 
-int ClientManager::getMode(int favHubMode)
+int ClientManager::getConnectivityMode(int af, int favHubMode)
 {
 	switch (favHubMode)
 	{
 		case 1: return SettingsManager::INCOMING_DIRECT;
 		case 2: return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 	}
-	int unused;
-	if (g_portTest.getState(PortTest::PORT_TCP, unused, nullptr) == PortTest::STATE_FAILURE)
-		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
-	int type = SETTING(INCOMING_CONNECTIONS);
+	int portTestState = PortTest::STATE_UNKNOWN;
+	int type;
+	if (af == AF_INET6)
+	{
+		type = SETTING(INCOMING_CONNECTIONS6);
+	}
+	else
+	{
+		type = SETTING(INCOMING_CONNECTIONS);
+		int unused;
+		portTestState = g_portTest.getState(PortTest::PORT_TCP, unused, nullptr);
+		if (portTestState == PortTest::STATE_FAILURE)
+			return SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	}
 	if (type == SettingsManager::INCOMING_FIREWALL_UPNP &&
-	    ConnectivityManager::getInstance()->getMapperV4().getState(MappingManager::PORT_TCP) == MappingManager::STATE_FAILURE)
+	    portTestState != PortTest::STATE_SUCCESS &&
+		ConnectivityManager::getInstance()->getMapper(af).getState(MappingManager::PORT_TCP) == MappingManager::STATE_FAILURE)
 		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 	return type;
 }
 
-bool ClientManager::isActive(int favHubMode)
+bool ClientManager::isActive(int af, int favHubMode)
 {
-	return getMode(favHubMode) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	return getConnectivityMode(af, favHubMode) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
 }
 
 void ClientManager::cancelSearch(void* aOwner)
@@ -1400,7 +1417,7 @@ void ClientManager::dumpUserInfo(const HintedUser& user)
 		client->dumpUserInfo(report);
 }
 
-StringList ClientManager::getNicksByIp(Ip4Address ip)
+StringList ClientManager::getNicksByIp(const IpAddress& ip)
 {
 	std::unordered_set<string> nicks;
 	{
@@ -1408,12 +1425,20 @@ StringList ClientManager::getNicksByIp(Ip4Address ip)
 		for (auto i = g_onlineUsers.cbegin(); i != g_onlineUsers.cend(); ++i)
 		{
 			const auto& user = i->second->getUser();
-			if (user && user->getIP() == ip)
+			if (!user) continue;
+			string nick;
+			if (ip.type == AF_INET)
 			{
-				const string nick = user->getLastNick();
-				if (!nick.empty())
-					nicks.insert(nick);
+				if (user->getIP4() == ip.data.v4)
+					nick = user->getLastNick();
 			}
+			else if (ip.type == AF_INET6)
+			{
+				if (user->getIP6() == ip.data.v6)
+					nick = user->getLastNick();
+			}
+			if (!nick.empty())
+				nicks.insert(nick);
 		}
 	}
 	StringList result;
