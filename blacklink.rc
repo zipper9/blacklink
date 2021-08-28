@@ -2525,7 +2525,6 @@ IDR_OFFLINE_ICO         ICON                    "res\\offline.ico"
 
 IDR_ONLINE_ICO          ICON                    "res\\online.ico"
 
-
 /////////////////////////////////////////////////////////////////////////////
 //
 // PNG
@@ -2593,6 +2592,7 @@ IDR_DCLST               PNG                     "res\\dclst.png"
 
 IDR_MAGNET_PNG          PNG                     "res\\Magnet.png"
 
+IDR_FAVORITE            PNG                     "res\\favorite.png"
 
 /////////////////////////////////////////////////////////////////////////////
 //

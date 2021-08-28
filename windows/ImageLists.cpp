@@ -14,6 +14,7 @@ GenderImage g_genderImage;
 FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
 VideoImage g_videoImage;
+FavImage g_favImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -76,8 +77,6 @@ int FileImage::getIconIndex(const string& aFileName)
 		return iconIndex;
 	if (BOOLSETTING(USE_SYSTEM_ICONS))
 	{
-//#ifndef _DEBUG
-#if 1
 		if (!x.empty())
 		{
 			const auto j = m_iconCache.find(x);
@@ -97,9 +96,6 @@ int FileImage::getIconIndex(const string& aFileName)
 		{
 			return DIR_FILE;
 		}
-#else
-		return DIR_FILE;
-#endif
 	}
 	else
 	{
@@ -248,6 +244,11 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 	return -1;
 }
 
+void FavImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_FAVORITE, images, 16, 16);
+}
+
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)
 {
 	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
@@ -339,6 +340,7 @@ IconBitmaps::IconBitmaps()
 	init(BANNED_USER,        SOURCE_SETTINGS, 27);
 	init(DCLST,              SOURCE_SETTINGS, 36);
 	init(MESSAGES,           SOURCE_SETTINGS, 39);
+	init(FAVORITE,           SOURCE_FAVORITE, 0);
 	init(PM,                 SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
 	init(USER,               SOURCE_ICON,     IDR_PRIVATE);
 	init(HUB_ONLINE,         SOURCE_ICON,     IDR_HUB);
@@ -382,6 +384,9 @@ HBITMAP IconBitmaps::getBitmap(int index, int size)
 		HIMAGELIST imageList;
 		if (data[index].source == SOURCE_MAIN)
 			imageList = size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
+		else
+		if (data[index].source == SOURCE_FAVORITE)
+			imageList = g_favImage.getIconList();
 		else
 			imageList = mainFrame->getSettingsImages();
 		HDC hdc = GetDC(mainFrame->m_hWnd);

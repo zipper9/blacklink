@@ -28,6 +28,7 @@
 #define IDR_FILE_LIST                   135
 #define IDR_FILE_LIST_OFFLINE           136
 #define IDR_MAGNET                      138
+#define IDR_FAVORITE                    139
 #define IDR_TUSER                       141
 #define IDR_PURGE                       143
 #define IDR_PAUSE                       144

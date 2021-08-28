@@ -133,10 +133,17 @@ class GenderImage : public BaseImageList
 		void init();
 };
 
+class FavImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern TrackerImage g_trackerImage;
 extern GenderImage g_genderImage;
+extern FavImage g_favImage;
 
 class TransferTreeImage : public BaseImageList
 {
@@ -217,6 +224,7 @@ class IconBitmaps
 			BANNED_USER,
 			DCLST,
 			MESSAGES,
+			FAVORITE,
 			PM,
 			USER,
 			HUB_ONLINE,
@@ -240,7 +248,8 @@ class IconBitmaps
 		{
 			SOURCE_ICON,
 			SOURCE_MAIN,
-			SOURCE_SETTINGS
+			SOURCE_SETTINGS,
+			SOURCE_FAVORITE
 		};
 
 		Image data[MAX_BITMAPS];
