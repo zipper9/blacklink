@@ -665,6 +665,7 @@
 #define IDC_PROT_TRAY                   1541
 #define IDC_CONFIRM_OPTIONS             1542
 #define IDC_PROT_CLOSE                  1543
+#define IDC_SHOW_LEGEND                 1544
 #define IDC_SOCKET_IN_BUFFER            1545
 #define IDC_GROUP                       1546
 #define IDC_FAVGROUP                    1547

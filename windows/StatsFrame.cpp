@@ -20,37 +20,228 @@
 
 #include <atlgdiraii.h>
 
-#pragma warning(disable: 4458)
-
 #ifdef FLYLINKDC_USE_STATS_FRAME
+
 #include "StatsFrame.h"
 #include "WinUtil.h"
 #include "Colors.h"
+#include "../client/UploadManager.h"
+#include "../client/DownloadManager.h"
 
-int StatsFrame::g_width = 0;
-int StatsFrame::g_height = 0;
+#include <gdiplus.h>
 
-StatsFrame::StatsFrame() :
-	TimerHelper(m_hWnd), twidth(0), lastTick(GET_TICK()), scrollTick(0), m_max(1024)
+static const float PEN_WIDTH = 1.4f;
+
+using namespace Gdiplus;
+
+StatsWindow::StatsWindow() : lastTick(GET_TICK()), maxValue(1024), maxItems(0), showLegend(true)
 {
-	m_backgr.CreateSolidBrush(Colors::g_bgColor);
-	m_UploadsPen.CreatePen(PS_SOLID, 0, SETTING(UPLOAD_BAR_COLOR));
-	m_DownloadsPen.CreatePen(PS_SOLID, 0, SETTING(DOWNLOAD_BAR_COLOR));
-	m_foregr.CreatePen(PS_SOLID, 0, Colors::g_textColor);
+}
+
+LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	if (!GetUpdateRect(nullptr))
+		return 0;
+
+	CPaintDC paintDC(m_hWnd);
+
+	CRect rc;
+	GetClientRect(&rc);
+	int width = rc.Width();
+	int height = rc.Height();
+
+	Bitmap bmp(width, height);
+	Graphics* graph = Graphics::FromImage(&bmp);
+	graph->SetSmoothingMode(SmoothingModeHighQuality);
+	graph->Clear(Color(255, 255, 255));
+	
+	const int captionHeight = Fonts::g_fontHeight + 2;
+	const int lines = (height / (Fonts::g_fontHeight * LINE_HEIGHT)) + 1;
+	const int lineHeight = (height - captionHeight) / lines;
+
+	Font font(paintDC, Fonts::g_font);
+	Pen pen(Color(0xC0, 0xC0, 0xC0));
+	SolidBrush blackBrush(Color(0, 0, 0));
+	int y = rc.bottom - 1;
+	for (int i = 0; i < lines; ++i)
+	{
+		y -= lineHeight;
+		if (i != lines - 1)
+			graph->DrawLine(&pen, rc.left, y, rc.right, y);
+				
+		const wstring txt = Util::formatBytesW(maxValue * (i + 1) / lines) + L'/' + WSTRING(S);
+		graph->DrawString(txt.c_str(), txt.length(), &font, PointF(1, y - captionHeight), &blackBrush);
+	}
+
+	int graphHeight = rc.bottom - 1 - y;
+
+	COLORREF color = SETTING(UPLOAD_BAR_COLOR);
+	SolidBrush uploadsBrush(Color(128, GetRValue(color), GetGValue(color), GetBValue(color)));
+	Pen uploadsPen(Color(GetRValue(color), GetGValue(color), GetBValue(color)), PEN_WIDTH);
+
+	color = SETTING(DOWNLOAD_BAR_COLOR);
+	SolidBrush downloadsBrush(Color(128, GetRValue(color), GetGValue(color), GetBValue(color)));
+	Pen downloadsPen(Color(GetRValue(color), GetGValue(color), GetBValue(color)), PEN_WIDTH);
+
+	if (!(stats.size() < 2 || maxValue == 0))
+	{
+		auto i = stats.rbegin();
+		int count = 0;
+		int x = rc.right - 1;
+		int y = (int)(i->upload * graphHeight / maxValue);
+		tmp.clear();
+		tmp.push_back(Point(x, rc.bottom - 1));
+		tmp.push_back(Point(x, rc.bottom - 1 - y));
+		for (++i; i != stats.rend(); ++i)
+		{
+			dcassert(i->upload <= maxValue);
+			y = (int)(i->upload * graphHeight / maxValue);
+			x -= i->scroll;
+			tmp.push_back(Point(x, rc.bottom - 1 - y));
+			count++;
+			if (x < 0) break;
+		}
+
+		int addPoints = 0;
+		if (tmp.back().Y != rc.bottom - 1)
+		{
+			addPoints++;
+			tmp.emplace_back(x, rc.bottom - 1);
+		}
+
+		graph->FillPolygon(&uploadsBrush, tmp.data(), tmp.size());
+		graph->DrawLines(&uploadsPen, tmp.data() + 1, tmp.size() - (addPoints + 1));
+
+		i = stats.rbegin();
+		x = rc.right - 1;
+		y = (int)(i->download * graphHeight / maxValue);
+		tmp.clear();
+		tmp.push_back(Point(x, rc.bottom - 1));
+		tmp.push_back(Point(x, rc.bottom - 1 - y));
+		for (++i; i != stats.rend(); ++i)
+		{
+			dcassert(i->download <= maxValue);
+			y = (int)(i->download * graphHeight / maxValue);
+			x -= i->scroll;
+			tmp.push_back(Point(x, rc.bottom - 1 - y));
+			if (x < 0) break;
+		}
+
+		addPoints = 0;
+		if (tmp.back().Y != rc.bottom - 1)
+		{
+			addPoints++;
+			tmp.emplace_back(x, rc.bottom - 1);
+		}
+
+		graph->FillPolygon(&downloadsBrush, tmp.data(), tmp.size());
+		graph->DrawLines(&downloadsPen, tmp.data() + 1, tmp.size() - (addPoints + 1));
+
+		if (x < 0)
+			maxItems = count + 1;
+		else if (maxItems)
+			maxItems++;
+	}
+
+	if (showLegend)
+	{
+		const wstring& s1 = WSTRING(AVERAGE_DOWNLOAD);
+		const wstring& s2 = WSTRING(AVERAGE_UPLOAD);
+		RectF r1, r2;
+		graph->MeasureString(s1.c_str(), s1.length(), &font, PointF{}, &r1);
+		graph->MeasureString(s2.c_str(), s2.length(), &font, PointF{}, &r2);
+		int textHeight = std::max(r1.Height, r2.Height);
+		int textWidth = std::max(r1.Width, r2.Width);
+		int textOffset = textHeight / 2;
+		int legendHeight = 5*textHeight;
+		int legendWidth = textWidth + 3*textHeight + textOffset;
+
+		SolidBrush backgroundBrush(Color(0xCC, 0xFF, 0xFF, 0xFF));
+		static const int offset = 16;
+		int y = height - legendHeight - offset;
+		Rect r3(offset, y, legendWidth, legendHeight);
+		graph->FillRectangle(&backgroundBrush, r3);
+		graph->DrawRectangle(&pen, r3);
+
+		y += textHeight;
+		Rect r4(offset + textHeight, y, textHeight, textHeight);
+		graph->FillRectangle(&downloadsBrush, r4);
+		graph->DrawRectangle(&downloadsPen, r4);
+		int xtext = offset + 2*textHeight + textOffset;
+		graph->DrawString(s1.c_str(), s1.length(), &font, PointF(xtext, y), &blackBrush);
+
+		y += 2*textHeight;
+		Rect r5(offset + textHeight, y, textHeight, textHeight);
+		graph->FillRectangle(&uploadsBrush, r5);
+		graph->DrawRectangle(&uploadsPen, r5);
+		graph->DrawString(s2.c_str(), s2.length(), &font, PointF(xtext, y), &blackBrush);
+	}
+
+	Graphics graphics(paintDC);
+	graphics.DrawImage(&bmp, 0, 0, width, height);
+	return 0;
+}
+
+void StatsWindow::updateStats()
+{
+	const uint64_t tick = GET_TICK();
+	const uint64_t tdiff = tick - lastTick;
+	if (tdiff < 1000)
+		return;
+
+	Stat stat;
+	stat.download = DownloadManager::getRunningAverage();
+	stat.upload = UploadManager::getRunningAverage();
+	stat.scroll = (int) (tdiff / 1000) * PIX_PER_SEC;
+
+	stats.push_back(stat);
+	if (maxItems)
+	{
+		while (stats.size() > (size_t) maxItems) stats.pop_front();
+	}
+
+	//dcdebug("scroll=%d, ut=%lld, dt=%lld, tdiff=%llu\n", stat.scroll, stat.upload, stat.download, tdiff);
+
+	int64_t mspeed = 0;
+	for (const auto& s : stats)
+	{
+		if (s.upload > mspeed) mspeed = s.upload;
+		if (s.download > mspeed) mspeed = s.download;
+	}
+	if (mspeed > maxValue || (maxValue * 3 / 4) > mspeed)
+		maxValue = std::max(mspeed, (int64_t) 1024);
+	lastTick = tick;
+}
+
+StatsFrame::StatsFrame() : TimerHelper(m_hWnd)
+{
+	checkBoxSize.cx = checkBoxSize.cy = 0;
+	checkBoxXOffset = checkBoxYOffset = 0;
 }
 
 LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	statsWindow.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0/*WS_EX_CLIENTEDGE*/);
+	ctrlShowLegend.Create(m_hWnd, rcDefault, CTSTRING(SHOW_LEGEND), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_AUTOCHECKBOX | BS_VCENTER, 0, IDC_SHOW_LEGEND);
+	ctrlShowLegend.SetFont(Fonts::g_systemFont);
+	ctrlShowLegend.SetCheck(BST_CHECKED);
+
 	createTimer(1000);
-	
 	bHandled = FALSE;
 	return 1;
+}
+
+LRESULT StatsFrame::onShowLegend(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	statsWindow.setShowLegend(ctrlShowLegend.GetCheck() == BST_CHECKED);
+	statsWindow.RedrawWindow(nullptr, nullptr, RDW_INVALIDATE);
+	return 0;
 }
 
 LRESULT StatsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NETWORK_STATISTICS, 0);
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NETWORK_STATISTICS, 0);;
 	opt->isHub = false;
 	return TRUE;
 }
@@ -72,110 +263,6 @@ LRESULT StatsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	}
 }
 
-void StatsFrame::drawLine(CDC& dc, const StatIter& begin, const StatIter& end, const CRect& rc, const CRect& crc)
-{
-	int x = crc.right;
-	
-	StatIter i;
-	for (i = begin; i != end; ++i)
-	{
-		if ((x - (int)i->scroll) < rc.right)
-			break;
-		x -= i->scroll;
-	}
-	if (i != end)
-	{
-		int y = /* [-] IRainman fix (max == 0) ? 0 :*/ (int)((i->speed * g_height) / m_max);
-		dc.MoveTo(x, g_height - y);
-		x -= i->scroll;
-		++i;
-		
-		for (; i != end && x > twidth; ++i)
-		{
-			y = /* [-] IRainman fix (max == 0) ? 0 :*/ (int)((i->speed * g_height) / m_max);
-			dc.LineTo(x, g_height - y);
-			if (x < rc.left)
-				break;
-			x -= i->scroll;
-		}
-	}
-}
-
-LRESULT StatsFrame::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	if (GetUpdateRect(NULL))
-	{
-		CPaintDC dc(m_hWnd);
-		CRect rc(dc.m_ps.rcPaint);
-//[-]PPA        dcdebug("Update: %d, %d, %d, %d\n", rc.left, rc.top, rc.right, rc.bottom);
-
-		dc.SelectBrush(m_backgr);
-		dc.BitBlt(rc.left, rc.top, rc.Width(), rc.Height(), NULL, 0, 0, PATCOPY);
-		
-		CRect clientRC;
-		GetClientRect(clientRC);
-		
-		dc.SetTextColor(Colors::g_textColor);
-		dc.SetBkColor(Colors::g_bgColor);
-		
-		{
-			CSelectPen pen(dc, m_foregr);
-			CSelectFont font(dc, Fonts::g_font);
-			{
-				const int lines = g_height / (Fonts::g_fontHeight * LINE_HEIGHT);
-				const int lheight = g_height / (lines + 1);
-				
-				for (int i = 0; i < lines; ++i)
-				{
-					int ypos = lheight * (i + 1);
-					if (ypos > Fonts::g_fontHeight + 2)
-					{
-						dc.MoveTo(rc.left, ypos);
-						dc.LineTo(rc.right, ypos);
-					}
-					
-					if (rc.left <= twidth)
-					{
-						ypos -= Fonts::g_fontHeight + 2;
-						if (ypos < 0)
-							ypos = 0;
-						if (g_height == 0)
-							g_height = 1;
-						const tstring txt = Util::formatBytesT(m_max * (g_height - ypos) / g_height) + _T('/') + TSTRING(S);
-						const int tw = WinUtil::getTextWidth(txt, dc);
-						if (tw + 2 > twidth)
-							twidth = tw + 2;
-						dc.TextOut(1, ypos, txt.c_str());
-					}
-				}
-			}
-			if (rc.left < twidth)
-			{
-				const tstring txt = Util::formatBytesT(m_max) + _T('/') + TSTRING(S);
-				int tw = WinUtil::getTextWidth(txt, dc);
-				if (tw + 2 > twidth)
-					twidth = tw + 2;
-				dc.TextOut(1, 1, txt.c_str());
-			}
-		}
-		
-		{
-			CSelectPen pen(dc, m_UploadsPen);
-			drawLine(dc, m_Uploads, rc, clientRC);
-		}
-		{
-			CSelectPen pen(dc, m_DownloadsPen);
-			drawLine(dc, m_Downloads, rc, clientRC);
-		}
-	}
-	return 0;
-}
-
-inline int64_t calcSpeed(int64_t bdiff, uint64_t tdiff)
-{
-	return bdiff * 1024I64 / tdiff;
-}
-
 LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (!checkTimerID(wParam))
@@ -183,52 +270,46 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 		bHandled = FALSE;
 		return 0;
 	}
-	
-	const uint64_t tick = GET_TICK();
-	const uint64_t tdiff = tick - lastTick;
-	if (tdiff == 0)
-		return 0;
 
-	const uint64_t scrollms = (tdiff + scrollTick) * PIX_PER_SEC;
-	const uint64_t scroll = scrollms / 1000;
-	
-	if (scroll == 0)
-		return 0;
-		
-	scrollTick = scrollms - (scroll * 1000);
-	
-	CRect rc;
-	GetClientRect(rc);
-	rc.left = twidth;
-	ScrollWindow(-(int)scroll, 0, rc, rc);
-	
-	const int64_t dt = DownloadManager::getRunningAverage();
-	const int64_t ut = UploadManager::getRunningAverage();
-	
-	addAproximatedSpeedTick(dt, m_Downloads, (int)scroll);
-	addAproximatedSpeedTick(ut, m_Uploads, (int)scroll);
-	
-	int64_t mspeed = 0;
-	findMax(m_Downloads, mspeed);
-	findMax(m_Uploads, mspeed);
-	
-	if (mspeed > m_max || ((m_max * 3 / 4) > mspeed))
-	{
-		m_max = std::max(mspeed, (int64_t) 1024);
-		Invalidate();
-	}
-	
-	lastTick = tick;
+	statsWindow.updateStats();
+	statsWindow.RedrawWindow(nullptr, nullptr, RDW_INVALIDATE);
 	return 0;
 }
 
-LRESULT StatsFrame::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+void StatsFrame::updateLayout()
 {
-	CRect rc;
-	GetClientRect(rc);
-	g_width  = rc.Width();
-	g_height = rc.Height() - 1;
-	Invalidate();
+	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	if (!checkBoxYOffset)
+	{
+		int xdu, ydu;
+		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+		checkBoxSize.cx = WinUtil::dialogUnitsToPixelsX(12, xdu) + WinUtil::getTextWidth(TSTRING(SHOW_LEGEND), ctrlShowLegend);
+		checkBoxSize.cy = WinUtil::dialogUnitsToPixelsY(8, ydu);
+		checkBoxXOffset = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		checkBoxYOffset = std::max(WinUtil::dialogUnitsToPixelsY(2, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
+	}
+
+	int barHeight = checkBoxSize.cy + 2*checkBoxYOffset;
+	RECT rect;
+	GetClientRect(&rect);
+	rect.bottom -= barHeight - splitBarHeight;
+	statsWindow.MoveWindow(&rect);
+
+	RECT rc;
+	rc.left = checkBoxXOffset;
+	rc.top = rect.bottom + checkBoxYOffset;
+	rc.right = rc.left + checkBoxSize.cx;
+	rc.bottom = rc.top + checkBoxSize.cy;
+	ctrlShowLegend.MoveWindow(&rc);
+}
+
+LRESULT StatsFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	if (wParam != SIZE_MINIMIZED)
+	{
+		updateLayout();
+		Invalidate();
+	}
 	bHandled = FALSE;
 	return 0;
 }
@@ -239,7 +320,7 @@ CFrameWndClassInfo& StatsFrame::GetWndClassInfo()
 	{
 		{
 			sizeof(WNDCLASSEX), 0, StartWindowProc,
-			0, 0, NULL, NULL, NULL, NULL, NULL, _T("StatsFrame"), NULL
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("StatsFrame"), NULL
 		},
 		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
 	};
