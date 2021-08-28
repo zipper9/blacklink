@@ -96,9 +96,10 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			return 0;
 		}
 		
-		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		LRESULT onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			updateLayout();
+			bHandled = FALSE;
+			if (wParam != SIZE_MINIMIZED) updateLayout();
 			return 0;
 		}
 
