@@ -161,11 +161,11 @@ class FlagImage : public BaseImageList
 		FlagImage() : memDC(NULL) {}
 		~FlagImage();
 		void init();
-		void DrawCountry(HDC dc, const IPInfo& ipInfo, const POINT& pt)
+		void drawCountry(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 		{
 			Draw(dc, ipInfo.countryImage, pt);
 		}
-		bool DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt);
+		bool drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt);
 
 	private:
 		boost::unordered_map<int, HBITMAP> bitmaps;

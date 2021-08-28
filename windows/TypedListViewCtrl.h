@@ -355,7 +355,18 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			}
 			return i;
 		}
-		
+
+		void updateImage(int i, int subItem)
+		{
+			LVITEM lvItem = {0};
+			lvItem.iItem = i;
+			lvItem.iSubItem = subItem;
+			lvItem.mask = LVIF_PARAM | LVIF_IMAGE;
+			GetItem(&lvItem);
+			lvItem.iImage = ((T*)lvItem.lParam)->getImageIndex();
+			SetItem(&lvItem);
+		}
+
 		int deleteItem(const T* item)
 		{
 			int i = findItem(item);

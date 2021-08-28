@@ -52,7 +52,7 @@ static const int columnSizes[] =
 	290, // COLUMN_DESCRIPTION
 	60,  // COLUMN_USERS
 	190, // COLUMN_SERVER
-	130, // COLUMN_COUNTRY
+	140, // COLUMN_COUNTRY
 	60,  // COLUMN_SECURE
 	100, // COLUMN_SHARED
 	100, // COLUMN_MINSHARE
@@ -60,7 +60,7 @@ static const int columnSizes[] =
 	80,  // COLUMN_MAXHUBS
 	80,  // COLUMN_MAXUSERS
 	80,  // COLUMN_RELIABILITY
-	80,  // COLUMN_RATING
+	60,  // COLUMN_RATING
 	180, // COLUMN_WEBSITE
 	130, // COLIMN_EMAIL
 	80,  // COLUMN_ENCODING
@@ -123,7 +123,8 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
 	                WS_EX_CLIENTEDGE, IDC_HUBLIST);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	WinUtil::setExplorerTheme(ctrlHubs);
+	if (WinUtil::setExplorerTheme(ctrlHubs))
+		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
 
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
@@ -131,7 +132,7 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.insertColumns(SettingsManager::PUBLIC_HUBS_FRAME_ORDER, SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, SettingsManager::PUBLIC_HUBS_FRAME_VISIBLE);
 	ctrlHubs.setSortFromSettings(SETTING(PUBLIC_HUBS_FRAME_SORT), COLUMN_USERS, false);
 	setListViewColors(ctrlHubs);
-	ctrlHubs.SetImageList(g_flagImage.getIconList(), LVSIL_SMALL);
+	ctrlHubs.SetImageList(g_favImage.getIconList(), LVSIL_SMALL);
 
 	ctrlFilterDesc.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | BS_GROUPBOX, WS_EX_TRANSPARENT);
 	ctrlFilterDesc.SetWindowText(CTSTRING(FILTER));
@@ -593,7 +594,7 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		case WPARAM_HUB_CONNECTED:
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-			HubInfo* data = findHub(*hub);
+			HubInfo* data = findHub(*hub, nullptr);
 			if (data)
 			{
 				data->setOnline(true);
@@ -604,7 +605,7 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		case WPARAM_HUB_DISCONNECTED:
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-			HubInfo* data = findHub(*hub);
+			HubInfo* data = findHub(*hub, nullptr);
 			if (data)
 			{
 				data->setOnline(false);
@@ -615,22 +616,32 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		case WPARAM_FAVORITE_ADDED:
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-			HubInfo* data = findHub(*hub);
+			int pos;
+			HubInfo* data = findHub(*hub, &pos);
 			if (data)
 			{
-				data->setFavorite(true);
-				redraw();
+				if (!data->isFavorite())
+				{
+					data->setFavorite(true);
+					ctrlHubs.updateImage(pos, 0);
+					redraw();
+				}
 			}
 			break;
 		}
 		case WPARAM_FAVORITE_REMOVED:
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-			HubInfo* data = findHub(*hub);
+			int pos;
+			HubInfo* data = findHub(*hub, &pos);
 			if (data)
 			{
-				data->setFavorite(false);
-				redraw();
+				if (data->isFavorite())
+				{
+					data->setFavorite(false);
+					ctrlHubs.updateImage(pos, 0);
+					redraw();
+				}
 			}
 			break;
 		}
@@ -999,6 +1010,7 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
+			CustomDrawHelpers::startDraw(customDrawState, cd);
 			return CDRF_NOTIFYITEMDRAW;
 
 		case CDDS_ITEMPREPAINT:
@@ -1008,12 +1020,18 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 			cd->clrTextBk = Colors::g_bgColor;
 			if (data->isOnline())
 				cd->clrTextBk = RGB(142,233,164);
-			return CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+			CustomDrawHelpers::startItemDraw(customDrawState, cd);
+			return CDRF_NOTIFYSUBITEMDRAW;
 		}
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
 			const HubInfo* data = reinterpret_cast<HubInfo*>(cd->nmcd.lItemlParam);
-			int column = ctrlHubs.findColumn(cd->iSubItem);
+			const int column = ctrlHubs.findColumn(cd->iSubItem);
+			if (column == COLUMN_COUNTRY)
+			{
+				CustomDrawHelpers::drawCountry(customDrawState, cd, data->getCountryIndex(), data->getText(COLUMN_COUNTRY));
+				return CDRF_SKIPDEFAULT;
+			}
 			CDCHandle(cd->nmcd.hdc).SelectFont(column == 0 && data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
 			return CDRF_NEWFONT;
 		}
@@ -1086,14 +1104,19 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 	rating = Util::toInt(hub.getRating());
 }
 
-PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url) const
+PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url, int* pos) const
 {
 	int count = ctrlHubs.GetItemCount();
 	for (int i = 0; i < count; i++)
 	{
 		HubInfo* data = ctrlHubs.getItemData(i);
-		if (data->getHubUrl() == url) return data;
+		if (data->getHubUrl() == url)
+		{
+			if (pos) *pos = i;
+			return data;
+		}
 	}
+	if (pos) *pos = -1;
 	return nullptr;
 }
 

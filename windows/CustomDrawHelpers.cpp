@@ -281,12 +281,12 @@ void CustomDrawHelpers::drawLocation(CustomDrawState& state, const NMLVCUSTOMDRA
 	p.x += margin1;
 	if (BOOLSETTING(ENABLE_COUNTRY_FLAG) && ipInfo.countryImage > 0)
 	{
-		g_flagImage.DrawCountry(cd->nmcd.hdc, ipInfo, p);
+		g_flagImage.drawCountry(cd->nmcd.hdc, ipInfo, p);
 		p.x += flagIconWidth;
 	}
 	if (ipInfo.locationImage > 0)
 	{
-		if (g_flagImage.DrawLocation(cd->nmcd.hdc, ipInfo, p))
+		if (g_flagImage.drawLocation(cd->nmcd.hdc, ipInfo, p))
 			p.x += flagIconWidth;
 	}
 	setColor(state, cd);
@@ -298,6 +298,21 @@ void CustomDrawHelpers::drawLocation(CustomDrawState& state, const NMLVCUSTOMDRA
 		rc.top += topOffset;
 		DrawText(cd->nmcd.hdc, desc.c_str(), desc.length(), &rc, DT_LEFT|DT_TOP|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
 	}
+	endSubItemDraw(state, cd);
+}
+
+void CustomDrawHelpers::drawCountry(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, int index, const tstring& text)
+{
+	if (!startSubItemDraw(state, cd)) return;
+	setColor(state, cd);
+	RECT rc = state.rc;
+	POINT p = { rc.left, (rc.top + rc.bottom - iconSize) / 2 };
+	p.x += margin1;
+	g_flagImage.Draw(cd->nmcd.hdc, index + 1, p);
+	setColor(state, cd);
+	rc.left = p.x + flagIconWidth + margin2;
+	rc.top += topOffset;
+	DrawText(cd->nmcd.hdc, text.c_str(), text.length(), &rc, DT_LEFT|DT_TOP|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
 	endSubItemDraw(state, cd);
 }
 

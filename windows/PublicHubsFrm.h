@@ -165,7 +165,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			public:
 				const tstring& getText(int col) const;
 				static int compareItems(const HubInfo* a, const HubInfo* b, int col);
-				int getImageIndex() const { return countryIndex + 1; }
+				int getImageIndex() const { return favorite ? 0 : -1; }
 				static int getStateImageIndex() { return 0; }
 				void update(const HubEntry& hub);
 				void setOnline(bool flag) { online = flag; }
@@ -174,6 +174,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 				const string& getSecureHubUrl() const { return secureHubUrl; }
 				bool isFavorite() const { return favorite; }
 				void setFavorite(bool flag) { favorite = flag; }
+				int getCountryIndex() const { return countryIndex; }
 
 			private:
 				string hubUrl;
@@ -207,6 +208,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
+		CustomDrawHelpers::CustomDrawState customDrawState;
 
 		int xdu, ydu;
 		int buttonWidth, buttonHeight;
@@ -223,7 +225,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		
 		static const int columnId[];
 
-		HubInfo* findHub(const string& url) const;
+		HubInfo* findHub(const string& url, int* pos) const;
 		string getPubServer(int pos) const
 		{
 			return getPubServer(ctrlHubs.getItemData(pos));

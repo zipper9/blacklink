@@ -198,7 +198,7 @@ void FlagImage::init()
 	path = Text::toT(s);
 }
 
-bool FlagImage::DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
+bool FlagImage::drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 {
 	if (path.empty()) return false;
 	auto i = bitmaps.find(ipInfo.locationImage);
