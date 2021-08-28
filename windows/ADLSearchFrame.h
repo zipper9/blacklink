@@ -39,8 +39,8 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 	public:
 		// Base class typedef
 		typedef MDITabChildWindowImpl<ADLSearchFrame> baseClass;
-		
-		ADLSearchFrame() {}
+
+		ADLSearchFrame(): xdu(0), ydu(0) {}
 
 		ADLSearchFrame(const ADLSearchFrame&) = delete;
 		ADLSearchFrame& operator= (const ADLSearchFrame&) = delete;
@@ -103,9 +103,12 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		// Communication with manager
 		void LoadAll();
 		void UpdateSearch(size_t index, BOOL doDelete = TRUE);
-		
-		// Contained controls
+
 		ExListViewCtrl ctrlList;
+		int xdu, ydu;
+		int buttonWidth, buttonHeight, buttonSpace;
+		int vertMargin, horizMargin;
+
 		CButton ctrlAdd;
 		CButton ctrlEdit;
 		CButton ctrlRemove;

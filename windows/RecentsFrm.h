@@ -27,7 +27,9 @@
 
 class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 	public StaticFrame<RecentHubsFrame, ResourceManager::RECENT_HUBS, IDC_RECENTS>,
-	private FavoriteManagerListener, private SettingsManagerListener
+	private FavoriteManagerListener,
+	private SettingsManagerListener,
+	public CMessageFilter
 {
 	public:
 		typedef MDITabChildWindowImpl<RecentHubsFrame> baseClass;
@@ -41,6 +43,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 
 		BEGIN_MSG_MAP(RecentHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
@@ -63,6 +66,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDoubleClickHublist(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onEnter(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
@@ -94,6 +98,8 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		
 		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
+
 	private:
 		enum
 		{
@@ -115,8 +121,8 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		ExListViewCtrl ctrlHubs;
 
 		int xdu, ydu;
-		int buttonWidth, buttonHeight;
-		int vertMarginTop, vertMarginBottom;
+		int buttonWidth, buttonHeight, buttonSpace;
+		int vertMargin, horizMargin;
 
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];

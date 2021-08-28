@@ -395,21 +395,22 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		buttonHeight = comboHeight;
 		boxHeight = buttonHeight + WinUtil::dialogUnitsToPixelsY(16, ydu);
 		groupBoxOffset = WinUtil::dialogUnitsToPixelsY(10, ydu);
+		margin = WinUtil::dialogUnitsToPixelsX(4, xdu);
+		horizOffset = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		vertOffset = WinUtil::dialogUnitsToPixelsY(2, ydu);
 	}
-	
+
 	static const int expandedComboHeight = 140;
-	static const int margin = 8;
-	int panelHeight = boxHeight + 9;
+	int panelHeight = boxHeight + 2*vertOffset;
 
 	// listview
 	CRect rc = rect;
-	rc.top += 2;
 	rc.bottom -= panelHeight;
 	ctrlHubs.MoveWindow(rc);
 
 	// filter box
 	rc = rect;
-	rc.top = rc.bottom - panelHeight + 4;
+	rc.top = rc.bottom - panelHeight + vertOffset;
 	rc.bottom = rc.top + boxHeight;
 	rc.right -= buttonWidth + 2*margin;
 	rc.right -= ((rc.right - rc.left) / 2) + 1;
@@ -420,18 +421,18 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	rc.top += groupBoxOffset;
 	rc.bottom = rc.top + editHeight;
 	rc.left += margin;
-	rc.right -= ((rc.right - rc.left - 4) / 3);
+	rc.right -= ((rc.right - rc.left - horizOffset) / 3);
 	ctrlFilter.MoveWindow(rc);
 
 	// filter sel
 	rc.bottom += expandedComboHeight;
-	rc.left = rc.right + 4;
+	rc.left = rc.right + horizOffset;
 	rc.right = filterBoxRight - margin;
 	ctrlFilterSel.MoveWindow(rc);
 
 	// lists box
 	rc = rect;
-	rc.top = rc.bottom - panelHeight + 4;
+	rc.top = rc.bottom - panelHeight + vertOffset;
 	rc.bottom = rc.top + boxHeight;
 	rc.right -= buttonWidth + 2*margin;
 	rc.left += ((rc.right - rc.left) / 2) + 1;
@@ -447,7 +448,7 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 	// lists dropdown
 	rc.bottom = rc.top + expandedComboHeight;
-	rc.right = rc.left - 4;
+	rc.right = rc.left - horizOffset;
 	rc.left = listsBoxLeft + margin;
 	ctrlPubLists.MoveWindow(rc);
 

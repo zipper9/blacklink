@@ -12,6 +12,7 @@
 #define IDD_APPEARANCE_PAGE             108
 #define IDD_LOG_PAGE                    110
 #define IDD_USER_COMMAND                111
+#define IDR_RECENTS                     112
 #define IDR_MAINFRAME                   113
 #define IDR_INTERNET_HUBS               114
 #define IDR_FAVORITES                   115
@@ -94,6 +95,7 @@
 #define IDR_ITALIC_ICON                 213
 #define IDR_TRANSCODE_ICON              214
 #define IDR_UNDERLINE_ICON              215
+#define IDR_ERROR                       216
 #define IDR_CLOSE_PNG                   220
 #define IDD_DCLS_GENERATOR              222
 #define IDR_DCLST                       223

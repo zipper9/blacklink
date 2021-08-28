@@ -168,58 +168,44 @@ void ADLSearchFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	
 	// Position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
-	/*
-	if (ctrlStatus.IsWindow())  //[-] SCALOlaz
+
+	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	if (!xdu)
 	{
-	    CRect sr;
-	    int w[1];
-	    ctrlStatus.GetClientRect(sr);
-	    w[0] = sr.Width() - 16;
-	    ctrlStatus.SetParts(1, w);
+		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
+		buttonHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
+		vertMargin = std::max(WinUtil::dialogUnitsToPixelsY(3, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
+		horizMargin = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		buttonSpace = WinUtil::dialogUnitsToPixelsX(8, xdu);
 	}
-	*/
-	
-	// Position list control
+
 	CRect rc = rect;
-	//rc.top += 2; [~] Sergey Shushkanov
-	rc.bottom -= 28;
+	rc.bottom -= buttonHeight + 2*vertMargin - splitBarHeight;
 	ctrlList.MoveWindow(rc);
-	
-	// Position buttons
-	const long bwidth = 90;
-	const long bspace = 10;
-	rc = rect;
-	rc.bottom -= 2;
-	rc.top = rc.bottom - 22;
-	
-	rc.left = 2;
-	rc.right = rc.left + bwidth;
+
+	//const long bwidth = 90;
+	//const long bspace = 10;
+	rc.top = rc.bottom + vertMargin;
+	rc.bottom = rc.top + buttonHeight;
+	rc.left = horizMargin;
+	rc.right = rc.left + buttonWidth;
 	ctrlAdd.MoveWindow(rc);
-	
-	rc.left += bwidth + 2;
-	rc.right = rc.left + bwidth;
+
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlEdit.MoveWindow(rc);
-	
-	rc.left += bwidth + 2;
-	rc.right = rc.left + bwidth;
+
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlRemove.MoveWindow(rc);
-	
-	rc.left += bspace;
-	
-	rc.left += bwidth + 2;
-	rc.right = rc.left + bwidth;
+
+	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
 	ctrlMoveUp.MoveWindow(rc);
-	
-	rc.left += bwidth + 2;
-	rc.right = rc.left + bwidth;
+
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlMoveDown.MoveWindow(rc);
-	
-	rc.left += bspace;
-	
-	rc.left += bwidth + 2;
-	rc.right = rc.left + bwidth;
+
+	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
 	ctrlHelp.MoveWindow(rc);
-	
 }
 
 // Keyboard shortcuts

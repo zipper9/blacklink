@@ -217,6 +217,7 @@ void BaseChatFrame::createChatCtrl()
 			ctrlClient.SetAutoURLDetect(FALSE);
 			ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
+			ctrlClient.SetUndoLimit(0);
 			if (suppressChat)
 			{
 				//   ctrlClient.ShowWindow(SW_HIDE);

@@ -216,6 +216,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		int editHeight;
 		int boxHeight;
 		int groupBoxOffset;
+		int horizOffset, vertOffset;
+		int margin;
 
 		CContainedWindow listContainer;
 		

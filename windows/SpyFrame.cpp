@@ -107,7 +107,7 @@ LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	showNickContainer.SubclassWindow(ctrlShowNick.m_hWnd);
 	
 	logFilePath = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "SpyLog.log"));
-	const tstring logToFileCaption = TSTRING(SETTINGS_LOG_FILE_IN_SPY_FRAME) + _T(" (") + logFilePath + _T(" )");
+	const tstring logToFileCaption = TSTRING(SETTINGS_LOG_FILE_IN_SPY_FRAME) + _T(" (") + logFilePath + _T(")");
 	
 	ctrlLogToFile.Create(ctrlStatus.m_hWnd, rcDefault, logToFileCaption.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	ctrlLogToFile.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);

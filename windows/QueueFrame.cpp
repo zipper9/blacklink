@@ -1664,9 +1664,9 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			dirMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
 		}
 		dirMenu.AppendMenu(MF_SEPARATOR);
-		CMenu deleteAllMenu;
+		OMenu deleteAllMenu;
 		deleteAllMenu.CreatePopupMenu();
-		deleteAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL_QUEUE));
+		deleteAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::EXCLAMATION, 0));
 		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU) deleteAllMenu, CTSTRING(REMOVE_ALL));
 		dirMenu.AppendMenu(MF_SEPARATOR);
 		dirMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));

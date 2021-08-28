@@ -741,40 +741,40 @@ void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
 		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
 		buttonHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
-		vertMarginBottom = std::max(WinUtil::dialogUnitsToPixelsY(3, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
-		vertMarginTop = vertMarginBottom;
+		vertMargin = std::max(WinUtil::dialogUnitsToPixelsY(3, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
+		horizMargin = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		buttonSpace = WinUtil::dialogUnitsToPixelsX(8, xdu);
+		buttonDeltaWidth = WinUtil::dialogUnitsToPixelsX(10, xdu);
 	}
 
 	CRect rc = rect;
-	rc.bottom -= buttonHeight + vertMarginTop + vertMarginBottom - splitBarHeight;
+	rc.bottom -= buttonHeight + 2*vertMargin - splitBarHeight;
 	ctrlHubs.MoveWindow(rc);
 
-	static const int bspace = 10;
-
-	rc.top = rc.bottom + vertMarginTop;
+	rc.top = rc.bottom + vertMargin;
 	rc.bottom = rc.top + buttonHeight;
 
-	rc.left = 2;
+	rc.left = horizMargin;
 	rc.right = rc.left + buttonWidth;
 	ctrlNew.MoveWindow(rc);
 
-	rc.OffsetRect(buttonWidth + 2, 0);
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlProps.MoveWindow(rc);
 
-	rc.OffsetRect(buttonWidth + 2, 0);
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlRemove.MoveWindow(rc);
 
-	rc.OffsetRect(bspace + buttonWidth + 2, 0);
+	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
 	ctrlUp.MoveWindow(rc);
 
-	rc.OffsetRect(buttonWidth + 2, 0);
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlDown.MoveWindow(rc);
 
-	rc.OffsetRect(bspace + buttonWidth + 2, 0);
+	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
 	ctrlConnect.MoveWindow(rc);
 
-	rc.OffsetRect(bspace + buttonWidth + 2, 0);
-	rc.right += 16;
+	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
+	rc.right += buttonDeltaWidth;
 	ctrlManageGroups.MoveWindow(rc);
 }
 

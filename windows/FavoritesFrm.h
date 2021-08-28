@@ -168,8 +168,8 @@ class FavoriteHubsFrame :
 		ExListViewCtrl ctrlHubs;
 
 		int xdu, ydu;
-		int buttonWidth, buttonHeight;
-		int vertMarginTop, vertMarginBottom;
+		int buttonWidth, buttonHeight, buttonSpace, buttonDeltaWidth;
+		int vertMargin, horizMargin;
 
 		StringSet onlineHubs;
 		bool noSave;

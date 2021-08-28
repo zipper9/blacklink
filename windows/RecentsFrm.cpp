@@ -31,9 +31,14 @@ static ResourceManager::Strings columnNames[] = { ResourceManager::HUB_NAME, Res
 
 LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_RECENTS);
-	                
+	m_hAccel = LoadAccelerators(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_RECENTS));
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
+	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS |
+	                WS_TABSTOP | WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_RECENTS);
+
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	setListViewColors(ctrlHubs);
 	WinUtil::setExplorerTheme(ctrlHubs);
@@ -49,20 +54,17 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		const int fmt = LVCFMT_LEFT;
 		ctrlHubs.InsertColumn(j, CTSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
 	}
-	
+
 	ctrlHubs.SetColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                   BS_PUSHBUTTON, 0, IDC_CONNECT);
+	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_CONNECT);
 	ctrlConnect.SetWindowText(CTSTRING(CONNECT));
 	ctrlConnect.SetFont(Fonts::g_systemFont);
-	
-	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                  BS_PUSHBUTTON, 0, IDC_REMOVE);
+
+	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_REMOVE);
 	ctrlRemove.SetWindowText(CTSTRING(REMOVE));
 	ctrlRemove.SetFont(Fonts::g_systemFont);
-	
-	ctrlRemoveAll.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                     BS_PUSHBUTTON, 0, IDC_REMOVE_ALL);
+
+	ctrlRemoveAll.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_REMOVE_ALL);
 	ctrlRemoveAll.SetWindowText(CTSTRING(REMOVE_ALL));
 	ctrlRemoveAll.SetFont(Fonts::g_systemFont);
 	
@@ -88,6 +90,15 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	
 	bHandled = FALSE;
 	return TRUE;
+}
+
+LRESULT RecentHubsFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+	bHandled = FALSE;
+	return 0;
 }
 
 void RecentHubsFrame::openHubWindow(RecentHubEntry* entry)
@@ -212,36 +223,32 @@ void RecentHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
-	
+
+	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
 		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
 		buttonHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
-		vertMarginBottom = WinUtil::dialogUnitsToPixelsY(3, ydu);
-		int splitBarHeight = GetSystemMetrics(SM_CYSIZEFRAME);
-		if (vertMarginBottom < splitBarHeight) vertMarginBottom = splitBarHeight;
-		vertMarginTop = vertMarginBottom;
-		vertMarginBottom -= splitBarHeight;
+		vertMargin = std::max(WinUtil::dialogUnitsToPixelsY(3, ydu), GetSystemMetrics(SM_CYSIZEFRAME));
+		horizMargin = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		buttonSpace = WinUtil::dialogUnitsToPixelsX(8, xdu);
 	}
 
 	CRect rc = rect;
-	rc.bottom -= buttonHeight + vertMarginTop + vertMarginBottom;
+	rc.bottom -= buttonHeight + 2*vertMargin - splitBarHeight;
 	ctrlHubs.MoveWindow(rc);
-	
-	static const int bspace = 10;
 
-	rc.top = rc.bottom + vertMarginTop;
+	rc.top = rc.bottom + vertMargin;
 	rc.bottom = rc.top + buttonHeight;
-
-	rc.left = 2;
+	rc.left = horizMargin;
 	rc.right = rc.left + buttonWidth;
 	ctrlConnect.MoveWindow(rc);
 
-	rc.OffsetRect(bspace + buttonWidth + 2, 0);
+	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
 	ctrlRemove.MoveWindow(rc);
 
-	rc.OffsetRect(buttonWidth + 2, 0);
+	rc.OffsetRect(buttonWidth + horizMargin, 0);
 	ctrlRemoveAll.MoveWindow(rc);
 }
 
@@ -454,6 +461,16 @@ LRESULT RecentHubsFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandle
 		}
 	}
 	return 0;
+}
+
+BOOL RecentHubsFrame::PreTranslateMessage(MSG* pMsg)
+{
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::isCtrl()) return FALSE;
+	return IsDialogMessage(pMsg);
 }
 
 CFrameWndClassInfo& RecentHubsFrame::GetWndClassInfo()

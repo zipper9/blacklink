@@ -2525,6 +2525,8 @@ IDR_OFFLINE_ICO         ICON                    "res\\offline.ico"
 
 IDR_ONLINE_ICO          ICON                    "res\\online.ico"
 
+IDR_ERROR               ICON                    "res\\Error.ico"
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // PNG
@@ -2715,6 +2717,12 @@ BEGIN
     "R",            IDC_REMOVE,             VIRTKEY, ALT, NOINVERT
     "U",            IDC_MOVE_UP,            VIRTKEY, ALT, NOINVERT
     "D",            IDC_MOVE_DOWN,          VIRTKEY, ALT, NOINVERT
+    "C",            IDC_CONNECT,            VIRTKEY, ALT, NOINVERT
+END
+
+IDR_RECENTS ACCELERATORS
+BEGIN
+    "R",            IDC_REMOVE,             VIRTKEY, ALT, NOINVERT
     "C",            IDC_CONNECT,            VIRTKEY, ALT, NOINVERT
 END
 

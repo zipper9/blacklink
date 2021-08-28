@@ -26,6 +26,8 @@
 #include "../client/CompatibilityManager.h"
 #endif
 
+static const size_t MAX_CAPTION_LEN = 40;
+
 struct OMenuItem
 {
 	OMenuItem(const OMenuItem&) = delete;
@@ -129,7 +131,7 @@ BOOL OMenu::InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption)
 	if (ownerDrawMode == OD_NEVER)
 		return FALSE;
 	OMenuItem* omi = new OMenuItem(this);
-	omi->text = caption;
+	omi->text = caption.length() > MAX_CAPTION_LEN ? caption.substr(0, MAX_CAPTION_LEN) : caption;
 	omi->data = nullptr;
 	omi->extType = EXT_TYPE_HEADER;
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };

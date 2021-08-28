@@ -348,6 +348,7 @@ IconBitmaps::IconBitmaps()
 	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
 	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
 	init(CLEAR,              SOURCE_ICON,     IDR_PURGE);
+	init(EXCLAMATION,        SOURCE_ICON,     IDR_ERROR);
 }
 
 bool IconBitmaps::loadIcon(int index, int size)
@@ -355,7 +356,7 @@ bool IconBitmaps::loadIcon(int index, int size)
 	if (data[index].icon[size]) return true;
 	int iconSize = (size + 1)*16;
 	HIconWrapper wrapper(data[index].id, iconSize, iconSize);
-	HICON hIcon = wrapper.detach();;
+	HICON hIcon = wrapper.detach();
 	data[index].icon[size] = hIcon;
 	return hIcon != nullptr;
 }
