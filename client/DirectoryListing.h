@@ -269,7 +269,7 @@ class DirectoryListing : public UserInfoBase
 				void createCopiedPath(const Directory *dir, vector<const Directory*> &pathCache);
 		};
 		
-		DirectoryListing(std::atomic_bool& abortFlag, bool createRoot = true);
+		DirectoryListing(std::atomic_bool& abortFlag, bool createRoot = true, bool ownList = false);
 		~DirectoryListing();
 		
 		void loadFile(const string& fileName, ProgressNotif *progressNotif, bool ownList);

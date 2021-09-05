@@ -2637,7 +2637,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	if (searchOptions.onlyNewFiles)
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_ONLY_NEW_FILES;
 
-	DirectoryListing *dest = searchOptions.newWindow ? new DirectoryListing(abortFlag) : nullptr;
+	DirectoryListing *dest = searchOptions.newWindow ? new DirectoryListing(abortFlag, true, dl->isOwnList()) : nullptr;
 
 	if (!search[SEARCH_CURRENT].match(sq, dl->getRoot(), dest, pathCache))
 	{
