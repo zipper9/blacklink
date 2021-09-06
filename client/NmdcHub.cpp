@@ -412,7 +412,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 				reply = ClientManagerListener::SEARCH_PARTIAL_HIT;
 		}
 	}
-	ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, searchParam.filter, reply);
+	ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, reply);
 }
 
 bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
@@ -628,7 +628,7 @@ void NmdcHub::searchParse(const string& param, int type)
 
 	if (searchParam.fileType != FILE_TYPE_TTH && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 	{
-		ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, searchParam.filter, ClientManagerListener::SEARCH_MISS);
+		ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, ClientManagerListener::SEARCH_MISS);
 		return;
 	}
 

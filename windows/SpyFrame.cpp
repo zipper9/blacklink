@@ -31,6 +31,7 @@ static const int columnSizes[] =
 	50,
 	320,
 	120,
+	120,
 	50
 };
 
@@ -39,6 +40,7 @@ const int SpyFrame::columnId[] =
 	COLUMN_STRING,
 	COLUMN_COUNT,
 	COLUMN_USERS,
+	COLUMN_HUB,
 	COLUMN_TIME,
 	COLUMN_SHARE_HIT
 };
@@ -48,6 +50,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::SEARCH_STRING,
 	ResourceManager::COUNT,
 	ResourceManager::USERS,
+	ResourceManager::HUB,
 	ResourceManager::TIME,
 	ResourceManager::SHARED
 };
@@ -310,7 +313,7 @@ void SpyFrame::processTasks()
 					           si->s + "\r\n";
 				}
 				bool nicksUpdated = false;
-				if (showNick && ii->addSeeker(si->seeker))
+				if (showNick && ii->addSeeker(si->seeker, si->hub))
 				{
 					ii->updateNickList();
 					nicksUpdated = true;
@@ -393,12 +396,12 @@ LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 	return 0;
 }
 
-void SpyFrame::on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept
+void SpyFrame::on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& hub, const string& s, ClientManagerListener::SearchReply re) noexcept
 {
 	if (ignoreTTH && Util::isTTHBase32(s))
 		return;
 		
-	SearchInfoTask *x = new SearchInfoTask(user, s, re);
+	SearchInfoTask *x = new SearchInfoTask(user, hub, s, re);
 	if (protocol == ClientBase::TYPE_NMDC)
 		std::replace(x->s.begin(), x->s.end(), '$', ' ');
 	addTask(SEARCH, x);
@@ -529,12 +532,13 @@ SpyFrame::ItemInfo::ItemInfo(const string& s, uint64_t id) :
 	Text::toT(key, text);
 }
 
-bool SpyFrame::ItemInfo::addSeeker(const string& s)
+bool SpyFrame::ItemInfo::addSeeker(const string& user, const string& hub)
 {
 	for (size_t i = 0; i < NUM_SEEKERS; ++i)
-		if (s == seekers[i]) return false;
+		if (user == seekers[i].user) return false;
 
-	seekers[curPos] = s;
+	seekers[curPos].user = user;
+	seekers[curPos].hub = hub;
 	curPos = (curPos + 1) % NUM_SEEKERS;
 	return true;
 }			
@@ -542,20 +546,23 @@ bool SpyFrame::ItemInfo::addSeeker(const string& s)
 void SpyFrame::ItemInfo::updateNickList()
 {
 	nickList.clear();
+	hubList.clear();
 	for (size_t i = 0; i < NUM_SEEKERS; ++i)
 	{
-		const string::size_type pos = seekers[i].find(':');
+		size_t j = (curPos + i) % NUM_SEEKERS;
+		const string& user = seekers[j].user;
+		const string::size_type pos = user.find(':');
 		if (pos != string::npos)
 		{
 			if (!nickList.empty()) nickList += _T(' ');
-			if (pos == 3 && Text::isAsciiPrefix2(seekers[i].c_str(), "hub", 3))
+			if (pos == 3 && Text::isAsciiPrefix2(user.c_str(), "hub", 3))
 			{
-				nickList += Text::toT(seekers[i].substr(4));
+				nickList += Text::toT(user.substr(4));
 			}
 			else
 			{
-				nickList += Text::toT(seekers[i]);
-				const string ip = seekers[i].substr(0, pos);
+				nickList += Text::toT(user);
+				const string ip = user.substr(0, pos);
 				Ip4Address addr;
 				if (!ip.empty() && Util::parseIpAddress(addr, ip))
 				{
@@ -568,6 +575,12 @@ void SpyFrame::ItemInfo::updateNickList()
 						nickList += _T("]");
 					}
 				}
+			}
+			string hubName = ClientManager::getHubName(seekers[j].hub);
+			if (!hubName.empty())
+			{
+				if (!hubList.empty()) hubList += _T(", ");
+				hubList += Text::toT(hubName);
 			}
 		}
 	}
@@ -583,6 +596,8 @@ tstring SpyFrame::ItemInfo::getText(uint8_t col) const
 			return Util::toStringT(count);
 		case COLUMN_USERS:
 			return nickList;
+		case COLUMN_HUB:
+			return hubList;
 		case COLUMN_TIME:
 			return Text::toT(Util::formatDateTime(time));
 		case COLUMN_SHARE_HIT:
@@ -605,6 +620,9 @@ int SpyFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, uint8
 			break;
 		case COLUMN_USERS:
 			result = compare(a->nickList, b->nickList);
+			break;
+		case COLUMN_HUB:
+			result = Util::defaultSort(a->hubList, b->hubList);
 			break;
 		case COLUMN_TIME:
 			result = compare(a->time, b->time);

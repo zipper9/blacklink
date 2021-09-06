@@ -872,10 +872,10 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 	}
 }
 
-void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const string& filter, ClientManagerListener::SearchReply reply)
+void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const string& hub, const string& filter, ClientManagerListener::SearchReply reply)
 {
 	if (g_isSpyFrame)
-		Speaker<ClientManagerListener>::fly_fire4(ClientManagerListener::IncomingSearch(), protocol, seeker, filter, reply);
+		Speaker<ClientManagerListener>::fly_fire5(ClientManagerListener::IncomingSearch(), protocol, seeker, hub, filter, reply);
 }
 
 static void getShareGroup(const OnlineUserPtr& ou, CID& shareGroup)
@@ -904,7 +904,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	if (g_isSpyFrame)
 	{
 		string description = param.getDescription();
-		Speaker<ClientManagerListener>::fly_fire4(ClientManagerListener::IncomingSearch(), ClientBase::TYPE_ADC,  "Hub:" + ou->getIdentity().getNick(), description, re);
+		Speaker<ClientManagerListener>::fly_fire5(ClientManagerListener::IncomingSearch(), ClientBase::TYPE_ADC, "Hub:" + ou->getIdentity().getNick(), c->getHubUrl(), description, re);
 	}
 }
 

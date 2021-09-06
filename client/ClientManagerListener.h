@@ -48,7 +48,7 @@ class ClientManagerListener
 		virtual void on(UserUpdated, const OnlineUserPtr&) noexcept { }
 		/** User offline in all hubs */
 		virtual void on(UserDisconnected, const UserPtr&) noexcept { }
-		virtual void on(IncomingSearch, int, const string&, const string&, SearchReply) noexcept { }
+		virtual void on(IncomingSearch, int, const string&, const string&, const string&, SearchReply) noexcept { }
 		virtual void on(ClientConnected, const Client*) noexcept { }
 		virtual void on(ClientUpdated, const Client*) noexcept { }
 		virtual void on(ClientDisconnected, const Client*) noexcept { }

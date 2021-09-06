@@ -129,15 +129,23 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 			COLUMN_USERS,
 			COLUMN_TIME,
 			COLUMN_SHARE_HIT,
+			COLUMN_HUB,
 			COLUMN_LAST
 		};
 		
 		static const size_t NUM_SEEKERS = 8;
+
+		struct Seeker
+		{
+			string user;
+			string hub;
+		};
+
 		class ItemInfo
 		{
 			public:
 				ItemInfo(const string& s, uint64_t id);
-				bool addSeeker(const string& s);
+				bool addSeeker(const string& user, const string& hub);
 				void updateNickList();
 				tstring getText(uint8_t col) const;
 				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
@@ -148,11 +156,12 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 				string key;
 				tstring text;
 				tstring nickList;
+				tstring hubList;
 				int count;
 				time_t time;
 				ClientManagerListener::SearchReply re;
 
-				string seekers[NUM_SEEKERS];
+				Seeker seekers[NUM_SEEKERS];
 				size_t curPos;
 		};
 
@@ -204,14 +213,15 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		// ClientManagerListener
 		struct SearchInfoTask : public Task
 		{
-			SearchInfoTask(const string& user, const string& s, ClientManagerListener::SearchReply re) : seeker(user), s(s), re(re) {}
+			SearchInfoTask(const string& user, const string& hub, const string& s, ClientManagerListener::SearchReply re) : seeker(user), hub(hub), s(s), re(re) {}
 			string seeker;
 			string s;
+			string hub;
 			ClientManagerListener::SearchReply re;
 		};
 		
 		// ClientManagerListener
-		void on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept override;
+		void on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& hub, const string& s, ClientManagerListener::SearchReply re) noexcept override;
 
 		void on(SettingsManagerListener::Repaint) override;
 

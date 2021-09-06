@@ -243,7 +243,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		*/
 		static OnlineUserPtr findOnlineUserHintL(const CID& cid, const string& hintUrl, OnlinePairC& p);
 		
-		void fireIncomingSearch(int protocol, const string&, const string&, ClientManagerListener::SearchReply);
+		void fireIncomingSearch(int protocol, const string& seeker, const string& hub, const string& filter, ClientManagerListener::SearchReply reply);
+
 		// ClientListener
 		void on(Connected, const Client* c) noexcept override;
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
