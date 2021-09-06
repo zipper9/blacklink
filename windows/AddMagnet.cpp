@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "AddMagnet.h"
 #include "SimpleStringTokenizer.h"
+#include <boost/algorithm/string/trim.hpp>
 
 LRESULT AddMagnet::onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -60,8 +61,12 @@ LRESULT AddMagnet::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		WinUtil::getWindowText(ctrlMagnet, magnet);
 		SimpleStringTokenizer<TCHAR> st(magnet, _T('\n'));
 		tstring tok;
-		while (st.getNextNonEmptyToken(tok))
-			WinUtil::parseMagnetUri(tok, WinUtil::MA_DEFAULT);
+		while (st.getNextToken(tok))
+		{
+			boost::trim(tok);
+			if (!tok.empty())
+				WinUtil::parseMagnetUri(tok, WinUtil::MA_DEFAULT);
+		}
 	}
 	EndDialog(wID);
 	return 0;
