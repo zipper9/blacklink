@@ -23,6 +23,14 @@
 #include "SimpleStringTokenizer.h"
 #include <boost/algorithm/string/trim.hpp>
 
+static const WinUtil::TextItem texts[] =
+{
+	{ IDC_MAGNET, ResourceManager::ADD_MAGNET_DESC },
+	{ IDOK,       ResourceManager::OK              },
+	{ IDCANCEL,   ResourceManager::CANCEL          },
+	{ 0,          ResourceManager::Strings()       }
+};
+
 LRESULT AddMagnet::onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlMagnet.SetFocus();
@@ -31,15 +39,16 @@ LRESULT AddMagnet::onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 
 LRESULT AddMagnet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	DlgResize_Init();
+	WinUtil::translate(*this, texts);
+
 	ctrlMagnet.Attach(GetDlgItem(IDC_MAGNET_LINK));
 	ctrlMagnet.SetFocus();
 	ctrlMagnet.SetWindowText(magnet.c_str());
 	ctrlMagnet.SetSelAll(TRUE);
-	
-	ctrlDescription.Attach(GetDlgItem(IDC_MAGNET));
-	ctrlDescription.SetWindowText(CTSTRING(MAGNET_SHELL_DESC));
-	
-	SetWindowText(CTSTRING(ADDING_MAGNET_LINK));
+	GetDlgItem(IDOK).EnableWindow(!magnet.empty());
+
+	SetWindowText(CTSTRING(ADD_MAGNET_LINKS));
 	
 	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::MAGNET, 0);
 	SetIcon(dialogIcon, FALSE);
@@ -61,13 +70,30 @@ LRESULT AddMagnet::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		WinUtil::getWindowText(ctrlMagnet, magnet);
 		SimpleStringTokenizer<TCHAR> st(magnet, _T('\n'));
 		tstring tok;
+		bool linkFound = false;
 		while (st.getNextToken(tok))
 		{
 			boost::trim(tok);
-			if (!tok.empty())
+			if (Util::isMagnetLink(tok))
+			{
+				linkFound = true;
 				WinUtil::parseMagnetUri(tok, WinUtil::MA_DEFAULT);
+			}
+		}
+		if (!linkFound)
+		{
+			MessageBox(CTSTRING(MAGNET_LINKS_NOT_FOUND), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+			return 0;
 		}
 	}
 	EndDialog(wID);
+	return 0;
+}
+
+LRESULT AddMagnet::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	WinUtil::getWindowText(ctrlMagnet, magnet);
+	boost::trim(magnet);
+	GetDlgItem(IDOK).EnableWindow(!magnet.empty());
 	return 0;
 }
