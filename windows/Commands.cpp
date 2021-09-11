@@ -1052,6 +1052,33 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		}
 		return true;
 	}
+	else if (stricmp(cmd.c_str(), _T("queue")) == 0)
+	{
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		Text::makeLower(args[0]);
+		if (args[0] == _T("info"))
+		{
+			string result = "*** Download queue\n";
+			size_t fileCount;
+			{
+				QueueManager::LockFileQueueShared fileQueue;
+				fileCount = fileQueue.getQueueL().size();
+			}
+			result += "Total files: " + Util::toString(fileCount);
+			result += "\nRunning downloads: " + Util::toString(QueueManager::userQueue.getRunningCount());
+			result += '\n';
+			localMessage = Text::toT(result);
+			return true;
+		}
+		localMessage = TSTRING(COMMAND_INVALID_ACTION);
+		return true;
+	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	else if (stricmp(cmd.c_str(), _T("flushdb")) == 0)
 	{

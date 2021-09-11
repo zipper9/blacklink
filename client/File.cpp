@@ -107,10 +107,6 @@ void File::init(const wstring& fileName, int access, int mode, bool isAbsolutePa
 	{
 #ifdef _DEBUG
 		string errorText = Util::translateError();
-		if (outPath.find(L".dctmp") != wstring::npos)
-		{
-			dcassert(0);
-		}
 		string text = "Error = " + Util::toString(GetLastError()) + ", File = " + Text::wideToUtf8(outPath) + '\n';
 		DumpDebugMessage(_T("file-error.log"), text.c_str(), text.length(), false);
 		throw FileException(errorText);

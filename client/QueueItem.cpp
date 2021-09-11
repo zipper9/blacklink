@@ -403,19 +403,13 @@ void QueueItem::addDownload(const DownloadPtr& download)
 bool QueueItem::removeDownload(const UserPtr& user)
 {
 	LOCK(csDownloads);
-	const auto sizeBefore = downloads.size();
-	if (sizeBefore)
-	{
-		//dcassert(sizeBefore != downloads.size());
-		//downloads.erase(remove(downloads.begin(), downloads.end(), d), downloads.end());
-		for (auto i = downloads.begin(); i != downloads.end(); ++i)
-			if ((*i)->getUser() == user)
-			{
-				downloads.erase(i);
-				break;
-			}
-	}
-	return sizeBefore != downloads.size();
+	for (auto i = downloads.begin(); i != downloads.end(); ++i)
+		if ((*i)->getUser() == user)
+		{
+			downloads.erase(i);
+			return true;
+		}
+	return false;
 }
 
 Segment QueueItem::getNextSegmentForward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const

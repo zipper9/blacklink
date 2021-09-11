@@ -437,7 +437,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				mis = ShareManager::getInstance()->getTreeByTTH(tth);
 				if (!mis)
 				{
-					if (QueueManager::g_fileQueue.isQueued(tth))
+					if (QueueManager::fileQueue.isQueued(tth))
 						mis = ShareManager::getTreeFromStore(tth);
 				}
 			}

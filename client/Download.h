@@ -54,7 +54,7 @@ class Download : public Transfer, public Flags
 		/** @internal */		
 		TigerTree& getTigerTree() { return tigerTree; }
 		const TigerTree& getTigerTree() const { return tigerTree; }
-		string& getPFS() { return pfs; }
+		string& getFileListBuffer() { return fileListBuffer; }
 		
 		/** @internal */
 		void getCommand(AdcCommand& cmd, bool zlib) const;
@@ -93,7 +93,7 @@ class Download : public Transfer, public Flags
 		OutputStream* downloadFile;
 		const QueueItemPtr qi;
 		TigerTree tigerTree;
-		string pfs;
+		string fileListBuffer;
 
 	public:
 		struct ErrorInfo

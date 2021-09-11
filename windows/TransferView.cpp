@@ -1852,7 +1852,7 @@ LRESULT TransferView::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 		const string target = Text::fromT(ii->target);
 		if (ii->download)
 		{
-			const auto qi = QueueManager::g_fileQueue.findTarget(target);
+			const auto qi = QueueManager::fileQueue.findTarget(target);
 			if (qi) runPreview(wID, qi);
 		}
 		else

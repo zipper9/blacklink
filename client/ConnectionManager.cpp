@@ -471,7 +471,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	// Вешаемся при активной закачке cqi->getUser()->flushRatio();
 #endif
-	QueueManager::g_userQueue.removeRunning(cqi->getUser());
+	QueueManager::userQueue.removeRunning(cqi->getUser());
 	const string token = cqi->getConnectionQueueToken();
 	cqi.reset();
 	tokenManager.removeToken(token);

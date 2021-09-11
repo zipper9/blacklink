@@ -75,22 +75,22 @@ class QueueManager : public Singleton<QueueManager>,
 				LockFileQueueShared()
 				{
 #ifdef USE_QUEUE_RWLOCK
-					g_fileQueue.csFQ->acquireShared();
+					fileQueue.csFQ->acquireShared();
 #else
-					g_fileQueue.csFQ->lock();
+					fileQueue.csFQ->lock();
 #endif
 				}
 				~LockFileQueueShared()
 				{
 #ifdef USE_QUEUE_RWLOCK
-					g_fileQueue.csFQ->releaseShared();
+					fileQueue.csFQ->releaseShared();
 #else
-					g_fileQueue.csFQ->unlock();
+					fileQueue.csFQ->unlock();
 #endif
 				}
 				const QueueItem::QIStringMap& getQueueL()
 				{
-					return g_fileQueue.getQueueL();
+					return fileQueue.getQueueL();
 				}
 		};
 		
@@ -186,7 +186,7 @@ class QueueManager : public Singleton<QueueManager>,
 	public:
 		static bool getTTH(const string& target, TTHValue& tth)
 		{
-			return g_fileQueue.getTTH(target, tth);
+			return fileQueue.getTTH(target, tth);
 		}
 		
 		/** Move the target location of a queued item. Running items are silently ignored */
@@ -238,11 +238,7 @@ class QueueManager : public Singleton<QueueManager>,
 	private:
 		static void getRunningFilesL(QueueItemList& runningFiles)
 		{
-			g_fileQueue.getRunningFilesL(runningFiles);
-		}
-		static size_t getRunningFileCount(const size_t stopKey)
-		{
-			return g_fileQueue.getRunningFileCount(stopKey);
+			fileQueue.getRunningFilesL(runningFiles);
 		}
 
 	public:
@@ -280,7 +276,6 @@ class QueueManager : public Singleton<QueueManager>,
 				bool empty() const { return queue.empty(); }
 				const QueueItem::QIStringMap& getQueueL() const { return queue; }
 				void getRunningFilesL(QueueItemList& runningFiles);
-				size_t getRunningFileCount(const size_t stopCount) const;
 				void moveTarget(const QueueItemPtr& qi, const string& target);
 				void remove(const QueueItemPtr& qi);
 				void clearAll();
@@ -296,11 +291,11 @@ class QueueManager : public Singleton<QueueManager>,
 				QueueItem::QIStringMap queue;
 				boost::unordered_map<TTHValue, QueueItemList> queueTTH;
 				std::regex reAutoPriority;
-				string autoPriorityPattern;				
+				string autoPriorityPattern;
 		};
 
 		/** QueueItems by target */
-		static FileQueue g_fileQueue;
+		static FileQueue fileQueue;
 
 		/** All queue items indexed by user (this is a cache for the FileQueue really...) */
 		class UserQueue
@@ -321,24 +316,27 @@ class QueueManager : public Singleton<QueueManager>,
 				bool isInQueue(const QueueItemPtr& qi) const;
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
+				static void modifyRunningCount(int count);
+				static size_t getRunningCount();
 				
 				typedef boost::unordered_map<UserPtr, QueueItemList, User::Hash> UserQueueMap; // TODO - set ?
 				typedef boost::unordered_map<UserPtr, QueueItemPtr, User::Hash> RunningMap;
 				
 			private:
 				/** QueueItems by priority and user (this is where the download order is determined) */
-				static UserQueueMap g_userQueueMap[QueueItem::LAST];
+				static UserQueueMap userQueueMap[QueueItem::LAST];
 				/** Currently running downloads, a QueueItem is always either here or in the userQueue */
-				static RunningMap g_runningMap;
+				static RunningMap runningMap;
 				/** Last error message to sent to TransferView */
 #define FLYLINKDC_USE_RUNNING_QUEUE_CS
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
-				static std::unique_ptr<RWLock> g_runningMapCS;
+				static std::unique_ptr<RWLock> csRunningMap;
 #endif
+				static size_t totalDownloads;
 		};
 
 		/** QueueItems by user */
-		static UserQueue g_userQueue;
+		static UserQueue userQueue;
 
 	private:
 		friend class QueueLoader;
