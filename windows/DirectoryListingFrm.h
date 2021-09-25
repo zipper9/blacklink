@@ -78,6 +78,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		{
 			FINISHED,
 			ABORTED,
+			SPLICE_TREE,
 			PROGRESS = 0x1000
 		};
 

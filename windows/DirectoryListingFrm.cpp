@@ -2049,7 +2049,7 @@ void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 	}
 }
 
-LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	switch (wParam)
 	{
@@ -2072,6 +2072,30 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*
 		{
 			loading = false;
 			PostMessage(WM_CLOSE, 0, 0);
+			break;
+		}
+		case SPLICE_TREE:
+		{
+			unique_ptr<DirectoryListing> newListing(reinterpret_cast<DirectoryListing*>(lParam));
+			DirectoryListing::Directory *subdir = dl->findDirPath(newListing->getBasePath());
+			if (subdir)
+			{
+				HTREEITEM ht;
+				if (subdir == dl->getRoot())
+					ht = treeRoot;
+				else
+					ht = static_cast<HTREEITEM>(subdir->getUserData());
+				DirectoryListing::Directory *newRoot = newListing->getRoot();
+				if (dl->spliceTree(subdir, *newListing))
+				{
+					loading = true;
+					try { refreshTree(newRoot, ht); }
+					catch (Exception&) { dcassert(0); }
+					loading = false;
+					newRoot->setUserData(static_cast<void*>(ht));
+					showDirContents(newRoot, nullptr, nullptr);
+				}
+			}
 			break;
 		}
 		default:
@@ -2744,25 +2768,10 @@ int ThreadedDirectoryListing::run()
 			}
 			case MODE_LOAD_PARTIAL_LIST:
 			{
-				DirectoryListing newListing(window->abortFlag);
-				newListing.setHintedUser(window->dl->getHintedUser());
-				newListing.loadXML(text, this, false);
-				DirectoryListing::Directory *subdir = window->dl->findDirPath(newListing.getBasePath());
-				if (subdir)
-				{
-					HTREEITEM ht;
-					if (subdir == window->dl->getRoot())
-						ht = window->treeRoot;
-					else
-						ht = static_cast<HTREEITEM>(subdir->getUserData());
-					DirectoryListing::Directory *newRoot = newListing.getRoot();
-					if (window->dl->spliceTree(subdir, newListing))
-					{
-						window->refreshTree(newRoot, ht);
-						newRoot->setUserData(static_cast<void*>(ht));
-						window->showDirContents(newRoot, nullptr, nullptr);
-					}
-				}
+				unique_ptr<DirectoryListing> newListing(new DirectoryListing(window->abortFlag));
+				newListing->setHintedUser(window->dl->getHintedUser());
+				newListing->loadXML(text, this, false);
+				WinUtil::postSpeakerMsg(*window, DirectoryListingFrame::SPLICE_TREE, newListing.release());
 				break;
 			}
 			default:
