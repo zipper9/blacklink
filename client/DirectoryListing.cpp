@@ -73,12 +73,14 @@ static bool checkFormat(const char *s, const char *fmt)
 	return true;
 }
 
-DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag, bool createRoot, bool ownList) :
+DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag, bool createRoot, const DirectoryListing* src) :
 	abortFlag(abortFlag),
-	includeSelf(false), ownList(ownList), incomplete(false), aborted(false), hasTimestampsFlag(false)
+	includeSelf(false), incomplete(false), aborted(false)
 {
 	root = createRoot ? new Directory(nullptr, Util::emptyString, false, true) : nullptr;
 	tthSet = createRoot ? nullptr : new TTHMap;
+	ownList = src ? src->ownList : false;
+	hasTimestampsFlag = src ? src->hasTimestampsFlag : false;
 }
 
 DirectoryListing::~DirectoryListing()
