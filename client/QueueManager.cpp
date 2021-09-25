@@ -40,7 +40,7 @@
 
 static const unsigned SAVE_QUEUE_TIME = 300000; // 5 minutes
 static const int64_t MOVER_LIMIT = 10 * 1024 * 1024;
-
+static const int MAX_MATCH_QUEUE_ITEMS = 10;
 
 QueueManager::FileQueue QueueManager::fileQueue;
 QueueManager::UserQueue QueueManager::userQueue;
@@ -1209,14 +1209,21 @@ void QueueManager::addDirectory(const string& dir, const UserPtr& user, const st
 	if (user)
 	{
 		{
+			int matchQueueItems = 0;
 			LOCK(csDirectories);
 			const auto dp = directories.equal_range(user);
 			for (auto i = dp.first; i != dp.second; ++i)
+			{
+				if (flag == QueueItem::FLAG_MATCH_QUEUE && (i->second.getFlags() & QueueItem::FLAG_MATCH_QUEUE))
+				{
+					if (++matchQueueItems == MAX_MATCH_QUEUE_ITEMS) return;
+				}
 				if (stricmp(dir, i->second.getName()) == 0)
 				{
 					i->second.addFlags(flag);
 					return;
 				}
+			}
 
 			// Unique directory, fine...
 			directories.emplace(make_pair(user, DirectoryItem(user, dir, target, p, flag)));
@@ -2715,7 +2722,6 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 		try
 		{
 			const string path = Util::getFilePath(sr.getFile());
-			// [!] IRainman fix: please always match listing without hint! old code: sr->getHubUrl().
 			addDirectory(path, sr.getUser(), Util::emptyString, QueueItem::DEFAULT, QueueItem::FLAG_MATCH_QUEUE);
 		}
 		catch (const Exception&)
