@@ -898,7 +898,7 @@ int WebServerSocket::run()
 						switch (Util::toInt(m["type"]))
 						{
 							case SearchResult::TYPE_DIRECTORY:
-								QueueManager::getInstance()->addDirectory(Util::encodeURI(m["file"], true), HintedUser(toAdd.User, toAdd.HubURL), dir);
+								QueueManager::getInstance()->addDirectory(Util::encodeURI(m["file"], true), HintedUser(toAdd.User, toAdd.HubURL), dir, QueueItem::DEFAULT, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 								break;
 							case SearchResult::TYPE_FILE:
 								const string name = Util::encodeURI(m["name"], true);

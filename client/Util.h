@@ -189,6 +189,16 @@ namespace Util
 	}
 
 	template<typename T>
+	inline void toNativePathSeparators(T& path)
+	{
+#ifdef _WIN32
+		std::replace(path.begin(), path.end(), '/', '\\');
+#else
+		std::replace(path.begin(), path.end(), '\\', '/');
+#endif
+	}
+
+	template<typename T>
 	inline bool isReservedDirName(const T& name)
 	{
 		if (name.empty() || name.length() > 2) return false;

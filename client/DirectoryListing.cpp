@@ -607,7 +607,7 @@ void DirectoryListing::download(Directory* dir, const string& aTarget, QueueItem
 	if (!dir->getComplete())
 	{
 		// folder is not completed (partial list?), so we need to download it first
-		QueueManager::getInstance()->addDirectory(Util::emptyString, hintedUser, target, prio);
+		QueueManager::getInstance()->addDirectory(Util::emptyString, hintedUser, target, prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 	}
 	else
 	{
@@ -900,10 +900,21 @@ DirectoryListing::Directory* DirectoryListing::findDirPath(const string& path) c
 {
 	if (!root) return nullptr;
 	SimpleStringTokenizer<char> sl(path, '/');
-	string token;
+	SimpleStringTokenizer<char> slBase(basePath, '/');
+	bool matchBase = basePath.length() > 1;
+	string token, basePathToken;
 	const Directory *dir = root;
 	while (sl.getNextNonEmptyToken(token))
 	{
+		if (matchBase)
+		{
+			if (slBase.getNextNonEmptyToken(basePathToken))
+			{
+				if (basePathToken != token) return nullptr;
+				continue;
+			}
+			matchBase = false;
+		}
 		const Directory *nextDir = nullptr;
 		for (auto j = dir->directories.cbegin(); j != dir->directories.cend(); ++j)
 		{

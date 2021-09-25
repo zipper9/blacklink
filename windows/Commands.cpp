@@ -21,6 +21,7 @@
 
 #ifdef _DEBUG
 extern bool suppressUserConn;
+extern bool disablePartialListUploads;
 #endif
 
 // FIXME: Synchronize help text with actual commands.
@@ -147,7 +148,7 @@ static void splitParams(const tstring& cmd, vector<tstring>& params)
 			if (cmd[i] == _T('"'))
 			{
 				quote = !quote;
-				if (quote) continue;
+				continue;
 			}
 			newParam += cmd[i];
 		}
@@ -1006,13 +1007,17 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
 			return true;
 		}
-		enum { ACTION_SHOW_INFO, ACTION_GET_LIST };
+		enum { ACTION_SHOW_INFO, ACTION_GET_LIST, ACTION_MATCH_QUEUE, ACTION_DL_DIR };
 		int action;
 		Text::makeLower(args[0]);
 		if (args[0] == _T("getlist"))
 			action = ACTION_GET_LIST;
+		else if (args[0] == _T("mq"))
+			action = ACTION_MATCH_QUEUE;
 		else if (args[0] == _T("info"))
 			action = ACTION_SHOW_INFO;
+		else if (args[0] == _T("dldir"))
+			action = ACTION_DL_DIR;
 		else
 		{
 			localMessage = TSTRING(COMMAND_INVALID_ACTION);
@@ -1022,7 +1027,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		string hubUrl;
 		CID cid;
 		if (parseCID(cid, args[1], localMessage)) hasCID = true;
-		if (args.size() >= 3)
+		if (args.size() >= 3 && !hasCID)
 		{
 			hubUrl = Text::fromT(args[2]);
 		}
@@ -1043,6 +1048,21 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		{
 			ou->getList();
 			localMessage = _T("Getting file list");
+		}
+		else if (action == ACTION_MATCH_QUEUE || action == ACTION_DL_DIR)
+		{
+			size_t index = hasCID ? 2 : 3;
+			if (args.size() <= index)
+			{
+				++index;
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, index);
+				return true;
+			}
+			auto qm = QueueManager::getInstance();
+			qm->addDirectory(Text::fromT(args[index]), ou->getUser(), Util::emptyString,
+				QueueItem::DEFAULT,
+				action == ACTION_MATCH_QUEUE ? QueueItem::FLAG_MATCH_QUEUE : QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			localMessage = _T("Requesting partial file list");
 		}
 		else
 		{
@@ -1072,6 +1092,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			}
 			result += "Total files: " + Util::toString(fileCount);
 			result += "\nRunning downloads: " + Util::toString(QueueManager::userQueue.getRunningCount());
+			result += "\nDirectories: " + Util::toString(QueueManager::getInstance()->getDirectoryItemCount());
 			result += '\n';
 			localMessage = Text::toT(result);
 			return true;
@@ -1088,6 +1109,24 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 #endif
 #ifdef _DEBUG
+	else if (stricmp(cmd.c_str(), _T("disable")) == 0)
+	{
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		if (args[0] == _T("partial"))
+		{
+			disablePartialListUploads = !disablePartialListUploads;
+			localMessage = _T("Partial list uploads disabled: ") + Util::toStringT(disablePartialListUploads);
+			return true;
+		}
+		localMessage = TSTRING(COMMAND_INVALID_ACTION);
+		return true;
+	}
 	else if (stricmp(cmd.c_str(), _T("bloom")) == 0)
 	{
 		vector<tstring> args;

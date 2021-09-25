@@ -34,7 +34,6 @@ class UserConnection;
 class QueueLoader;
 class DirectoryItem;
 class DirectoryListing;
-typedef DirectoryItem* DirectoryItemPtr;
 
 class QueueManager : public Singleton<QueueManager>,
 	public Speaker<QueueManagerListener>,
@@ -170,15 +169,14 @@ class QueueManager : public Singleton<QueueManager>,
 
 	public:
 		void shutdown();
-		
+
 		/** Readd a source that was removed */
 		void readd(const string& target, const UserPtr& user);
 		void readdAll(const QueueItemPtr& q);
 		/** Add a directory to the queue (downloads filelist and matches the directory). */
-		void addDirectory(const string& dir, const UserPtr& user, const string& target,
-		                  QueueItem::Priority p = QueueItem::DEFAULT) noexcept;
-		                  
+		void addDirectory(const string& dir, const UserPtr& user, const string& target, QueueItem::Priority p, int flag) noexcept;
 		int matchListing(DirectoryListing& dl) noexcept;
+		size_t getDirectoryItemCount() const noexcept;
 
 	private:
 		void removeItem(const QueueItemPtr& qi, bool removeFromUserQueue);
@@ -341,27 +339,48 @@ class QueueManager : public Singleton<QueueManager>,
 	private:
 		friend class QueueLoader;
 		friend class Singleton<QueueManager>;
-		
+
 		QueueManager();
 		~QueueManager() noexcept;
-		
+
+		class DirectoryItem
+		{
+			public:
+				DirectoryItem(const UserPtr& user, const string& name, const string& target, QueueItem::Priority p, int flag) :
+					name(name), target(target), priority(p), user(user), flags(flag) {}
+
+				const UserPtr& getUser() const { return user; }
+				int getFlags() const { return flags; }
+				void addFlags(int f) { flags |= f; }
+				const string& getName() const { return name; }
+				const string& getTarget() const { return target; }
+				QueueItem::Priority getPriority() const { return priority; }
+
+			private:
+				const UserPtr user;
+				const string name;
+				const string target;
+				const QueueItem::Priority priority;
+				int flags;
+		};
+
 		mutable FastCriticalSection csDirectories;
-		
-		/** Directories queued for downloading */
-		boost::unordered_multimap<UserPtr, DirectoryItemPtr, User::Hash> m_directories;
+
+		/** Directories for downloading or matching the queue */
+		boost::unordered_multimap<UserPtr, DirectoryItem, User::Hash> directories;
 		/** Recent searches list, to avoid searching for the same thing too often */
 		deque<string> m_recent;
 		/** The queue needs to be saved */
 		static bool g_dirty;
 		/** Next search */
 		uint64_t nextSearch;
-		
+
 		std::atomic_bool listMatcherAbortFlag;
 		std::atomic_flag listMatcherRunning;
 		std::atomic_bool dclstLoaderAbortFlag;
 		std::atomic_bool recheckerAbortFlag;
 
-		void processList(const string& name, const HintedUser& hintedUser, int flags);
+		void processList(const string& name, const HintedUser& hintedUser, int flags, const DirectoryItem* dirItem);
 		void deleteFileLists();
 		
 		bool moveFile(const string& source, const string& target);

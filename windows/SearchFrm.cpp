@@ -1483,7 +1483,7 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 		}
 		else
 		{
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(tgt), prio);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(tgt), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 		}
 	}
 	catch (const Exception& e)
@@ -1500,11 +1500,11 @@ void SearchFrame::SearchInfo::DownloadWhole::operator()(const SearchInfo* si)
 		QueueItem::Priority prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
-			QueueManager::getInstance()->addDirectory(Text::fromT(si->getText(COLUMN_PATH)), si->sr.getHintedUser(), Text::fromT(tgt), prio);
+			QueueManager::getInstance()->addDirectory(Text::fromT(si->getText(COLUMN_PATH)), si->sr.getHintedUser(), Text::fromT(tgt), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 		}
 		else
 		{
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(tgt), prio);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(tgt), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 		}
 	}
 	catch (const Exception&)

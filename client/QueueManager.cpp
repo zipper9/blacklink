@@ -56,28 +56,6 @@ size_t QueueManager::UserQueue::totalDownloads = 0;
 using boost::adaptors::map_values;
 using boost::range::for_each;
 
-class DirectoryItem
-{
-	public:
-		DirectoryItem() : m_priority(QueueItem::DEFAULT) {}
-		DirectoryItem(const UserPtr& aUser, const string& aName, const string& aTarget,
-		              QueueItem::Priority p) : m_name(aName), m_target(aTarget), m_priority(p), m_user(aUser) { }
-		              
-		DirectoryItem(const DirectoryItem&) = delete;
-		DirectoryItem& operator= (const DirectoryItem&) = delete;
-		
-		const UserPtr& getUser() const
-		{
-			return m_user;
-		}
-		
-		GETSET(string, m_name, Name);
-		GETSET(string, m_target, Target);
-		GETSET(QueueItem::Priority, m_priority, Priority);
-	private:
-		const UserPtr m_user;
-};
-
 QueueManager::FileQueue::FileQueue() :
 #ifdef USE_QUEUE_RWLOCK
 	csFQ(RWLock::create())
@@ -923,6 +901,11 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 	{
 		dcassert(user);
 		targetPath = getListPath(user);
+		if (flags & QueueItem::FLAG_PARTIAL_LIST)
+		{
+			targetPath += ':';
+			targetPath += target;
+		}
 		tempTarget = target;
 	}
 	else if (testIP)
@@ -1219,43 +1202,43 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, Queue
 	return wantConnection;
 }
 
-void QueueManager::addDirectory(const string& aDir, const UserPtr& user, const string& aTarget, QueueItem::Priority p /* = QueueItem::DEFAULT */) noexcept
+void QueueManager::addDirectory(const string& dir, const UserPtr& user, const string& target, QueueItem::Priority p, int flag) noexcept
 {
-	bool needList;
+	dcassert(flag == QueueItem::FLAG_DIRECTORY_DOWNLOAD || flag == QueueItem::FLAG_MATCH_QUEUE);
 	dcassert(user);
-	if (user) // torrent
+	if (user)
 	{
 		{
 			LOCK(csDirectories);
-			
-			const auto dp = m_directories.equal_range(user);
-			
+			const auto dp = directories.equal_range(user);
 			for (auto i = dp.first; i != dp.second; ++i)
-			{
-				if (stricmp(aTarget.c_str(), i->second->getName().c_str()) == 0)
+				if (stricmp(dir, i->second.getName()) == 0)
+				{
+					i->second.addFlags(flag);
 					return;
-			}
-			
+				}
+
 			// Unique directory, fine...
-			m_directories.insert(make_pair(user, new DirectoryItem(user, aDir, aTarget, p)));
-			needList = (dp.first == dp.second);
+			directories.emplace(make_pair(user, DirectoryItem(user, dir, target, p, flag)));
 		}
-		
+
 		setDirty();
-		
-		if (needList)
+
+		try
 		{
-			try
-			{
-				addList(user, QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_PARTIAL_LIST, aDir);
-			}
-			catch (const Exception&)
-			{
-				dcassert(0);
-				// Ignore, we don't really care...
-			}
+			addList(user, flag | QueueItem::FLAG_PARTIAL_LIST, dir);
+		}
+		catch (const Exception&)
+		{
+			dcassert(0);
 		}
 	}
+}
+
+size_t QueueManager::getDirectoryItemCount() const noexcept
+{
+	LOCK(csDirectories);
+	return directories.size();
 }
 
 QueueItem::Priority QueueManager::hasDownload(const UserPtr& user)
@@ -1761,6 +1744,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 	}
 #endif
 	UserList getConn;
+	unique_ptr<DirectoryItem> processListDirItem;
 	string processListFileName;
 	const HintedUser hintedUser = download->getHintedUser();
 	UserPtr user = download->getUser();
@@ -1782,20 +1766,24 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 				
 				if (!download->getFileListBuffer().empty())
 				{
-					bool matchQueue = q->isSet(QueueItem::FLAG_MATCH_QUEUE);
-					if (!matchQueue)
+					int dirFlags = 0;
+					if (q->isAnySet(QueueItem::FLAG_MATCH_QUEUE | QueueItem::FLAG_DIRECTORY_DOWNLOAD))
 					{
-						matchQueue = q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD);
-						if (matchQueue)
-						{
-							LOCK(csDirectories);
-							matchQueue = m_directories.find(download->getUser()) != m_directories.end();
-						}
+						LOCK(csDirectories);
+						auto dp = directories.equal_range(download->getUser());
+						for (auto i = dp.first; i != dp.second; ++i)
+							if (stricmp(q->getTempTargetConst(), i->second.getName()) == 0)
+							{
+								dirFlags = i->second.getFlags();
+								processListDirItem.reset(new DirectoryItem(std::move(i->second)));
+								directories.erase(i);
+								break;
+							}
 					}
-					if (matchQueue)
+					if (dirFlags)
 					{
 						processListFileName = std::move(download->getFileListBuffer());
-						processListFlags = (q->flags & (QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_MATCH_QUEUE)) | QueueItem::FLAG_TEXT;
+						processListFlags = dirFlags | QueueItem::FLAG_TEXT;
 					}
 					else
 					{
@@ -1806,9 +1794,14 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 				{
 					// partial filelist probably failed, redownload full list
 					dcassert(!finished);
-					
-					downloadList = true;
-					processListFlags = q->flags & ~QueueItem::FLAG_PARTIAL_LIST;
+					processListFlags = 0;
+					{
+						LOCK(csDirectories);
+						auto dp = directories.equal_range(download->getUser());
+						for (auto i = dp.first; i != dp.second; ++i)
+							processListFlags |= i->second.getFlags();
+					}
+					if (processListFlags) downloadList = true;
 				}
 				
 				removeItem(q, true);
@@ -1836,17 +1829,15 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						dcassert(download->getTreeValid());
 						DatabaseManager::getInstance()->addTree(download->getTigerTree());
 						userQueue.removeDownload(q, download->getUser());
-						
 						fireStatusUpdated(q);
 					}
 					else
 					{
 						// Now, let's see if this was a directory download filelist...
-						dcassert(!q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD));
-						if (q->isSet(QueueItem::FLAG_MATCH_QUEUE))
+						if (q->isAnySet(QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_MATCH_QUEUE))
 						{
 							processListFileName = q->getListName();
-							processListFlags = QueueItem::FLAG_MATCH_QUEUE;
+							processListFlags = q->getFlags() & (QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_MATCH_QUEUE);
 						}
 						
 						const bool isFile = download->getType() == Transfer::TYPE_FILE;
@@ -2022,7 +2013,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 		getDownloadConnection(*i);
 
 	if (!processListFileName.empty())
-		processList(processListFileName, hintedUser, processListFlags);
+		processList(processListFileName, hintedUser, processListFlags, processListDirItem.get());
 	
 	// partial file list failed, redownload full list
 	if (downloadList && user->isOnline())
@@ -2044,12 +2035,11 @@ static void logMatchedFiles(const UserPtr& user, int count)
 	LogManager::message(str);
 }
 
-void QueueManager::processList(const string& name, const HintedUser& hintedUser, int flags)
+void QueueManager::processList(const string& name, const HintedUser& hintedUser, int flags, const DirectoryItem* dirItem)
 {
 	dcassert(hintedUser.user);
-	
-	std::atomic_bool abortFlag(false);
-	DirectoryListing dirList(abortFlag);
+	std::atomic_bool unusedAbortFlag(false);
+	DirectoryListing dirList(unusedAbortFlag);
 	dirList.setHintedUser(hintedUser);
 	try
 	{
@@ -2065,33 +2055,56 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 	}
 	catch (const Exception&)
 	{
-		LogManager::message(STRING(UNABLE_TO_OPEN_FILELIST) + ' ' + name);
+		if (!(flags & QueueItem::FLAG_TEXT))
+			LogManager::message(STRING(UNABLE_TO_OPEN_FILELIST) + ' ' + name);
 		return;
 	}
 	if (!dirList.getRoot()->getTotalFileCount())
-	{
-		LogManager::message(STRING(UNABLE_TO_OPEN_FILELIST) + " (dirList.getTotalFileCount() == 0) " + name);
 		return;
-	}
-	#if 0 // FIXME: function removed
 	if (flags & QueueItem::FLAG_DIRECTORY_DOWNLOAD)
 	{
-		vector<DirectoryItemPtr> dl;
+		struct DownloadItem
 		{
+			DirectoryListing::Directory* d;
+			string target;
+			QueueItem::Priority p;
+		};
+		vector<DownloadItem> dl;
+		if (flags & QueueItem::FLAG_TEXT)
+		{
+			// Process partial list, use supplied dirItem
+			if (dirItem)
+			{
+				DirectoryListing::Directory* d = dirList.findDirPath(dirItem->getName());
+				if (d)
+					dl.emplace_back(DownloadItem{d, dirItem->getTarget(), dirItem->getPriority()});
+			}
+		}
+		else
+		{
+			// Process full list, remove all directories belonging to this user
 			LOCK(csDirectories);
-			const auto dp = m_directories.equal_range(hintedUser.user) | map_values;
-			dl.assign(boost::begin(dp), boost::end(dp));
-			m_directories.erase(hintedUser.user);
+			const auto dp = directories.equal_range(hintedUser.user);
+			for (auto i = dp.first; i != dp.second; ++i)
+			{
+				if (i->second.getFlags() & QueueItem::FLAG_DIRECTORY_DOWNLOAD)
+				{
+					const DirectoryItem& dir = i->second;
+					DirectoryListing::Directory* d = dirList.findDirPath(dir.getName());
+					if (d)
+						dl.emplace_back(DownloadItem{d, dir.getTarget(), dir.getPriority()});
+				}
+			}
 		}
-		
-		for (auto i = dl.cbegin(); i != dl.cend(); ++i)
-		{
-			DirectoryItem* di = *i;
-			dirList.download(di->getName(), di->getTarget(), false);
-			delete di;
-		}
+		bool getConn = false;
+		for (const auto& di : dl)
+			dirList.download(di.d, di.target, di.p, getConn);
 	}
-	#endif
+	if (!(flags & QueueItem::FLAG_TEXT))
+	{
+		LOCK(csDirectories);
+		directories.erase(hintedUser.user);
+	}
 	if (flags & QueueItem::FLAG_MATCH_QUEUE)
 	{
 		logMatchedFiles(hintedUser.user, matchListing(dirList));
@@ -2121,14 +2134,30 @@ bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 	if (!q)
 		return false;
 			
-	if (q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD))
+	if (q->isAnySet(QueueItem::FLAG_MATCH_QUEUE | QueueItem::FLAG_DIRECTORY_DOWNLOAD))
 	{
-		QueueRLock(*QueueItem::g_cs);
-		dcassert(q->getSourcesL().size() == 1);
+		UserPtr user;
+		{
+			QueueRLock(*QueueItem::g_cs);
+			dcassert(q->getSourcesL().size() == 1);
+			user = q->getSourcesL().begin()->first;
+		}
 		{
 			LOCK(csDirectories);
-			for_each(m_directories.equal_range(q->getSourcesL().begin()->first) | map_values, [](auto p) { delete p; });
-			m_directories.erase(q->getSourcesL().begin()->first);
+			if (q->isSet(QueueItem::FLAG_PARTIAL_LIST))
+			{
+				auto dp = directories.equal_range(user);
+				for (auto i = dp.first; i != dp.second; ++i)
+					if (stricmp(q->getTempTargetConst(), i->second.getName()) == 0)
+					{
+						directories.erase(i);
+						break;
+					}
+			}
+			else
+			{
+				directories.erase(user);
+			}
 		}
 	}
 
@@ -2136,7 +2165,7 @@ bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 		DatabaseManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
 		
 	const string& tempTarget = q->getTempTargetConst();
-	if (!tempTarget.empty())
+	if (!q->isSet(QueueItem::FLAG_USER_LIST) && !tempTarget.empty())
 	{
 		// For partial-share
 		UploadManager::getInstance()->abortUpload(tempTarget);
@@ -2147,7 +2176,7 @@ bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 	{
 		q->getUsers(x);
 	}
-	else if (!tempTarget.empty() && tempTarget != q->getTarget())
+	else if (!q->isSet(QueueItem::FLAG_PARTIAL_LIST) && !tempTarget.empty() && tempTarget != q->getTarget())
 	{
 		if (File::isExist(tempTarget))
 		{
@@ -2687,7 +2716,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 		{
 			const string path = Util::getFilePath(sr.getFile());
 			// [!] IRainman fix: please always match listing without hint! old code: sr->getHubUrl().
-			addList(sr.getUser(), QueueItem::FLAG_MATCH_QUEUE | (path.empty() ? 0 : QueueItem::FLAG_PARTIAL_LIST), path);
+			addDirectory(path, sr.getUser(), Util::emptyString, QueueItem::DEFAULT, QueueItem::FLAG_MATCH_QUEUE);
 		}
 		catch (const Exception&)
 		{

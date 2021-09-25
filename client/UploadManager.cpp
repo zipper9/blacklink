@@ -38,7 +38,9 @@ static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;
 
 #ifdef _DEBUG
 std::atomic_int UploadQueueFile::g_upload_queue_item_count(0);
+bool disablePartialListUploads = false;
 #endif
+
 uint32_t UploadManager::g_count_WaitingUsersFrame = 0;
 int UploadManager::g_running = 0;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -458,6 +460,13 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		}
 		else if (isTypePartialList)
 		{
+#ifdef _DEBUG
+			if (disablePartialListUploads)
+			{
+				source->fileNotAvail("Unknown file type");
+				return false;
+			}
+#endif
 			// Partial file list
 			MemoryInputStream* mis = ShareManager::getInstance()->generatePartialList(fileName, listRecursive, hideShare, shareGroup);
 			if (!mis)

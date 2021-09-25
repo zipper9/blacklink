@@ -247,13 +247,29 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			if (dir)
 				return Text::toT(dir->name);
 			if (qi)
+			{
+				if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+				{
+					tstring str = Text::toT(qi->getTempTargetConst());
+					Util::toNativePathSeparators(str);
+					if (str.empty() || str[0] != _T(PATH_SEPARATOR))
+						str.insert(0, 1, _T(PATH_SEPARATOR));
+					return str;
+				}
 				return Text::toT(Util::getFileName(qi->getTarget()));
+			}
 			break;
 		case COLUMN_TYPE:
 			if (dir)
 				return TSTRING(DIRECTORY);
-			if (qi && !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
+			if (qi)
+			{
+				if (qi->isSet(QueueItem::FLAG_USER_GET_IP))
+					return TSTRING(CONNECTION_CHECK);
+				if (qi->isSet(QueueItem::FLAG_USER_LIST))
+					return qi->isSet(QueueItem::FLAG_PARTIAL_LIST) ? TSTRING(PARTIAL_FILE_LIST) : TSTRING(FILE_LIST);
 				return Text::toT(Util::getFileExtWithoutDot(qi->getTarget()));
+			}
 			break;
 		case COLUMN_STATUS:
 		{
@@ -377,7 +393,20 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			if (dir)
 				return Text::toT(getFullPath(dir));
 			if (qi)
+			{
+				if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+				{
+					string target = qi->getTarget();
+					const string& dirName = qi->getTempTargetConst();
+					if (dirName.length() + 1 < target.length())
+					{
+						size_t pos = target.length() - (dirName.length() + 1);
+						if (target[pos] == ':') target.erase(pos);
+					}
+					return Text::toT(Util::getFilePath(target));
+				}
 				return Text::toT(Util::getFilePath(qi->getTarget()));
+			}
 			break;
 		}
 		case COLUMN_EXACT_SIZE:
@@ -521,7 +550,18 @@ static string::size_type findCommonSubdir(const string& a, const string& b)
 void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree)
 {
 	dcassert(!closed);
-	const string& target = qi->getTarget();
+	string target = qi->getTarget();
+	if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+	{
+		const string& dirName = qi->getTempTargetConst();
+		dcassert(dirName.length() + 1 < target.length());
+		if (dirName.length() + 1 < target.length())
+		{
+			size_t pos = target.length() - (dirName.length() + 1);
+			dcassert(target[pos] == ':' && target.substr(pos + 1) == dirName);
+			if (target[pos] == ':') target.erase(pos);
+		}
+	}
 	const string dirname = Util::getFilePath(target);
 	if (dirname.length() == target.length())
 	{
