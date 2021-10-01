@@ -232,7 +232,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			DHT_PORT,
 			INCOMING_CONNECTIONS,
 			INCOMING_CONNECTIONS6,
-			AUTO_PASSIVE_INCOMING_CONNECTIONS,
 			OUTGOING_CONNECTIONS,
 			AUTO_DETECT_CONNECTION,
 			AUTO_DETECT_CONNECTION6,
@@ -412,12 +411,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			USE_TORRENT_SEARCH,
 			USE_TORRENT_RSS,
 
-			// DNS lookup <Not implemented>
-#ifdef FLYLINKDC_USE_DNS
-			NSLOOKUP_MODE,
-			NSLOOKUP_DELAY,
-#endif
-			
 			// Database
 			DB_LOG_FINISHED_DOWNLOADS,
 			DB_LOG_FINISHED_UPLOADS,

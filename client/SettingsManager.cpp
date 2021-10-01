@@ -258,7 +258,6 @@ static const char* g_settingTags[] =
 	"DHTPort",
 	"IncomingConnections",
 	"IncomingConnections6",
-	"AutoPassiveIncomingConnections",
 	"OutgoingConnections",
 	"AutoDetectIncomingConnection",
 	"AutoDetectIncomingConnection6",
@@ -437,12 +436,6 @@ static const char* g_settingTags[] =
 	// Torrents
 	"UseTorrentSearch",
 	"UseTorrentRSS",
-
-	// DNS lookup <Not implemented>
-#ifdef FLYLINKDC_USE_DNS
-	"NsLookupMode",
-	"NsLookupDelay",
-#endif
 
 	// Database
 	"DbLogFinishedDownloads",
@@ -1750,7 +1743,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case EXTRA_SLOTS:
 		{
-			VER_MIN(3);
+			VER_MIN(0);
 			break;
 		}
 		case HUB_SLOTS:

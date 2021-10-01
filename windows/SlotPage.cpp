@@ -82,7 +82,7 @@ LRESULT SlotPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	spin5.SetBuddy(GetDlgItem(IDC_PARTIAL_SLOTS));
 
 	CUpDownCtrl spin6(GetDlgItem(IDC_EXTRA_SLOTS_SPIN));
-	spin6.SetRange32(3, 100);
+	spin6.SetRange32(0, 100);
 	spin6.SetBuddy(GetDlgItem(IDC_EXTRA_SLOTS));
 
 	CUpDownCtrl spin7(GetDlgItem(IDC_SMALL_FILE_SIZE_SPIN));

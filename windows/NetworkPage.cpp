@@ -53,8 +53,10 @@ enum
 
 static const DialogLayout::Align align1 = { 2, DialogLayout::SIDE_RIGHT, U_DU(6) };
 static const DialogLayout::Align align2 = { 1, DialogLayout::SIDE_RIGHT, U_DU(6) };
-static const DialogLayout::Align align3 = { 16, DialogLayout::SIDE_LEFT, U_DU(6) };
-static const DialogLayout::Align align4 = { 20, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align3 = { 17, DialogLayout::SIDE_LEFT, U_DU(6) };
+static const DialogLayout::Align align4 = { 21, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align5 = { 15, DialogLayout::SIDE_LEFT, U_PX(-1) };
+static const DialogLayout::Align align6 = { 16, DialogLayout::SIDE_RIGHT, U_PX(-1) };
 
 static const DialogLayout::Item layoutItems1[] =
 {
@@ -73,13 +75,14 @@ static const DialogLayout::Item layoutItems1[] =
 	{ IDC_DEFAULT_GATEWAY_IP, 0, UNSPEC, UNSPEC },
 	{ IDC_STATIC_GATEWAY, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_SETTINGS_PORTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_PORTS_UPNP, 0, UNSPEC, UNSPEC },
 	{ IDC_PORT_TCP, 0, UNSPEC, UNSPEC },
 	{ IDC_SETTINGS_PORT_TCP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
 	{ IDC_SETTINGS_PORT_UDP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
 	{ IDC_SETTINGS_PORT_TLS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align3 },
 	{ IDC_CAPTION_MAPPER, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_MAPPER, 0, UNSPEC, UNSPEC, 0, &align4 },
-	{ IDC_GETIP, FLAG_TRANSLATE, UNSPEC, UNSPEC }
+	{ IDC_GETIP, FLAG_TRANSLATE, UNSPEC, UNSPEC, 0, &align5, &align6 }
 };
 
 static const DialogLayout::Item layoutItems2[] =
