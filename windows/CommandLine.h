@@ -22,6 +22,7 @@ struct ParsedCommandLine
 	int installShellExt = 0;
 #endif
 	int installAutoRunShortcut = 0;
+	bool addFirewallEx = false;
 	tstring openMagnet;
 	tstring openHub;
 	tstring openFile;	

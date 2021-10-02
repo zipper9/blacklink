@@ -1637,42 +1637,22 @@ bool WinUtil::registerShellExt(bool unregister)
 }
 #endif // SSA_SHELL_INTEGRATION
 
-bool WinUtil::runElevated(
-    HWND    hwnd,
-    LPCTSTR pszPath,
-    LPCTSTR pszParameters, //   = NULL,
-    LPCTSTR pszDirectory)  //   = NULL );
+bool WinUtil::runElevated(HWND hwnd, const TCHAR* path, const TCHAR* parameters, const TCHAR* directory, int waitTime)
 {
-
-	SHELLEXECUTEINFO shex = { 0 };
+	SHELLEXECUTEINFO shex = { sizeof(SHELLEXECUTEINFO) };	
+	shex.fMask        = waitTime ? SEE_MASK_NOCLOSEPROCESS : 0;
+	shex.hwnd         = hwnd;
+	shex.lpVerb       = _T("runas");
+	shex.lpFile       = path;
+	shex.lpParameters = parameters;
+	shex.lpDirectory  = directory;
+	shex.nShow        = SW_NORMAL;
 	
-	shex.cbSize         = sizeof(SHELLEXECUTEINFO);
-	shex.fMask          = SEE_MASK_NOCLOSEPROCESS; // 0;
-	shex.hwnd           = hwnd;
-	shex.lpVerb         = _T("runas");
-	shex.lpFile         = pszPath;
-	shex.lpParameters   = pszParameters;
-	shex.lpDirectory    = pszDirectory;
-	shex.nShow          = SW_NORMAL;
-	
-	bool bRet = ::ShellExecuteEx(&shex) != FALSE;
-	
-	//if (shex.hProcess)
-	//{
-	//  BOOL result = FALSE;
-	//  while (1)
-	//  {
-	//      if (::IsProcessInJob(shex.hProcess, NULL, &result))
-	//      {
-	//          if (!result)
-	//              break;
-	//          ::Sleep(10);
-	//      }else
-	//          break;
-	//  }
-	//}
-	::Sleep(1000);
-	return bRet;
+	if (!ShellExecuteEx(&shex)) return false;
+	if (!waitTime) return true;
+	bool result = WaitForSingleObject(shex.hProcess, waitTime) == WAIT_OBJECT_0;
+	CloseHandle(shex.hProcess);
+	return result;
 }
 
 bool WinUtil::createShortcut(const tstring& targetFile, const tstring& targetArgs,

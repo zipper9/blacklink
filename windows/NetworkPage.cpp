@@ -31,6 +31,10 @@
 #include "../client/NetworkUtil.h"
 #include "../client/webrtc/talk/base/winfirewall.h"
 
+#ifdef OSVER_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;
@@ -551,8 +555,11 @@ LRESULT NetworkFirewallTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlButton.SetWindowText(CTSTRING(ADD_FIREWALL_EXCEPTION));
 	ctrlText.Attach(GetDlgItem(IDC_FIREWALL_STATUS));
 	ctrlIcon.Attach(GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO));
-	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
-	//SetButtonElevationRequiredState(IDC_ADD_FLYLINKDC_WINFIREWALL,);
+#ifdef OSVER_WIN_XP
+	if (CompatibilityManager::isOsVistaPlus())
+#endif
+		ctrlButton.SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
+
 	testWinFirewall();
 	return 0;
 }
@@ -560,25 +567,32 @@ LRESULT NetworkFirewallTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 LRESULT NetworkFirewallTab::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
 	const tstring appPath = Util::getModuleFileName();
-	talk_base::WinFirewall fw;
-	HRESULT hr;
-	fw.Initialize(&hr);
-	const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
-	if (res)
+	if (IsUserAnAdmin())
 	{
-		MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
-	}
-	else
+		talk_base::WinFirewall fw;
+		HRESULT hr;
+		fw.Initialize(&hr);
+		const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
+		if (res)
+		{
+			MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
+		}
+		else
+		{
+			_com_error msg(hr);
+			MessageBox(CTSTRING_F(FIREWALL_EXCEPTION_ERROR, msg.ErrorMessage() % Util::toHexStringT(hr)),
+				getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+		}
+		testWinFirewall();
+	} else
 	{
-		_com_error msg(hr);
-		MessageBox(CTSTRING_F(FIREWALL_EXCEPTION_ERROR, msg.ErrorMessage() % Util::toHexStringT(hr)),
-			getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+		if (WinUtil::runElevated(m_hWnd, appPath.c_str(), _T("/addFw"), nullptr, -1) && testWinFirewall())
+			MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
 	}
-	testWinFirewall();
 	return 0;
 }
 
-void NetworkFirewallTab::testWinFirewall()
+bool NetworkFirewallTab::testWinFirewall()
 {
 	talk_base::WinFirewall fw;
 	HRESULT hr;
@@ -588,7 +602,7 @@ void NetworkFirewallTab::testWinFirewall()
 		ctrlText.SetWindowText(CTSTRING(WINDOWS_FIREWALL_DISABLED));
 		ctrlButton.EnableWindow(FALSE);
 		setIcon(ctrlIcon, IconUnknown);
-		return;
+		return false;
 	}
 
 	bool authorized = false;
@@ -612,6 +626,7 @@ void NetworkFirewallTab::testWinFirewall()
 		setIcon(ctrlIcon, IconQuestion);
 	}
 	ctrlButton.EnableWindow(TRUE);
+	return authorized;
 }
 
 static const PropPage::Item items[] =

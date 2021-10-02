@@ -327,7 +327,7 @@ class WinUtil
 		static tstring getShellExtDllPath();
 		static bool registerShellExt(bool unregister);
 #endif
-		static bool runElevated(HWND hwnd, LPCTSTR pszPath, LPCTSTR pszParameters = NULL, LPCTSTR pszDirectory = NULL);
+		static bool runElevated(HWND hwnd, const TCHAR* path, const TCHAR* parameters = nullptr, const TCHAR* directory = nullptr, int waitTime = 0);
 		
 		static bool autoRunShortcut(bool create);
 		static bool isAutoRunShortcutExists();

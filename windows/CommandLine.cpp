@@ -110,6 +110,11 @@ bool parseCommandLine(ParsedCommandLine& out, const WCHAR* cmdLine)
 			out.shareFolder = result[i];
 			continue;
 		}
+		if (!wcscmp(result[i], L"/addFw"))
+		{
+			out.addFirewallEx = true;
+			continue;
+		}
 		if (Util::isMagnetLink(result[i]))
 		{
 			out.openMagnet = result[i];

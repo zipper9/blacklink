@@ -92,7 +92,7 @@ class NetworkFirewallTab : public CDialogImpl<NetworkFirewallTab>
 		enum { IDD = IDD_FIREWALL_TAB };
 
 		NetworkFirewallTab() {}
-		void testWinFirewall();
+		bool testWinFirewall();
 
 		BEGIN_MSG_MAP(NetworkFirewallTab)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
