@@ -380,14 +380,11 @@ class LastDir
 		}
 		static void add(const tstring& dir)
 		{
-			if (find(dirs.begin(), dirs.end(), dir) != dirs.end())
-			{
-				return;
-			}
+			auto i = find(dirs.begin(), dirs.end(), dir);
+			if (i != dirs.end())
+				dirs.erase(i);
 			if (dirs.size() == 10)
-			{
 				dirs.erase(dirs.begin());
-			}
 			dirs.push_back(dir);
 		}
 		static void appendItems(OMenu& menu, int& count)

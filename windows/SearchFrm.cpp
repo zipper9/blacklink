@@ -36,6 +36,8 @@
 #include "../client/PortTest.h"
 #include "../client/dht/DHT.h"
 
+#define USE_DOWNLOAD_DIR
+
 std::list<tstring> SearchFrame::g_lastSearches;
 HIconWrapper SearchFrame::iconUdpOk(IDR_ICON_SUCCESS_ICON);
 HIconWrapper SearchFrame::iconUdpFail(IDR_ICON_FAIL_ICON);
@@ -1587,7 +1589,6 @@ bool SearchFrame::getDownloadDirectory(WORD wID, tstring& dir) const
 	if (target.type == DownloadTarget::PATH_SRC && !target.path.empty())
 	{
 		dir = target.path;
-		LastDir::add(dir);
 		return true;
 	}
 	if (target.type == DownloadTarget::PATH_DEFAULT || !target.path.empty())
@@ -1650,8 +1651,20 @@ LRESULT SearchFrame::onDownload(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 LRESULT SearchFrame::onDownloadWhole(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring dir;
-	if (getDownloadDirectory(wID, dir) && !dir.empty())
+	if (!getDownloadDirectory(wID, dir)) return 0;
+	if (!dir.empty())
 		ctrlResults.forEachSelectedT(SearchInfo::DownloadWhole(dir));
+	else
+	{
+		int i = -1;
+		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
+		{
+			SearchInfo* si = ctrlResults.getItemData(i);
+			tstring target = getTargetDirectory(si);
+			if (!target.empty())
+				(SearchInfo::DownloadWhole(target))(si);
+		}
+	}
 	return 0;
 }
 
@@ -2664,7 +2677,20 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 	return 0;
 }
 
-int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title, ResourceManager::Strings prevFoldersTitle)
+tstring SearchFrame::getTargetDirectory(const SearchInfo* si)
+{
+	const tstring& target = si->getText(COLUMN_PATH);
+	if (target.length() > 2)
+	{
+		size_t start = target.rfind(_T('\\'), target.length() - 2);
+		if (start == tstring::npos) start = 0; else start++;
+		string downloadDir = Util::getDownloadDir(si->getUser());
+		return Text::toT(downloadDir) + target.substr(start);
+	}
+	return Util::emptyStringT;
+}
+
+int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title)
 {
 	menu.ClearMenu();
 	dlTargets[idc + 0] = DownloadTarget(Util::emptyStringT, DownloadTarget::PATH_DEFAULT); // for 'Download' without options
@@ -2691,13 +2717,9 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, Reso
 	// !SMT!-S: Append special folder, like in source share
 	if (si && !isTorrent(si))
 	{
-		tstring target = si->getText(COLUMN_PATH);
-		if (target.length() > 2)
+		tstring target = getTargetDirectory(si);
+		if (!target.empty())
 		{
-			size_t start = target.substr(0, target.length() - 1).find_last_of(_T('\\'));
-			if (start == tstring::npos) start = 0; else start++;
-			string downloadDir = Util::getDownloadDir(si->getUser());
-			target = Text::toT(downloadDir) + target.substr(start);
 			dlTargets[idc + n] = DownloadTarget(target, DownloadTarget::PATH_SRC);
 			Util::removePathSeparator(target);
 			WinUtil::escapeMenu(target);
@@ -2713,17 +2735,14 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, Reso
 	//Append last favorite download dirs
 	if (!LastDir::get().empty())
 	{
-		if (prevFoldersTitle)
-			menu.InsertSeparatorLast(TSTRING_I(prevFoldersTitle));
-		else
-			menu.AppendMenu(MF_SEPARATOR);
+		menu.InsertSeparatorLast(TSTRING(PREVIOUS_FOLDERS));
 		for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
 		{
 			tstring target = *i;
 			dlTargets[idc + n] = DownloadTarget(target, DownloadTarget::PATH_LAST);
 			Util::removePathSeparator(target);
 			WinUtil::escapeMenu(target);
-			menu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV + n, target.c_str());
+			menu.AppendMenu(MF_STRING, idc + n, target.c_str());
 			n++;
 		}
 	}
@@ -2755,7 +2774,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenuTorrent, CTSTRING(COPY));
 				resultsMenu.AppendMenu(MF_SEPARATOR);
 				dlTargets.clear();
-				makeTargetMenu(si, targetMenu, IDC_DOWNLOAD_TO_FAV, ResourceManager::DOWNLOAD_TO, ResourceManager::PREVIOUS_FOLDERS);
+				makeTargetMenu(si, targetMenu, IDC_DOWNLOAD_TO_FAV, ResourceManager::DOWNLOAD_TO);
 				resultsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 				return TRUE;
 			}
@@ -2763,6 +2782,16 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 #endif
 		if (selCount)
 		{
+			const SearchInfo* si = nullptr;
+			const SearchResult* sr = nullptr;
+			if (selCount == 1)
+			{
+				int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
+				dcassert(i != -1);
+				si = ctrlResults.getItemData(i);
+				sr = &si->sr;
+			}
+
 			clearUserMenu();
 			OMenu resultsMenu;
 			
@@ -2772,8 +2801,11 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 #ifdef USE_DOWNLOAD_DIR
-			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV, CTSTRING(DOWNLOAD_WHOLE_DIR));
-			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
+			if (si)
+			{
+				resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV, CTSTRING(DOWNLOAD_WHOLE_DIR));
+				resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
+			}
 #endif
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 			resultsMenu.AppendMenu(MF_SEPARATOR);
@@ -2787,20 +2819,10 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			appendAndActivateUserItems(resultsMenu, true);
 			resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
 			resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_TO_FAV);
-			
-			const SearchInfo* si = nullptr;
-			const SearchResult* sr = nullptr;
-			if (ctrlResults.GetSelectedCount() == 1)
-			{
-				int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
-				dcassert(i != -1);
-				si = ctrlResults.getItemData(i);
-				sr = &si->sr;
-			}
 
 			// Add target menu
 			dlTargets.clear();
-			int n = makeTargetMenu(si, targetMenu, IDC_DOWNLOAD_TO_FAV, ResourceManager::DOWNLOAD_TO, ResourceManager::PREVIOUS_FOLDERS);
+			int n = makeTargetMenu(si, targetMenu, IDC_DOWNLOAD_TO_FAV, ResourceManager::DOWNLOAD_TO);
 			
 			const SearchInfo::CheckTTH SIcheck = ctrlResults.forEachSelectedT(SearchInfo::CheckTTH());
 			
@@ -2825,7 +2847,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			
 #ifdef USE_DOWNLOAD_DIR
 			// second sub-menu
-			makeTargetMenu(si, targetDirMenu, IDC_DOWNLOADDIR_TO_FAV, ResourceManager::DOWNLOAD_WHOLE_DIR_TO, ResourceManager::Strings());
+			makeTargetMenu(si, targetDirMenu, IDC_DOWNLOADDIR_TO_FAV, ResourceManager::DOWNLOAD_WHOLE_DIR_TO);
 #endif
 
 			if (sr && sr->getType() == SearchResult::TYPE_FILE)

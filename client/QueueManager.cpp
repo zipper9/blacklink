@@ -2082,7 +2082,7 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 			// Process partial list, use supplied dirItem
 			if (dirItem)
 			{
-				DirectoryListing::Directory* d = dirList.findDirPath(dirItem->getName());
+				DirectoryListing::Directory* d = dirList.findDirPath(Util::toAdcFile(dirItem->getName()));
 				if (d)
 					dl.emplace_back(DownloadItem{d, dirItem->getTarget(), dirItem->getPriority()});
 			}
@@ -2097,7 +2097,7 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 				if (i->second.getFlags() & QueueItem::FLAG_DIRECTORY_DOWNLOAD)
 				{
 					const DirectoryItem& dir = i->second;
-					DirectoryListing::Directory* d = dirList.findDirPath(dir.getName());
+					DirectoryListing::Directory* d = dirList.findDirPath(Util::toAdcFile(dir.getName()));
 					if (d)
 						dl.emplace_back(DownloadItem{d, dir.getTarget(), dir.getPriority()});
 				}

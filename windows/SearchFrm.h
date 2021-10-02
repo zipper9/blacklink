@@ -626,7 +626,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void showPortStatus();
 		
 		void onEnter();
-		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title, ResourceManager::Strings prevFoldersTitle);
+		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title);
+		static tstring getTargetDirectory(const SearchInfo* si);
 		
 		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
 		

@@ -876,7 +876,7 @@ enum Strings   // @DontAdd
 	POWER_USER, // "Power username"
 	PRESS_FOLLOW_FMT, // "Press the follow redirect button to connect to %1%"
 	PREVIEW_MENU, // "Preview"
-	PREVIOUS_FOLDERS, // "Previous folders"
+	PREVIOUS_FOLDERS, // "Recent folders"
 	PRIORITY, // "Priority"
 	PRIVATE_CHAT_PASSWORD_OK, // "Password correct. Access granted"
 	PRIVATE_KEY_FILE, // "Private key file"
