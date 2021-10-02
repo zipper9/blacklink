@@ -47,6 +47,11 @@ class SimpleStringTokenizer
 		{
 			start = pos;
 		}
+
+		size_t getPos() const
+		{
+			return start;
+		}
 	
 	private:
 		const string_type& str;

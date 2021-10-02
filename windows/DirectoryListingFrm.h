@@ -239,7 +239,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			downloadList(Util::emptyStringT, view, prio);
 		}
 
-		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem, const string& selPath = Util::emptyString);
+		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem, bool insertParent, const string& selPath = Util::emptyString);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		int getButtonWidth(ResourceManager::Strings id) const;
 		void runUserCommand(UserCommand& uc);

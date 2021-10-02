@@ -206,7 +206,7 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing *dl, c
 	else
 		frame->Create(WinUtil::g_mdiClient);
 	frame->setWindowTitle();
-	frame->refreshTree(frame->dl->getRoot(), frame->treeRoot);
+	frame->refreshTree(frame->dl->getRoot(), frame->treeRoot, false);
 	frame->loading = false;
 	frame->initStatus();
 	frame->enableControls();
@@ -517,11 +517,11 @@ void DirectoryListingFrame::enableControls()
 	createTimer(1000);
 }
 
-void DirectoryListingFrame::updateTree(DirectoryListing::Directory* aTree, HTREEITEM aParent)
+void DirectoryListingFrame::updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem)
 {
-	if (aTree)
+	if (tree)
 	{
-		for (auto i = aTree->directories.cbegin(); i != aTree->directories.cend(); ++i)
+		for (auto i = tree->directories.cbegin(); i != tree->directories.cend(); ++i)
 		{
 			if (!loading && !isClosedOrShutdown())
 				throw AbortException(STRING(ABORT_EM));
@@ -530,7 +530,7 @@ void DirectoryListingFrame::updateTree(DirectoryListing::Directory* aTree, HTREE
 			const tstring name = Text::toT(dir->getName());
 			const auto typeDirectory = GetTypeDirectory(dir);
 
-			HTREEITEM ht = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM, name.c_str(), typeDirectory, typeDirectory, 0, 0, (LPARAM) dir, aParent, TVI_LAST);
+			HTREEITEM ht = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM, name.c_str(), typeDirectory, typeDirectory, 0, 0, (LPARAM) dir, treeItem, TVI_LAST);
 			dir->setUserData(static_cast<void*>(ht));
 			if (dir->getAdls())
 				ctrlTree.SetItemState(ht, TVIS_BOLD, TVIS_BOLD);
@@ -540,7 +540,7 @@ void DirectoryListingFrame::updateTree(DirectoryListing::Directory* aTree, HTREE
 	}
 }
 
-void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEITEM treeItem, const string& selPath)
+void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEITEM treeItem, bool insertParent, const string& selPath)
 {
 	if (!loading && !isClosedOrShutdown())
 		throw AbortException(STRING(ABORT_EM));
@@ -551,6 +551,14 @@ void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEI
 	HTREEITEM next = nullptr;
 	while ((next = ctrlTree.GetChildItem(treeItem)) != nullptr)
 		ctrlTree.DeleteItem(next);
+	if (insertParent)
+	{
+		const tstring name = Text::toT(dir->getName());
+		const auto typeDirectory = GetTypeDirectory(dir);
+		HTREEITEM ht = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM, name.c_str(), typeDirectory, typeDirectory, 0, 0, (LPARAM) dir, treeItem, TVI_LAST);
+		dir->setUserData(static_cast<void*>(ht));
+		treeItem = ht;
+	}
 	updateTree(dir, treeItem);
 	const auto typeDirectory = GetTypeDirectory(dir);
 	dir->setUserData(static_cast<void*>(treeItem));
@@ -2077,23 +2085,31 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		case SPLICE_TREE:
 		{
 			unique_ptr<DirectoryListing> newListing(reinterpret_cast<DirectoryListing*>(lParam));
-			DirectoryListing::Directory *subdir = dl->findDirPath(newListing->getBasePath());
-			if (subdir)
+			DirectoryListing::SpliceTreeResult sr;
+			auto root = dl->getRoot();
+			if (root->getFlags() & DirectoryListing::FLAG_HAS_FOUND)
 			{
-				HTREEITEM ht;
-				if (subdir == dl->getRoot())
-					ht = treeRoot;
-				else
-					ht = static_cast<HTREEITEM>(subdir->getUserData());
-				DirectoryListing::Directory *newRoot = newListing->getRoot();
-				if (dl->spliceTree(subdir, *newListing))
+				clearSearch();
+				root->clearMatches();
+				updateSearchButtons();
+			}
+			if (dl->spliceTree(*newListing, sr))
+			{
+				HTREEITEM htParent = sr.parentUserData ? (HTREEITEM) sr.parentUserData : treeRoot;
+				loading = true;
+				try { refreshTree(sr.firstItem, htParent, sr.insertParent, newListing->getBasePath()); }
+				catch (Exception&) { dcassert(0); }
+				loading = false;
+				ctrlTree.SetItemData(treeRoot, (DWORD_PTR) dl->getRoot());
+				if (ctrlTree.GetSelectedItem() == selectedDir)
 				{
-					loading = true;
-					try { refreshTree(newRoot, ht); }
-					catch (Exception&) { dcassert(0); }
-					loading = false;
-					newRoot->setUserData(static_cast<void*>(ht));
-					showDirContents(newRoot, nullptr, nullptr);
+					auto d = reinterpret_cast<const DirectoryListing::Directory*>(ctrlTree.GetItemData(selectedDir));
+					if (d) showDirContents(d, nullptr, nullptr);
+				}
+				root = dl->getRoot();
+				if (!root->getComplete())
+				{
+					ctrlTree.SetItemImage(treeRoot, FileImage::DIR_MASKED, FileImage::DIR_MASKED);
 				}
 			}
 			break;
@@ -2749,7 +2765,7 @@ int ThreadedDirectoryListing::run()
 				window->addToUserList(user, false);
 				window->setWindowTitle();
 				ADLSearchManager::getInstance()->matchListing(*window->dl);
-				window->refreshTree(window->dl->getRoot(), window->treeRoot, Util::toAdcFile(Text::fromT(directory)));
+				window->refreshTree(window->dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}
 			case MODE_SUBTRACT_FILE:
@@ -2761,7 +2777,7 @@ int ThreadedDirectoryListing::run()
 				{
 					window->dl->getRoot()->filterList(*newListing.getTTHSet());
 					window->filteredListFlag = true;
-					window->refreshTree(window->dl->getRoot(), window->treeRoot);
+					window->refreshTree(window->dl->getRoot(), window->treeRoot, false);
 					window->updateRootItemText();
 				}
 				break;

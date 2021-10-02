@@ -122,7 +122,14 @@ class DirectoryListing : public UserInfoBase
 
 		typedef boost::unordered_map<TTHValue, list<File*>> TTHToFileMap;
 
-		bool spliceTree(Directory* dest, DirectoryListing& tree);
+		struct SpliceTreeResult
+		{
+			void* parentUserData;
+			Directory* firstItem;
+			bool insertParent;
+		};
+
+		bool spliceTree(DirectoryListing& tree, SpliceTreeResult& sr);
 
 		class Directory : public Flags
 		{
@@ -182,7 +189,7 @@ class DirectoryListing : public UserInfoBase
 				void updateSubDirs(Flags::MaskType& updatedFlags);
 				void updateFiles(Flags::MaskType& updatedFlags);
 		
-				friend bool DirectoryListing::spliceTree(Directory* dest, DirectoryListing& tree);
+				friend bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr);
 				friend class ListLoader;
 		};
 		

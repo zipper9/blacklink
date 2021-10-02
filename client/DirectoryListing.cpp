@@ -932,32 +932,102 @@ DirectoryListing::Directory* DirectoryListing::findDirPath(const string& path) c
 	return const_cast<Directory*>(dir);
 }
 
-bool DirectoryListing::spliceTree(DirectoryListing::Directory* dest, DirectoryListing& tree)
+bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr)
 {
-	if (!dest) return false;
-	Directory *parent = dest->getParent();
-	if (!parent)
+	sr.parentUserData = nullptr;
+	sr.insertParent = false;
+	string path = tree.getBasePath();
+	string dirName;
+	for (;;)
 	{
-		dcassert(dest == root);
+		string::size_type pos = path.rfind('/');
+		if (pos == string::npos) break;
+		if (pos == path.length()-1)
+		{
+			path.erase(pos);
+			continue;
+		}
+		dirName = path.substr(pos + 1);
+		path.erase(pos);
+		break;
+	}
+	SimpleStringTokenizer<char> sl(path, '/');
+	string token;
+	Directory* dir = root;
+	size_t prevPos = sl.getPos();
+	while (sl.getNextNonEmptyToken(token))
+	{
+		Directory* nextDir = nullptr;
+		for (auto j = dir->directories.cbegin(); j != dir->directories.cend(); ++j)
+		{
+			if ((*j)->getName() == token)
+			{
+				nextDir = *j;
+				break;
+			}
+		}
+		if (!nextDir)
+		{
+			sl.reset(prevPos);
+			break;
+		}
+		dir = nextDir;
+		prevPos = sl.getPos();
+	}
+	bool initFirstItem = true;
+	while (sl.getNextNonEmptyToken(token))
+	{
+		Directory* newDir = new Directory(dir, token, false, false);
+		if (initFirstItem)
+		{
+			sr.parentUserData = dir->getUserData();
+			sr.firstItem = newDir;
+			sr.insertParent = true;
+			initFirstItem = false;
+		}
+		if (dir == root) dir->setComplete(false);
+		dir->directories.push_back(newDir);
+		dir = newDir;
+	}
+	if (dir == root && dirName.empty())
+	{
 		delete root;
 		root = tree.root;
 		tree.root = nullptr;
 		root->parent = nullptr;
+		if (initFirstItem) sr.firstItem = root;
 		return true;
 	}
-	for (auto i = parent->directories.begin(); i != parent->directories.end(); i++)
-		if (*i == dest)
+	Directory *src = tree.root;
+	bool addDir = true;
+	for (auto i = dir->directories.begin(); i != dir->directories.end(); i++)
+		if ((*i)->getName() == dirName)
 		{
+			Directory* dest = *i;
 			*i = tree.root;
-			Directory *src = tree.root;
-			src->parent = parent;
-			src->name = std::move(dest->name); // Partial Filelist's root has no name
+			src->setUserData(dest->getUserData());
 			delete dest;
-			tree.root = nullptr;
-			Directory::updateInfo(src);
-			return true;
+			if (initFirstItem)
+			{
+				sr.parentUserData = src->getUserData();
+				sr.firstItem = src;
+				initFirstItem = false;
+			}
+			addDir = false;
+			break;
 		}
-	return false;
+
+	src->parent = dir;
+	src->name = std::move(dirName); // Partial Filelist's root has no name
+	if (addDir) dir->directories.push_back(src);
+	tree.root = nullptr;
+	Directory::updateInfo(src);
+	if (initFirstItem)
+	{
+		sr.parentUserData = dir->getUserData();
+		sr.firstItem = src;
+	}
+	return true;
 }
 
 void DirectoryListing::Directory::addFile(DirectoryListing::File *f)
