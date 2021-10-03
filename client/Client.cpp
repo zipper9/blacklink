@@ -56,6 +56,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	fakeHubCount(false),
 	fakeShareSize(-1),
 	fakeShareFiles(-1),
+	fakeClientStatus(0),
 	favMode(0),
 	csUserCommands(RWLock::create())
 {
@@ -224,6 +225,7 @@ void Client::reloadSettings(bool updateNick)
 		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
 		exclChecks = hub->getExclChecks();
 		fakeHubCount = hub->getExclusiveHub();
+		fakeClientStatus = hub->getFakeClientStatus();
 
 		const string& fakeShare = hub->getFakeShare();
 		if (!fakeShare.empty())
@@ -258,14 +260,15 @@ void Client::reloadSettings(bool updateNick)
 		shareGroup.init();
 		setFavIp(Util::emptyString);
 		favMode = 0;
-		
+
 		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000);
 		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000);
 		overrideSearchInterval = overrideSearchIntervalPassive = false;
-		
+
 		opChat.clear();
 		exclChecks = false;
 		fakeHubCount = false;
+		fakeClientStatus = 0;
 		fakeShareSize = -1;
 		fakeShareFiles = -1;
 	}

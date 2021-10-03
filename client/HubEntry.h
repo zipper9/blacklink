@@ -103,6 +103,7 @@ class FavoriteHubEntry
 			swapPanels(false),
 			hideShare(false),
 			fakeFileCount(-1),
+			fakeClientStatus(0),
 			exclusiveHub(false), showJoins(false), exclChecks(false), mode(0),
 			searchInterval(0),
 			searchIntervalPassive(0),
@@ -148,6 +149,7 @@ class FavoriteHubEntry
 		GETSET(bool, exclusiveHub, ExclusiveHub); // Fake hub count
 		GETSET(string, fakeShare, FakeShare);
 		GETSET(int, fakeFileCount, FakeFileCount);
+		GETSET(int, fakeClientStatus, FakeClientStatus);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		GETSET(int, mode, Mode); // 0 = default, 1 = active, 2 = passive
 		GETSET(string, ip, IP);

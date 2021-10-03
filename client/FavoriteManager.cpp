@@ -974,6 +974,9 @@ void FavoriteManager::saveFavorites()
 				int fakeFileCount = (*i)->getFakeFileCount();
 				if (fakeFileCount > 0)
 					xml.addChildAttrib("FakeFiles", fakeFileCount);
+				int fakeClientStatus = (*i)->getFakeClientStatus();
+				if (fakeClientStatus)
+					xml.addChildAttrib("FakeClientStatus", fakeClientStatus);
 				xml.addChildAttribIfNotEmpty("Group", (*i)->getGroup());
 				const auto& cs = (*i)->getConnectionStatus();
 				if (cs.status != ConnectionStatus::UNKNOWN)
@@ -1295,6 +1298,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setOverrideId(isOverrideId);
 			e->setFakeShare(xml.getChildAttrib("FakeShare"));
 			e->setFakeFileCount(xml.getIntChildAttrib("FakeFiles"));
+			e->setFakeClientStatus(xml.getIntChildAttrib("FakeClientStatus"));
 
 			e->setGroup(group);
 			const string& connStatusAttr = xml.getChildAttrib("Status");

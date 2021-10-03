@@ -1716,6 +1716,8 @@ enum Strings   // @DontAdd
 	FAV_HUB_OPTIONS, // "Options"
 	FAV_HUB_CHEATS, // "Cheats"
 	FAV_HUB_ADVANCED, // "Advanced"
+	OVERRIDE_CLIENT_STATUS, // "Override client status (NMDC only)"
+	CLIENT_STATUS_NORMAL, // "Normal"
 	CONNECTION_TYPE, // "Connection type"
 	IP_ADDRESS, // "IP address"
 	SEARCH_INTERVAL_ACTIVE, // "Active"

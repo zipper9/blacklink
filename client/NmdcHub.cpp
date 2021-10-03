@@ -1870,13 +1870,20 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	{
 		status |= NmdcSupports::AWAY;
 	}
-	if (UploadManager::getInstance()->getIsFileServerStatus())
+	if (fakeClientStatus)
 	{
-		status |= NmdcSupports::SERVER;
+		if (fakeClientStatus == 2)
+			status |= NmdcSupports::SERVER;
+		else if (fakeClientStatus == 3)
+			status |= NmdcSupports::FIREBALL;
 	}
-	if (UploadManager::getInstance()->getIsFireballStatus())
+	else
 	{
-		status |= NmdcSupports::FIREBALL;
+		auto um = UploadManager::getInstance();
+		if (um->getIsFileServerStatus())
+			status |= NmdcSupports::SERVER;
+		if (um->getIsFireballStatus())
+			status |= NmdcSupports::FIREBALL;
 	}
 	if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && !isActive())
 	{

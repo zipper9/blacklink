@@ -210,6 +210,8 @@
 #define IDC_TOPMOST                     1046
 #define IDC_LOCK_TOOLBARS               1047
 #define IDC_KICK_USERS                  1048
+#define IDC_OVERRIDE_STATUS             1049
+#define IDC_FAKE_STATUS                 1050
 #define IDC_BTN_ABORT                   1051
 #define IDC_BROWSE_PRIVATE_KEY          1052
 #define IDC_BROWSE_CERTIFICATE          1053

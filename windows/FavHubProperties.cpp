@@ -93,7 +93,8 @@ static const DialogLayout::Item layoutItemsCheats[] =
 	{ IDC_SIZE_TYPE, 0, UNSPEC, UNSPEC },
 	{ IDC_CAPTION_FILE_COUNT, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_FILE_COUNT, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
-	{ IDC_WIZARD_NICK_RND, FLAG_TRANSLATE, UNSPEC, UNSPEC, 0, &align3 }
+	{ IDC_WIZARD_NICK_RND, FLAG_TRANSLATE, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_OVERRIDE_STATUS, FLAG_TRANSLATE, AUTO, UNSPEC }
 };
 
 static void filterText(HWND hwnd, const TCHAR* filter)
@@ -343,6 +344,11 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		}
 		entry->setFakeFileCount(fakeCount);
 
+		int fakeClientStatus = 0;
+		if (tabCheats.ctrlOverrideStatus.GetCheck() == BST_CHECKED)
+			fakeClientStatus = tabCheats.ctrlFakeStatus.GetCurSel() + 1;
+		entry->setFakeClientStatus(fakeClientStatus);
+
 		entry->setMode(tabOptions.ctrlConnType.GetCurSel());
 
 		if (Util::isAdcHub(entry->getServer()))
@@ -587,6 +593,8 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlFakeShareUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
 	ctrlFakeCount.Attach(GetDlgItem(IDC_FILE_COUNT));
 	ctrlRandomCount.Attach(GetDlgItem(IDC_WIZARD_NICK_RND));
+	ctrlOverrideStatus.Attach(GetDlgItem(IDC_OVERRIDE_STATUS));
+	ctrlFakeStatus.Attach(GetDlgItem(IDC_FAKE_STATUS));
 
 	static const ResourceManager::Strings units[] =
 	{
@@ -612,6 +620,15 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		}
 	}
 
+	static const ResourceManager::Strings clientStatus[] =
+	{
+		ResourceManager::CLIENT_STATUS_NORMAL,
+		ResourceManager::FILESERVER,
+		ResourceManager::FIREBALL
+	};
+	for (int i = 0; i < _countof(clientStatus); ++i)
+		ctrlFakeStatus.AddString(CTSTRING_I(clientStatus[i]));
+
 	ctrlFakeShareUnit.SetCurSel(fakeShareUnit);
 	ctrlEnableFakeShare.SetCheck(useFakeShare ? BST_CHECKED : BST_UNCHECKED);
 	ctrlFakeShare.EnableWindow(useFakeShare);
@@ -622,16 +639,30 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	if (entry->getFakeFileCount() > 0)
 		ctrlFakeCount.SetWindowText(Util::toStringT(entry->getFakeFileCount()).c_str());
 
+	int fakeStatus = entry->getFakeClientStatus();
+	if (fakeStatus < 0 || fakeStatus > 3) fakeStatus = 0;
+	ctrlOverrideStatus.SetCheck(fakeStatus ? BST_CHECKED : BST_UNCHECKED);
+	ctrlFakeStatus.EnableWindow(fakeStatus != 0);
+	if (fakeStatus) fakeStatus--;
+	ctrlFakeStatus.SetCurSel(fakeStatus);
+
 	return 0;
 }
 
 LRESULT FavoriteHubTabCheats::onChangeFakeShare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	BOOL state = IsDlgButtonChecked(IDC_FAKE_SHARE) == BST_CHECKED;
+	BOOL state = ctrlEnableFakeShare.GetCheck() == BST_CHECKED;
 	ctrlFakeShare.EnableWindow(state);
 	ctrlFakeShareUnit.EnableWindow(state);
 	ctrlFakeCount.EnableWindow(state);
 	ctrlRandomCount.EnableWindow(state);
+	return 0;
+}
+
+LRESULT FavoriteHubTabCheats::onChangeOverrideStatus(WORD, WORD, HWND, BOOL&)
+{
+	BOOL state = ctrlOverrideStatus.GetCheck() == BST_CHECKED;
+	ctrlFakeStatus.EnableWindow(state);
 	return 0;
 }
 
