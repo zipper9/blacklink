@@ -1142,9 +1142,9 @@ void Socket::setBlocking(bool block) noexcept
 #else
 	int newFlags, flags = fcntl(sock, F_GETFL, 0);
 	if (block)
-		newFlags &= ~O_NONBLOCK;
+		newFlags = flags & ~O_NONBLOCK;
 	else
-		newFlags |= O_NONBLOCK;
+		newFlags = flags | O_NONBLOCK;
 	if (newFlags != flags)
 		fcntl(sock, F_SETFL, newFlags);
 #endif

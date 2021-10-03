@@ -30,8 +30,8 @@
 #include "NetworkUtil.h"
 #include "dht/DHT.h"
 
-std::atomic_bool ConnectivityManager::ipv6Supported = false;
-std::atomic_bool ConnectivityManager::ipv6Enabled = false;
+std::atomic_bool ConnectivityManager::ipv6Supported(false);
+std::atomic_bool ConnectivityManager::ipv6Enabled(false);
 
 enum
 {
