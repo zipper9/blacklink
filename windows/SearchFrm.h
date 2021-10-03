@@ -627,7 +627,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		void onEnter();
 		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title);
-		static tstring getTargetDirectory(const SearchInfo* si);
+		static tstring getTargetDirectory(const SearchInfo* si, const tstring& downloadDir);
 		
 		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
 		

@@ -1485,7 +1485,8 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 		}
 		else
 		{
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(tgt), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			tstring targetDir = getTargetDirectory(si, tgt);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 		}
 	}
 	catch (const Exception& e)
@@ -1500,13 +1501,14 @@ void SearchFrame::SearchInfo::DownloadWhole::operator()(const SearchInfo* si)
 	try
 	{
 		QueueItem::Priority prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
+		tstring targetDir = getTargetDirectory(si, tgt);
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
-			QueueManager::getInstance()->addDirectory(Text::fromT(si->getText(COLUMN_PATH)), si->sr.getHintedUser(), Text::fromT(tgt), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			QueueManager::getInstance()->addDirectory(Text::fromT(si->getText(COLUMN_PATH)), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 		}
 		else
 		{
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(tgt), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 		}
 	}
 	catch (const Exception&)
@@ -1660,9 +1662,7 @@ LRESULT SearchFrame::onDownloadWhole(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
 			SearchInfo* si = ctrlResults.getItemData(i);
-			tstring target = getTargetDirectory(si);
-			if (!target.empty())
-				(SearchInfo::DownloadWhole(target))(si);
+			(SearchInfo::DownloadWhole(Util::emptyStringT))(si);
 		}
 	}
 	return 0;
@@ -2677,15 +2677,20 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 	return 0;
 }
 
-tstring SearchFrame::getTargetDirectory(const SearchInfo* si)
+tstring SearchFrame::getTargetDirectory(const SearchInfo* si, const tstring& downloadDir)
 {
 	const tstring& target = si->getText(COLUMN_PATH);
 	if (target.length() > 2)
 	{
 		size_t start = target.rfind(_T('\\'), target.length() - 2);
 		if (start == tstring::npos) start = 0; else start++;
-		string downloadDir = Util::getDownloadDir(si->getUser());
-		return Text::toT(downloadDir) + target.substr(start);
+		if (!downloadDir.empty())
+		{
+			dcassert(downloadDir.back() == _T('\\'));
+			return downloadDir + target.substr(start);
+		}
+		string defaultDownloadDir = Util::getDownloadDir(si->getUser());
+		return Text::toT(defaultDownloadDir) + target.substr(start);
 	}
 	return Util::emptyStringT;
 }
@@ -2714,10 +2719,10 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, Reso
 		}
 	}
 	
-	// !SMT!-S: Append special folder, like in source share
-	if (si && !isTorrent(si))
+	// Append the result of getTargetDirectory
+	if (si && si->sr.getType() == SearchResult::TYPE_FILE && idc != IDC_DOWNLOADDIR_TO_FAV && !isTorrent(si))
 	{
-		tstring target = getTargetDirectory(si);
+		tstring target = getTargetDirectory(si, Util::emptyStringT);
 		if (!target.empty())
 		{
 			dlTargets[idc + n] = DownloadTarget(target, DownloadTarget::PATH_SRC);
@@ -2801,7 +2806,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 #ifdef USE_DOWNLOAD_DIR
-			if (si)
+			if (sr && sr->getType() == SearchResult::TYPE_FILE)
 			{
 				resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV, CTSTRING(DOWNLOAD_WHOLE_DIR));
 				resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
@@ -2847,7 +2852,8 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			
 #ifdef USE_DOWNLOAD_DIR
 			// second sub-menu
-			makeTargetMenu(si, targetDirMenu, IDC_DOWNLOADDIR_TO_FAV, ResourceManager::DOWNLOAD_WHOLE_DIR_TO);
+			if (sr)
+				makeTargetMenu(si, targetDirMenu, IDC_DOWNLOADDIR_TO_FAV, ResourceManager::DOWNLOAD_WHOLE_DIR_TO);
 #endif
 
 			if (sr && sr->getType() == SearchResult::TYPE_FILE)
