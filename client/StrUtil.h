@@ -64,18 +64,33 @@ namespace Util
 	inline int64_t toInt64(const wstring& s) { return stringToInt<int64_t, wchar_t>(s.c_str()); }
 	inline int64_t toInt64(const wchar_t* s) { return stringToInt<int64_t, wchar_t>(s); }
 
-	inline double toDouble(const string& aString)
+	inline bool toDouble(double& result, const string& s)
 	{
-		// Work-around for atof and locales...
-		lconv* lv = localeconv();
-		string::size_type i = aString.find_last_of(".,");
-		if (i != string::npos && aString[i] != lv->decimal_point[0])
+		if (s.empty())
 		{
-			string tmp(aString);
-			tmp[i] = lv->decimal_point[0];
-			return atof(tmp.c_str());
+			result = 0;
+			return false;
 		}
-		return atof(aString.c_str());
+		// Work-around for atof and locales...
+		char* endptr;
+		lconv* lv = localeconv();
+		string::size_type i = s.find_last_of(".,");
+		if (i != string::npos && s[i] != lv->decimal_point[0])
+		{
+			string tmp(s);
+			tmp[i] = lv->decimal_point[0];
+			result = strtod(tmp.c_str(), &endptr);
+			return *endptr == 0;
+		}
+		result = strtod(s.c_str(), &endptr);
+		return *endptr == 0;
+	}
+
+	inline double toDouble(const string& s)
+	{
+		double result;
+		toDouble(result, s);
+		return result;
 	}
 
 	template<typename int_type, typename char_type>

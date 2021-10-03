@@ -55,6 +55,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	suppressChatAndPM(false),
 	fakeHubCount(false),
 	fakeShareSize(-1),
+	fakeShareFiles(-1),
 	favMode(0),
 	csUserCommands(RWLock::create())
 {
@@ -226,9 +227,15 @@ void Client::reloadSettings(bool updateNick)
 
 		const string& fakeShare = hub->getFakeShare();
 		if (!fakeShare.empty())
-			fakeShareSize = FavoriteHubEntry::parseSizeString(fakeShare);
+		{
+			fakeShareSize = static_cast<int64_t>(FavoriteHubEntry::parseSizeString(fakeShare));
+			fakeShareFiles = hub->getFakeFileCount();
+		}
 		else
+		{
 			fakeShareSize = -1;
+			fakeShareFiles = -1;
+		}
 	}
 	else
 	{
@@ -260,6 +267,7 @@ void Client::reloadSettings(bool updateNick)
 		exclChecks = false;
 		fakeHubCount = false;
 		fakeShareSize = -1;
+		fakeShareFiles = -1;
 	}
 	fm->releaseFavoriteHubEntryPtr(hub);
 }

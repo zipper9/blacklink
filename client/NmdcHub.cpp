@@ -1927,7 +1927,12 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	else if (fakeShareSize >= 0)
 	{
 		bytesShared = fakeShareSize;
-		filesShared = (fakeShareSize + averageFakeFileSize - 1) / averageFakeFileSize;
+		filesShared = 0;
+		if (fakeShareSize)
+		{
+			filesShared = fakeShareFiles;
+			if (filesShared <= 0) filesShared = (fakeShareSize + averageFakeFileSize - 1)/averageFakeFileSize;
+		}
 	}
 	else
 		ShareManager::getInstance()->getShareGroupInfo(shareGroup, bytesShared, filesShared);

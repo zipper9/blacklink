@@ -1442,7 +1442,13 @@ void AdcHub::info(bool/* forceUpdate*/)
 	else if (fakeShareSize >= 0)
 	{
 		addInfoParam(c, "SS", Util::toString(fakeShareSize));
-		addInfoParam(c, "SF", Util::toString((fakeShareSize + averageFakeFileSize - 1)/ averageFakeFileSize));
+		int64_t fileCount = 0;
+		if (fakeShareSize)
+		{
+			fileCount = fakeShareFiles;
+			if (fileCount <= 0) fileCount = (fakeShareSize + averageFakeFileSize - 1)/averageFakeFileSize;
+		}
+		addInfoParam(c, "SF", Util::toString(fileCount));
 	}
 	else
 	{

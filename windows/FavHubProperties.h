@@ -61,7 +61,6 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 		BEGIN_MSG_MAP(FavoriteHubTabIdent)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_CLIENT_ID, onChangeClientId);
-		COMMAND_ID_HANDLER(IDC_FAKE_SHARE, onChangeFakeShare);
 		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomNick);
 		COMMAND_HANDLER(IDC_HUBNICK, EN_CHANGE, onTextChanged)
 		COMMAND_HANDLER(IDC_HUBPASS, EN_CHANGE, onTextChanged)
@@ -71,7 +70,6 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onChangeClientId(WORD, WORD, HWND, BOOL&);
-		LRESULT onChangeFakeShare(WORD, WORD, HWND, BOOL&);
 		LRESULT onRandomNick(WORD, WORD, HWND, BOOL&);
 		LRESULT onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&);
 
@@ -84,10 +82,6 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 		CEdit ctrlAwayMsg;
 		CComboBox ctrlShareGroup;
 		CComboBox ctrlClientId;
-		CButton ctrlFakeHubCount;
-		CButton ctrlEnableFakeShare;
-		CEdit ctrlFakeShare;
-		CComboBox ctrlFakeShareUnit;
 
 		struct ShareGroupInfo
 		{
@@ -126,6 +120,32 @@ class FavoriteHubTabOptions : public CDialogImpl<FavoriteHubTabOptions>
 		FavoriteHubEntry* entry;
 };
 
+class FavoriteHubTabCheats : public CDialogImpl<FavoriteHubTabCheats>
+{
+	public:
+		enum { IDD = IDD_FAVORITE_HUB_TAB5 };
+
+		FavoriteHubTabCheats(FavoriteHubEntry* entry) : entry(entry) {}
+
+		BEGIN_MSG_MAP(FavoriteHubTabCheats)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_FAKE_SHARE, onChangeFakeShare);
+		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomFileCount);
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onChangeFakeShare(WORD, WORD, HWND, BOOL&);
+		LRESULT onRandomFileCount(WORD, WORD, HWND, BOOL&);
+
+		CButton ctrlFakeHubCount;
+		CButton ctrlEnableFakeShare;
+		CEdit ctrlFakeShare;
+		CComboBox ctrlFakeShareUnit;
+		CEdit ctrlFakeCount;
+		CButton ctrlRandomCount;
+		FavoriteHubEntry* entry;
+};
+
 class FavoriteHubTabAdvanced : public CDialogImpl<FavoriteHubTabAdvanced>
 {
 	public:
@@ -149,7 +169,8 @@ class FavHubProperties : public CDialogImpl<FavHubProperties>
 	public:
 		enum { IDD = IDD_FAVORITE_HUB };
 
-		FavHubProperties(FavoriteHubEntry* entry) : entry(entry) {}
+		FavHubProperties(FavoriteHubEntry* entry) : entry(entry),
+			tabName(entry), tabIdent(entry), tabOptions(entry), tabCheats(entry), tabAdvanced(entry) {}
 
 		BEGIN_MSG_MAP_EX(FavHubProperties)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
@@ -165,10 +186,11 @@ class FavHubProperties : public CDialogImpl<FavHubProperties>
 	private:
 		FavoriteHubEntry* entry;
 		CTabCtrl ctrlTabs;
-		std::unique_ptr<FavoriteHubTabName> tabName;
-		std::unique_ptr<FavoriteHubTabIdent> tabIdent;
-		std::unique_ptr<FavoriteHubTabOptions> tabOptions;
-		std::unique_ptr<FavoriteHubTabAdvanced> tabAdvanced;
+		FavoriteHubTabName tabName;
+		FavoriteHubTabIdent tabIdent;
+		FavoriteHubTabOptions tabOptions;
+		FavoriteHubTabCheats tabCheats;
+		FavoriteHubTabAdvanced tabAdvanced;
 
 		void changeTab();
 };

@@ -21,7 +21,12 @@
 #include "WinUtil.h"
 #include "FavHubProperties.h"
 #include "KnownClients.h"
+#include "DialogLayout.h"
 #include "../client/ShareManager.h"
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
 static const WinUtil::TextItem textsName[] =
 {
@@ -43,8 +48,6 @@ static const WinUtil::TextItem textsIdent[] =
 	{ IDC_FH_SHARE_GROUP,           ResourceManager::SHARE_GROUP                     },
 	{ IDC_FH_AWAY,                  ResourceManager::AWAY_MESSAGE                    },
 	{ IDC_CLIENT_ID,                ResourceManager::CLIENT_ID                       },
-	{ IDC_EXCLUSIVE_HUB,            ResourceManager::EXCLUSIVE_HUB                   },
-	{ IDC_FAKE_SHARE,               ResourceManager::FAKE_SHARE_SIZE                 },
 	{ 0,                            ResourceManager::Strings()                       }
 };
 
@@ -79,6 +82,20 @@ static const WinUtil::TextItem texts[] =
 	{ 0,                            ResourceManager::Strings()                       }
 };
 
+static const DialogLayout::Align align1 = { 4, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align2 = { 3, DialogLayout::SIDE_RIGHT, 0 };
+static const DialogLayout::Align align3 = { 5, DialogLayout::SIDE_RIGHT, U_DU(2) };
+
+static const DialogLayout::Item layoutItemsCheats[] =
+{
+	{ IDC_EXCLUSIVE_HUB, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_FAKE_SHARE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SIZE_TYPE, 0, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_FILE_COUNT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_FILE_COUNT, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
+	{ IDC_WIZARD_NICK_RND, FLAG_TRANSLATE, UNSPEC, UNSPEC, 0, &align3 }
+};
+
 static void filterText(HWND hwnd, const TCHAR* filter)
 {
 	CEdit edit(hwnd);
@@ -108,9 +125,8 @@ static void filterText(HWND hwnd, const TCHAR* filter)
 
 #define ADD_TAB(name, type, text) \
 	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(text)); \
-	name.reset(new type(entry)); \
-	tcItem.lParam = reinterpret_cast<LPARAM>(name.get()); \
-	name->Create(m_hWnd, type::IDD); \
+	tcItem.lParam = reinterpret_cast<LPARAM>(&name); \
+	name.Create(m_hWnd, type::IDD); \
 	ctrlTabs.InsertItem(n++, &tcItem);
 
 LRESULT FavHubProperties::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -125,6 +141,7 @@ LRESULT FavHubProperties::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	ADD_TAB(tabName, FavoriteHubTabName, FAV_HUB_NAME);
 	ADD_TAB(tabIdent, FavoriteHubTabIdent, FAV_HUB_IDENT);
 	ADD_TAB(tabOptions, FavoriteHubTabOptions, FAV_HUB_OPTIONS);
+	ADD_TAB(tabCheats, FavoriteHubTabCheats, FAV_HUB_CHEATS);
 	ADD_TAB(tabAdvanced, FavoriteHubTabAdvanced, FAV_HUB_ADVANCED);	
 	
 	ctrlTabs.SetCurSel(0);
@@ -145,10 +162,11 @@ LRESULT FavHubProperties::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 void FavHubProperties::changeTab()
 {
 	int pos = ctrlTabs.GetCurSel();
-	tabName->ShowWindow(SW_HIDE);
-	tabIdent->ShowWindow(SW_HIDE);
-	tabOptions->ShowWindow(SW_HIDE);
-	tabAdvanced->ShowWindow(SW_HIDE);
+	tabName.ShowWindow(SW_HIDE);
+	tabIdent.ShowWindow(SW_HIDE);
+	tabOptions.ShowWindow(SW_HIDE);
+	tabCheats.ShowWindow(SW_HIDE);
+	tabAdvanced.ShowWindow(SW_HIDE);
 
 	CRect rc;
 	ctrlTabs.GetClientRect(&rc);
@@ -158,23 +176,28 @@ void FavHubProperties::changeTab()
 	switch (pos)
 	{
 		case 0:
-			tabName->MoveWindow(&rc);
-			tabName->ShowWindow(SW_SHOW);
+			tabName.MoveWindow(&rc);
+			tabName.ShowWindow(SW_SHOW);
 			break;
-		
+
 		case 1:
-			tabIdent->MoveWindow(&rc);
-			tabIdent->ShowWindow(SW_SHOW);
+			tabIdent.MoveWindow(&rc);
+			tabIdent.ShowWindow(SW_SHOW);
 			break;
-	
+
 		case 2:
-			tabOptions->MoveWindow(&rc);
-			tabOptions->ShowWindow(SW_SHOW);
+			tabOptions.MoveWindow(&rc);
+			tabOptions.ShowWindow(SW_SHOW);
 			break;
 
 		case 3:
-			tabAdvanced->MoveWindow(&rc);
-			tabAdvanced->ShowWindow(SW_SHOW);
+			tabCheats.MoveWindow(&rc);
+			tabCheats.ShowWindow(SW_SHOW);
+			break;
+
+		case 4:
+			tabAdvanced.MoveWindow(&rc);
+			tabAdvanced.ShowWindow(SW_SHOW);
 			break;
 	}
 }
@@ -184,7 +207,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	if (wID == IDOK)
 	{
 		tstring buf;
-		WinUtil::getWindowText(tabName->ctrlAddress, buf);
+		WinUtil::getWindowText(tabName.ctrlAddress, buf);
 		if (buf.empty())
 		{
 			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
@@ -209,65 +232,81 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		url = Util::formatDchubUrl(proto, host, port);
 		
-		if (tabName->addressChanged && FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
+		if (tabName.addressChanged && FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
 		{
 			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
 		}
-		
+
+		tstring fakeShare;
+		if (tabCheats.ctrlEnableFakeShare.GetCheck() == BST_CHECKED)
+		{
+			static const TCHAR units[] = _T("KMGT");
+			WinUtil::getWindowText(tabCheats.ctrlFakeShare, fakeShare);
+			double unused;
+			if (!Util::toDouble(unused, Text::fromT(fakeShare)))
+			{
+				MessageBox(CTSTRING(FAV_BAD_SIZE), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+				return 0;
+			}
+			int unit = tabCheats.ctrlFakeShareUnit.GetCurSel();
+			if (unit > 0 && unit < 5) fakeShare += units[unit-1];
+		}
+
 		entry->setServer(url);
 		
-		WinUtil::getWindowText(tabName->ctrlName, buf);
+		WinUtil::getWindowText(tabName.ctrlName, buf);
 		string name = Text::fromT(buf);
 		if (name.empty()) name = host;
 		entry->setName(name);
 		
-		WinUtil::getWindowText(tabName->ctrlDesc, buf);
+		WinUtil::getWindowText(tabName.ctrlDesc, buf);
 		entry->setDescription(Text::fromT(buf));
 		
-		WinUtil::getWindowText(tabIdent->ctrlNick, buf);
+		WinUtil::getWindowText(tabIdent.ctrlNick, buf);
 		entry->setNick(Text::fromT(buf));
 		
-		WinUtil::getWindowText(tabIdent->ctrlPassword, buf);
+		WinUtil::getWindowText(tabIdent.ctrlPassword, buf);
 		entry->setPassword(Text::fromT(buf));
 		
-		WinUtil::getWindowText(tabIdent->ctrlDesc, buf);
+		WinUtil::getWindowText(tabIdent.ctrlDesc, buf);
 		entry->setUserDescription(Text::fromT(buf));
 
-		WinUtil::getWindowText(tabIdent->ctrlAwayMsg, buf);
+		WinUtil::getWindowText(tabIdent.ctrlAwayMsg, buf);
 		entry->setAwayMsg(Text::fromT(buf));
 
-		WinUtil::getWindowText(tabIdent->ctrlEmail, buf);
+		WinUtil::getWindowText(tabIdent.ctrlEmail, buf);
 		entry->setEmail(Text::fromT(buf));
 
-		int shareGroupIndex = tabIdent->ctrlShareGroup.GetCurSel();
-		const FavoriteHubTabIdent::ShareGroupInfo& sg = tabIdent->shareGroups[shareGroupIndex];
+		int shareGroupIndex = tabIdent.ctrlShareGroup.GetCurSel();
+		const FavoriteHubTabIdent::ShareGroupInfo& sg = tabIdent.shareGroups[shareGroupIndex];
 		entry->setShareGroup(sg.id);
 		entry->setHideShare(sg.def == 1);
 
-		entry->setShowJoins(tabOptions->ctrlShowJoins.GetCheck() == BST_CHECKED);
-		entry->setExclChecks(tabOptions->ctrlExclChecks.GetCheck() == BST_CHECKED);
-		entry->setExclusiveHub(tabIdent->ctrlFakeHubCount.GetCheck() == BST_CHECKED);
-		entry->setSuppressChatAndPM(tabOptions->ctrlSuppressMsg.GetCheck() == BST_CHECKED);
+		entry->setShowJoins(tabOptions.ctrlShowJoins.GetCheck() == BST_CHECKED);
+		entry->setExclChecks(tabOptions.ctrlExclChecks.GetCheck() == BST_CHECKED);
+		entry->setSuppressChatAndPM(tabOptions.ctrlSuppressMsg.GetCheck() == BST_CHECKED);
+
+		entry->setExclusiveHub(tabCheats.ctrlFakeHubCount.GetCheck() == BST_CHECKED);
 
 		for (int i = 0; i < 5; ++i)
 		{
-			WinUtil::getWindowText(tabAdvanced->ctrlRaw[i], buf);
+			WinUtil::getWindowText(tabAdvanced.ctrlRaw[i], buf);
 			entry->setRawCommand(Text::fromT(buf), i);
 		}
 
-		WinUtil::getWindowText(tabOptions->ctrlIpAddress, buf);
+		WinUtil::getWindowText(tabOptions.ctrlIpAddress, buf);
 		entry->setIP(Text::fromT(buf));
 
-		WinUtil::getWindowText(tabAdvanced->ctrlOpChat, buf);
+		WinUtil::getWindowText(tabAdvanced.ctrlOpChat, buf);
 		entry->setOpChat(Text::fromT(buf));
 
-		if (tabOptions->ctrlSearchOverride.GetCheck() == BST_CHECKED)
+		if (tabOptions.ctrlSearchOverride.GetCheck() == BST_CHECKED)
 		{
-			WinUtil::getWindowText(tabOptions->ctrlSearchActive, buf);
+			WinUtil::getWindowText(tabOptions.ctrlSearchActive, buf);
 			entry->setSearchInterval(Util::toUInt32(buf));
 
-			WinUtil::getWindowText(tabOptions->ctrlSearchPassive, buf);
+			WinUtil::getWindowText(tabOptions.ctrlSearchPassive, buf);
 			entry->setSearchIntervalPassive(Util::toUInt32(buf));
 		}
 		else
@@ -276,39 +315,40 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			entry->setSearchIntervalPassive(0);
 		}
 		
-		if (tabName->ctrlGroup.GetCurSel() == 0)
+		if (tabName.ctrlGroup.GetCurSel() == 0)
 		{
 			entry->setGroup(Util::emptyString);
 		}
 		else
 		{
-			WinUtil::getWindowText(tabName->ctrlGroup, buf);
+			WinUtil::getWindowText(tabName.ctrlGroup, buf);
 			entry->setGroup(Text::fromT(buf));
 		}
 		
-		WinUtil::getWindowText(tabIdent->ctrlClientId, buf);
+		WinUtil::getWindowText(tabIdent.ctrlClientId, buf);
 		string clientName, clientVersion;
 		FavoriteManager::splitClientId(Text::fromT(buf), clientName, clientVersion);
 		entry->setClientName(clientName);
 		entry->setClientVersion(clientVersion);
-		entry->setOverrideId(tabIdent->IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
-		
-		tstring fakeShare;
-		if (tabIdent->ctrlEnableFakeShare.GetCheck() == BST_CHECKED)
-		{
-			static const TCHAR units[] = _T("KMGT");
-			WinUtil::getWindowText(tabIdent->ctrlFakeShare, fakeShare);
-			int unit = tabIdent->ctrlFakeShareUnit.GetCurSel();
-			if (unit > 0 && unit < 5) fakeShare += units[unit-1];
-		}
+		entry->setOverrideId(tabIdent.IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
+
 		entry->setFakeShare(Text::fromT(fakeShare));
 
-		entry->setMode(tabOptions->ctrlConnType.GetCurSel());
-		
+		int fakeCount = -1;
+		if (!fakeShare.empty())
+		{
+			WinUtil::getWindowText(tabCheats.ctrlFakeCount, buf);
+			fakeCount = Util::toInt(buf);
+			if (fakeCount <= 0) fakeCount = -1;
+		}
+		entry->setFakeFileCount(fakeCount);
+
+		entry->setMode(tabOptions.ctrlConnType.GetCurSel());
+
 		if (Util::isAdcHub(entry->getServer()))
 			entry->setEncoding(Text::CHARSET_UTF8);
 		else
-			entry->setEncoding(WinUtil::getSelectedCharset(tabOptions->ctrlEncoding));
+			entry->setEncoding(WinUtil::getSelectedCharset(tabOptions.ctrlEncoding));
 	}
 	EndDialog(wID);
 	return 0;
@@ -424,42 +464,6 @@ LRESULT FavoriteHubTabIdent::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	CheckDlgButton(IDC_CLIENT_ID, entry->getOverrideId() ? BST_CHECKED : BST_UNCHECKED);
 	ctrlClientId.EnableWindow(entry->getOverrideId() ? TRUE : FALSE);
 
-	ctrlFakeHubCount.Attach(GetDlgItem(IDC_EXCLUSIVE_HUB));
-	ctrlFakeHubCount.SetCheck(entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED);
-
-	ctrlEnableFakeShare.Attach(GetDlgItem(IDC_FAKE_SHARE));
-	ctrlFakeShare.Attach(GetDlgItem(IDC_FAKE_SHARE_SIZE));
-	ctrlFakeShareUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
-
-	static const ResourceManager::Strings units[] =
-	{
-		ResourceManager::B,
-		ResourceManager::KB,
-		ResourceManager::MB,
-		ResourceManager::GB,
-		ResourceManager::TB
-	};
-	for (int i = 0; i < _countof(units); ++i)
-		ctrlFakeShareUnit.AddString(CTSTRING_I(units[i]));
-	int fakeShareUnit = 0;
-	const string& fakeShare = entry->getFakeShare();
-	BOOL useFakeShare = FALSE;
-	if (!fakeShare.empty())
-	{
-		int64_t fakeShareSize;
-		FavoriteHubEntry::parseSizeString(fakeShare, &fakeShareSize, &fakeShareUnit);
-		if (fakeShareSize >= 0)
-		{
-			useFakeShare = TRUE;
-			ctrlFakeShare.SetWindowText(Util::toStringT(fakeShareSize).c_str());
-		}
-	}
-
-	ctrlFakeShareUnit.SetCurSel(fakeShareUnit);
-	ctrlEnableFakeShare.SetCheck(useFakeShare ? BST_CHECKED : BST_UNCHECKED);
-	ctrlFakeShare.EnableWindow(useFakeShare);
-	ctrlFakeShareUnit.EnableWindow(useFakeShare);
-
 	ctrlNick.LimitText(35);
 	ctrlPassword.LimitText(64);
 	ctrlDesc.LimitText(50);
@@ -476,14 +480,6 @@ LRESULT FavoriteHubTabIdent::onRandomNick(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 LRESULT FavoriteHubTabIdent::onChangeClientId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ctrlClientId.EnableWindow(IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
-	return 0;
-}
-
-LRESULT FavoriteHubTabIdent::onChangeFakeShare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	BOOL state = IsDlgButtonChecked(IDC_FAKE_SHARE) == BST_CHECKED;
-	ctrlFakeShare.EnableWindow(state);
-	ctrlFakeShareUnit.EnableWindow(state);
 	return 0;
 }
 
@@ -575,6 +571,73 @@ LRESULT FavoriteHubTabOptions::onChangeSearchCheck(WORD /*wNotifyCode*/, WORD /*
 	BOOL state = ctrlSearchOverride.GetCheck() == BST_CHECKED;
 	ctrlSearchActive.EnableWindow(state);
 	ctrlSearchPassive.EnableWindow(state);
+	return 0;
+}
+
+LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	DialogLayout::layout(m_hWnd, layoutItemsCheats, _countof(layoutItemsCheats));
+
+	ctrlFakeHubCount.Attach(GetDlgItem(IDC_EXCLUSIVE_HUB));
+	ctrlFakeHubCount.SetCheck(entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED);
+
+	ctrlEnableFakeShare.Attach(GetDlgItem(IDC_FAKE_SHARE));
+	ctrlFakeShare.Attach(GetDlgItem(IDC_FAKE_SHARE_SIZE));
+	ctrlFakeShareUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
+	ctrlFakeCount.Attach(GetDlgItem(IDC_FILE_COUNT));
+	ctrlRandomCount.Attach(GetDlgItem(IDC_WIZARD_NICK_RND));
+
+	static const ResourceManager::Strings units[] =
+	{
+		ResourceManager::B,
+		ResourceManager::KB,
+		ResourceManager::MB,
+		ResourceManager::GB,
+		ResourceManager::TB
+	};
+	for (int i = 0; i < _countof(units); ++i)
+		ctrlFakeShareUnit.AddString(CTSTRING_I(units[i]));
+	int fakeShareUnit = 0;
+	const string& fakeShare = entry->getFakeShare();
+	BOOL useFakeShare = FALSE;
+	if (!fakeShare.empty())
+	{
+		double fakeShareSize;
+		FavoriteHubEntry::parseSizeString(fakeShare, &fakeShareSize, &fakeShareUnit);
+		if (fakeShareSize >= 0)
+		{
+			useFakeShare = TRUE;
+			ctrlFakeShare.SetWindowText(Util::toStringT(fakeShareSize).c_str());
+		}
+	}
+
+	ctrlFakeShareUnit.SetCurSel(fakeShareUnit);
+	ctrlEnableFakeShare.SetCheck(useFakeShare ? BST_CHECKED : BST_UNCHECKED);
+	ctrlFakeShare.EnableWindow(useFakeShare);
+	ctrlFakeShareUnit.EnableWindow(useFakeShare);
+	ctrlFakeCount.EnableWindow(useFakeShare);
+	ctrlRandomCount.EnableWindow(useFakeShare);
+
+	if (entry->getFakeFileCount() > 0)
+		ctrlFakeCount.SetWindowText(Util::toStringT(entry->getFakeFileCount()).c_str());
+
+	return 0;
+}
+
+LRESULT FavoriteHubTabCheats::onChangeFakeShare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	BOOL state = IsDlgButtonChecked(IDC_FAKE_SHARE) == BST_CHECKED;
+	ctrlFakeShare.EnableWindow(state);
+	ctrlFakeShareUnit.EnableWindow(state);
+	ctrlFakeCount.EnableWindow(state);
+	ctrlRandomCount.EnableWindow(state);
+	return 0;
+}
+
+LRESULT FavoriteHubTabCheats::onRandomFileCount(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlFakeCount.SetWindowText(Util::toStringT(Util::rand(1, 200000)).c_str());
 	return 0;
 }
 

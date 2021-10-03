@@ -419,6 +419,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		bool overrideSearchInterval;
 		bool overrideSearchIntervalPassive;
 		int64_t fakeShareSize;
+		int64_t fakeShareFiles;
 		CID shareGroup;
 		
 		void updateCounts(bool remove);

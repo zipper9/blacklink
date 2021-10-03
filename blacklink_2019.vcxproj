@@ -1077,6 +1077,7 @@
     <Image Include="res\Cam.ico" />
     <Image Include="res\Cam.png" />
     <Image Include="res\clock.ico" />
+    <Image Include="res\favorite.png" />
     <Image Include="res\firewall.ico" />
     <Image Include="res\Gender.png" />
     <Image Include="res\mode_active.ico" />
