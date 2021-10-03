@@ -373,7 +373,7 @@ void HttpConnection::onDataLine(const string &line) noexcept
 
 void HttpConnection::onFailed(const string &errorText) noexcept
 {
-	if (connState != STATE_FAILED)
+	if (connState != STATE_FAILED && connState != STATE_IDLE)
 	{
 		connState = STATE_FAILED;
 		fire(HttpConnectionListener::Failed(), this, errorText + " (" + currentUrl + ")");
