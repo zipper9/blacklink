@@ -279,8 +279,10 @@ void LogManager::speakStatusMessage(const string& message) noexcept
 #ifdef _WIN32
 	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !ClientManager::isStartup() && !ClientManager::isBeforeShutdown())
 	{
-		char* data = new char[message.length() + 1];
-		memcpy(data, message.c_str(), message.length() + 1); 
+		size_t len = std::min<size_t>(message.length(), 255);
+		char* data = new char[len + 1];
+		memcpy(data, message.c_str(), len); 
+		data[len] = 0;
 		if (!::PostMessage(LogManager::g_mainWnd, WM_SPEAKER, g_LogMessageID, reinterpret_cast<LPARAM>(data)))
 		{
 			// TODO - LOG dcassert(0);

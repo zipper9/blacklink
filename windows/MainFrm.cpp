@@ -1331,14 +1331,10 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		{
 			string msgStr = Util::formatDateTime("[%H:%M:%S] ", GET_TIME());
 			msgStr.append(msg);
-			const tstring line = Text::toT(msgStr);
+			tstring line = Text::toT(msgStr);
+			tstring::size_type rpos = line.find(_T('\r'));
+			if (rpos != tstring::npos) line.erase(rpos);
 			ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
-			
-			const tstring::size_type rpos = line.find(_T('\r'));
-			if (rpos == tstring::npos)
-				lastLinesList.push_back(line);
-			else
-				lastLinesList.push_back(line.substr(0, rpos));
 
 			while (lastLinesList.size() > MAX_CLIENT_LINES)
 				lastLinesList.erase(lastLinesList.begin());
