@@ -1412,15 +1412,27 @@ LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 			virt.title = TSTRING(VIRTUAL_NAME);
 			virt.description = TSTRING(VIRTUAL_NAME_LONG);
 			virt.allowEmpty = false;
+			virt.checkBox = virt.checked = true;
+			virt.checkBoxText = ResourceManager::ADD_TO_DEFAULT_SHARE_GROUP;
 			virt.icon = IconBitmaps::FINISHED_UPLOADS;
-			
+
 			tstring path = pItem->m_sFQPath;
 			Util::appendPathSeparator(path);
 			virt.line = Text::toT(ShareManager::validateVirtual(Util::getLastDir(Text::fromT(path))));
-			                          
+
 			if (virt.DoModal() == IDOK)
 			{
-				ShareManager::getInstance()->addDirectory(Text::fromT(path), Text::fromT(virt.line));
+				string realPath = Text::fromT(path);
+				ShareManager* sm = ShareManager::getInstance();
+				sm->addDirectory(realPath, Text::fromT(virt.line));
+				if (virt.checked)
+				{
+					CID id;
+					list<string> dirs;
+					sm->getShareGroupDirectories(id, dirs);
+					dirs.push_back(realPath);
+					sm->updateShareGroup(id, Util::emptyString, dirs);
+				}
 				if (listener) listener->onChange();
 			}
 			else
