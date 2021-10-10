@@ -19,20 +19,30 @@
 #include "stdafx.h"
 #include "AdvancedPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 #include "../client/SettingsManager.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 5, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_MAGNET_URL_TEMPLATE, ResourceManager::SETCZDC_MAGNET_URL_TEMPLATE },
-	{ IDC_CZDC_WINAMP, ResourceManager::SETCZDC_WINAMP },
-	{ IDC_CZDC_RATIOMSG, ResourceManager::CZDC_RATIOMSG },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_GROUP_TEMPLATES, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_MAGNET_URL_TEMPLATE, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CZDC_RATIOMSG, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CZDC_WINAMP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_THOLD_STR, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_THOLD, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align1 }
 };
 
 static const PropPage::Item items[] =
 {
 	{ IDC_EWMAGNET_TEMPL, SettingsManager::WMLINK_TEMPLATE, PropPage::T_STR},
 	{ IDC_RATIOMSG, SettingsManager::RATIO_MESSAGE, PropPage::T_STR},
+	{ IDC_THOLD, SettingsManager::USER_THERSHOLD, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -40,17 +50,11 @@ static const AdvancedPage::ListItem listItems[] =
 {
 	{ SettingsManager::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
 	{ SettingsManager::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
-//	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
-//	{ SettingsManager::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
 	{ SettingsManager::AUTO_KICK, ResourceManager::SETTINGS_AUTO_KICK },
 	{ SettingsManager::AUTO_KICK_NO_FAVS, ResourceManager::SETTINGS_AUTO_KICK_NO_FAVS },
+	{ SettingsManager::AUTO_CHANGE_NICK, ResourceManager::SETTINGS_AUTO_CHANGE_NICK },
 	{ SettingsManager::COMPRESS_TRANSFERS, ResourceManager::SETTINGS_COMPRESS_TRANSFERS },
 	{ SettingsManager::USE_MEMORY_MAPPED_FILES, ResourceManager::SETTINGS_USE_MM_FILES },
-	{ SettingsManager::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
-	{ SettingsManager::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
-	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
-	{ SettingsManager::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
-	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
 	{ SettingsManager::SHOW_SHELL_MENU, ResourceManager::SETTINGS_SHOW_SHELL_MENU },
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	{ SettingsManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
@@ -66,7 +70,7 @@ static const AdvancedPage::ListItem listItems[] =
 
 LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
 	
 	curSel = SETTING(MEDIA_PLAYER);

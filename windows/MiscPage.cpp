@@ -18,22 +18,28 @@
 
 #include "stdafx.h"
 #include "MiscPage.h"
+#include "DialogLayout.h"
 #include "../client/SettingsManager.h"
 
-static const PropPage::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_ADV_MISC, ResourceManager::SETTINGS_EXPERTS_ONLY },
-	{ IDC_PSR_DELAY_STR, ResourceManager::PSR_DELAY },
-	{ IDC_THOLD_STR, ResourceManager::THRESHOLD },
-	{ IDC_RAW_TEXTS, ResourceManager::RAW_TEXTS },
-	{ IDC_CAPTION_MAX_UC, ResourceManager::SETTINGS_MAX_HUB_UC },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_ADV_MISC, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_MAX_UC, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_PSR_DELAY_STR, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_RAW_TEXTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_MAX_UC, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_PSR_DELAY, 0, UNSPEC, UNSPEC, 0, &align1 }
 };
 
 static const PropPage::Item items[] =
 {
 	{ IDC_PSR_DELAY, SettingsManager::PSR_DELAY, PropPage::T_INT },
-	{ IDC_THOLD, SettingsManager::USER_THERSHOLD, PropPage::T_INT },
 	{ IDC_MAX_UC, SettingsManager::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
 	{ IDC_RAW1_TEXT, SettingsManager::RAW1_TEXT, PropPage::T_STR },
 	{ IDC_RAW2_TEXT, SettingsManager::RAW2_TEXT, PropPage::T_STR },
@@ -43,10 +49,20 @@ static const PropPage::Item items[] =
 	{ 0, 0, PropPage::T_END }
 };
 
+static const PropPage::ListItem listItems[] =
+{
+	{ SettingsManager::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
+	{ SettingsManager::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
+	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
+	{ SettingsManager::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
+	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
+	{ 0, ResourceManager::Strings() }
+};
+
 LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
-	PropPage::read(*this, items);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::read(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
 	return TRUE;
 }
 

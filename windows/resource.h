@@ -165,6 +165,7 @@
 #define IDD_FIREWALL_TAB                349
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
+#define IDC_GROUP_TEMPLATES             1002
 #define IDC_REMOVE_OFFLINE              1003
 #define IDC_DISABLE_SOUNDS              1004
 #define IDC_CDMDEBUG_WINDOW             1005
