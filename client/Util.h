@@ -291,7 +291,7 @@ namespace Util
 		replace(string_t(search), string_t(replacement), str);
 	}
 
-	void parseIpPort(const string& ipPort, string& ip, uint16_t& port);
+	bool parseIpPort(const string& ipPort, string& ip, uint16_t& port);
 
 	void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
 	inline void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, string& query, string& fragment)

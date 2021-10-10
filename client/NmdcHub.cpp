@@ -634,12 +634,26 @@ void NmdcHub::searchParse(const string& param, int type)
 
 	if (!isPassive)
 	{
+		uint16_t port = 0;
+		IpAddress ip;
+		string host;
+		if (!Util::parseIpPort(searchParam.seeker, host, port) || !port || !Util::parseIpAddress(ip, host))
+			return;
+		if (BOOLSETTING(INCOMING_SEARCH_IGNORE_BOTS) && ip == getIp())
+		{
+			if (BOOLSETTING(LOG_SEARCH_TRACE))
+			{
+				string message = STRING_F(SEARCH_HIT_IGNORED, searchParam.seeker % getHubUrl() % searchParam.filter);
+				LOG(SEARCH_TRACE, message);
+			}
+			return;
+		}
+#if 0
 		string::size_type m = searchParam.seeker.rfind(':');
 		if (m == string::npos)
 			return;
 		if (searchParam.fileType != FILE_TYPE_TTH)
 		{
-#if 0
 			// FIXME FIXME FIXME
 			if (m_cache_hub_url_flood.empty())
 				m_cache_hub_url_flood = getHubUrlAndIP();
@@ -649,8 +663,8 @@ void NmdcHub::searchParse(const string& param, int type)
 			{
 				return; // http://dchublist.ru/forum/viewtopic.php?f=6&t=1028&start=150
 			}
-#endif
 		}
+#endif
 	}
 	else
 	{

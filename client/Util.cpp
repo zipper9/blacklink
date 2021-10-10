@@ -675,8 +675,9 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	}
 }
 	
-void Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
+bool Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
 {
+	bool result = true;
 	string::size_type i = ipPort.rfind(':');
 	if (i == string::npos)
 	{
@@ -687,8 +688,18 @@ void Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
 		string::size_type j = ipPort[0] == '[' ? ipPort.rfind(']') : string::npos;
 		if (j == string::npos || j < i)
 		{
+			result = false;
 			ip = ipPort.substr(0, i);
-			port = Util::toInt(ipPort.c_str() + i + 1);
+			auto portLen = ipPort.length() - (i + 1);
+			if (portLen <= 5 && portLen)
+			{
+				uint32_t val = Util::toUInt32(ipPort.c_str() + i + 1);
+				if (val && val < 0x10000)
+				{
+					port = val;
+					result = true;
+				}
+			}
 		}
 		else
 			ip = ipPort;
@@ -698,6 +709,8 @@ void Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
 		ip.erase(0, 1);
 		ip.erase(ip.length()-1);
 	}
+	if (ip.empty()) result = false;
+	return result;
 }
 	
 std::map<string, string> Util::decodeQuery(const string& query)
