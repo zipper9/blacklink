@@ -92,28 +92,14 @@ void TokenManager::removeToken(const string& token) noexcept
 		tokens.erase(p);
 }
 
-string TokenManager::getInfo() const noexcept
+void TokenManager::getList(vector<pair<string, TokenData>>& result) const noexcept
 {
-	uint64_t now = GET_TICK();
-	LOCK(cs);
-	string res;
-	for (const auto& p : tokens)
-	{		
-		const auto& data = p.second;
-		res += p.first;
-		res += ": ";
-		res += data.type == TYPE_UPLOAD ? "upload" : "download";
-		if (data.expires != UINT64_MAX)
-		{
-			int64_t t = data.expires - now;
-			if (t < 0) t = 0;
-			res += " (";
-			res += Util::toString(t/1000);
-			res += ')';
-		}
-		res += '\n';
+	result.clear();
+	{
+		LOCK(cs);
+		for (const auto& p : tokens)
+			result.emplace_back(p);
 	}
-	return res;
 }
 
 void TokenManager::removeExpired(uint64_t now) noexcept
@@ -626,6 +612,11 @@ void ConnectionManager::connectNextNmdcUser(const ExpectedNmdcMap::NextConnectio
 	OnlineUserPtr u = ClientManager::findOnlineUser(cid, nci.hubUrl, true);
 	if (u)
 		u->getClientBase().connect(u, nci.token, false);
+#ifdef DEBUG_NMDC_UC
+	else
+		LogManager::message("Expected user " + nci.nick + "/" + cid.toBase32()
+			+ " on hub " + nci.hubUrl + " not found", false);
+#endif
 }
 
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
@@ -710,6 +701,11 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					cqi->setLastAttempt(tick);
 					cqi->setState(ConnectionQueueItem::WAITING);
 					removeExpectedToken(token);
+#ifdef DEBUG_NMDC_UC
+					LogManager::message("Connection timed out: user=" + cqi->getHintedUser().user->getLastNick() +
+						" token=" + cqi->getConnectionQueueToken() +
+						" errors=" + Util::toString(cqi->getErrors()), false);
+#endif
 				}
 			}
 		}
@@ -1566,6 +1562,53 @@ string ConnectionManager::getUserConnectionInfo() const
 string ConnectionManager::getExpectedInfo() const
 {
 	return expectedNmdc.getInfo() + expectedAdc.getInfo();
+}
+
+string ConnectionManager::getTokenInfo() const
+{
+	vector<pair<string, TokenManager::TokenData>> v;
+	tokenManager.getList(v);
+	uint64_t now = GET_TICK();
+	string res;
+	for (const auto& p : v)
+	{
+		const auto& data = p.second;
+		res += p.first;
+		res += ": ";
+		ConnectionQueueItemPtr cqi;
+		if (data.type == TokenManager::TYPE_UPLOAD)
+		{
+			res += "upload";
+			LOCK(csUploads);
+			auto i = find(uploads.begin(), uploads.end(), p.first);
+			if (i != uploads.end()) cqi = *i;
+		}
+		else
+		{
+			res += "download";
+			READ_LOCK(*csDownloads);
+			auto i = find(downloads.begin(), downloads.end(), p.first);
+			if (i != downloads.end()) cqi = *i;
+		}
+		if (data.expires != UINT64_MAX)
+		{
+			int64_t t = data.expires - now;
+			if (t < 0) t = 0;
+			res += " expires=";
+			res += Util::toString(t/1000);
+		}
+		if (cqi)
+		{
+			const auto& hintedUser = cqi->getHintedUser();
+			res += " user=" + (hintedUser.user ? hintedUser.user->getLastNick() : "<empty>");
+			if (!hintedUser.hint.empty()) res += " hub=" + hintedUser.hint;
+			res += " state=" + Util::toString(cqi->getState());
+			int errors = cqi->getErrors();
+			if (errors) res += " errors=" + Util::toString(errors);
+		}
+		res += '\n';
+	}
+	return res;
 }
 
 #ifdef DEBUG_USER_CONNECTION

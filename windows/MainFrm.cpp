@@ -200,7 +200,9 @@ unsigned int WINAPI MainFrame::stopper(void* p)
 		{
 			if (counter > 1000)
 			{
-				LogManager::message("Forced shutdown, hwnd=0x" + Util::toHexString(wnd));
+				tstring title;
+				WinUtil::getWindowText(wnd, title);
+				LogManager::message("Forced shutdown, hwnd=0x" + Util::toHexString(wnd) + " (" + Text::fromT(title) + ")");
 				break;
 			}
 			Sleep(10);

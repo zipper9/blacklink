@@ -810,7 +810,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		}
 		if (args[0] == _T("tokens"))
 		{
-			string info = ConnectionManager::tokenManager.getInfo();
+			string info = ConnectionManager::getInstance()->getTokenInfo();
 			if (info.empty())
 				localMessage = _T("Empty list");
 			else

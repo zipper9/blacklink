@@ -41,15 +41,16 @@ class TokenManager
 		bool isToken(const string& token) const noexcept;
 		void removeToken(const string& token) noexcept;
 		size_t getTokenCount() const noexcept;
-		string getInfo() const noexcept;
 		void removeExpired(uint64_t now) noexcept;
 
-	private:
 		struct TokenData
 		{
 			int type;
 			uint64_t expires;
 		};
+		void getList(vector<pair<string, TokenData>>& result) const noexcept;
+
+	private:
 		boost::unordered_map<string, TokenData> tokens;
 		mutable FastCriticalSection cs;
 };
@@ -207,6 +208,7 @@ class ConnectionManager :
 
 		string getUserConnectionInfo() const;
 		string getExpectedInfo() const;
+		string getTokenInfo() const;
 
 		static uint16_t g_ConnToMeCount;
 
