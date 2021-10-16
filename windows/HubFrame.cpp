@@ -717,6 +717,7 @@ void HubFrame::createTabMenu()
 	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT, CTSTRING(MENU_RECONNECT), g_iconBitmaps.getBitmap(IconBitmaps::RECONNECT, 0));
 	if (isConnected())
 		tabMenu.AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
+	WinUtil::g_copyHubMenu.EnableMenuItem(IDC_COPY_IP, client ? MFS_ENABLED : MFS_GRAYED);
 	tabMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
 	tabMenu.AppendMenu(MF_SEPARATOR);
 	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED), g_iconBitmaps.getBitmap(IconBitmaps::RESTORE_CONN, 0));
@@ -761,6 +762,9 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 			break;
 		case IDC_COPY_HUBADDRESS:
 			sCopy = baseClient->getHubUrl();
+			break;
+		case IDC_COPY_IP:
+			if (client) sCopy = client->getIpAsString();
 			break;
 	}
 	

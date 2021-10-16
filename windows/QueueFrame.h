@@ -78,6 +78,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		COMMAND_ID_HANDLER(IDC_MOVE, onMove)
 		COMMAND_ID_HANDLER(IDC_RENAME, onRename)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
+		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_NAME, onCopyFolder)
+		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_PATH, onCopyFolder)
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onPriority)
 		COMMAND_RANGE_HANDLER(IDC_SEGMENTONE, IDC_SEGMENTTWO_HUNDRED, onSegments)
@@ -114,6 +116,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onRemoveOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCopyFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onShowQueueItem(UINT, WPARAM, LPARAM, BOOL&);
 		

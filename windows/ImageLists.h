@@ -232,6 +232,7 @@ class IconBitmaps
 			FILELIST_OFFLINE,
 			MAGNET,
 			CLEAR,
+			PAUSE,
 			EXCLAMATION,
 			MAX_BITMAPS
 		};

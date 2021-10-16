@@ -144,6 +144,25 @@ static tstring getLastNickHubT(const UserPtr& user)
 	return Text::toT(user->getLastNick());
 }
 
+static const tstring& getErrorText(const QueueItem::Source& source)
+{
+	if (source.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
+		return TSTRING(FILE_NOT_AVAILABLE);
+	if (source.isSet(QueueItem::Source::FLAG_NO_NEED_PARTS))
+		return TSTRING(NO_NEEDED_PART);
+	if (source.isSet(QueueItem::Source::FLAG_BAD_TREE))
+		return TSTRING(INVALID_TREE);
+	if (source.isSet(QueueItem::Source::FLAG_NO_TTHF))
+		return TSTRING(SOURCE_TOO_OLD);
+	if (source.isSet(QueueItem::Source::FLAG_PASSIVE))
+		return TSTRING(PASSIVE_USER);
+	if (source.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
+		return TSTRING(SLOW_USER);
+	if (source.isSet(QueueItem::Source::FLAG_UNTRUSTED))
+		return TSTRING(CERTIFICATE_NOT_TRUSTED);
+	return Util::emptyStringT;
+}
+
 LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	showTree = BOOLSETTING(QUEUE_FRAME_SHOW_TREE);
@@ -433,37 +452,14 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 						if (!tmp.empty())
 							tmp += _T(", ");
 						tmp += getLastNickHubT(j->first);
-						
-						tmp += _T(" (");
-						if (j->second.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
+
+						const tstring& error = getErrorText(j->second);
+						if (!error.empty())
 						{
-							tmp += TSTRING(FILE_NOT_AVAILABLE);
+							tmp += _T(" (");
+							tmp += error;
+							tmp += _T(')');
 						}
-						else if (j->second.isSet(QueueItem::Source::FLAG_PASSIVE))
-						{
-							tmp += TSTRING(PASSIVE_USER);
-						}
-						else if (j->second.isSet(QueueItem::Source::FLAG_BAD_TREE))
-						{
-							tmp += TSTRING(INVALID_TREE);
-						}
-						else if (j->second.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
-						{
-							tmp += TSTRING(SLOW_USER);
-						}
-						else if (j->second.isSet(QueueItem::Source::FLAG_NO_TTHF))
-						{
-							tmp += TSTRING(SOURCE_TOO_OLD);
-						}
-						else if (j->second.isSet(QueueItem::Source::FLAG_NO_NEED_PARTS))
-						{
-							tmp += TSTRING(NO_NEEDED_PART);
-						}
-						else if (j->second.isSet(QueueItem::Source::FLAG_UNTRUSTED))
-						{
-							tmp += TSTRING(CERTIFICATE_NOT_TRUSTED);
-						}
-						tmp += _T(')');
 					}
 				}
 			}
@@ -1586,35 +1582,13 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					{
 						const auto& user = i->first;
 						tstring nick = getLastNickHubT(user);
-						if (i->second.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
+						const tstring& error = getErrorText(i->second);
+						if (!error.empty())
 						{
-							nick += _T(" (") + TSTRING(FILE_NOT_AVAILABLE) + _T(")");
+							nick += _T(" (");
+							nick += error;
+							nick += _T(')');
 						}
-						else if (i->second.isSet(QueueItem::Source::FLAG_PASSIVE))
-						{
-							nick += _T(" (") + TSTRING(PASSIVE_USER) + _T(")");
-						}
-						else if (i->second.isSet(QueueItem::Source::FLAG_BAD_TREE))
-						{
-							nick += _T(" (") + TSTRING(INVALID_TREE) + _T(")");
-						}
-						else if (i->second.isSet(QueueItem::Source::FLAG_NO_NEED_PARTS))
-						{
-							nick += _T(" (") + TSTRING(NO_NEEDED_PART) + _T(")");
-						}
-						else if (i->second.isSet(QueueItem::Source::FLAG_NO_TTHF))
-						{
-							nick += _T(" (") + TSTRING(SOURCE_TOO_OLD) + _T(")");
-						}
-						else if (i->second.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
-						{
-							nick += _T(" (") + TSTRING(SLOW_USER) + _T(")");
-						}
-						else if (i->second.isSet(QueueItem::Source::FLAG_UNTRUSTED))
-						{
-							nick += _T(" (") + TSTRING(CERTIFICATE_NOT_TRUSTED) + _T(")");
-						}
-
 						WinUtil::escapeMenu(nick);
 						mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
 						mii.fType = MFT_STRING;
@@ -1696,21 +1670,32 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 
 		usingDirMenu = true;
 		
-		CMenu dirMenu;
+		OMenu dirMenu;
 		dirMenu.CreatePopupMenu();
-		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY));
+		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 		if (dir != fileLists)
 		{
 			dirMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
 			dirMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
 		}
-		dirMenu.AppendMenu(MF_SEPARATOR);
+		dirMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+
+		CMenu copyDirMenu;
+		if (dir != fileLists)
+		{
+			copyDirMenu.CreatePopupMenu();
+			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
+			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
+			dirMenu.AppendMenu(MF_SEPARATOR);
+			dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY));
+		}
+
 		OMenu deleteAllMenu;
 		deleteAllMenu.CreatePopupMenu();
 		deleteAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::EXCLAMATION, 0));
-		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU) deleteAllMenu, CTSTRING(REMOVE_ALL));
 		dirMenu.AppendMenu(MF_SEPARATOR);
-		dirMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU) deleteAllMenu, CTSTRING(REMOVE_ALL));
+
 		dirMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		
 		return TRUE;
@@ -2364,6 +2349,36 @@ LRESULT QueueFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOO
 			data += _T("\r\n");
 			data += sdata;
 		}
+	}
+	WinUtil::setClipboard(data);
+	return 0;
+}
+
+LRESULT QueueFrame::onCopyFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	HTREEITEM ht = ctrlDirs.GetSelectedItem();
+	if (!ht) return 0;
+	const DirItem* di = reinterpret_cast<const DirItem*>(ctrlDirs.GetItemData(ht));
+	if (!di || di->name.empty()) return 0;
+	string data = di->name;
+	if (wID == IDC_COPY_FOLDER_NAME)
+	{
+		Util::removePathSeparator(data);
+		auto pos = data.rfind(PATH_SEPARATOR);
+		if (pos != string::npos && pos != data.length()-1) data.erase(0, pos + 1);
+	}
+	else
+	{
+		ht = ctrlDirs.GetParentItem(ht);
+		while (ht)
+		{
+			di = reinterpret_cast<const DirItem*>(ctrlDirs.GetItemData(ht));
+			string name = di->name;
+			Util::appendPathSeparator(name);
+			data.insert(0, name);
+			ht = ctrlDirs.GetParentItem(ht);
+		}
+		Util::appendPathSeparator(data);
 	}
 	WinUtil::setClipboard(data);
 	return 0;

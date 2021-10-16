@@ -348,6 +348,7 @@ IconBitmaps::IconBitmaps()
 	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
 	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
 	init(CLEAR,              SOURCE_ICON,     IDR_PURGE);
+	init(PAUSE,              SOURCE_ICON,     IDR_PAUSE);
 	init(EXCLAMATION,        SOURCE_ICON,     IDR_ERROR);
 }
 
