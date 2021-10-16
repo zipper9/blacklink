@@ -137,7 +137,13 @@ void ConnectivityManager::setupConnections(bool forcePortTest)
 	if (BOOLSETTING(ENABLE_IP6) && ipv6Supported)
 		hasIP6 = setup(AF_INET6);
 	ipv6Enabled = hasIP6;
-	if (!hasIP4 && !hasIP6) return;
+	if (!hasIP4 && !hasIP6)
+	{
+		cs.lock();
+		running = 0;
+		cs.unlock();
+		return;
+	}
 
 	dht::DHT::getInstance()->start();
 	SearchManager::getInstance()->start();
