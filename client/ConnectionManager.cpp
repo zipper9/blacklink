@@ -1410,6 +1410,12 @@ void ConnectionManager::disconnect(const UserPtr& user, bool isDownload)
 	}
 }
 
+void ConnectionManager::stopServers()
+{
+	stopServer(AF_INET);
+	stopServer(AF_INET6);
+}
+
 void ConnectionManager::shutdown()
 {
 	dcassert(!shuttingDown);
@@ -1424,8 +1430,7 @@ void ConnectionManager::shutdown()
 		updatedUsers.clear();
 	}
 	
-	stopServer(AF_INET);
-	stopServer(AF_INET6);
+	stopServers();
 	{
 		READ_LOCK(*csConnections);
 		for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)

@@ -130,6 +130,7 @@ void preparingCoreToShutdown()
 		CFlyLog l_log("[Core shutdown]");
 		dht::DHT::getInstance()->stop();
 		ClientManager::shutdown();
+		ConnectionManager::getInstance()->stopServers();
 		SearchManager::getInstance()->shutdown();
 		HashManager::getInstance()->shutdown();
 		TimerManager::getInstance()->shutdown();

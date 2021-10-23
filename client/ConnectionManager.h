@@ -194,7 +194,8 @@ class ConnectionManager :
 		
 		void disconnect(const UserPtr& user);
 		void disconnect(const UserPtr& user, bool isDownload);
-		
+
+		void stopServers();
 		void shutdown();
 
 		void startListen(int af, int type);
