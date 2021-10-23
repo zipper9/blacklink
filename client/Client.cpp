@@ -30,6 +30,10 @@
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
+#ifdef _DEBUG
+std::atomic_int Client::clientCount(0);
+#endif
+
 Client::Client(const string& hubURL, const string& address, uint16_t port, char separator, bool secure, Socket::Protocol proto) :
 	reconnDelay(120),
 	lastActivity(GET_TICK()),
@@ -61,10 +65,10 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	csUserCommands(RWLock::create())
 {
 	dcassert(hubURL == Text::toLower(hubURL));
+#ifdef _DEBUG
+	++clientCount;
+#endif
 	encoding = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
-	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), Util::emptyString);
-	const auto hubUser = std::make_shared<User>(CID(), Util::emptyString);
-	myUser->setFlag(User::MYSELF);
 	const auto l_lower_url = Text::toLower(hubURL);
 	if (!Util::isAdcHub(l_lower_url))
 	{
@@ -79,15 +83,30 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 		}
 	}
 
-	myOnlineUser = std::make_shared<OnlineUser>(myUser, *this, 0);
-	hubOnlineUser = std::make_shared<OnlineUser>(hubUser, *this, AdcCommand::HUB_SID);
 	TimerManager::getInstance()->addListener(this);
 }
 
 Client::~Client()
 {
+#ifdef _DEBUG
+	--clientCount;
+#endif
 	dcassert(!clientSock);
 	updateCounts(true);
+}
+
+void Client::initDefaultUsers()
+{
+	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), Util::emptyString);
+	const auto hubUser = std::make_shared<User>(CID(), Util::emptyString);
+	myUser->setFlag(User::MYSELF);
+	if (getType() == TYPE_NMDC)
+	{
+		myUser->setFlag(User::NMDC);
+		hubUser->setFlag(User::NMDC);
+	}
+	myOnlineUser = std::make_shared<OnlineUser>(myUser, clientPtr, 0);
+	hubOnlineUser = std::make_shared<OnlineUser>(hubUser, clientPtr, AdcCommand::HUB_SID);
 }
 
 void Client::resetSocket(BufferedSocket* bufferedSocket) noexcept

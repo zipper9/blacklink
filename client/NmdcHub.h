@@ -34,6 +34,9 @@ class NmdcHub : public Client, private Flags
 		using Client::send;
 		using Client::connect;
 		
+		NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
+		~NmdcHub();
+
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		void disconnect(bool graceless) override;
 
@@ -144,15 +147,12 @@ class NmdcHub : public Client, private Flags
 		};
 		std::unique_ptr<NickRule> nickRule;
 
-		NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
-		~NmdcHub();
-		
 		void clearUsers();
 		void onLine(const string& aLine);
 
-		OnlineUserPtr getUser(const string& aNick);
-		OnlineUserPtr findUser(const string& aNick) const;
-		void putUser(const string& aNick);
+		OnlineUserPtr getUser(const string& nick);
+		OnlineUserPtr findUser(const string& nick) const;
+		void putUser(const string& nick);
 		bool getShareGroup(const string& seeker, CID& shareGroup) const;
 		
 		void privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson);

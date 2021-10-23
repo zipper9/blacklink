@@ -264,7 +264,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool waitingForPassword;
 		bool showingPasswordDlg;
 		
-		ClientBase* baseClient;
+		ClientBasePtr baseClient;
 		Client* client;
 		string serverUrl;
 		string originalServerUrl;

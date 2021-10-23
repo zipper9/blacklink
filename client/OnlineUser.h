@@ -709,22 +709,22 @@ class OnlineUser :  public UserInfoBase
 			}
 		};
 		
-		OnlineUser(const UserPtr& user, ClientBase& client, uint32_t sid)
-			: identity(user, sid), client(client)
+		OnlineUser(const UserPtr& user, const ClientBasePtr& cb, uint32_t sid)
+			: identity(user, sid), cb(cb)
 		{
 #ifdef _DEBUG
-			++g_online_user_counts;
+			++onlineUserCount;
 #endif
 		}
 		
 		virtual ~OnlineUser() noexcept
 		{
 #ifdef _DEBUG
-			--g_online_user_counts;
+			--onlineUserCount;
 #endif
 		}
 #ifdef _DEBUG
-		static std::atomic_int g_online_user_counts;
+		static std::atomic_int onlineUserCount;
 #endif
 		
 		operator UserPtr&()
@@ -751,21 +751,13 @@ class OnlineUser :  public UserInfoBase
 		{
 			return identity;
 		}
-		Client& getClient()
+		ClientBasePtr& getClientBase()
 		{
-			return (Client&) client;
+			return cb;
 		}
-		const Client& getClient() const
+		const ClientBasePtr& getClientBase() const
 		{
-			return (const Client&) client;
-		}
-		ClientBase& getClientBase()
-		{
-			return client;
-		}
-		const ClientBase& getClientBase() const
-		{
-			return client;
+			return cb;
 		}
 		
 		bool isHub() const
@@ -780,7 +772,7 @@ class OnlineUser :  public UserInfoBase
 #endif
 	private:
 		Identity identity;
-		ClientBase& client;
+		ClientBasePtr cb;
 };
 
 #endif /* ONLINEUSER_H_ */

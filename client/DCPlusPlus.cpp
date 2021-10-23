@@ -202,7 +202,8 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #endif // FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		
 #ifdef _DEBUG
-		dcdebug("shutdown start - User::g_user_counts = %d OnlineUser::g_online_user_counts = %d\n", int(User::g_user_counts), int(OnlineUser::g_online_user_counts));
+		dcdebug("shutdown started: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
+			User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
 #endif
 #ifdef FLYLINKDC_USE_TORRENT
 		DownloadManager::getInstance()->shutdown_torrent();
@@ -239,6 +240,7 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #ifdef FLYLINKDC_USE_VLD
 		VLDEnable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
 #endif
+		dht::DHT::getInstance()->stop(true);
 		dht::DHT::deleteInstance();
 		ThrottleManager::deleteInstance();
 		DownloadManager::deleteInstance();
@@ -266,10 +268,10 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		WSACleanup();
 #endif
 #ifdef _DEBUG
-		dcdebug("shutdown end - User::g_user_counts = %d OnlineUser::g_online_user_counts = %d\n", int(User::g_user_counts), int(OnlineUser::g_online_user_counts));
-		//dcassert(User::g_user_counts == 2);
-		// ClientManager::g_uflylinkdc and ClientManager::g_me destroyed only with the full completion of the program, all the other user must be destroyed already by this time.
-		dcassert(OnlineUser::g_online_user_counts == 0);
+		dcdebug("shutdown completed: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
+			User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
+		dcassert(OnlineUser::onlineUserCount == 0);
+		dcassert(Client::clientCount == 0);
 		dcassert(UploadQueueFile::g_upload_queue_item_count == 0);
 		dcdebug("shutdown start - UploadQueueItem::g_upload_queue_item_count = %d \n", int(UploadQueueFile::g_upload_queue_item_count));
 #endif

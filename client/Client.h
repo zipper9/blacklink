@@ -48,6 +48,7 @@ class ClientBase
 		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
 		virtual const string& getHubUrl() const = 0;
 		virtual string getHubName() const = 0;
+		virtual string getMyNick() const = 0;
 		virtual bool isOp() const = 0;
 		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0;
@@ -248,6 +249,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 	protected:
 		bool isFloodCommand(const string& command, const string& line);
 		
+		ClientBasePtr clientPtr;
 		OnlineUserPtr myOnlineUser;
 		OnlineUserPtr hubOnlineUser;
 
@@ -332,7 +334,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			pwd = storedPassword;
 		}
 
-		string getMyNick() const
+		virtual string getMyNick() const override
 		{
 			LOCK(csState);
 			return myNick;
@@ -361,6 +363,15 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		const CID& getShareGroup() const { return shareGroup; }
 		void getUserCommands(vector<UserCommand>& result) const;
+
+		void setClientPtr(const ClientBasePtr& ptr) { clientPtr = ptr; }
+		void resetClientPtr()
+		{
+			clientPtr.reset();
+			myOnlineUser.reset();
+			hubOnlineUser.reset();
+		}
+		void initDefaultUsers();
 
 	private:
 		bool overrideId;
@@ -485,6 +496,10 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		static bool removeRandomSuffix(string& nick);
 		static void appendRandomSuffix(string& nick);
+
+#ifdef _DEBUG
+		static std::atomic_int clientCount;
+#endif
 };
 
 #endif // !defined(CLIENT_H)

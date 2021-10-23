@@ -25,14 +25,13 @@
 #include "../AdcCommand.h"
 #include "../CID.h"
 #include "../MerkleTree.h"
-#include "../Singleton.h"
 
 namespace dht
 {
 
 	class BootstrapManager;
 
-	class DHT : public Singleton<DHT>, public Speaker<ClientListener>, public ClientBase
+	class DHT : public Speaker<ClientListener>, public ClientBase
 	{
 	public:
 		DHT();
@@ -55,9 +54,15 @@ namespace dht
 			STATE_FAILED
 		};
 
+		static ClientBasePtr getClientBaseInstance();
+		static DHT* getInstance();
+		static void deleteInstance();
+		static void newInstance();
+
 		/** ClientBase derived functions */
 		const string& getHubUrl() const { return NetworkName; }
 		string getHubName() const { return NetworkName; }
+		string getMyNick() const { return SETTING(NICK); }
 		bool isOp() const { return false; }
 		bool resendMyINFO(bool alwaysSend, bool forcePassive) { return false; }
 		int getType() const { return ClientBase::TYPE_DHT; }
@@ -206,6 +211,8 @@ namespace dht
 		void loadData();
 
 		void setExternalIP(const string& ip);
+
+		static ClientBasePtr instance;
 	};
 
 }

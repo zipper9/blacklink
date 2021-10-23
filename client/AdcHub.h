@@ -30,6 +30,8 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		using Client::send;
 		using Client::connect;
 		
+		~AdcHub();
+		AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		
 		int getType() const { return TYPE_ADC; }
@@ -79,9 +81,6 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			FEATURE_FLAG_USER_COMMANDS       = 4,
 			FEATURE_FLAG_SEND_BLOOM          = 8
 		};
-		
-		AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
-		~AdcHub();
 		
 		/** Map session id to OnlineUser */
 		typedef boost::unordered_map<uint32_t, OnlineUserPtr> SIDMap;
@@ -140,7 +139,6 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void handle(AdcCommand::PSR, const AdcCommand& c) noexcept;
 		void handle(AdcCommand::ZON, const AdcCommand& c) noexcept;
 		void handle(AdcCommand::ZOF, const AdcCommand& c) noexcept;
-		
 		
 		template<typename T> void handle(T, const AdcCommand&) { }
 		

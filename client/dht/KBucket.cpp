@@ -31,7 +31,7 @@ namespace dht
 {
 
 	// Set all new nodes' type to 3 to avoid spreading dead nodes..
-	Node::Node(const UserPtr& u) : OnlineUser(u, *DHT::getInstance(), 0),
+	Node::Node(const UserPtr& u) : OnlineUser(u, DHT::getClientBaseInstance(), 0),
 		created(GET_TICK()), expires(0), type(3), ipVerified(false), online(false), isInList(false)
 	{
 	}

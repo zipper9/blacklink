@@ -39,7 +39,7 @@ volatile bool g_isShutdown = false;
 volatile bool g_isBeforeShutdown = false;
 bool g_isStartupProcess = true;
 bool ClientManager::g_isSpyFrame = false;
-ClientManager::ClientList ClientManager::g_clients;
+ClientManager::ClientMap ClientManager::g_clients;
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 OnlineUserList ClientManager::g_UserUpdateQueue;
 std::unique_ptr<RWLock> ClientManager::g_csOnlineUsersUpdateQueue = std::unique_ptr<RWLock>(RWLock::create());
@@ -67,31 +67,32 @@ ClientManager::~ClientManager()
 #endif
 }
 
-Client* ClientManager::getClient(const string& hubURL)
+ClientBasePtr ClientManager::getClient(const string& hubURL)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
 	string scheme, address, file, query, fragment;
 	uint16_t port;
 	Util::decodeUrl(hubURL, scheme, address, port, file, query, fragment);
 	int protocol = Util::getHubProtocol(scheme);
-	Client* c;
+	ClientBasePtr cb;
 	if (protocol == Util::HUB_PROTOCOL_ADC)
 	{
-		c = new AdcHub(hubURL, address, port, false);
+		cb = std::make_shared<AdcHub>(hubURL, address, port, false);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_ADCS)
 	{
-		c = new AdcHub(hubURL, address, port, true);
+		cb = std::make_shared<AdcHub>(hubURL, address, port, true);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_NMDCS)
 	{
-		c = new NmdcHub(hubURL, address, port, true);
+		cb = std::make_shared<NmdcHub>(hubURL, address, port, true);
 	}
 	else
 	{
-		c = new NmdcHub(hubURL, address, port, false);
+		cb = std::make_shared<NmdcHub>(hubURL, address, port, false);
 	}
 	
+	Client* c = static_cast<Client*>(cb.get());
 	if (!query.empty())
 	{
 		string keyprint = Util::getQueryParam(query, "kp");
@@ -103,12 +104,13 @@ Client* ClientManager::getClient(const string& hubURL)
 
 	{
 		WRITE_LOCK(*g_csClients);
-		g_clients.insert(make_pair(c->getHubUrl(), c));
+		g_clients.insert(make_pair(c->getHubUrl(), cb));
 	}
 	
 	c->addListener(this);
-	
-	return c;
+	c->setClientPtr(cb);
+	c->initDefaultUsers();
+	return cb;
 }
 
 void ClientManager::shutdown()
@@ -152,7 +154,7 @@ size_t ClientManager::getTotalUsers()
 	size_t users = 0;
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-		users += i->second->getUserCount();
+		users += static_cast<const Client*>(i->second.get())->getUserCount();
 	return users;
 }
 
@@ -197,7 +199,7 @@ void ClientManager::getConnectedHubUrls(StringList& out)
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		const Client* c = i->second;
+		const Client* c = static_cast<const Client*>(i->second.get());
 		if (c->isConnected())
 			out.push_back(c->getHubUrl());
 	}
@@ -208,7 +210,7 @@ void ClientManager::getConnectedHubInfo(HubInfoArray& out)
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		const Client* c = i->second;
+		const Client* c = static_cast<const Client*>(i->second.get());
 		if (c->isConnected())
 			out.push_back(HubInfo{c->getHubUrl(), c->getHubName(), c->getMyIdentity().isOp()});
 	}
@@ -232,8 +234,11 @@ void ClientManager::prepareClose()
 	}
 }
 
-void ClientManager::putClient(Client* client)
+void ClientManager::putClient(const ClientBasePtr& cb)
 {
+	dcassert(cb.get());
+	dcassert(cb->getType() != ClientBase::TYPE_DHT);
+	Client* client = static_cast<Client*>(cb.get());
 	client->removeListeners();
 	{
 		WRITE_LOCK(*g_csClients);
@@ -244,7 +249,7 @@ void ClientManager::putClient(Client* client)
 		fly_fire1(ClientManagerListener::ClientDisconnected(), client);
 	}
 	client->shutdown();
-	delete client;
+	client->resetClientPtr();
 }
 
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl)
@@ -274,7 +279,7 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 		{
-			lst.push_back(i->second->getClientBase().getHubUrl());
+			lst.push_back(i->second->getClientBase()->getHubUrl());
 		}
 	}
 	else
@@ -283,7 +288,7 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 		{
-			lst.push_back(u->getClientBase().getHubUrl());
+			lst.push_back(u->getClientBase()->getHubUrl());
 		}
 	}
 	return lst;
@@ -298,7 +303,7 @@ StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl, boo
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 		{
-			lst.push_back(i->second->getClientBase().getHubName());
+			lst.push_back(i->second->getClientBase()->getHubName());
 		}
 	}
 	else
@@ -307,7 +312,7 @@ StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl, boo
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 		{
-			lst.push_back(u->getClientBase().getHubName());
+			lst.push_back(u->getClientBase()->getHubName());
 		}
 	}
 	return lst;
@@ -375,7 +380,8 @@ bool ClientManager::getHubUserCommands(const string& hubUrl, vector<UserCommand>
 	READ_LOCK(*g_csClients);
 	auto i = g_clients.find(hubUrl);
 	if (i == g_clients.end()) return false;
-	i->second->getUserCommands(cmd);
+	const Client* c = static_cast<const Client*>(i->second.get());
+	c->getUserCommands(cmd);
 	return true;
 }
 
@@ -436,7 +442,7 @@ OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
 		if (!(ou->getUser()->getFlags() & User::DHT))
 			break;
 
-		if (ou->getClientBase().getType() == ClientBase::TYPE_DHT)
+		if (ou->getClientBase()->getType() == ClientBase::TYPE_DHT)
 			return ou;
 	}
 	return OnlineUserPtr();
@@ -494,7 +500,7 @@ string ClientManager::findHub(const string& ipPort, int type)
 	READ_LOCK(*g_csClients);
 	for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 	{
-		const Client* c = j->second;
+		const Client* c = static_cast<const Client*>(j->second.get());
 		if (type && c->getType() != type) continue;
 		if (!parseResult) // hostname
 		{
@@ -528,7 +534,10 @@ int ClientManager::findHubEncoding(const string& url)
 		READ_LOCK(*g_csClients);
 		const auto& i = g_clients.find(url);
 		if (i != g_clients.end())
-			return i->second->getEncoding();
+		{
+			const Client* c = static_cast<const Client*>(i->second.get());
+			return c->getEncoding();
+		}
 	}
 	return Util::isAdcHub(url) ? Text::CHARSET_UTF8 : Text::CHARSET_SYSTEM_DEFAULT;
 }
@@ -544,7 +553,8 @@ UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl, 
 			const auto& i = g_clients.find(hubUrl);
 			if (i != g_clients.end())
 			{
-				const auto& ou = i->second->findUser(nick);
+				const Client* c = static_cast<const Client*>(i->second.get());
+				const auto& ou = c->findUser(nick);
 				if (ou)
 					return ou->getUser();
 			}
@@ -552,7 +562,8 @@ UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl, 
 		}
 		for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 		{
-			const auto& ou = j->second->findUser(nick);
+			const Client* c = static_cast<const Client*>(j->second.get());
+			const auto& ou = c->findUser(nick);
 			if (ou)
 			{
 				if (foundHubUrl) *foundHubUrl = j->first;
@@ -612,7 +623,7 @@ bool ClientManager::isOp(const string& hubUrl)
 	READ_LOCK(*g_csClients);
 	auto i = g_clients.find(hubUrl);
 	if (i == g_clients.cend()) return false;
-	const Client* c = i->second;
+	const Client* c = static_cast<const Client*>(i->second.get());
 	return c->isConnected() && c->isOp();
 }
 
@@ -716,7 +727,7 @@ OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& h
 		for (auto i = p.first; i != p.second; ++i)
 		{
 			const OnlineUserPtr u = i->second;
-			if (u->getClientBase().getHubUrl() == hintUrl)
+			if (u->getClientBase()->getHubUrl() == hintUrl)
 			{
 				return u;
 			}
@@ -730,10 +741,9 @@ void ClientManager::resendMyInfo()
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		if (i->second->isConnected())
-		{
-			i->second->resendMyINFO(true, false);
-		}
+		Client* c = static_cast<Client*>(i->second.get());
+		if (c->isConnected())
+			c->resendMyINFO(true, false);
 	}
 }
 
@@ -752,9 +762,9 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool fo
 		{
 			if (forcePassive)
 			{
-				u->getClientBase().resendMyINFO(false, true);
+				u->getClientBase()->resendMyINFO(false, true);
 			}
-			u->getClientBase().connect(u, token, forcePassive);
+			u->getClientBase()->connect(u, token, forcePassive);
 		}
 	}
 }
@@ -772,7 +782,7 @@ void ClientManager::privateMessage(const HintedUser& user, const string& msg, bo
 	}
 	if (u)
 	{
-		u->getClientBase().privateMessage(u, msg, thirdPerson);
+		u->getClientBase()->privateMessage(u, msg, thirdPerson);
 	}
 }
 void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)
@@ -789,20 +799,33 @@ void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand&
 		if (!ou) return;
 		getUserCommandParams(ou, uc, params, compatibility);
 	}
-	ou->getClient().sendUserCmd(uc, params);
+	ClientBasePtr& cb = ou->getClientBase();
+	if (cb->getType() != ClientBase::TYPE_DHT)
+	{
+		Client* client = static_cast<Client*>(cb.get());
+		client->sendUserCmd(uc, params);
+	}
 }
 
 void ClientManager::getUserCommandParams(const OnlineUserPtr& ou, const UserCommand& uc, StringMap& params, bool compatibility)
 {
-	auto& client = ou->getClient();
-	const string& opChat = client.getOpChat();
-	if (opChat.find('*') == string::npos && opChat.find('?') == string::npos)
-		params["opchat"] = opChat;
+	const ClientBasePtr& cb = ou->getClientBase();
+	const Client* client = nullptr;
+	if (cb->getType() != ClientBase::TYPE_DHT)
+	{
+		client = static_cast<const Client*>(cb.get());
+		const string& opChat = client->getOpChat();
+		if (opChat.find('*') == string::npos && opChat.find('?') == string::npos)
+			params["opchat"] = opChat;
+	}
 		
 	ou->getIdentity().getParams(params, "user", compatibility);
-	client.getHubIdentity().getParams(params, "hub", false);
-	client.getMyIdentity().getParams(params, "my", compatibility);
-	if (uc.isRaw()) client.escapeParams(params);
+	if (client)
+	{
+		client->getHubIdentity().getParams(params, "hub", false);
+		client->getMyIdentity().getParams(params, "my", compatibility);
+		if (uc.isRaw()) client->escapeParams(params);
+	}
 }
 
 void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
@@ -833,7 +856,12 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 	}
 	if (sendToClient)
 	{
-		u->getClient().send(cmd);
+		const ClientBasePtr& cb = u->getClientBase();
+		if (cb->getType() != ClientBase::TYPE_DHT)
+		{
+			Client* client = static_cast<Client*>(cb.get());
+			client->send(cmd);
+		}
 		return;
 	}
 	if (sendUDP)
@@ -863,7 +891,7 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		Client* c = i->second;
+		Client* c = static_cast<Client*>(i->second.get());
 		if (!ClientManager::isBeforeShutdown())
 		{
 			if (c->isConnected())
@@ -885,7 +913,14 @@ static void getShareGroup(const OnlineUserPtr& ou, CID& shareGroup)
 	int uploadLimit;
 	if (fm->getFavUserParam(ou->getUser(), flags, uploadLimit, shareGroup) && !shareGroup.isZero())
 		return;
-	shareGroup = ou->getClient().getShareGroup();
+	const ClientBasePtr& cb = ou->getClientBase();
+	if (cb->getType() == ClientBase::TYPE_DHT)
+	{
+		shareGroup.init();
+		return;
+	}
+	Client* client = static_cast<Client*>(cb.get());
+	shareGroup = client->getShareGroup();
 }
 
 void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept
@@ -914,7 +949,7 @@ void ClientManager::search(const SearchParamToken& sp)
 		READ_LOCK(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 		{
-			Client* c = i->second;
+			Client* c = static_cast<Client*>(i->second.get());
 			if (c->isConnected())
 				c->searchInternal(sp);
 		}
@@ -933,11 +968,14 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 		useDHT = true;
 		READ_LOCK(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-			if (i->second->isConnected())
+		{
+			Client* c = static_cast<Client*>(i->second.get());
+			if (c->isConnected())
 			{
-				unsigned waitTime = i->second->searchInternal(sp);
+				unsigned waitTime = c->searchInternal(sp);
 				if (waitTime > maxWaitTime) maxWaitTime = waitTime;
 			}
+		}
 	}
 	else
 	{
@@ -951,10 +989,14 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 				continue;
 			}
 			const auto& i = g_clients.find(client.url);
-			if (i != g_clients.end() && i->second->isConnected())
+			if (i != g_clients.end())
 			{
-				client.waitTime = i->second->searchInternal(sp);
-				if (client.waitTime > maxWaitTime) maxWaitTime = client.waitTime;
+				Client* c = static_cast<Client*>(i->second.get());
+				if (c->isConnected())
+				{
+					client.waitTime = c->searchInternal(sp);
+					if (client.waitTime > maxWaitTime) maxWaitTime = client.waitTime;
+				}
 			}
 		}
 	}
@@ -977,8 +1019,9 @@ void ClientManager::getOnlineClients(StringSet& onlineClients)
 	onlineClients.clear();
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		if (i->second->isConnected())
-			onlineClients.insert(i->second->getHubUrl());
+		Client* c = static_cast<Client*>(i->second.get());
+		if (c->isConnected())
+			onlineClients.insert(c->getHubUrl());
 	}
 }
 
@@ -1119,12 +1162,13 @@ bool ClientManager::isActive(int af, int favHubMode)
 	return getConnectivityMode(af, favHubMode) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
 }
 
-void ClientManager::cancelSearch(void* aOwner)
+void ClientManager::cancelSearch(void* owner)
 {
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		i->second->cancelSearch(aOwner);
+		Client* c = static_cast<Client*>(i->second.get());
+		c->cancelSearch(owner);
 	}
 }
 
@@ -1191,13 +1235,17 @@ OnlineUserPtr ClientManager::getOnlineUserL(const UserPtr& p)
 
 void ClientManager::sendRawCommand(const OnlineUserPtr& ou, int commandIndex)
 {
-	const string rawCommand = ou->getClient().getRawCommand(commandIndex);
+	const ClientBasePtr& cb = ou->getClientBase();
+	if (cb->getType() == ClientBase::TYPE_DHT)
+		return;
+	Client* client = static_cast<Client*>(cb.get());
+	const string rawCommand = client->getRawCommand(commandIndex);
 	if (!rawCommand.empty())
 	{
 		StringMap params;
 		const UserCommand uc = UserCommand(0, 0, 0, 0, "", rawCommand, "", "");
 		getUserCommandParams(ou, uc, params, true);
-		ou->getClient().sendUserCmd(uc, params);
+		client->sendUserCmd(uc, params);
 	}
 }
 
@@ -1274,13 +1322,17 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 				
 			if (connectionTimeouts == maxTimeouts)
 			{
-				c = &ou->getClient();
+				const ClientBasePtr& cb = ou->getClientBase();
+				if (cb->getType() != ClientBase::TYPE_DHT)
+				{
+					c = static_cast<Client*>(cb.get());
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
-				report = id.setCheat(ou->getClientBase(), "Connection timeout " + Util::toString(connectionTimeouts) + " times", false);
+					report = id.setCheat(ou->getClientBase(), "Connection timeout " + Util::toString(connectionTimeouts) + " times", false);
 #else
-				report = "Connection timeout " + Util::toString(connectionTimeouts) + " times";
+					report = "Connection timeout " + Util::toString(connectionTimeouts) + " times";
 #endif
-				sendCmd = ou;
+					sendCmd = ou;
+				}
 			}
 		}
 	}
@@ -1402,7 +1454,7 @@ void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCo
 void ClientManager::dumpUserInfo(const HintedUser& user)
 {
 	string report;
-	ClientBase* client = nullptr;
+	ClientBasePtr cb;
 	if (user.user)
 	{
 		READ_LOCK(*g_csOnlineUsers);
@@ -1411,10 +1463,10 @@ void ClientManager::dumpUserInfo(const HintedUser& user)
 			return;
 			
 		ou->getIdentity().getReport(report);
-		client = &(ou->getClientBase());
+		cb = ou->getClientBase();
 	}
-	if (client)
-		client->dumpUserInfo(report);
+	if (cb)
+		cb->dumpUserInfo(report);
 }
 
 StringList ClientManager::getNicksByIp(const IpAddress& ip)

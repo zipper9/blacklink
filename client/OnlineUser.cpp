@@ -25,7 +25,7 @@
 #include "ConnectivityManager.h"
 
 #ifdef _DEBUG
-std::atomic_int OnlineUser::g_online_user_counts(0);
+std::atomic_int OnlineUser::onlineUserCount(0);
 #endif
 
 #ifdef _DEBUG
@@ -408,9 +408,9 @@ void Identity::setStringParam(const char* name, const string& val)
 
 void FavoriteUser::update(const OnlineUser& info)
 {
-	dcassert(!info.getIdentity().getNick().empty() || info.getClient().getHubUrl().empty());
+	dcassert(!info.getIdentity().getNick().empty() || info.getClientBase()->getHubUrl().empty());
 	nick = info.getIdentity().getNick();
-	url = info.getClient().getHubUrl();
+	url = info.getClientBase()->getHubUrl();
 }
 
 void Identity::loadP2PGuard()

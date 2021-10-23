@@ -17,8 +17,8 @@
  */
 
 #include "stdinc.h"
-#include "OnlineUser.h"
 #include "ChatMessage.h"
+#include "Util.h"
 
 string ChatMessage::format() const
 {

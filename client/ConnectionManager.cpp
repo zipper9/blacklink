@@ -611,7 +611,7 @@ void ConnectionManager::connectNextNmdcUser(const ExpectedNmdcMap::NextConnectio
 	const CID cid = ClientManager::makeCid(nci.nick, nci.hubUrl);
 	OnlineUserPtr u = ClientManager::findOnlineUser(cid, nci.hubUrl, true);
 	if (u)
-		u->getClientBase().connect(u, nci.token, false);
+		u->getClientBase()->connect(u, nci.token, false);
 #ifdef DEBUG_NMDC_UC
 	else
 		LogManager::message("Expected user " + nci.nick + "/" + cid.toBase32()
@@ -993,7 +993,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16
 	uc->setUserConnectionToken(token);
 	uc->setEncoding(Text::CHARSET_UTF8);
 	uc->setState(UserConnection::STATE_CONNECT);
-	uc->setHubUrl(&user.getClient() == nullptr ? "DHT" : user.getClient().getHubUrl());
+	uc->setHubUrl(user.getClientBase()->getHubUrl());
 	try
 	{
 		uc->connect(user.getIdentity().getConnectIP(), port, localPort, natRole);

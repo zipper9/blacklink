@@ -41,8 +41,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		};
 		typedef std::vector<HubInfo> HubInfoArray;
 
-		Client* getClient(const string& hubURL);
-		void putClient(Client* client);
+		ClientBasePtr getClient(const string& hubURL);
+		void putClient(const ClientBasePtr& cb);
 		static void prepareClose();
 		static StringList getHubs(const CID& cid, const string& hintUrl);
 		static StringList getHubNames(const CID& cid, const string& hintUrl);
@@ -62,7 +62,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool getSlots(const CID& cid, uint16_t& slots);
 		static void search(const SearchParamToken& sp);
 		static unsigned multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients);
-		static void cancelSearch(void* aOwner);
+		static void cancelSearch(void* owner);
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);
 		
@@ -196,8 +196,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void updateUser(const OnlineUserPtr& ou);
 
 	private:	
-		typedef std::unordered_map<string, Client*, noCaseStringHash, noCaseStringEq> ClientList;
-		static ClientList g_clients;
+		typedef std::unordered_map<string, ClientBasePtr, noCaseStringHash, noCaseStringEq> ClientMap;
+		static ClientMap g_clients;
 		static std::unique_ptr<RWLock> g_csClients;
 		
 		typedef boost::unordered_map<CID, UserPtr> UserMap;

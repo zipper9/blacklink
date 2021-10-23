@@ -57,6 +57,8 @@ namespace dht
 	static const uint8_t ADC_PACKET_FOOTER = 0x0A;  // byte which every uncompressed packet must end with
 	static const uint8_t ADC_COMPRESSED_PACKET_HEADER = 0xC1; // compressed packet detection byte
 
+	ClientBasePtr DHT::instance;
+
 	DHT::DHT() : bucket(nullptr), lastPacket(0), firewalled(true), requestFWCheck(true), dirty(false), state(STATE_IDLE), lastExternalIP(0)
 	{
 		IndexManager::newInstance();
@@ -64,14 +66,6 @@ namespace dht
 
 	DHT::~DHT()
 	{
-		// when DHT is disabled, we shouldn't try to perform exit cleanup
-		if (bucket == nullptr)
-		{
-			IndexManager::deleteInstance();
-			return;
-		}
-
-		stop(true);
 		IndexManager::deleteInstance();
 	}
 
@@ -519,7 +513,7 @@ namespace dht
 	 */
 	void DHT::connect(const OnlineUserPtr& ou, const string& token, bool forcePassive)
 	{
-		if (ou->getClientBase().getType() != ClientBase::TYPE_DHT) return;
+		if (ou->getClientBase()->getType() != ClientBase::TYPE_DHT) return;
 		Node::Ptr node = std::static_pointer_cast<Node>(ou);
 		ConnectionManager::getInstance()->connect(node, token);
 	}
@@ -1066,6 +1060,28 @@ namespace dht
 		if (!Util::parseIpAddress(ip, localIP) || !Util::isValidIp4(ip)) return;
 		LOCK(fwCheckCs);
 		if (!lastExternalIP) lastExternalIP = ip;
+	}
+
+
+	ClientBasePtr DHT::getClientBaseInstance()
+	{
+		return instance;
+	}
+
+	DHT* DHT::getInstance()
+	{
+		return static_cast<DHT*>(instance.get());
+	}
+
+	void DHT::deleteInstance()
+	{
+		instance.reset();
+	}
+
+	void DHT::newInstance()
+	{
+		dcassert(!instance.get());
+		instance.reset(new DHT);
 	}
 
 }

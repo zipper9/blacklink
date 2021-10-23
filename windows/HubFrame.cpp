@@ -90,9 +90,9 @@ HubFrame::HubFrame(const Settings& cs) :
 
 	if (serverUrl == dht::NetworkName)
 	{
-		dht::DHT* d = dht::DHT::getInstance();
+		baseClient = dht::DHT::getClientBaseInstance();
+		dht::DHT* d = static_cast<dht::DHT*>(baseClient.get());
 		d->addListener(this);
-		baseClient = d;
 		client = nullptr;
 		isDHT = true;
 		currentDHTState = d->getState();
@@ -100,13 +100,13 @@ HubFrame::HubFrame(const Settings& cs) :
 	}
 	else
 	{
-		client = ClientManager::getInstance()->getClient(serverUrl);
+		baseClient = ClientManager::getInstance()->getClient(serverUrl);
+		client = static_cast<Client*>(baseClient.get());
 		client->setName(cs.name);
 		if (cs.rawCommands) client->setRawCommands(cs.rawCommands);
 		if (cs.encoding && client->getType() == ClientBase::TYPE_NMDC) client->setEncoding(cs.encoding);
 		client->setSuppressChatAndPM(cs.suppressChatAndPM);
 		client->addListener(this);
-		baseClient = client;
 		isDHT = false;
 		currentDHTState = 0;
 		currentDHTNodeCount = 0;
@@ -124,8 +124,8 @@ HubFrame::~HubFrame()
 {
 	removeFrame(Util::emptyString);
 	delete ctrlChatContainer;
-	if (client)
-		ClientManager::getInstance()->putClient(client);
+	if (baseClient && baseClient->getType() != ClientBase::TYPE_DHT)
+		ClientManager::getInstance()->putClient(baseClient);
 }
 
 LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -432,7 +432,7 @@ StringMap HubFrame::getFrameLogParams() const
 	
 	params["hubNI"] = baseClient->getHubName();
 	params["hubURL"] = baseClient->getHubUrl();
-	params["myNI"] = client ? client->getMyNick() : SETTING(NICK);
+	params["myNI"] = baseClient->getMyNick();
 	
 	return params;
 }
@@ -1018,7 +1018,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 	}
 	else
 	{
-		dcdebug("updateUserJoin: user=%s, hub=%s (not connected)\n", ou->getIdentity().getNick().c_str(), ou->getClient().getAddress().c_str());
+		dcdebug("updateUserJoin: user=%s, hub=%s (not connected)\n", ou->getIdentity().getNick().c_str(), ou->getClientBase()->getHubUrl().c_str());
 		dcassert(0);
 	}
 }
@@ -1551,7 +1551,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		if (client)
 			client->removeListener(this);
 		else if (baseClient)
-			static_cast<dht::DHT*>(baseClient)->removeListener(this);
+			static_cast<dht::DHT*>(baseClient.get())->removeListener(this);
 		removeFrame(Util::emptyString);
 		storeColumnsInfo();
 		if (client)
@@ -2109,11 +2109,12 @@ void HubFrame::followRedirect()
 		removeFrame(redirect);
 		// the client is dead, long live the client!
 		client->setAutoReconnect(false);
-		ClientManager::getInstance()->putClient(client);
-		baseClient = client = nullptr;
+		ClientManager::getInstance()->putClient(baseClient);
+		baseClient.reset();
+		client = nullptr;
 		clearTaskAndUserList();
-		client = ClientManager::getInstance()->getClient(redirect);
-		baseClient = client;
+		baseClient = ClientManager::getInstance()->getClient(redirect);
+		client = static_cast<Client*>(baseClient.get());
 		RecentHubEntry r;
 		r.setRedirect(true);
 		r.setServer(redirect);

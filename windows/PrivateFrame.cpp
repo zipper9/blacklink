@@ -174,7 +174,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 	{
 		if (ou)
 		{
-			myNick = ou->getClient().getMyNick();
+			myNick = ou->getClientBase()->getMyNick();
 		}
 		else if (!replyTo.hint.empty())
 		{

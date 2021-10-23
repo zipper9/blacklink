@@ -63,13 +63,11 @@ NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, boo
 	myInfoState(WAITING_FOR_MYINFO),
 	csUsers(std::unique_ptr<RWLock>(RWLock::create()))
 {
-	myOnlineUser->getUser()->setFlag(User::NMDC);
-	hubOnlineUser->getUser()->setFlag(User::NMDC);
 }
 
 NmdcHub::~NmdcHub()
 {
-	clearUsers();
+	dcassert(users.empty());
 }
 
 void NmdcHub::disconnect(bool graceless)
@@ -115,53 +113,54 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 	}
 }
 
-OnlineUserPtr NmdcHub::getUser(const string& aNick)
+OnlineUserPtr NmdcHub::getUser(const string& nick)
 {
 	OnlineUserPtr ou;
+	if (!clientPtr) return ou;
 	{
 		csState.lock();
-		bool isMyNick = aNick == myNick;
+		bool isMyNick = nick == myNick;
 		csState.unlock();
 
 		WRITE_LOCK(*csUsers);
 #if 0
 		if (hub)
 		{
-			dcassert(users.count(aNick) == 0);
-			ou = users.insert(make_pair(aNick, getHubOnlineUser())).first->second;
-			dcassert(ou->getIdentity().getNick() == aNick);
-			ou->getIdentity().setNick(aNick);
+			dcassert(users.count(nick) == 0);
+			ou = users.insert(make_pair(nick, getHubOnlineUser())).first->second;
+			dcassert(ou->getIdentity().getNick() == nick);
+			ou->getIdentity().setNick(nick);
 		}
 		else
 #endif
 		if (isMyNick)
 		{
-//			dcassert(users.count(aNick) == 0);
-			auto res = users.insert(make_pair(aNick, getMyOnlineUser()));
+//			dcassert(users.count(nick) == 0);
+			auto res = users.insert(make_pair(nick, getMyOnlineUser()));
 			if (!res.second)
 			{
-				dcassert(res.first->second->getIdentity().getNick() == aNick);
+				dcassert(res.first->second->getIdentity().getNick() == nick);
 				return res.first->second;
 			}
 			else
 			{
 				ou = res.first->second;
-				dcassert(ou->getIdentity().getNick() == aNick);
+				dcassert(ou->getIdentity().getNick() == nick);
 			}
 		}
 		else
 		{
-			auto res = users.insert(make_pair(aNick, OnlineUserPtr()));
+			auto res = users.insert(make_pair(nick, OnlineUserPtr()));
 			if (res.second)
 			{
-				UserPtr p = ClientManager::getUser(aNick, getHubUrl());
-				ou = std::make_shared<OnlineUser>(p, *this, 0);
-				ou->getIdentity().setNick(aNick);
+				UserPtr p = ClientManager::getUser(nick, getHubUrl());
+				ou = std::make_shared<OnlineUser>(p, clientPtr, 0);
+				ou->getIdentity().setNick(nick);
 				res.first->second = ou;
 			}
 			else
 			{
-				dcassert(res.first->second->getIdentity().getNick() == aNick);
+				dcassert(res.first->second->getIdentity().getNick() == nick);
 				return res.first->second;
 			}
 		}
@@ -178,19 +177,19 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 	return ou;
 }
 
-OnlineUserPtr NmdcHub::findUser(const string& aNick) const
+OnlineUserPtr NmdcHub::findUser(const string& nick) const
 {
 	READ_LOCK(*csUsers);
-	const auto& i = users.find(aNick);
+	const auto& i = users.find(nick);
 	return i == users.end() ? OnlineUserPtr() : i->second;
 }
 
-void NmdcHub::putUser(const string& aNick)
+void NmdcHub::putUser(const string& nick)
 {
 	OnlineUserPtr ou;
 	{
 		WRITE_LOCK(*csUsers);
-		const auto& i = users.find(aNick);
+		const auto& i = users.find(nick);
 		if (i == users.end())
 			return;
 		auto bytesShared = i->second->getIdentity().getBytesShared();
@@ -199,17 +198,16 @@ void NmdcHub::putUser(const string& aNick)
 		decBytesShared(bytesShared);
 	}
 	
-	if (!ou->getUser()->getCID().isZero()) // [+] IRainman fix.
-	{
-		ClientManager::getInstance()->putOffline(ou); // [2] https://www.box.net/shared/7b796492a460fe528961
-	}
-	
-	fly_fire2(ClientListener::UserRemoved(), this, ou); // [+] IRainman fix.
+	if (!ou->getUser()->getCID().isZero())
+		ClientManager::getInstance()->putOffline(ou);
+
+	fly_fire2(ClientListener::UserRemoved(), this, ou);
 }
 
 void NmdcHub::clearUsers()
 {
-	myOnlineUser->getIdentity().setBytesShared(0);
+	if (myOnlineUser)
+		myOnlineUser->getIdentity().setBytesShared(0);
 	if (ClientManager::isBeforeShutdown())
 	{
 		WRITE_LOCK(*csUsers);

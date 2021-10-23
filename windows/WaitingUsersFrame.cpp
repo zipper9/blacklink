@@ -435,7 +435,7 @@ void WaitingUsersFrame::addFile(const HintedUser& hintedUser, const UploadQueueF
 		tstring text;
 		OnlineUserPtr ou = ClientManager::findOnlineUser(hintedUser.user->getCID(), hintedUser.hint, true);
 		if (ou)
-			text = Text::toT(ou->getIdentity().getNick() + " - " + ou->getClientBase().getHubName());
+			text = Text::toT(ou->getIdentity().getNick() + " - " + ou->getClientBase()->getHubName());
 		else
 			text = Text::toT(hintedUser.user->getLastNick() + " - " + hintedUser.hint);
 		HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), treeRoot, TVI_LAST);

@@ -84,7 +84,7 @@ AdcHub::AdcHub(const string& hubURL, const string& address, uint16_t port, bool 
 
 AdcHub::~AdcHub()
 {
-	clearUsers();
+	dcassert(users.empty());
 }
 
 void AdcHub::getUserList(OnlineUserList& result) const
@@ -106,6 +106,8 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 	if (ou)
 		return ou;
 		
+	if (!clientPtr)
+		return ou;
 	if (cid.isZero())
 	{
 		WRITE_LOCK(*csUsers);
@@ -126,7 +128,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 	{
 		UserPtr u = ClientManager::createUser(cid, nick, getHubUrl());
 		u->setLastNick(nick);
-		auto newUser = std::make_shared<OnlineUser>(u, *this, sid);
+		auto newUser = std::make_shared<OnlineUser>(u, clientPtr, sid);
 		WRITE_LOCK(*csUsers);
 		ou = users.insert(make_pair(sid, newUser)).first->second;
 	}
@@ -198,7 +200,8 @@ void AdcHub::putUser(const uint32_t sid, bool disconnect)
 
 void AdcHub::clearUsers()
 {
-	myOnlineUser->getIdentity().setBytesShared(0);
+	if (myOnlineUser)
+		myOnlineUser->getIdentity().setBytesShared(0);
 	if (ClientManager::isBeforeShutdown())
 	{
 		WRITE_LOCK(*csUsers);

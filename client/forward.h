@@ -38,6 +38,9 @@ typedef std::deque<FinishedItemPtr> FinishedItemList;
 
 class HubEntry;
 
+class ClientBase;
+typedef std::shared_ptr<ClientBase> ClientBasePtr;
+
 class OnlineUser;
 typedef std::shared_ptr<OnlineUser> OnlineUserPtr;
 typedef std::vector<OnlineUserPtr> OnlineUserList;
