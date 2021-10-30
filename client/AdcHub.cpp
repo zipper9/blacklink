@@ -75,6 +75,11 @@ const vector<StringList> AdcHub::searchExts
 	{ "3gp", "asf", "asx", "avi", "divx", "flv", "mkv", "mov", "mp4", "mpeg", "mpg", "ogm", "pxp", "qt", "rm", "rmvb", "swf", "vob", "webm", "wmv" }
 };
 
+ClientBasePtr AdcHub::create(const string& hubURL, const string& address, uint16_t port, bool secure)
+{
+	return std::shared_ptr<Client>(static_cast<Client*>(new AdcHub(hubURL, address, port, secure)));
+}
+
 AdcHub::AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure) :
 	Client(hubURL, address, port, '\n', secure, Socket::PROTO_ADC),
 	featureFlags(0), lastErrorCode(0), sid(0),
@@ -106,8 +111,6 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 	if (ou)
 		return ou;
 		
-	if (!clientPtr)
-		return ou;
 	if (cid.isZero())
 	{
 		WRITE_LOCK(*csUsers);
@@ -128,7 +131,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 	{
 		UserPtr u = ClientManager::createUser(cid, nick, getHubUrl());
 		u->setLastNick(nick);
-		auto newUser = std::make_shared<OnlineUser>(u, clientPtr, sid);
+		auto newUser = std::make_shared<OnlineUser>(u, getClientPtr(), sid);
 		WRITE_LOCK(*csUsers);
 		ou = users.insert(make_pair(sid, newUser)).first->second;
 	}

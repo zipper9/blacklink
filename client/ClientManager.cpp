@@ -77,19 +77,19 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 	ClientBasePtr cb;
 	if (protocol == Util::HUB_PROTOCOL_ADC)
 	{
-		cb = std::make_shared<AdcHub>(hubURL, address, port, false);
+		cb = AdcHub::create(hubURL, address, port, false);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_ADCS)
 	{
-		cb = std::make_shared<AdcHub>(hubURL, address, port, true);
+		cb = AdcHub::create(hubURL, address, port, true);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_NMDCS)
 	{
-		cb = std::make_shared<NmdcHub>(hubURL, address, port, true);
+		cb = NmdcHub::create(hubURL, address, port, true);
 	}
 	else
 	{
-		cb = std::make_shared<NmdcHub>(hubURL, address, port, false);
+		cb = NmdcHub::create(hubURL, address, port, false);
 	}
 	
 	Client* c = static_cast<Client*>(cb.get());
@@ -108,7 +108,6 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 	}
 	
 	c->addListener(this);
-	c->setClientPtr(cb);
 	c->initDefaultUsers();
 	return cb;
 }
@@ -218,16 +217,6 @@ void ClientManager::getConnectedHubInfo(HubInfoArray& out)
 
 void ClientManager::prepareClose()
 {
-	// http://www.flickr.com/photos/96019675@N02/11475592005/
-	/*
-	{
-	    READ_LOCK(*g_csClients);
-	    for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-	    {
-	        i->second->removeListeners();
-	    }
-	}
-	*/
 	{
 		WRITE_LOCK(*g_csClients);
 		g_clients.clear();
@@ -249,7 +238,7 @@ void ClientManager::putClient(const ClientBasePtr& cb)
 		fly_fire1(ClientManagerListener::ClientDisconnected(), client);
 	}
 	client->shutdown();
-	client->resetClientPtr();
+	client->clearDefaultUsers();
 }
 
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl)

@@ -30,10 +30,9 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		using Client::send;
 		using Client::connect;
 		
-		~AdcHub();
-		AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
+		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
-		
+
 		int getType() const { return TYPE_ADC; }
 		void hubMessage(const string& message, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false);
@@ -74,6 +73,9 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		friend class CommandHandler<AdcHub>;
 		friend class Identity;
 
+		AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
+		~AdcHub();
+
 		enum
 		{
 			FEATURE_FLAG_OLD_PASSWORD        = 1,
@@ -81,7 +83,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			FEATURE_FLAG_USER_COMMANDS       = 4,
 			FEATURE_FLAG_SEND_BLOOM          = 8
 		};
-		
+
 		/** Map session id to OnlineUser */
 		typedef boost::unordered_map<uint32_t, OnlineUserPtr> SIDMap;
 		

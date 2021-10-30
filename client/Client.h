@@ -57,7 +57,11 @@ class ClientBase
 };
 
 /** Yes, this should probably be called a Hub */
-class Client : public ClientBase, public Speaker<ClientListener>, public BufferedSocketListener, protected TimerManagerListener
+class Client : public ClientBase,
+               public Speaker<ClientListener>,
+               public BufferedSocketListener,
+               protected TimerManagerListener,
+               public std::enable_shared_from_this<Client>
 {
 	protected:
 		void fireUserListUpdated(const OnlineUserList& userList);
@@ -68,6 +72,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		static const int64_t averageFakeFileSize = 1536 * 1024;
 
 	public:
+		virtual ~Client();
 		int64_t getBytesShared() const
 		{
 			return bytesShared.load();
@@ -248,8 +253,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 	protected:
 		bool isFloodCommand(const string& command, const string& line);
-		
-		ClientBasePtr clientPtr;
+
 		OnlineUserPtr myOnlineUser;
 		OnlineUserPtr hubOnlineUser;
 
@@ -364,10 +368,12 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		const CID& getShareGroup() const { return shareGroup; }
 		void getUserCommands(vector<UserCommand>& result) const;
 
-		void setClientPtr(const ClientBasePtr& ptr) { clientPtr = ptr; }
-		void resetClientPtr()
+		std::shared_ptr<Client> getClientPtr()
 		{
-			clientPtr.reset();
+			return shared_from_this();
+		}
+		void clearDefaultUsers()
+		{
 			myOnlineUser.reset();
 			hubOnlineUser.reset();
 		}
@@ -389,9 +395,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		friend class ClientManager;
 		friend class User;
+
 		Client(const string& hubURL, const string& address, uint16_t port, char separator, bool secure, Socket::Protocol proto);
-		virtual ~Client();
-		
+
 		enum CountType
 		{
 			COUNT_NORMAL,

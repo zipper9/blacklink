@@ -33,10 +33,8 @@ class NmdcHub : public Client, private Flags
 	public:
 		using Client::send;
 		using Client::connect;
-		
-		NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
-		~NmdcHub();
 
+		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		void disconnect(bool graceless) override;
 
@@ -113,7 +111,10 @@ class NmdcHub : public Client, private Flags
 			MYINFO_LIST,
 			MYINFO_LIST_COMPLETED
 		};
-		
+
+		NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
+		~NmdcHub();
+
 		typedef boost::unordered_map<string, OnlineUserPtr> NickMap;
 		
 		NickMap users;

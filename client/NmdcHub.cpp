@@ -52,6 +52,11 @@ enum
 	ST_SP
 };
 
+ClientBasePtr NmdcHub::create(const string& hubURL, const string& address, uint16_t port, bool secure)
+{
+	return std::shared_ptr<Client>(static_cast<Client*>(new NmdcHub(hubURL, address, port, secure)));
+}
+
 NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure) :
 	Client(hubURL, address, port, '|', secure, Socket::PROTO_NMDC),
 	hubSupportFlags(0),
@@ -116,7 +121,6 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 OnlineUserPtr NmdcHub::getUser(const string& nick)
 {
 	OnlineUserPtr ou;
-	if (!clientPtr) return ou;
 	{
 		csState.lock();
 		bool isMyNick = nick == myNick;
@@ -154,7 +158,7 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 			if (res.second)
 			{
 				UserPtr p = ClientManager::getUser(nick, getHubUrl());
-				ou = std::make_shared<OnlineUser>(p, clientPtr, 0);
+				ou = std::make_shared<OnlineUser>(p, getClientPtr(), 0);
 				ou->getIdentity().setNick(nick);
 				res.first->second = ou;
 			}

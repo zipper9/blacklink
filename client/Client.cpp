@@ -105,6 +105,7 @@ void Client::initDefaultUsers()
 		myUser->setFlag(User::NMDC);
 		hubUser->setFlag(User::NMDC);
 	}
+	auto clientPtr = getClientPtr();
 	myOnlineUser = std::make_shared<OnlineUser>(myUser, clientPtr, 0);
 	hubOnlineUser = std::make_shared<OnlineUser>(hubUser, clientPtr, AdcCommand::HUB_SID);
 }
