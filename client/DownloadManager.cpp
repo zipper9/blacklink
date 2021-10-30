@@ -474,7 +474,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 	}
 	catch (const FileException& e)
 	{
-		failDownload(source, STRING(COULD_NOT_OPEN_TARGET_FILE) + ' ' + e.getError());
+		failDownload(source, STRING(COULD_NOT_OPEN_TARGET_FILE) + e.getError());
 		return;
 	}
 	catch (const QueueException& e)

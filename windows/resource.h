@@ -686,7 +686,6 @@
 #define IDC_GROUPS                      1550
 #define IDC_SETTINGS_SKIPLIST           1551
 #define IDC_SETTINGS_SOCKET_OUT_BUFFER  1552
-#define IDC_PROFILE_COUNT               1553
 #define IDC_SKIPLIST_SHARE              1554
 #define IDC_SETTINGS_SOCKET_IN_BUFFER   1555
 #define IDC_ICON_SIZE                   1558
