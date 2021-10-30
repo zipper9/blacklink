@@ -68,6 +68,7 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	transferListAction.AddString(CTSTRING(ADD_TO_FAVORITES));
 	transferListAction.AddString(CTSTRING(FORCE_ATTEMPT));
 	transferListAction.AddString(CTSTRING(BROWSE_FILE_LIST));
+	transferListAction.AddString(CTSTRING(OPEN_DOWNLOAD_QUEUE));
 
 	chatAction.AddString(CTSTRING(SELECT_USER_LIST));
 	chatAction.AddString(CTSTRING(ADD_NICK_TO_CHAT));

@@ -241,6 +241,34 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		
 		if (ctrlTransfers.GetSelectedCount() > 0)
 		{
+			int defaultItem = 0;
+			switch (SETTING(TRANSFERLIST_DBLCLICK))
+			{
+				case 0:
+					defaultItem = IDC_PRIVATE_MESSAGE;
+					break;
+				case 1:
+					defaultItem = IDC_GETLIST;
+					break;
+				case 2:
+					defaultItem = IDC_MATCH_QUEUE;
+					break;
+				case 3:
+					defaultItem = IDC_GRANTSLOT;
+					break;
+				case 4:
+					defaultItem = IDC_ADD_TO_FAVORITES;
+					break;
+				case 5:
+					defaultItem = IDC_FORCE;
+					break;
+				case 6:
+					defaultItem = IDC_BROWSELIST;
+					break;
+				case 7:
+					defaultItem = IDC_QUEUE;
+			}
+
 			int i = -1;
 			bool bCustomMenu = false;
 			ItemInfo* ii = ctrlTransfers.getItemData(ctrlTransfers.GetNextItem(-1, LVNI_SELECTED));
@@ -331,7 +359,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #endif
 				transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED);
 			}
-				
+
 #ifdef IRAINMAN_ENABLE_WHOIS
 			if (ii->transferIp.type)
 			{
@@ -341,14 +369,23 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #endif
 
 			activatePreviewItems(transferMenu);
-			transferMenu.SetMenuDefaultItem(IDC_PRIVATE_MESSAGE);
 
 			if (!main)
 			{
+				OMenu* defItemMenu = &transferMenu;
+				if (defaultItem)
+				{
+					if (defaultItem == IDC_GRANTSLOT)
+						defItemMenu = &grantMenu;
+					else if (defaultItem == IDC_ADD_TO_FAVORITES)
+						defItemMenu = &favUserMenu;
+				}
+				defItemMenu->SetMenuDefaultItem(defaultItem);
 				transferMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
 			else
 			{
+				if (defaultItem == IDC_QUEUE) segmentedMenu.SetMenuDefaultItem(defaultItem);
 				segmentedMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
 			
@@ -370,24 +407,27 @@ LRESULT TransferView::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 }
 #endif // IRAINMAN_ENABLE_WHOIS
 
+void TransferView::openDownloadQueue(const ItemInfo* ii)
+{
+	QueueFrame::openWindow();
+	if (ii)
+	{
+		string target = Text::fromT(ii->target);
+		bool isList = ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST;
+		if (!target.empty() && QueueFrame::g_frame)
+			QueueFrame::g_frame->showQueueItem(target, isList);
+	}
+}
+
 LRESULT TransferView::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	switch (wID)
 	{
 		case IDC_QUEUE:
 		{
-			string target;
-			bool isList = false;
-			int i;
-			if ((i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				const ItemInfo* ii = ctrlTransfers.getItemData(i);
-				target = Text::fromT(ii->target);
-				isList = ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST;
-			}
-			QueueFrame::openWindow();
-			if (!target.empty() && QueueFrame::g_frame)
-				QueueFrame::g_frame->showQueueItem(target, isList);
+			int i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED);
+			const ItemInfo* ii = i == -1 ? nullptr : ctrlTransfers.getItemData(i);
+			openDownloadQueue(ii);
 			break;
 		}
 		case IDC_UPLOAD_QUEUE:
@@ -774,33 +814,36 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 			
 		ItemInfo* i = ctrlTransfers.getItemData(item->iItem);
 		const vector<ItemInfo*>& children = ctrlTransfers.findChildren(i->getGroupCond());
-		if (i->parent != nullptr || children.size() <= 1)
+		bool isUser = i->parent != nullptr || children.size() <= 1;
+		switch (SETTING(TRANSFERLIST_DBLCLICK))
 		{
-			switch (SETTING(TRANSFERLIST_DBLCLICK))
-			{
-				case 0:
-					i->pm(i->hintedUser.hint);
-					break;
-				case 1:
-					i->getList();
-					break;
-				case 2:
-					i->matchQueue();
-				case 3:
-					i->grantSlotPeriod(i->hintedUser.hint, 600);
-					break;
-				case 4:
-					i->addFav();
-					break;
-				case 5:
+			case 0:
+				if (isUser) i->pm(i->hintedUser.hint);
+				break;
+			case 1:
+				if (isUser) i->getList();
+				break;
+			case 2:
+				if (isUser) i->matchQueue();
+			case 3:
+				if (isUser) i->grantSlotPeriod(i->hintedUser.hint, 600);
+				break;
+			case 4:
+				if (isUser) i->addFav();
+				break;
+			case 5:
+				if (isUser)
+				{
 					i->statusString = TSTRING(CONNECTING_FORCED);
 					ctrlTransfers.updateItem(i);
 					ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false);
-					break;
-				case 6:
-					i->browseList();
-					break;
-			}
+				}
+				break;
+			case 6:
+				if (isUser) i->browseList();
+				break;
+			case 7:
+				openDownloadQueue(i);
 		}
 	}
 	return 0;
@@ -2153,7 +2196,7 @@ LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 	return 0;
 }
 
-void TransferView::PauseSelectedTransfer(void)
+void TransferView::pauseSelectedTransfer(void)
 {
 	const ItemInfo* ii = ctrlTransfers.getItemData(ctrlTransfers.GetNextItem(-1, LVNI_SELECTED));
 	if (ii)

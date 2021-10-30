@@ -171,7 +171,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		LRESULT onPauseSelectedItem(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			PauseSelectedTransfer();
+			pauseSelectedTransfer();
 			return 0;
 		}
 
@@ -594,8 +594,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		ItemInfo* findItem(const UpdateInfo& ui, int& pos) const;
 		void updateItem(int ii, uint32_t updateMask);
 
-		void PauseSelectedTransfer(void);
+		void pauseSelectedTransfer(void);
 		bool getTTH(const ItemInfo* ii, TTHValue& tth);
+		void openDownloadQueue(const ItemInfo* ii);
 };
 
 #endif // !defined(TRANSFER_VIEW_H)
