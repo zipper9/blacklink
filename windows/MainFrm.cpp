@@ -127,7 +127,7 @@ MainFrame::MainFrame() :
 	CSplitterImpl(false),
 	TimerHelper(m_hWnd),
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
-	hashProgressVisible(false),
+	hashProgressState(HASH_PROGRESS_HIDDEN),
 	updateStatusBar(0),
 	useTrayIcon(true),
 	hasPM(false),
@@ -1221,36 +1221,62 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		if (ctrlStatus.IsWindow())
 		{
 			bool update = false;
-			HashManager::Info info;
-			auto hm = HashManager::getInstance();
-			hm->getInfo(info);
-			if (info.filesLeft)
+			int newHashProgressState = HASH_PROGRESS_HIDDEN;
+			int progressValue = 0;
+			int smState = ShareManager::getInstance()->getState();
+			if (!(smState == ShareManager::STATE_SCANNING_DIRS || smState == ShareManager::STATE_CREATING_FILELIST))
 			{
-				int progressValue;
-				if (info.sizeHashed >= info.sizeToHash)
-					progressValue = HashProgressDlg::MAX_PROGRESS_VALUE;
-				else
-					progressValue = (info.sizeHashed * HashProgressDlg::MAX_PROGRESS_VALUE) / info.sizeToHash;
-#ifdef OSVER_WIN_XP
-				if (CompatibilityManager::isOsVistaPlus())
-#endif
-					ctrlHashProgress.SendMessage(PBM_SETSTATE, hm->getHashSpeed() < 0 ? PBST_PAUSED : PBST_NORMAL);
-				ctrlHashProgress.SetPos(progressValue);
-				if (!hashProgressVisible)
+				HashManager::Info info;
+				auto hm = HashManager::getInstance();
+				hm->getInfo(info);
+				if (info.filesLeft)
 				{
-					ctrlHashProgress.ShowWindow(SW_SHOW);
-					update = true;
-					hashProgressVisible = true;
+					newHashProgressState = hm->getHashSpeed() < 0 ? HASH_PROGRESS_PAUSED : HASH_PROGRESS_NORMAL;
+					if (info.sizeHashed >= info.sizeToHash)
+						progressValue = HashProgressDlg::MAX_PROGRESS_VALUE;
+					else
+						progressValue = (info.sizeHashed * HashProgressDlg::MAX_PROGRESS_VALUE) / info.sizeToHash;
 				}
 			}
-			else if (hashProgressVisible)
+			else
+				newHashProgressState = HASH_PROGRESS_MARQUEE;
+
+			if (newHashProgressState != hashProgressState)
 			{
-				ctrlHashProgress.ShowWindow(SW_HIDE);
+				if (newHashProgressState != HASH_PROGRESS_HIDDEN)
+				{
+#ifdef OSVER_WIN_XP
+					if (CompatibilityManager::isOsVistaPlus())
+#endif
+						ctrlHashProgress.SendMessage(PBM_SETSTATE, newHashProgressState == HASH_PROGRESS_PAUSED ? PBST_PAUSED : PBST_NORMAL);
+					if (hashProgressState == HASH_PROGRESS_MARQUEE || newHashProgressState == HASH_PROGRESS_MARQUEE)
+					{
+						if (newHashProgressState == HASH_PROGRESS_MARQUEE)
+						{
+							ctrlHashProgress.ModifyStyle(0, PBS_MARQUEE);
+							ctrlHashProgress.SetMarquee(TRUE);
+						}
+						else
+						{
+							ctrlHashProgress.SetMarquee(FALSE);
+							ctrlHashProgress.ModifyStyle(PBS_MARQUEE, 0);
+						}
+					}
+					if (newHashProgressState != HASH_PROGRESS_MARQUEE)
+						ctrlHashProgress.SetPos(progressValue);
+					ctrlHashProgress.ShowWindow(SW_SHOW);
+				}
+				else
+				{
+					ctrlHashProgress.ShowWindow(SW_HIDE);
+					ctrlHashProgress.SetPos(0);
+				}
+				hashProgressState = newHashProgressState;
 				update = true;
-				hashProgressVisible = false;
-				ctrlHashProgress.SetPos(0);
 			}
-			
+			else if (hashProgressState == HASH_PROGRESS_NORMAL)
+				ctrlHashProgress.SetPos(progressValue);
+
 			if (statusText[0] != str[0])
 			{
 				statusText[0] = std::move(str[0]);
@@ -1456,7 +1482,7 @@ LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 
 LRESULT MainFrame::onHashProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	HashProgressDlg dlg(false, false, g_iconBitmaps.getIcon(IconBitmaps::HASH_PROGRESS, 0));
+	HashProgressDlg dlg(false, false);
 	dlg.DoModal(m_hWnd);
 	return 0;
 }
@@ -1940,7 +1966,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					dontQuit = result != IDOK;
 			}
 			
-			bool bForceNoWarning = false;
+			bool forceNoWarning = false;
 			
 			if (!dontQuit)
 			{
@@ -1951,18 +1977,18 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				
 				if (HashManager::getInstance()->isHashing())
 				{
-					bool bForceStopExit = false;
+					bool forceStopExit = false;
 					if (!HashProgressDlg::instanceCounter)
 					{
-						HashProgressDlg dlg(true, true, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
-						bForceStopExit = dlg.DoModal() != IDC_BTN_EXIT_ON_DONE;
+						HashProgressDlg dlg(true, true);
+						forceStopExit = dlg.DoModal() != IDC_BTN_EXIT_ON_DONE;
 					}
 					
 					// User take decision in dialog,
 					//so avoid one more warning message
-					bForceNoWarning = true;
+					forceNoWarning = true;
 					
-					if (HashManager::getInstance()->isHashing() || bForceStopExit)
+					if (HashManager::getInstance()->isHashing() || forceStopExit)
 					{
 						// User closed progress window, while hashing still in progress,
 						// or user unchecked "exit on done" checkbox,
@@ -1979,7 +2005,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			if ((endSession ||
 			     SETTING(PROTECT_CLOSE) ||
 			     checkState == BST_UNCHECKED ||
-			     (bForceNoWarning ||
+			     (forceNoWarning ||
 			     MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_EXIT), getAppNameVerT().c_str(),
 			                         CTSTRING(ALWAYS_ASK), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES))
 			     && !dontQuit)
@@ -2068,7 +2094,9 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			CRect sr;
 			int w[STATUS_PART_LAST];
 			
-			bool isHashing = HashManager::getInstance()->isHashing();
+			int smState = ShareManager::getInstance()->getState();
+			bool isHashing = smState == ShareManager::STATE_SCANNING_DIRS || smState == ShareManager::STATE_CREATING_FILELIST
+				|| HashManager::getInstance()->isHashing();
 			ctrlStatus.GetClientRect(sr);
 			if (isHashing)
 			{
@@ -2130,8 +2158,8 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-	static tstring g_last_torrent_file;
 #ifdef FLYLINKDC_USE_TORRENT
+	static tstring g_last_torrent_file;
 	if (wID == IDC_OPEN_TORRENT_FILE)
 	{
 		if (WinUtil::browseFile(file, m_hWnd, false, g_last_torrent_file, L"All torrent file\0*.torrent\0\0"))
@@ -2156,8 +2184,8 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	{
 		if (Util::isTorrentFile(file))
 		{
-			g_last_torrent_file = Util::getFilePath(file);
 #ifdef FLYLINKDC_USE_TORRENT
+			g_last_torrent_file = Util::getFilePath(file);
 			DownloadManager::getInstance()->add_torrent_file(file, _T(""));
 #endif
 		}

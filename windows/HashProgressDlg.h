@@ -30,8 +30,8 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 		enum { IDD = IDD_HASH_PROGRESS };
 		static const int MAX_PROGRESS_VALUE = 8192;
 		
-		HashProgressDlg(bool autoClose, bool exitOnDone, HICON icon) :
-			TimerHelper(m_hWnd), autoClose(autoClose), exitOnDone(exitOnDone), icon(icon),
+		HashProgressDlg(bool autoClose, bool exitOnDone) :
+			TimerHelper(m_hWnd), autoClose(autoClose), exitOnDone(exitOnDone),
 			paused(false), tempHashSpeed(0), updatingEditBox(0),
 			progressMarquee(false), progressState(PBST_NORMAL)
 		{
@@ -70,13 +70,19 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 		bool autoClose;
 		bool exitOnDone;
 		CProgressBarCtrl progress;
+		CButton pauseButton;
 		CButton exitOnDoneButton;
 		CTrackBarCtrl slider;
-		HICON icon;
 		CStatic currentFile;
-		CStatic infoFiles;
-		CStatic infoSpeed;
-		CStatic infoTime;
+		CStatic infoState;
+		CStatic infoSpeedLabel;
+		CStatic infoSpeedText;
+		CStatic infoTimeLabel;
+		CStatic infoTimeText;
+		CStatic infoDirsLabel;
+		CStatic infoDirsText;
+		CStatic infoFilesLabel;
+		CStatic infoFilesText;
 		bool paused;
 		int tempHashSpeed;
 		int updatingEditBox;
@@ -86,6 +92,8 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 		void updateStats();
 		void setProgressMarquee(bool enable);
 		void setProgressState(int state);
+		void showSpeedInfo(int state);
+		void showScanInfo(int state);
 
 	public:
 		static int instanceCounter;

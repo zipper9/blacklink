@@ -863,7 +863,6 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 void ClientManager::infoUpdated(Client* client)
 {
 	if (!client) return;
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		READ_LOCK(*g_csClients);
@@ -874,7 +873,6 @@ void ClientManager::infoUpdated(Client* client)
 
 void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;
 	READ_LOCK(*g_csClients);

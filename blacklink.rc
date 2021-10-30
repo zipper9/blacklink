@@ -232,9 +232,15 @@ BEGIN
     LTEXT           "Please wait while DC++ hashes your files (they won't be shared until they've been hashed)...",IDC_HASH_INDEXING,8,9,449,8
     LTEXT           "Current file...",IDC_CURRENT_FILE,8,22,449,8,SS_NOPREFIX | SS_CENTERIMAGE | SS_PATHELLIPSIS
     GROUPBOX        "Statistics",IDC_STATISTICS,8,38,186,50
-    LTEXT           "S1",IDC_HASH_FILES,16,50,168,8
-    LTEXT           "S2",IDC_HASH_SPEED,16,62,168,8
-    LTEXT           "S3",IDC_TIME_LEFT,16,74,168,8
+    LTEXT           "S1",IDC_HASH_STATE,16,50,168,8
+    LTEXT           "@ProgressSpeedColon",IDC_HASH_SPEED_LABEL,16,62,80,8
+    LTEXT           "",IDC_HASH_SPEED_TEXT,80,62,80,8
+    LTEXT           "@ProgressEtaColon",IDC_HASH_ETA_LABEL,16,74,80,8
+    LTEXT           "",IDC_HASH_ETA_TEXT,80,74,80,8
+    LTEXT           "@ProgressFoldersColon",IDC_HASH_SCAN1_LABEL,16,62,80,8
+    LTEXT           "",IDC_HASH_SCAN1_TEXT,80,62,80,8
+    LTEXT           "@ProgressFilesColon",IDC_HASH_SCAN2_LABEL,16,74,80,8
+    LTEXT           "",IDC_HASH_SCAN2_TEXT,80,74,80,8
     GROUPBOX        "Maximum hashing speed",IDC_CURRENT_HASH_SPEED,202,38,255,50
     LTEXT           "Temporarily change maximum speed (Mb/s)\n(0 = unlimited)",IDC_CHANGE_HASH_SPEED,208,50,240,18
     EDITTEXT        IDC_EDIT_MAX_HASH_SPEED,207,69,39,14,ES_AUTOHSCROLL | ES_NUMBER

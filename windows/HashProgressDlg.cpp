@@ -1,13 +1,17 @@
 #include "stdafx.h"
-#include "Resource.h"
-#include "WinUtil.h"
 #include "HashProgressDlg.h"
+#include "WinUtil.h"
+#include "DialogLayout.h"
 #include "../client/ShareManager.h"
 #include "../client/HashManager.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
 int HashProgressDlg::instanceCounter = 0;
 
@@ -24,29 +28,50 @@ static const WinUtil::TextItem texts[] =
 	{ 0,                         ResourceManager::Strings()                 }
 };
 
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { -2, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
+{
+	{ IDC_HASH_SCAN1_LABEL, FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_HASH_SCAN2_LABEL, FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_HASH_SCAN1_TEXT,  0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_HASH_SCAN2_TEXT,  0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_HASH_SPEED_LABEL, FLAG_TRANSLATE, AUTO,   UNSPEC, 2          },
+	{ IDC_HASH_ETA_LABEL,   FLAG_TRANSLATE, AUTO,   UNSPEC, 2          },
+	{ IDC_HASH_SPEED_TEXT,  0,              UNSPEC, UNSPEC, 0, &align2 },
+	{ IDC_HASH_ETA_TEXT,    0,              UNSPEC, UNSPEC, 0, &align2 }
+};
+
 LRESULT HashProgressDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(HASH_PROGRESS));
 	
-	if (icon)
-	{
-		SetIcon(icon, FALSE);
-		SetIcon(icon, TRUE);
-	}
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::HASH_PROGRESS, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
 
 	WinUtil::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 
 	currentFile.Attach(GetDlgItem(IDC_CURRENT_FILE));
-	infoFiles.Attach(GetDlgItem(IDC_HASH_FILES));
-	infoSpeed.Attach(GetDlgItem(IDC_HASH_SPEED));
-	infoTime.Attach(GetDlgItem(IDC_TIME_LEFT));
-	
+	infoState.Attach(GetDlgItem(IDC_HASH_STATE));
+	infoSpeedLabel.Attach(GetDlgItem(IDC_HASH_SPEED_LABEL));
+	infoSpeedText.Attach(GetDlgItem(IDC_HASH_SPEED_TEXT));
+	infoTimeLabel.Attach(GetDlgItem(IDC_HASH_ETA_LABEL));
+	infoTimeText.Attach(GetDlgItem(IDC_HASH_ETA_TEXT));
+	infoDirsLabel.Attach(GetDlgItem(IDC_HASH_SCAN1_LABEL));
+	infoDirsText.Attach(GetDlgItem(IDC_HASH_SCAN1_TEXT));
+	infoFilesLabel.Attach(GetDlgItem(IDC_HASH_SCAN2_LABEL));
+	infoFilesText.Attach(GetDlgItem(IDC_HASH_SCAN2_TEXT));
+
+	pauseButton.Attach(GetDlgItem(IDC_PAUSE));
 	exitOnDoneButton.Attach(GetDlgItem(IDC_BTN_EXIT_ON_DONE));
 	exitOnDoneButton.SetCheck(exitOnDone ? BST_CHECKED : BST_UNCHECKED);
-	
+
 	if (!exitOnDone)
 		exitOnDoneButton.ShowWindow(SW_HIDE);
-		
+
 	int hashSpeed = SETTING(MAX_HASH_SPEED);
 	slider.Attach(GetDlgItem(IDC_EDIT_MAX_HASH_SPEED_SLIDER));
 	slider.SetRange(0, 100);
@@ -89,18 +114,36 @@ LRESULT HashProgressDlg::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	return 0;
 }
 
+void HashProgressDlg::showSpeedInfo(int state)
+{
+	dcassert(state == SW_SHOW || state == SW_HIDE);
+	infoSpeedLabel.ShowWindow(state);
+	infoSpeedText.ShowWindow(state);
+	infoTimeLabel.ShowWindow(state);
+	infoTimeText.ShowWindow(state);
+}
+
+void HashProgressDlg::showScanInfo(int state)
+{
+	dcassert(state == SW_SHOW || state == SW_HIDE);
+	infoDirsLabel.ShowWindow(state);
+	infoDirsText.ShowWindow(state);
+	infoFilesLabel.ShowWindow(state);
+	infoFilesText.ShowWindow(state);
+}
+
 void HashProgressDlg::updateStats()
 {
 	auto hashManager = HashManager::getInstance();
 	
 	paused = hashManager->getHashSpeed() < 0;
-
-	SetDlgItemText(IDC_PAUSE, paused ? CTSTRING(RESUME) : CTSTRING(PAUSE));
+	pauseButton.SetWindowText(paused ? CTSTRING(RESUME) : CTSTRING(PAUSE));
 
 	HashManager::Info info;
 	hashManager->getInfo(info);
 	if (info.filesLeft == 0)
 	{
+		pauseButton.EnableWindow(FALSE);
 		if (exitOnDoneButton.GetCheck())
 		{
 			EndDialog(IDC_BTN_EXIT_ON_DONE);
@@ -122,33 +165,36 @@ void HashProgressDlg::updateStats()
 				stateText = ResourceManager::SCANNING_DIRS;
 				int64_t progress[2];
 				sm->getScanProgress(progress);
-				infoSpeed.SetWindowText(TSTRING_F(PROGRESS_FOLDERS, progress[0]).c_str());
-				infoSpeed.ShowWindow(SW_SHOW);
-				infoTime.SetWindowText(TSTRING_F(PROGRESS_FILES, progress[1]).c_str());
-				infoTime.ShowWindow(SW_SHOW);
+				showSpeedInfo(SW_HIDE);
+				infoDirsText.SetWindowText(Util::toStringT(progress[0]).c_str());
+				infoFilesText.SetWindowText(Util::toStringT(progress[1]).c_str());
+				showScanInfo(SW_SHOW);
 				setProgressState(PBST_NORMAL);
 				setProgressMarquee(true);
 				break;
 			}
 			case ShareManager::STATE_CREATING_FILELIST:
 				stateText = ResourceManager::CREATING_FILELIST;
-				infoSpeed.ShowWindow(SW_HIDE);
-				infoTime.ShowWindow(SW_HIDE);
+				showSpeedInfo(SW_HIDE);
+				showScanInfo(SW_HIDE);
 				setProgressState(PBST_NORMAL);
 				setProgressMarquee(true);
 				break;
 			default:
 				stateText = ResourceManager::DONE;
-				infoSpeed.ShowWindow(SW_HIDE);
-				infoTime.ShowWindow(SW_HIDE);
+				showSpeedInfo(SW_HIDE);
+				showScanInfo(SW_HIDE);
 				setProgressState(PBST_NORMAL);
 				setProgressMarquee(false);
 				progress.SetPos(0);
 		}
-		infoFiles.SetWindowText(CTSTRING_I(stateText));
+		infoState.SetWindowText(CTSTRING_I(stateText));
 		return;
 	}
-	
+
+	pauseButton.EnableWindow(TRUE);
+	showScanInfo(SW_HIDE);
+
 	GetDlgItem(IDC_BTN_REFRESH_FILELIST).EnableWindow(FALSE);
 	currentFile.SetWindowText(Text::toT(info.filename).c_str());
 	currentFile.ShowWindow(SW_SHOW);
@@ -157,15 +203,17 @@ void HashProgressDlg::updateStats()
 	const int64_t bytesLeft = info.sizeToHash - info.sizeHashed;
 	tstring sizeStr = Util::formatBytesT(bytesLeft);
 	tstring filesStr = Util::toStringT(info.filesLeft);
-	infoFiles.SetWindowText(TSTRING_F(HASH_INFO_FILES, filesStr % sizeStr).c_str());
+	infoState.SetWindowText(TSTRING_F(HASH_INFO_FILES, filesStr % sizeStr).c_str());
 
 	setProgressMarquee(false);
 	if (paused)
 	{
 		tstring timeStr = _T("(") + TSTRING(PAUSED) + _T(")");;
-		infoTime.SetWindowText(timeStr.c_str());
-		infoTime.ShowWindow(SW_SHOW);
-		infoSpeed.ShowWindow(SW_HIDE);
+		infoTimeText.SetWindowText(timeStr.c_str());
+		infoTimeLabel.ShowWindow(SW_SHOW);
+		infoTimeText.ShowWindow(SW_SHOW);
+		infoSpeedLabel.ShowWindow(SW_HIDE);
+		infoSpeedText.ShowWindow(SW_HIDE);
 		setProgressState(PBST_PAUSED);
 	}
 	else
@@ -184,12 +232,11 @@ void HashProgressDlg::updateStats()
 			speedStr = Util::formatBytesT(sizeHashed * 1000 / diff) + _T('/') + TSTRING(S);
 			timeStr = Util::formatSecondsT(bytesLeft * diff / (sizeHashed * 1000));
 		}
-		infoSpeed.SetWindowText(CTSTRING_F(HASH_INFO_SPEED, speedStr));
-		infoSpeed.ShowWindow(SW_SHOW);
-		infoTime.SetWindowText(CTSTRING_F(HASH_INFO_ETA, timeStr));
-		infoTime.ShowWindow(SW_SHOW);
+		infoSpeedText.SetWindowText(speedStr.c_str());
+		infoTimeText.SetWindowText(timeStr.c_str());
+		showSpeedInfo(SW_SHOW);
 	}
-	
+
 	int progressValue;
 	if (info.sizeHashed >= info.sizeToHash)
 		progressValue = MAX_PROGRESS_VALUE;

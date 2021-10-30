@@ -503,7 +503,15 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			STATUS_PART_HASH_PROGRESS,
 			STATUS_PART_LAST
 		};
-		
+
+		enum
+		{
+			HASH_PROGRESS_HIDDEN,
+			HASH_PROGRESS_NORMAL,
+			HASH_PROGRESS_PAUSED,
+			HASH_PROGRESS_MARQUEE
+		};
+
 		TStringList lastLinesList;
 		tstring lastLines;
 		CStatusBarCtrl ctrlStatus;
@@ -516,7 +524,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		CContainedWindow statusContainer;
 		CProgressBarCtrl ctrlHashProgress;
-		bool hashProgressVisible;
+		int hashProgressState;
 		unsigned updateStatusBar;
 
 		// Tray icon
