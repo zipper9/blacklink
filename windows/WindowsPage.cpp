@@ -19,8 +19,9 @@
 #include "stdafx.h"
 #include "WindowsPage.h"
 #include "../client/SettingsManager.h"
+#include "WinUtil.h"
 
-static const PropPage::TextItem textItem[] =
+static const WinUtil::TextItem textItem[] =
 {
 	{ IDC_SETTINGS_AUTO_OPEN, ResourceManager::SETTINGS_AUTO_OPEN },
 	{ IDC_SETTINGS_WINDOWS_OPTIONS, ResourceManager::SETTINGS_WINDOWS_OPTIONS },
@@ -84,7 +85,7 @@ LRESULT WindowsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlOptions.Attach(GetDlgItem(IDC_WINDOWS_OPTIONS));
 	ctrlConfirms.Attach(GetDlgItem(IDC_CONFIRM_OPTIONS));
 
-	PropPage::translate(*this, textItem);
+	WinUtil::translate(*this, textItem);
 	PropPage::read(*this, nullptr, listItems, ctrlStartup);
 	PropPage::read(*this, nullptr, optionItems, ctrlOptions);
 	PropPage::read(*this, nullptr, confirmItems, ctrlConfirms);

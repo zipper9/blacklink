@@ -23,17 +23,17 @@
 #include "PreviewDlg.h"
 #include "WinUtil.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
-	{ IDC_ADD_MENU, ResourceManager::ADD },
+	{ IDC_ADD_MENU,    ResourceManager::ADD        },
 	{ IDC_CHANGE_MENU, ResourceManager::EDIT_ACCEL },
-	{ IDC_REMOVE_MENU, ResourceManager::REMOVE },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_REMOVE_MENU, ResourceManager::REMOVE     },
+	{ 0,               ResourceManager::Strings()  }
 };
 
 LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	
 	CRect rc;
 	

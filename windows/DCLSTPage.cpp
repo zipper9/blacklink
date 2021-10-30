@@ -21,7 +21,7 @@
 #include "WinUtil.h"
 #include "../client/SettingsManager.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_DCLS_GENERATORBORDER, ResourceManager::DCLS_GENERATORBORDER },
 	{ IDC_DCLS_CREATE_IN_FOLDER, ResourceManager::DCLS_CREATE_IN_FOLDER },
@@ -40,7 +40,7 @@ static const PropPage::Item items[] =
 
 LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	if (BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER))

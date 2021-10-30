@@ -5,7 +5,7 @@
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_STATIC0, ResourceManager::WEBSERVER },
 	{ IDC_STATIC1, ResourceManager::PORT },
@@ -39,7 +39,7 @@ static const PropPage::Item items[] =
 
 LRESULT WebServerPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	CComboBox bindCombo(GetDlgItem(IDC_WEB_BIND_ADDRESS));

@@ -33,7 +33,7 @@ enum
 	GROUP_EXCLUDED
 };
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SHOW_TREE, ResourceManager::SETTINGS_USE_SHARE_TREE },
 	{ IDC_REMOVE, ResourceManager::REMOVE },
@@ -52,7 +52,7 @@ static const PropPage::Item items[] =
 
 LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	WinUtil::translate((HWND)(*this), texts);
 	
 	PropPage::read(*this, items);
 	showTree = !BOOLSETTING(USE_OLD_SHARING_UI);

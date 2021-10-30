@@ -23,7 +23,7 @@
 #include "WinUtil.h"
 #include "../client/Socket.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SETTINGS_OUTGOING,         ResourceManager::SETTINGS_OUTGOING             },
 	{ IDC_DIRECT_OUT,                ResourceManager::SETTINGS_DIRECT               },
@@ -53,7 +53,7 @@ static const PropPage::Item items[] =
 
 LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	
 	switch (SETTING(OUTGOING_CONNECTIONS))
 	{

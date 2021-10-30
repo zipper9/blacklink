@@ -22,7 +22,7 @@
 #include "PropertiesDlg.h"
 #include "BarShader.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_ODC_STYLE, ResourceManager::PROGRESSBAR_ODC_STYLE },
 	{ IDC_STEALTHY_STYLE_ICO, ResourceManager::SETTINGS_SHOW_SPEED_ICON },
@@ -133,7 +133,7 @@ LRESULT OperaColorsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	ctrlList.Attach(GetDlgItem(IDC_OPERACOLORS_BOOLEANS));
 	WinUtil::setExplorerTheme(ctrlList);
 
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlList);
 	
 	crProgressDown = SETTING(DOWNLOAD_BAR_COLOR);

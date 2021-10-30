@@ -22,17 +22,17 @@
 #include "WinUtil.h"
 #include "../client/Util.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
-	{ IDC_REMOVE, ResourceManager::REMOVE },
-	{ IDC_ADD, ResourceManager::SETTINGS_ADD_FOLDER },
-	{ IDC_CHANGE, ResourceManager::EDIT_ACCEL },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_REMOVE, ResourceManager::REMOVE              },
+	{ IDC_ADD,    ResourceManager::SETTINGS_ADD_FOLDER },
+	{ IDC_CHANGE, ResourceManager::EDIT_ACCEL          },
+	{ 0,          ResourceManager::Strings()           }
 };
 
 LRESULT FavoriteDirsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	ctrlDirectories.Attach(GetDlgItem(IDC_FAVORITE_DIRECTORIES));
 	ctrlDirectories.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);

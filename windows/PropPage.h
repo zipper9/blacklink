@@ -63,12 +63,7 @@ class PropPage
 			int setting;
 			ResourceManager::Strings desc;
 		};
-		struct TextItem
-		{
-			WORD itemID;
-			ResourceManager::Strings translatedString;
-		};
-		
+
 		PropPage(const PropPage &) = delete;
 		PropPage& operator= (const PropPage &) = delete;
 
@@ -84,7 +79,6 @@ class PropPage
 			m_check_read_write = 0;
 #endif
 		}
-		void translate(HWND page, const TextItem* textItems);
 		bool getBoolSetting(const ListItem* listItems, HWND list, int setting);
 
 #ifdef _DEBUG

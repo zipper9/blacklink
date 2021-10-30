@@ -5,7 +5,7 @@
 #include "Colors.h"
 #include "Fonts.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_AVAILABLE_STYLES, ResourceManager::SETCZDC_STYLES            },
 	{ IDC_BACK_COLOR,       ResourceManager::SETCZDC_BACK_COLOR        },
@@ -199,7 +199,7 @@ LRESULT PropPageTextStyles::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 {
 	loadSettings();
 	
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	lsbList.Attach(GetDlgItem(IDC_TEXT_STYLES));

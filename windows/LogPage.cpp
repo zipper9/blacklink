@@ -22,7 +22,7 @@
 #include "../client/LogManager.h"
 #include "../client/File.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SETTINGS_LOGGING,                     ResourceManager::SETTINGS_LOGGING          },
 	{ IDC_SETTINGS_LOG_DIR,                     ResourceManager::DIRECTORY                 },
@@ -76,7 +76,7 @@ static const PropPage::ListItem listItems[] =
 
 LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_LOG_OPTIONS));
 	
 	for (int i = 0; i < LogManager::LAST; ++i)

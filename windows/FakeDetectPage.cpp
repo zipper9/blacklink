@@ -21,7 +21,7 @@
 #include "FakeDetectPage.h"
 #include "WinUtil.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_ENABLE_AUTO_BAN, ResourceManager::SETTINGS_AUTO_BAN },
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE
@@ -121,7 +121,7 @@ LRESULT FakeDetect::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	
 #undef ADDSTRINGS
 	
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	
 	ctrlList.ShowWindow(SW_HIDE);
 	return TRUE;

@@ -21,19 +21,19 @@
 #include "CommandDlg.h"
 #include "WinUtil.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
-	{ IDC_MOVE_UP, ResourceManager::MOVE_UP },
-	{ IDC_MOVE_DOWN, ResourceManager::MOVE_DOWN },
-	{ IDC_ADD_MENU, ResourceManager::ADD },
+	{ IDC_MOVE_UP,     ResourceManager::MOVE_UP    },
+	{ IDC_MOVE_DOWN,   ResourceManager::MOVE_DOWN  },
+	{ IDC_ADD_MENU,    ResourceManager::ADD        },
 	{ IDC_CHANGE_MENU, ResourceManager::EDIT_ACCEL },
-	{ IDC_REMOVE_MENU, ResourceManager::REMOVE },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_REMOVE_MENU, ResourceManager::REMOVE     },
+	{ 0,               ResourceManager::Strings()  }
 };
 
 LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, nullptr);
 	
 	CRect rc;

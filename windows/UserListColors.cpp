@@ -4,7 +4,7 @@
 #include "Colors.h"
 #include "ImageLists.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_STATIC_ULC, ResourceManager::SETTINGS_USER_LIST },
 	{ IDC_CHANGE_COLOR, ResourceManager::SETTINGS_CHANGE },
@@ -56,7 +56,7 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 		ResourceManager::USER_DESC_SLOW
 	};
 
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	
 	origImagePath = imagePath = Text::toT(g_settings->get(SettingsManager::USERLIST_IMAGE));
 

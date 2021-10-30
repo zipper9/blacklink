@@ -23,7 +23,7 @@
 #include "MainFrm.h"
 #include "../client/SimpleStringTokenizer.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_MOUSE_OVER, ResourceManager::SETTINGS_MOUSE_OVER },
 	{ IDC_NORMAL, ResourceManager::SETTINGS_NORMAL },
@@ -51,7 +51,7 @@ static string filter(const string& s)
 
 LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	WinUtil::translate((HWND)(*this), texts);
 	PropPage::read(*this, items);
 	
 	auto mainFrame = MainFrame::getMainFrame();

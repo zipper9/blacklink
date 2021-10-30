@@ -4,14 +4,14 @@
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 
-PropPage::TextItem RemoteControlPage::texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_ENABLE_WEBSERVER, ResourceManager::SETTINGS_WEBSERVER },
 	{ IDC_DESCRIPTION, ResourceManager::WEBSERVER_NO_FILES },
 	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item RemoteControlPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_ENABLE_WEBSERVER, SettingsManager::WEBSERVER, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
@@ -27,7 +27,7 @@ static bool checkPath()
 
 LRESULT RemoteControlPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	WinUtil::translate((HWND)(*this), texts);
 	PropPage::read(*this, items);
 
 	if (!checkPath())

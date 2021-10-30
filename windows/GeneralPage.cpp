@@ -25,7 +25,7 @@
 
 static const string defLangFileName("en-US.xml");
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SETTINGS_PERSONAL_INFORMATION, ResourceManager::SETTINGS_PERSONAL_INFORMATION },
 	{ IDC_SETTINGS_NICK, ResourceManager::NICK },
@@ -114,7 +114,7 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	GetDlgItem(IDC_CHECK_ADD_SLOTS).ShowWindow(FALSE);
 	GetDlgItem(IDC_CHECK_ADD_LIMIT).ShowWindow(FALSE);
 #endif	
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	CComboBox ctrlConnection(GetDlgItem(IDC_CONNECTION));
 	
 	for (auto i = SettingsManager::g_connectionSpeeds.cbegin(); i != SettingsManager::g_connectionSpeeds.cend(); ++i)

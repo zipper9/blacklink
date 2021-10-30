@@ -33,11 +33,6 @@ class RemoteControlPage : public CPropertyPage<IDD_REMOTE_CONTROL_PAGE>, public 
 		{
 			cancel_check();
 		}
-	protected:
-		static Item items[];
-		static TextItem texts[];
-		
-		
 };
 
 #endif //RemoteControlPage_H

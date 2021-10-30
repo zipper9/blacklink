@@ -25,7 +25,7 @@
 #include "../client/CompatibilityManager.h"
 #endif
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SETTINGS_B, ResourceManager::B },
 	{ IDC_B1, ResourceManager::B },
@@ -64,7 +64,7 @@ static const PropPage::Item items[] =
 
 LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	CUpDownCtrl updown;

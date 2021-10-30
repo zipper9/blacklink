@@ -22,7 +22,7 @@
 #include "MainFrm.h"
 #include "PopupManager.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_POPUP_ENABLE, ResourceManager::ENABLE_POPUPS },
 	{ IDC_POPUP_AWAY, ResourceManager::POPUP_ONLY_WHEN_AWAY },
@@ -80,7 +80,7 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 {
 	ctrlPopups.Attach(GetDlgItem(IDC_POPUPLIST));
 
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlPopups);
 	
 	ctrlPopupType.Attach(GetDlgItem(IDC_POPUP_TYPE));

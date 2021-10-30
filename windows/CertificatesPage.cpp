@@ -24,7 +24,7 @@
 
 int g_tlsOption = 0;
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_STATIC1, ResourceManager::PRIVATE_KEY_FILE },
 	{ IDC_STATIC2, ResourceManager::OWN_CERTIFICATE_FILE },
@@ -61,7 +61,7 @@ static const PropPage::ListItem securityItems[] =
 LRESULT CertificatesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlList.Attach(GetDlgItem(IDC_TLS_OPTIONS));
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlList);
 #if 0
 	PropPage::read(*this, nullptr, securityItems, GetDlgItem(IDC_SECURITY_LIST));

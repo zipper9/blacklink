@@ -24,7 +24,7 @@
 #include "WinUtil.h"
 
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_DOUBLE_CLICK_ACTION, ResourceManager::DOUBLE_CLICK_ACTION },
 	{ IDC_USERLISTDBLCLICKACTION, ResourceManager::USERLISTDBLCLICKACTION },
@@ -37,7 +37,7 @@ static const PropPage::TextItem texts[] =
 
 LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, nullptr);
 
 	userListAction.Attach(GetDlgItem(IDC_USERLIST_DBLCLICK));

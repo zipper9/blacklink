@@ -192,10 +192,3 @@ void PropPage::cancel(HWND page)
 	dcassert(page != NULL);
 	cancel_check();
 }
-
-void PropPage::translate(HWND page, const TextItem* textItems)
-{
-	if (!textItems) return;
-	for (int i = 0; textItems[i].itemID != 0; i++)
-		::SetDlgItemText(page, textItems[i].itemID, CTSTRING_I(textItems[i].translatedString));
-}

@@ -22,7 +22,7 @@
 #include "../client/File.h"
 #include "../client/CompatibilityManager.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SETTINGS_APPEARANCE_OPTIONS, ResourceManager::SETTINGS_OPTIONS },
 	{ IDC_SETTINGS_TIME_STAMPS_FORMAT, ResourceManager::SETTINGS_TIME_STAMPS_FORMAT },
@@ -71,10 +71,10 @@ LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 {
 	ctrlList.Attach(GetDlgItem(IDC_APPEARANCE_BOOLEANS));
 	WinUtil::setExplorerTheme(ctrlList);
-	
-	PropPage::translate(*this, texts);	
+
+	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlList);	
-	
+
 	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO));
 	getThemeList();
 	const string& selectedTheme = SETTING(THEME_MANAGER_THEME_DLL_NAME);
