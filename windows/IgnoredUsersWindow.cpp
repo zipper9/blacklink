@@ -9,11 +9,10 @@
 
 LRESULT IgnoredUsersWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
 	ctrlIgnored.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
 	                   LVS_REPORT | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
 	ctrlIgnored.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	ctrlIgnored.SetImageList(images, LVSIL_SMALL);
+	ctrlIgnored.SetImageList(g_favUserImage.getIconList(), LVSIL_SMALL);
 	setListViewColors(ctrlIgnored);
 
 	ctrlIgnored.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);

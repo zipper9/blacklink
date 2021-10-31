@@ -595,6 +595,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	tooltip.Activate(TRUE);
 	onSizeMode();   //Get Mode, and turn ON or OFF controlls Size
 	SearchManager::getInstance()->addListener(this);
+	FavoriteManager::getInstance()->addListener(this);
 	initHubs();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 	treeItemRoot = nullptr;
@@ -1113,6 +1114,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 	{
 		LOCK(csEverything);
 		everything.insert(searchInfo);
+		allUsers.insert(sr.getUser());
 	}
 	if (!WinUtil::postSpeakerMsg(*this, ADD_RESULT, searchInfo))
 	{
@@ -1715,6 +1717,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		closed = true;
 		SettingsManager::getInstance()->removeListener(this);
 		ClientManager::getInstance()->removeListener(this);
+		FavoriteManager::getInstance()->removeListener(this);
 		SearchManager::getInstance()->removeListener(this);
 		g_search_frames.erase(m_hWnd);
 		ctrlResults.deleteAll();
@@ -2895,12 +2898,15 @@ void SearchFrame::initHubs()
 	ctrlHubs.insertItem(new HubInfo(Util::emptyString, TSTRING(ONLY_WHERE_OP), false), 0);
 	ctrlHubs.SetCheckState(0, false);
 	ClientManager::getInstance()->addListener(this);
-	ClientManager::HubInfoArray hubInfo;
-	ClientManager::getConnectedHubInfo(hubInfo);
+	vector<ClientBasePtr> hubs;
+	ClientManager::getConnectedHubs(hubs);
 	if (useDHT)
 		onHubAdded(new HubInfo(dht::NetworkName, TSTRING(DHT), false));
-	for (const auto& hub : hubInfo)
-		onHubAdded(new HubInfo(hub.url, Text::toT(hub.name), hub.isOp));
+	for (const ClientBasePtr& clientBase : hubs)
+	{
+		const Client* client = static_cast<Client*>(clientBase.get());
+		onHubAdded(new HubInfo(client->getHubUrl(), Text::toT(client->getHubName()), client->getMyIdentity().isOp()));
+	}
 }
 
 void SearchFrame::updateWaitingTime()
@@ -3177,6 +3183,33 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 			if (!si->m_is_torrent)
 #endif
 			{
+				if (column == COLUMN_NICK)
+				{
+					const tstring& text = si->getText(COLUMN_NICK);
+					const UserPtr& user = si->getUser();
+					int icon = user->isOnline() ? 0 : 2;
+					auto userFlags = user->getFlags();
+#ifdef ENABLE_USER_TEXT_COLORS
+					COLORREF savedColor = cd->clrText;
+					if (userFlags & User::FAVORITE)
+					{
+						if (userFlags & User::BANNED)
+						{
+							icon += 3;
+							cd->clrText = SETTING(TEXT_ENEMY_FORE_COLOR);
+						}
+						else
+							cd->clrText = SETTING(FAVORITE_COLOR);
+					}
+#else
+					if (userFlags & User::BANNED) icon += 3;
+#endif
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_favUserImage.getIconList(), icon, text, false);
+#ifdef ENABLE_USER_TEXT_COLORS
+					cd->clrText = savedColor;
+#endif
+					return CDRF_SKIPDEFAULT;
+				}
 				if (column == COLUMN_P2P_GUARD)
 				{
 					si->sr.loadP2PGuard();
@@ -3186,7 +3219,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_userStateImage.getIconList(), text.empty() ? -1 : 3, text, false);
 					return CDRF_SKIPDEFAULT;
 				}
-				else if (column == COLUMN_LOCATION)
+				if (column == COLUMN_LOCATION)
 				{
 					si->sr.loadLocation();
 					si->colMask &= ~(1<<COLUMN_LOCATION);
@@ -3385,6 +3418,7 @@ void SearchFrame::clearFound()
 			delete *i;
 		}
 		everything.clear();
+		allUsers.clear();
 	}
 }
 
@@ -3492,13 +3526,18 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		}
 		if (autoSwitchToTTH)
 		{
-			//¬ диалоге поиска очень хорошо сделано, что при вставке хэша автоматически подставл€етс€ тип файла TTH. Ќо если после этого попробовать
-			//найти по имени, то приходитс€ убирать TTH вручную --> соответственно требуетс€ при несовпадении с шаблоном TTH ставить обратно "Ћюбой".
 			ctrlFiletype.SetCurSel(ctrlFiletype.FindStringExact(0, CTSTRING(ANY)));
 			autoSwitchToTTH = false;
 		}
 	}
 	return 0;
+}
+
+void SearchFrame::onUserUpdated(const UserPtr& user) noexcept
+{
+	LOCK(csEverything);
+	if (allUsers.find(user) != allUsers.end())
+		updateList = true;
 }
 
 void SearchFrame::on(SettingsManagerListener::Repaint)

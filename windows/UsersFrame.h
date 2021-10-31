@@ -41,7 +41,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 {
 	public:	
 		UsersFrame();
-		~UsersFrame() { images.Destroy(); }
 
 		UsersFrame(const UsersFrame&) = delete;
 		UsersFrame& operator= (const UsersFrame&) = delete;
@@ -192,7 +191,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		typedef TypedListViewCtrl<ItemInfo, IDC_USERS> UserInfoList;
 		UserInfoList ctrlUsers;
 		IgnoredUsersWindow ctrlIgnored;
-		CImageList images;
 		bool startup;
 		OMenu copyMenu;
 		int barHeight;

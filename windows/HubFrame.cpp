@@ -2215,7 +2215,6 @@ void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user
 		return;
 	++asyncUpdate;
 	user.user->setFlag(User::ATTRIBS_CHANGED);
-	resortForFavsFirst();
 }
 
 void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept

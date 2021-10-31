@@ -193,25 +193,15 @@ bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
 	return false;
 }
 
-void ClientManager::getConnectedHubUrls(StringList& out)
+void ClientManager::getConnectedHubs(vector<ClientBasePtr>& out)
 {
 	READ_LOCK(*g_csClients);
+	out.reserve(g_clients.size());
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		const Client* c = static_cast<const Client*>(i->second.get());
 		if (c->isConnected())
-			out.push_back(c->getHubUrl());
-	}
-}
-
-void ClientManager::getConnectedHubInfo(HubInfoArray& out)
-{
-	READ_LOCK(*g_csClients);
-	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-	{
-		const Client* c = static_cast<const Client*>(i->second.get());
-		if (c->isConnected())
-			out.push_back(HubInfo{c->getHubUrl(), c->getHubName(), c->getMyIdentity().isOp()});
+			out.push_back(i->second);
 	}
 }
 

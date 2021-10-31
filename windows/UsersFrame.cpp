@@ -87,8 +87,7 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
 	ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
-	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
-	ctrlUsers.SetImageList(images, LVSIL_SMALL);
+	ctrlUsers.SetImageList(g_favUserImage.getIconList(), LVSIL_SMALL);
 	setListViewColors(ctrlUsers);
 	WinUtil::setExplorerTheme(ctrlUsers);
 	

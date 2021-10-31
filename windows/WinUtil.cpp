@@ -382,6 +382,7 @@ void WinUtil::init(HWND hWnd)
 	g_trackerImage.init();
 	g_genderImage.init();
 	g_favImage.init();
+	g_favUserImage.init();
 	
 	Colors::init();
 	Fonts::init();

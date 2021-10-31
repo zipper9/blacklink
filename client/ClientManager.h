@@ -33,22 +33,13 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		friend class SpyFrame;
 
 	public:
-		struct HubInfo
-		{
-			string url;
-			string name;
-			bool isOp;
-		};
-		typedef std::vector<HubInfo> HubInfoArray;
-
 		ClientBasePtr getClient(const string& hubURL);
 		void putClient(const ClientBasePtr& cb);
 		static void prepareClose();
 		static StringList getHubs(const CID& cid, const string& hintUrl);
 		static StringList getHubNames(const CID& cid, const string& hintUrl);
 		static StringList getNicks(const CID& cid, const string& hintUrl);
-		static void getConnectedHubInfo(HubInfoArray& out);
-		static void getConnectedHubUrls(StringList& out);
+		static void getConnectedHubs(vector<ClientBasePtr>& out);
 		static size_t getTotalUsers();
 		static StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);

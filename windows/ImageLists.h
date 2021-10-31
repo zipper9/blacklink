@@ -139,11 +139,18 @@ class FavImage : public BaseImageList
 		void init();
 };
 
+class FavUserImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern TrackerImage g_trackerImage;
 extern GenderImage g_genderImage;
 extern FavImage g_favImage;
+extern FavUserImage g_favUserImage;
 
 class TransferTreeImage : public BaseImageList
 {

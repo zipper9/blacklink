@@ -15,6 +15,7 @@ FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
 VideoImage g_videoImage;
 FavImage g_favImage;
+FavUserImage g_favUserImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -247,6 +248,11 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 void FavImage::init()
 {
 	ResourceLoader::LoadImageList(IDR_FAVORITE, images, 16, 16);
+}
+
+void FavUserImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
 }
 
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)

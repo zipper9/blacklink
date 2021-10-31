@@ -41,7 +41,9 @@
 
 class HIconWrapper;
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
-	private SearchManagerListener, private ClientManagerListener,
+	private SearchManagerListener,
+	private ClientManagerListener,
+	private FavoriteManagerListener,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener,
 	private TimerHelper,
@@ -537,6 +539,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		vector<SearchInfo*> results;
 #endif
 		std::unordered_set<SearchInfo*> everything;
+		std::unordered_set<UserPtr> allUsers;
 		FastCriticalSection csEverything;
 
 		void clearFound();
@@ -649,6 +652,14 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				speak(HUB_REMOVED, c);
 			}
 		}
+		void on(UserConnected, const UserPtr& user) noexcept override { onUserUpdated(user); }
+		void on(UserDisconnected, const UserPtr& user) noexcept override { onUserUpdated(user); }
+
+		// FavoriteManagerListener
+		void on(UserAdded, const FavoriteUser& user) noexcept override { onUserUpdated(user.user); }
+		void on(UserRemoved, const FavoriteUser& user) noexcept override { onUserUpdated(user.user); }
+		void on(UserStatusChanged, const UserPtr& user) noexcept override { onUserUpdated(user); }
+
 		void on(SettingsManagerListener::Repaint) override;
 		
 		void initHubs();
@@ -656,6 +667,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void onHubAdded(HubInfo* info);
 		void onHubChanged(HubInfo* info);
 		void onHubRemoved(HubInfo* info);
+		void onUserUpdated(const UserPtr& user) noexcept;
 		bool matchFilter(const SearchInfo* si, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		void removeSearchInfo(SearchInfo* si);
@@ -663,7 +675,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void updateSearchList(SearchInfo* si = nullptr);
 		void updateResultCount();
 		void updateStatusLine(uint64_t tick);
-	
+
 		void addSearchResult(SearchInfo* si);
 		bool isSkipSearchResult(SearchInfo* si);
 		

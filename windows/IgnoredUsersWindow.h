@@ -14,7 +14,6 @@ class IgnoredUsersWindow : public CWindowImpl<IgnoredUsersWindow>
 		DECLARE_WND_CLASS_EX(_T("IgnoredUsersWindow"), CS_HREDRAW | CS_VREDRAW, COLOR_3DFACE);
 
 		IgnoredUsersWindow() : xdu(0), ydu(0) {}
-		~IgnoredUsersWindow() { images.Destroy(); }
 
 		IgnoredUsersWindow(const IgnoredUsersWindow&) = delete;
 		IgnoredUsersWindow& operator= (const IgnoredUsersWindow&) = delete;
@@ -48,7 +47,6 @@ class IgnoredUsersWindow : public CWindowImpl<IgnoredUsersWindow>
 
 	private:
 		ExListViewCtrl ctrlIgnored;
-		CImageList images;
 		CButton ctrlAdd;
 		CButton ctrlRemove;
 		CButton ctrlClear;
