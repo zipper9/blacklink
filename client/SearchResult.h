@@ -123,7 +123,9 @@ class SearchResult : public SearchResultCore
 			FLAG_SHARED            = 0x02,
 			FLAG_QUEUED            = 0x04,
 			FLAG_DOWNLOADED        = 0x08,
-			FLAG_DOWNLOAD_CANCELED = 0x10
+			FLAG_DOWNLOAD_CANCELED = 0x10,
+
+			FLAG_MASK_FIXED_TEXT_COLOR = FLAG_SHARED | FLAG_DOWNLOADED | FLAG_DOWNLOAD_CANCELED | FLAG_QUEUED
 		};
 
 		SearchResult() : flags(0), token(uint32_t (-1)), ip{0}
