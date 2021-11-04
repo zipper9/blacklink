@@ -841,8 +841,15 @@ static void getShareGroup(const UserConnection* source, bool& hideShare, CID& sh
 		auto fm = FavoriteManager::getInstance();
 		FavoriteUser::MaskType flags;
 		int uploadLimit;
-		if (fm->getFavUserParam(source->getUser(), flags, uploadLimit, shareGroup) && !shareGroup.isZero())
-			return;
+		if (fm->getFavUserParam(source->getUser(), flags, uploadLimit, shareGroup))
+		{
+			if (flags & FavoriteUser::FLAG_HIDE_SHARE)
+			{
+				hideShare = true;
+				return;
+			}
+			if (!shareGroup.isZero()) return;
+		}
 		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(source->getHintedUser().hint);
 		if (fhe)
 		{

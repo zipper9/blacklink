@@ -382,6 +382,9 @@
     <ClCompile Include="windows\IgnoredUsersWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\ShareGroupList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -901,6 +904,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\CompiledDateTime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ShareGroupList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

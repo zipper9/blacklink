@@ -365,6 +365,7 @@ class Client : public ClientBase,
 			return randomTempNick;
 		}
 
+		bool getHideShare() const { return hideShare; }
 		const CID& getShareGroup() const { return shareGroup; }
 		void getUserCommands(vector<UserCommand>& result) const;
 

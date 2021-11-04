@@ -7,8 +7,7 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "../client/Text.h"
-#include "../client/CID.h"
+#include "ShareGroupList.h"
 
 class FavUserDlg: public CDialogImpl<FavUserDlg>
 {
@@ -33,17 +32,9 @@ class FavUserDlg: public CDialogImpl<FavUserDlg>
 		CEdit ctrlSpeedValue;
 		CComboBox ctrlShareGroup;
 		CComboBox ctrlPMHandling;
+		ShareGroupList shareGroups;
 
 		void updateSpeedCtrl();
-
-		struct ShareGroupInfo
-		{
-			CID id;
-			tstring name;
-			int def;
-		};
-
-		vector<ShareGroupInfo> shareGroups;
 
 	public:
 		tstring title;

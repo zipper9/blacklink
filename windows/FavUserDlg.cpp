@@ -2,7 +2,6 @@
 #include "FavUserDlg.h"
 #include "WinUtil.h"
 #include "../client/FavoriteUser.h"
-#include "../client/ShareManager.h"
 #include "../client/Util.h"
 
 static const WinUtil::TextItem texts[] =
@@ -60,28 +59,8 @@ LRESULT FavUserDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	updateSpeedCtrl();
 
 	ctrlShareGroup.Attach(GetDlgItem(IDC_SHARE_GROUP));
-	vector<ShareManager::ShareGroupInfo> smGroups;
-	ShareManager::getInstance()->getShareGroups(smGroups);
-	shareGroups.clear();
-	shareGroups.emplace_back(ShareGroupInfo{CID(), TSTRING(SHARE_GROUP_DEFAULT), 0});
-	for (const auto& sg : smGroups)
-		shareGroups.emplace_back(ShareGroupInfo{sg.id, Text::toT(sg.name), 1});
-	sort(shareGroups.begin(), shareGroups.end(),
-		[](const ShareGroupInfo& a, const ShareGroupInfo& b)
-		{
-			if (a.def != b.def) return a.def < b.def;
-			return stricmp(a.name, b.name) < 0;
-		});
-	selIndex = 0;
-	bool shareGroupSet = !shareGroup.isZero();
-	for (int i = 0; i < (int) shareGroups.size(); ++i)
-	{
-		const auto& sg = shareGroups[i];
-		ctrlShareGroup.AddString(sg.name.c_str());
-		if (shareGroupSet && sg.def == 1 && shareGroup == sg.id)
-			selIndex = i;
-	}
-	ctrlShareGroup.SetCurSel(selIndex);
+	shareGroups.init();
+	shareGroups.fillCombo(ctrlShareGroup, shareGroup, (flags & FavoriteUser::FLAG_HIDE_SHARE) != 0);
 
 	ctrlPMHandling.Attach(GetDlgItem(IDC_PM_HANDLING));
 	ctrlPMHandling.AddString(CTSTRING(NORMAL));
@@ -148,8 +127,13 @@ LRESULT FavUserDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 			}
 		}
 		int selIndex = ctrlShareGroup.GetCurSel();
-		if (selIndex >= 0 && selIndex < (int) shareGroups.size())
-			shareGroup = shareGroups[selIndex].id;
+		if (selIndex >= 0 && selIndex < (int) shareGroups.v.size())
+		{
+			const auto& sg = shareGroups.v[selIndex];
+			if (sg.def == ShareGroupList::HIDE_SHARE_DEF)
+				flags |= FavoriteUser::FLAG_HIDE_SHARE;
+			shareGroup = sg.id;
+		}
 		else
 			shareGroup.init();
 	}

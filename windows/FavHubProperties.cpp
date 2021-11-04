@@ -22,7 +22,6 @@
 #include "FavHubProperties.h"
 #include "KnownClients.h"
 #include "DialogLayout.h"
-#include "../client/ShareManager.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -280,9 +279,9 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		entry->setEmail(Text::fromT(buf));
 
 		int shareGroupIndex = tabIdent.ctrlShareGroup.GetCurSel();
-		const FavoriteHubTabIdent::ShareGroupInfo& sg = tabIdent.shareGroups[shareGroupIndex];
+		const auto& sg = tabIdent.shareGroups.v[shareGroupIndex];
 		entry->setShareGroup(sg.id);
-		entry->setHideShare(sg.def == 1);
+		entry->setHideShare(sg.def == ShareGroupList::HIDE_SHARE_DEF);
 
 		entry->setShowJoins(tabOptions.ctrlShowJoins.GetCheck() == BST_CHECKED);
 		entry->setExclChecks(tabOptions.ctrlExclChecks.GetCheck() == BST_CHECKED);
@@ -413,7 +412,7 @@ LRESULT FavoriteHubTabIdent::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 
 	ctrlNick.Attach(GetDlgItem(IDC_HUBNICK));
 	ctrlNick.SetWindowText(Text::toT(entry->getNick(false)).c_str());
-	
+
 	ctrlPassword.Attach(GetDlgItem(IDC_HUBPASS));
 	ctrlPassword.SetWindowText(Text::toT(entry->getPassword()).c_str());
 
@@ -427,31 +426,8 @@ LRESULT FavoriteHubTabIdent::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlAwayMsg.SetWindowText(Text::toT(entry->getAwayMsg()).c_str());
 
 	ctrlShareGroup.Attach(GetDlgItem(IDC_SHARE_GROUP));
-	vector<ShareManager::ShareGroupInfo> smGroups;
-	ShareManager::getInstance()->getShareGroups(smGroups);
-	shareGroups.clear();
-	shareGroups.emplace_back(ShareGroupInfo{CID(), TSTRING(SHARE_GROUP_DEFAULT), 0});
-	shareGroups.emplace_back(ShareGroupInfo{CID(), TSTRING(SHARE_GROUP_NOTHING), 1});
-	for (const auto& sg : smGroups)
-		shareGroups.emplace_back(ShareGroupInfo{sg.id, Text::toT(sg.name), 2});
-	sort(shareGroups.begin(), shareGroups.end(),
-		[](const ShareGroupInfo& a, const ShareGroupInfo& b)
-		{
-			if (a.def != b.def) return a.def < b.def;
-			return stricmp(a.name, b.name) < 0;
-		});
-
-	int selIndex = -1;
-	for (int i = 0; i < (int) shareGroups.size(); ++i)
-	{
-		const auto& sg = shareGroups[i];
-		ctrlShareGroup.AddString(sg.name.c_str());
-		if (selIndex < 0 && sg.def == 2 && entry->getShareGroup() == sg.id)
-			selIndex = i;
-	}
-	if (entry->getHideShare()) selIndex = 1;
-	if (selIndex < 0) selIndex = 0;
-	ctrlShareGroup.SetCurSel(selIndex);
+	shareGroups.init();
+	shareGroups.fillCombo(ctrlShareGroup, entry->getShareGroup(), entry->getHideShare());
 
 	ctrlClientId.Attach(GetDlgItem(IDC_CLIENT_ID_BOX));
 	for (size_t i = 0; KnownClients::clients[i].name; ++i)

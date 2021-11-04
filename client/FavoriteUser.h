@@ -41,7 +41,8 @@ class FavoriteUser : public Flags
 			FLAG_NONE           = 0,
 			FLAG_GRANT_SLOT     = 1,
 			FLAG_IGNORE_PRIVATE = 2,
-			FLAG_FREE_PM_ACCESS = 4
+			FLAG_FREE_PM_ACCESS = 4,
+			FLAG_HIDE_SHARE     = 8
 		};
 		
 		static const Flags PM_FLAGS_MASK = Flags(FLAG_IGNORE_PRIVATE | FLAG_FREE_PM_ACCESS);

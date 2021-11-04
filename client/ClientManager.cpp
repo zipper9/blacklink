@@ -883,13 +883,21 @@ void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const
 		Speaker<ClientManagerListener>::fly_fire5(ClientManagerListener::IncomingSearch(), protocol, seeker, hub, filter, reply);
 }
 
-static void getShareGroup(const OnlineUserPtr& ou, CID& shareGroup)
+static void getShareGroup(const OnlineUserPtr& ou, bool& hideShare, CID& shareGroup)
 {
+	hideShare = false;
 	auto fm = FavoriteManager::getInstance();
 	FavoriteUser::MaskType flags;
 	int uploadLimit;
-	if (fm->getFavUserParam(ou->getUser(), flags, uploadLimit, shareGroup) && !shareGroup.isZero())
-		return;
+	if (fm->getFavUserParam(ou->getUser(), flags, uploadLimit, shareGroup))
+	{
+		if (flags & FavoriteUser::FLAG_HIDE_SHARE)
+		{
+			hideShare = true;
+			return;
+		}
+		if (!shareGroup.isZero()) return;
+	}
 	const ClientBasePtr& cb = ou->getClientBase();
 	if (cb->getType() == ClientBase::TYPE_DHT)
 	{
@@ -897,6 +905,7 @@ static void getShareGroup(const OnlineUserPtr& ou, CID& shareGroup)
 		return;
 	}
 	Client* client = static_cast<Client*>(cb.get());
+	hideShare = client->getHideShare();
 	shareGroup = client->getShareGroup();
 }
 
@@ -905,11 +914,14 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	bool isUdpActive = ou->getIdentity().isUdpActive();
 	const IpAddress hubIp = c->getIp();
 	int hubPort = c->getPort();
+	bool hideShare;
 	CID shareGroup;
-	getShareGroup(ou, shareGroup);
+	getShareGroup(ou, hideShare, shareGroup);
 	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE, shareGroup);
 	ClientManagerListener::SearchReply re;
-	if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
+	if (hideShare)
+		re = ClientManagerListener::SEARCH_MISS;
+	else if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 		re = ClientManagerListener::SEARCH_MISS;
 	else
 		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIp, hubPort);

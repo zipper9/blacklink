@@ -23,8 +23,8 @@
 #include <atlwin.h>
 #include <atlcrack.h>
 #include <atlctrls.h>
-#include "typedefs.h"
 #include "resource.h"
+#include "ShareGroupList.h"
 
 class FavoriteHubEntry;
 
@@ -83,14 +83,7 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 		CComboBox ctrlShareGroup;
 		CComboBox ctrlClientId;
 
-		struct ShareGroupInfo
-		{
-			CID id;
-			tstring name;
-			int def;
-		};
-
-		vector<ShareGroupInfo> shareGroups;
+		ShareGroupList shareGroups;
 };
 
 class FavoriteHubTabOptions : public CDialogImpl<FavoriteHubTabOptions>

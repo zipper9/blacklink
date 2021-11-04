@@ -493,6 +493,9 @@ void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 	else
 		columns[COLUMN_PM_HANDLING].clear();
 	columns[COLUMN_SPEED_LIMIT] = Text::toT(UserInfo::getSpeedLimitText(speedLimit));
+	if (flags & FavoriteUser::FLAG_HIDE_SHARE)
+		columns[COLUMN_SHARE_GROUP] = TSTRING(SHARE_GROUP_NOTHING);
+	else
 	if (!u.shareGroup.isZero())
 	{
 		string name;

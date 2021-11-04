@@ -854,6 +854,7 @@
     <ClCompile Include="windows\SearchDlg.cpp" />
     <ClCompile Include="windows\SearchFrm.cpp" />
     <ClCompile Include="windows\SearchPage.cpp" />
+    <ClCompile Include="windows\ShareGroupList.cpp" />
     <ClCompile Include="windows\ShareMiscPage.cpp" />
     <ClCompile Include="windows\ShellContextMenu.cpp" />
     <ClCompile Include="windows\SlotPage.cpp" />
@@ -989,6 +990,7 @@
     <ClInclude Include="windows\RichTextLabel.h" />
     <ClInclude Include="windows\SearchDlg.h" />
     <ClInclude Include="windows\SearchPage.h" />
+    <ClInclude Include="windows\ShareGroupList.h" />
     <ClInclude Include="windows\ShareMiscPage.h" />
     <ClInclude Include="windows\ShellContextMenu.h" />
     <ClInclude Include="windows\SoundsPage.h" />

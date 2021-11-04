@@ -920,7 +920,9 @@ void FavoriteManager::saveFavorites()
 						xml.addChildAttrib("Encoding", encoding);
 				}
 				const CID& shareGroup = (*i)->getShareGroup();
-				if (!shareGroup.isZero())
+				if ((*i)->getHideShare())
+					xml.addChildAttrib("HideShare", true);
+				else if (!shareGroup.isZero())
 					xml.addChildAttrib("ShareGroup", shareGroup.toBase32());
 				xml.addChildAttribIfNotEmpty("AwayMsg", (*i)->getAwayMsg());
 				xml.addChildAttribIfNotEmpty("Email", (*i)->getEmail());
@@ -930,8 +932,6 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("WindowSizeY", (*i)->getWindowSizeY());
 				xml.addChildAttrib("WindowType", (*i)->getWindowType());
 				xml.addChildAttrib("ChatUserSplitSize", (*i)->getChatUserSplit());
-				if ((*i)->getHideShare())
-					xml.addChildAttrib("HideShare", true);
 				if ((*i)->getShowJoins())
 					xml.addChildAttrib("ShowJoins", true);
 				if ((*i)->getExclChecks())
@@ -1004,7 +1004,9 @@ void FavoriteManager::saveFavorites()
 					xml.addChildAttrib("LastSeen", u.lastSeen);
 				if (u.isSet(FavoriteUser::FLAG_GRANT_SLOT))
 					xml.addChildAttrib("GrantSlot", true);
-				if (!u.shareGroup.isZero())
+				if (u.isSet(FavoriteUser::FLAG_HIDE_SHARE))
+					xml.addChildAttrib("HideShare", true);
+				else if (!u.shareGroup.isZero())
 					xml.addChildAttrib("ShareGroup", u.shareGroup.toBase32());
 				if (u.uploadLimit == FavoriteUser::UL_SU)
 					xml.addChildAttrib("SuperUser", true);
@@ -1367,9 +1369,14 @@ void FavoriteManager::load(SimpleXML& xml)
 			if (xml.getBoolChildAttrib("GrantSlot"))
 				user.setFlag(FavoriteUser::FLAG_GRANT_SLOT);
 
-			const string& shareGroup = xml.getChildAttrib("ShareGroup");
-			if (shareGroup.length() == 39)
-				user.shareGroup.fromBase32(shareGroup);
+			if (!xml.getBoolChildAttrib("HideShare"))
+			{
+				const string& shareGroup = xml.getChildAttrib("ShareGroup");
+				if (shareGroup.length() == 39)
+					user.shareGroup.fromBase32(shareGroup);
+			}
+			else
+				user.setFlag(FavoriteUser::FLAG_HIDE_SHARE);
 			
 			user.lastSeen = xml.getInt64ChildAttrib("LastSeen");
 			user.description = xml.getChildAttrib("UserDescription");
