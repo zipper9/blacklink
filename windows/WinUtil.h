@@ -229,9 +229,9 @@ class WinUtil
 		//returns the position where the context menu should be
 		//opened if it was invoked from the keyboard.
 		//aPt is relative to the screen not the control.
-		static void getContextMenuPos(CListViewCtrl& aList, POINT& aPt);
-		static void getContextMenuPos(CTreeViewCtrl& aTree, POINT& aPt);
-		static void getContextMenuPos(CEdit& aEdit,         POINT& aPt);
+		static void getContextMenuPos(const CListViewCtrl& list, POINT& pt);
+		static void getContextMenuPos(const CTreeViewCtrl& tree, POINT& pt);
+		static void getContextMenuPos(const CEdit& edit, POINT& pt);
 		
 		static bool getUCParams(HWND parent, const UserCommand& cmd, StringMap& sm);
 		
@@ -369,6 +369,9 @@ class WinUtil
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
 		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
+
+	public:
+		static const GUID guidGetTTH;
 };
 
 class LastDir

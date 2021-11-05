@@ -2069,7 +2069,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir, WinUtil::getFileMaskString(WinUtil::allFilesMask).c_str()))
+	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir, WinUtil::getFileMaskString(WinUtil::allFilesMask).c_str(), nullptr, &WinUtil::guidGetTTH))
 	{
 		FileHashDlg dlg(g_iconBitmaps.getIcon(IconBitmaps::TTH, 0));
 		dlg.filename = std::move(file);

@@ -1229,8 +1229,6 @@ void QueueManager::addDirectory(const string& dir, const UserPtr& user, const st
 			directories.emplace(make_pair(user, DirectoryItem(user, dir, target, p, flag)));
 		}
 
-		setDirty();
-
 		try
 		{
 			addList(user, flag | QueueItem::FLAG_PARTIAL_LIST, dir);

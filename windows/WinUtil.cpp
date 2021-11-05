@@ -84,6 +84,8 @@ bool WinUtil::magnetHandlerRegistered = false;
 bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
 
+const GUID WinUtil::guidGetTTH = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x96 } };
+
 HLSCOLOR RGB2HLS(COLORREF rgb)
 {
 	unsigned char minval = min(GetRValue(rgb), min(GetGValue(rgb), GetBValue(rgb)));
@@ -981,7 +983,7 @@ static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
 	return result;
 }
 
-static const TCHAR* dcLstNames[] = { _T("DcLst metafile"), _T(".dclst"), _T(".dcls"), nullptr };
+static const TCHAR* dcLstNames[] = { _T("DcLst download list"), _T(".dclst"), _T(".dcls"), nullptr };
 
 void WinUtil::registerDclstHandler()
 {
@@ -1299,54 +1301,47 @@ pair<tstring, bool> WinUtil::getHubNames(const HintedUser& user)
 	return getHubNames(user.user, user.hint);
 }
 
-void WinUtil::getContextMenuPos(CListViewCtrl& aList, POINT& aPt)
+void WinUtil::getContextMenuPos(const CListViewCtrl& list, POINT& pt)
 {
-	int pos = aList.GetNextItem(-1, LVNI_SELECTED | LVNI_FOCUSED);
+	int pos = list.GetNextItem(-1, LVNI_SELECTED | LVNI_FOCUSED);
 	if (pos >= 0)
 	{
-		CRect lrc;
-		aList.GetItemRect(pos, &lrc, LVIR_LABEL);
-		aPt.x = lrc.left;
-		aPt.y = lrc.top + (lrc.Height() / 2);
+		CRect rc;
+		list.GetItemRect(pos, &rc, LVIR_LABEL);
+		pt.x = rc.left;
+		pt.y = rc.top + rc.Height() / 2;
 	}
 	else
-	{
-		aPt.x = aPt.y = 0;
-	}
-	aList.ClientToScreen(&aPt);
+		pt.x = pt.y = 0;
+	list.ClientToScreen(&pt);
 }
 
-void WinUtil::getContextMenuPos(CTreeViewCtrl& aTree, POINT& aPt)
+void WinUtil::getContextMenuPos(const CTreeViewCtrl& tree, POINT& pt)
 {
-	CRect trc;
-	HTREEITEM ht = aTree.GetSelectedItem();
+	CRect rc;
+	HTREEITEM ht = tree.GetSelectedItem();
 	if (ht)
 	{
-		aTree.GetItemRect(ht, &trc, TRUE);
-		aPt.x = trc.left;
-		aPt.y = trc.top + (trc.Height() / 2);
+		tree.GetItemRect(ht, &rc, TRUE);
+		pt.x = rc.left;
+		pt.y = rc.top + rc.Height() / 2;
 	}
 	else
-	{
-		aPt.x = aPt.y = 0;
-	}
-	aTree.ClientToScreen(&aPt);
+		pt.x = pt.y = 0;
+	tree.ClientToScreen(&pt);
 }
-void WinUtil::getContextMenuPos(CEdit& aEdit, POINT& aPt)
+
+void WinUtil::getContextMenuPos(const CEdit& edit, POINT& pt)
 {
-	CRect erc;
-	aEdit.GetRect(&erc);
-	aPt.x = erc.Width() / 2;
-	aPt.y = erc.Height() / 2;
-	aEdit.ClientToScreen(&aPt);
+	CRect rc;
+	edit.GetRect(&rc);
+	pt.x = rc.Width() / 2;
+	pt.y = rc.Height() / 2;
+	edit.ClientToScreen(&pt);
 }
 
 void WinUtil::openFolder(const tstring& file)
 {
-	/* TODO: needs test in last wine!
-	if (CompatibilityManager::isWine()) // [+]IRainman
-	    ::ShellExecute(NULL, NULL, Text::toT(Util::getFilePath(ii->entry->getTarget())).c_str(), NULL, NULL, SW_SHOWNORMAL);
-	*/
 	if (File::isExist(file))
 		::ShellExecute(NULL, NULL, _T("explorer.exe"), (_T("/e, /select, \"") + file + _T('\"')).c_str(), NULL, SW_SHOWNORMAL);
 	else
@@ -1365,28 +1360,20 @@ void WinUtil::openLog(const string& dir, const StringMap& params, const tstring&
 bool WinUtil::shutDown(int action)
 {
 	// Prepare for shutdown
-	
-	// [-] IRainman old code:
-	//UINT iForceIfHung = 0;
-	//OSVERSIONINFO osvi = {0};
-	//osvi.dwOSVersionInfoSize = sizeof(osvi);
-	//if (GetVersionEx(&osvi) != 0 && osvi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-	//{
-	UINT iForceIfHung = 0x00000010;
+	static const UINT forceIfHung = 0x00000010;
 	HANDLE hToken;
 	OpenProcessToken(GetCurrentProcess(), (TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY), &hToken);
-	
+
 	LUID luid;
 	LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME, &luid);
-	
+
 	TOKEN_PRIVILEGES tp;
 	tp.PrivilegeCount = 1;
 	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 	tp.Privileges[0].Luid = luid;
 	AdjustTokenPrivileges(hToken, FALSE, &tp, 0, (PTOKEN_PRIVILEGES)NULL, (PDWORD)NULL);
 	CloseHandle(hToken);
-	//}
-	
+
 	// Shutdown
 	switch (action)
 	{
@@ -1427,14 +1414,7 @@ bool WinUtil::shutDown(int action)
 		}
 	}
 	
-	if (ExitWindowsEx(action | iForceIfHung, 0) == 0)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
+	return ExitWindowsEx(action | forceIfHung, 0) != 0;
 }
 
 void WinUtil::activateMDIChild(HWND hWnd)
@@ -1724,12 +1704,10 @@ bool WinUtil::isAutoRunShortcutExists()
 
 tstring WinUtil::getAutoRunShortcutName()
 {
-	// Name: {userstartup}\FlylinkDC++{code:Postfix| }; Filename: {app}\FlylinkDC{code:Postfix|_}.exe; Tasks: startup; WorkingDir: {app}
-	// CSIDL_STARTUP
 	TCHAR startupPath[MAX_PATH];
 	if (!SHGetSpecialFolderPath(NULL, startupPath, CSIDL_STARTUP, TRUE))
 		return Util::emptyStringT;
-		
+
 	tstring result = startupPath;
 	Util::appendPathSeparator(result);
 	result += getAppNameT();

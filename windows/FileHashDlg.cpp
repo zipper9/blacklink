@@ -53,7 +53,7 @@ LRESULT FileHashDlg::OnCloseCmd(WORD, WORD wID, HWND, BOOL&)
 LRESULT FileHashDlg::OnOpen(WORD, WORD, HWND, BOOL&)
 {
 	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, false, lastDir, WinUtil::getFileMaskString(WinUtil::allFilesMask).c_str()))
+	if (WinUtil::browseFile(file, m_hWnd, false, lastDir, WinUtil::getFileMaskString(WinUtil::allFilesMask).c_str(), nullptr, &WinUtil::guidGetTTH))
 	{
 		stopThread();
 		filename = std::move(file);

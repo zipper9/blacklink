@@ -191,7 +191,7 @@ static int getControlType(HWND hwnd, int& drawFlags)
 	return type;
 }
 
-static void alignHorizontal(DialogInfo& di, ItemInfo* ii, RECT* groups, int i, const Align* align, int side)
+static void alignHorizontal(DialogInfo& di, ItemInfo* ii, const RECT* groups, int i, const Align* align, int side)
 {
 	dcassert(align->side == SIDE_LEFT || align->side == SIDE_RIGHT);
 	int x;
@@ -222,7 +222,7 @@ static void alignHorizontal(DialogInfo& di, ItemInfo* ii, RECT* groups, int i, c
 	}
 }
 
-static void alignVertical(DialogInfo& di, ItemInfo* ii, RECT* groups, int i, const Align* align, int side)
+static void alignVertical(DialogInfo& di, ItemInfo* ii, const RECT* groups, int i, const Align* align, int side)
 {
 	dcassert(align->side == SIDE_TOP || align->side == SIDE_BOTTOM);
 	int y;
