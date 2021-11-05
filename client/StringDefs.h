@@ -654,6 +654,7 @@ enum Strings   // @DontAdd
 	MAIN_WINDOW_CREATION_FAILED, // "Main window creation failed!\n"
 	MANAGE, // "Manage"
 	MANAGE_GROUPS, // "Manage groups"
+	MARK_AS_DOWNLOADED, // "Mark as downloaded"
 	MATCH, // "Match"
 	MATCHED_FILES_FMT, // "Matched %1% file(s)"
 	MATCH_QUEUE, // "Match queue"

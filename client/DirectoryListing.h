@@ -90,10 +90,6 @@ class DirectoryListing : public UserInfoBase
 				{
 				}
 
-				~File()
-				{
-				}
-
 				bool match(const SearchQuery &sq) const;
 
 				const string& getName() const { return name; }	
@@ -169,6 +165,7 @@ class DirectoryListing : public UserInfoBase
 				uint16_t getMaxBirate() const { return maxBitrate; }
 
 				static void updateInfo(DirectoryListing::Directory* dir);
+				static void updateFlags(DirectoryListing::Directory* dir);
 				void addFile(DirectoryListing::File *f);
 
 				Directory(const Directory &) = delete;
@@ -188,6 +185,7 @@ class DirectoryListing : public UserInfoBase
 
 				void updateSubDirs(Flags::MaskType& updatedFlags);
 				void updateFiles(Flags::MaskType& updatedFlags);
+				bool updateFlags();
 		
 				friend bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr);
 				friend class ListLoader;

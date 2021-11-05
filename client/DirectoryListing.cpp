@@ -636,7 +636,6 @@ void DirectoryListing::download(Directory* dir, const string& aTarget, QueueItem
 				LogManager::message("DirectoryListing::download - FileException:" + e.getError());
 			}
 		}
-		dir->setFlag(FLAG_HAS_QUEUED);
 	}
 }
 
@@ -647,6 +646,7 @@ void DirectoryListing::download(File* file, const string& target, bool view, Que
 	{
 		QueueManager::getInstance()->add(target, file->getSize(), file->getTTH(), getUser(), flags, prio, true, getConnFlag);
 		file->setFlag(FLAG_QUEUED);
+		file->getParent()->setFlag(FLAG_HAS_QUEUED);
 	}
 	catch (const Exception& e)
 	{
@@ -857,6 +857,38 @@ void DirectoryListing::Directory::updateFiles(Flags::MaskType& updatedFlags)
 	updatedFlags |= flags;
 }
 
+bool DirectoryListing::Directory::updateFlags()
+{
+	Flags::MaskType flags = getFlags() & (FLAG_FOUND | FLAG_HAS_FOUND);
+	for (auto i = files.cbegin(); i != files.cend(); i++)
+	{
+		const DirectoryListing::File *file = *i;
+		if (file->isSet(DirectoryListing::FLAG_QUEUED))
+			flags |= DirectoryListing::FLAG_HAS_QUEUED;
+		if (file->isSet(DirectoryListing::FLAG_SHARED))
+			flags |= DirectoryListing::FLAG_HAS_SHARED;
+		else
+		if (file->isSet(DirectoryListing::FLAG_DOWNLOADED))
+			flags |= DirectoryListing::FLAG_HAS_DOWNLOADED;
+		else
+		if (file->isSet(DirectoryListing::FLAG_CANCELED))
+			flags |= DirectoryListing::FLAG_HAS_CANCELED;
+		else
+			flags |= DirectoryListing::FLAG_HAS_OTHER;
+	}
+	for (auto i = directories.cbegin(); i != directories.cend(); i++)
+	{
+		const DirectoryListing::Directory *dir = *i;
+		if (dir->getAdls()) continue;
+		flags |= dir->getFlags() &
+			(DirectoryListing::FLAG_HAS_SHARED | DirectoryListing::FLAG_HAS_DOWNLOADED |
+			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER);
+	}
+	if (getFlags() == flags) return false;
+	setFlags(flags);
+	return true;
+}
+
 void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 {
 	for (;;)
@@ -895,6 +927,17 @@ void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 			dir->getFlags() != flags;
 		if (dir->getParent()) dir->setFlags(flags);
 		if (!update) break;
+	}
+}
+
+void DirectoryListing::Directory::updateFlags(DirectoryListing::Directory* dir)
+{
+	while (true)
+	{
+		DirectoryListing::Directory* p = dir->getParent();
+		if (!p) break;
+		if (!dir->updateFlags()) break;
+		dir = p;
 	}
 }
 

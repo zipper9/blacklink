@@ -101,7 +101,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		};
 		FileImage::TypeDirectoryImages GetTypeDirectory(const DirectoryListing::Directory* dir) const;
 
-		DirectoryListingFrame(const HintedUser& aUser, DirectoryListing *dl);
+		DirectoryListingFrame(const HintedUser& user, DirectoryListing *dl);
 		~DirectoryListingFrame();
 
 		static CFrameWndClassInfo& GetWndClassInfo();
@@ -146,6 +146,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_ADD_TO_FAVORITES, onAddToFavorites)
+		COMMAND_ID_HANDLER(IDC_MARK_AS_DOWNLOADED, onMarkAsDownloaded)
 		COMMAND_ID_HANDLER(IDC_PRIVATE_MESSAGE, onPM)
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopy);
 		COMMAND_ID_HANDLER(IDC_COPY_FILENAME, onCopy);
@@ -156,8 +157,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_PATH, onCopyFolder)
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_DIR_LIST, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
-		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDCLST)
-		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDCLST)
+		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDcLst)
+		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDcLst)
 		COMMAND_ID_HANDLER(IDC_SHOW_DUPLICATES, onShowDuplicates)
 		COMMAND_ID_HANDLER(IDC_GOTO_ORIGINAL, onGoToOriginal)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET + 1, IDC_DOWNLOAD_TARGET + LastDir::get().size(), onDownloadToLastDir)
@@ -216,6 +217,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGoToDirectory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickFiles(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
@@ -227,16 +229,16 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
-		LRESULT onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onGenerateDcLst(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onShowDuplicates(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGoToOriginal(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
-		void downloadList(const tstring& target, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
-		void downloadList(bool view = false, QueueItem::Priority prio = QueueItem::DEFAULT)
+		void downloadSelected(const tstring& target, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
+		void downloadSelected(bool view = false, QueueItem::Priority prio = QueueItem::DEFAULT)
 		{
-			downloadList(Util::emptyStringT, view, prio);
+			downloadSelected(Util::emptyStringT, view, prio);
 		}
 
 		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem, bool insertParent, const string& selPath = Util::emptyString);
@@ -326,7 +328,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		friend class ThreadedDirectoryListing;
 
-		static DirectoryListingFrame* openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults);
+		static DirectoryListingFrame* openWindow(DirectoryListing *dl, const HintedUser& user, int64_t speed, bool searchResults);
 		static DirectoryListingFrame* findFrameByID(uint64_t id);
 
 		void addToUserList(const UserPtr& user, bool isBrowsing);

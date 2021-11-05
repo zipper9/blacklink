@@ -1276,6 +1276,7 @@
 #define IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP 2363
 #define IDC_STATIC_GATEWAY              2367
 #define IDC_COPY_GEO_LOCATION           2373
+#define IDC_MARK_AS_DOWNLOADED          2374
 #define IDC_TRANSFER_TREE               2378
 #define IDC_COPY_TYPE                   2379
 #define IDC_SHARING_HASHING             2380
