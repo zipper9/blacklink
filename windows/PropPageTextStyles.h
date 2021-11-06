@@ -28,7 +28,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		COMMAND_HANDLER(IDC_THEME_COMBO2, CBN_SELCHANGE, onImport)
 		COMMAND_ID_HANDLER(IDC_BAN_COLOR, onSelectColor)
 		
-		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -43,7 +43,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		LRESULT onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClientSelectTabColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
-		LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+]NSL
 		
 		void setForeColor(CEdit& cs, COLORREF cr);
@@ -138,6 +138,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		void restoreSettings();
 		void refreshPreview();
 		void getThemeList();
+		void applyTabColor(int index);
 };
 
 #endif // _PROP_PAGE_TEXT_STYLES_H_

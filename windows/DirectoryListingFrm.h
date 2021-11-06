@@ -440,6 +440,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COLORREF colorDownloaded, colorDownloadedLighter;
 		COLORREF colorCanceled, colorCanceledLighter;
 		COLORREF colorFound, colorFoundLighter;
+		COLORREF colorContrastText;
 		COLORREF colorInQueue;
 
 		uint64_t loadStartTime;

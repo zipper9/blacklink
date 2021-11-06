@@ -70,6 +70,7 @@ SpyFrame::SpyFrame() :
 	memset(countPerSec, 0, sizeof(countPerSec));
 	colorShared = RGB(114,219,139);
 	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
+	colorContrastText = RGB(0,0,0);
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 
@@ -449,14 +450,8 @@ LRESULT SpyFrame::onLogToFile(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 
 void SpyFrame::on(SettingsManagerListener::Repaint)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
-		if (ctrlSearches.isRedraw())
-		{
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-		}
-	}
+	if (ctrlSearches.isRedraw())
+		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -471,13 +466,18 @@ LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		case CDDS_ITEMPREPAINT:
 		{
 			const ItemInfo* ii = reinterpret_cast<ItemInfo*>(cd->nmcd.lItemlParam);
-			bool force_text_Color = (ii->re == ClientManagerListener::SEARCH_HIT || ii->re == ClientManagerListener::SEARCH_PARTIAL_HIT);
-			cd->clrText = force_text_Color ? RGB(0,0,0) : Colors::g_textColor;
+			cd->clrText = Colors::g_textColor;
 			cd->clrTextBk = Colors::g_bgColor;
 			if (ii->re == ClientManagerListener::SEARCH_HIT)
+			{
 				cd->clrTextBk = colorShared;
+				cd->clrText = colorContrastText;
+			}
 			else if (ii->re == ClientManagerListener::SEARCH_PARTIAL_HIT)
+			{
 				cd->clrTextBk = colorSharedLighter;
+				cd->clrText = colorContrastText;
+			}
 			CustomDrawHelpers::startItemDraw(customDrawState, cd);
 			if (hTheme) CustomDrawHelpers::drawBackground(hTheme, customDrawState, cd);
 			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;

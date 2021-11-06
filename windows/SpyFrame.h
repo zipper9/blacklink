@@ -194,7 +194,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		
 		tstring searchString;
 
-		COLORREF colorShared, colorSharedLighter;
+		COLORREF colorShared, colorSharedLighter, colorContrastText;
 		
 		tstring logFilePath;
 		File* logFile;

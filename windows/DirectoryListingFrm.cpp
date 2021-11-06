@@ -233,6 +233,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	this->dl.reset(dl);
 	dl->setHintedUser(user);
 
+	colorContrastText = RGB(0,0,0);
 	colorShared = RGB(114,219,139);
 	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
 	colorDownloaded = RGB(145,194,196);
@@ -2112,10 +2113,11 @@ LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL
 
 void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	if (ctrlList.isRedraw())
 	{
-		if (ctrlList.isRedraw()) redraw();
+		ctrlTree.SetBkColor(Colors::g_bgColor);
+		ctrlTree.SetTextColor(Colors::g_textColor);
+		redraw();
 	}
 }
 
@@ -2193,59 +2195,77 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 
 void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
 {
-	fg = (flags & DirectoryListing::FLAG_MASK_FIXED_TEXT_COLOR_DIR) ? RGB(0,0,0) : ctrlTree.GetTextColor();
-	bg = ctrlTree.GetBkColor();
+	fg = Colors::g_textColor;
+	bg = Colors::g_bgColor;
 	if (flags & DirectoryListing::FLAG_FOUND)
-		bg = colorFound; else
-	if (flags & DirectoryListing::FLAG_HAS_FOUND)
-		bg = colorFoundLighter; else
-	if (flags & DirectoryListing::FLAG_HAS_SHARED)
 	{
+		fg = colorContrastText;
+		bg = colorFound;
+	}
+	else if (flags & DirectoryListing::FLAG_HAS_FOUND)
+	{
+		fg = colorContrastText;
+		bg = colorFoundLighter;	
+	}
+	else if (flags & DirectoryListing::FLAG_HAS_SHARED)
+	{
+		fg = colorContrastText;
 		if (flags & (DirectoryListing::FLAG_HAS_DOWNLOADED | DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER))
 			bg = colorSharedLighter;
 		else
 			bg = colorShared;
-	} else
-	if (flags & DirectoryListing::FLAG_HAS_DOWNLOADED)
+	}
+	else if (flags & DirectoryListing::FLAG_HAS_DOWNLOADED)
 	{
+		fg = colorContrastText;
 		if (flags & (DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER))
 			bg = colorDownloadedLighter;
 		else
 			bg = colorDownloaded;
-	} else
-	if (flags & DirectoryListing::FLAG_HAS_CANCELED)
+	}
+	else if (flags & DirectoryListing::FLAG_HAS_CANCELED)
 	{
+		fg = colorContrastText;
 		if (flags & DirectoryListing::FLAG_HAS_OTHER)
 			bg = colorCanceledLighter;
 		else
 			bg = colorCanceled;
 	}
 	if (flags & DirectoryListing::FLAG_HAS_QUEUED)
-	{
 		fg = colorInQueue;
-		bg = RGB(255,255,255);
-	}
 }
 
 void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
 {
-	fg = (flags & DirectoryListing::FLAG_MASK_FIXED_TEXT_COLOR_FILE) ? RGB(0,0,0) : ctrlList.GetTextColor();
-	bg = ctrlList.GetTextBkColor();
+	fg = Colors::g_textColor;
+	bg = Colors::g_bgColor;
 	if (flags & DirectoryListing::FLAG_FOUND)
-		bg = colorFound; else
-	if (flags & DirectoryListing::FLAG_HAS_FOUND)
-		bg = colorFoundLighter; else
-	if (flags & DirectoryListing::FLAG_SHARED)
-		bg = colorShared; else
-	if (flags & DirectoryListing::FLAG_DOWNLOADED)
-		bg = colorDownloaded; else
-	if (flags & DirectoryListing::FLAG_CANCELED)
-		bg = colorCanceled;
-	if (flags & DirectoryListing::FLAG_QUEUED)
 	{
-		fg = colorInQueue;
-		bg = RGB(255,255,255);
+		fg = colorContrastText;
+		bg = colorFound;
 	}
+	else if (flags & DirectoryListing::FLAG_HAS_FOUND)
+	{
+		fg = colorContrastText;
+		bg = colorFoundLighter;
+	}
+	else if (flags & DirectoryListing::FLAG_SHARED)
+	{
+		fg = colorContrastText;
+		bg = colorShared;
+	}
+	else if (flags & DirectoryListing::FLAG_DOWNLOADED)
+	{
+		fg = colorContrastText;
+		bg = colorDownloaded;
+	}
+	else if (flags & DirectoryListing::FLAG_CANCELED)
+	{
+		fg = colorContrastText;
+		bg = colorCanceled;
+	}
+	if (flags & DirectoryListing::FLAG_QUEUED)
+		fg = colorInQueue;
 }
 
 LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)

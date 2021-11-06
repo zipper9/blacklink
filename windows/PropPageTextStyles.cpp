@@ -445,7 +445,7 @@ bool PropPageTextStyles::TextStyleSettings::editTextStyle()
 	return true;
 }
 
-LRESULT PropPageTextStyles::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT PropPageTextStyles::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	lsbList.Detach();
 	preview.Detach();
@@ -521,10 +521,17 @@ LRESULT PropPageTextStyles::onTabListChange(WORD /*wNotifyCode*/, WORD /*wID*/, 
 	return 0;
 }
 
+void PropPageTextStyles::applyTabColor(int index)
+{
+	if (index == 0)
+		bg = colors[index].value;
+}
+
 LRESULT PropPageTextStyles::onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int index = ctrlTabList.GetCurSel();
 	colors[index].value = SettingsManager::getDefault((SettingsManager::IntSetting) colors[index].setting);
+	applyTabColor(index);
 	setForeColor(ctrlTabExample, colors[index].value);
 	return 0;
 }
@@ -534,13 +541,9 @@ LRESULT PropPageTextStyles::onClientSelectTabColor(WORD /*wNotifyCode*/, WORD /*
 	CColorDialog d(colors[ctrlTabList.GetCurSel()].value, CC_FULLOPEN, *this);
 	if (d.DoModal() == IDOK)
 	{
-		colors[ctrlTabList.GetCurSel()].value = d.GetColor();
-		switch (ctrlTabList.GetCurSel())
-		{
-			case 0:
-				bg = d.GetColor();
-				break;
-		}
+		int index = ctrlTabList.GetCurSel();
+		colors[index].value = d.GetColor();
+		applyTabColor(index);
 		setForeColor(ctrlTabExample, d.GetColor());
 		refreshPreview();
 	}

@@ -47,6 +47,12 @@ static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
 
 extern bool g_DisableTestPort;
 
+static const COLORREF colorContrastText = RGB(0,0,0);
+static const COLORREF colorShared = RGB(114,219,139);
+static const COLORREF colorDownloaded = RGB(145,194,196);
+static const COLORREF colorCanceled = RGB(210,168,211);
+static const COLORREF colorInQueue = RGB(186,0,42);
+
 const int SearchFrame::columnId[] =
 {
 	COLUMN_FILENAME,
@@ -3113,23 +3119,25 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 
 static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
 {
-	static const COLORREF colorShared = RGB(114,219,139);
-	static const COLORREF colorDownloaded = RGB(145,194,196);
-	static const COLORREF colorCanceled = RGB(210,168,211);
-	static const COLORREF colorInQueue = RGB(186,0,42);
-	fg = (flags & SearchResult::FLAG_MASK_FIXED_TEXT_COLOR) ? RGB(0,0,0) : Colors::g_textColor;
+	fg = Colors::g_textColor;
 	bg = Colors::g_bgColor;
 	if (flags & SearchResult::FLAG_SHARED)
-		bg = colorShared; else
-	if (flags & SearchResult::FLAG_DOWNLOADED)
-		bg = colorDownloaded; else
-	if (flags & SearchResult::FLAG_DOWNLOAD_CANCELED)
-		bg = colorCanceled;
-	if (flags & SearchResult::FLAG_QUEUED)
 	{
-		fg = colorInQueue;
-		bg = RGB(255,255,255);
+		fg = colorContrastText;
+		bg = colorShared;
 	}
+	else if (flags & SearchResult::FLAG_DOWNLOADED)
+	{
+		fg = colorContrastText;
+		bg = colorDownloaded;
+	}
+	else if (flags & SearchResult::FLAG_DOWNLOAD_CANCELED)
+	{
+		fg = colorContrastText;
+		bg = colorCanceled;
+	}
+	if (flags & SearchResult::FLAG_QUEUED)
+		fg = colorInQueue;
 }
 
 LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -3545,16 +3553,14 @@ void SearchFrame::onUserUpdated(const UserPtr& user) noexcept
 
 void SearchFrame::on(SettingsManagerListener::Repaint)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	if (ctrlResults.isRedraw())
 	{
-		if (ctrlResults.isRedraw())
-		{
-			ctrlHubs.SetBkColor(Colors::g_bgColor);
-			ctrlHubs.SetTextBkColor(Colors::g_bgColor);
-			ctrlHubs.SetTextColor(Colors::g_textColor);
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-		}
+		ctrlHubs.SetBkColor(Colors::g_bgColor);
+		ctrlHubs.SetTextBkColor(Colors::g_bgColor);
+		ctrlHubs.SetTextColor(Colors::g_textColor);
+		ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
+		ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
+		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}
 }
 

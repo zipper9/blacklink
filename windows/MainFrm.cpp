@@ -1578,7 +1578,9 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		bool prevDHT = BOOLSETTING(USE_DHT);
 		bool prevHubUrlInTitle = BOOLSETTING(HUB_URL_IN_TITLE);
 		string prevDownloadDir = SETTING(TEMP_DOWNLOAD_DIRECTORY);
-		
+		COLORREF prevTextColor = Colors::g_textColor;
+		COLORREF prevBgColor = Colors::g_bgColor;
+
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
 			SettingsManager::getInstance()->save();
@@ -1646,6 +1648,9 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 				UpdateLayout();
 				needInvalidateTabs = true;
 			}
+
+			if (Colors::g_textColor != prevTextColor || Colors::g_bgColor != prevBgColor)
+				quickSearchEdit.Invalidate();
 
 			if (needInvalidateTabs)
 				ctrlTab.Invalidate();
