@@ -41,6 +41,8 @@
 static const unsigned SAVE_QUEUE_TIME = 300000; // 5 minutes
 static const int64_t MOVER_LIMIT = 10 * 1024 * 1024;
 static const int MAX_MATCH_QUEUE_ITEMS = 10;
+static const size_t PFS_SOURCES = 10;
+static const int PFS_QUERY_INTERVAL = 300000; // 5 minutes
 
 QueueManager::FileQueue QueueManager::fileQueue;
 QueueManager::UserQueue QueueManager::userQueue;
@@ -699,12 +701,15 @@ void QueueManager::deleteFileLists()
 
 struct PartsInfoReqParam
 {
-	PartsInfo parts;
+	QueueItem::PartsInfo parts;
+	uint64_t  blockSize;
 	string    tth;
+	string    nick;
 	string    myNick;
 	string    hubIpPort;
 	IpAddress ip;
 	uint16_t  udpPort;
+	uint8_t   req;
 };
 
 void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
@@ -714,32 +719,31 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	string searchString;
 	vector<const PartsInfoReqParam*> params;
 	{
-		PFSSourceList sl;
+		QueueItem::SourceList sl;
 		//find max 10 pfs sources to exchange parts
 		//the source basis interval is 5 minutes
-		fileQueue.findPFSSourcesL(sl);
-		
-		for (auto i = sl.cbegin(); i != sl.cend(); ++i)
+		fileQueue.findPFSSources(sl, tick);
+
+		for (const auto& item : sl)
 		{
-			if (ClientManager::isBeforeShutdown())
-				return;
-			QueueItem::PartialSource::Ptr source = i->first->second.getPartialSource();
-			const QueueItemPtr qi = i->second;
-			
+			QueueItem::PartialSource::Ptr source = item.si->second.getPartialSource();
+			uint8_t req = source->getPendingQueryCount() + 1;
+			source->setPendingQueryCount(req);
+			source->setNextQueryTime(tick + PFS_QUERY_INTERVAL);
+
 			PartsInfoReqParam* param = new PartsInfoReqParam;
-			
-			qi->getPartialInfo(param->parts, qi->getBlockSize());
-			
-			param->tth = qi->getTTH().toBase32();
+			item.qi->getParts(param->parts, item.qi->getBlockSize());
+
+			param->blockSize = source->getBlockSize();
+			param->tth = item.qi->getTTH().toBase32();
 			param->ip  = source->getIp();
 			param->udpPort = source->getUdpPort();
 			param->myNick = source->getMyNick();
+			param->nick = item.si->first->getLastNick();
 			param->hubIpPort = source->getHubIpPort();
-			
+			param->req = req;
+
 			params.push_back(param);
-			
-			source->setPendingQueryCount(source->getPendingQueryCount() + 1);
-			source->setNextQueryTime(tick + 300000); // 5 minutes
 		}
 	}
 	if (fileQueue.getSize() > 0 && tick >= nextSearch && BOOLSETTING(AUTO_SEARCH))
@@ -770,49 +774,27 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 				 );
 			}
 		}
-		else
-		{
-#ifdef _DEBUG
-			//LogManager::message("[!]fileQueue.findAutoSearch - empty()");
-#endif
-		}
 	}
-	else
-	{
-#ifdef _DEBUG
-		//LogManager::message("[!]fileQueue.getSize() > 0 && tick >= nextSearch && BOOLSETTING(AUTO_SEARCH)");
-#endif
-	}
-	
+
 	// Request parts info from partial file sharing sources
 	for (auto i = params.cbegin(); i != params.cend(); ++i)
 	{
 		const PartsInfoReqParam* param = *i;
 		dcassert(param->udpPort > 0);
-		
-		try
+		AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
+		SearchManager::toPSR(cmd, true, param->myNick, param->ip.type, param->hubIpPort, param->tth, param->parts);
+		string data = cmd.toString(ClientManager::getMyCID());
+		if (CMD_DEBUG_ENABLED())
+			COMMAND_DEBUG("[Partial-Search]" + data, DebugTask::CLIENT_OUT, Util::printIpAddress(param->ip) + ':' + Util::toString(param->udpPort));
+		if (BOOLSETTING(LOG_PSR_TRACE))
 		{
-			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-			SearchManager::toPSR(cmd, true, param->myNick, param->ip.type, param->hubIpPort, param->tth, param->parts);
-			string data = cmd.toString(ClientManager::getMyCID());
-			if (CMD_DEBUG_ENABLED())
-				COMMAND_DEBUG("[Partial-Search]" + data, DebugTask::CLIENT_OUT, Util::printIpAddress(param->ip) + ':' + Util::toString(param->udpPort));
-			LogManager::psr_message(
-			    "[PartsInfoReq] Send UDP IP = " + Util::printIpAddress(param->ip) +
-			    " param->udpPort = " + Util::toString(param->udpPort) +
-			    " cmd = " + data);
-			SearchManager::getInstance()->addToSendQueue(data, param->ip, param->udpPort);
+			string msg = param->tth + ": sending periodic PSR #" + Util::toString(param->req) + " to ";
+			msg += Util::printIpAddress(param->ip, true) + ':' + Util::toString(param->udpPort);
+			if (!param->nick.empty()) msg += ", " + param->nick;
+			msg += ", we have " + Util::toString(QueueItem::countParts(param->parts)) + '*' + Util::toString(param->blockSize);
+			LOG(PSR_TRACE, msg);
 		}
-		catch (Exception& e)
-		{
-			dcdebug("Partial search caught error\n");
-			LogManager::psr_message(
-			    "[Partial search caught error] Error = " + e.getError() +
-			    " IP = " + Util::printIpAddress(param->ip) +
-			    " param->udpPort = " + Util::toString(param->udpPort)
-			);
-		}
-		
+		SearchManager::getInstance()->addToSendQueue(data, param->ip, param->udpPort);
 		delete param;
 	}
 	if (!searchString.empty())
@@ -2864,52 +2846,49 @@ bool QueueManager::dropSource(const DownloadPtr& aDownload)
 }
 #endif
 
-bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo)
+bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, QueueItem::PartsInfo& outPartialInfo)
 {
 	bool wantConnection = false;
 	dcassert(outPartialInfo.empty());
-	
+
 	{
 		// Locate target QueueItem in download queue
 		QueueItemPtr qi = fileQueue.findQueueItem(tth);
 		if (!qi)
 			return false;
-		LogManager::psr_message("[QueueManager::handlePartialResult] findQueueItem - OK TTH = " + tth.toBase32());
-		
-		
+
 		// don't add sources to finished files
 		// this could happen when "Keep finished files in queue" is enabled
 		if (qi->isFinished())
 			return false;
-			
+
 		// Check min size
-		if (qi->getSize() < PARTIAL_SHARE_MIN_SIZE)
+		if (qi->getSize() < QueueItem::PFS_MIN_FILE_SIZE)
 		{
-			dcassert(0);
-			LogManager::psr_message(
-			    "[QueueManager::handlePartialResult] qi->getSize() < PARTIAL_SHARE_MIN_SIZE. qi->getSize() = " + Util::toString(qi->getSize()));
+			if (BOOLSETTING(LOG_PSR_TRACE))
+				LOG(PSR_TRACE, tth.toBase32() + ": file size below minimum (" + Util::toString(qi->getSize()) + ")");
 			return false;
 		}
-		
+
 		// Get my parts info
 		const auto blockSize = qi->getBlockSize();
 		partialSource.setBlockSize(blockSize);
-		qi->getPartialInfo(outPartialInfo, qi->getBlockSize());
-		
+		qi->getParts(outPartialInfo, qi->getBlockSize());
+
 		// Any parts for me?
-		wantConnection = qi->isNeededPart(partialSource.getPartialInfo(), blockSize);
-		
-		QueueWLock(*QueueItem::g_cs); // TODO - опустить ниже?
-		
+		wantConnection = QueueItem::isNeededPart(partialSource.getParts(), outPartialInfo);
+
+		QueueWLock(*QueueItem::g_cs);
+
 		// If this user isn't a source and has no parts needed, ignore it
 		auto si = qi->findSourceL(user);
 		if (si == qi->getSourcesL().end())
 		{
 			si = qi->findBadSourceL(user);
-			
+
 			if (si != qi->getBadSourcesL().end() && si->second.isSet(QueueItem::Source::FLAG_TTH_INCONSISTENCY))
 				return false;
-				
+
 			if (!wantConnection)
 			{
 				if (si == qi->getBadSourcesL().end())
@@ -2920,61 +2899,61 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 				// add this user as partial file sharing source
 				si = qi->addSourceL(user, false);
 				si->second.setFlag(QueueItem::Source::FLAG_PARTIAL);
-				
+
 				const auto ps = std::make_shared<QueueItem::PartialSource>(partialSource.getMyNick(),
 					partialSource.getHubIpPort(), partialSource.getIp(), partialSource.getUdpPort(), partialSource.getBlockSize());
 				si->second.setPartialSource(ps);
-				
+
 				userQueue.addL(qi, user, false);
 				dcassert(si != qi->getSourcesL().end());
 				addUpdatedSource(qi);
-				LogManager::psr_message(
-				    "[QueueManager::handlePartialResult] new QueueItem::PartialSource nick = " + partialSource.getMyNick() +
-				    " HubIpPort = " + partialSource.getHubIpPort() +
-				    " IP = " + Util::printIpAddress(partialSource.getIp()) +
-				    " UDP port = " + Util::toString(partialSource.getUdpPort())
-				);
+				if (BOOLSETTING(LOG_PSR_TRACE))
+				{
+					string msg = tth.toBase32() + ": adding partial source ";
+					msg += Util::printIpAddress(partialSource.getIp(), true) + ':' + Util::toString(partialSource.getUdpPort());
+					string nick = user->getLastNick();
+					if (!nick.empty()) msg += ", " + nick;
+					const string& hub = partialSource.getHubIpPort();
+					if (!hub.empty()) msg += ", hub " + hub;
+					msg += ", they have " + Util::toString(QueueItem::countParts(partialSource.getParts())) + '*' + Util::toString(partialSource.getBlockSize());
+					LOG(PSR_TRACE, msg);
+				}
 			}
 		}
-		
+
 		// Update source's parts info
 		if (si->second.getPartialSource())
-			si->second.getPartialSource()->setPartialInfo(partialSource.getPartialInfo());
+			si->second.getPartialSource()->setParts(partialSource.getParts());
 	}
-	
+
 	// Connect to this user
 	if (wantConnection)
 		getDownloadConnection(user);
-	
+
 	return true;
 }
 
-bool QueueManager::handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsInfo)
+bool QueueManager::handlePartialSearch(const TTHValue& tth, QueueItem::PartsInfo& outPartsInfo, uint64_t& blockSize)
 {
 	// Locate target QueueItem in download queue
 	const QueueItemPtr qi = fileQueue.findQueueItem(tth);
 	if (!qi)
 		return false;
-	if (qi->getSize() < PARTIAL_SHARE_MIN_SIZE)
+	if (qi->getSize() < QueueItem::PFS_MIN_FILE_SIZE || !qi->getDownloadedBytes())
 		return false;
-	
+
 	// don't share when file does not exist
 	if (!File::isExist(qi->isFinished() ? qi->getTarget() : qi->getTempTargetConst()))
 		return false;
-		
-	qi->getPartialInfo(outPartsInfo, qi->getBlockSize());
+
+	blockSize = qi->getBlockSize();
+	qi->getParts(outPartsInfo, blockSize);
 	return !outPartsInfo.empty();
 }
 
 // compare nextQueryTime, get the oldest ones
-void QueueManager::FileQueue::findPFSSourcesL(PFSSourceList& sl) const
+void QueueManager::FileQueue::findPFSSources(QueueItem::SourceList& sl, uint64_t now) const
 {
-	QueueItem::SourceListBuffer buffer;
-#ifdef _DEBUG
-	QueueItem::SourceListBuffer debug_buffer;
-#endif
-	const uint64_t now = GET_TICK();
-	// TODO - утащить в отдельный метод
 	QueueRLock(*csFQ);
 	for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 	{
@@ -2982,61 +2961,15 @@ void QueueManager::FileQueue::findPFSSourcesL(PFSSourceList& sl) const
 			return;
 		const auto q = i->second;
 		
-		if (q->getSize() < PARTIAL_SHARE_MIN_SIZE) continue;
-		
+		if (q->getSize() < QueueItem::PFS_MIN_FILE_SIZE || !q->getDownloadedBytes()) continue;
+
+#if 0
 		// don't share when file does not exist
-		if (q->m_is_file_not_exist == true)
-		{
+		if (!File::isExist(q->isFinished() ? q->getTarget() : q->getTempTargetConst()))
 			continue;
-		}
-		if (q->m_is_file_not_exist == false && !File::isExist(q->isFinished() ? q->getTarget() : q->getTempTargetConst())) // Обязательно Const
-		{
-			q->m_is_file_not_exist = true;
-			continue;
-		}
-		
-		QueueItem::getPFSSourcesL(q, buffer, now);
-//////////////////
-#ifdef _DEBUG
-		// После отладки убрать сарый вариант наполнения
-		const auto& sources = q->getSourcesL();
-		const auto& badSources = q->getBadSourcesL();
-		for (auto j = sources.cbegin(); j != sources.cend(); ++j)
-		{
-			const auto &l_getPartialSource = j->second.getPartialSource(); // [!] PVS V807 Decreased performance. Consider creating a pointer to avoid using the '(* j).getPartialSource()' expression repeatedly. queuemanager.cpp 2900
-			if (j->second.isSet(QueueItem::Source::FLAG_PARTIAL) &&
-			        l_getPartialSource->getNextQueryTime() <= now &&
-			        l_getPartialSource->getPendingQueryCount() < 10 && l_getPartialSource->getUdpPort() > 0)
-			{
-				debug_buffer.insert(make_pair(l_getPartialSource->getNextQueryTime(), make_pair(j, q)));
-			}
-			
-		}
-		for (auto j = badSources.cbegin(); j != badSources.cend(); ++j)
-		{
-			const auto &l_getPartialSource = j->second.getPartialSource(); // [!] PVS V807 Decreased performance. Consider creating a pointer to avoid using the '(* j).getPartialSource()' expression repeatedly. queuemanager.cpp 2900
-			if (j->second.isSet(QueueItem::Source::FLAG_TTH_INCONSISTENCY) == false && j->second.isSet(QueueItem::Source::FLAG_PARTIAL) &&
-			        l_getPartialSource->getNextQueryTime() <= now && l_getPartialSource->getPendingQueryCount() < 10 &&
-			        l_getPartialSource->getUdpPort() > 0)
-			{
-				debug_buffer.insert(make_pair(l_getPartialSource->getNextQueryTime(), make_pair(j, q)));
-			}
-		}
 #endif
-//////////////////
-	}
-	// TODO: opt this function.
-	// copy to results
-	dcassert(debug_buffer == buffer);
-	dcassert(sl.empty());
-	if (!buffer.empty())
-	{
-		const size_t maxElements = 10;
-		sl.reserve(std::min(buffer.size(), maxElements));
-		for (auto i = buffer.cbegin(); i != buffer.cend() && sl.size() < maxElements; ++i)
-		{
-			sl.push_back(i->second);
-		}
+
+		QueueItem::getPFSSourcesL(q, sl, now, PFS_SOURCES);
 	}
 }
 

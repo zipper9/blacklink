@@ -915,7 +915,8 @@ void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
 	if (!ou)
 	{
 		dcdebug("Invalid user in AdcHub::onPSR\n");
-		LogManager::psr_message("Invalid user in AdcHub::onPSR = " + c.toString(c.getFrom()));
+		if (BOOLSETTING(LOG_PSR_TRACE))
+			LOG(PSR_TRACE, "PSR from unknown user " + Identity::getSIDString(c.getFrom()) + " on " + getHubUrl());
 		return;
 	}
 	SearchManager::getInstance()->onPSR(c, false, ou->getUser(), IpAddress{0});

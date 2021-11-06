@@ -227,8 +227,8 @@ class QueueManager : public Singleton<QueueManager>,
 
 		static string getQueueFile() { return Util::getConfigPath() + "Queue.xml"; }
 		
-		static bool handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsInfo);
-		bool handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
+		static bool handlePartialSearch(const TTHValue& tth, QueueItem::PartsInfo& outPartsInfo, uint64_t& blockSize);
+		bool handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, QueueItem::PartsInfo& outPartialInfo);
 		
 #ifdef FLYLINKDC_USE_DROP_SLOW
 		bool dropSource(const DownloadPtr& d);
@@ -250,8 +250,6 @@ class QueueManager : public Singleton<QueueManager>,
 		static uint64_t g_lastSave;
 
 	public:
-		typedef vector<pair<QueueItem::SourceConstIter, const QueueItemPtr> > PFSSourceList;
-		
 		/** All queue items by target */
 		class FileQueue
 		{
@@ -267,7 +265,7 @@ class QueueManager : public Singleton<QueueManager>,
 				QueueItemPtr findQueueItem(const TTHValue& tth) const;
 				static uint8_t getMaxSegments(const uint64_t filesize);
 				// find some PFS sources to exchange parts info
-				void findPFSSourcesL(PFSSourceList&) const;
+				void findPFSSources(QueueItem::SourceList& sl, uint64_t now) const;
 				
 				QueueItemPtr findAutoSearch(deque<string>& recent) const;
 				size_t getSize() const { return queue.size(); }

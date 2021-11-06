@@ -419,17 +419,13 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 
 bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 {
-	bool isPartial = false;
 	if (searchParam.fileType == FILE_TYPE_TTH && Util::isTTHBase32(searchParam.filter))
 	{
-		PartsInfo partialInfo;
+		QueueItem::PartsInfo outParts;
+		uint64_t blockSize;
 		TTHValue tth(searchParam.filter.c_str() + 4);
-		if (QueueManager::handlePartialSearch(tth, partialInfo)) // TODO - часто ищется по ТТХ
+		if (QueueManager::handlePartialSearch(tth, outParts, blockSize))
 		{
-#ifdef _DEBUG
-			LogManager::message("[OK] handlePartialSearch TTH = " + searchParam.filter);
-#endif
-			isPartial = true;
 			string ip;
 			uint16_t port = 0;
 			Util::parseIpPort(searchParam.seeker, ip, port);
@@ -439,34 +435,23 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 			IpAddress addr;
 			if (!Util::parseIpAddress(addr, ip))
 				return false;
-			try
+
+			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
+			SearchManager::toPSR(cmd, true, getMyNick(), addr.type, getIpPort(), tth.toBase32(), outParts);
+			if (BOOLSETTING(LOG_PSR_TRACE))
 			{
-				AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-				SearchManager::toPSR(cmd, true, getMyNick(), addr.type, getIpPort(), tth.toBase32(), partialInfo);
-				string str = cmd.toString(ClientManager::getMyCID());
-				sendUDP(ip, port, str);
-				LogManager::psr_message(
-				    "[ClientManager::NmdcSearch Send UDP IP = " + ip +
-				    " param->udpPort = " + Util::toString(port) +
-				    " cmd = " + cmd.toString(ClientManager::getMyCID())
-				);
+				string msg = tth.toBase32() + ": sending PSR search result to ";
+				msg += Util::printIpAddress(addr, true) + ':' + Util::toString(port);
+				msg += ", hub " + getHubUrl();
+				msg += ", we have " + Util::toString(QueueItem::countParts(outParts)) + '*' + Util::toString(blockSize);
+				LOG(PSR_TRACE, msg);
 			}
-			catch (Exception& e)
-			{
-				LogManager::psr_message(
-				    "[Partial search caught error] Error = " + e.getError() +
-				    " IP = " + ip +
-				    " param->udpPort = " + Util::toString(port)
-				);
-				
-#ifdef _DEBUG
-				LogManager::message("ClientManager::on(NmdcSearch, Partial search caught error = " + e.getError() + " TTH = " + searchParam.filter);
-				dcdebug("Partial search caught error\n");
-#endif
-			}
+			string str = cmd.toString(ClientManager::getMyCID());
+			sendUDP(ip, port, str);
+			return true;
 		}
 	}
-	return isPartial;
+	return false;
 }
 
 void NmdcHub::sendUDP(const string& ip, uint16_t port, string& sr)

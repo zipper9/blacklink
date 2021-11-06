@@ -151,9 +151,8 @@ void Identity::setExtJSON()
 	hasExtJson = true;
 }
 
-string Identity::getSIDString() const
+string Identity::getSIDString(uint32_t sid)
 {
-	uint32_t sid = getSID();
 	union
 	{
 		uint32_t val;

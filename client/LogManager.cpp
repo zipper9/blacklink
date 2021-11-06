@@ -239,12 +239,6 @@ void LogManager::flood_message(const string& message) noexcept
 		LOG(FLOOD_TRACE, message);
 }
 
-void LogManager::psr_message(const string& message) noexcept
-{
-	if (BOOLSETTING(LOG_PSR_TRACE))
-		LOG(PSR_TRACE, message);
-}
-
 #ifdef FLYLINKDC_USE_TORRENT
 void LogManager::torrent_message(const string& message, bool addToSystem /*= true*/) noexcept
 {

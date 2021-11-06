@@ -50,7 +50,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 
 		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, const IpAddress& remoteIp);
 		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, const IpAddress& remoteIp);
-		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo);
+		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const QueueItem::PartsInfo& partialInfo);
 
 		void onSearchResult(const string& line, const IpAddress& ip)
 		{
@@ -105,7 +105,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		bool processPSR(const char* buf, int len, const IpAddress& address);
 		bool processPortTest(const char* buf, int len, const IpAddress& address);
 
-		static string getPartsString(const PartsInfo& partsInfo);
+		static string getPartsString(const QueueItem::PartsInfo& partsInfo);
 		bool isShutdown() const;
 		void processSendQueue() noexcept;
 		void sendNotif();

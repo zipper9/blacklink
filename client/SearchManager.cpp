@@ -433,7 +433,9 @@ bool SearchManager::processPSR(const char* buf, int len, const IpAddress& remote
 		if (c.getParameters().empty()) return false;
 		const string& cid = c.getParam(0);
 		if (cid.size() != 39) return false;
-		const UserPtr user = ClientManager::findUser(CID(cid));
+		UserPtr user;
+		OnlineUserPtr ou = ClientManager::findOnlineUser(CID(cid), Util::emptyString, false);
+		if (ou) user = ou->getUser();
 		// when user == NULL then it is probably NMDC user, check it later
 		onPSR(c, true, user, remoteIp);
 		return true;
@@ -531,7 +533,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 	string tth;
 	string hubIpPort;
 	string nick;
-	PartsInfo partialInfo;
+	QueueItem::PartsInfo partialInfo;
 	
 	const auto& params = cmd.getParameters();
 	for (StringList::size_type i = skipCID ? 1 : 0; i < params.size(); ++i)
@@ -570,7 +572,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 		}
 	}
 
-	if (partialInfo.size() != partialCount)
+	if (partialInfo.size() != partialCount || !partialCount)
 		return; // Malformed command
 
 	string url = ClientManager::findHub(hubIpPort, 0);
@@ -591,45 +593,50 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 			if (!from)
 			{
 				dcdebug("Search result from unknown user");
-				LogManager::psr_message("Error SearchManager::onPSR & ClientManager::findLegacyUser nick = " + nick + " url = " + url);
+				if (BOOLSETTING(LOG_PSR_TRACE))
+					LOG(PSR_TRACE, "Unknown user " + (nick.empty() ? "<empty>" : nick) + " (" + url + ')');
 				return;
 			}
 			else
 			{
 				dcdebug("Search result from valid user");
-				LogManager::psr_message("OK SearchManager::onPSR & ClientManager::findLegacyUser nick = " + nick + " url = " + url);
+				if (BOOLSETTING(LOG_PSR_TRACE))
+					LOG(PSR_TRACE, "Found user " + (nick.empty() ? "<empty>" : nick) + " (" + url + ')');
 			}
 		}
 	}
-	
-	// TODO »щем в OnlineUser а чуть выше ищем в UserPtr може тожно схлопнуть в один поиск дл€ апдейта IP
 
 	uint16_t udpPort = remoteIp.type == AF_INET6 ? udp6Port : udp4Port;
-	PartsInfo outPartialInfo;
+	QueueItem::PartsInfo outParts;
 	QueueItem::PartialSource ps((from->getFlags() & User::NMDC) ? ClientManager::findMyNick(url) : Util::emptyString, hubIpPort, remoteIp, udpPort, 0);
-	ps.setPartialInfo(partialInfo);
-	
-	QueueManager::getInstance()->handlePartialResult(from, TTHValue(tth), ps, outPartialInfo);
+	ps.setParts(partialInfo);
 
-	if (udpPort && !outPartialInfo.empty())
+	QueueManager::getInstance()->handlePartialResult(from, TTHValue(tth), ps, outParts);
+
+	if (udpPort && !outParts.empty())
 	{
 		try
 		{
 			AdcCommand reply(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-			toPSR(reply, false, ps.getMyNick(), remoteIp.type, hubIpPort, tth, outPartialInfo);
-			ClientManager::sendAdcCommand(reply, from->getCID());
-			LogManager::psr_message(
-			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
-			    " ps.getMyNick() = " + ps.getMyNick() +
-			    " tth = " + tth +
-			    " outPartialInfo.size() = " + Util::toString(outPartialInfo.size())
-			);
-			
+			toPSR(reply, false, ps.getMyNick(), remoteIp.type, hubIpPort, tth, outParts);
+			bool result = ClientManager::sendAdcCommand(reply, from->getCID(), remoteIp, udpPort);
+			if (BOOLSETTING(LOG_PSR_TRACE))
+			{
+				string msg = tth + ": sending PSR response to ";
+				msg += from->getCID().toBase32();
+				string nick = from->getLastNick();
+				if (!nick.empty()) msg += ", " + nick;
+				if (!hubIpPort.empty()) msg += ", hub " + hubIpPort;
+				msg += ", we have " + Util::toString(QueueItem::countParts(outParts)) + '*' + Util::toString(ps.getBlockSize());
+				LOG(PSR_TRACE, msg);
+				if (!result)
+					LOG(PSR_TRACE, "Unable to send PSR response");
+			}
 		}
 		catch (const Exception& e)
 		{
-			dcdebug("Partial search caught error\n");
-			LogManager::psr_message("Partial search caught error = " + e.getError());
+			if (BOOLSETTING(LOG_PSR_TRACE))
+				LOG(PSR_TRACE, "Error sending response packet - " + e.getError());
 		}
 	}
 	
@@ -642,8 +649,8 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 	if (from == ClientManager::getMyCID())
 		return ClientManagerListener::SEARCH_MISS;
 	
-	const UserPtr p = ClientManager::findUser(from);
-	if (!p)
+	const UserPtr user = ClientManager::findUser(from);
+	if (!user)
 		return ClientManagerListener::SEARCH_MISS;
 	
 	vector<SearchResultCore> searchResults;
@@ -656,21 +663,29 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 	{
 		if (!param.hasRoot)
 			return sr;
-			
-		PartsInfo partialInfo;
-		if (QueueManager::handlePartialSearch(param.root, partialInfo))
+
+		QueueItem::PartsInfo outParts;
+		uint64_t blockSize;
+		if (QueueManager::handlePartialSearch(param.root, outParts, blockSize))
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			string tth = param.root.toBase32();
 			string hubIpPort = Util::printIpAddress(hubIp, true) + ":" + Util::toString(hubPort);
-			toPSR(cmd, true, Util::emptyString, hubIp.type, hubIpPort, tth, partialInfo);
-			ClientManager::sendAdcCommand(cmd, from);
+			toPSR(cmd, true, Util::emptyString, hubIp.type, hubIpPort, tth, outParts);
+			bool result = ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0);
+			if (BOOLSETTING(LOG_PSR_TRACE))
+			{
+				string msg = tth + ": sending PSR search result to ";
+				msg += from.toBase32();
+				string nick = user->getLastNick();
+				if (!nick.empty()) msg += ", " + nick;
+				if (!hubIpPort.empty()) msg += ", hub " + hubIpPort;
+				msg += ", we have " + Util::toString(QueueItem::countParts(outParts)) + '*' + Util::toString(blockSize);
+				LOG(PSR_TRACE, msg);
+				if (!result)
+					LOG(PSR_TRACE, "Unable to send PSR request");
+			}
 			sr = ClientManagerListener::SEARCH_PARTIAL_HIT;
-			LogManager::psr_message(
-			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
-			    " tth = " + tth +
-			    " partialInfo.size() = " + Util::toString(partialInfo.size())
-			);
 		}
 	}
 	else
@@ -695,28 +710,32 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 			i->toRES(cmd, UploadManager::getFreeSlots());
 			if (!param.token.empty())
 				cmd.addParam("TO", param.token);
-			ClientManager::sendAdcCommand(cmd, from);
+			ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0);
 		}
 		sr = ClientManagerListener::SEARCH_HIT;
 	}
 	return sr;
 }
 
-string SearchManager::getPartsString(const PartsInfo& partsInfo)
+string SearchManager::getPartsString(const QueueItem::PartsInfo& partsInfo)
 {
 	string ret;	
-	for (size_t i = 0; i < partsInfo.size(); i += 2)
-		ret += Util::toString(partsInfo[i]) + "," + Util::toString(partsInfo[i + 1]) + ",";
-	if (!ret.empty()) ret.resize(ret.length()-1);
+	for (size_t i = 0; i + 2 <= partsInfo.size(); i += 2)
+	{
+		if (!ret.empty()) ret += ',';
+		ret += Util::toString(partsInfo[i]);
+		ret += ',';
+		ret += Util::toString(partsInfo[i + 1]);
+	}
 	return ret;
 }
 
-void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo)
+void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const QueueItem::PartsInfo& partialInfo)
 {
 	cmd.getParameters().reserve(6);
 	if (!myNick.empty())
 		cmd.addParam("NI", myNick);
-	
+
 	cmd.addParam("HI", hubIpPort);
 	cmd.addParam(af == AF_INET6 ? "U6" : "U4", Util::toString(wantResponse ? getUdpPort() : 0));
 	cmd.addParam("TR", tth);

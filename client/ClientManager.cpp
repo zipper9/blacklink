@@ -807,7 +807,7 @@ void ClientManager::getUserCommandParams(const OnlineUserPtr& ou, const UserComm
 	}
 }
 
-void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
+bool ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid, const IpAddress& udpAddr, uint16_t udpPort)
 {
 	IpAddress ip;
 	uint16_t port = 0;
@@ -820,17 +820,33 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 		if (i != g_onlineUsers.end())
 		{
 			u = i->second;
-			if (cmd.getType() == AdcCommand::TYPE_UDP && !u->getIdentity().isUdpActive())
+			if (cmd.getType() == AdcCommand::TYPE_UDP)
+			{
+				if (u->getIdentity().isUdpActive())
+					sendUDP = u->getIdentity().getUdpAddress(ip, port);
+				if (!sendUDP)
+				{
+					if (!(u->getUser()->getFlags() & User::NMDC))
+					{
+						cmd.setType(AdcCommand::TYPE_DIRECT);
+						cmd.setTo(u->getIdentity().getSID());
+						sendToClient = true;
+					}
+					else if (Util::isValidIp(udpAddr) && udpPort)
+					{
+						ip = udpAddr;
+						port = udpPort;
+						sendUDP = true;
+					}
+				}
+			}
+			else
 			{
 				if (u->getUser()->getFlags() & User::NMDC)
-					return;
-					
-				cmd.setType(AdcCommand::TYPE_DIRECT);
+					return false;
 				cmd.setTo(u->getIdentity().getSID());
 				sendToClient = true;
 			}
-			else
-				sendUDP = u->getIdentity().getUdpAddress(ip, port);
 		}
 	}
 	if (sendToClient)
@@ -839,15 +855,17 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 		if (cb->getType() != ClientBase::TYPE_DHT)
 		{
 			Client* client = static_cast<Client*>(cb.get());
-			client->send(cmd);
+			return client->send(cmd);
 		}
-		return;
+		return false;
 	}
 	if (sendUDP)
 	{
 		string cmdStr = cmd.toString(getMyCID());
 		SearchManager::getInstance()->addToSendQueue(cmdStr, ip, port);
+		return true;
 	}
+	return false;
 }
 
 void ClientManager::infoUpdated(Client* client)

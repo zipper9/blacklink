@@ -44,7 +44,6 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool
 	priority(priority),
 	added(added),
 	autoPriority(autoPriority),
-	m_is_file_not_exist(false),
 	tthRoot(tth),
 	downloadedBytes(0),
 	doneSegmentsSize(0),
@@ -65,13 +64,6 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool
 	}
 #endif
 	flags = flag;
-}
-
-QueueItem::~QueueItem()
-{
-#if 0
-	LogManager::message("[~~~~] QueueItem::~QueueItem aTarget = " + this->getTarget() + " this = " + Util::toString(__int64(this)));
-#endif
 }
 
 int16_t QueueItem::getTransferFlags(int& flags) const
@@ -241,7 +233,7 @@ QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user, bool isFirstLoa
 	return it;
 }
 
-void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceListBuffer& sourceList, uint64_t now)
+void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceList& sourceList, uint64_t now, size_t maxCount)
 {
 	auto addToList = [&](const bool isBadSources) -> void
 	{
@@ -251,7 +243,9 @@ void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceListBuffer& sourceL
 			const auto &ps = j->second.getPartialSource();
 			if (j->second.isCandidate(isBadSources) && ps->isCandidate(now))
 			{
-				sourceList.insert(make_pair(ps->getNextQueryTime(), make_pair(j, qi)));
+				sourceList.emplace(SourceListItem{ps->getNextQueryTime(), qi, j});
+				if (sourceList.size() > maxCount)
+					sourceList.erase(sourceList.begin() + sourceList.size()-1);
 			}
 		}
 	};
@@ -618,10 +612,10 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	
 	if (partialSource && partialSource->getBlockSize() == blockSize)
 	{
-		posArray.reserve(partialSource->getPartialInfo().size());
+		posArray.reserve(partialSource->getParts().size());
 		
 		// Convert block index to file position
-		for (auto i = partialSource->getPartialInfo().cbegin(); i != partialSource->getPartialInfo().cend(); ++i)
+		for (auto i = partialSource->getParts().cbegin(); i != partialSource->getParts().cend(); ++i)
 		{
 			int64_t pos = (int64_t) *i * blockSize;
 			posArray.push_back(min(getSize(), pos));
@@ -779,24 +773,44 @@ void QueueItem::addSegmentL(const Segment& segment)
 	}
 }
 
-bool QueueItem::isNeededPart(const PartsInfo& partsInfo, int64_t blockSize) const
+bool QueueItem::isNeededPart(const PartsInfo& theirParts, const PartsInfo& ourParts)
 {
-	dcassert(partsInfo.size() % 2 == 0);
-	LOCK(csSegments);
-	auto i = doneSegments.begin();
-	for (auto j = partsInfo.cbegin(); j != partsInfo.cend(); j += 2)
+	if ((theirParts.size() & 1) || (ourParts.size() & 1))
 	{
-		while (i != doneSegments.end() && (*i).getEnd() <= (*j) * blockSize)
-			++i;
-			
-		if (i == doneSegments.end() || !((*i).getStart() <= (*j) * blockSize && (*i).getEnd() >= (*(j + 1)) * blockSize))
-			return true;
+		dcassert(0);
+		return false;
 	}
-	
-	return false;
+	if (theirParts.empty()) return false;
+	uint16_t start = theirParts[0];
+	uint16_t end = theirParts[1];
+	size_t i = 0, j = 0;
+	while (j + 2 <= ourParts.size())
+	{
+		uint16_t myStart = ourParts[j];
+		uint16_t myEnd = ourParts[j + 1];
+		if (start < myStart) return true;
+		if (start >= myEnd)
+		{
+			j += 2;
+			continue;
+		}
+		if (end <= myEnd)
+		{
+			i += 2;
+			if (i + 2 > theirParts.size()) return false;
+			start = theirParts[i];
+			end = theirParts[i + 1];
+		}
+		else
+		{
+			start = myEnd;
+			j += 2;
+		}
+	}
+	return true;
 }
 
-void QueueItem::getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const
+void QueueItem::getParts(PartsInfo& partialInfo, uint64_t blockSize) const
 {
 	dcassert(blockSize);
 	if (blockSize == 0) // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=31115
@@ -815,6 +829,14 @@ void QueueItem::getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const
 		partialInfo.push_back(s);
 		partialInfo.push_back(e);
 	}
+}
+
+int QueueItem::countParts(const QueueItem::PartsInfo& pi)
+{
+	int res = 0;
+	for (size_t i = 0; i + 2 <= pi.size(); i += 2)
+		res += pi[i+1] - pi[i];
+	return res;
 }
 
 void QueueItem::getDoneSegments(vector<Segment>& done) const

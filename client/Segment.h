@@ -20,9 +20,6 @@
 #ifndef DCPLUSPLUS_DCPP_SEGMENT_H_
 #define DCPLUSPLUS_DCPP_SEGMENT_H_
 
-// minimum file size to be PFS : 20M
-#define PARTIAL_SHARE_MIN_SIZE 20971520
-
 #include "BaseUtil.h"
 
 class Segment

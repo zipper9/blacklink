@@ -27,13 +27,13 @@
 #include "TransferFlags.h"
 #include "Thread.h"
 #include <atomic>
+#include <boost/container/flat_set.hpp>
 
 typedef std::vector<DownloadPtr> DownloadList;
 
 extern const string dctmpExtension;
 
 class QueueManager;
-typedef std::vector<uint16_t> PartsInfo;
 
 #ifdef USE_QUEUE_RWLOCK
 #define QueueRLock READ_LOCK
@@ -48,7 +48,9 @@ class QueueItem
 	public:
 		typedef boost::unordered_map<string, QueueItemPtr> QIStringMap;
 		typedef uint32_t MaskType;
-		
+
+		static const size_t PFS_MIN_FILE_SIZE = 20 * 1024 * 1024;
+
 		enum Priority
 		{
 			DEFAULT = -1,
@@ -84,11 +86,15 @@ class QueueItem
 			FLAG_WANT_END           = 0x2000,
 			FLAG_COPYING            = 0x4000
 		};
-		
+
 		bool isUserList() const
 		{
 			return isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
 		}
+
+		typedef std::vector<uint16_t> PartsInfo;
+		static int countParts(const PartsInfo& pi);
+
 		/**
 		 * Source parts info
 		 * Meaningful only when Source::FLAG_PARTIAL is set
@@ -102,10 +108,10 @@ class QueueItem
 				typedef std::shared_ptr<PartialSource> Ptr;
 				bool isCandidate(const uint64_t now) const
 				{
-					return getPendingQueryCount() < 10 && getUdpPort() != 0 && getNextQueryTime() <= now;
+					return getPendingQueryCount() < 80 && getUdpPort() != 0 && getNextQueryTime() <= now;
 				}
 
-				GETSET(PartsInfo, partialInfo, PartialInfo);
+				GETSET(PartsInfo, parts, Parts);
 				GETSET(string, myNick, MyNick);         // for NMDC support only
 				GETSET(string, hubIpPort, HubIpPort);
 				GETSET(IpAddress, ip, Ip);
@@ -158,10 +164,7 @@ class QueueItem
 		typedef boost::unordered_map<UserPtr, Source, User::Hash> SourceMap;
 		typedef SourceMap::iterator SourceIter;
 		typedef SourceMap::const_iterator SourceConstIter;
-		typedef std::multimap<time_t, pair<SourceConstIter, const QueueItemPtr> > SourceListBuffer;
-		
-		static void getPFSSourcesL(const QueueItemPtr& qi, SourceListBuffer& sourceList, uint64_t now);
-		
+
 		typedef std::set<Segment> SegmentSet;
 		
 		QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, bool aAutoPriority, Flags::MaskType aFlag,
@@ -169,10 +172,19 @@ class QueueItem
 		          
 		QueueItem(const QueueItem &) = delete;
 		QueueItem& operator= (const QueueItem &) = delete;
-		
-		~QueueItem();
-		
-		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const; // [+] FlylinkDC++ opt.
+
+		struct SourceListItem
+		{
+			uint64_t queryTime;
+			QueueItemPtr qi;
+			SourceConstIter si;
+			bool operator< (const SourceListItem& other) const { return queryTime < other.queryTime; }
+		};
+		typedef boost::container::flat_multiset<SourceListItem> SourceList;
+
+		static void getPFSSourcesL(const QueueItemPtr& qi, SourceList& sourceList, uint64_t now, size_t maxCount);
+
+		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const;
 		void getOnlineUsers(UserList& l) const;
 		
 #ifdef USE_QUEUE_RWLOCK
@@ -220,12 +232,12 @@ class QueueItem
 		/**
 		 * Is specified parts needed by this download?
 		 */
-		bool isNeededPart(const PartsInfo& partsInfo, int64_t blockSize) const;
+		static bool isNeededPart(const PartsInfo& theirParts, const PartsInfo& ourParts);
 		
 		/**
 		 * Get shared parts info, max 255 parts range pairs
 		 */
-		void getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const;
+		void getParts(PartsInfo& partialInfo, uint64_t blockSize) const;
 		
 		int64_t getDownloadedBytes() const { return downloadedBytes; }
 		void updateDownloadedBytes();
@@ -276,8 +288,6 @@ class QueueItem
 		bool shouldSearchBackward() const;
 
 	public:
-		bool m_is_file_not_exist;
-		
 		bool isSet(MaskType flag) const { return (flags & flag) == flag; }
 		bool isAnySet(MaskType flag) const { return (flags & flag) != 0; }
 		MaskType getFlags() const { return flags; }

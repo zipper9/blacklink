@@ -69,7 +69,6 @@ class LogManager
 #ifdef FLYLINKDC_USE_TORRENT
 		static void torrent_message(const string& message, bool addToSystem = true) noexcept;
 #endif
-		static void psr_message(const string& message) noexcept;
 		static void message(const string& msg, bool useStatus = true) noexcept;
 		static void commandTrace(const string& msg, int flags, const string& ip, int port) noexcept;
 		static void speakStatusMessage(const string& message) noexcept;
