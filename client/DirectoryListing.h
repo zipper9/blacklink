@@ -53,7 +53,10 @@ class DirectoryListing : public UserInfoBase
 			FLAG_HAS_CANCELED   = 1 << 7,
 			FLAG_HAS_OTHER      = 1 << 8,
 			FLAG_FOUND          = 1 << 9, // files and dirs
-			FLAG_HAS_FOUND      = 1 << 10  // dirs only
+			FLAG_HAS_FOUND      = 1 << 10, // dirs only
+
+			FLAG_MASK_FIXED_TEXT_COLOR_DIR = FLAG_FOUND | FLAG_HAS_FOUND | FLAG_HAS_SHARED | FLAG_HAS_DOWNLOADED | FLAG_HAS_CANCELED,
+			FLAG_MASK_FIXED_TEXT_COLOR_FILE = FLAG_FOUND | FLAG_HAS_FOUND | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED
 		};
 		
 		struct MediaInfo

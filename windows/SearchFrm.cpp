@@ -3117,8 +3117,8 @@ static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
 	static const COLORREF colorDownloaded = RGB(145,194,196);
 	static const COLORREF colorCanceled = RGB(210,168,211);
 	static const COLORREF colorInQueue = RGB(186,0,42);
-	fg = RGB(0,0,0);
-	bg = RGB(255,255,255);
+	fg = (flags & SearchResult::FLAG_MASK_FIXED_TEXT_COLOR) ? RGB(0,0,0) : Colors::g_textColor;
+	bg = Colors::g_bgColor;
 	if (flags & SearchResult::FLAG_SHARED)
 		bg = colorShared; else
 	if (flags & SearchResult::FLAG_DOWNLOADED)
@@ -3126,7 +3126,10 @@ static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
 	if (flags & SearchResult::FLAG_DOWNLOAD_CANCELED)
 		bg = colorCanceled;
 	if (flags & SearchResult::FLAG_QUEUED)
+	{
 		fg = colorInQueue;
+		bg = RGB(255,255,255);
+	}
 }
 
 LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)

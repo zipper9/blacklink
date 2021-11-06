@@ -2193,8 +2193,8 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 
 void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
 {
-	fg = RGB(0,0,0);
-	bg = RGB(255,255,255);
+	fg = (flags & DirectoryListing::FLAG_MASK_FIXED_TEXT_COLOR_DIR) ? RGB(0,0,0) : ctrlTree.GetTextColor();
+	bg = ctrlTree.GetBkColor();
 	if (flags & DirectoryListing::FLAG_FOUND)
 		bg = colorFound; else
 	if (flags & DirectoryListing::FLAG_HAS_FOUND)
@@ -2221,13 +2221,16 @@ void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORRE
 			bg = colorCanceled;
 	}
 	if (flags & DirectoryListing::FLAG_HAS_QUEUED)
+	{
 		fg = colorInQueue;
+		bg = RGB(255,255,255);
+	}
 }
 
 void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
 {
-	fg = RGB(0,0,0);
-	bg = RGB(255,255,255);
+	fg = (flags & DirectoryListing::FLAG_MASK_FIXED_TEXT_COLOR_FILE) ? RGB(0,0,0) : ctrlList.GetTextColor();
+	bg = ctrlList.GetTextBkColor();
 	if (flags & DirectoryListing::FLAG_FOUND)
 		bg = colorFound; else
 	if (flags & DirectoryListing::FLAG_HAS_FOUND)
@@ -2239,7 +2242,10 @@ void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORR
 	if (flags & DirectoryListing::FLAG_CANCELED)
 		bg = colorCanceled;
 	if (flags & DirectoryListing::FLAG_QUEUED)
+	{
 		fg = colorInQueue;
+		bg = RGB(255,255,255);
+	}
 }
 
 LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)

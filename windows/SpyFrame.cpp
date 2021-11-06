@@ -92,6 +92,7 @@ LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	ctrlSearches.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL, WS_EX_CLIENTEDGE, IDC_RESULTS);
 	ctrlSearches.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+	ctrlSearches.SetBkColor(Colors::g_bgColor);
 	hTheme = OpenThemeData(m_hWnd, L"EXPLORER::LISTVIEW");
 	if (hTheme)
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
@@ -469,9 +470,10 @@ LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 
 		case CDDS_ITEMPREPAINT:
 		{
-			cd->clrText = RGB(0,0,0);
-			cd->clrTextBk = RGB(255,255,255);
 			const ItemInfo* ii = reinterpret_cast<ItemInfo*>(cd->nmcd.lItemlParam);
+			bool force_text_Color = (ii->re == ClientManagerListener::SEARCH_HIT || ii->re == ClientManagerListener::SEARCH_PARTIAL_HIT);
+			cd->clrText = force_text_Color ? RGB(0,0,0) : Colors::g_textColor;
+			cd->clrTextBk = Colors::g_bgColor;
 			if (ii->re == ClientManagerListener::SEARCH_HIT)
 				cd->clrTextBk = colorShared;
 			else if (ii->re == ClientManagerListener::SEARCH_PARTIAL_HIT)
