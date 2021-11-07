@@ -130,18 +130,21 @@ QueueFrame::~QueueFrame()
 #endif
 }
 
-static tstring getLastNickHubT(const UserPtr& user)
+static tstring getSourceName(const UserPtr& user, bool partial)
 {
+	tstring res;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	string nick, hubUrl;
 	if (user->getLastNickAndHub(nick, hubUrl))
 	{
 		nick += " - ";
 		auto p = WinUtil::getHubNames(user, hubUrl);
-		return Text::toT(nick) + (p.second ? p.first : Text::toT(hubUrl));
+		res = Text::toT(nick) + (p.second ? p.first : Text::toT(hubUrl));
 	}
 #endif
-	return Text::toT(user->getLastNick());
+	if (res.empty()) res = Text::toT(user->getLastNick());
+	if (partial) res.insert(0, _T("[P] "));
+	return res;
 }
 
 static const tstring& getErrorText(const QueueItem::Source& source)
@@ -403,7 +406,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				{
 					if (!tmp.empty())
 						tmp += _T(", ");
-					tmp += getLastNickHubT(j->first);
+					tmp += getSourceName(j->first, j->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
 				}
 			}
 			return tmp.empty() ? TSTRING(NO_USERS) : tmp;
@@ -447,11 +450,11 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				const auto& badSources = qi->getBadSourcesL();
 				for (auto j = badSources.cbegin(); j != badSources.cend(); ++j)
 				{
-					if (!j->second.isSet(QueueItem::Source::FLAG_REMOVED))
+					if (!j->second.isAnySet(QueueItem::Source::FLAG_REMOVED))
 					{
 						if (!tmp.empty())
 							tmp += _T(", ");
-						tmp += getLastNickHubT(j->first);
+						tmp += getSourceName(j->first, j->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
 
 						const tstring& error = getErrorText(j->second);
 						if (!error.empty())
@@ -1550,7 +1553,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 					{
 						const auto user = i->first;
-						tstring nick = getLastNickHubT(user);
+						tstring nick = getSourceName(user, i->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
 						WinUtil::escapeMenu(nick);
 						bool isOnline = user->isOnline();
 							
@@ -1581,7 +1584,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					for (auto i = badSources.cbegin(); i != badSources.cend(); ++i)
 					{
 						const auto& user = i->first;
-						tstring nick = getLastNickHubT(user);
+						tstring nick = getSourceName(user, i->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
 						const tstring& error = getErrorText(i->second);
 						if (!error.empty())
 						{
