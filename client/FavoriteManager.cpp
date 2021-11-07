@@ -511,7 +511,7 @@ bool FavoriteManager::getFavoriteHubWindowInfo(const string& server, WindowInfo&
 	return result;
 }
 
-bool FavoriteManager::setFavoriteHubPassword(const string& server, const string& password, bool addIfNotFound)
+bool FavoriteManager::setFavoriteHubPassword(const string& server, const string& nick, const string& password, bool addIfNotFound)
 {
 	bool result = false;	
 	FavoriteHubEntry* hubAdded = nullptr;
@@ -523,8 +523,9 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 			FavoriteHubEntry* fhe = *i;
 			if (fhe->getServer() == server)
 			{
-				if (fhe->getPassword() != password)
+				if (fhe->getNick() != nick || fhe->getPassword() != password)
 				{
+					fhe->setNick(nick);
 					fhe->setPassword(password);
 					hubChanged = new FavoriteHubEntry(*fhe);
 				}
@@ -538,6 +539,7 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 			hubAdded->id = ++favHubId;
 			hubAdded->setName(server);
 			hubAdded->setServer(server);
+			hubAdded->setNick(nick);
 			hubAdded->setPassword(password);
 			FavoriteHubEntry* fhe = new FavoriteHubEntry(*hubAdded);
 			favoriteHubs.push_back(fhe);

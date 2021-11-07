@@ -153,7 +153,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		bool getFavoriteHub(int id, FavoriteHubEntry& entry) const;
 		bool setFavoriteHubWindowInfo(const string& server, const WindowInfo& wi);
 		bool getFavoriteHubWindowInfo(const string& server, WindowInfo& wi) const;
-		bool setFavoriteHubPassword(const string& server, const string& password, bool addIfNotFound);
+		bool setFavoriteHubPassword(const string& server, const string& nick, const string& password, bool addIfNotFound);
 		bool setFavoriteHubAutoConnect(const string& server, bool autoConnect);
 		bool setFavoriteHubAutoConnect(int id, bool autoConnect);
 		bool isFavoriteHub(const string& server, int excludeID = 0) const;

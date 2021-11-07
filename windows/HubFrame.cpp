@@ -1168,9 +1168,10 @@ void HubFrame::processTasks()
 							else
 							{
 								showingPasswordDlg = true;
+								string nick = client->getMyNick();
 								LineDlg linePwd;
 								linePwd.title = getHubTitle();
-								linePwd.description = Text::toT(STRING_F(ENTER_PASSWORD_FOR_NICK, client->getMyNick()));
+								linePwd.description = Text::toT(STRING_F(ENTER_PASSWORD_FOR_NICK, nick));
 								linePwd.password = linePwd.checkBox = true;
 								if (linePwd.DoModal(m_hWnd) == IDOK)
 								{
@@ -1178,7 +1179,7 @@ void HubFrame::processTasks()
 									client->password(pwd, true);
 									waitingForPassword = false;
 									if (linePwd.checked)
-										FavoriteManager::getInstance()->setFavoriteHubPassword(serverUrl, pwd, true);
+										FavoriteManager::getInstance()->setFavoriteHubPassword(serverUrl, nick, pwd, true);
 								}
 								else
 								{
