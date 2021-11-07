@@ -15,7 +15,6 @@ miniupnpc
 nasm
 natpmp
 jsoncpp
-leveldb
 libtorrent
 lua
 selene

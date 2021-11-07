@@ -95,7 +95,6 @@ SovietServer
 mrgtmp?
 *.opensdf
 *-profile-*.html
-tth-history.leveldb
 .dctmp
 test/Debug/*
 test/ipch/*

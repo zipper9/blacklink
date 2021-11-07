@@ -31,7 +31,6 @@ vc17
 /compiled/Settings/Favorites.xml
 /compiled/Settings/Queue.xml
 /compiled/Settings/Logs
-/compiled/Settings/tth-history.leveldb
 /compiled/Settings/hash-db*
 /compiled/Settings/*.sqlite-shm
 /compiled/Settings/*.sqlite-wal
