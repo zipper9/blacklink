@@ -202,7 +202,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			return ctrlTransfers;
 		}
 #ifdef IRAINMAN_ENABLE_WHOIS
-		static tstring g_sSelectedIP;
+		tstring selectedIP;
 #endif
 	private:
 		enum Tasks
@@ -269,18 +269,19 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				}
 #endif
 				const bool download;
+				TTHValue tth;
 
 				bool transferFailed;
 				bool collapsed;
-				
+
 				int16_t running;
 				int16_t hits;
-				
+
 				ItemInfo* parent;
 				HintedUser hintedUser;
 				Status status;
 				Transfer::Type type;
-				
+
 				int64_t pos;
 				int64_t size;
 				int64_t actual;
@@ -363,7 +364,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				MASK_CIPHER              = 0x0400,
 				MASK_USER                = 0x0800,
 				MASK_ERROR_STATUS_STRING = 0x2000,
-				MASK_TOKEN               = 0x4000
+				MASK_TOKEN               = 0x4000,
+				MASK_TTH                 = 0x8000
 			};
 			
 			bool operator==(const ItemInfo& ii) const
@@ -396,94 +398,101 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			}
 
 			int16_t running;
-			void setRunning(int16_t aRunning)
+			void setRunning(int16_t running)
 			{
-				running = aRunning;
+				this->running = running;
 				updateMask |= MASK_SEGMENT;
 			}
 
 			ItemInfo::Status status;
-			void setStatus(ItemInfo::Status aStatus)
+			void setStatus(ItemInfo::Status status)
 			{
-				status = aStatus;
+				this->status = status;
 				updateMask |= MASK_STATUS;
 			}
 
 			int64_t pos;
-			void setPos(int64_t aPos)
+			void setPos(int64_t pos)
 			{
-				pos = aPos;
+				this->pos = pos;
 				updateMask |= MASK_POS;
 			}
 
 			int64_t size;
-			void setSize(int64_t aSize)
+			void setSize(int64_t size)
 			{
-				size = aSize;
+				this->size = size;
 				updateMask |= MASK_SIZE;
 			}
 
 			int64_t actual;
-			void setActual(int64_t aActual)
+			void setActual(int64_t actual)
 			{
-				actual = aActual;
+				this->actual = actual;
 				updateMask |= MASK_ACTUAL;
 			}
 
 			string token;
-			void setToken(const string& aToken)
+			void setToken(const string& token)
 			{
-				dcassert(!aToken.empty());
-				token = aToken;
+				dcassert(!token.empty());
+				this->token = token;
 				updateMask |= MASK_TOKEN;
 			}
-			
+
 			int64_t speed;
-			void setSpeed(int64_t aSpeed)
+			void setSpeed(int64_t speed)
 			{
-				speed = aSpeed;
+				this->speed = speed;
 				updateMask |= MASK_SPEED;
 			}
 
 			int64_t timeLeft;
-			void setTimeLeft(int64_t aTimeLeft)
+			void setTimeLeft(int64_t timeLeft)
 			{
-				timeLeft = aTimeLeft;
+				this->timeLeft = timeLeft;
 				updateMask |= MASK_TIMELEFT;
 			}
 
 			tstring errorStatusString;
-			void setErrorStatusString(const tstring& aErrorStatusString)
+			void setErrorStatusString(const tstring& str)
 			{
-				errorStatusString = aErrorStatusString;
+				errorStatusString = str;
 				updateMask |= MASK_ERROR_STATUS_STRING;
 			}
 
 			tstring statusString;
-			void setStatusString(const tstring& aStatusString)
+			void setStatusString(const tstring& str)
 			{
-				statusString = aStatusString;
+				statusString = str;
 				updateMask |= MASK_STATUS_STRING;
 			}
 
 			tstring target;
-			void setTarget(const string& aTarget)
+			void setTarget(const string& target)
 			{
-				target = Text::toT(aTarget);				
+				this->target = Text::toT(target);
 				updateMask |= MASK_FILE;
 			}
 
 			tstring cipher;
-			void setCipher(const tstring& aCipher)
+			void setCipher(const tstring& cipher)
 			{
-				cipher = aCipher;
+				this->cipher = cipher;
 				updateMask |= MASK_CIPHER;
 			}
 
 			Transfer::Type type;
-			void setType(Transfer::Type aType)
+			void setType(Transfer::Type type)
 			{
-				type = aType;
+				this->type = type;
+			}
+
+			TTHValue tth;
+			void setTTH(const TTHValue& tth)
+			{
+				this->tth = tth;
+				updateMask |= MASK_TTH;
 			}
 
 			// !SMT!-IP
@@ -595,7 +604,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void updateItem(int ii, uint32_t updateMask);
 
 		void pauseSelectedTransfer(void);
-		bool getTTH(const ItemInfo* ii, TTHValue& tth);
 		void openDownloadQueue(const ItemInfo* ii);
 };
 

@@ -46,8 +46,6 @@ static const unsigned TIMER_VAL = 1000;
 std::atomic<long> TransferView::ItemInfo::g_count_transfer_item;
 #endif
 
-tstring TransferView::g_sSelectedIP;
-
 HIconWrapper TransferView::g_user_icon(IDR_TUSER);
 
 const int TransferView::columnId[] =
@@ -269,10 +267,21 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 					defaultItem = IDC_QUEUE;
 			}
 
+			bool hasTTH = false;
 			int i = -1;
-			bool bCustomMenu = false;
+			while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
+			{
+				const ItemInfo* ii = ctrlTransfers.getItemData(i);
+				if (ii && !ii->tth.isZero())
+				{
+					hasTTH = true;
+					break;
+				}
+			}
+
+			bool showUserMenu = false;
 			ItemInfo* ii = ctrlTransfers.getItemData(ctrlTransfers.GetNextItem(-1, LVNI_SELECTED));
-			
+
 			// Something wrong happened
 			if (!ii)
 			{
@@ -307,11 +316,11 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP));
 			transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION));
 			transferMenu.AppendMenu(MF_SEPARATOR);
-			if (!main && (i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
+			if (!main && (i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
 			{
-				const ItemInfo* itemI = ctrlTransfers.getItemData(i);
-				bCustomMenu = true;				
-				reinitUserMenu(itemI->hintedUser.user, itemI->hintedUser.hint);
+				const ItemInfo* ii = ctrlTransfers.getItemData(i);
+				showUserMenu = true;				
+				reinitUserMenu(ii->hintedUser.user, ii->hintedUser.hint);
 				if (getSelectedUser())
 					appendUcMenu(usercmdsMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
 			}
@@ -322,7 +331,6 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
 			transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
 #endif
-			transferMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MFS_ENABLED);
 			if (ii->download)
 			{
 #ifdef FLYLINKDC_USE_DROP_SLOW
@@ -363,12 +371,17 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #ifdef IRAINMAN_ENABLE_WHOIS
 			if (ii->transferIp.type)
 			{
-				g_sSelectedIP = Util::printIpAddressT(ii->transferIp);  // set tstring for 'openlink function'
-				WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, true);
+				selectedIP = Util::printIpAddressT(ii->transferIp);  // set tstring for 'openlink function'
+				WinUtil::appendWhoisMenu(transferMenu, selectedIP, true);
 			}
 #endif
 
 			activatePreviewItems(transferMenu);
+
+			int flag = hasTTH ? MFS_ENABLED : MFS_DISABLED;
+			copyMenu.EnableMenuItem(IDC_COPY_TTH, flag);
+			copyMenu.EnableMenuItem(IDC_COPY_LINK, flag);
+			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, flag);
 
 			if (!main)
 			{
@@ -380,16 +393,18 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 					else if (defaultItem == IDC_ADD_TO_FAVORITES)
 						defItemMenu = &favUserMenu;
 				}
+				transferMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, hasTTH ? MFS_ENABLED : MFS_DISABLED);
 				defItemMenu->SetMenuDefaultItem(defaultItem);
 				transferMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
 			else
 			{
 				if (defaultItem == IDC_QUEUE) segmentedMenu.SetMenuDefaultItem(defaultItem);
+				segmentedMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, hasTTH ? MFS_ENABLED : MFS_DISABLED);
 				segmentedMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
 			
-			if (bCustomMenu) usercmdsMenu.ClearMenu();
+			if (showUserMenu) usercmdsMenu.ClearMenu();
 			WinUtil::unlinkStaticMenus(transferMenu);
 			return TRUE;
 		}
@@ -401,8 +416,8 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #ifdef IRAINMAN_ENABLE_WHOIS
 LRESULT TransferView::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!g_sSelectedIP.empty())
-		WinUtil::processWhoisMenu(wID, g_sSelectedIP);
+	if (!selectedIP.empty())
+		WinUtil::processWhoisMenu(wID, selectedIP);
 	return 0;
 }
 #endif // IRAINMAN_ENABLE_WHOIS
@@ -1249,10 +1264,9 @@ LRESULT TransferView::onSearchAlternates(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	{
 		const ItemInfo *ii = ctrlTransfers.getItemData(i);
 		TTHValue tth;
-		if (ii && getTTH(ii, tth))
-			WinUtil::searchHash(tth);
+		if (ii && !ii->tth.isZero())
+			WinUtil::searchHash(ii->tth);
 	}
-	
 	return 0;
 }
 
@@ -1351,6 +1365,10 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 			hintedUser = ui.hintedUser;
 			updateNicks();
 		}
+	}
+	if (ui.updateMask & UpdateInfo::MASK_TTH)
+	{
+		tth = ui.tth;
 	}
 }
 
@@ -1578,7 +1596,7 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 		case COLUMN_STATUS:
 		{
 			if (status != STATUS_RUNNING && !errorStatusString.empty())
-				return statusString + _T(" [") + errorStatusString  + _T("]"); // bad_alloc https://drdump.com/UploadedReport.aspx?DumpID=11192168
+				return statusString + _T(" [") + errorStatusString  + _T("]");
 			return statusString;
 		}
 		case COLUMN_TIMELEFT:
@@ -1631,16 +1649,14 @@ void TransferView::starting(UpdateInfo* ui, const Transfer* t)
 void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept
 {
 	UpdateInfo* ui = new UpdateInfo(download->getHintedUser(), true);
-	// TODO - AirDC++
-	// if (hubChanged)
-	//  ui->setUser(d->getHintedUser());
-	
 	starting(ui, download.get());
 	ui->setPos(download->getPos());
 	ui->setActual(download->getActual());
 	ui->setSize(download->getSize());
 	ui->setStatus(ItemInfo::STATUS_RUNNING);
 	ui->setTarget(download->getPath());
+	if (download->getType() == Download::TYPE_FILE)
+		ui->setTTH(download->getTTH());
 	ui->updateMask &= ~UpdateInfo::MASK_STATUS; // hack to avoid changing item status
 	ui->setStatusString(TSTRING(REQUESTING) + _T(' ') + getFile(download->getType(), Text::toT(Util::getFileName(download->getPath()))) + _T("..."));
 	const string& token = download->getConnectionQueueToken();
@@ -1751,16 +1767,16 @@ void TransferView::on(UploadManagerListener::Starting, const UploadPtr& upload) 
 		ui->setTarget(upload->getPath());
 		ui->setStatus(ItemInfo::STATUS_RUNNING);
 		ui->setRunning(1);
-		
+		if (upload->getType() == Transfer::TYPE_FILE)
+			ui->setTTH(upload->getTTH());
+
 		if (!upload->isSet(Upload::FLAG_RESUMED))
-		{
 			ui->setStatusString(TSTRING(UPLOAD_STARTING));
-		}
-		
+
 		const string& token = upload->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token);
-		
+
 		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
@@ -2162,18 +2178,17 @@ LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 			tstring sdata;
 			if (wID == IDC_COPY_TTH || wID == IDC_COPY_LINK || wID == IDC_COPY_WMLINK)
 			{
-				TTHValue tth;
-				if (!getTTH(ii, tth)) continue;
+				if (ii->tth.isZero()) continue;
 				switch (wID)
 				{
 					case IDC_COPY_TTH:
-						sdata = Text::toT(tth.toBase32());
+						sdata = Text::toT(ii->tth.toBase32());
 						break;
 					case IDC_COPY_LINK:
-						sdata = Text::toT(Util::getMagnet(tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
+						sdata = Text::toT(Util::getMagnet(ii->tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
 						break;
 					default:
-						sdata = Text::toT(Util::getWebMagnet(tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
+						sdata = Text::toT(Util::getWebMagnet(ii->tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
 				}
 			}
 			else if (columnId >= COLUMN_FIRST && columnId < COLUMN_LAST)
@@ -2204,14 +2219,6 @@ void TransferView::pauseSelectedTransfer(void)
 		const string target = Text::fromT(ii->target);
 		QueueManager::getInstance()->setPriority(target, QueueItem::PAUSED, true);
 	}
-}
-
-bool TransferView::getTTH(const ItemInfo* ii, TTHValue& tth)
-{
-	if (ii->download)
-		return QueueManager::getTTH(Text::fromT(ii->target), tth);
-	else
-		return ShareManager::getInstance()->findByRealPath(Text::fromT(ii->target), &tth, nullptr, nullptr);
 }
 
 LRESULT TransferView::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
