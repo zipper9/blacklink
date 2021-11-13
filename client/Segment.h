@@ -26,7 +26,7 @@ class Segment
 {
 	public:
 		Segment() : start(0), size(-1), overlapped(false) { }
-		Segment(int64_t start_, int64_t size_, bool overlapped_ = false) : start(start_), size(size_), overlapped(overlapped_)
+		Segment(int64_t start, int64_t size, bool overlapped = false) : start(start), size(size), overlapped(overlapped)
 		{
 		}
 		
@@ -34,7 +34,7 @@ class Segment
 		int64_t getSize() const { return size; }
 		int64_t getEnd() const { return start + size; }
 		
-		void setSize(int64_t size_) { size = size_; }
+		void setSize(int64_t size) { this->size = size; }
 		
 		bool overlaps(const Segment& rhs) const
 		{
@@ -45,14 +45,12 @@ class Segment
 		{
 			return (getStart() < rhs.getStart()) || (getStart() == rhs.getStart() && getSize() < rhs.getSize());
 		}
-		//bool operator==(const Segment& rhs) const
-		//{
-		//  return getStart() == rhs.getStart() && getSize() == rhs.getSize();
-		//}
+
 		bool contains(const Segment& rhs) const
 		{
-			return getStart() <= rhs.getStart() && getEnd() == rhs.getEnd();
+			return getStart() <= rhs.getStart() && getEnd() == rhs.getEnd(); // ???
 		}
+
 	private:
 		int64_t start;
 		int64_t size;

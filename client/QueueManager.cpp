@@ -2846,6 +2846,21 @@ bool QueueManager::dropSource(const DownloadPtr& aDownload)
 }
 #endif
 
+static void logPartialSourceInfo(const QueueItem::PartialSource& partialSource, const UserPtr& user, const TTHValue& tth, const string& header, bool hasPart)
+{
+	string msg = tth.toBase32() + ": ";
+	msg += header;
+	msg += ' ';
+	msg += Util::printIpAddress(partialSource.getIp(), true) + ':' + Util::toString(partialSource.getUdpPort());
+	string nick = user->getLastNick();
+	if (!nick.empty()) msg += ", " + nick;
+	const string& hub = partialSource.getHubIpPort();
+	if (!hub.empty()) msg += ", hub " + hub;
+	msg += ", they have " + Util::toString(QueueItem::countParts(partialSource.getParts())) + '*' + Util::toString(partialSource.getBlockSize());
+	if (!hasPart) msg += " (no needed part)";
+	LOG(PSR_TRACE, msg);
+}
+
 bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, QueueItem::PartsInfo& outPartialInfo)
 {
 	bool wantConnection = false;
@@ -2893,6 +2908,8 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 			{
 				if (si == qi->getBadSourcesL().end())
 					return false;
+				auto ps = si->second.getPartialSource();
+				if (ps) ps->setNextQueryTime(GET_TICK() + PFS_QUERY_INTERVAL);
 			}
 			else
 			{
@@ -2902,28 +2919,33 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 
 				const auto ps = std::make_shared<QueueItem::PartialSource>(partialSource.getMyNick(),
 					partialSource.getHubIpPort(), partialSource.getIp(), partialSource.getUdpPort(), partialSource.getBlockSize());
+				ps->setParts(partialSource.getParts());
+				ps->setNextQueryTime(GET_TICK() + PFS_QUERY_INTERVAL);
 				si->second.setPartialSource(ps);
 
 				userQueue.addL(qi, user, false);
 				dcassert(si != qi->getSourcesL().end());
 				addUpdatedSource(qi);
 				if (BOOLSETTING(LOG_PSR_TRACE))
-				{
-					string msg = tth.toBase32() + ": adding partial source ";
-					msg += Util::printIpAddress(partialSource.getIp(), true) + ':' + Util::toString(partialSource.getUdpPort());
-					string nick = user->getLastNick();
-					if (!nick.empty()) msg += ", " + nick;
-					const string& hub = partialSource.getHubIpPort();
-					if (!hub.empty()) msg += ", hub " + hub;
-					msg += ", they have " + Util::toString(QueueItem::countParts(partialSource.getParts())) + '*' + Util::toString(partialSource.getBlockSize());
-					LOG(PSR_TRACE, msg);
-				}
+					logPartialSourceInfo(partialSource, user, tth, "adding partial source", wantConnection);
 			}
 		}
-
-		// Update source's parts info
-		if (si->second.getPartialSource())
-			si->second.getPartialSource()->setParts(partialSource.getParts());
+		else
+		{
+			// Update source's parts info
+			QueueItem::PartialSource::Ptr ps = si->second.getPartialSource();
+			if (ps)
+			{
+				uint16_t oldPort = ps->getUdpPort();
+				uint16_t newPort = partialSource.getUdpPort();
+				if (!newPort) newPort = oldPort;
+				if (BOOLSETTING(LOG_PSR_TRACE) && (!QueueItem::compareParts(ps->getParts(), partialSource.getParts()) || oldPort != newPort))
+					logPartialSourceInfo(partialSource, user, tth, "updating partial source", wantConnection);
+				ps->setParts(partialSource.getParts());
+				ps->setUdpPort(newPort);
+				ps->setNextQueryTime(GET_TICK() + PFS_QUERY_INTERVAL);
+			}
+		}
 	}
 
 	// Connect to this user

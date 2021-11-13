@@ -94,6 +94,7 @@ class QueueItem
 
 		typedef std::vector<uint16_t> PartsInfo;
 		static int countParts(const PartsInfo& pi);
+		static bool compareParts(const PartsInfo& a, const PartsInfo& b);
 
 		/**
 		 * Source parts info
@@ -108,7 +109,7 @@ class QueueItem
 				typedef std::shared_ptr<PartialSource> Ptr;
 				bool isCandidate(const uint64_t now) const
 				{
-					return getPendingQueryCount() < 80 && getUdpPort() != 0 && getNextQueryTime() <= now;
+					return getUdpPort() != 0 && getNextQueryTime() <= now;
 				}
 
 				GETSET(PartsInfo, parts, Parts);

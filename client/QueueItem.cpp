@@ -762,7 +762,8 @@ void QueueItem::addSegmentL(const Segment& segment)
 		const Segment& segPrev = *prev;
 		if (segPrev.getEnd() >= segCurrent.getStart())
 		{
-			const Segment big(segPrev.getStart(), segCurrent.getEnd() - segPrev.getStart());
+			int64_t bigEnd = std::max(segCurrent.getEnd(), segPrev.getEnd());
+			Segment big(segPrev.getStart(), bigEnd - segPrev.getStart());
 			int64_t removedSize = segPrev.getSize() + segCurrent.getSize();
 			doneSegments.erase(prev);
 			doneSegments.erase(current++);
@@ -837,6 +838,12 @@ int QueueItem::countParts(const QueueItem::PartsInfo& pi)
 	for (size_t i = 0; i + 2 <= pi.size(); i += 2)
 		res += pi[i+1] - pi[i];
 	return res;
+}
+
+bool QueueItem::compareParts(const QueueItem::PartsInfo& a, const QueueItem::PartsInfo& b)
+{
+	if (a.size() != b.size()) return false;
+	return memcmp(&a[0], &b[0], a.size() * sizeof(a[0])) == 0;
 }
 
 void QueueItem::getDoneSegments(vector<Segment>& done) const
