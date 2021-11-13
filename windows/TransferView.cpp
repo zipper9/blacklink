@@ -1263,7 +1263,6 @@ LRESULT TransferView::onSearchAlternates(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo *ii = ctrlTransfers.getItemData(i);
-		TTHValue tth;
 		if (ii && !ii->tth.isZero())
 			WinUtil::searchHash(ii->tth);
 	}
@@ -1369,6 +1368,7 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	if (ui.updateMask & UpdateInfo::MASK_TTH)
 	{
 		tth = ui.tth;
+		if (parent) parent->tth = tth;
 	}
 }
 

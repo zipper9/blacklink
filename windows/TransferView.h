@@ -335,6 +335,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 					ii->statusString = TSTRING(CONNECTING);
 					ii->target = target;
 					ii->errorStatusString = errorStatusString;
+					ii->tth = tth;
 					return ii;
 				}
 				const tstring& getGroupCond() const
