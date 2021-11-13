@@ -220,7 +220,9 @@ void Client::reloadSettings(bool updateNick)
 		hideShare = hub->getHideShare();
 		shareGroup = hub->getShareGroup();
 
-		setFavIp(hub->getIP());
+		string ip = hub->getIP();
+		boost::algorithm::trim(ip);
+		setFavIp(ip);
 		favMode = hub->getMode();
 		
 		int hubEncoding = hub->getEncoding();

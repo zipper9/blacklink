@@ -733,10 +733,17 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	
 }
 
+static uint16_t parsePort(const string& s)
+{
+	if (s.empty() || s.length() > 5) return 0;
+	uint32_t port = Util::toUInt32(s);
+	return port < 65536 ? static_cast<uint16_t>(port) : 0;
+}
+
 void NmdcHub::connectToMeParse(const string& param)
 {
 	string senderNick;
-	string port;
+	string portStr;
 	string server;
 	string myNick;
 	uint16_t localPort;
@@ -782,44 +789,45 @@ void NmdcHub::connectToMeParse(const string& param)
 		i = param.find(' ', j + 1);
 		if (i == string::npos)
 		{
-			port = param.substr(j + 1);
+			portStr = param.substr(j + 1);
 		}
 		else
 		{
 			senderNick = param.substr(i + 1);
-			port = param.substr(j + 1, i - j - 1);
+			portStr = param.substr(j + 1, i - j - 1);
 		}
-		
+
+		if (portStr.empty())
+			break;
+
 		bool secure = false;
-		if (port[port.size() - 1] == 'S')
+		if (portStr.back() == 'S')
 		{
-			port.erase(port.size() - 1);
+			portStr.erase(portStr.length() - 1);
+			if (portStr.empty())
+				break;
 			if (CryptoManager::TLSOk())
-			{
 				secure = true;
-			}
 		}
 
 		IpAddress ip;
 		if (!(Util::parseIpAddress(ip, server) && Util::isValidIp(ip)))
 			break;
 
-		if (port.empty())
-			break;
-
 		if (BOOLSETTING(ALLOW_NAT_TRAVERSAL))
 		{
-			if (port[port.size() - 1] == 'N')
+			if (portStr.back() == 'N')
 			{
 				if (senderNick.empty())
 					break;
 					
-				port.erase(port.size() - 1);
-				if (port.empty())
+				portStr.erase(portStr.length() - 1);
+				uint16_t port = parsePort(portStr);
+				if (!port)
 					break;
 				
 				// Trigger connection attempt sequence locally ...
-				ConnectionManager::getInstance()->nmdcConnect(ip, static_cast<uint16_t>(Util::toInt(port)), localPort,
+				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_CLIENT, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
@@ -830,18 +838,19 @@ void NmdcHub::connectToMeParse(const string& param)
 				}
 				else
 				{
-					send("$ConnectToMe " + senderNick + ' ' + getMyExternalIP() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
+					send("$ConnectToMe " + fromUtf8(senderNick) + ' ' + getMyExternalIP() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
 				}
 				break;
 			}
-			else if (port[port.size() - 1] == 'R')
+			else if (portStr.back() == 'R')
 			{
-				port.erase(port.size() - 1);
-				if (port.empty())
+				portStr.erase(portStr.length() - 1);
+				uint16_t port = parsePort(portStr);
+				if (!port)
 					break;
 
 				// Trigger connection attempt sequence locally
-				ConnectionManager::getInstance()->nmdcConnect(ip, static_cast<uint16_t>(Util::toInt(port)), localPort,
+				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_SERVER, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
@@ -849,8 +858,12 @@ void NmdcHub::connectToMeParse(const string& param)
 			}
 		}
 
+		uint16_t port = parsePort(portStr);
+		if (!port)
+			break;
+
 		// For simplicity, we make the assumption that users on a hub have the same character encoding
-		ConnectionManager::getInstance()->nmdcConnect(ip, static_cast<uint16_t>(Util::toInt(port)), myNick, getHubUrl(),
+		ConnectionManager::getInstance()->nmdcConnect(ip, port, myNick, getHubUrl(),
 		                                              getEncoding(),
 		                                              secure);
 		break; // OK
@@ -1179,34 +1192,30 @@ void NmdcHub::userIPParse(const string& param)
 	{
 		const StringTokenizer<string> t(param, "$$");
 		const StringList& sl = t.getTokens();
+		for (const string& s : sl)
 		{
-			for (auto it = sl.cbegin(); it != sl.cend(); ++it)
+			string::size_type j = s.find(' ');
+			if (j == string::npos || j == 0 || j + 1 == s.length())
+				continue;
+
+			const string ipStr = s.substr(j + 1);
+			const string user = s.substr(0, j);
+			OnlineUserPtr ou = findUser(user);
+
+			if (!ou)
+				continue;
+
+			IpAddress ip;
+			if (Util::parseIpAddress(ip, ipStr))
 			{
-				string::size_type j = 0;
-				if ((j = it->find(' ')) == string::npos)
-					continue;
-				if ((j + 1) == it->length())
-					continue;
-
-				const string ipStr = it->substr(j + 1);
-				const string user = it->substr(0, j);
-				OnlineUserPtr ou = findUser(user);
-
-				if (!ou)
-					continue;
-	
-				IpAddress ip;
-				if (Util::parseIpAddress(ip, ipStr))
+				switch (ip.type)
 				{
-					switch (ip.type)
-					{
-						case AF_INET:
-							ou->getIdentity().setIP4(ip.data.v4);
-							break;
-						case AF_INET6:
-							ou->getIdentity().setIP6(ip.data.v6);
-							break;
-					}
+					case AF_INET:
+						ou->getIdentity().setIP4(ip.data.v4);
+						break;
+					case AF_INET6:
+						ou->getIdentity().setIP6(ip.data.v6);
+						break;
 				}
 			}
 		}
