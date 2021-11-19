@@ -660,12 +660,7 @@ LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 						ui->clearLocation();
 					}
 				}
-				const UserPtr& user = ui->getUser();
-				if (user->getFlags() & User::ATTRIBS_CHANGED)
-				{
-					ui->flags = UserInfo::ALL_MASK;
-					user->unsetFlag(User::ATTRIBS_CHANGED);
-				}
+				ui->flags |= IS_FAVORITE | IS_BAN | IS_RESERVED_SLOT;
 				getUserColor(cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
@@ -925,21 +920,18 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	const auto userFlags = user->getFlags();
 	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
 	{
+		flags &= ~IS_IGNORED_USER;
 		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
-			flags = (flags & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
-		else
-			flags = (flags & ~IS_IGNORED_USER);
+			flags |= IS_IGNORED_USER_ON;
 	}
 	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
 	{
-		if (UploadManager::getInstance()->getReservedSlotTick(user))
-			flags = (flags & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
-		else
-			flags = (flags & ~IS_RESERVED_SLOT);
+		flags &= ~IS_RESERVED_SLOT;
+		if (userFlags & User::RESERVED_SLOT)
+			flags |= IS_RESERVED_SLOT_ON;
 	}
 	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
 	{
-		auto userFlags = user->getFlags();
 		flags &= ~(IS_FAVORITE | IS_BAN);
 		if (userFlags & User::FAVORITE)
 		{

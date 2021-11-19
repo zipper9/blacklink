@@ -698,7 +698,7 @@ void HubFrame::createTabMenu()
 		tabMenu.CreatePopupMenu();
 	if (BOOLSETTING(LOG_MAIN_CHAT))
 	{
-		tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG));
+		tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 		tabMenu.AppendMenu(MF_SEPARATOR);
 	}
 	if (isFav)
@@ -2206,7 +2206,6 @@ void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) 
 	if (isClosedOrShutdown())
 		return;
 	++asyncUpdate;
-	user.user->setFlag(User::ATTRIBS_CHANGED);
 	resortForFavsFirst();
 }
 
@@ -2215,13 +2214,11 @@ void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user
 	if (isClosedOrShutdown())
 		return;
 	++asyncUpdate;
-	user.user->setFlag(User::ATTRIBS_CHANGED);
 }
 
 void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept
 {
 	++asyncUpdate;
-	user->setFlag(User::ATTRIBS_CHANGED);
 }
 
 void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
@@ -2233,16 +2230,17 @@ void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept
 {
 	ctrlUsers.onIgnoreListChanged(userName);
+	++asyncUpdate;
 }
 
 void HubFrame::on(UserManagerListener::IgnoreListCleared) noexcept
 {
 	ctrlUsers.onIgnoreListCleared();
+	++asyncUpdate;
 }
 
 void HubFrame::on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept
 {
-	user->setFlag(User::ATTRIBS_CHANGED);
 	++asyncUpdate;
 }
 

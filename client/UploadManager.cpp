@@ -551,8 +551,10 @@ ok:
 	}
 	bool hasReserved = slotTimeout == 0 ? false : slotTimeout > GET_TICK();
 	if (!hasReserved)
+	{
+		if (slotTimeout) source->getUser()->unsetFlag(User::RESERVED_SLOT);
 		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(source->getUser());// !SMT!-S
-	
+	}
 	const bool isFavorite = FavoriteManager::getInstance()->hasAutoGrantSlot(source->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	// !SMT!-S
@@ -790,6 +792,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 	{
 		WRITE_LOCK(*csReservedSlots);
 		reservedSlots[hintedUser.user] = GET_TICK() + seconds * 1000;
+		hintedUser.user->setFlag(User::RESERVED_SLOT);
 	}
 	save();
 	bool notifyUser = false;
@@ -824,6 +827,7 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	{
 		WRITE_LOCK(*csReservedSlots);
 		if (!reservedSlots.erase(hintedUser.user)) return;
+		hintedUser.user->unsetFlag(User::RESERVED_SLOT);
 	}
 	save();
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
@@ -1208,8 +1212,11 @@ void UploadManager::testSlotTimeout(uint64_t tick /*= GET_TICK()*/)
 	if (!users.empty())
 	{
 		auto um = UserManager::getInstance();
-		for (UserPtr user : users)
+		for (UserPtr& user : users)
+		{
+			user->unsetFlag(User::RESERVED_SLOT);
 			um->fireReservedSlotChanged(user);
+		}
 	}
 }
 
@@ -1540,7 +1547,10 @@ void UploadManager::load()
 		WRITE_LOCK(*csReservedSlots);
 		int64_t timeout = k->second.ival;
 		if (timeout > currentTime)
+		{
 			reservedSlots[user] = (timeout-currentTime)*1000 + currentTick;
+			user->setFlag(User::RESERVED_SLOT);
+		}
 	}
 	testSlotTimeout();
 }
