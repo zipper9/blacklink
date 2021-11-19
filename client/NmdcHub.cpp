@@ -496,16 +496,26 @@ void NmdcHub::getMyUDPAddr(string& ip, uint16_t& port) const
 	port = 0;
 }
 
-bool NmdcHub::getShareGroup(const string& seeker, CID& shareGroup) const
+bool NmdcHub::getShareGroup(const string& seeker, CID& shareGroup, bool& hideShare) const
 {
+	hideShare = false;
 	const CID cid = ClientManager::makeCid(seeker, getHubUrl());
 	FavoriteManager::LockInstanceUsers lockedInstance;
 	const auto& users = lockedInstance.getFavoriteUsersL();
 	auto i = users.find(cid);
 	if (i == users.cend()) return false;
-	if (i->second.shareGroup.isZero()) return false;
-	shareGroup = i->second.shareGroup;
-	return true;
+	const FavoriteUser& favUser = i->second;
+	if (favUser.isAnySet(FavoriteUser::FLAG_HIDE_SHARE))
+	{
+		hideShare = true;
+		return true;
+	}
+	if (!favUser.shareGroup.isZero())
+	{
+		shareGroup = favUser.shareGroup;
+		return true;
+	}
+	return false;
 }
 
 void NmdcHub::searchParse(const string& param, int type)
@@ -536,7 +546,12 @@ void NmdcHub::searchParse(const string& param, int type)
 		{
 			if (searchParam.seeker.compare(4, myNick.length(), myNick) == 0)
 				return;
-			if (!getShareGroup(searchParam.seeker.substr(4), searchParam.shareGroup))
+			bool hideShare;
+			if (getShareGroup(searchParam.seeker.substr(4), searchParam.shareGroup, hideShare))
+			{
+				if (hideShare) return;
+			}
+			else
 				searchParam.shareGroup = shareGroup;
 		}
 		else if (isActive())
