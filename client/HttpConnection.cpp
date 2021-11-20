@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "HttpConnection.h"
+#include "HttpHeaders.h"
 #include "BufferedSocket.h"
 #include "SettingsManager.h"
 #include "version.h"
@@ -59,7 +60,7 @@ void HttpConnection::downloadFile(const string &url)
 {
 	currentUrl = url;
 	requestBody.clear();
-	prepareRequest(TYPE_GET);
+	prepareRequest(Http::METHOD_GET);
 }
 
 /**
@@ -76,17 +77,17 @@ void HttpConnection::postData(const string &url, const StringMap &params)
 		requestBody += "&" + Util::encodeURI(i->first) + "=" + Util::encodeURI(i->second);
 
 	if (!requestBody.empty()) requestBody = requestBody.substr(1);
-	prepareRequest(TYPE_POST);
+	prepareRequest(Http::METHOD_POST);
 }
 
 void HttpConnection::postData(const string &url, const string &body)
 {
 	currentUrl = url;
 	requestBody = body;
-	prepareRequest(TYPE_POST);
+	prepareRequest(Http::METHOD_POST);
 }
 
-void HttpConnection::prepareRequest(RequestType type)
+void HttpConnection::prepareRequest(int type)
 {
 	dcassert(Text::isAsciiPrefix2(currentUrl, prefixHttp) ||
 	         Text::isAsciiPrefix2(currentUrl, prefixHttps));
@@ -99,9 +100,7 @@ void HttpConnection::prepareRequest(RequestType type)
 	bodySize = BODY_SIZE_UNKNOWN;
 	receivedBodySize = 0;
 	receivedHeadersSize = 0;
-	responseCode = 0;
-	responseText.clear();
-	redirLocation.clear();
+	resp.clear();
 
 	if (Util::checkFileExt(currentUrl, string(".bz2")))
 		mimeType = "application/x-bzip2";
@@ -141,14 +140,15 @@ void HttpConnection::prepareRequest(RequestType type)
 	}
 }
 
-#define LIT(n) n, sizeof(n)-1
-
 void HttpConnection::onConnected() noexcept
 {
 	dcassert(socket);
-	string req = (requestType == TYPE_POST ? "POST " : "GET ") + path;
-	if (!query.empty()) req += '?' + query;
-	req += " HTTP/1.1\r\n";
+	Http::Request req;
+	req.setMethodId(requestType);
+	if (!query.empty())
+		req.setUri(path + '?' + query);
+	else
+		req.setUri(path);
 
 	string remoteServer = server;
 #if 0
@@ -159,92 +159,40 @@ void HttpConnection::onConnected() noexcept
 		Util::decodeUrl(file, proto, remoteServer, tport, tfile, queryTmp, fragment);
 	}
 #endif
+	req.addHeader(Http::HEADER_HOST, remoteServer);
+	if (!userAgent.empty()) req.addHeader(Http::HEADER_USER_AGENT, userAgent);
+	req.addHeader(Http::HEADER_CONNECTION, "close");
+	req.addHeader(Http::HEADER_CACHE_CONTROL, "no-cache");
+	req.addHeader(Http::HEADER_CONTENT_LENGTH, Util::toString(requestBody.length()));
 
-	req += "Host: " + remoteServer + "\r\n";
-	if (!userAgent.empty()) req += "User-Agent: " + userAgent + "\r\n";
-	req.append(LIT("Connection: close\r\n"));
-	req.append(LIT("Cache-Control: no-cache\r\n"));
-	req += "Content-Length: " + Util::toString(requestBody.length()) + "\r\n";
-	req.append(LIT("\r\n"));
-	req += requestBody;
-	socket->write(req);
-	connState = STATE_WAIT_RESPONSE;
+	string s;
+	req.print(s);
+	s += requestBody;
+	socket->write(s);
+	connState = STATE_PROCESS_RESPONSE;
 }
 
-static inline bool isDigit(char c)
+void HttpConnection::parseResponseHeader(const string& line) noexcept
 {
-	return c >= '0' && c <= '9';
-}
-
-static inline bool isWhiteSpace(char c)
-{
-	return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-
-bool HttpConnection::parseStatusLine(const string& line) noexcept
-{
-	static const string strStatusLine = "HTTP/1.";
-	responseCode = 0;
-	if (line.length() < 12) return false;
-	if (line.compare(0, 7, strStatusLine) || !(line[7] == '0' || line[7] == '1')) return false;
-	if (!(isDigit(line[9]) && isDigit(line[10]) && isDigit(line[11]))) return false;
-	responseCode = (line[9]-'0')*100 + (line[10]-'0')*10 + (line[11]-'0');
-	size_t start = 12;
-	while (start < line.length() && isWhiteSpace(line[start])) start++;
-	size_t end = line.length();
-	while (end > start && isWhiteSpace(line[end-1])) end--;
-	if (start < end)
-		responseText = line.substr(start, end-start);
-	else
-		responseText.clear();
-	return true;
-}
-
-bool HttpConnection::parseResponseHeader(const string& line) noexcept
-{
-	static const string headerContentLength = "content-length";
-	static const string headerContentType = "content-type";
-	static const string headerTransferEncoding = "transfer-encoding";
-	static const string headerLocation = "location";
 	static const string encodingChunked = "chunked";
-	string lineLower = line;
-	Text::asciiMakeLower(lineLower);
-	size_t pos = lineLower.find(':');
-	if (pos == string::npos) return false;
-	size_t nameEnd = pos;
-	while (nameEnd > 0 && isWhiteSpace(lineLower[nameEnd-1])) nameEnd--;
-	size_t valueStart = pos + 1;
-	while (valueStart < lineLower.length() && isWhiteSpace(lineLower[valueStart])) valueStart++;
-	size_t valueEnd = lineLower.length();
-	while (valueEnd > valueStart && isWhiteSpace(lineLower[valueEnd-1])) valueEnd--;
-	if (valueEnd <= valueStart) return false;
-	if (lineLower.compare(0, nameEnd, headerContentLength) == 0)
+	resp.parseLine(line);
+	if (resp.isComplete() && !resp.isError())
 	{
-		bodySize = Util::toInt64(lineLower.substr(valueStart, valueEnd-valueStart));
-		return true;
+		bodySize = resp.parseContentLength();
+		if (resp.isError()) return;
+		if (bodySize < 0)
+		{
+			string transferEncoding = resp.getHeaderValue(Http::HEADER_TRANSFER_ENCODING);
+			auto pos = transferEncoding.find(';');
+			if (pos != string::npos) transferEncoding.erase(pos);
+			boost::algorithm::trim(transferEncoding);
+			Text::asciiMakeLower(transferEncoding);
+			if (transferEncoding == encodingChunked)
+				bodySize = BODY_SIZE_CHUNKED;
+		}
+		string params;
+		resp.parseContentType(mimeType, params);
 	}
-	if (lineLower.compare(0, nameEnd, headerContentType) == 0)
-	{
-		mimeType = lineLower.substr(valueStart, valueEnd-valueStart);
-		pos = mimeType.find(';');
-		if (pos != string::npos) mimeType.erase(pos);
-		return true;
-	}
-	if (lineLower.compare(0, nameEnd, headerTransferEncoding) == 0)
-	{
-		string transferEncoding = lineLower.substr(valueStart, valueEnd-valueStart);
-		pos = transferEncoding.find(';');
-		if (pos != string::npos) transferEncoding.erase(pos);
-		if (transferEncoding == encodingChunked)
-			bodySize = BODY_SIZE_CHUNKED;
-		return true;
-	}
-	if (lineLower.compare(0, nameEnd, headerLocation) == 0)
-	{
-		redirLocation = lineLower.substr(valueStart, valueEnd-valueStart);
-		return true;
-	}
-	return true;
 }
 
 void HttpConnection::onDataLine(const string &line) noexcept
@@ -277,23 +225,20 @@ void HttpConnection::onDataLine(const string &line) noexcept
 			socket->setDataMode(chunkSize);
 		return;
 	}
-	if (connState == STATE_WAIT_RESPONSE)
+	if (connState == STATE_PROCESS_RESPONSE)
 	{
 		receivedHeadersSize += line.size();
-		if (!parseStatusLine(line))
+		parseResponseHeader(line);
+		if (resp.isError())
 		{
 			connState = STATE_FAILED;
-			fire(HttpConnectionListener::Failed(), this, "Malformed status line (" + currentUrl + ")");
+			fire(HttpConnectionListener::Failed(), this, "Malformed HTTP response (" + currentUrl + ")");
 			disconnect();
-		} else
-			connState = STATE_PROCESS_HEADERS;
-		return;
-	}
-	if (connState == STATE_PROCESS_HEADERS)
-	{
-		receivedHeadersSize += line.size();
-		if (line[0] == '\r')
+			return;
+		}
+		if (resp.isComplete())
 		{
+			int responseCode = resp.getResponseCode();
 			if (responseCode == 200)
 			{
 				if (bodySize >= 0)
@@ -327,7 +272,7 @@ void HttpConnection::onDataLine(const string &line) noexcept
 				return;
 			}
 
-			if (requestType == TYPE_GET && (responseCode == 301 || responseCode == 302 || responseCode == 307))
+			if (requestType == Http::METHOD_GET && (responseCode == 301 || responseCode == 302 || responseCode == 307))
 			{
 				if (++redirCount > maxRedirects)
 				{
@@ -340,6 +285,8 @@ void HttpConnection::onDataLine(const string &line) noexcept
 					disconnect();
 					return;
 				}				
+				int index;
+				const string& redirLocation = resp.findSingleHeader(Http::HEADER_LOCATION, index) ? resp.at(index) : Util::emptyString;
 				if (!(Text::isAsciiPrefix2(redirLocation, prefixHttp) || Text::isAsciiPrefix2(redirLocation, prefixHttps)))
 				{
 					connState = STATE_FAILED;
@@ -354,7 +301,7 @@ void HttpConnection::onDataLine(const string &line) noexcept
 			else
 			{
 				connState = STATE_FAILED;
-				fire(HttpConnectionListener::Failed(), this, responseText + " (" + currentUrl + ")");
+				fire(HttpConnectionListener::Failed(), this, resp.getResponsePhrase() + " (" + currentUrl + ")");
 				disconnect();
 			}
 			return;
@@ -366,8 +313,6 @@ void HttpConnection::onDataLine(const string &line) noexcept
 			disconnect();
 			return;
 		}
-		parseResponseHeader(line);
-		return;
 	}
 }
 

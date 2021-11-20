@@ -21,6 +21,7 @@
 
 #include "BufferedSocketListener.h"
 #include "HttpConnectionListener.h"
+#include "HttpMessage.h"
 #include "Speaker.h"
 #include <limits>
 
@@ -53,19 +54,11 @@ public:
 	void setMaxRedirects(int count) { maxRedirects = count; }
 
 private:
-	enum RequestType
-	{
-		TYPE_UNKNOWN,
-		TYPE_GET,
-		TYPE_POST,
-	 };
-
 	enum ConnectionStates
 	{
 		STATE_IDLE,
 		STATE_SEND_REQUEST,
-		STATE_WAIT_RESPONSE,
-		STATE_PROCESS_HEADERS,
+		STATE_PROCESS_RESPONSE,
 		STATE_DATA,
 		STATE_DATA_CHUNKED,
 		STATE_FAILED
@@ -79,14 +72,11 @@ private:
 	string path;
 	string query;
 	uint16_t port = 80;
-	
-	int responseCode = 0;
-	string responseText;
+
 	int64_t bodySize = -1;
 	int64_t receivedBodySize = 0;
 	size_t receivedHeadersSize = 0;
 	int redirCount = 0;
-	string redirLocation;
 	string requestBody;
 	string userAgent;
 	string mimeType;
@@ -94,13 +84,13 @@ private:
 	int maxRedirects = 5;
 
 	ConnectionStates connState = STATE_IDLE;
-	RequestType requestType = TYPE_UNKNOWN;
+	int requestType = -1;
+	Http::Response resp;
 
 	BufferedSocket* socket = nullptr;
 
-	void prepareRequest(RequestType type);
-	bool parseStatusLine(const string &line) noexcept;
-	bool parseResponseHeader(const string &line) noexcept;
+	void prepareRequest(int type);
+	void parseResponseHeader(const string &line) noexcept;
 	void detachSocket() noexcept;
 	void disconnect() noexcept;
 	

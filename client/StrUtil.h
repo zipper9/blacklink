@@ -45,6 +45,26 @@ namespace Util
 		return negative ? -result : result;
 	}
 
+	template<typename int_type, typename char_type>
+	inline int_type stringToInt(const char_type* s, size_t& index)
+	{
+		bool negative = false;
+		if (std::is_signed<int_type>::value && s[index] == '-')
+		{
+			negative = true;
+			index++;
+		}
+		else if (s[index] == '+')
+			index++;
+		int_type result = 0;
+		while (s[index] >= '0' && s[index] <= '9')
+		{
+			result = result*10 + s[index] - '0';
+			index++;
+		}
+		return negative ? -result : result;
+	}
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

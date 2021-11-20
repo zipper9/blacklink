@@ -531,6 +531,8 @@
     <ClCompile Include="client\HashManager.cpp" />
     <ClCompile Include="client\HashUtil.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
+    <ClCompile Include="client\HttpHeaders.cpp" />
+    <ClCompile Include="client\HttpMessage.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
     <ClCompile Include="client\inet_compat.cpp" />
     <ClCompile Include="client\Ip4Address.cpp" />
@@ -709,6 +711,8 @@
     <ClInclude Include="client\HintedUser.h" />
     <ClInclude Include="client\HttpConnection.h" />
     <ClInclude Include="client\HttpConnectionListener.h" />
+    <ClInclude Include="client\HttpHeaders.h" />
+    <ClInclude Include="client\HttpMessage.h" />
     <ClInclude Include="client\HublistManager.h" />
     <ClInclude Include="client\HublistManagerListener.h" />
     <ClInclude Include="client\idna\idna.h" />
