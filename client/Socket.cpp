@@ -921,7 +921,7 @@ int Socket::resolveHost(Ip4Address* v4, Ip6Address* v6, int af, const string& ho
 		outFlags |= RESOLVE_RESULT_V6;
 		if (v6)
 		{
-			const sockaddr_in6* sa = (const sockaddr_in6*) v4Result;
+			const sockaddr_in6* sa = (const sockaddr_in6*) v6Result;
 			memcpy(v6, &sa->sin6_addr, sizeof(*v6));
 		}
 	}
