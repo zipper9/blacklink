@@ -288,24 +288,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			COLUMN_IP              = 17,
 			COLUMN_TTH             = 18,
 			COLUMN_P2P_GUARD       = 19,
-#ifdef FLYLINKDC_USE_TORRENT
-			COLUMN_TORRENT_COMMENT = 20,
-			COLUMN_TORRENT_DATE    = 21,
-			COLUMN_TORRENT_URL     = 22,
-			COLUMN_TORRENT_TRACKER = 23,
-			COLUMN_TORRENT_PAGE    = 24,
-#endif
 			COLUMN_LAST
 		};
-		
-		enum Images
-		{
-			IMAGE_UNKOWN,
-			IMAGE_SLOW,
-			IMAGE_NORMAL,
-			IMAGE_FAST
-		};
-		
+
 		enum FilterModes
 		{
 			NONE,
@@ -325,9 +310,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				
 				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
 					colMask(0), hits(0), iconIndex(-1)
-#ifdef FLYLINKDC_USE_TORRENT
-					, m_is_torrent(false), m_is_top_torrent(false)
-#endif
 				{
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 					ipUpdated = false;
@@ -341,10 +323,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				{
 					return sr.getUser();
 				}
-#ifdef FLYLINKDC_USE_TORRENT
-				bool m_is_torrent;
-				bool m_is_top_torrent;
-#endif
 				bool collapsed;
 				SearchInfo* parent;
 				size_t hits;
@@ -404,8 +382,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				}
 		};
 
-		friend bool isTorrent(const SearchInfo* si);
-
 		struct HubInfo
 		{
 			HubInfo(const string& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
@@ -428,11 +404,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			ADD_RESULT,
 			HUB_ADDED,
 			HUB_CHANGED,
-			HUB_REMOVED,
-#ifdef FLYLINKDC_USE_TORRENT
-			PREPARE_RESULT_TORRENT,
-			PREPARE_RESULT_TOP_TORRENT
-#endif
+			HUB_REMOVED
 		};
 		
 		tstring initialString;
@@ -489,11 +461,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CButton ctrlUseGroupTreeSettings;
 		bool useTree;
 #endif
-#ifdef FLYLINKDC_USE_TORRENT
-		CButton ctrlUseTorrentSearch;
-		CButton ctrlUseTorrentRSS;
-		bool disableTorrentRSS;
-#endif
 		bool autoSwitchToTTH;
 		bool shouldSort;
 		CImageList images;
@@ -509,16 +476,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		HTREEITEM treeItemOld;
 		std::unordered_map<string, HTREEITEM> extToTreeItem;
 
-#ifdef FLYLINKDC_USE_TORRENT
-		HTREEITEM m_RootTorrentRSSTreeItem;
-		HTREEITEM m_24HTopTorrentTreeItem;
-		std::unordered_map<string, HTREEITEM> m_category_map;
-		std::unordered_map<string, HTREEITEM> m_tree_sub_torrent_map;
-		static const int FILE_TYPE_TORRENT_MAGNET = NUMBER_OF_FILE_TYPES;
-		static const int NUMBER_OF_TYPE_NODES = FILE_TYPE_TORRENT_MAGNET + 1;
-#else
 		static const int NUMBER_OF_TYPE_NODES = NUMBER_OF_FILE_TYPES;
-#endif
+
 		struct ExtGroup
 		{
 			string ext;
@@ -530,11 +489,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool treeExpanded;
 		bool itemMatchesSelType(const SearchInfo* si) const;
 		HTREEITEM getInsertAfter(int type) const;
-#ifdef FLYLINKDC_USE_TORRENT
-		bool subTreeExpanded;
-		HTREEITEM add_category(const std::string p_search, std::string p_group, SearchInfo* p_si,
-		                       const SearchResult& p_sr, int p_type_node,  HTREEITEM p_parent_node, bool p_force_add = false, bool p_expand = false);
-#endif
 #else
 		vector<SearchInfo*> results;
 #endif
@@ -549,10 +503,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		OMenu priorityMenu;
 		OMenu copyMenu;
 		OMenu tabMenu;
-#ifdef FLYLINKDC_USE_TORRENT
-		OMenu copyMenuTorrent;
-#endif
-		
+
 		StringList search;
 		StringList targets;
 		StringList wholeTargets;
@@ -682,58 +633,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onItemChangedHub(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		
 		void speak(Speakers s, const Client* c);
-
-#ifdef FLYLINKDC_USE_TORRENT
-	private:
-		class TorrentTopSender : public Thread
-		{
-			private:
-				HWND m_wnd;
-				bool m_is_run;
-				int run();
-			public:
-				TorrentTopSender(): m_wnd(0), m_is_run(false) { }
-				void start_torrent_top(HWND p_wnd)
-				{
-					m_wnd = p_wnd;
-					if (m_is_run == false)
-					{
-						m_is_run = true;
-						try
-						{
-							start(1024);
-						}
-						catch (const ThreadException& e)
-						{
-							LogManager::message("TorrentTopSender: = " + e.getError());
-						}
-					}
-				}
-		} m_torrentRSSThread;
-		class TorrentSearchSender : public Thread
-		{
-			private:
-				HWND m_wnd;
-				tstring m_search;
-				int run();
-			public:
-				TorrentSearchSender(): m_wnd(0) { }
-				void start_torrent_search(HWND p_wnd, const tstring& p_search)
-				{
-					m_wnd = p_wnd;
-					m_search = p_search;
-					try
-					{
-						//join();
-						start(1024);
-					}
-					catch (const ThreadException& e)
-					{
-						LogManager::message("TorrentSearchSender: = " + e.getError());
-					}
-				}
-		} m_torrentSearchThread;
-#endif
 };
 
 #endif // !defined(SEARCH_FRM_H)
