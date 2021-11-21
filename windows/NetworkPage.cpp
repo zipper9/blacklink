@@ -28,6 +28,7 @@
 #include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
+#include "../client/IpTest.h"
 #include "../client/NetworkUtil.h"
 #include "../client/webrtc/talk/base/winfirewall.h"
 
@@ -209,7 +210,6 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 
 	if (v6)
 	{
-		GetDlgItem(IDC_GETIP).ShowWindow(SW_HIDE);
 		for (int i = 0; i < 3; ++i)
 		{
 			CWindow wndIcon(GetDlgItem(controlInfo[i].protoIcon));
@@ -244,7 +244,10 @@ LRESULT NetworkIPTab::onEnable(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl,
 
 LRESULT NetworkIPTab::onTestPorts(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	parent->testPorts();
+	if (v6)
+		parent->runIpTest();
+	else
+		parent->testPorts();
 	return 0;
 }
 
@@ -398,8 +401,17 @@ void NetworkIPTab::updateState()
 		const auto& ci = controlInfo[type];
 		int port, portIcon, mappingIcon;
 		int mappingState = mapper.getState(type);
-		int portState = v6 ? PortTest::STATE_UNKNOWN : g_portTest.getState(type, port, nullptr);
-		if (portState == PortTest::STATE_RUNNING) running = true;
+		int portState = PortTest::STATE_UNKNOWN;
+		if (!v6)
+		{
+			portState = g_portTest.getState(type, port, nullptr);
+			if (portState == PortTest::STATE_RUNNING) running = true;
+		}
+		else
+		{
+			int getIpState = g_ipTest.getState(IpTest::REQ_IP6, nullptr);
+			if (getIpState == IpTest::STATE_RUNNING) running = true;
+		}
 		if (type == PortTest::PORT_TLS && !parent->useTLS)
 		{
 			portIcon = IconDisabled;
@@ -416,24 +428,21 @@ void NetworkIPTab::updateState()
 		setIcon(GetDlgItem(ci.upnpIcon), mappingIcon);
 	}
 
-	if (!v6)
+	CButton ctrl(GetDlgItem(IDC_GETIP));
+	if (running)
 	{
-		CButton ctrl(GetDlgItem(IDC_GETIP));
-		if (running)
-		{
-			ctrl.SetWindowText(CTSTRING(TESTING_PORTS));
-			ctrl.EnableWindow(FALSE);
-		}
-		else if (ConnectivityManager::getInstance()->isSetupInProgress())
-		{
-			ctrl.SetWindowText(CTSTRING(APPLYING_SETTINGS));
-			ctrl.EnableWindow(FALSE);
-		}
-		else
-		{
-			ctrl.SetWindowText(CTSTRING(TEST_PORTS_AND_GET_IP));
-			ctrl.EnableWindow(TRUE);
-		}
+		ctrl.SetWindowText(v6 ? CTSTRING(GETTING_IP) : CTSTRING(TESTING_PORTS));
+		ctrl.EnableWindow(FALSE);
+	}
+	else if (ConnectivityManager::getInstance()->isSetupInProgress())
+	{
+		ctrl.SetWindowText(CTSTRING(APPLYING_SETTINGS));
+		ctrl.EnableWindow(FALSE);
+	}
+	else
+	{
+		ctrl.SetWindowText(v6 ? CTSTRING(GET_IP) : CTSTRING(TEST_PORTS_AND_GET_IP));
+		ctrl.EnableWindow(IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED);
 	}
 
 	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
@@ -749,6 +758,13 @@ bool NetworkPage::runPortTest()
 	}
 	if (!g_portTest.runTest(mask)) return false;
 	tabIP[0].updateState();
+	return true;
+}
+
+bool NetworkPage::runIpTest()
+{
+	if (!g_ipTest.runTest(IpTest::REQ_IP6)) return false;
+	tabIP[1].updateState();
 	return true;
 }
 

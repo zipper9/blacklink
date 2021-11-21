@@ -92,7 +92,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			HUBLIST_SERVERS,
 			URL_PORT_TEST,
 			URL_GET_IP,
-			URL_IPTRUST, // Unused
+			URL_GET_IP6,
 			URL_DHT_BOOTSTRAP,
 
 			// TLS settings

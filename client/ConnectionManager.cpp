@@ -28,6 +28,7 @@
 #include "SSLSocket.h"
 #include "AutoDetectSocket.h"
 #include "PortTest.h"
+#include "IpTest.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
 #include "NmdcHub.h"
@@ -1421,6 +1422,7 @@ void ConnectionManager::shutdown()
 	dcassert(!shuttingDown);
 	shuttingDown = true;
 	g_portTest.shutdown();
+	g_ipTest.shutdown();
 	removeUnusedConnections();
 	HttpConnection::cleanup();
 	TimerManager::getInstance()->removeListener(this);

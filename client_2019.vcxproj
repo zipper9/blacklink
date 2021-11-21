@@ -539,6 +539,7 @@
     <ClCompile Include="client\Ip6Address.cpp" />
     <ClCompile Include="client\IpAddress.cpp" />
     <ClCompile Include="client\IPStat.cpp" />
+    <ClCompile Include="client\IpTest.cpp" />
     <ClCompile Include="client\JobExecutor.cpp" />
     <ClCompile Include="client\LocationUtil.cpp" />
     <ClCompile Include="client\LogManager.cpp" />
@@ -725,6 +726,7 @@
     <ClInclude Include="client\IPInfo.h" />
     <ClInclude Include="client\IpList.h" />
     <ClInclude Include="client\IPStat.h" />
+    <ClInclude Include="client\IpTest.h" />
     <ClInclude Include="client\JobExecutor.h" />
     <ClInclude Include="client\LocationUtil.h" />
     <ClInclude Include="client\LruCache.h" />

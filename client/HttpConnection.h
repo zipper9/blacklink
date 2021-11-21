@@ -33,7 +33,7 @@ public:
 	HttpConnection(int id): id(id) {}
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
-	
+
 	virtual ~HttpConnection() { detachSocket(); }
 	static void cleanup();
 
@@ -52,6 +52,7 @@ public:
 	uint64_t getID() const { return id; }
 	void clearRedirCount() { redirCount = 0; }
 	void setMaxRedirects(int count) { maxRedirects = count; }
+	void setIpVersion(int af) { ipVersion = af; }
 
 private:
 	enum ConnectionStates
@@ -82,6 +83,7 @@ private:
 	string mimeType;
 	int64_t maxBodySize = std::numeric_limits<int64_t>::max();
 	int maxRedirects = 5;
+	int ipVersion = 0;
 
 	ConnectionStates connState = STATE_IDLE;
 	int requestType = -1;
@@ -93,7 +95,7 @@ private:
 	void parseResponseHeader(const string &line) noexcept;
 	void detachSocket() noexcept;
 	void disconnect() noexcept;
-	
+
 	// BufferedSocketListener
 	void onConnected() noexcept override;
 	void onDataLine(const string&) noexcept override;

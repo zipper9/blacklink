@@ -149,6 +149,7 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 	outStream = nullptr;
 	updateSent = updateReceived = 0;
 	gracefulDisconnectTimeout = 0;
+	ipVersion = 0;
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 	++socketCounter;
 #endif
@@ -829,7 +830,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 				}
 				IpAddress ip;
 				bool isNumeric;
-				if (!Socket::resolveHost(ip, 0, *host, &isNumeric))
+				if (!Socket::resolveHost(ip, ipVersion, *host, &isNumeric))
 				{
 					if (doLog)
 						LogManager::message("Error resolving " + *host, false);

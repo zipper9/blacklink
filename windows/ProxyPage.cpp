@@ -21,22 +21,27 @@
 #include "Resource.h"
 #include "ProxyPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 #include "../client/Socket.h"
 
-static const WinUtil::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_SETTINGS_OUTGOING,         ResourceManager::SETTINGS_OUTGOING             },
-	{ IDC_DIRECT_OUT,                ResourceManager::SETTINGS_DIRECT               },
-	{ IDC_SOCKS5,                    ResourceManager::SETTINGS_SOCKS5               },
-	{ IDC_SETTINGS_SOCKS5_IP,        ResourceManager::SETTINGS_SOCKS5_IP            },
-	{ IDC_SETTINGS_SOCKS5_PORT,      ResourceManager::SETTINGS_SOCKS5_PORT          },
-	{ IDC_SETTINGS_SOCKS5_USERNAME,  ResourceManager::SETTINGS_SOCKS5_USERNAME      },
-	{ IDC_SETTINGS_SOCKS5_PASSWORD,  ResourceManager::PASSWORD                      },
-	{ IDC_SOCKS_RESOLVE,             ResourceManager::SETTINGS_SOCKS5_RESOLVE       },
-	{ IDC_CAPTION_PORT_TEST_URL,     ResourceManager::SETTINGS_PORT_TEST_SERVER_URL },
-	{ IDC_CAPTION_DHT_BOOTSTRAP_URL, ResourceManager::SETTINGS_DHT_BOOTSTRAP        },
-	{ 0,                             ResourceManager::Strings()                     }
-	
+	{ IDC_SETTINGS_OUTGOING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_DIRECT_OUT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SOCKS5, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SETTINGS_SOCKS5_IP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_SOCKS5_IP, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_SOCKS5_PORT, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_SOCKS5_USERNAME, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SETTINGS_SOCKS5_PASSWORD, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SOCKS_RESOLVE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_PORT_TEST_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_GET_IPV6_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_DHT_BOOTSTRAP_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
 
 static const PropPage::Item items[] =
@@ -47,14 +52,15 @@ static const PropPage::Item items[] =
 	{ IDC_SOCKS_PASSWORD,    SettingsManager::SOCKS_PASSWORD,    PropPage::T_STR  },
 	{ IDC_SOCKS_RESOLVE,     SettingsManager::SOCKS_RESOLVE,     PropPage::T_BOOL },
 	{ IDC_PORT_TEST_URL,     SettingsManager::URL_PORT_TEST,     PropPage::T_STR  },
+	{ IDC_GET_IPV6_URL,      SettingsManager::URL_GET_IP6,       PropPage::T_STR  },
 	{ IDC_DHT_BOOTSTRAP_URL, SettingsManager::URL_DHT_BOOTSTRAP, PropPage::T_STR  },
 	{ 0,                     0,                                  PropPage::T_END  }
 };
 
 LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	WinUtil::translate(*this, texts);
-	
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+
 	switch (SETTING(OUTGOING_CONNECTIONS))
 	{
 		case SettingsManager::OUTGOING_SOCKS5:
@@ -64,18 +70,18 @@ LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 			CheckDlgButton(IDC_DIRECT_OUT, BST_CHECKED);
 			break;
 	}
-	
+
 	PropPage::read(*this, items);
-	
+
 	fixControls();
-	
+
 	CEdit(GetDlgItem(IDC_SOCKS_SERVER)).LimitText(250);
 	CEdit(GetDlgItem(IDC_SOCKS_PORT)).LimitText(5);
 	CEdit(GetDlgItem(IDC_SOCKS_USER)).LimitText(250);
 	CEdit(GetDlgItem(IDC_SOCKS_PASSWORD)).LimitText(250);
 	CEdit(GetDlgItem(IDC_PORT_TEST_URL)).LimitText(280);
 	CEdit(GetDlgItem(IDC_DHT_BOOTSTRAP_URL)).LimitText(280);
-	
+
 	return TRUE;
 }
 
@@ -84,25 +90,25 @@ void ProxyPage::write()
 	tstring x;
 	WinUtil::getWindowText(GetDlgItem(IDC_SOCKS_SERVER), x);
 	tstring::size_type i;
-	
+
 	while ((i = x.find(' ')) != string::npos)
 		x.erase(i, 1);
 	SetDlgItemText(IDC_SOCKS_SERVER, x.c_str());
-	
+
 	WinUtil::getWindowText(GetDlgItem(IDC_SERVER), x);
-	
+
 	while ((i = x.find(' ')) != string::npos)
 		x.erase(i, 1);
-		
+
 	SetDlgItemText(IDC_SERVER, x.c_str());
-	
+
 	PropPage::write(*this, items);
-	
+
 	int ct = SettingsManager::OUTGOING_DIRECT;
-	
+
 	if (IsDlgButtonChecked(IDC_SOCKS5))
 		ct = SettingsManager::OUTGOING_SOCKS5;
-		
+
 	if (SETTING(OUTGOING_CONNECTIONS) != ct)
 	{
 		g_settings->set(SettingsManager::OUTGOING_CONNECTIONS, ct);

@@ -38,7 +38,8 @@
 
 static const string DEFAULT_LANG_FILE = "en-US.xml";
 
-static const char URL_GET_IP_DEFAULT[] = "http://checkip.dyndns.com";
+static const char URL_GET_IP_DEFAULT[]  = "http://checkip.dyndns.com";
+static const char URL_GET_IP6_DEFAULT[] = "http://checkipv6.dynu.com";
 
 static const char HUBLIST_SERVERS_DEFAULT[] =
 	"https://www.te-home.net/?do=hublist&get=hublist.xml.bz2;"
@@ -121,7 +122,7 @@ static const char* g_settingTags[] =
 	"HublistServers",
 	"UrlPortTest",
 	"UrlGetIp",
-	"UrlIPTrust",
+	"UrlGetIp6",
 	"UrlDHTBootstrap",
 
 	// TLS settings
@@ -813,6 +814,7 @@ void SettingsManager::setDefaults()
 	setDefault(HUBLIST_SERVERS, HUBLIST_SERVERS_DEFAULT);
 	setDefault(URL_PORT_TEST, "http://test2.fly-server.ru:37015/fly-test-port");
 	setDefault(URL_GET_IP, URL_GET_IP_DEFAULT);
+	setDefault(URL_GET_IP6, URL_GET_IP6_DEFAULT);
 	setDefault(URL_DHT_BOOTSTRAP, "http://strongdc.sourceforge.net/bootstrap/");
 
 	// TLS settings
@@ -1594,7 +1596,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case BIND_ADDRESS:
 		case WEBSERVER_BIND_ADDRESS:
 		case URL_GET_IP:
-		case URL_IPTRUST:
+		case URL_GET_IP6:
 		case URL_DHT_BOOTSTRAP:
 		{
 			string trimmedValue = value;

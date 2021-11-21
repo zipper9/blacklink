@@ -793,7 +793,6 @@
 #define IDC_RAW4_TEXT                   1683
 #define IDC_RAW5_TEXT                   1684
 #define IDC_DCLSTGEN_COPYMAGNET         1689
-#define IDC_INTEGRATION_IFACE_DESKTOP_IMG 1693
 #define IDC_ENABLE_WEBSERVER            1694
 #define IDC_OPCHAT                      1695
 #define IDC_CAPTION_OPCHAT              1696
@@ -814,14 +813,13 @@
 #define IDC_OTHER_QUEUE_OPTIONS         1713
 #define IDC_B1                          1714
 #define IDC_USE_FAST_HASH               1715
-#define IDC_MAGNET_URL_TEMPLATE         1718
-#define IDC_MAGNET_URL_TEMPLATE_OLD     1719
-#define IDC_EXCEPTION                   1720
+#define IDC_MAGNET_URL_TEMPLATE         1716
+#define IDC_CAPTION_GET_IPV6_URL        1717
+#define IDC_GET_IPV6_URL                1718
 #define IDC_DISCONNECTS_T               1722
 #define IDC_TIMEOUT_T                   1725
 #define IDC_CLIENT_ID                   1727
 #define IDC_FAKESHARE_T                 1728
-#define IDC_AUTOUPDATE_STARTATTIME      1729
 #define IDC_FILELIST_DIFF               1733
 #define IDC_SETTINGS_MEBIBITS           1734
 #define IDC_CLIENT_ID_BOX               1735
@@ -863,8 +861,6 @@
 #define IDC_CLOSE_ALL_SEARCH_FRAME      1782
 #define IDC_SETTINGS_PORT_TLS           1783
 #define IDC_MATCH_ALL                   1785
-#define IDC_SETTINGS_PORT_TORRENT       1788
-#define IDC_PORT_TORRENT                1790
 #define IDC_EXCLUSIVE_HUB               1804
 #define IDC_STATUS_HASH_PROGRESS        1805
 #define IDC_SUPPRESS_FAV_CHAT_AND_PM    1805

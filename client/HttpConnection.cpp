@@ -126,6 +126,7 @@ void HttpConnection::prepareRequest(int type)
 	if (!port) port = 80;
 
 	socket = BufferedSocket::getBufferedSocket('\n', this);
+	socket->setIpVersion(ipVersion);
 
 	try
 	{
@@ -284,7 +285,7 @@ void HttpConnection::onDataLine(const string &line) noexcept
 					fire(HttpConnectionListener::Failed(), this, error);
 					disconnect();
 					return;
-				}				
+				}
 				int index;
 				const string& redirLocation = resp.findSingleHeader(Http::HEADER_LOCATION, index) ? resp.at(index) : Util::emptyString;
 				if (!(Text::isAsciiPrefix2(redirLocation, prefixHttp) || Text::isAsciiPrefix2(redirLocation, prefixHttps)))
@@ -358,7 +359,7 @@ void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 		return;
 	}
 
-	fire(HttpConnectionListener::Data(), this, data, dataSize);	
+	fire(HttpConnectionListener::Data(), this, data, dataSize);
 	receivedBodySize = newBodySize;
 	if (receivedBodySize == bodySize)
 	{

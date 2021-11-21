@@ -160,6 +160,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		void changeTab();
 		void setIcon(int id, int stateIcon);
 		bool runPortTest();
+		bool runIpTest();
 		void getFromUI(NetworkSettings& settings) const;
 };
 

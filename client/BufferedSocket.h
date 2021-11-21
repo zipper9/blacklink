@@ -106,6 +106,7 @@ class BufferedSocket : private Thread
 		}
 		void write(const void* buf, size_t size);
 		void transmitFile(InputStream* stream);
+		void setIpVersion(int af) { ipVersion = af; }
 
 		uint16_t getLocalPort() const
 		{
@@ -209,6 +210,7 @@ class BufferedSocket : private Thread
 		uint64_t updateReceived;
 		uint64_t gracefulDisconnectTimeout;
 		BufferedSocketListener* listener;
+		int ipVersion;
 
 		BufferedSocket(char separator, BufferedSocketListener* listener);
 		virtual ~BufferedSocket();
