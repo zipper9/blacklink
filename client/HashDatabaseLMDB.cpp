@@ -20,7 +20,7 @@ HashDatabaseLMDB::HashDatabaseLMDB()
 	txnReadReset = false;
 }
 
-#ifdef _WIN64
+#if defined(_WIN64) || defined(__LP64__)
 #define PLATFORM_TAG "x64"
 #else
 #define PLATFORM_TAG "x32"
