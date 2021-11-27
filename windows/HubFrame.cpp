@@ -763,7 +763,7 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 		case IDC_COPY_HUBADDRESS:
 			sCopy = baseClient->getHubUrl();
 			break;
-		case IDC_COPY_IP:
+		case IDC_COPY_HUB_IP:
 			if (client) sCopy = client->getIpAsString();
 			break;
 	}
