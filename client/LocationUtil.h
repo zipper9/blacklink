@@ -21,18 +21,15 @@
 
 #include "typedefs.h"
 #include "IPInfo.h"
+#include "IpAddress.h"
 
 namespace Util
 {
-	const char* getCountryShortName(unsigned index);
-	int getFlagIndexByCode(const char* countryCode);
-	
 	void loadCustomLocations();
-	void loadGeoIp();
 	void loadP2PGuard();
 	void loadIBlockList();
 
-	void getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached = false);
+	void getIpInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached = false);
 	const string& getDescription(const IPInfo& ipInfo);
 }
 

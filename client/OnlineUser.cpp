@@ -420,8 +420,11 @@ void Identity::loadP2PGuard()
 		Ip4Address addr = getIP4();
 		if (addr)
 		{
+			IpAddress ip;
+			ip.data.v4 = addr;
+			ip.type = AF_INET;
 			IPInfo ipInfo;
-			Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
 			setP2PGuard(ipInfo.p2pGuard);
 			p2pGuardInfoKnown = true;
 		}
@@ -462,8 +465,7 @@ string Identity::formatIpString(const IpAddress& ip)
 		string desc;
 		string hostname = Socket::getRemoteHost(ip);
 		IPInfo loc;
-		if (ip.type == AF_INET)
-			Util::getIpInfo(ip.data.v4, loc, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+		Util::getIpInfo(ip, loc, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 		const string& location = Util::getDescription(loc);
 		if (!hostname.empty() && !location.empty())
 			desc = hostname + " - " + location;

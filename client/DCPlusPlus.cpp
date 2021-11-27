@@ -66,7 +66,6 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP_L(STARTUP_SQLITE_DATABASE, DatabaseManager::newInstance());
 	DatabaseManager::getInstance()->init(dbErrorCallback);
 
-	LOAD_STEP_L(STARTUP_GEO_IP, Util::loadGeoIp());
 	LOAD_STEP_L(STARTUP_P2P_GUARD, Util::loadP2PGuard());
 	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());
 	
@@ -161,7 +160,6 @@ void preparingCoreToShutdown()
 		sl.step("HublistManager");
 #endif
 		ClientManager::clear();
-		DatabaseManager::getInstance()->flush();
 	}
 }
 

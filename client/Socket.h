@@ -73,7 +73,11 @@ class SocketException : public Exception
 		int errorCode;
 };
 
-class ServerSocket;
+union sockaddr_u
+{
+	sockaddr_in v4;
+	sockaddr_in6 v6;
+};
 
 class Socket
 {
@@ -298,6 +302,9 @@ class Socket
 		void signalControlEvent();
 		void setConnected() { connected = true; }
 		void printSockName(string& s) const;
+
+		static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uint16_t port);
+		static void fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa);
 
 	protected:
 		socket_t sock;

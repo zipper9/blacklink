@@ -763,11 +763,8 @@ void WaitingUsersFrame::UploadQueueItem::update()
 		if (text[COLUMN_IP] != ipStr)
 		{
 			text[COLUMN_IP] = std::move(ipStr);
-			if (ip.type == AF_INET)
-			{
-				Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
-				setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
-			}
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
 		}
 	}
 }

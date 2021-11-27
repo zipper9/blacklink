@@ -2,8 +2,7 @@
 #define NETWORK_UTIL_H_
 
 #include "typedefs.h"
-#include "Ip4Address.h"
-#include "Ip6Address.h"
+#include "IpAddress.h"
 
 namespace Util
 {
@@ -34,6 +33,8 @@ namespace Util
 	bool isPrivateIp(const Ip6Address& ip);
 	bool isPublicIp(const Ip6Address& ip);
 	bool isLinkScopedIp(const Ip6Address& ip);
+	bool isPrivateIp(const IpAddress& ip);
+	bool isPublicIp(const IpAddress& ip);
 	bool isReservedIp(const Ip6Address& ip);
 	bool isSameNetwork(const string& addr1, const string& addr2, unsigned prefix, int af);
 }

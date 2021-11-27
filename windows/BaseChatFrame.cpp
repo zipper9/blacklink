@@ -643,10 +643,10 @@ tstring BaseChatFrame::getIpCountry(const IpAddress& ip, bool ts, bool ipInChat,
 		result = ts ? _T(" | ") : _T(" ");
 		if (ipInChat)
 			result += Util::printIpAddressT(ip);
-		if ((countryInChat || locationInChat) && ip.type == AF_INET)
+		if (countryInChat || locationInChat)
 		{
 			IPInfo ipInfo;
-			Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 			if (countryInChat)
 			{
 				if (!ipInfo.country.empty())

@@ -242,6 +242,20 @@ bool Util::isReservedIp(const Ip6Address& ip)
 	return checkPrefix(w, 0, 8);
 }
 
+bool Util::isPrivateIp(const IpAddress& ip)
+{
+	if (ip.type == AF_INET) return isPrivateIp(ip.data.v4);
+	if (ip.type == AF_INET6) return isPrivateIp(ip.data.v6);
+	return false;
+}
+
+bool Util::isPublicIp(const IpAddress& ip)
+{
+	if (ip.type == AF_INET) return isPublicIp(ip.data.v4);
+	if (ip.type == AF_INET6) return isPublicIp(ip.data.v6);
+	return false;
+}
+
 bool Util::isSameNetwork(const string& addr1, const string& addr2, unsigned prefix, int af)
 {
 	if (af == AF_INET)

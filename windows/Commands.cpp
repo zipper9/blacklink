@@ -650,8 +650,8 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
 			return true;
 		}
-		uint32_t addr;
-		if (!Util::parseIpAddress(addr, param))
+		IpAddress addr;
+		if (!Util::parseIpAddress(addr, Text::fromT(param)))
 		{
 			localMessage = TSTRING(COMMAND_INVALID_IP);
 			return true;
@@ -685,7 +685,10 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			return true;
 		}
 		IPInfo ipInfo;
-		Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
+		IpAddress ip;
+		ip.type = AF_INET;
+		ip.data.v4 = addr;
+		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
 		if (!ipInfo.p2pGuard.empty())
 			localMessage += param + _T(": ") + Text::toT(ipInfo.p2pGuard);
 		else

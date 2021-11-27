@@ -566,8 +566,8 @@ void SpyFrame::ItemInfo::updateNickList()
 			{
 				nickList += Text::toT(user);
 				const string ip = user.substr(0, pos);
-				Ip4Address addr;
-				if (!ip.empty() && Util::parseIpAddress(addr, ip))
+				IpAddress addr;
+				if (!ip.empty() && Util::parseIpAddress(addr, ip) && Util::isValidIp(addr))
 				{
 					IPInfo ipInfo;
 					Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_COUNTRY);

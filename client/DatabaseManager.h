@@ -19,6 +19,7 @@
 #include "BaseUtil.h"
 #include "IPInfo.h"
 #include "CID.h"
+#include "IpAddress.h"
 #include "sqlite/sqlite3x.hpp"
 
 #ifdef FLYLINKDC_USE_TORRENT
@@ -77,7 +78,7 @@ struct LocationInfo
 	uint32_t endIp;
 	string location;
 	int imageIndex;
-	
+
 	LocationInfo() : startIp(0), endIp(0), imageIndex(-1) {}
 	LocationInfo(const string& location, uint32_t startIp, uint32_t endIp, int imageIndex) :
 		location(location), startIp(startIp), endIp(endIp), imageIndex(imageIndex) {}
@@ -92,6 +93,45 @@ struct TransferHistorySummary
 	uint64_t fileSize;
 	TransferHistorySummary() : count(0), dateAsInt(0), actual(0), fileSize(0) {}
 };
+
+struct IpKey
+{	
+	union
+	{
+		uint8_t b[16];
+		uint32_t dw[4];
+	} u;
+	
+	bool operator< (const IpKey& x) const
+	{
+		for (int i = 0; i < 4; i++)
+			if (u.dw[i] != x.u.dw[i])
+				return u.dw[i] < x.u.dw[i];
+		return false;
+	}
+	bool operator== (const IpKey& x) const
+	{
+		return u.dw[0] == x.u.dw[0] && u.dw[1] == x.u.dw[1] &&
+		       u.dw[2] == x.u.dw[2] && u.dw[3] == x.u.dw[3];
+	}
+	void setIP(Ip4Address ip);
+	void setIP(const Ip6Address& ip);
+	uint32_t getHash() const
+	{
+		return u.dw[0] ^ u.dw[1] ^ u.dw[2] ^ u.dw[3];
+	}
+};
+
+namespace boost
+{
+	template<> struct hash<IpKey>
+	{
+		size_t operator()(const IpKey& x) const
+		{
+			return x.getHash();
+		}
+	};
+}
 
 enum DBRegistryType
 {
@@ -132,7 +172,6 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		DatabaseManager() noexcept;
 		~DatabaseManager();
 		static void shutdown();
-		void flush();
 
 		string getDBInfo(string& root);
 		int64_t getDBSize() const { return dbSize; }
@@ -201,21 +240,24 @@ class DatabaseManager : public Singleton<DatabaseManager>
 			PG_DATA_MANUAL         = 64
 		};
 		
-		void saveGeoIpCountries(const vector<LocationInfo>& data);
 		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
 		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
-		void removeManuallyBlockedIP(uint32_t ip);
-		void getIPInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached);
-		void clearCachedP2PGuardData(uint32_t ip);
+		void removeManuallyBlockedIP(Ip4Address ip);
+		void getIPInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached);
+		void clearCachedP2PGuardData(Ip4Address ip);
 		void clearIpCache();
 
 	private:
-		void loadCountry(uint32_t ip, IPInfo& result);
-		void loadLocation(uint32_t ip, IPInfo& result);
-		void loadP2PGuard(uint32_t ip, IPInfo& result);
+		void loadLocation(Ip4Address ip, IPInfo& result);
+		void loadP2PGuard(Ip4Address ip, IPInfo& result);
 
 	public:	
 		void saveLocation(const vector<LocationInfo>& data);
+
+	private:
+		bool openGeoIPDatabaseL();
+		void closeGeoIPDatabase();
+		bool loadGeoIPInfo(const IpAddress& ip, IPInfo& result);
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	private:
@@ -254,6 +296,9 @@ class DatabaseManager : public Singleton<DatabaseManager>
 #ifdef FLYLINKDC_USE_LMDB
 		HashDatabaseLMDB lmdb;
 #endif
+		struct MMDB_s* mmdb;
+		CriticalSection csMmdb;
+		uint64_t timeCheckMmdb;
 
 	private:
 		sqlite3_command selectIgnoredUsers;
@@ -267,22 +312,21 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		sqlite3_command selectTick;
 		
 		static const size_t IP_CACHE_SIZE = 3000;
-		
+
 		struct IpCacheItem
 		{
-			uint32_t key;
+			IpKey key;
 			IPInfo info;
 			IpCacheItem* next;
 			IpCacheItem* prev;
 		};
 
-		LruCacheEx<IpCacheItem, uint32_t> ipCache;
+		LruCacheEx<IpCacheItem, IpKey> ipCache;
 		mutable FastCriticalSection csIpCache;
 		
 		sqlite3_command insertLocation;
 		sqlite3_command deleteLocation;
-		
-		sqlite3_command selectCountry;
+
 		sqlite3_command selectLocation;
 		sqlite3_command selectP2PGuard;
 		sqlite3_command deleteCountry;
@@ -354,4 +398,5 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		static bool is_delete_torrent(const libtorrent::sha1_hash& p_sha1);
 #endif
 };
+
 #endif

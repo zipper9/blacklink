@@ -91,19 +91,13 @@ void SearchResult::loadLocation()
 {
 	static const int flags = IPInfo::FLAG_LOCATION | IPInfo::FLAG_COUNTRY;
 	if ((ipInfo.known & flags) != flags)
-	{
-		if (ip.type == AF_INET)
-			Util::getIpInfo(ip.data.v4, ipInfo, flags);
-	}
+		Util::getIpInfo(ip, ipInfo, flags);
 }
 
 void SearchResult::loadP2PGuard()
 {
 	if (!(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
-	{
-		if (ip.type == AF_INET)
-			Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_P2P_GUARD);
-	}
+		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
 }
 
 void SearchResult::checkTTH()

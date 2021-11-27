@@ -64,13 +64,7 @@ Socket::Stats Socket::g_stats;
 
 static const unsigned SOCKS_TIMEOUT = 30000;
 
-union sockaddr_u
-{
-	sockaddr_in v4;
-	sockaddr_in6 v6;
-};
-
-static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uint16_t port)
+void Socket::toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uint16_t port)
 {
 	memset(&sa, 0, sizeof(sa));
 	switch (ip.type)
@@ -94,7 +88,7 @@ static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uin
 	}
 }
 
-static void fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa)
+void Socket::fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa)
 {
 	memset(&ip, 0, sizeof(ip));
 	switch (((const sockaddr*) &sa)->sa_family)

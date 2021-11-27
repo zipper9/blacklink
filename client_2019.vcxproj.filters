@@ -358,6 +358,12 @@
     <ClCompile Include="client\IpTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\maxminddb\data-pool.c">
+      <Filter>maxminddb</Filter>
+    </ClCompile>
+    <ClCompile Include="client\maxminddb\maxminddb.c">
+      <Filter>maxminddb</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -954,6 +960,15 @@
     <ClInclude Include="client\Tag16.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\maxminddb\data-pool.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
+    <ClInclude Include="client\maxminddb\maxminddb-compat-util.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
+    <ClInclude Include="client\maxminddb\maxminddb.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -1000,6 +1015,9 @@
     </Filter>
     <Filter Include="DHT">
       <UniqueIdentifier>{e1ecb402-b0db-4200-8352-6d818a7edbc3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="maxminddb">
+      <UniqueIdentifier>{61342f6d-4e97-4efe-b053-6c36ca9de518}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

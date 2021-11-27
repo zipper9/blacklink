@@ -809,7 +809,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			case IDC_COPY_GEO_LOCATION:
 			{
 				IPInfo ipInfo;
-				Util::getIpInfo(id.getIP4(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				Util::getIpInfo(id.getConnectIP(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				sCopy += Util::getDescription(ipInfo);
 				break;
 			}

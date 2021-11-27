@@ -126,7 +126,7 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
 	{
 		IPInfo ipInfo;
-		Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_P2P_GUARD);
+		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
 		if (!ipInfo.p2pGuard.empty())
 		{
 			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % Util::printIpAddress(ip.data.v4) % ipInfo.p2pGuard));

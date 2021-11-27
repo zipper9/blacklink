@@ -326,8 +326,8 @@ void UserInfo::loadP2PGuard()
 void UserInfo::loadLocation()
 {
 	IpAddress ip = getIp();
-	if (ip.type == AF_INET && Util::isValidIp4(ip.data.v4))
-		Util::getIpInfo(ip.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+	if (Util::isValidIp(ip))
+		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 	else
 	{
 		ipInfo.clearCountry();

@@ -75,11 +75,24 @@ void UserInfoSimple::addSummaryMenu()
 			}
 		}
 		
-		if (params.ip4)
+		bool hasIp4 = Util::isValidIp4(params.ip4);
+		bool hasIp6 = Util::isValidIp6(params.ip6);
+		if (hasIp4 || hasIp6)
 		{
 			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, getTagIP(params).c_str());
 			IPInfo ipInfo;
-			Util::getIpInfo(params.ip4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
+			IpAddress ip;
+			if (hasIp4)
+			{
+				ip.data.v4 = params.ip4;
+				ip.type = AF_INET;
+			}
+			else
+			{
+				memcpy(ip.data.v6.data, params.ip6.data, 16);
+				ip.type = AF_INET6;
+			}
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
 			if (!ipInfo.country.empty() || !ipInfo.location.empty())
 			{
 				tstring text = TSTRING(LOCATION_BARE) + _T(": ");

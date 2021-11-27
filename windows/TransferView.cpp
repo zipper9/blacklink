@@ -797,9 +797,9 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			else if (colIndex == COLUMN_LOCATION)
 			{
 				IPInfo& ipInfo = ii->ipInfo;
-				if (ii->transferIp.type == AF_INET && !(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)))
+				if (!(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)))
 				{
-					Util::getIpInfo(ii->transferIp.data.v4, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+					Util::getIpInfo(ii->transferIp, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				}
 				if (!ipInfo.country.empty() || !ipInfo.location.empty())
 				{
@@ -1326,8 +1326,8 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 			if (Util::parseIpAddress(ip, Text::fromT(ui.m_ip)))
 			{
 				transferIp = ip;
-				if (transferIp.type == AF_INET && !(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
-					Util::getIpInfo(transferIp.data.v4, ipInfo, IPInfo::FLAG_P2P_GUARD);
+				if (!(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
+					Util::getIpInfo(transferIp, ipInfo, IPInfo::FLAG_P2P_GUARD);
 			}
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			ratioText.clear();

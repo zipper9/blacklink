@@ -16,6 +16,9 @@
 #include "TimerManager.h"
 #include "NetworkUtil.h"
 #include "BusyCounter.h"
+#include "Socket.h"
+#include "Tag16.h"
+#include "maxminddb/maxminddb.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/read_resume_data.hpp"
@@ -237,6 +240,8 @@ DatabaseManager::DatabaseManager() noexcept
 	deleteOldTransfers = true;
 	errorCallback = nullptr;
 	dbSize = 0;
+	mmdb = nullptr;
+	timeCheckMmdb = 0;
 }
 
 void DatabaseManager::init(ErrorCallback errorCallback)
@@ -366,13 +371,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		connection.executenonquery("DROP INDEX IF EXISTS location_db.i_fly_p2pguard_note;");
 		connection.executenonquery("CREATE INDEX IF NOT EXISTS location_db.i_fly_p2pguard_type ON fly_p2pguard_ip(type);");
 		safeAlter("ALTER TABLE location_db.fly_p2pguard_ip add column type integer");
-		
-		connection.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS location_db.fly_country_ip(start_ip integer not null,stop_ip integer not null,country text,flag_index integer);");
-		safeAlter("ALTER TABLE location_db.fly_country_ip add column country text");
-		
-		connection.executenonquery("CREATE INDEX IF NOT EXISTS location_db.i_fly_country_ip ON fly_country_ip(start_ip);");
-		
+
 		connection.executenonquery(
 		    "CREATE TABLE IF NOT EXISTS location_db.fly_location_ip(start_ip integer not null,stop_ip integer not null,location text,flag_index integer);");
 		    
@@ -385,7 +384,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,type int not null,day int64 not null,stamp int64 not null,"
 		                              "tth char(39),path text not null,nick text, hub text,size int64 not null,speed int,ip text, actual int64);");
 		connection.executenonquery("CREATE INDEX IF NOT EXISTS transfer_db.fly_transfer_file_day_type ON fly_transfer_file(day,type);");
-		
+
 		safeAlter("ALTER TABLE transfer_db.fly_transfer_file add column actual int64");
 
 #ifdef FLYLINKDC_USE_TORRENT
@@ -435,10 +434,6 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 	}
 }
 
-void DatabaseManager::flush()
-{
-}
-
 void DatabaseManager::saveLocation(const vector<LocationInfo>& data)
 {
 	LOCK(cs);
@@ -466,13 +461,19 @@ void DatabaseManager::saveLocation(const vector<LocationInfo>& data)
 	}
 }
 
-void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached)
+void DatabaseManager::getIPInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached)
 {
 	dcassert(what);
-	dcassert(ip);
+	dcassert(Util::isValidIp(ip));
+	IpKey ipKey;
+	if (ip.type == AF_INET6)
+		ipKey.setIP(ip.data.v6);
+	else
+		ipKey.setIP(ip.data.v4);
+
 	{
 		LOCK(csIpCache);
-		IpCacheItem* item = ipCache.get(ip);
+		IpCacheItem* item = ipCache.get(ipKey);
 		if (item)
 		{
 			ipCache.makeNewest(item);
@@ -496,16 +497,32 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 	}
 	if (onlyCached) return;
 	if (what & IPInfo::FLAG_COUNTRY)
-		loadCountry(ip, result);
+	{
+		result.clearCountry();
+		if (Util::isPublicIp(ip))
+			loadGeoIPInfo(ip, result);
+		else
+			result.known |= IPInfo::FLAG_COUNTRY;
+	}
 	if (what & IPInfo::FLAG_LOCATION)
-		loadLocation(ip, result);
+	{
+		if (ip.type == AF_INET)
+			loadLocation(ip.data.v4, result);
+		else
+			result.known |= IPInfo::FLAG_LOCATION;
+	}
 	if (what & IPInfo::FLAG_P2P_GUARD)
-		loadP2PGuard(ip, result);
+	{
+		if (ip.type == AF_INET)
+			loadP2PGuard(ip.data.v4, result);
+		else
+			result.known |= IPInfo::FLAG_P2P_GUARD;
+	}
 	LOCK(csIpCache);
 	IpCacheItem* storedItem;
 	IpCacheItem newItem;
 	newItem.info = result;
-	newItem.key = ip;
+	newItem.key = ipKey;
 	if (!ipCache.add(newItem, &storedItem))
 	{
 		if (result.known & IPInfo::FLAG_COUNTRY)
@@ -529,47 +546,7 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 	ipCache.removeOldest(IP_CACHE_SIZE + 1);
 }
 
-extern uint16_t getCountryCode(int index);
-
-void DatabaseManager::loadCountry(uint32_t ip, IPInfo& result)
-{
-	result.clearCountry();
-	dcassert(ip);
-
-	if (!Util::isPublicIp(ip))
-	{
-		result.known |= IPInfo::FLAG_COUNTRY;
-		return;
-	}
-
-	LOCK(cs);
-	try
-	{		
-		initQuery2(selectCountry,
-			"select country,flag_index,start_ip,stop_ip from "
-			"(select country,flag_index,start_ip,stop_ip from location_db.fly_country_ip where start_ip <=? order by start_ip desc limit 1) "
-			"where stop_ip >=?");
-		selectCountry.bind(1, ip);
-		selectCountry.bind(2, ip);
-		int countryHits = 0;
-		sqlite3_reader reader = selectCountry.executereader();
-		while (reader.read())
-		{
-			countryHits++;
-			result.country = reader.getstring(0);
-			int countryIndex = reader.getint(1);
-			result.countryCode = getCountryCode(countryIndex-1);
-		}
-		dcassert(countryHits <= 1);
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - loadCountry: " + e.getError(), e.getErrorCode());
-	}
-	result.known |= IPInfo::FLAG_COUNTRY;
-}
-
-void DatabaseManager::loadLocation(uint32_t ip, IPInfo& result)
+void DatabaseManager::loadLocation(Ip4Address ip, IPInfo& result)
 {
 	result.clearLocation();
 	dcassert(ip);
@@ -597,7 +574,7 @@ void DatabaseManager::loadLocation(uint32_t ip, IPInfo& result)
 	result.known |= IPInfo::FLAG_LOCATION;
 }
 
-void DatabaseManager::loadP2PGuard(uint32_t ip, IPInfo& result)
+void DatabaseManager::loadP2PGuard(Ip4Address ip, IPInfo& result)
 {
 	result.p2pGuard.clear();
 	dcassert(ip);
@@ -630,11 +607,13 @@ void DatabaseManager::loadP2PGuard(uint32_t ip, IPInfo& result)
 	result.known |= IPInfo::FLAG_P2P_GUARD;
 }
 
-void DatabaseManager::removeManuallyBlockedIP(uint32_t ip)
+void DatabaseManager::removeManuallyBlockedIP(Ip4Address ip)
 {
 	{
+		IpKey ipKey;
+		ipKey.setIP(ip);
 		LOCK(csIpCache);
-		IpCacheItem* item = ipCache.get(ip);
+		IpCacheItem* item = ipCache.get(ipKey);
 		if (item)
 		{
 			item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
@@ -710,37 +689,12 @@ void DatabaseManager::saveP2PGuardData(const vector<P2PGuardData>& data, int typ
 	}
 }
 
-void DatabaseManager::saveGeoIpCountries(const vector<LocationInfo>& data)
+void DatabaseManager::clearCachedP2PGuardData(Ip4Address ip)
 {
-	LOCK(cs);
-	try
-	{
-		BusyCounter<int> busy(g_DisableSQLtrace);
-		sqlite3_transaction trans(connection);
-		initQuery2(deleteCountry, "delete from location_db.fly_country_ip");
-		deleteCountry.executenonquery();
-		initQuery2(insertCountry, "insert into location_db.fly_country_ip (start_ip,stop_ip,country,flag_index) values(?,?,?,?)");
-		for (const auto& val : data)
-		{
-			dcassert(val.startIp && !val.location.empty());
-			insertCountry.bind(1, val.startIp);
-			insertCountry.bind(2, val.endIp);
-			insertCountry.bind(3, val.location, SQLITE_STATIC);
-			insertCountry.bind(4, val.imageIndex);
-			insertCountry.executenonquery();
-		}
-		trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - saveGeoIpCountries: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::clearCachedP2PGuardData(uint32_t ip)
-{
+	IpKey ipKey;
+	ipKey.setIP(ip);
 	LOCK(csIpCache);
-	IpCacheItem* item = ipCache.get(ip);
+	IpCacheItem* item = ipCache.get(ipKey);
 	if (item)
 	{
 		item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
@@ -1694,7 +1648,7 @@ void DatabaseManager::shutdown()
 
 DatabaseManager::~DatabaseManager()
 {
-	flush();
+	closeGeoIPDatabase();
 }
 
 bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize)
@@ -1817,3 +1771,80 @@ bool DatabaseManager::is_delete_torrent(const libtorrent::sha1_hash& p_sha1)
 	return g_delete_torrents.find(p_sha1) != g_delete_torrents.end();
 }
 #endif
+
+bool DatabaseManager::openGeoIPDatabaseL()
+{
+	if (mmdb) return true;
+	uint64_t now = GET_TICK();
+	if (now < timeCheckMmdb) return false;
+	string path = Util::getConfigPath();
+	path += "country_ip_db.mmdb";
+	mmdb = new MMDB_s;
+	if (MMDB_open(path.c_str(), MMDB_MODE_MMAP, mmdb) == 0)
+	{
+		timeCheckMmdb = 0;
+		return true;
+	}
+	delete mmdb;
+	timeCheckMmdb = now + 600000; // 10 minutes
+	return false;
+}
+
+void DatabaseManager::closeGeoIPDatabase()
+{
+	LOCK(csMmdb);
+	if (mmdb)
+	{
+		MMDB_close(mmdb);
+		delete mmdb;
+		mmdb = nullptr;
+		timeCheckMmdb = 0;
+	}
+}
+
+static string getMMDBString(MMDB_lookup_result_s& lres, const char* *path)
+{
+	MMDB_entry_data_s data;
+	int error = MMDB_aget_value(&lres.entry, &data, path);
+	if (error != MMDB_SUCCESS || !data.has_data || data.type != MMDB_DATA_TYPE_UTF8_STRING)
+		return Util::emptyString;
+	return string(data.utf8_string, data.data_size);
+}
+
+bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result)
+{
+	LOCK(csMmdb);
+	if (!openGeoIPDatabaseL()) return false;
+	sockaddr_u sa;
+	socklen_t size;
+	Socket::toSockAddr(sa, size, ip, 0);
+	result.known |= IPInfo::FLAG_COUNTRY;
+	int error = 0;
+	auto lres = MMDB_lookup_sockaddr(mmdb, (const sockaddr *) &sa, &error);
+	if (error) return false;
+	const char* path[4] = { "country", "iso_code", nullptr };
+	string countryCode = getMMDBString(lres, path);
+	if (countryCode.length() != 2) return false;
+	path[1] = "names";
+	path[2] = "en";
+	path[3] = nullptr;
+	string countryName = getMMDBString(lres, path);
+	if (countryName.empty()) return false;
+	Text::asciiMakeLower(countryCode);
+	result.country = std::move(countryName);
+	result.countryCode = TAG(countryCode[0], countryCode[1]);
+	return true;
+}
+
+void IpKey::setIP(Ip4Address ip)
+{
+	u.dw[0] = 0;
+	u.dw[1] = 0;
+	u.dw[2] = htonl(0xFFFF);
+	u.dw[3] = htonl(ip);
+}
+
+void IpKey::setIP(const Ip6Address& ip)
+{
+	memcpy(u.b, ip.data, 16);
+}
