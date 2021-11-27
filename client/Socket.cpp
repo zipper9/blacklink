@@ -531,7 +531,9 @@ int Socket::sendPacket(const void* buffer, int bufLen, const IpAddress& ip, uint
 	sockaddr_u sockAddr;
 	socklen_t sockLen;
 	toSockAddr(sockAddr, sockLen, ip, port);
-	return sendto(sock, static_cast<const char*>(buffer), bufLen, 0, (const sockaddr*) &sockAddr, sockLen);
+	int res = sendto(sock, static_cast<const char*>(buffer), bufLen, 0, (const sockaddr*) &sockAddr, sockLen);
+	if (res > 0) g_stats.udp.uploaded += res;
+	return res;
 }
 
 int Socket::receivePacket(void* buffer, int bufLen, IpAddress& ip, uint16_t& port) noexcept
@@ -540,7 +542,11 @@ int Socket::receivePacket(void* buffer, int bufLen, IpAddress& ip, uint16_t& por
 	sockaddr_u sockAddr;	
 	socklen_t sockLen = sizeof(sockAddr);
 	int res = recvfrom(sock, static_cast<char*>(buffer), bufLen, 0, (sockaddr*) &sockAddr, &sockLen);
-	if (res > 0) fromSockAddr(ip, port, sockAddr);
+	if (res > 0)
+	{
+		g_stats.udp.downloaded += res;
+		fromSockAddr(ip, port, sockAddr);
+	}
 	return res;
 }
 
