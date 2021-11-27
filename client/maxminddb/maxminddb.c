@@ -13,6 +13,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#define PACKAGE_VERSION "1.6.0"
+
 #ifdef _WIN32
 #ifndef UNICODE
 #define UNICODE
