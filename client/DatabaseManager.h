@@ -22,10 +22,6 @@
 #include "IpAddress.h"
 #include "sqlite/sqlite3x.hpp"
 
-#ifdef FLYLINKDC_USE_TORRENT
-#include "libtorrent/session.hpp"
-#endif
-
 #ifdef FLYLINKDC_USE_LMDB
 #include "HashDatabaseLMDB.h"
 #endif
@@ -204,16 +200,6 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		void deleteOldTransferHistoryL();
 		
 	public:
-#ifdef FLYLINKDC_USE_TORRENT
-		void save_torrent_resume(const libtorrent::sha1_hash& p_sha1, const std::string& p_name, const std::vector<char>& p_resume);
-		void load_torrent_resume(libtorrent::session& p_session);
-		void delete_torrent_resume(const libtorrent::sha1_hash& p_sha1);
-		void loadTorrentTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
-		void loadTorrentTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
-		void addTorrentTransfer(eTypeTransfer type, const FinishedItemPtr& item);
-		void deleteTorrentTransferHistory(const vector<int64_t>& id);
-#endif
-		
 		void errorDB(const string& text, int errorCode = SQLITE_ERROR);
 		void vacuum();
 
@@ -282,8 +268,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 #endif
 
 	private:
-		void initQuery(unique_ptr<sqlite3_command> &command, const char *sql);
-		void initQuery2(sqlite3_command &command, const char *sql);
+		void initQuery(sqlite3_command &command, const char *sql);
 		bool checkDbPrefix(const string& str);
 		void attachDatabase(const string& file, const string& name);
 
@@ -341,19 +326,6 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		sqlite3_command insertTransfer;		
 		sqlite3_command deleteTransfer;				
 
-#ifdef FLYLINKDC_USE_TORRENT
-		sqlite3_command selectTransfersSummaryTorrent;
-		sqlite3_command selectTransfersDayTorrent;
-		sqlite3_command insertTransferTorrent;
-		sqlite3_command deleteTransferTorrent;
-
-		unique_ptr<sqlite3_command> m_insert_resume_torrent;
-		unique_ptr<sqlite3_command> m_update_resume_torrent;
-		unique_ptr<sqlite3_command> m_check_resume_torrent;
-		unique_ptr<sqlite3_command> m_select_resume_torrent;
-		unique_ptr<sqlite3_command> m_delete_resume_torrent;
-#endif
-		
 		bool deleteOldTransfers;
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -384,19 +356,6 @@ class DatabaseManager : public Singleton<DatabaseManager>
 
 		CriticalSection csTreeCache;
 		LruCache<TreeCacheItem, TTHValue> treeCache;
-		
-#ifdef FLYLINKDC_USE_TORRENT
-		static FastCriticalSection  g_resume_torrents_cs;
-		static FastCriticalSection  g_delete_torrents_cs;
-		static std::unordered_set<libtorrent::sha1_hash> g_resume_torrents;
-		static std::unordered_set<libtorrent::sha1_hash> g_delete_torrents;
-#endif
-
-	public:
-#ifdef FLYLINKDC_USE_TORRENT
-		static bool is_resume_torrent(const libtorrent::sha1_hash& p_sha1);
-		static bool is_delete_torrent(const libtorrent::sha1_hash& p_sha1);
-#endif
 };
 
 #endif

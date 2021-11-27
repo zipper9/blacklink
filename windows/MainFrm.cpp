@@ -511,10 +511,6 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	transferView.UpdateLayout();
 
-#ifdef FLYLINKDC_USE_TORRENT
-	DownloadManager::getInstance()->init_torrent();
-#endif
-	
 #ifdef IRAINMAN_INCLUDE_SMILE
 	EmoticonPack::reCreate();
 #endif
@@ -2158,18 +2154,6 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-#ifdef FLYLINKDC_USE_TORRENT
-	static tstring g_last_torrent_file;
-	if (wID == IDC_OPEN_TORRENT_FILE)
-	{
-		if (WinUtil::browseFile(file, m_hWnd, false, g_last_torrent_file, L"All torrent file\0*.torrent\0\0"))
-		{
-			g_last_torrent_file = Util::getFilePath(file);
-			DownloadManager::getInstance()->add_torrent_file(file, _T(""));
-		}
-		return 0;
-	}
-#endif
 	if (wID == IDC_OPEN_MY_LIST)
 	{
 		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), SETTING(NICK));
@@ -2184,10 +2168,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	{
 		if (Util::isTorrentFile(file))
 		{
-#ifdef FLYLINKDC_USE_TORRENT
-			g_last_torrent_file = Util::getFilePath(file);
-			DownloadManager::getInstance()->add_torrent_file(file, _T(""));
-#endif
+			// do nothing
 		}
 		else
 		{

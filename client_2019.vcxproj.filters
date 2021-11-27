@@ -217,9 +217,6 @@
     <ClCompile Include="client\AdcSupports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\TransferData.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="jsoncpp\jsoncpp.cpp">
       <Filter>Source Files\jsoncpp</Filter>
     </ClCompile>

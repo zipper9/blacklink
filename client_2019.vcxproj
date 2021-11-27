@@ -651,7 +651,6 @@
     <ClCompile Include="client\TigerHash.cpp" />
     <ClCompile Include="client\TimerManager.cpp" />
     <ClCompile Include="client\Transfer.cpp" />
-    <ClCompile Include="client\TransferData.cpp" />
     <ClCompile Include="client\Upload.cpp" />
     <ClCompile Include="client\UploadManager.cpp" />
     <ClCompile Include="client\User.cpp" />

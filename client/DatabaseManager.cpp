@@ -20,10 +20,6 @@
 #include "Tag16.h"
 #include "maxminddb/maxminddb.h"
 
-#ifdef FLYLINKDC_USE_TORRENT
-#include "libtorrent/read_resume_data.hpp"
-#endif
-
 using sqlite3x::database_error;
 using sqlite3x::sqlite3_transaction;
 using sqlite3x::sqlite3_reader;
@@ -34,23 +30,12 @@ bool g_EnableSQLtrace = false; // http://www.sqlite.org/c3ref/profile.html
 bool g_UseSynchronousOff = false;
 int g_DisableSQLtrace = 0;
 
-#ifdef FLYLINKDC_USE_TORRENT
-FastCriticalSection  DatabaseManager::g_resume_torrents_cs;
-std::unordered_set<libtorrent::sha1_hash> DatabaseManager::g_resume_torrents;
-
-FastCriticalSection  DatabaseManager::g_delete_torrents_cs;
-std::unordered_set<libtorrent::sha1_hash> DatabaseManager::g_delete_torrents;
-#endif
-
 static const char* fileNames[] =
 {
 	"",
 	"locations",
 	"transfers",
-	"user",
-#ifdef FLYLINKDC_USE_TORRENT
-	"queue"
-#endif
+	"user"
 };
 
 #ifdef _WIN32
@@ -92,12 +77,7 @@ static void traceCallback(void*, const char* sql)
 	}
 }
 
-void DatabaseManager::initQuery(unique_ptr<sqlite3_command> &command, const char *sql)
-{
-	if (!command) command.reset(new sqlite3_command(&connection, sql));
-}
-
-void DatabaseManager::initQuery2(sqlite3_command &command, const char *sql)
+void DatabaseManager::initQuery(sqlite3_command &command, const char *sql)
 {
 	if (command.empty()) command.open(&connection, sql);
 }
@@ -270,7 +250,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 				if (status != SQLITE_OK)
 					LogManager::message("[Error] sqlite3_initialize = " + Util::toString(status));
 				dcassert(status == SQLITE_OK);
-				
+
 				connection.open((prefix + ".sqlite").c_str());
 				if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
 					sqlite3_trace(connection.getdb(), traceCallback, nullptr);
@@ -278,10 +258,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 				attachDatabase("locations", "location_db");
 				attachDatabase("user", "user_db");
 				attachDatabase("transfers", "transfer_db");
-#ifdef FLYLINKDC_USE_TORRENT
-				attachDatabase("queue", "queue_db");
-#endif
-				
+
 #ifdef FLYLINKDC_USE_LMDB
 				lmdb.open();
 #endif
@@ -376,7 +353,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		    "CREATE TABLE IF NOT EXISTS location_db.fly_location_ip(start_ip integer not null,stop_ip integer not null,location text,flag_index integer);");
 		    
 		safeAlter("ALTER TABLE location_db.fly_location_ip add column location text");
-		
+
 		connection.executenonquery("CREATE INDEX IF NOT EXISTS "
 		                              "location_db.i_fly_location_ip ON fly_location_ip(start_ip);");
 		                              
@@ -387,17 +364,6 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 
 		safeAlter("ALTER TABLE transfer_db.fly_transfer_file add column actual int64");
 
-#ifdef FLYLINKDC_USE_TORRENT
-		connection.executenonquery("CREATE TABLE IF NOT EXISTS transfer_db.fly_transfer_file_torrent("
-		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,type int not null,day int64 not null,stamp int64 not null,"
-		                              "sha1 char(20),path text,size int64 not null);");
-		connection.executenonquery("CREATE INDEX IF NOT EXISTS transfer_db.fly_transfer_file_torrentday_type ON fly_transfer_file_torrent(day,type);");
-
-		connection.executenonquery("CREATE TABLE IF NOT EXISTS queue_db.fly_queue_torrent("
-		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,day int64 not null,stamp int64 not null,sha1 char(20) NOT NULL,resume blob, magnet string,name string);");
-		connection.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS queue_db.iu_fly_queue_torrent_sha1 ON fly_queue_torrent(sha1);");
-#endif
-		
 		if (l_db_user_version < 1)
 		{
 			connection.executenonquery("PRAGMA user_version=1");
@@ -441,9 +407,9 @@ void DatabaseManager::saveLocation(const vector<LocationInfo>& data)
 	{
 		BusyCounter<int> busy(g_DisableSQLtrace);
 		sqlite3_transaction trans(connection);
-		initQuery2(deleteLocation, "delete from location_db.fly_location_ip");
+		initQuery(deleteLocation, "delete from location_db.fly_location_ip");
 		deleteLocation.executenonquery();
-		initQuery2(insertLocation, "insert into location_db.fly_location_ip (start_ip,stop_ip,location,flag_index) values(?,?,?,?)");
+		initQuery(insertLocation, "insert into location_db.fly_location_ip (start_ip,stop_ip,location,flag_index) values(?,?,?,?)");
 		for (const auto& val : data)
 		{
 			dcassert(val.startIp && !val.location.empty());
@@ -554,7 +520,7 @@ void DatabaseManager::loadLocation(Ip4Address ip, IPInfo& result)
 	LOCK(cs);
 	try
 	{		
-		initQuery2(selectLocation,
+		initQuery(selectLocation,
 			"select location,flag_index,start_ip,stop_ip from "
 			"(select location,flag_index,start_ip,stop_ip from location_db.fly_location_ip where start_ip <=? order by start_ip desc limit 1) "
 			"where stop_ip >=?");
@@ -582,7 +548,7 @@ void DatabaseManager::loadP2PGuard(Ip4Address ip, IPInfo& result)
 	LOCK(cs);
 	try
 	{		
-		initQuery2(selectP2PGuard,
+		initQuery(selectP2PGuard,
 			"select note,start_ip,stop_ip,2 from "
 		    "(select note,start_ip,stop_ip from location_db.fly_p2pguard_ip where start_ip <=? order by start_ip desc limit 1) "
 			"where stop_ip >=?");
@@ -667,11 +633,11 @@ void DatabaseManager::saveP2PGuardData(const vector<P2PGuardData>& data, int typ
 		sqlite3_transaction trans(connection);
 		if (removeOld)
 		{
-			initQuery2(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where (type=? or type is null)");
+			initQuery(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where (type=? or type is null)");
 			deleteP2PGuard.bind(1, type);
 			deleteP2PGuard.executenonquery();
 		}
-		initQuery2(insertP2PGuard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
+		initQuery(insertP2PGuard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
 		for (const auto& val : data)
 		{
 			dcassert(!val.note.empty());
@@ -747,7 +713,7 @@ void DatabaseManager::loadRegistry(DBRegistryMap& values, DBRegistryType type)
 	LOCK(cs);
 	try
 	{
-		initQuery2(selectRegistry, "select key,val_str,val_number from fly_registry where segment=? order by rowid");
+		initQuery(selectRegistry, "select key,val_str,val_number from fly_registry where segment=? order by rowid");
 		selectRegistry.bind(1, type);
 		sqlite3_reader reader = selectRegistry.executereader();
 		while (reader.read())
@@ -778,7 +744,7 @@ void DatabaseManager::clearRegistry(DBRegistryType type, int64_t tick)
 
 void DatabaseManager::clearRegistryL(DBRegistryType type, int64_t tick)
 {
-	initQuery2(deleteRegistry, "delete from fly_registry where segment=? and tick_count<>?");
+	initQuery(deleteRegistry, "delete from fly_registry where segment=? and tick_count<>?");
 	deleteRegistry.bind(1, type);
 	deleteRegistry.bind(2, (long long) tick);
 	deleteRegistry.executenonquery();
@@ -790,8 +756,8 @@ void DatabaseManager::saveRegistry(const DBRegistryMap& values, DBRegistryType t
 	try
 	{
 		const int64_t tick = getRandValForRegistry();
-		initQuery2(insertRegistry, "insert or replace into fly_registry (segment,key,val_str,val_number,tick_count) values(?,?,?,?,?)");
-		initQuery2(updateRegistry, "update fly_registry set val_str=?,val_number=?,tick_count=? where segment=? and key=?");
+		initQuery(insertRegistry, "insert or replace into fly_registry (segment,key,val_str,val_number,tick_count) values(?,?,?,?,?)");
+		initQuery(updateRegistry, "update fly_registry set val_str=?,val_number=?,tick_count=? where segment=? and key=?");
 		sqlite3_transaction trans(connection, values.size() > 1 || clearOldValues);
 		for (auto k = values.cbegin(); k != values.cend(); ++k)
 		{
@@ -828,7 +794,7 @@ int64_t DatabaseManager::getRandValForRegistry()
 	while (true)
 	{
 		val = ((int64_t) Util::rand() << 31) ^ Util::rand();
-		initQuery2(selectTick, "select count(*) from fly_registry where tick_count=?");
+		initQuery(selectTick, "select count(*) from fly_registry where tick_count=?");
 		selectTick.bind(1, (long long) val);
 		if (selectTick.executeint() == 0) break;
 	}
@@ -855,12 +821,6 @@ void DatabaseManager::deleteOldTransferHistoryL()
 		string sqlDC = makeDeleteOldTransferHistory("fly_transfer_file", currentDay);
 		sqlite3_command cmdDC(&connection, sqlDC);
 		cmdDC.executenonquery();
-
-#ifdef FLYLINKDC_USE_TORRENT
-		string sqlTorrent = makeDeleteOldTransferHistory("fly_transfer_file_torrent", currentDay);
-		sqlite3_command cmdTorrent(&connection, sqlTorrent);
-		cmdTorrent.executenonquery();
-#endif
 	}
 }
 
@@ -875,7 +835,7 @@ void DatabaseManager::loadTransferHistorySummary(eTypeTransfer type, vector<Tran
 			deleteOldTransferHistoryL();
 		}
 
-		initQuery2(selectTransfersSummary,
+		initQuery(selectTransfersSummary,
 			"select day,count(*),sum(actual) "
 			"from transfer_db.fly_transfer_file where type=? group by day order by day desc");
 		selectTransfersSummary.bind(1, type);
@@ -896,46 +856,12 @@ void DatabaseManager::loadTransferHistorySummary(eTypeTransfer type, vector<Tran
 	}
 }
 
-#ifdef FLYLINKDC_USE_TORRENT
-void DatabaseManager::loadTorrentTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
-{
-	LOCK(cs);
-	try
-	{
-		if (deleteOldTransfers)
-		{
-			deleteOldTransfers = false;
-			deleteOldTransferHistoryL();
-		}
-
-		initQuery2(selectTransfersSummaryTorrent,
-			"select day,count(*) "
-			"from transfer_db.fly_transfer_file_torrent where type=? group by day order by day desc");
-		selectTransfersSummaryTorrent.bind(1, type);
-		sqlite3_reader reader = selectTransfersSummaryTorrent.executereader();
-		while (reader.read())
-		{
-			TransferHistorySummary item;
-			item.dateAsInt = reader.getint(0);
-			item.count = reader.getint(1);
-			// TODO: fill item.actual
-			item.date = static_cast<time_t>(item.dateAsInt*(60*60*24));
-			out.push_back(item);
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - loadTorrentTransferHistorySummary: " + e.getError(), e.getErrorCode());
-	}
-}
-#endif
-
 void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
 {
 	LOCK(cs);
 	try
 	{
-		initQuery2(selectTransfersDay,
+		initQuery(selectTransfersDay,
 			"select path,nick,hub,size,speed,stamp,ip,tth,id,actual "
 			"from transfer_db.fly_transfer_file where type=? and day=?");
 		selectTransfersDay.bind(1, type);
@@ -963,40 +889,6 @@ void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<Fi
 	}
 }
 
-#ifdef FLYLINKDC_USE_TORRENT
-void DatabaseManager::loadTorrentTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
-{
-	LOCK(cs);
-	try
-	{
-		initQuery2(selectTransfersDayTorrent,
-			"select path,sha1,size,stamp,id "
-			"from transfer_db.fly_transfer_file_torrent where type=? and day=?");
-		selectTransfersDayTorrent.bind(1, type);
-		selectTransfersDayTorrent.bind(2, day);
-		sqlite3_reader reader = selectTransfersDayTorrent.executereader();
-		
-		while (reader.read())
-		{
-			libtorrent::sha1_hash sha1;
-			reader.getblob(1, sha1.data(), sha1.size());
-			auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
-			                                           reader.getint64(2), // size
-			                                           0, // speed
-			                                           reader.getint64(3), // time
-			                                           sha1, // SHA1
-			                                           0, // actual
-			                                           reader.getint64(4)); // id
-			out.push_back(item);
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - loadTorrentTransferHistory: " + e.getError(), e.getErrorCode());
-	}
-}
-#endif
-
 void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 {
 	if (id.empty()) return;
@@ -1004,7 +896,7 @@ void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 	try
 	{
 		sqlite3_transaction trans(connection, id.size() > 1);
-		initQuery2(deleteTransfer, "delete from transfer_db.fly_transfer_file where id=?");
+		initQuery(deleteTransfer, "delete from transfer_db.fly_transfer_file where id=?");
 		for (auto i = id.cbegin(); i != id.cend(); ++i)
 		{
 			dcassert(*i);
@@ -1019,161 +911,6 @@ void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 	}
 }
 
-#ifdef FLYLINKDC_USE_TORRENT
-void DatabaseManager::deleteTorrentTransferHistory(const vector<int64_t>& id)
-{
-	if (id.empty()) return;
-	LOCK(cs);
-	try
-	{
-		sqlite3_transaction trans(connection, id.size() > 1);
-		initQuery2(deleteTransferTorrent, "delete from transfer_db.fly_transfer_file_torrent where id=?");
-		for (auto i = id.cbegin(); i != id.cend(); ++i)
-		{
-			dcassert(*i);
-			deleteTransferTorrent.bind(1, *i);
-			deleteTransferTorrent.executenonquery();
-		}
-		trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - deleteTorrentTransferHistory: " + e.getError(), e.getErrorCode());
-	}
-}
-#endif
-
-#ifdef FLYLINKDC_USE_TORRENT
-void DatabaseManager::load_torrent_resume(libtorrent::session& p_session)
-{
-	try
-	{
-		initQuery(m_select_resume_torrent, "select resume,sha1 from queue_db.fly_queue_torrent");
-		sqlite3_reader l_q = m_select_resume_torrent->executereader();
-		while (l_q.read())
-		{
-			vector<uint8_t> l_resume;
-			l_q.getblob(0, l_resume);
-			//dcassert(!l_resume.empty());
-			if (!l_resume.empty())
-			{
-				libtorrent::error_code ec;
-				libtorrent::add_torrent_params p = libtorrent::read_resume_data({ (const char*)l_resume.data(), l_resume.size()}, ec);
-				//p.save_path = SETTING(DOWNLOAD_DIRECTORY); // TODO - load from DB ?
-				libtorrent::sha1_hash l_sha1;
-				l_q.getblob(1, l_sha1.data(), l_sha1.size());
-				p.info_hash = l_sha1;
-				p.flags |= libtorrent::torrent_flags::auto_managed;
-				{
-					LOCK(g_resume_torrents_cs);
-					g_resume_torrents.insert(l_sha1);
-				}
-#ifdef _DEBUG
-				ec.clear();
-				p_session.async_add_torrent(std::move(p)); // TODO sync for debug
-				if (ec)
-				{
-					dcdebug("%s\n", ec.message().c_str());
-					dcassert(0);
-					LogManager::message("Error add_torrent_file: " + ec.message());
-				}
-#else
-				p_session.async_add_torrent(std::move(p));
-#endif
-			}
-			else
-			{
-				LogManager::torrent_message("Error add_torrent_file: resume data is empty()");
-				// TODO delete_torrent_resume
-			}
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - load_torrent_resume: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::delete_torrent_resume(const libtorrent::sha1_hash& p_sha1)
-{
-	LOCK(cs);
-	try
-	{
-		initQuery(m_delete_resume_torrent, "delete from queue_db.fly_queue_torrent where sha1=?");
-		m_delete_resume_torrent->bind(1, p_sha1.data(), p_sha1.size(), SQLITE_STATIC);
-		m_delete_resume_torrent->executenonquery();
-		if (connection.changes() == 1)
-		{
-			LOCK(g_delete_torrents_cs);
-			g_delete_torrents.insert(p_sha1);
-		}
-		else
-		{
-			dcassert(0); // Зовем второй раз удаление - не хорошо
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - delete_torrent_resume: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::save_torrent_resume(const libtorrent::sha1_hash& p_sha1, const std::string& p_name, const std::vector<char>& p_resume)
-{
-	LOCK(cs);
-	try
-	{
-		initQuery(m_check_resume_torrent, "select resume,id from queue_db.fly_queue_torrent where sha1=?");
-		m_check_resume_torrent->bind(1, p_sha1.data(), p_sha1.size(), SQLITE_STATIC);
-		bool l_is_need_update = true;
-		int64_t l_ID = 0;
-		{
-			sqlite3_reader l_q_check = m_check_resume_torrent->executereader();
-			while (l_q_check.read())
-			{
-				l_ID = l_q_check.getint64(1);
-				vector<uint8_t> l_resume;
-				l_q_check.getblob(0, l_resume);
-				//dcassert(!l_resume.empty());
-				if (!l_resume.empty() && l_resume.size() == p_resume.size())
-				{
-					l_is_need_update = !memcmp(&p_resume[0], &l_resume[0], l_resume.size());
-				}
-			}
-		}
-		if (l_is_need_update)
-		{
-			if (l_ID == 0)
-			{
-				initQuery(m_insert_resume_torrent,
-					"insert or replace into queue_db.fly_queue_torrent (day,stamp,sha1,resume,name) "
-					"values(strftime('%s','now','localtime')/60/60/24,strftime('%s','now','localtime'),?,?,?)");
-				m_insert_resume_torrent->bind(1, p_sha1.data(), p_sha1.size(), SQLITE_STATIC);
-				m_insert_resume_torrent->bind(2, &p_resume[0], p_resume.size(), SQLITE_STATIC);
-				m_insert_resume_torrent->bind(3, p_name, SQLITE_STATIC);
-				m_insert_resume_torrent->executenonquery();
-			}
-			else
-			{
-				initQuery(m_update_resume_torrent,
-					"update queue_db.fly_queue_torrent set day = strftime('%s','now','localtime')/60/60/24,"
-					"stamp = strftime('%s','now','localtime'),"
-					"resume = ?,"
-					"name = ? where id = ?");
-				m_update_resume_torrent->bind(1, &p_resume[0], p_resume.size(), SQLITE_STATIC);
-				m_update_resume_torrent->bind(2, p_name, SQLITE_STATIC);
-				m_update_resume_torrent->bind(3, l_ID);
-				m_update_resume_torrent->executenonquery();
-			}
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - save_torrent_resume: " + e.getError(), e.getErrorCode());
-	}
-}
-#endif
-
 void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item)
 {
 	int64_t timestamp = posixTimeToLocal(item->getTime());
@@ -1186,7 +923,7 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 		inc_hitL(path, name);
 #endif
 			
-		initQuery2(insertTransfer,
+		initQuery(insertTransfer,
 			"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
 			"values(?,?,?,?,?,?,?,?,?,?,?)");
 		insertTransfer.bind(1, type);
@@ -1211,40 +948,12 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 	}
 }
 
-#ifdef FLYLINKDC_USE_TORRENT
-void DatabaseManager::addTorrentTransfer(eTypeTransfer type, const FinishedItemPtr& item)
-{
-	int64_t timestamp = posixTimeToLocal(item->getTime());	
-	LOCK(cs);
-	try
-	{
-		initQuery2(insertTransferTorrent,
-			"insert into transfer_db.fly_transfer_file_torrent (day,type,stamp,path,size,sha1) "
-			"values(?,?,?,?,?,?)");
-		insertTransferTorrent.bind(1, timestamp/(60*60*24));
-		insertTransferTorrent.bind(2, type);
-		insertTransferTorrent.bind(3, item->getTime());
-		insertTransferTorrent.bind(4, item->getTarget(), SQLITE_STATIC);
-		insertTransferTorrent.bind(5, item->getSize());
-		if (!item->sha1.is_all_zeros())
-			insertTransferTorrent.bind(6, item->sha1.data(), item->sha1.size(), SQLITE_STATIC);
-		else
-			insertTransferTorrent.bind(6);
-		insertTransferTorrent.executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - addTorrentTransfer: " + e.getError(), e.getErrorCode());
-	}
-}
-#endif
-
 void DatabaseManager::loadIgnoredUsers(StringSet& users)
 {
 	LOCK(cs);
 	try
 	{
-		initQuery2(selectIgnoredUsers, "select trim(nick) from fly_ignore");
+		initQuery(selectIgnoredUsers, "select trim(nick) from fly_ignore");
 		sqlite3_reader reader = selectIgnoredUsers.executereader();
 		while (reader.read())
 		{
@@ -1265,9 +974,9 @@ void DatabaseManager::saveIgnoredUsers(const StringSet& users)
 	try
 	{
 		sqlite3_transaction trans(connection);
-		initQuery2(deleteIgnoredUsers, "delete from fly_ignore");
+		initQuery(deleteIgnoredUsers, "delete from fly_ignore");
 		deleteIgnoredUsers.executenonquery();
-		initQuery2(insertIgnoredUsers, "insert or replace into fly_ignore (nick) values(?)");
+		initQuery(insertIgnoredUsers, "insert or replace into fly_ignore (nick) values(?)");
 		for (auto k = users.cbegin(); k != users.cend(); ++k)
 		{
 			string user = (*k);
@@ -1310,7 +1019,7 @@ void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStat
 	if (!count) trans.begin();
 	if (item.flags & IPStatItem::FLAG_LOADED)
 	{
-		initQuery2(updateIPStat, "update ip_stat set upload=?, download=? where cid=? and ip=?");
+		initQuery(updateIPStat, "update ip_stat set upload=?, download=? where cid=? and ip=?");
 		updateIPStat.bind(1, static_cast<long long>(item.upload));
 		updateIPStat.bind(2, static_cast<long long>(item.download));
 		updateIPStat.bind(3, cid.data(), CID::SIZE, SQLITE_STATIC);
@@ -1319,7 +1028,7 @@ void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStat
 	}
 	else
 	{
-		initQuery2(insertIPStat, "insert into ip_stat values(?,?,?,?)"); // cid, ip, upload, download
+		initQuery(insertIPStat, "insert into ip_stat values(?,?,?,?)"); // cid, ip, upload, download
 		insertIPStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
 		insertIPStat.bind(2, ip, SQLITE_STATIC);
 		insertIPStat.bind(3, static_cast<long long>(item.upload));
@@ -1339,7 +1048,7 @@ IPStatMap* DatabaseManager::loadIPStat(const CID& cid)
 	LOCK(cs);
 	try
 	{
-		initQuery2(selectIPStat, "select ip, upload, download from ip_stat where cid=?");
+		initQuery(selectIPStat, "select ip, upload, download from ip_stat where cid=?");
 		selectIPStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
 		sqlite3_reader reader = selectIPStat.executereader();
 		while (reader.read())
@@ -1380,7 +1089,7 @@ void DatabaseManager::saveUserStatL(const CID& cid, UserStatItem& stat, int batc
 	if (!count) trans.begin();
 	if (stat.flags & UserStatItem::FLAG_LOADED)
 	{
-		initQuery2(updateUserStat, "update user_db.user_stat set nick=?, last_ip=?, message_count=? where cid=?");
+		initQuery(updateUserStat, "update user_db.user_stat set nick=?, last_ip=?, message_count=? where cid=?");
 		updateUserStat.bind(1, nickList, SQLITE_STATIC);
 		updateUserStat.bind(2, stat.lastIp, SQLITE_STATIC);
 		updateUserStat.bind(3, stat.messageCount);
@@ -1389,7 +1098,7 @@ void DatabaseManager::saveUserStatL(const CID& cid, UserStatItem& stat, int batc
 	}
 	else
 	{
-		initQuery2(insertUserStat, "insert into user_db.user_stat values(?,?,?,?,0,0)"); // cid, nick, last_ip, message_count
+		initQuery(insertUserStat, "insert into user_db.user_stat values(?,?,?,?,0,0)"); // cid, nick, last_ip, message_count
 		insertUserStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
 		insertUserStat.bind(2, nickList, SQLITE_STATIC);
 		insertUserStat.bind(3, stat.lastIp, SQLITE_STATIC);
@@ -1425,7 +1134,7 @@ bool DatabaseManager::loadUserStat(const CID& cid, UserStatItem& stat)
 	LOCK(cs);
 	try
 	{
-		initQuery2(selectUserStat, "select nick, last_ip, message_count from user_db.user_stat where cid=?");
+		initQuery(selectUserStat, "select nick, last_ip, message_count from user_db.user_stat where cid=?");
 		selectUserStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
 		sqlite3_reader reader = selectUserStat.executereader();
 		if (reader.read())
@@ -1605,7 +1314,7 @@ void DatabaseManager::loadGlobalRatio(bool force)
 	if (!force && tick < timeLoadGlobalRatio) return;
 	try
 	{
-		initQuery2(selectGlobalRatio, "select total(upload), total(download) from ip_stat");
+		initQuery(selectGlobalRatio, "select total(upload), total(download) from ip_stat");
 		sqlite3_reader reader = selectGlobalRatio.executereader();
 		if (reader.read())
 		{
@@ -1757,20 +1466,6 @@ void DatabaseManager::attachDatabase(const string& file, const string& name)
 	cmd += name;
 	connection.executenonquery(cmd.c_str());
 }
-
-#ifdef FLYLINKDC_USE_TORRENT
-bool DatabaseManager::is_resume_torrent(const libtorrent::sha1_hash& p_sha1)
-{
-	LOCK(g_resume_torrents_cs);
-	return g_resume_torrents.find(p_sha1) != g_resume_torrents.end();
-}
-
-bool DatabaseManager::is_delete_torrent(const libtorrent::sha1_hash& p_sha1)
-{
-	LOCK(g_delete_torrents_cs);
-	return g_delete_torrents.find(p_sha1) != g_delete_torrents.end();
-}
-#endif
 
 bool DatabaseManager::openGeoIPDatabaseL()
 {

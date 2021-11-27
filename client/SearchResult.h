@@ -68,42 +68,6 @@ class SearchResultCore
 			return type;
 		}
 
-#ifdef FLYLINKDC_USE_TORRENT
-		string getSHA1() const
-		{
-			const auto pos = torrentMagnet.find("xt=urn:btih:");
-			if (pos != string::npos && pos + 12 + 40 <= torrentMagnet.length())
-				return torrentMagnet.substr(pos + 12, 40);
-			return string();
-		}
-
-		const string& getTorrentMagnet() const
-		{
-			return torrentMagnet;
-		}
-
-		void setTorrentMagnet(const string& torrentMagnet)
-		{
-			this->torrentMagnet = torrentMagnet;
-			type = TYPE_TORRENT_MAGNET;
-		}
-
-		string getPeersString() const
-		{
-			return Util::toString(peer) + '/' + Util::toString(seed);
-		}
-
-		uint16_t peer = 0;
-		uint16_t seed = 0;
-		string torrentUrl;
-		uint16_t m_group_index = 0;
-		string   m_group_name;
-		uint16_t m_comment = 0;
-		string m_tracker;
-		uint16_t m_tracker_index = 0;
-		string m_date;
-#endif
-
 	protected:
 		TTHValue tth;
 		string file;
@@ -164,9 +128,6 @@ class SearchResult : public SearchResultCore
 		}
 		
 		int flags;
-#ifdef FLYLINKDC_USE_TORRENT
-		unsigned m_torrent_page = 0;
-#endif
 		unsigned freeSlots;
 		unsigned slots;
 		

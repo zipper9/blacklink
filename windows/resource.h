@@ -142,7 +142,6 @@
 #define IDR_TORRENT_PNG                 325
 #define IDR_TRANSFER_TREE               326
 #define IDD_FILELIST_SEARCH             328
-#define IDD_FLY_TORRENT_DIALOG          329
 #define IDD_HUB_LIST                    330
 #define IDR_TRACKER_IMAGES              331
 #define IDD_FILE_HASH                   332

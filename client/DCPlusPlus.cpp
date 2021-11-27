@@ -222,9 +222,6 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		dcdebug("shutdown started: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
 			User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
 #endif
-#ifdef FLYLINKDC_USE_TORRENT
-		DownloadManager::getInstance()->shutdown_torrent();
-#endif
 		QueueManager::getInstance()->saveQueue(true);
 		SettingsManager::getInstance()->save();
 		ConnectionManager::getInstance()->shutdown();

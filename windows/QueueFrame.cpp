@@ -27,10 +27,6 @@
 #include "MainFrm.h"
 #include "ExMessageBox.h"
 
-#ifdef FLYLINKDC_USE_TORRENT
-#include "libtorrent/hex.hpp"
-#endif
-
 #ifdef DEBUG_QUEUE_FRAME
 int QueueFrame::DirItem::itemsCreated;
 int QueueFrame::DirItem::itemsRemoved;
@@ -475,10 +471,6 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 		case COLUMN_TTH:
 		{
-#ifdef FLYLINKDC_USE_TORRENT
-			if (isTorrent())
-				return Text::toT(libtorrent::aux::to_hex(sha1));
-#endif
 			if (qi && !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 				return Text::toT(qi->getTTH().toBase32());
 			break;

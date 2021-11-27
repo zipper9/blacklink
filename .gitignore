@@ -73,6 +73,7 @@ vc17
 *.suo
 *.ipdb
 *.iobj
+*.AssemblyReference.cache
 
 /lua/ARM64/Debug
 /lua/ARM64/Debug

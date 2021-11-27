@@ -24,10 +24,6 @@
 #include "TransferData.h"
 #include "Download.h"
 
-#ifdef FLYLINKDC_USE_TORRENT
-#include "libtorrent/torrent_info.hpp"
-#endif
-
 /**
  * Use this listener interface to get progress information for downloads.
  *
@@ -41,15 +37,6 @@
  * for every Downloads, sending one Download at a time. But maybe updating the
  * GUI is not DownloadManagers problem at all???
  */
-
-#ifdef FLYLINKDC_USE_TORRENT
-struct CFlyTorrentFile
-{
-	std::string m_file_path;
-	int64_t m_size = 0;
-};
-typedef std::vector<CFlyTorrentFile> CFlyTorrentFileArray;
-#endif
 
 class DownloadManagerListener
 {
@@ -69,13 +56,6 @@ class DownloadManagerListener
 		typedef X<4> Requesting;
 		typedef X<5> Status;
 		typedef X<6> RemoveToken;
-#ifdef FLYLINKDC_USE_TORRENT
-		typedef X<7> TorrentEvent;
-		typedef X<8> RemoveTorrent;
-		typedef X<9> SelectTorrent;
-		typedef X<10> AddedTorrent;
-		typedef X<11> CompleteTorrentFile;
-#endif
 
 		/**
 		 * This is the first message sent before a download starts.
@@ -112,15 +92,6 @@ class DownloadManagerListener
 		virtual void on(Failed, const DownloadPtr& aDownload, const string&) noexcept { }
 		
 		virtual void on(Status, const UserConnection*, const Download::ErrorInfo&) noexcept { }
-
-#ifdef FLYLINKDC_USE_TORRENT
-		virtual void on(TorrentEvent, const DownloadArray&) noexcept { }
-		virtual void on(RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept { }
-		virtual void on(SelectTorrent, const libtorrent::sha1_hash& p_sha1, CFlyTorrentFileArray& p_files,
-		                std::shared_ptr<const libtorrent::torrent_info> p_torrent_info) noexcept { }
-		virtual void on(AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept { }
-		virtual void on(CompleteTorrentFile, const std::string& p_name) noexcept { }
-#endif
 };
 
 #endif /*DOWNLOADMANAGERLISTENER_H_*/
