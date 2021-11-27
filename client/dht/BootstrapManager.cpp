@@ -72,7 +72,8 @@ namespace dht
 		LOCK(csState);
 		if (downloading) return;
 
-		LogManager::message("Using bootstrap URL " + url, false);
+		if (BOOLSETTING(LOG_DHT_TRACE))
+			LOG(DHT_TRACE, "Using bootstrap URL " + url);
 		LogManager::message(STRING(DHT_BOOTSTRAPPING_STARTED));
 
 		delete conn;

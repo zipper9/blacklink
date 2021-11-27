@@ -233,7 +233,8 @@ namespace dht
 		string command = cmd.toString(ClientManager::getMyCID());
 		if (command.length() > PACKET_BUF_SIZE - 3)
 		{
-			LogManager::message("DHT: Outgoing command too large (size=" + Util::toString(command.length()) + ')');
+			if (BOOLSETTING(LOG_DHT_TRACE))
+				LOG(DHT_TRACE, "DHT: Outgoing command too large (size=" + Util::toString(command.length()) + ')');
 			return;
 		}
 

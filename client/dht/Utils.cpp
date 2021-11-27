@@ -107,7 +107,8 @@ namespace dht
 					}
 				}
 
-				LogManager::message("Received unwanted response from " + Util::printIpAddress(ip) + ". Packet dropped.", false);
+				if (BOOLSETTING(LOG_DHT_TRACE))
+					LOG(DHT_TRACE, "Received unwanted response from " + Util::printIpAddress(ip) + ". Packet dropped.");
 				return false;
 			}
 		}
@@ -118,8 +119,9 @@ namespace dht
 
 		if (packetsPerIp.count(cmd.getCommand()) > maxAllowedPacketsPerMinute)
 		{
-			LogManager::message("Request flood detected (" + Util::toString(packetsPerIp.count(cmd.getCommand())) +
-				") from " + Util::printIpAddress(ip) + ". Packet dropped.", false);
+			if (BOOLSETTING(LOG_DHT_TRACE))
+				LOG(DHT_TRACE, "Request flood detected (" + Util::toString(packetsPerIp.count(cmd.getCommand())) +
+				") from " + Util::printIpAddress(ip) + ". Packet dropped.");
 			return false;
 		}
 

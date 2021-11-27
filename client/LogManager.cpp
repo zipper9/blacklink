@@ -64,6 +64,8 @@ void LogManager::init()
 	types[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
 	types[SEARCH_TRACE].fileOption      = SettingsManager::LOG_FILE_SEARCH_TRACE;
 	types[SEARCH_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SEARCH_TRACE;
+	types[DHT_TRACE].fileOption         = SettingsManager::LOG_FILE_DHT_TRACE;
+	types[DHT_TRACE].formatOption       = SettingsManager::LOG_FORMAT_DHT_TRACE;
 	types[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
 	types[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
 	types[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;
@@ -296,55 +298,28 @@ void LogManager::message(const string& message, bool useStatus) noexcept
 		speakStatusMessage(message);
 }
 
-CFlyLog::CFlyLog(const string& p_message, bool p_skip_start /* = true */) :
-	m_start(GET_TICK()),
-	m_message(p_message),
-	m_tc(m_start),
-	m_skip_start(p_skip_start), // TODO - может оно не нужно?
-	m_skip_stop(false)
+StepLogger::StepLogger(const string& message, bool skipStart, bool skipStop) : message(message), skipStop(skipStop)
 {
-	if (!m_skip_start)
+	startTime = stepTime = GET_TICK();
+	if (!skipStart && BOOLSETTING(LOG_SYSTEM))
+		LogManager::log(LogManager::SYSTEM, "[Start] " + message);
+}
+
+StepLogger::~StepLogger()
+{
+	if (!skipStop && BOOLSETTING(LOG_SYSTEM))
 	{
-		log("[Start] " + m_message);
+		uint64_t now = GET_TICK();
+		LogManager::log(LogManager::SYSTEM,
+			message + " [" + Util::toString(now - stepTime) + " ms, Total: " + Util::toString(now - startTime) + " ms]");
 	}
 }
 
-CFlyLog::~CFlyLog()
+void StepLogger::step(const string& what)
 {
-	if (!m_skip_stop)
-	{
-		const uint64_t l_current = GET_TICK();
-		log("[Stop] " + m_message + " [" + Util::toString(l_current - m_tc) + " ms, Total: " + Util::toString(l_current - m_start) + " ms]");
-	}
-}
-
-uint64_t CFlyLog::calcSumTime() const
-{
-	const uint64_t l_current = GET_TICK();
-	return l_current - m_start;
-}
-
-void CFlyLog::step(const string& p_message_step, const bool p_reset_count /*= true */)
-{
-	const uint64_t l_current = GET_TICK();
-	dcassert(p_message_step.size() == string(p_message_step.c_str()).size());
-	log("[Step] " + m_message + ' ' + p_message_step + " [" + Util::toString(l_current - m_tc) + " ms]");
-	if (p_reset_count)
-		m_tc = l_current;
-}
-void CFlyLog::loadStep(const string& p_message_step, const bool p_reset_count /*= true */)
-{
-	const uint64_t l_current = GET_TICK();
-	const uint64_t l_step = l_current - m_tc;
-	const uint64_t l_total = l_current - m_start;
-	
-	m_tc = l_current;
-	if (p_reset_count)
-	{
-		log("[Step] " + m_message + " Begin load " + p_message_step + " [" + Util::toString(l_step) + " ms]");
-	}
-	else
-	{
-		log("[Step] " + m_message + " End load " + p_message_step + " [" + Util::toString(l_step) + " ms and " + Util::toString(l_total) + " ms after start]");
-	}
+	uint64_t now = GET_TICK();
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::log(LogManager::SYSTEM,
+			message + ' ' + what + " [" + Util::toString(now - stepTime) + " ms]");
+	stepTime = now;
 }

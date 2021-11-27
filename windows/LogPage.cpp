@@ -63,6 +63,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::LOG_TORRENT_TRACE,      ResourceManager::SETTINGS_LOG_TORRENT_TRACE      },
 #endif
 	{ SettingsManager::LOG_SEARCH_TRACE,       ResourceManager::SETTINGS_LOG_SEARCH_TRACE       },
+	{ SettingsManager::LOG_DHT_TRACE,          ResourceManager::SETTINGS_LOG_DHT_TRACE          },
 	{ SettingsManager::LOG_PSR_TRACE,          ResourceManager::SETTINGS_LOG_PSR_TRACE          },
 	{ SettingsManager::LOG_FLOOD_TRACE,        ResourceManager::SETTINGS_LOG_FLOOD_TRACE        },
 	{ SettingsManager::LOG_TCP_MESSAGES,       ResourceManager::SETTINGS_LOG_TCP_MESSAGES       },

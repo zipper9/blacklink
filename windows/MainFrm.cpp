@@ -2023,22 +2023,17 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				destroyTimer();
 				ClientManager::stopStartup();
 				preparingCoreToShutdown();
-					
+
 				transferView.prepareClose();
-				//dcassert(TransferView::ItemInfo::g_count_transfer_item == 0);
-					
+
 				WebServerManager::getInstance()->removeListener(this);
 				FavoriteManager::getInstance()->removeListener(this);
 				FinishedManager::getInstance()->removeListener(this);
 				UserManager::getInstance()->removeListener(this);
 				QueueManager::getInstance()->removeListener(this);
 
-				auto cm = ConnectionManager::getInstance();
-				cm->stopServer(AF_INET);
-				cm->stopServer(AF_INET6);
-					
 				ToolbarManager::getInstance()->getFrom(m_hWndToolBar, "MainToolBar");
-					
+
 				useTrayIcon = false;
 				setTrayIcon(TRAY_ICON_NONE);
 				if (m_nProportionalPos > 300)

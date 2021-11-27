@@ -46,7 +46,7 @@ string Emoticon::unzipIcons(const string& fileName)
 	//  size_t size;
 	//};
 	string l_result;
-	CFlyLog l_log("[Unzip EmoPacks.zip]" + fileName);
+	StepLogger sl("[Unzip EmoPacks.zip] " + fileName);
 	//buffer_t buf = {0};
 	const string l_path = Util::getEmoPacksPath() + "EmoPacks.zip";
 	const string l_tmp_path = Util::getTempPath(); // +"FlylinkDC++EmoPacks";

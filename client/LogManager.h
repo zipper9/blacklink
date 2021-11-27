@@ -46,6 +46,7 @@ class LogManager
 			TORRENT_TRACE,
 #endif
 			SEARCH_TRACE,
+			DHT_TRACE,
 			PSR_TRACE,
 			FLOOD_TRACE,
 			TCP_MESSAGES,
@@ -117,31 +118,18 @@ class LogManager
 
 #define LOG(area, msg) LogManager::log(LogManager::area, msg)
 
-class CFlyLog
+class StepLogger
 {
 	public:
-		const string m_message;
-		const uint64_t m_start;
-		uint64_t m_tc;
-		bool m_skip_start;
-		bool m_skip_stop;
-		bool m_only_file;
-		void log(const string& msg) { LogManager::message(msg, false); }
+		StepLogger(const string& message, bool skipStart = true, bool skipStop = false);
+		~StepLogger();
+		void step(const string& what);
 
-	public:
-		CFlyLog(const string& p_message, bool p_skip_start = true);
-		~CFlyLog();
-		uint64_t calcSumTime() const;
-		void step(const string& p_message_step, const bool p_reset_count = true);
-		void loadStep(const string& p_message_step, const bool p_reset_count = true);
-};
-
-class CFlyLogFile : public CFlyLog
-{
-	public:
-		explicit CFlyLogFile(const string& p_message) : CFlyLog(p_message, true)
-		{
-		}
+	private:
+		const string message;
+		const bool skipStop;
+		uint64_t startTime;
+		uint64_t stepTime;
 };
 
 #endif // DCPLUSPLUS_DCPP_LOG_MANAGER_H

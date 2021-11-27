@@ -23,7 +23,6 @@
 #include "DHTSearchManager.h"
 
 #include "../CID.h"
-#include "../LogManager.h"
 #include "../ShareManager.h"
 #include "../TimerManager.h"
 

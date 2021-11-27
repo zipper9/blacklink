@@ -40,7 +40,7 @@ namespace dht
 	{
 #ifdef DEBUG_DHT_SEARCH
 		if (type == TYPE_FILE)
-			LogManager::message("DHT Search " + Util::toString(token) + " completed, tried " + Util::toString(triedNodes.size()) + " nodes", false);
+			LOG(DHT_TRACE, "DHT Search " + Util::toString(token) + " completed, tried " + Util::toString(triedNodes.size()) + " nodes");
 #endif
 		switch (type)
 		{
@@ -206,8 +206,8 @@ namespace dht
 		if (s->type == DHTSearch::TYPE_FILE)
 		{
 			for (auto i = s->possibleNodes.cbegin(); i != s->possibleNodes.cend(); ++i)
-				LogManager::message("DHT Search " + Util::toString(s->token) + " using initial node " +
-					Util::toString(++s->nodeCtr) + ": " + i->second->getUser()->getCID().toBase32(), false);
+				LOG(DHT_TRACE, "DHT Search " + Util::toString(s->token) + " using initial node " +
+					Util::toString(++s->nodeCtr) + ": " + i->second->getUser()->getCID().toBase32());
 		}
 #endif
 
@@ -479,11 +479,11 @@ namespace dht
 				if (s->type == DHTSearch::TYPE_FILE)
 				{
 					if (isAcceptable)
-						LogManager::message("DHT Search " + Util::toString(s->token) + " using node " +
-							Util::toString(++s->nodeCtr) + ": " + newNode->getUser()->getCID().toBase32(), false);
+						LOG(DHT_TRACE, "DHT Search " + Util::toString(s->token) + " using node " +
+							Util::toString(++s->nodeCtr) + ": " + newNode->getUser()->getCID().toBase32());
 					else
-						LogManager::message("DHT Search " + Util::toString(s->token) + " unacceptable node: " +
-							newNode->getUser()->getCID().toBase32(), false);
+						LOG(DHT_TRACE, "DHT Search " + Util::toString(s->token) + " unacceptable node: " +
+							newNode->getUser()->getCID().toBase32());
 				}
 #endif
 				if (--n == 0) break;

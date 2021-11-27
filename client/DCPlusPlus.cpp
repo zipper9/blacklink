@@ -127,21 +127,39 @@ void preparingCoreToShutdown()
 	if (!g_is_first)
 	{
 		g_is_first = true;
-		CFlyLog l_log("[Core shutdown]");
+		StepLogger sl("[Core shutdown]", false);
 		dht::DHT::getInstance()->stop();
 		ClientManager::shutdown();
 		ConnectionManager::getInstance()->stopServers();
+#ifdef DEBUG_SHUTDOWN
+		sl.step("ConnectionManager");
+#endif
 		SearchManager::getInstance()->shutdown();
 		HashManager::getInstance()->shutdown();
+#ifdef DEBUG_SHUTDOWN
+		sl.step("HashManager");
+#endif
 		TimerManager::getInstance()->shutdown();
 		UploadManager::getInstance()->shutdown();
+#ifdef DEBUG_SHUTDOWN
+		sl.step("UploadManager");
+#endif
 #ifdef ENABLE_WEB_SERVER
 		WebServerManager::getInstance()->shutdown();
 #endif
 		ClientManager::prepareClose();
 		ShareManager::getInstance()->shutdown();
+#ifdef DEBUG_SHUTDOWN
+		sl.step("ShareManager");
+#endif
 		QueueManager::getInstance()->shutdown();
+#ifdef DEBUG_SHUTDOWN
+		sl.step("QueueManager");
+#endif
 		HublistManager::getInstance()->shutdown();
+#ifdef DEBUG_SHUTDOWN
+		sl.step("HublistManager");
+#endif
 		ClientManager::clear();
 		DatabaseManager::getInstance()->flush();
 	}
@@ -220,6 +238,9 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #endif
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		BufferedSocket::waitShutdown();
+#ifdef DEBUG_SHUTDOWN
+		LogManager::message("BufferedSockets deleted", false);
+#endif
 #endif
 
 		ConnectivityManager::deleteInstance();

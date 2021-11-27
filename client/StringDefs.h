@@ -1168,6 +1168,7 @@ enum Strings   // @DontAdd
 	SETTINGS_LOG_DDOS_TRACE, // "Log DDoS detect"
 	SETTINGS_LOG_TORRENT_TRACE,  // "Log torrent"
 	SETTINGS_LOG_SEARCH_TRACE, // "Log search hits"
+	SETTINGS_LOG_DHT_TRACE, // "Log DHT information"
 	SETTINGS_LOG_PSR_TRACE,  // "Log PSR (partial search results)"
 	SETTINGS_LOG_FLOOD_TRACE, // "Log Flood $Command detect"
 	SETTINGS_LOG_IF_SUPPRESS_PMS, // "Log suppressed private messages"
