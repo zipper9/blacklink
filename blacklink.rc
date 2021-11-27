@@ -2448,8 +2448,6 @@ IDR_MAINFRAME           ICON                    "res\\app.ico"
 
 IDR_NETWORK_STATISTICS_ICON ICON                    "res\\Network-Statistics.ico"
 
-IDR_SEARCH              ICON                    "res\\Search.ico"
-
 IDR_HUB                 ICON                    "res\\Hub.ico"
 
 IDR_HUB_OFF             ICON                    "res\\HubOff.ico"

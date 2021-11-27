@@ -1076,11 +1076,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico" />
-    <Image Include="res\Cam.ico" />
-    <Image Include="res\Cam.png" />
-    <Image Include="res\clock.ico" />
     <Image Include="res\favorite.png" />
-    <Image Include="res\firewall.ico" />
     <Image Include="res\Gender.png" />
     <Image Include="res\mode_active.ico" />
     <Image Include="res\mode_offline.ico" />
@@ -1096,7 +1092,6 @@
     <Image Include="res\Trackers.png" />
     <Image Include="res\TransferTree.png" />
     <Image Include="res\addMessage.ico" />
-    <Image Include="res\addMessage.png" />
     <Image Include="res\ADLSearch.ico" />
     <Image Include="res\Arrows.png" />
     <Image Include="res\Bold.ico" />
@@ -1105,17 +1100,10 @@
     <Image Include="res\CloseIcon.png" />
     <Image Include="res\color.ico" />
     <Image Include="res\dclst.png" />
-    <Image Include="res\Download-Queue.ico" />
     <Image Include="res\Error.ico" />
     <Image Include="res\Fav-Users-States.png" />
-    <Image Include="res\Favorite-Users.ico" />
-    <Image Include="res\Favorites.ico" />
     <Image Include="res\File-List-Off.ico" />
     <Image Include="res\File-List.ico" />
-    <Image Include="res\Finished-Downloads.ico" />
-    <Image Include="res\Finished-Uploads.ico" />
-    <Image Include="res\Flags.png" />
-    <Image Include="res\FlyLink.png" />
     <Image Include="res\Folders.png" />
     <Image Include="res\f_green_16.ico" />
     <Image Include="res\f_grey_16.ico" />
@@ -1124,7 +1112,6 @@
     <Image Include="res\f_yellow_16.ico" />
     <Image Include="res\Hub.ico" />
     <Image Include="res\HubOff.ico" />
-    <Image Include="res\Internet-Hubs.ico" />
     <Image Include="res\italic.ico" />
     <Image Include="res\italic.png" />
     <Image Include="res\Magnet.ico" />
@@ -1132,24 +1119,18 @@
     <Image Include="res\Mediafiles.png" />
     <Image Include="res\MultiChat.ico" />
     <Image Include="res\Network-Statistics.ico" />
-    <Image Include="res\Notepad.ico" />
     <Image Include="res\Pause.ico" />
     <Image Include="res\Purge.ico" />
     <Image Include="res\PlayersControl-highlight.png" />
     <Image Include="res\PlayersControl-mini.png" />
     <Image Include="res\PlayersControl.png" />
-    <Image Include="res\PM-None.ico" />
     <Image Include="res\PM.ico" />
-    <Image Include="res\Recent-Hubs.ico" />
-    <Image Include="res\Search-Spy.ico" />
     <Image Include="res\Search-Types.png" />
     <Image Include="res\Search.ico" />
     <Image Include="res\Settings-icons.png" />
-    <Image Include="res\Shutdown.ico" />
     <Image Include="res\Smile.ico" />
     <Image Include="res\Smile.png" />
     <Image Include="res\Sounds.ico" />
-    <Image Include="res\Speeds.png" />
     <Image Include="res\State.png" />
     <Image Include="res\strike.ico" />
     <Image Include="res\strike.png" />
@@ -1164,7 +1145,6 @@
     <Image Include="res\TransferSpeeds-BW.png" />
     <Image Include="res\underline.ico" />
     <Image Include="res\underline.png" />
-    <Image Include="res\Upload-Queue.ico" />
     <Image Include="res\User.ico" />
     <Image Include="res\UserBan.ico" />
     <Image Include="res\UserBanOff.ico" />

@@ -19,7 +19,6 @@
 #define IDR_ADLSEARCH                   116
 #define IDR_FILELIST                    117
 #define IDR_NETWORK_STATISTICS_ICON     122
-#define IDR_SEARCH                      123
 #define IDR_HUB                         129
 #define IDR_HUB_OFF                     130
 #define IDR_PRIVATE                     131
