@@ -34,7 +34,11 @@ namespace dht
 	 */
 	void ConnectionManager::connect(const Node::Ptr& node, const string& token)
 	{
-		connect(node, token, CryptoManager::getInstance()->TLSOk() && (node->getUser()->getFlags() & User::TLS) != 0, false);
+		bool useTLS = CryptoManager::getInstance()->TLSOk() &&
+			(node->getUser()->getFlags() & User::TLS) != 0;
+		if (useTLS && node->getIdentity().getStringParam("KP").empty() && !BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS))
+			useTLS = false;
+		connect(node, token, useTLS, false);
 	}
 
 	void ConnectionManager::connect(const Node::Ptr& node, const string& token, bool secure, bool revConnect)

@@ -178,6 +178,8 @@ namespace dht
 		/** Process incoming command */
 		bool dispatch(const string& line, Ip4Address address, uint16_t port, bool isUdpKeyValid);
 
+		void handleFwCheckResponse(const AdcCommand& c, Ip4Address fromIP, string& newExternalIP);
+
 		std::atomic<int> state;
 
 		CID myUdpKey;

@@ -40,6 +40,7 @@
 #include "../ThrottleManager.h"
 #include "../FavoriteManager.h"
 #include "../TimerManager.h"
+#include "../ConnectivityManager.h"
 #include "../User.h"
 #include "../Tag16.h"
 #include "../version.h"
@@ -772,80 +773,13 @@ namespace dht
 			}
 			else if (resTo == "FWCHECK")
 			{
-				LOCK(fwCheckCs);
-				auto j = firewalledWanted.find(fromIP);
-				if (j == firewalledWanted.end())
-					return true; // we didn't requested firewall check from this node
-
-				firewalledWanted.erase(j);
-				if (firewalledChecks.find(fromIP) != firewalledChecks.end())
-					return true; // already received firewall check from this node
-
-				string i4, u4;
-				if (!c.getParam("I4", 1, i4) || !c.getParam("U4", 1, u4))
-					return true; // no IP and port in response
-
-				Ip4Address externalIP;
-				if (!Util::parseIpAddress(externalIP, i4) || !Util::isValidIp4(externalIP))
-					return true;
-
-				uint16_t externalUdpPort = static_cast<uint16_t>(Util::toInt(u4));				
-				
-				firewalledChecks.insert(std::make_pair((uint32_t) fromIP, std::make_pair((uint32_t) externalIP, externalUdpPort)));
-
-				if (firewalledChecks.size() >= FW_RESPONSES)
+				string newExternalIP;
+				handleFwCheckResponse(c, fromIP, newExternalIP);
+				if (!newExternalIP.empty())
 				{
-					// when we received more firewalled statuses, we will be firewalled
-					int fw = 0;
-					uint32_t lastIP = 0;
-					for (auto i = firewalledChecks.cbegin(); i != firewalledChecks.cend(); i++)
-					{
-						uint32_t ip = i->second.first;
-						uint16_t udpPort = i->second.second;
-
-						if (udpPort != getPort())
-							fw++;
-						else
-							fw--;
-
-						if (!lastIP)
-						{
-							externalIP = ip;
-							lastIP = ip;
-						}
-
-						//If the last check matches this one, reset our current IP.
-						//If the last check does not match, wait for our next incoming IP.
-						//This happens for one reason.. a client responsed with a bad IP.
-						if (ip == lastIP)
-							externalIP = ip;
-						else
-							lastIP = ip;
-					}
-
-					if (fw >= 0)
-					{
-						// we are probably firewalled, so our internal UDP port is unaccessible
-						if (externalIP != lastExternalIP || !firewalled)
-							LogManager::message(STRING_F(DHT_PORT_FIREWALLED, Util::printIpAddress(externalIP)));
-						firewalled = true;
-					}
-					else
-					{
-						if (externalIP != lastExternalIP || firewalled)
-							LogManager::message(STRING_F(DHT_PORT_OPEN, Util::printIpAddress(externalIP)));
-						firewalled = false;
-					}
-
-#if 0
-					if (BOOLSETTING(UPDATE_IP))
-						SettingsManager::getInstance()->set(SettingsManager::EXTERNAL_IP, externalIP);
-#endif
-					firewalledChecks.clear();
-					firewalledWanted.clear();
-
-					lastExternalIP = externalIP;
-					requestFWCheck = false;
+					auto cm = ConnectivityManager::getInstance();
+					if (cm->getReflectedIP(AF_INET).empty())
+						cm->setReflectedIP(AF_INET, newExternalIP);
 				}
 			}
 		}
@@ -982,6 +916,82 @@ namespace dht
 		requestFWCheck = true;
 		firewalledWanted.clear();
 		firewalledChecks.clear();
+	}
+
+	void DHT::handleFwCheckResponse(const AdcCommand& c, Ip4Address fromIP, string& newExternalIP)
+	{
+		LOCK(fwCheckCs);
+		auto j = firewalledWanted.find(fromIP);
+		if (j == firewalledWanted.end())
+			return; // we didn't requested firewall check from this node
+
+		firewalledWanted.erase(j);
+		if (firewalledChecks.find(fromIP) != firewalledChecks.end())
+			return; // already received firewall check from this node
+
+		string i4, u4;
+		if (!c.getParam("I4", 1, i4) || !c.getParam("U4", 1, u4))
+			return; // no IP and port in response
+
+		Ip4Address externalIP;
+		if (!Util::parseIpAddress(externalIP, i4) || !Util::isValidIp4(externalIP))
+			return;
+
+		uint16_t externalUdpPort = static_cast<uint16_t>(Util::toInt(u4));
+
+		firewalledChecks.insert(std::make_pair((uint32_t) fromIP, std::make_pair((uint32_t) externalIP, externalUdpPort)));
+
+		if (firewalledChecks.size() >= FW_RESPONSES)
+		{
+			// when we received more firewalled statuses, we will be firewalled
+			int fw = 0;
+			uint32_t lastIP = 0;
+			for (auto i = firewalledChecks.cbegin(); i != firewalledChecks.cend(); i++)
+			{
+				uint32_t ip = i->second.first;
+				uint16_t udpPort = i->second.second;
+
+				if (udpPort != getPort())
+					fw++;
+				else
+					fw--;
+
+				if (!lastIP)
+				{
+					externalIP = ip;
+					lastIP = ip;
+				}
+
+				//If the last check matches this one, reset our current IP.
+				//If the last check does not match, wait for our next incoming IP.
+				//This happens for one reason.. a client responsed with a bad IP.
+				if (ip == lastIP)
+					externalIP = ip;
+				else
+					lastIP = ip;
+			}
+
+			if (fw >= 0)
+			{
+				// we are probably firewalled, so our internal UDP port is unaccessible
+				if (externalIP != lastExternalIP || !firewalled)
+					LogManager::message(STRING_F(DHT_PORT_FIREWALLED, Util::printIpAddress(externalIP)));
+				firewalled = true;
+			}
+			else
+			{
+				if (externalIP != lastExternalIP || firewalled)
+					LogManager::message(STRING_F(DHT_PORT_OPEN, Util::printIpAddress(externalIP)));
+				firewalled = false;
+				newExternalIP = i4;
+			}
+
+			firewalledChecks.clear();
+			firewalledWanted.clear();
+
+			lastExternalIP = externalIP;
+			requestFWCheck = false;
+		}
 	}
 
 	bool DHT::isFirewalled() const
