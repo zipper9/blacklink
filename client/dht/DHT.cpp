@@ -41,6 +41,7 @@
 #include "../FavoriteManager.h"
 #include "../TimerManager.h"
 #include "../User.h"
+#include "../Tag16.h"
 #include "../version.h"
 
 #include <zlib.h>

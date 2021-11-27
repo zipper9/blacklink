@@ -162,21 +162,19 @@ class TransferTreeImage : public BaseImageList
 
 extern TransferTreeImage g_TransferTreeImage;
 
-class FlagImage : public BaseImageList
+class FlagImage
 {
 	public:
 		FlagImage() : memDC(NULL) {}
 		~FlagImage();
 		void init();
-		void drawCountry(HDC dc, const IPInfo& ipInfo, const POINT& pt)
-		{
-			Draw(dc, ipInfo.countryImage, pt);
-		}
+		bool drawCountry(HDC dc, uint16_t countryCode, const POINT& pt);
 		bool drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt);
 
 	private:
-		boost::unordered_map<int, HBITMAP> bitmaps;
-		tstring path;
+		boost::unordered_map<uint32_t, HBITMAP> bitmaps;
+		tstring customLocationsPath;
+		tstring flagsPath;
 		HDC memDC;
 };
 

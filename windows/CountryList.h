@@ -2,6 +2,7 @@
 #define COUNTRY_LIST_H
 
 #include <string>
+#include <stdint.h>
 
 enum
 {
@@ -258,5 +259,6 @@ enum
 };
 
 int getCountryByName(const std::string& name);
+uint16_t getCountryCode(int index);
 
 #endif /* COUNTRY_LIST_H */

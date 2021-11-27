@@ -420,7 +420,6 @@ void WinUtil::uninit()
 	g_userStateImage.uninit();
 	g_genderImage.uninit();
 	g_TransferTreeImage.uninit();
-	g_flagImage.uninit();
 	g_videoImage.uninit();
 
 	Fonts::uninit();

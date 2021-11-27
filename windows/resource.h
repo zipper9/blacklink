@@ -70,7 +70,7 @@
 #define IDR_PLAYERS_CONTROL_MINI        186
 #define IDR_SETTINGS_ICONS              187
 #define IDR_USERS                       188
-#define IDR_FLAGS                       189
+#define IDR_BAD_FLAG                    189
 #define IDR_ARROWS                      190
 #define IDR_TSPEEDS                     191
 #define IDR_TSPEEDS_BW                  192

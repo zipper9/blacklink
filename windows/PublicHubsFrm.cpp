@@ -1030,7 +1030,8 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 			const int column = ctrlHubs.findColumn(cd->iSubItem);
 			if (column == COLUMN_COUNTRY)
 			{
-				CustomDrawHelpers::drawCountry(customDrawState, cd, data->getCountryIndex(), data->getText(COLUMN_COUNTRY));
+				uint16_t code = getCountryCode(data->getCountryIndex());
+				CustomDrawHelpers::drawCountry(customDrawState, cd, code, data->getText(COLUMN_COUNTRY));
 				return CDRF_SKIPDEFAULT;
 			}
 			CDCHandle(cd->nmcd.hdc).SelectFont(column == 0 && data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);

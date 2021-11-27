@@ -53,7 +53,7 @@ namespace CustomDrawHelpers
 	UINT getTextFlags(const CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 
 	void drawLocation(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const IPInfo& ipInfo);
-	void drawCountry(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, int index, const tstring& text);
+	void drawCountry(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, uint16_t code, const tstring& text);
 	void drawTextAndIcon(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, CImageList* images, int icon, const tstring& text, bool rightIcon);
 	void drawIPAddress(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, bool isPhantomIP, const tstring& text);
 

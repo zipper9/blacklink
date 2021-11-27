@@ -34,8 +34,6 @@
 class ClientBase;
 class Client;
 
-#define TAG(x,y) (x + (y << 8)) // TODO static_assert
-
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 #include "IPStat.h"
 #endif

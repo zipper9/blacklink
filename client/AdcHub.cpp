@@ -30,6 +30,7 @@
 #include "LogManager.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
+#include "Tag16.h"
 
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 FastCriticalSection AdcSupports::g_debugCsUnknownAdcFeatures;

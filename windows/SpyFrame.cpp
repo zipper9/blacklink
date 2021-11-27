@@ -21,6 +21,7 @@
 #include "SearchFrm.h"
 #include "WinUtil.h"
 #include "../client/Client.h"
+#include "../client/Tag16.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int MAX_ITEMS = 500;
@@ -570,10 +571,11 @@ void SpyFrame::ItemInfo::updateNickList()
 				{
 					IPInfo ipInfo;
 					Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_COUNTRY);
-					if (ipInfo.countryImage > 0)
+					if (ipInfo.countryCode)
 					{
+						string s = tagToString(ipInfo.countryCode);
 						nickList += _T(" [");
-						nickList += Text::toT(Util::getCountryShortName(ipInfo.countryImage-1));
+						nickList += Text::toT(s);
 						nickList += _T("]");
 					}
 				}

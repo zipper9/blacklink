@@ -2584,7 +2584,7 @@ IDR_TRACKER_IMAGES      PNG                     "res\\Trackers.png"
 
 IDR_GENDER_USERS        PNG                     "res\\Gender.png"
 
-IDR_FLAGS               PNG                     "res\\Flags.png"
+IDR_BAD_FLAG            PNG                     "res\\zz.png"
 
 IDR_ARROWS              PNG                     "res\\Arrows.png"
 

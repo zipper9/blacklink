@@ -809,6 +809,7 @@
     <ClInclude Include="client\QueueManagerListener.h" />
     <ClInclude Include="client\ResourceManager.h" />
     <ClInclude Include="client\StrUtil.h" />
+    <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\Thread.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />

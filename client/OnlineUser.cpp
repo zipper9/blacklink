@@ -23,6 +23,7 @@
 #include "LocationUtil.h"
 #include "UserConnection.h"
 #include "ConnectivityManager.h"
+#include "Tag16.h"
 
 #ifdef _DEBUG
 std::atomic_int OnlineUser::onlineUserCount(0);

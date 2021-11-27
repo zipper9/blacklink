@@ -1,10 +1,20 @@
 #include "stdafx.h"
 #include "CountryList.h"
+#include "../client/Tag16.h"
 
 /* Command-line: gperf --ignore-case -C -I -L ANSI-C -G countries.txt  */
 /* Computed positions: -k'1-2,4-5' */
 
 #include <string.h>
+
+static const char countryCodes[] =
+	"adaeafagaialamanaoaqarasatauawaxazbabbbdbebfbgbhbibjbmbnbobrbsbtbvbwbybzcacc"
+	"cdcfcgchcickclcmcncocrcscucvcxcyczdedjdkdmdodzeceeegehereseteufifjfkfmfofrga"
+	"gbgdgegfggghgiglgmgngpgqgrgsgtgugwgyhkhmhnhrhthuidieiliminioiqirisitjejmjojp"
+	"kekgkhkikmknkpkrkwkykzlalblclilklrlsltlulvlymamcmdmemgmhmkmlmmmnmompmqmrmsmt"
+	"mumvmwmxmymznancnenfngninlnonpnrnunzompapepfpgphpkplpmpnprpsptpwpyqarerorsru"
+	"rwsasbscsdsesgshsisjskslsmsnsosrstsvsysztctdtftgthtjtktltmtntotrtttvtwtzuaug"
+	"umusuyuzvavcvevgvivnvuwfwsyeytyuzazmzw";
 
 #define TOTAL_KEYWORDS 249
 #define MIN_WORD_LENGTH 4
@@ -719,4 +729,11 @@ int getCountryByName(const string &str)
 		case COUNTRY_EUROPEAN_UNION: result = COUNTRY_EUROPE; break;
 	}
 	return result;
+}
+
+uint16_t getCountryCode(int index)
+{
+	static const int maxCode = (sizeof(countryCodes)-1)/2;
+	if (index < 0 || index >= maxCode) return TAG('z', 'z');
+	return TAG(countryCodes[2*index], countryCodes[2*index + 1]);
 }

@@ -2,6 +2,7 @@
 #define IP_INFO_H_
 
 #include <string>
+#include <stdint.h>
 
 struct IPInfo
 {
@@ -16,12 +17,12 @@ struct IPInfo
 	std::string country;
 	std::string location;
 	std::string p2pGuard;
-	int countryImage;
+	uint16_t countryCode;
 	int locationImage;
 
 	void clearCountry()
 	{
-		countryImage = 0;
+		countryCode = 0;
 		country.clear();
 	}
 
@@ -31,7 +32,7 @@ struct IPInfo
 		location.clear();
 	}
 
-	IPInfo() : known(0), countryImage(0), locationImage(0) {}
+	IPInfo() : known(0), countryCode(0), locationImage(0) {}
 };
 
 #endif // IP_INFO_H_

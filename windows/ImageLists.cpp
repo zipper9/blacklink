@@ -4,6 +4,7 @@
 #include "ResourceLoader.h"
 #include "resource.h"
 #include "../client/CompatibilityManager.h"
+#include "../client/Tag16.h"
 #include <Shellapi.h>
 
 FileImage g_fileImage;
@@ -186,29 +187,64 @@ static bool checkPath(string& path)
 
 void FlagImage::init()
 {
-	int count = ResourceLoader::LoadImageList(IDR_FLAGS, images, 25, 16);
-	dcassert(count);
-	dcassert(images.GetImageCount() <= 255);
-	
-	string s = Util::getConfigPath() + "CustomLocations";
+	string s = Util::getConfigPath() + "Flags";
+	if (!checkPath(s))
+	{
+		s = Util::getDataPath() + "Flags";
+		checkPath(s);
+	}
+	flagsPath = Text::toT(s);
+
+	s = Util::getConfigPath() + "CustomLocations";
 	if (!checkPath(s))
 	{
 		s = Util::getDataPath() + "CustomLocations";
 		checkPath(s);
 	}
-	path = Text::toT(s);
+	customLocationsPath = Text::toT(s);
+}
+
+bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, const POINT& pt)
+{
+	if (flagsPath.empty()) return false;
+	HBITMAP bmp = nullptr;
+	auto i = bitmaps.find(countryCode);
+	if (i == bitmaps.end())
+	{
+		if (countryCode != TAG('z', 'z'))
+		{
+			tstring imagePath = flagsPath + Text::toT(tagToString(countryCode)) + _T(".bmp");
+			bmp = (HBITMAP) ::LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+			bitmaps.insert(make_pair(countryCode, bmp));
+		}
+		else
+		{
+			ExCImage img;
+			if (img.LoadFromResource(IDR_BAD_FLAG, _T("PNG")))
+				bmp = img.Detach();
+		}
+	}
+	else
+		bmp = i->second;
+	if (!bmp) return false;
+	if (!memDC) memDC = CreateCompatibleDC(dc);
+	HGDIOBJ oldBmp = SelectObject(memDC, bmp);
+	BitBlt(dc, pt.x, pt.y, pt.x + 25, pt.y + 16, memDC, 0, 0, SRCCOPY);
+	SelectObject(memDC, oldBmp);
+	return true;
 }
 
 bool FlagImage::drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 {
-	if (path.empty()) return false;
-	auto i = bitmaps.find(ipInfo.locationImage);
+	if (customLocationsPath.empty()) return false;
+	uint32_t index = (uint32_t) ipInfo.locationImage << 16;
+	auto i = bitmaps.find(index);
 	HBITMAP bmp;
 	if (i == bitmaps.end())
 	{
-		tstring imagePath = path + Util::toStringT(ipInfo.locationImage) + _T(".bmp");
+		tstring imagePath = customLocationsPath + Util::toStringT(ipInfo.locationImage) + _T(".bmp");
 		bmp = (HBITMAP) ::LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-		bitmaps.insert(make_pair(ipInfo.locationImage, bmp));
+		bitmaps.insert(make_pair(index, bmp));
 	}
 	else
 		bmp = i->second;

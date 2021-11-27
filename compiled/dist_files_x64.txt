@@ -2,6 +2,7 @@ blacklink_x64.exe
 blacklink_x64.pdb
 Lang
 EmoPacks
+Flags
 Themes\*_x64.dll
 Sounds
 Settings\CustomLocations.ini

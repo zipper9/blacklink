@@ -480,7 +480,7 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 			if (found & IPInfo::FLAG_COUNTRY)
 			{
 				result.country = item->info.country;
-				result.countryImage = item->info.countryImage;
+				result.countryCode = item->info.countryCode;
 			}
 			if (found & IPInfo::FLAG_LOCATION)
 			{
@@ -512,7 +512,7 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 		{
 			storedItem->info.known |= IPInfo::FLAG_COUNTRY;
 			storedItem->info.country = result.country;
-			storedItem->info.countryImage = result.countryImage;
+			storedItem->info.countryCode = result.countryCode;
 		}
 		if (result.known & IPInfo::FLAG_LOCATION)
 		{
@@ -528,6 +528,8 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 	}
 	ipCache.removeOldest(IP_CACHE_SIZE + 1);
 }
+
+extern uint16_t getCountryCode(int index);
 
 void DatabaseManager::loadCountry(uint32_t ip, IPInfo& result)
 {
@@ -555,7 +557,8 @@ void DatabaseManager::loadCountry(uint32_t ip, IPInfo& result)
 		{
 			countryHits++;
 			result.country = reader.getstring(0);
-			result.countryImage = reader.getint(1);
+			int countryIndex = reader.getint(1);
+			result.countryCode = getCountryCode(countryIndex-1);
 		}
 		dcassert(countryHits <= 1);
 	}

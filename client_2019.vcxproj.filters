@@ -951,6 +951,9 @@
     <ClInclude Include="client\IpTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\Tag16.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
