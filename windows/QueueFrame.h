@@ -437,8 +437,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void insertTrees();
 		void removeEmptyDir(DirItem* dir);
 		
-		void updateQueue();
+		void updateQueue(bool changingState);
 		void updateQueueStatus();
+		void redrawQueue();
 		
 		void moveDir(const DirItem* dir, const string& newPath);
 		void moveSelected();

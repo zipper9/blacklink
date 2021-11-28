@@ -2125,7 +2125,7 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			{
 				if (!treeInserted) insertTrees();
 				SetSinglePaneMode(SPLIT_PANE_NONE);
-				updateQueue();
+				updateQueue(true);
 			}
 		}
 		else
@@ -2137,7 +2137,7 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				clearingTree--;
 				treeInserted = false;
 				SetSinglePaneMode(SPLIT_PANE_RIGHT);
-				updateQueue();
+				updateQueue(true);
 			}
 		}
 		
@@ -2183,7 +2183,7 @@ LRESULT QueueFrame::onTreeItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 {
 	if (!closed && !clearingTree)
 	{
-		updateQueue();
+		updateQueue(false);
 		updateQueueStatus();
 	}
 	return 0;
@@ -2205,17 +2205,29 @@ void QueueFrame::onTab()
 	}
 }
 
-void QueueFrame::updateQueue()
+void QueueFrame::redrawQueue()
+{
+	ctrlQueue.RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN);
+}
+
+void QueueFrame::updateQueue(bool changingState)
 {
 	dcassert(!closed);
 	CWaitCursor waitCursor;
 	ctrlQueue.deleteAllNoLock();
+	if (changingState) redrawQueue();
+	ctrlQueue.SetRedraw(FALSE);
 	if (showTree)
 	{
 		if (!ctrlDirs.GetRootItem())
 			insertTrees();
 		HTREEITEM ht = ctrlDirs.GetSelectedItem();
-		if (!ht) return;
+		if (!ht)
+		{
+			ctrlQueue.SetRedraw(TRUE);
+			redrawQueue();
+			return;
+		}
 		auto dir = reinterpret_cast<DirItem*>(ctrlDirs.GetItemData(ht));
 		int count = 0;
 		for (DirItem* item : dir->directories)
@@ -2246,6 +2258,8 @@ void QueueFrame::updateQueue()
 		walkDirItem(root, func);
 	}
 	ctrlQueue.resort();
+	ctrlQueue.SetRedraw(TRUE);
+	redrawQueue();
 }
 
 LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
