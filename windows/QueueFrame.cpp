@@ -1140,11 +1140,8 @@ void QueueFrame::processTasks()
 				const string& target = task.target;
 				if (!showTree || isCurrentDir(target))
 				{
-					int pos = ctrlQueue.GetTopIndex();
-					int last = pos + ctrlQueue.GetCountPerPage();
 					int count = ctrlQueue.GetItemCount();
-					if (last > count-1) last = count-1;
-					while (pos <= last)
+					for (int pos = 0; pos < count; ++pos)
 					{
 						const QueueItemPtr& qi = ctrlQueue.getItemData(pos)->getQueueItem();
 						if (qi && qi->getTarget() == target)
@@ -1159,7 +1156,6 @@ void QueueFrame::processTasks()
 							ctrlQueue.updateItem(pos, COLUMN_SPEED);
 							break;
 						}
-						pos++;
 					}
 				}
 			}
