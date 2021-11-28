@@ -142,7 +142,7 @@ void WebServerManager::getLoginPage(string& p_out)
 
 void WebServerManager::on(SettingsManagerListener::Repaint)
 {
-	dcassert(!ClientManager::isBeforeShutdown())
+	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		if (BOOLSETTING(WEBSERVER))

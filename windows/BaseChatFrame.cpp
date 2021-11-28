@@ -805,7 +805,7 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 
 void BaseChatFrame::appendNickToChat(const tstring& nick)
 {
-	dcassert(ctrlMessage)
+	dcassert(ctrlMessage);
 	if (ctrlMessage)
 	{
 		tstring sUser(nick);

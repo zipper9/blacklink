@@ -51,7 +51,7 @@ static inline void debugTrace(const char* format, ...)
 
 #ifdef _MSC_VER
 #define dcassert(exp) \
-	{ \
+	do { \
 		if (!(exp)) \
 		{ \
 			dcdebug("Assertion hit in %s(%d): " #exp "\n", __FILE__, __LINE__); \
