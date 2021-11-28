@@ -2333,12 +2333,16 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 			return CDRF_NOTIFYITEMDRAW;
 
 		case CDDS_ITEMPREPAINT:
-			if ((plvcd->nmcd.uItemState & CDIS_SELECTED) == 0)
+		{
+			DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(plvcd->nmcd.lItemlParam);
+			if (dir)
 			{
-				DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(plvcd->nmcd.lItemlParam);
-				if (dir)
-					getDirItemColor(dir->getFlags(), plvcd->clrText, plvcd->clrTextBk);
+				COLORREF bg;
+				getDirItemColor(dir->getFlags(), plvcd->clrText, bg);
+				if (!(plvcd->nmcd.uItemState & CDIS_SELECTED))
+					plvcd->clrTextBk = bg;
 			}
+		}
 	}
 	return CDRF_DODEFAULT;
 }

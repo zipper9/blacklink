@@ -646,7 +646,13 @@ void DirectoryListing::download(File* file, const string& target, bool view, Que
 	{
 		QueueManager::getInstance()->add(target, file->getSize(), file->getTTH(), getUser(), flags, prio, true, getConnFlag);
 		file->setFlag(FLAG_QUEUED);
-		file->getParent()->setFlag(FLAG_HAS_QUEUED);
+		Directory* dir = file->getParent();
+		while (dir->getParent())
+		{
+			if (dir->isAnySet(FLAG_HAS_QUEUED)) break;
+			dir->setFlag(FLAG_HAS_QUEUED);
+			dir = dir->getParent();
+		}
 	}
 	catch (const Exception& e)
 	{
@@ -811,7 +817,8 @@ void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
 		if (dir->getAdls()) continue;
 		flags |= dir->getFlags() &
 			(DirectoryListing::FLAG_HAS_SHARED | DirectoryListing::FLAG_HAS_DOWNLOADED |
-			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER);
+			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER |
+			DirectoryListing::FLAG_HAS_QUEUED);
 		totalFileCount += dir->totalFileCount;
 		totalDirCount += dir->totalDirCount;
 		totalSize += dir->totalSize;
@@ -882,7 +889,8 @@ bool DirectoryListing::Directory::updateFlags()
 		if (dir->getAdls()) continue;
 		flags |= dir->getFlags() &
 			(DirectoryListing::FLAG_HAS_SHARED | DirectoryListing::FLAG_HAS_DOWNLOADED |
-			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER);
+			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER |
+			DirectoryListing::FLAG_HAS_QUEUED);
 	}
 	if (getFlags() == flags) return false;
 	setFlags(flags);
