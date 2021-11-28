@@ -219,6 +219,7 @@ class IconBitmaps
 			CDM_DEBUG,
 			TTH,
 			HASH_PROGRESS,
+			ABOUT,
 			FAVORITE_DIRS,
 			PREVIEW,
 			PRIORITY,

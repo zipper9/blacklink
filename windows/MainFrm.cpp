@@ -275,22 +275,17 @@ void MainFrame::createMainMenu(void)
 
 void MainFrame::createTrayMenu()
 {
+	trayMenu.SetOwnerDraw(OMenu::OD_NEVER);
 	trayMenu.CreatePopupMenu();
 	trayMenu.AppendMenu(MF_STRING, IDC_TRAY_SHOW, CTSTRING(MENU_SHOW));
-	trayMenu.AppendMenu(MF_STRING, IDC_OPEN_DOWNLOADS, CTSTRING(MENU_OPEN_DOWNLOADS_DIR));
-	
+	trayMenu.AppendMenu(MF_STRING, IDC_OPEN_DOWNLOADS, CTSTRING(MENU_OPEN_DOWNLOADS_DIR), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOADS_DIR, 0));
 	trayMenu.AppendMenu(MF_SEPARATOR);
-	trayMenu.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST, CTSTRING(MENU_REFRESH_FILE_LIST));
-	trayMenu.AppendMenu(MF_STRING, IDC_TRAY_LIMITER, CTSTRING(TRAY_LIMITER));
+	trayMenu.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST, CTSTRING(MENU_REFRESH_FILE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::REFRESH_SHARE, 0));
+	trayMenu.AppendMenu(MF_STRING, IDC_TRAY_LIMITER, CTSTRING(SETCZDC_ENABLE_LIMITING), g_iconBitmaps.getBitmap(IconBitmaps::LIMIT, 0));
+	trayMenu.AppendMenu(MF_STRING, ID_FILE_SETTINGS, CTSTRING(MENU_SETTINGS), g_iconBitmaps.getBitmap(IconBitmaps::SETTINGS, 0));
+	trayMenu.AppendMenu(MF_STRING, ID_APP_ABOUT, CTSTRING(MENU_ABOUT), g_iconBitmaps.getBitmap(IconBitmaps::ABOUT, 0));
+	trayMenu.AppendMenu(MF_STRING, IDC_TRAY_RESTORE_POS, CTSTRING(RESTORE_WINDOW_POS));
 	trayMenu.AppendMenu(MF_SEPARATOR);
-	trayMenu.AppendMenu(MF_STRING, ID_FILE_SETTINGS, CTSTRING(MENU_SETTINGS));
-	
-	trayMenu.AppendMenu(MF_SEPARATOR);
-	trayMenu.AppendMenu(MF_STRING, ID_APP_ABOUT, CTSTRING(MENU_ABOUT));
-	trayMenu.AppendMenu(MF_SEPARATOR);
-#ifdef SCALOLAZ_MANY_MONITORS
-	trayMenu.AppendMenu(MF_STRING, IDC_SETMASTERMONITOR, CTSTRING(RESTORE_WINDOW_POS));
-#endif
 	trayMenu.AppendMenu(MF_STRING, ID_APP_EXIT, CTSTRING(MENU_EXIT));
 	trayMenu.SetMenuDefaultItem(IDC_TRAY_SHOW);
 }
@@ -1912,26 +1907,12 @@ void MainFrame::storeWindowsPos()
 #endif
 }
 
-#ifdef SCALOLAZ_MANY_MONITORS
 LRESULT MainFrame::onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/)
 {
-	CRect rc;
-	GetWindowRect(rc);
-	rc.left = 0;
-	rc.top = 0;
-	rc.right = rc.left + SETTING(MAIN_WINDOW_SIZE_X);
-	rc.bottom = rc.top + SETTING(MAIN_WINDOW_SIZE_Y);
-	if ((rc.right - rc.left) < 600 || (rc.bottom - rc.top) < 400)
-	{
-		rc.right = rc.left + 600;
-		rc.bottom = rc.top + 400;
-	}
-	MoveWindow(rc);
+	ShowWindow(SW_SHOWDEFAULT);
 	CenterWindow(GetParent());
-	storeWindowsPos();       // ’з как лучше - сразу сохранить новые значени€, или ждЄм закрыти€ программы и там сохраним как обычно.
 	return 0;
 }
-#endif
 
 LRESULT MainFrame::onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -2312,7 +2293,7 @@ LRESULT MainFrame::onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPAR
 	buttons[2].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[2].iId = IDC_REFRESH_FILE_LIST;
 	buttons[2].hIcon = g_iconBitmaps.getIcon(IconBitmaps::REFRESH_SHARE, 0);
-	wcsncpy(buttons[2].szTip, CWSTRING(CMD_SHARE_REFRESH), sizeTip);
+	wcsncpy(buttons[2].szTip, CWSTRING(HASH_REFRESH_FILE_LIST), sizeTip);
 	buttons[2].szTip[sizeTip] = 0;
 	buttons[2].dwFlags = THBF_ENABLED;
 

@@ -19,8 +19,6 @@
 #ifndef MAIN_FRM_H
 #define MAIN_FRM_H
 
-#define SCALOLAZ_MANY_MONITORS
-
 #include "../client/HubEntry.h"
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
@@ -138,9 +136,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_OPEN_TORRENT_FILE, onOpenFileList)
 		COMMAND_ID_HANDLER(IDC_OPEN_MY_LIST, onOpenFileList)
 		COMMAND_ID_HANDLER(IDC_TRAY_SHOW, onAppShow)
-#ifdef SCALOLAZ_MANY_MONITORS
-		COMMAND_ID_HANDLER(IDC_SETMASTERMONITOR, onSetDefaultPosition)
-#endif
+		COMMAND_ID_HANDLER(IDC_TRAY_RESTORE_POS, onSetDefaultPosition)
 		COMMAND_ID_HANDLER(ID_WINDOW_MINIMIZE_ALL, onWindowMinimizeAll)
 		COMMAND_ID_HANDLER(ID_WINDOW_RESTORE_ALL, onWindowRestoreAll)
 		COMMAND_ID_HANDLER(IDC_SHUTDOWN, onShutDown)
@@ -542,7 +538,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool disableAutoComplete;
 		
 		// Menu
-		CMenu trayMenu;
+		OMenu trayMenu;
 		CMenu tbMenu;
 		CMenu tabAwayMenu;
 		CMenu winampMenu;
@@ -595,9 +591,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void toggleLockToolbars();
 		
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
-#ifdef SCALOLAZ_MANY_MONITORS
 		LRESULT onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
-#endif
+
 		void autoConnect(const std::vector<FavoriteHubEntry>& hubs);
 		void openDefaultWindows();
 		int tuneTransferSplit();

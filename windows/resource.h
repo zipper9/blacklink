@@ -207,6 +207,7 @@
 #define IDC_MAX_MSG_LENGTH_SPIN         1042
 #define IDC_PUBLIC_HUBS                 1043
 #define IDC_COPY_HUB_IP                 1044
+#define IDC_TRAY_RESTORE_POS            1045
 #define IDC_TOPMOST                     1046
 #define IDC_LOCK_TOOLBARS               1047
 #define IDC_KICK_USERS                  1048
@@ -1357,7 +1358,6 @@
 #define IDC_PM                          7300
 #define IDC_READD                       7400
 #define IDC_PREVIEW_APP                 7500
-#define IDC_SETMASTERMONITOR            7605
 #define ID_TOGGLE_TOOLBAR               32771
 #define ID_TOGGLE_QSEARCH               32772
 #define ID_VIEW_TRANSFER_VIEW           32773

@@ -34,13 +34,13 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			SetWindowText(CTSTRING(MENU_ABOUT));
+			SetWindowText(CTSTRING(ABOUT));
 			ctrlTab.Attach(GetDlgItem(IDC_ABOUTTAB));
 			TCITEM tcItem;
 			tcItem.mask = TCIF_TEXT | TCIF_PARAM;
 			tcItem.iImage = -1;
 			
-			tcItem.pszText = (LPWSTR) CTSTRING(MENU_ABOUT);
+			tcItem.pszText = (LPWSTR) CTSTRING(ABOUT);
 			page1 = std::unique_ptr<AboutDlg>(new AboutDlg());
 			tcItem.lParam = (LPARAM)&page1;
 			ctrlTab.InsertItem(0, &tcItem);
