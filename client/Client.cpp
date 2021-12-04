@@ -548,11 +548,16 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 		}
 		if (externalIP.empty() || !BOOLSETTING(NO_IP_OVERRIDE))
 		{
-			string ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET);
-			if (!ip.empty()) externalIP = std::move(ip);
+			IpAddress ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET);
+			if (!Util::isEmpty(ip)) externalIP = Util::printIpAddress(ip);
 		}
-		if (externalIP.empty()) externalIP = ConnectivityManager::getInstance()->getLocalIP(AF_INET);
-		Util::parseIpAddress(ip4, externalIP);
+		if (externalIP.empty())
+		{
+			IpAddress ip = ConnectivityManager::getInstance()->getLocalIP(AF_INET);
+			ip4 = ip.data.v4;
+		}
+		else
+			Util::parseIpAddress(ip4, externalIP);
 	}
 
 	if (Util::isEmpty(ip6))
@@ -565,11 +570,16 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 		}
 		if (externalIP.empty() || !BOOLSETTING(NO_IP_OVERRIDE6))
 		{
-			string ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET6);
-			if (!ip.empty()) externalIP = std::move(ip);
+			IpAddress ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET6);
+			if (!Util::isEmpty(ip)) externalIP = Util::printIpAddress(ip);
 		}
-		if (externalIP.empty()) externalIP = ConnectivityManager::getInstance()->getLocalIP(AF_INET6);
-		Util::parseIpAddress(ip6, externalIP);
+		if (externalIP.empty())
+		{
+			IpAddress ip = ConnectivityManager::getInstance()->getLocalIP(AF_INET6);
+			ip6 = ip.data.v6;
+		}
+		else
+			Util::parseIpAddress(ip6, externalIP);
 	}
 }
 

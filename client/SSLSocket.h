@@ -58,7 +58,7 @@ class SSLSocket : public Socket
 		}
 		
 		virtual uint16_t accept(const Socket& listeningSocket) override;
-		virtual void connect(const IpAddress& ip, uint16_t port, const string& host) override;
+		virtual void connect(const IpAddressEx& ip, uint16_t port, const string& host) override;
 		virtual int read(void* buffer, int bufLen) override;
 		virtual int write(const void* buffer, int len) override;
 		virtual int wait(int millis, int waitFor) override;

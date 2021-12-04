@@ -239,8 +239,9 @@ void UserConnection::onDataLine(const string& line) noexcept
 			    g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
 			{
 				Util::parseIpPort(reflectedAddress, ip, port);
-				if (Util::isValidIp4(ip))
-					ConnectivityManager::getInstance()->setReflectedIP(AF_INET, ip);
+				IpAddress addr;
+				if (Util::parseIpAddress(addr, ip) && addr.type == AF_INET && Util::isValidIp(addr))
+					ConnectivityManager::getInstance()->setReflectedIP(addr);
 			}
 			ConnectivityManager::getInstance()->processPortTestResult();
 		}

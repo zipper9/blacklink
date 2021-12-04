@@ -1458,7 +1458,9 @@ void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAd
 {
 	vector<Util::AdapterInfo> adapters;
 	Util::getNetworkAdapters(af, adapters);
-	const string defaultAdapter(af == AF_INET6 ? "::" : "0.0.0.0");
+	IpAddressEx defaultAdapter;
+	memset(&defaultAdapter, 0, sizeof(defaultAdapter));
+	defaultAdapter.type = af;
 	if (std::find_if(adapters.cbegin(), adapters.cend(),
 		[&defaultAdapter](const auto &v) { return v.ip == defaultAdapter; }) == adapters.cend())
 	{
@@ -1467,7 +1469,8 @@ void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAd
 	int selected = -1;
 	for (size_t i = 0; i < adapters.size(); ++i)
 	{
-		tstring text = Text::toT(adapters[i].ip);
+		string address = Util::printIpAddress(adapters[i].ip);
+		tstring text = Text::toT(address);
 		if (!adapters[i].adapterName.empty())
 		{
 			text += _T(" (");
@@ -1475,7 +1478,7 @@ void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAd
 			text += _T(')');
 		}
 		bindCombo.AddString(text.c_str());
-		if (adapters[i].ip == bindAddress)
+		if (address == bindAddress)
 			selected = i;
 	}
 	if (bindAddress.empty()) selected = 0;

@@ -385,7 +385,7 @@ void ConnectionManager::startListen(int af, int type)
 		bind = SettingsManager::get(ips.bindAddress);
 	uint16_t port = SettingsManager::get(portSetting);
 
-	IpAddress bindIp;
+	IpAddressEx bindIp;
 	BufferedSocket::getBindAddress(bindIp, af, bind);
 	auto newServer = new Server(type, bindIp, port);
 	SettingsManager::set(portSetting, newServer->getServerPort());
@@ -786,7 +786,7 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 static const uint64_t g_FLOOD_TRIGGER = 20000;
 static const uint64_t g_FLOOD_ADD = 2000;
 
-ConnectionManager::Server::Server(int type, const IpAddress& ip, uint16_t port): type(type), bindIp(ip), stopFlag(false)
+ConnectionManager::Server::Server(int type, const IpAddressEx& ip, uint16_t port): type(type), bindIp(ip), stopFlag(false)
 {
 	sock.create(ip.type, Socket::TYPE_TCP);
 	sock.setSocketOpt(SOL_SOCKET, SO_REUSEADDR, 1);
@@ -946,11 +946,16 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 void ConnectionManager::updateLocalIp(int af)
 {
 	int index = af == AF_INET6 ? SERVER_V6 : 0;
-	string localIp = servers[index] ? servers[index]->getServerIP() : Util::emptyString;
-	IpAddress addr;
-	if (localIp.empty() || !(Util::parseIpAddress(addr, localIp) && addr.type == af && Util::isValidIp(addr)))
-		localIp = Util::getLocalIp(af);
-	ConnectivityManager::getInstance()->setLocalIP(af, localIp);
+	IpAddress localIp;
+	memset(&localIp, 0, sizeof(localIp));
+	if (servers[index])
+		localIp = servers[index]->getServerIP();
+	if (!Util::isValidIp(localIp))
+	{
+		IpAddressEx ip = Util::getLocalIp(af);
+		memcpy(&localIp, &ip, sizeof(IpAddress));
+	}
+	ConnectivityManager::getInstance()->setLocalIP(localIp);
 }
 
 void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure)
@@ -1049,9 +1054,11 @@ void ConnectionManager::processMyNick(UserConnection* source, const string& nick
 		if (!nci.hubUrl.empty()) connectNextNmdcUser(nci);
 		hubUrl = std::move(ed.hubUrl);
 	}
+	else
+		hubUrl = source->getHubUrl();
 	
 	const string nickUtf8 = Text::toUtf8(nick, source->getEncoding());
-	const CID cid = ClientManager::makeCid(nickUtf8, source->getHubUrl());
+	const CID cid = ClientManager::makeCid(nickUtf8, hubUrl);
 	
 	// First, we try looking in the pending downloads...hopefully it's one of them...
 	if (!ClientManager::isBeforeShutdown())
@@ -1079,13 +1086,13 @@ void ConnectionManager::processMyNick(UserConnection* source, const string& nick
 		source->setUser(ClientManager::findUser(cid));
 		if (!source->getUser())
 		{
-			LogManager::message("Incoming connection from unknown user " + nickUtf8 + '/' + cid.toBase32() + (hubUrl.empty() ? Util::emptyString : " (" + hubUrl + ")"), false);
+			LogManager::message("Upload: unknown user " + nickUtf8 + '/' + cid.toBase32() + (hubUrl.empty() ? Util::emptyString : " (" + hubUrl + ")"), false);
 			putConnection(source);
 			return;
 		}
 		if (!source->getUser()->isOnline())
 		{
-			LogManager::message("Incoming connection from offline user " + nickUtf8 + '/' + cid.toBase32() + (hubUrl.empty() ? Util::emptyString : " (" + hubUrl + ")"), false);
+			LogManager::message("Upload: offline user " + nickUtf8 + '/' + cid.toBase32() + (hubUrl.empty() ? Util::emptyString : " (" + hubUrl + ")"), false);
 			putConnection(source);
 			return;
 		}

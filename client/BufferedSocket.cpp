@@ -702,7 +702,7 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 			}
 			else
 			{
-				IpAddress addr;
+				IpAddressEx addr;
 				bool isNumeric;
 				if (!Socket::resolveHost(addr, getIp().type, ci->addr, &isNumeric)) // FIXME
 				{
@@ -767,7 +767,7 @@ void BufferedSocket::checkSocksReply()
 	rb.clear();
 	proxyStage = PROXY_STAGE_NONE;
 	mode = MODE_LINE;
-	IpAddress ip;
+	IpAddressEx ip;
 	Socket::resolveHost(ip, getIp().type, connectInfo->addr);
 	sock->setIp(ip);
 	sock->setPort(connectInfo->port);
@@ -828,7 +828,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 					host = &ci->addr;
 					port = ci->port;
 				}
-				IpAddress ip;
+				IpAddressEx ip;
 				bool isNumeric;
 				if (!Socket::resolveHost(ip, ipVersion, *host, &isNumeric))
 				{
@@ -843,7 +843,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 						CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol)) : new Socket);
 					s->create(ip.type, Socket::TYPE_TCP);
 					setSocket(move(s));
-					IpAddress bindAddr;
+					IpAddressEx bindAddr;
 					getBindAddress(bindAddr, ip.type);
 					sock->bind(ci->localPort, bindAddr);
 				}
@@ -998,11 +998,11 @@ void BufferedSocket::printSockName(string& sockName) const
 		sockName = "Socket 0";
 }
 
-void BufferedSocket::getBindAddress(IpAddress& ip, int af, const string& s)
+void BufferedSocket::getBindAddress(IpAddressEx& ip, int af, const string& s)
 {
 	if (af == AF_INET6)
 	{
-		Ip6Address v6;
+		Ip6AddressEx v6;
 		if (!s.empty() && Util::parseIpAddress(v6, s))
 			ip.data.v6 = v6;
 		else
@@ -1020,7 +1020,7 @@ void BufferedSocket::getBindAddress(IpAddress& ip, int af, const string& s)
 	}
 }
 
-void BufferedSocket::getBindAddress(IpAddress& ip, int af)
+void BufferedSocket::getBindAddress(IpAddressEx& ip, int af)
 {
 	getBindAddress(ip, af, af == AF_INET6 ? SETTING(BIND_ADDRESS6) : SETTING(BIND_ADDRESS));
 }

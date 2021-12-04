@@ -8,16 +8,16 @@ namespace Util
 {
 	struct AdapterInfo
 	{
-		AdapterInfo(const tstring& name, const string& ip, int prefix, int index) : adapterName(name), ip(ip), prefix(prefix), index(index) { }
+		AdapterInfo(const tstring& name, const IpAddressEx& ip, int prefix, int index) : adapterName(name), ip(ip), prefix(prefix), index(index) { }
 		tstring adapterName;
-		string ip;
+		IpAddressEx ip;
 		int prefix;
 		int index;
 	};
 
 	void getNetworkAdapters(int af, std::vector<AdapterInfo>& adapterInfos) noexcept;
-	string getDefaultGateway(int af, const std::vector<AdapterInfo>* cachedAdapterInfos = nullptr);
-	string getLocalIp(int af);
+	IpAddressEx getDefaultGateway(int af, const std::vector<AdapterInfo>* cachedAdapterInfos = nullptr);
+	IpAddressEx getLocalIp(int af);
 	inline bool isPrivateIp(Ip4Address ip)
 	{
 		return ((ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
@@ -36,7 +36,7 @@ namespace Util
 	bool isPrivateIp(const IpAddress& ip);
 	bool isPublicIp(const IpAddress& ip);
 	bool isReservedIp(const Ip6Address& ip);
-	bool isSameNetwork(const string& addr1, const string& addr2, unsigned prefix, int af);
+	bool isSameNetwork(const IpAddressEx& addr1, const IpAddressEx& addr2, unsigned prefix);
 }
 
 #endif // NETWORK_UTIL_H_

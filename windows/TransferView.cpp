@@ -797,7 +797,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			else if (colIndex == COLUMN_LOCATION)
 			{
 				IPInfo& ipInfo = ii->ipInfo;
-				if (!(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)))
+				if (!(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)) && Util::isValidIp(ii->transferIp))
 				{
 					Util::getIpInfo(ii->transferIp, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				}

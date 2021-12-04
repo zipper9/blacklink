@@ -50,6 +50,8 @@ class ListenerException : public Exception
 
 ConnectivityManager::ConnectivityManager() : running(0), autoDetect{false, false}, forcePortTest(false)
 {
+	memset(reflectedIP, 0, sizeof(reflectedIP));
+	memset(localIP, 0, sizeof(localIP));
 	mappers[0].init(AF_INET);
 	mappers[1].init(AF_INET6);
 	checkIP6();
@@ -73,9 +75,7 @@ void ConnectivityManager::detectConnection(int af)
 	SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
 	listenTCP(af);
 
-	const string ipStr = getLocalIP(af);
-	IpAddress ip;
-	Util::parseIpAddress(ip, ipStr);
+	IpAddress ip = getLocalIP(af);
 	bool isPrivate = false;
 	switch (ip.type)
 	{
@@ -94,7 +94,7 @@ void ConnectivityManager::detectConnection(int af)
 	else
 	{
 		SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_DIRECT);
-		log(STRING_F(CONN_DETECT_PUBLIC, ipStr), SEV_INFO, af);
+		log(STRING_F(CONN_DETECT_PUBLIC, Util::printIpAddress(ip)), SEV_INFO, af);
 	}
 }
 
@@ -239,10 +239,10 @@ string ConnectivityManager::getInformation() const
 	string mode = getModeString(AF_INET);
 	s += mode;
 	s += '\n';
-	string externalIP = getReflectedIP(AF_INET);
-	if (!externalIP.empty())
+	IpAddress ip = getReflectedIP(AF_INET);
+	if (!Util::isEmpty(ip))
 	{
-		s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 4 % externalIP);
+		s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 4 % Util::printIpAddress(ip));
 		s += '\n';
 	}
 	const string& bindV4 = SETTING(BIND_ADDRESS);
@@ -256,10 +256,10 @@ string ConnectivityManager::getInformation() const
 		mode = getModeString(AF_INET6);
 		s += "\t" + mode;
 		s += '\n';
-		externalIP = getReflectedIP(AF_INET6);
-		if (!externalIP.empty())
+		ip = getReflectedIP(AF_INET6);
+		if (!Util::isEmpty(ip))
 		{
-			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 6 % externalIP);
+			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 6 % Util::printIpAddress(ip));
 			s += '\n';
 		}
 		const string& bindV6 = SETTING(BIND_ADDRESS6);
@@ -466,28 +466,42 @@ unsigned ConnectivityManager::getRunningFlags() const noexcept
 	return result;
 }
 
-void ConnectivityManager::setReflectedIP(int af, const string& ip) noexcept
+static int getIndex(int af) noexcept
 {
-	LOCK(cs);
-	reflectedIP[af == AF_INET6 ? 1 : 0] = ip;
+	if (af != AF_INET && af != AF_INET6) return -1;
+	return af == AF_INET6 ? 1 : 0;
 }
 
-string ConnectivityManager::getReflectedIP(int af) const noexcept
+void ConnectivityManager::setReflectedIP(const IpAddress& ip) noexcept
 {
+	int index = getIndex(ip.type);
+	if (index == -1) return;
 	LOCK(cs);
-	return reflectedIP[af == AF_INET6 ? 1 : 0];
+	reflectedIP[index] = ip;
 }
 
-void ConnectivityManager::setLocalIP(int af, const string& ip) noexcept
+IpAddress ConnectivityManager::getReflectedIP(int af) const noexcept
 {
+	int index = getIndex(af);
+	if (index == -1) return IpAddress{};
 	LOCK(cs);
-	localIP[af == AF_INET6 ? 1 : 0] = ip;
+	return reflectedIP[index];
 }
 
-string ConnectivityManager::getLocalIP(int af) const noexcept
+void ConnectivityManager::setLocalIP(const IpAddress& ip) noexcept
 {
+	int index = getIndex(ip.type);
+	if (index == -1) return;
 	LOCK(cs);
-	return localIP[af == AF_INET6 ? 1 : 0];
+	localIP[index] = ip;
+}
+
+IpAddress ConnectivityManager::getLocalIP(int af) const noexcept
+{
+	int index = getIndex(af);
+	if (index == -1) return IpAddress{};
+	LOCK(cs);
+	return localIP[index];
 }
 
 const MappingManager& ConnectivityManager::getMapper(int af) const
@@ -508,9 +522,8 @@ void ConnectivityManager::checkIP6()
 #endif
 		vector<Util::AdapterInfo> adapters;
 		Util::getNetworkAdapters(AF_INET6, adapters);
-		Ip6Address ip;
 		for (const auto& ai : adapters)
-			if (Util::parseIpAddress(ip, ai.ip) && !Util::isReservedIp(ip) && !Util::isLinkScopedIp(ip))
+			if (!Util::isReservedIp(ai.ip.data.v6) && !Util::isLinkScopedIp(ai.ip.data.v6))
 			{
 				result = true;
 				break;

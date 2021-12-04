@@ -128,7 +128,7 @@ namespace dht
 
 		int getState() const { return state; }
 		bool pingNode(const CID& cid);
-		void updateLocalIP(const string& localIP);
+		void updateLocalIP(const IpAddress& localIP);
 
 		class LockInstanceNodes
 		{
@@ -212,7 +212,7 @@ namespace dht
 		/** Loads network information from XML file */
 		void loadData();
 
-		void setExternalIP(const string& ip);
+		void setExternalIP(const IpAddress& ip);
 
 		static ClientBasePtr instance;
 	};

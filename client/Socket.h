@@ -173,7 +173,7 @@ class Socket
 		}
 
 		// host is used only for logging (empty for literal IPs)
-		virtual void connect(const IpAddress& ip, uint16_t port, const string& host);
+		virtual void connect(const IpAddressEx& ip, uint16_t port, const string& host);
 		void connect(const string& host, uint16_t port);
 
 		/**
@@ -222,11 +222,11 @@ class Socket
 
 		virtual int wait(int millis, int waitFor);
 
-		static int resolveHost(Ip4Address* v4, Ip6Address* v6, int af, const string& host, bool* isNumeric = nullptr) noexcept;		
+		static int resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric = nullptr) noexcept;		
 		static const int RESOLVE_RESULT_V4 = 1;
 		static const int RESOLVE_RESULT_V6 = 2;
 
-		static bool resolveHost(IpAddress& addr, int af, const string& host, bool* isNumeric = nullptr) noexcept;
+		static bool resolveHost(IpAddressEx& addr, int af, const string& host, bool* isNumeric = nullptr) noexcept;
 
 		void setBlocking(bool block) noexcept;
 		uint16_t getLocalPort() const;
@@ -236,7 +236,7 @@ class Socket
 		virtual void create(int af, SocketType type);
 		
 		/** Binds a socket to a certain local port and possibly IP. */
-		virtual uint16_t bind(uint16_t port, const IpAddress& addr);
+		virtual uint16_t bind(uint16_t port, const IpAddressEx& addr);
 		virtual void listen();
 		/** Accept a socket.
 		@return remote port */
@@ -273,6 +273,7 @@ class Socket
 		static string getRemoteHost(const IpAddress& ip);
 		
 		void setIp(const IpAddress& ip) { this->ip = ip; }
+		void setIp(const IpAddressEx& ip);
 		const IpAddress& getIp() const { return ip; }
 		
 		void setPort(uint16_t port) { this->port = port; }
@@ -304,7 +305,9 @@ class Socket
 		void printSockName(string& s) const;
 
 		static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uint16_t port);
+		static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddressEx& ip, uint16_t port);
 		static void fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa);
+		static void fromSockAddr(IpAddressEx& ip, uint16_t& port, const sockaddr_u& sa);
 
 	protected:
 		socket_t sock;

@@ -227,15 +227,15 @@ class ConnectionManager :
 		class Server : public Thread
 		{
 			public:
-				Server(int type, const IpAddress& ip, uint16_t port);
+				Server(int type, const IpAddressEx& ip, uint16_t port);
 				uint16_t getServerPort() const
 				{
 					dcassert(serverPort);
 					return serverPort;
 				}
-				string getServerIP() const
+				IpAddress getServerIP() const
 				{
-					return Util::printIpAddress(sock.getLocalIp());
+					return sock.getLocalIp();
 				}
 				~Server()
 				{
@@ -251,7 +251,7 @@ class ConnectionManager :
 				Socket sock;
 				uint16_t serverPort;
 				const int type;
-				IpAddress bindIp;
+				IpAddressEx bindIp;
 		};
 
 		mutable std::unique_ptr<RWLock> csConnections;

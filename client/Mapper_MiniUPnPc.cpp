@@ -76,21 +76,20 @@ bool Mapper_MiniUPnPc::init()
 			uint16_t portTmp = 0;
 			Util::decodeUrl(controlUrl, protoTmp, routerIp, portTmp, pathTmp, queryTmp, fragmentTmp);
 
-			IpAddress addr;
+			IpAddressEx addr;
 			if (Socket::resolveHost(addr, af, routerIp))
 			{
-				routerIp = Util::printIpAddress(addr);
 				vector<Util::AdapterInfo> adapters;
 				Util::getNetworkAdapters(af, adapters);
 
 				// Find a local IP that is within the same subnet
 				auto p = std::find_if(adapters.cbegin(), adapters.cend(),
-					[&routerIp, this](const Util::AdapterInfo &ai)
+					[&addr, this](const Util::AdapterInfo &ai)
 					{
-						return Util::isSameNetwork(ai.ip, routerIp, ai.prefix, af);
+						return Util::isSameNetwork(ai.ip, addr, ai.prefix);
 					});
 				if (p != adapters.end())
-					localIp = p->ip;
+					localIp = Util::printIpAddress(p->ip);
 			}
 		}
 

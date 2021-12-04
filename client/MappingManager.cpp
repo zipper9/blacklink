@@ -191,7 +191,9 @@ int MappingManager::run()
 		string externalIP = mapper.getExternalIP();
 		if (!externalIP.empty())
 		{
-			ConnectivityManager::getInstance()->setReflectedIP(af, externalIP);
+			IpAddress ip;
+			if (Util::parseIpAddress(ip, externalIP))
+				ConnectivityManager::getInstance()->setReflectedIP(ip);
 		}
 		else
 		{

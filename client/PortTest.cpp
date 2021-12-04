@@ -361,7 +361,12 @@ void PortTest::on(Second, uint64_t tick) noexcept
 		if (hasFailed)
 		{
 			auto cm = ConnectivityManager::getInstance();
-			if (!reflectedAddress.empty()) cm->setReflectedIP(AF_INET, reflectedAddress);
+			if (!reflectedAddress.empty())
+			{
+				IpAddress ip;
+				if (Util::parseIpAddress(ip, reflectedAddress))
+					cm->setReflectedIP(ip);
+			}
 			cm->processPortTestResult();
 		}
 	}

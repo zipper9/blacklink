@@ -84,7 +84,7 @@ void SearchManager::listenUDP(int af)
 		sockets[index]->create(af, Socket::TYPE_UDP);
 		sockets[index]->setInBufSize();
 
-		IpAddress bindIp;
+		IpAddressEx bindIp;
 		if (autoDetectFlag)
 		{
 			memset(&bindIp, 0, sizeof(bindIp));
@@ -106,12 +106,12 @@ void SearchManager::listenUDP(int af)
 
 		if (af == AF_INET)
 		{
-			string localIp;
-			bindIp = sockets[index]->getLocalIp();
-			if (Util::isValidIp(bindIp))
-				localIp = Util::printIpAddress(bindIp);
-			else
-				localIp = Util::getLocalIp(af);
+			IpAddress localIp = sockets[index]->getLocalIp();
+			if (!Util::isValidIp(localIp))
+			{
+				auto ip = Util::getLocalIp(af);
+				memcpy(&localIp, &ip, sizeof(IpAddress));
+			}
 			dht::DHT::getInstance()->updateLocalIP(localIp);
 		}
 

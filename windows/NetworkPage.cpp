@@ -124,7 +124,7 @@ static const struct
 LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	DialogLayout::layout(m_hWnd, layoutItems1, _countof(layoutItems1));
-	
+
 	for (int i = 0; i < _countof(portSettings); ++i)
 		SetDlgItemInt(portSettings[i].id, SettingsManager::get(portSettings[i].setting));
 
@@ -194,8 +194,8 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	CEdit ctrlGatewayIP(GetDlgItem(IDC_DEFAULT_GATEWAY_IP));
 	if (v6)
 		ctrlGatewayIP.SetWindowPos(nullptr, 0, 0, rc.Width()*2, rc.Height(), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-	string gateway = Util::getDefaultGateway(af);
-	ctrlGatewayIP.SetWindowText(Text::toT(gateway).c_str());
+	IpAddressEx gateway = Util::getDefaultGateway(af);
+	ctrlGatewayIP.SetWindowText(Util::printIpAddressT(gateway).c_str());
 
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
 	StringList mappers = ConnectivityManager::getInstance()->getMapper(af).getMappers();
@@ -268,7 +268,7 @@ void NetworkIPTab::fixControls()
 	const BOOL autoDetect = enabled && IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
 	const BOOL upnp = enabled && IsDlgButtonChecked(IDC_FIREWALL_UPNP) == BST_CHECKED;
 	const BOOL nat = enabled && IsDlgButtonChecked(IDC_FIREWALL_NAT) == BST_CHECKED;
-	const BOOL passive = enabled && IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;	
+	const BOOL passive = enabled && IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;
 	const BOOL manualIP = enabled && IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
 
 	GetDlgItem(IDC_DIRECT).EnableWindow(enabled && !autoDetect);
@@ -336,7 +336,7 @@ static void setIcon(HWND hwnd, int stateIcon)
 	static HIconWrapper g_hModePauseIco(IDR_ICON_PAUSE_ICON);
 	static HIconWrapper g_hModeProcessIco(IDR_NETWORK_STATISTICS_ICON);
 	//static HIconWrapper g_hModeDisableTestIco(IDR_SKULL_RED_ICO);
-	
+
 	HICON icon;
 	switch (stateIcon)
 	{
@@ -448,8 +448,8 @@ void NetworkIPTab::updateState()
 	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
 	if (!externalIp.IsWindowEnabled())
 	{
-		string ipAddr = ConnectivityManager::getInstance()->getReflectedIP(af);
-		externalIp.SetWindowText(Text::toT(ipAddr).c_str());
+		IpAddress ipAddr = ConnectivityManager::getInstance()->getReflectedIP(af);
+		externalIp.SetWindowText(Util::printIpAddressT(ipAddr).c_str());
 	}
 }
 
@@ -656,7 +656,7 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	useTLS = BOOLSETTING(USE_TLS);
 	applyingSettings = ConnectivityManager::getInstance()->isSetupInProgress();
 	DialogLayout::layout(m_hWnd, layoutItems2, _countof(layoutItems2));
-	
+
 	ctrlTabs.Attach(GetDlgItem(IDC_TABS));
 	TCITEM tcItem;
 	tcItem.mask = TCIF_TEXT | TCIF_PARAM;
@@ -738,7 +738,7 @@ void NetworkPage::onShow()
 {
 	if (!g_tlsOption) return;
 	useTLS = g_tlsOption == 1;
-	tabIP[0].updateTLSOption();	
+	tabIP[0].updateTLSOption();
 	tabIP[1].updateTLSOption();
 	Invalidate();
 }

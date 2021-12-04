@@ -778,8 +778,9 @@ namespace dht
 				if (!newExternalIP.empty())
 				{
 					auto cm = ConnectivityManager::getInstance();
-					if (cm->getReflectedIP(AF_INET).empty())
-						cm->setReflectedIP(AF_INET, newExternalIP);
+					IpAddress ip;
+					if (Util::isEmpty(cm->getReflectedIP(AF_INET)) && Util::parseIpAddress(ip, newExternalIP))
+						cm->setReflectedIP(ip);
 				}
 			}
 		}
@@ -1006,12 +1007,11 @@ namespace dht
 		return Util::printIpAddress(lastExternalIP);
 	}
 
-	void DHT::setExternalIP(const string& ip)
+	void DHT::setExternalIP(const IpAddress& ip)
 	{
-		Ip4Address address;
-		if (!Util::parseIpAddress(address, ip) || !Util::isValidIp4(address)) return;
+		if (ip.type != AF_INET || !Util::isValidIp4(ip.data.v4)) return;
 		LOCK(fwCheckCs);
-		lastExternalIP = address;
+		lastExternalIP = ip.data.v4;
 	}
 
 	void DHT::getPublicIPInfo(string& externalIP, bool &isFirewalled) const
@@ -1066,12 +1066,11 @@ namespace dht
 		fly_fire2(ClientListener::UserReport(), this, userReport);
 	}
 
-	void DHT::updateLocalIP(const string& localIP)
+	void DHT::updateLocalIP(const IpAddress& localIP)
 	{
-		Ip4Address ip;
-		if (!Util::parseIpAddress(ip, localIP) || !Util::isValidIp4(ip)) return;
+		if (localIP.type != AF_INET || !Util::isValidIp4(localIP.data.v4)) return;
 		LOCK(fwCheckCs);
-		if (!lastExternalIP) lastExternalIP = ip;
+		if (!lastExternalIP) lastExternalIP = localIP.data.v4;
 	}
 
 

@@ -129,7 +129,8 @@ void IpTest::on(Failed, HttpConnection* conn, const string&) noexcept
 
 void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
 {
-	string newReflectedAddress[MAX_REQ];
+	IpAddress newReflectedAddress[MAX_REQ];
+	memset(newReflectedAddress, 0, sizeof(newReflectedAddress));
 	// Reset connID to prevent on(Failed) from signalling the error
 	bool addListener = false;
 	cs.lock();
@@ -148,15 +149,25 @@ void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
 				{
 					Ip4Address addr;
 					result = Util::parseIpAddress(addr, s) && addr != 0;
+					if (result)
+					{
+						newReflectedAddress[type].type = AF_INET;
+						newReflectedAddress[type].data.v4 = addr;
+					}
 				}
 				else
 				{
 					Ip6Address addr;
 					result = Util::parseIpAddress(addr, s) && !Util::isEmpty(addr);
+					if (result)
+					{
+						newReflectedAddress[type].type = AF_INET6;
+						newReflectedAddress[type].data.v6 = addr;
+					}
 				}
 				if (result)
 				{
-					newReflectedAddress[type] = req[type].reflectedAddress = s;
+					req[type].reflectedAddress = s;
 					req[type].state = STATE_SUCCESS;
 				}
 			}
@@ -172,11 +183,8 @@ void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
 	if (addListener)
 		TimerManager::getInstance()->addListener(this);
 	for (int type = 0; type < MAX_REQ; type++)
-		if (!newReflectedAddress[type].empty())
-		{
-			int af = type == REQ_IP4 ? AF_INET : AF_INET6;
-			ConnectivityManager::getInstance()->setReflectedIP(af, newReflectedAddress[type]);
-		}
+		if (newReflectedAddress[type].type)
+			ConnectivityManager::getInstance()->setReflectedIP(newReflectedAddress[type]);
 }
 
 void IpTest::on(Second, uint64_t tick) noexcept

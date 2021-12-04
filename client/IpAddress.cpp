@@ -2,7 +2,7 @@
 #include "IpAddress.h"
 #include "BaseUtil.h"
 
-bool operator==(const IpAddress& a, const IpAddress& b)
+bool operator==(const IpAddress& a, const IpAddress& b) noexcept
 {
 	if (a.type != b.type) return false;
 	if (a.type == AF_INET)
@@ -12,54 +12,102 @@ bool operator==(const IpAddress& a, const IpAddress& b)
 	return true;
 }
 
-int compare(const IpAddress& a, const IpAddress& b)
+bool operator==(const IpAddressEx& a, const IpAddressEx& b) noexcept
+{
+	if (a.type != b.type) return false;
+	if (a.type == AF_INET)
+		return a.data.v4 == b.data.v4;
+	if (a.type == AF_INET6)
+		return a.data.v6 == b.data.v6;
+	return true;
+}
+
+int compare(const IpAddress& a, const IpAddress& b) noexcept
 {
 	if (a.type != b.type) return compare(a.type, b.type);
 	if (a.type == AF_INET)
 		return compare(a.data.v4, b.data.v4);
 	if (a.type == AF_INET6)
-		return memcmp(&a.data.v6, &b.data.v6, sizeof(Ip6Address));
+		return memcmp(a.data.v6.data, b.data.v6.data, sizeof(Ip6Address));
 	return 0;
 }
 
-bool Util::parseIpAddress(IpAddress& result, const string& s) noexcept
+int compare(const IpAddressEx& a, const IpAddressEx& b) noexcept
+{
+	if (a.type != b.type) return compare(a.type, b.type);
+	if (a.type == AF_INET)
+		return compare(a.data.v4, b.data.v4);
+	if (a.type == AF_INET6)
+	{
+		if (a.data.v6.scopeId != b.data.v6.scopeId)
+			return compare(a.data.v6.scopeId, b.data.v6.scopeId);
+		return memcmp(a.data.v6.data, b.data.v6.data, sizeof(Ip6Address));
+	}
+	return 0;
+}
+
+template<typename T, typename S> 
+bool _parseIpAddress(T& result, const S& s) noexcept
 {
 	result.type = 0;
 	if (s.empty()) return false;
 	if (s.find(':') != string::npos)
 	{
-		if (!parseIpAddress(result.data.v6, s)) return false;
+		if (!Util::parseIpAddress(result.data.v6, s)) return false;
 		result.type = AF_INET6;
 		return true;
 	}
-	if (!parseIpAddress(result.data.v4, s)) return false;
+	if (!Util::parseIpAddress(result.data.v4, s)) return false;
 	result.type = AF_INET;
 	return true;
 }
 
-bool Util::isValidIp(const IpAddress& addr) noexcept
+bool Util::parseIpAddress(IpAddress& result, const string& s) noexcept
+{
+	return _parseIpAddress(result, s);
+}
+
+bool Util::parseIpAddress(IpAddressEx& result, const string& s) noexcept
+{
+	return _parseIpAddress(result, s);
+}
+
+template<typename T>
+string _printIpAddress(const T& addr, bool brackets) noexcept
 {
 	if (addr.type == AF_INET)
-		return isValidIp4(addr.data.v4);
+		return Util::printIpAddress(addr.data.v4);
 	if (addr.type == AF_INET6)
-		return isValidIp6(addr.data.v6);
-	return false;
+		return Util::printIpAddress(addr.data.v6, brackets);
+	return Util::emptyString;
 }
 
 string Util::printIpAddress(const IpAddress& addr, bool brackets) noexcept
 {
+	return _printIpAddress(addr, brackets);
+}
+
+string Util::printIpAddress(const IpAddressEx& addr, bool brackets) noexcept
+{
+	return _printIpAddress(addr, brackets);
+}
+
+template<typename T>
+wstring _printIpAddressW(const T& addr, bool brackets) noexcept
+{
 	if (addr.type == AF_INET)
-		return printIpAddress(addr.data.v4);
+		return Util::printIpAddressW(addr.data.v4);
 	if (addr.type == AF_INET6)
-		return printIpAddress(addr.data.v6, brackets);
-	return Util::emptyString;
+		return Util::printIpAddressW(addr.data.v6, brackets);
+	return Util::emptyStringW;
 }
 
 wstring Util::printIpAddressW(const IpAddress& addr, bool brackets) noexcept
 {
-	if (addr.type == AF_INET)
-		return printIpAddressW(addr.data.v4);
-	if (addr.type == AF_INET6)
-		return printIpAddressW(addr.data.v6, brackets);
-	return Util::emptyStringW;
+	return _printIpAddressW(addr, brackets);
+}
+
+wstring Util::printIpAddressW(const IpAddressEx& addr, bool brackets) noexcept
+{
+	return _printIpAddressW(addr, brackets);
 }

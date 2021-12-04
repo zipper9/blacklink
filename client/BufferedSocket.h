@@ -37,8 +37,8 @@ class BufferedSocket : private Thread
 			delete sock;
 		}
 
-		static void getBindAddress(IpAddress& ip, int af, const string& s);
-		static void getBindAddress(IpAddress& ip, int af);
+		static void getBindAddress(IpAddressEx& ip, int af, const string& s);
+		static void getBindAddress(IpAddressEx& ip, int af);
 
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		static void waitShutdown();

@@ -78,8 +78,33 @@ void Socket::toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, ui
 
 		case AF_INET6:
 			sa.v6.sin6_family = AF_INET6;
-			memcpy(&sa.v6.sin6_addr, &ip.data.v6, sizeof(in6_addr));
+			memcpy(&sa.v6.sin6_addr, &ip.data.v6.data, sizeof(in6_addr));
 			sa.v6.sin6_port = htons(port);
+			size = sizeof(sa.v6);
+			break;
+	
+		default:
+			size = 0;
+	}
+}
+
+void Socket::toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddressEx& ip, uint16_t port)
+{
+	memset(&sa, 0, sizeof(sa));
+	switch (ip.type)
+	{
+		case AF_INET:
+			sa.v4.sin_family = AF_INET;
+			sa.v4.sin_addr.s_addr = htonl(ip.data.v4);
+			sa.v4.sin_port = htons(port);
+			size = sizeof(sa.v4);
+			break;
+
+		case AF_INET6:
+			sa.v6.sin6_family = AF_INET6;
+			memcpy(&sa.v6.sin6_addr, &ip.data.v6.data, sizeof(in6_addr));
+			sa.v6.sin6_port = htons(port);
+			sa.v6.sin6_scope_id = ip.data.v6.scopeId;
 			size = sizeof(sa.v6);
 			break;
 	
@@ -101,8 +126,28 @@ void Socket::fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa)
 
 		case AF_INET6:
 			ip.type = AF_INET6;
-			memcpy(&ip.data.v6, &sa.v6.sin6_addr, sizeof(in6_addr));
+			memcpy(&ip.data.v6.data, &sa.v6.sin6_addr, sizeof(in6_addr));
 			port = ntohs(sa.v6.sin6_port);
+			break;
+	}
+}
+
+void Socket::fromSockAddr(IpAddressEx& ip, uint16_t& port, const sockaddr_u& sa)
+{
+	memset(&ip, 0, sizeof(ip));
+	switch (((const sockaddr*) &sa)->sa_family)
+	{
+		case AF_INET:
+			ip.type = AF_INET;
+			ip.data.v4 = htonl(sa.v4.sin_addr.s_addr);
+			port = ntohs(sa.v4.sin_port);
+			break;
+
+		case AF_INET6:
+			ip.type = AF_INET6;
+			memcpy(&ip.data.v6.data, &sa.v6.sin6_addr, sizeof(in6_addr));
+			port = ntohs(sa.v6.sin6_port);
+			ip.data.v6.scopeId = sa.v6.sin6_scope_id;
 			break;
 	}
 }
@@ -153,6 +198,21 @@ string SocketException::errorToString(int error) noexcept
 socket_t Socket::getSock() const
 {
 	return sock;
+}
+
+void Socket::setIp(const IpAddressEx& ip)
+{
+	switch (ip.type)
+	{
+		case AF_INET:
+			this->ip.data.v4 = ip.data.v4;
+			this->ip.type = AF_INET;
+			break;
+		case AF_INET6:
+			this->ip.data.v6 = ip.data.v6;
+			this->ip.type = AF_INET6;
+			break;
+	}
 }
 
 void Socket::create(int af, SocketType type)
@@ -236,7 +296,7 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	return port;
 }
 
-uint16_t Socket::bind(uint16_t port, const IpAddress& addr)
+uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	string sockName;
@@ -294,7 +354,7 @@ void Socket::listen()
 void Socket::connect(const string& host, uint16_t port)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
-	IpAddress ip;
+	IpAddressEx ip;
 	bool isNumeric;
 	if (!resolveHost(ip, 0, host, &isNumeric))
 	{
@@ -316,7 +376,7 @@ void Socket::connect(const string& host, uint16_t port)
 	connect(ip, port, isNumeric ? Util::emptyString : host);
 }
 
-void Socket::connect(const IpAddress& ip, uint16_t port, const string& host)
+void Socket::connect(const IpAddressEx& ip, uint16_t port, const string& host)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 
@@ -732,14 +792,14 @@ bool Socket::waitAccepted(unsigned /*millis*/)
 	return true;
 }
 
-int Socket::resolveHost(Ip4Address* v4, Ip6Address* v6, int af, const string& host, bool* isNumeric) noexcept
+int Socket::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric) noexcept
 {
 	if (v4) *v4 = 0;
 	if (v6) memset(v6, 0, sizeof(*v6));
 	if (host.find(':') != string::npos)
 	{
 		if (!(af == 0 || af == AF_INET6)) return 0;
-		Ip6Address ip6;
+		Ip6AddressEx ip6;
 		if (Util::parseIpAddress(ip6, host))
 		{
 			if (v6) *v6 = ip6;
@@ -823,10 +883,10 @@ int Socket::resolveHost(Ip4Address* v4, Ip6Address* v6, int af, const string& ho
 	return outFlags;
 }
 
-bool Socket::resolveHost(IpAddress& addr, int af, const string& host, bool* isNumeric) noexcept
+bool Socket::resolveHost(IpAddressEx& addr, int af, const string& host, bool* isNumeric) noexcept
 {
 	Ip4Address v4;
-	Ip6Address v6;
+	Ip6AddressEx v6;
 	int result = resolveHost(&v4, &v6, af, host, isNumeric);
 	if (!result) return false;
 	// Prefer IPv4

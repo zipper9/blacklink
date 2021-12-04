@@ -27,7 +27,7 @@ void ServerSocket::listen(uint16_t port, const string& ip = SETTING(BIND_ADDRESS
 	{
 		socket.disconnect();
 	}
-	IpAddress addr;
+	IpAddressEx addr;
 	Util::parseIpAddress(addr, ip);
 	socket.create(addr.type, Socket::TYPE_TCP);
 	// Set reuse address option...
