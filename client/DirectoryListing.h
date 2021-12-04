@@ -44,16 +44,17 @@ class DirectoryListing : public UserInfoBase
 		enum
 		{
 			FLAG_QUEUED         = 1 << 0,
-			FLAG_SHARED         = 1 << 1, // files only
+			FLAG_SHARED         = 1 << 1,  // files only
 			FLAG_DOWNLOADED     = 1 << 2,
 			FLAG_CANCELED       = 1 << 3,
-			FLAG_HAS_QUEUED     = 1 << 4, // dirs only
+			FLAG_HAS_QUEUED     = 1 << 4,  // dirs only
 			FLAG_HAS_SHARED     = 1 << 5,
 			FLAG_HAS_DOWNLOADED = 1 << 6,
 			FLAG_HAS_CANCELED   = 1 << 7,
 			FLAG_HAS_OTHER      = 1 << 8,
-			FLAG_FOUND          = 1 << 9, // files and dirs
-			FLAG_HAS_FOUND      = 1 << 10 // dirs only
+			FLAG_FOUND          = 1 << 9,  // files and dirs
+			FLAG_HAS_FOUND      = 1 << 10, // dirs only
+			FLAG_DIR_TIMESTAMP  = 1 << 11  // temporary flag used during parsing
 		};
 		
 		struct MediaInfo

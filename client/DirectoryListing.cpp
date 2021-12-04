@@ -339,8 +339,8 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					shared = val / 10000000;
 					list->hasTimestampsFlag = true;
 				}
-			} else
-			if (valTS)
+			}
+			else if (valTS)
 			{
 				int64_t val = Util::toInt64(*valTS);
 				if (val > 0)
@@ -349,6 +349,8 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					list->hasTimestampsFlag = true;
 				}
 			}
+			else if (current->isAnySet(DirectoryListing::FLAG_DIR_TIMESTAMP))
+				shared = current->maxTS;
 
 			uint32_t hit = 0;
 			if (valHit)
@@ -442,12 +444,23 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			{
 				const string &fileName = getAttrib(attribs, attrName, 0);
 				const bool incomp = getAttrib(attribs, attrIncomplete, 1) == "1";
+				const string& valDate = getAttrib(attribs, attrDate, 1);
 				DirectoryListing::Directory* d;
 
 				if (fileName.empty())
 					d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), false, !incomp);
 				else
 					d = new DirectoryListing::Directory(current, fileName, false, !incomp);
+				if (!valDate.empty())
+				{
+					int64_t val = Util::toInt64(valDate);
+					if (val > 0)
+					{
+						d->maxTS = val;
+						d->setFlag(DirectoryListing::FLAG_DIR_TIMESTAMP);
+						list->hasTimestampsFlag = true;
+					}
+				}
 				current->directories.push_back(d);
 				current = d;
 
@@ -543,7 +556,7 @@ void ListLoader::endTag(const string& name, const string&)
 		{
 			Flags::MaskType addFlags = 0;
 			current->updateSubDirs(addFlags);
-			current->setFlag(addFlags);
+			current->setFlags((current->getFlags() & ~DirectoryListing::FLAG_DIR_TIMESTAMP) | addFlags);
 			sortList(current->files);
 			sortList(current->directories);
 			current = current->getParent();
