@@ -144,7 +144,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	}
 	if (!tickList.empty())
 	{
-		fly_fire1(DownloadManagerListener::Tick(), tickList);
+		fire(DownloadManagerListener::Tick(), tickList);
 	}
 	
 	for (auto i = dropTargets.cbegin(); i != dropTargets.cend(); ++i)
@@ -253,7 +253,7 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 	{
 		if (errorInfo.error != QueueManager::SUCCESS)
 		{
-			fly_fire2(DownloadManagerListener::Status(), conn, errorInfo);
+			fire(DownloadManagerListener::Status(), conn, errorInfo);
 		}
 		
 		conn->setState(UserConnection::STATE_IDLE);
@@ -278,7 +278,7 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 		dcassert(d->getUser());
 		g_download_map.push_back(d);
 	}
-	fly_fire1(DownloadManagerListener::Requesting(), d);
+	fire(DownloadManagerListener::Requesting(), d);
 	
 	dcdebug("Requesting " I64_FMT "/" I64_FMT "\n", d->getStartPos(), d->getSize());
 	AdcCommand cmd(AdcCommand::CMD_GET);
@@ -391,7 +391,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 	source->setState(UserConnection::STATE_RUNNING);
 	
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
-	fly_fire1(DownloadManagerListener::Starting(), d);
+	fire(DownloadManagerListener::Starting(), d);
 #endif
 	if (d->getPos() == d->getSize())
 	{
@@ -459,7 +459,7 @@ void DownloadManager::endData(UserConnection* source)
 		{
 			// This tree is for a different file, remove from queue...// [!]PPA TODO подтереть fly_hash_block
 			removeDownload(d);
-			fly_fire2(DownloadManagerListener::Failed(), d, STRING(INVALID_TREE));
+			fire(DownloadManagerListener::Failed(), d, STRING(INVALID_TREE));
 			
 			QueueManager::getInstance()->removeSource(d->getPath(), source->getUser(), QueueItem::Source::FLAG_BAD_TREE, false);
 			
@@ -494,11 +494,11 @@ void DownloadManager::endData(UserConnection* source)
 	
 	if (d->getType() != Transfer::TYPE_FILE)
 	{
-		fly_fire1(DownloadManagerListener::Complete(), d);
+		fire(DownloadManagerListener::Complete(), d);
 		//if (d->getUserConnection())
 		//{
 		//  const auto l_token = d->getConnectionQueueToken();
-		//  fly_fire1(DownloadManagerListener::RemoveToken(), l_token);
+		//  fire(DownloadManagerListener::RemoveToken(), l_token);
 		//}
 	}
 	QueueManager::getInstance()->putDownload(d->getPath(), d, true, false);
@@ -524,7 +524,7 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason)
 	{
 		const std::string path = d->getPath();
 		removeDownload(d);
-		fly_fire2(DownloadManagerListener::Failed(), d, reason);
+		fire(DownloadManagerListener::Failed(), d, reason);
 		
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		if (d->isSet(Download::FLAG_USER_CHECK))
@@ -650,7 +650,7 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	dcdebug("File Not Available: %s\n", d->getPath().c_str());
 	
 	removeDownload(d);
-	fly_fire2(DownloadManagerListener::Failed(), d, STRING(FILE_NOT_AVAILABLE));
+	fire(DownloadManagerListener::Failed(), d, STRING(FILE_NOT_AVAILABLE));
 	
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 	if (d->isSet(Download::FLAG_USER_CHECK))

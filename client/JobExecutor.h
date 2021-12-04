@@ -2,6 +2,7 @@
 #define JOB_EXECUTOR_H_
 
 #include "Thread.h"
+#include "Locks.h"
 #include "WaitableEvent.h"
 
 class JobExecutor : public Thread

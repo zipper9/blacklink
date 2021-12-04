@@ -25,7 +25,7 @@
 #include "Flags.h"
 #include "IpAddress.h"
 #include "forward.h"
-#include "Thread.h"
+#include "Locks.h"
 
 #ifdef _DEBUG
 #include <atomic>

@@ -207,7 +207,7 @@ class FinishedManager : public Singleton<FinishedManager>,
 		void pushHistoryFinishedItem(const FinishedItemPtr& item, bool isFile, int type);
 		void updateStatus()
 		{
-			fly_fire(FinishedManagerListener::UpdateStatus());
+			fire(FinishedManagerListener::UpdateStatus());
 		}
 		
 	private:

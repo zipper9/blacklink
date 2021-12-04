@@ -25,7 +25,7 @@
 #include "../AdcCommand.h"
 #include "../CID.h"
 #include "../MerkleTree.h"
-#include "../Thread.h"
+#include "../Locks.h"
 
 namespace dht
 {

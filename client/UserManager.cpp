@@ -184,7 +184,7 @@ bool UserManager::addToIgnoreList(const string& userName)
 	if (result)
 	{
 		saveIgnoreList();
-		fly_fire1(UserManagerListener::IgnoreListChanged(), userName);
+		fire(UserManagerListener::IgnoreListChanged(), userName);
 	}
 	return result;
 }
@@ -197,7 +197,7 @@ void UserManager::removeFromIgnoreList(const string& userName)
 		ignoreList.erase(userName);
 	}
 	saveIgnoreList();
-	fly_fire1(UserManagerListener::IgnoreListChanged(), userName);
+	fire(UserManagerListener::IgnoreListChanged(), userName);
 }
 
 void UserManager::removeFromIgnoreList(const vector<string>& userNames)
@@ -210,7 +210,7 @@ void UserManager::removeFromIgnoreList(const vector<string>& userNames)
 	}
 	saveIgnoreList();
 	for (auto i = userNames.cbegin(); i != userNames.cend(); ++i)
-		fly_fire1(UserManagerListener::IgnoreListChanged(), *i);
+		fire(UserManagerListener::IgnoreListChanged(), *i);
 }
 
 bool UserManager::isInIgnoreList(const string& nick) const
@@ -232,7 +232,7 @@ void UserManager::clearIgnoreList()
 		ignoreList.clear();
 	}
 	saveIgnoreList();
-	fly_fire(UserManagerListener::IgnoreListCleared());
+	fire(UserManagerListener::IgnoreListCleared());
 }
 
 void UserManager::loadIgnoreList()
@@ -271,7 +271,7 @@ void UserManager::openUserUrl(const UserPtr& aUser)
 	const string& url = FavoriteManager::getInstance()->getUserUrl(aUser);
 	if (!url.empty())
 	{
-		fly_fire1(UserManagerListener::OpenHub(), url);
+		fire(UserManagerListener::OpenHub(), url);
 	}
 }
 
@@ -285,5 +285,5 @@ bool UserManager::isInProtectedUserList(const string& userName) const
 
 void UserManager::fireReservedSlotChanged(const UserPtr& user)
 {
-	fly_fire1(UserManagerListener::ReservedSlotChanged(), user);
+	fire(UserManagerListener::ReservedSlotChanged(), user);
 }

@@ -1512,7 +1512,7 @@ void SettingsManager::loadOtherSettings()
 		fm->loadRecents(xml);
 		fm->loadPreview(xml);
 		
-		fly_fire1(SettingsManagerListener::Load(), xml);
+		fire(SettingsManagerListener::Load(), xml);
 		xml.stepOut();
 	}
 	catch (const FileException&)
@@ -1985,11 +1985,11 @@ void SettingsManager::save(const string& aFileName)
 	FavoriteManager::getInstance()->savePreview(xml);
 	ShareManager::getInstance()->saveShareList(xml);
 
-	fly_fire1(SettingsManagerListener::Save(), xml);
+	fire(SettingsManagerListener::Save(), xml);
 
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire(SettingsManagerListener::Repaint());
+		fire(SettingsManagerListener::Repaint());
 	}
 	
 	try

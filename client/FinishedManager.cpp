@@ -78,7 +78,7 @@ void FinishedManager::addItem(FinishedItemPtr& item, eType type)
 		data.pop_front();
 	}
 	if (maxTempId)
-		fly_fire1(FinishedManagerListener::DroppedItems(), maxTempId);
+		fire(FinishedManagerListener::DroppedItems(), maxTempId);
 }
 
 void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string&, const DownloadPtr& d) noexcept
@@ -98,7 +98,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 				DatabaseManager::getInstance()->addTransfer(e_TransferDownload, item);
 			}
 			addItem(item, e_Download);
-			fly_fire2(FinishedManagerListener::AddedDl(), isFile, item);
+			fire(FinishedManagerListener::AddedDl(), isFile, item);
 		}
 	}
 }
@@ -106,9 +106,9 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 void FinishedManager::pushHistoryFinishedItem(const FinishedItemPtr& item, bool isFile, int type)
 {
 	if (type == e_Upload)
-		fly_fire2(FinishedManagerListener::AddedUl(), isFile, item);
+		fire(FinishedManagerListener::AddedUl(), isFile, item);
 	else
-		fly_fire2(FinishedManagerListener::AddedDl(), isFile, item);
+		fire(FinishedManagerListener::AddedDl(), isFile, item);
 }
 
 void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) noexcept
@@ -126,6 +126,6 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 			DatabaseManager::getInstance()->addTransfer(e_TransferUpload, item);
 		}
 		addItem(item, e_Upload);
-		fly_fire2(FinishedManagerListener::AddedUl(), isFile, item);
+		fire(FinishedManagerListener::AddedUl(), isFile, item);
 	}
 }

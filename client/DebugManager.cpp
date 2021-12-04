@@ -5,12 +5,12 @@ bool DebugManager::g_isCMDDebug = false;
 
 void DebugManager::sendCommandMessage(const string& command, DebugTask::Type type, const string& ip) noexcept
 {
-	fly_fire1(DebugManagerListener::DebugEvent(), DebugTask(command, type, ip));
+	fire(DebugManagerListener::DebugEvent(), DebugTask(command, type, ip));
 }
 
 void DebugManager::sendDetectionMessage(const string& mess) noexcept
 {
-	fly_fire1(DebugManagerListener::DebugEvent(), DebugTask(mess, DebugTask::DETECTION));
+	fire(DebugManagerListener::DebugEvent(), DebugTask(mess, DebugTask::DETECTION));
 }
 
 DebugTask::DebugTask(const string& message, Type type, const string& ipAndPort /*= Util::emptyString */) :

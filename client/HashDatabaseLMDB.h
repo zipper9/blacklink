@@ -2,7 +2,7 @@
 #define HASH_DATABASE_LMDB_H
 
 #include "mdb/lmdb.h"
-#include "Thread.h"
+#include "Locks.h"
 #include "MerkleTree.h"
 
 class HashDatabaseLMDB

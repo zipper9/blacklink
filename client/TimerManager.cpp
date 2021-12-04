@@ -80,12 +80,12 @@ int TimerManager::run()
 		else
 			tick = (now - startup) * 1000 / frequency;
 		if (!ticksDisabled)
-			fly_fire1(TimerManagerListener::Second(), tick);
+			fire(TimerManagerListener::Second(), tick);
 		if (now >= nextMinute)
 		{
 			nextMinute = now + 60 * frequency;
 			if (!ticksDisabled)
-				fly_fire1(TimerManagerListener::Minute(), tick);
+				fire(TimerManagerListener::Minute(), tick);
 		}
 	}
 	return 0;

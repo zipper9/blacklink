@@ -969,7 +969,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 					int targetExistsAction = SETTING(TARGET_EXISTS_ACTION);
 					if (targetExistsAction == SettingsManager::TE_ACTION_ASK)
 					{
-						fly_fire5(QueueManagerListener::TryAdding(), targetPath, size, existingFileSize, existingFileTime, targetExistsAction);
+						fire(QueueManagerListener::TryAdding(), targetPath, size, existingFileSize, existingFileTime, targetExistsAction);
 					}
 					
 					switch (targetExistsAction)
@@ -1007,7 +1007,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 #ifdef DEBUG_TRANSFERS
 				if (usePath) q->setDownloadPath(target);
 #endif
-				fly_fire1(QueueManagerListener::Added(), q);
+				fire(QueueManagerListener::Added(), q);
 				if (flags & QueueItem::FLAG_COPYING)
 				{
 					newItem = false;
@@ -1330,7 +1330,7 @@ void QueueManager::move(const string& aSource, const string& aTarget) noexcept
 	if (!qt || stricmp(aSource, target) == 0)
 	{
 		// Good, update the target and move in the queue...
-		fly_fire2(QueueManagerListener::Moved(), qs, aSource);
+		fire(QueueManagerListener::Moved(), qs, aSource);
 		fileQueue.moveTarget(qs, target);
 		setDirty();
 	}
@@ -1672,7 +1672,7 @@ void QueueManager::moveStuckFile(const QueueItemPtr& qi)
 	}
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(QueueManagerListener::RecheckAlreadyFinished(), target);
+		fire(QueueManagerListener::RecheckAlreadyFinished(), target);
 	}
 }
 
@@ -1709,12 +1709,12 @@ void QueueManager::addUpdatedSource(const QueueItemPtr& qi)
 void QueueManager::fireStatusUpdated(const QueueItemPtr& qi)
 {
 	if (!ClientManager::isBeforeShutdown())
-		fly_fire1(QueueManagerListener::StatusUpdated(), qi);
+		fire(QueueManagerListener::StatusUpdated(), qi);
 }
 
 void QueueManager::rechecked(const QueueItemPtr& qi)
 {
-	fly_fire1(QueueManagerListener::RecheckDone(), qi->getTarget());
+	fire(QueueManagerListener::RecheckDone(), qi->getTarget());
 	fireStatusUpdated(qi);
 	setDirty();
 }
@@ -1774,7 +1774,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					}
 					else
 					{
-						fly_fire2(QueueManagerListener::PartialList(), hintedUser, download->getFileListBuffer());
+						fire(QueueManagerListener::PartialList(), hintedUser, download->getFileListBuffer());
 					}
 				}
 				else
@@ -1875,7 +1875,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							
 							if (!ClientManager::isBeforeShutdown())
 							{
-								fly_fire3(QueueManagerListener::Finished(), q, dir, download);
+								fire(QueueManagerListener::Finished(), q, dir, download);
 							}
 							
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
@@ -2107,7 +2107,7 @@ void QueueManager::removeItem(const QueueItemPtr& qi, bool removeFromUserQueue)
 {
 	if (removeFromUserQueue) userQueue.removeQueueItem(qi);
 	fileQueue.remove(qi);
-	fly_fire1(QueueManagerListener::Removed(), qi);
+	fire(QueueManagerListener::Removed(), qi);
 }
 
 bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
@@ -2578,7 +2578,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 					qi->addSegment(Segment(0, downloaded));
 				const bool ap = Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1;
 				qi->setAutoPriority(ap);
-				qm->fly_fire1(QueueManagerListener::Added(), qi);
+				qm->fire(QueueManagerListener::Added(), qi);
 			}
 			if (simple)
 			{
@@ -2723,7 +2723,7 @@ void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& user)
 	{
 		for (auto& qi : itemList)
 			qi->cachedOnlineSourceCountInvalid = true;
-		fly_fire1(QueueManagerListener::StatusUpdatedList(), itemList);
+		fire(QueueManagerListener::StatusUpdatedList(), itemList);
 	}
 	if (hasDown)
 	{
@@ -2742,7 +2742,7 @@ void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& us
 			qi->cachedOnlineSourceCountInvalid = true;
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(QueueManagerListener::StatusUpdatedList(), itemList);
+			fire(QueueManagerListener::StatusUpdatedList(), itemList);
 		}
 	}
 	userQueue.removeRunning(user); // fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1673
@@ -2777,7 +2777,7 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	}
 	if (!runningItems.empty())
 	{
-		fly_fire1(QueueManagerListener::Tick(), runningItems); // Don't fire when locked
+		fire(QueueManagerListener::Tick(), runningItems); // Don't fire when locked
 	}
 	StringList targetList;
 	bool sourceAddedFlag = false;
@@ -2790,9 +2790,9 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		std::swap(sourceAdded, sourceAddedFlag);
 	}
 	if (!targetList.empty())
-		fly_fire1(QueueManagerListener::TargetsUpdated(), targetList);
+		fire(QueueManagerListener::TargetsUpdated(), targetList);
 	if (sourceAddedFlag)
-		fly_fire(QueueManagerListener::SourceAdded());
+		fire(QueueManagerListener::SourceAdded());
 }
 
 #ifdef FLYLINKDC_USE_DROP_SLOW
@@ -3097,14 +3097,14 @@ void QueueManager::RecheckerJob::run()
 		if (!q || q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 			return;
 			
-		manager.fly_fire1(QueueManagerListener::RecheckStarted(), q->getTarget());
+		manager.fire(QueueManagerListener::RecheckStarted(), q->getTarget());
 		dcdebug("Rechecking %s\n", file.c_str());
 		
 		tempSize = File::getSize(q->getTempTarget());
 		
 		if (tempSize == -1)
 		{
-			manager.fly_fire1(QueueManagerListener::RecheckNoFile(), q->getTarget());
+			manager.fire(QueueManagerListener::RecheckNoFile(), q->getTarget());
 			q->resetDownloaded();
 			manager.rechecked(q);
 			return;
@@ -3112,7 +3112,7 @@ void QueueManager::RecheckerJob::run()
 		
 		if (tempSize < 64 * 1024)
 		{
-			manager.fly_fire1(QueueManagerListener::RecheckFileTooSmall(), q->getTarget());
+			manager.fire(QueueManagerListener::RecheckFileTooSmall(), q->getTarget());
 			q->resetDownloaded();
 			manager.rechecked(q);
 			return;
@@ -3132,7 +3132,7 @@ void QueueManager::RecheckerJob::run()
 		
 		if (q->isRunning())
 		{
-			manager.fly_fire1(QueueManagerListener::RecheckDownloadsRunning(), q->getTarget());
+			manager.fire(QueueManagerListener::RecheckDownloadsRunning(), q->getTarget());
 			return;
 		}
 		
@@ -3149,7 +3149,7 @@ void QueueManager::RecheckerJob::run()
 			return;
 		if (!DatabaseManager::getInstance()->getTree(tth, tt))
 		{
-			manager.fly_fire1(QueueManagerListener::RecheckNoTree(), q->getTarget());
+			manager.fire(QueueManagerListener::RecheckNoTree(), q->getTarget());
 			return;
 		}
 		

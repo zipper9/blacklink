@@ -5,7 +5,7 @@
 
 #ifdef DEBUG_GDI_IMAGE
 #include <unordered_set>
-#include "../client/Thread.h"
+#include "../client/Locks.h"
 #include "../client/debug.h"
 
 #ifdef _DEBUG

@@ -24,6 +24,7 @@
 
 #include "Mapper.h"
 #include "Thread.h"
+#include "Locks.h"
 #include "TimerManager.h"
 #include "Severity.h"
 #include <atomic>

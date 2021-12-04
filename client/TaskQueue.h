@@ -23,7 +23,7 @@
 #include <utility>
 #include <algorithm>
 #include <stdint.h>
-#include "Thread.h"
+#include "Locks.h"
 
 class Task
 {

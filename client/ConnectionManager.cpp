@@ -433,7 +433,7 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 		}
 		if (cqi && !ClientManager::isBeforeShutdown())
 		{
-			fly_fire3(ConnectionManagerListener::Added(), HintedUser(user, Util::emptyString), true, cqi->getConnectionQueueToken());
+			fire(ConnectionManagerListener::Added(), HintedUser(user, Util::emptyString), true, cqi->getConnectionQueueToken());
 			return;
 		}
 #ifndef USING_IDLERS_IN_CONNECTION_MANAGER
@@ -464,7 +464,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	tokenManager.removeToken(token);
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(ConnectionManagerListener::RemoveToken(), token);
+		fire(ConnectionManagerListener::RemoveToken(), token);
 	}
 }
 
@@ -583,11 +583,11 @@ void ConnectionManager::onUserUpdated(const UserPtr& user)
 		}
 		for (const auto& download : downloadUsers)
 		{
-			fly_fire3(ConnectionManagerListener::UserUpdated(), download.hintedUser, true, download.token);
+			fire(ConnectionManagerListener::UserUpdated(), download.hintedUser, true, download.token);
 		}
 		for (const auto& upload : uploadUsers)
 		{
-			fly_fire3(ConnectionManagerListener::UserUpdated(), upload.hintedUser, false, upload.token);
+			fire(ConnectionManagerListener::UserUpdated(), upload.hintedUser, false, upload.token);
 		}
 	}
 }
@@ -731,7 +731,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 			}
 			if (!ClientManager::isBeforeShutdown())
 			{
-				fly_fire3(ConnectionManagerListener::Removed(), hintedUser, isDownload, token);
+				fire(ConnectionManagerListener::Removed(), hintedUser, isDownload, token);
 			}
 		}
 		removed.clear();
@@ -741,7 +741,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	{
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire3(ConnectionManagerListener::ConnectionStatusChanged(), j->hintedUser, true, j->token);
+			fire(ConnectionManagerListener::ConnectionStatusChanged(), j->hintedUser, true, j->token);
 		}
 	}
 	statusChanged.clear();
@@ -750,7 +750,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	{
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire3(ConnectionManagerListener::FailedDownload(), k->hintedUser, k->reason, k->token);
+			fire(ConnectionManagerListener::FailedDownload(), k->hintedUser, k->reason, k->token);
 		}
 	}
 	downloadError.clear();
@@ -1138,7 +1138,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 				conn->setFlag(UserConnection::FLAG_ASSOCIATED);
 				
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
-				fly_fire1(ConnectionManagerListener::Connected(), cqi);
+				fire(ConnectionManagerListener::Connected(), cqi);
 #endif
 				dcdebug("ConnectionManager::addDownloadConnection, leaving to downloadmanager\n");
 			}
@@ -1198,9 +1198,9 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 	{
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire3(ConnectionManagerListener::Added(), cqi->getHintedUser(), false, cqi->getConnectionQueueToken());
+			fire(ConnectionManagerListener::Added(), cqi->getHintedUser(), false, cqi->getConnectionQueueToken());
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
-			fly_fire1(ConnectionManagerListener::Connected(), cqi);
+			fire(ConnectionManagerListener::Connected(), cqi);
 #endif
 		}
 		UploadManager::getInstance()->addConnection(conn);
@@ -1310,7 +1310,7 @@ void ConnectionManager::force(const UserPtr& user)
 	{
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION
 		// TODO унести из лока
-		fly_fire1(ConnectionManagerListener::Forced(), *i);
+		fire(ConnectionManagerListener::Forced(), *i);
 #endif
 		(*i)->setLastAttempt(0);
 	}
@@ -1377,7 +1377,7 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		}
 		if (doFire && !ClientManager::isBeforeShutdown() && reasonItem.hintedUser.user)
 		{
-			fly_fire3(ConnectionManagerListener::FailedDownload(), reasonItem.hintedUser, reasonItem.reason, token);
+			fire(ConnectionManagerListener::FailedDownload(), reasonItem.hintedUser, reasonItem.reason, token);
 		}
 	}
 	else
@@ -1636,17 +1636,17 @@ void ConnectionManager::dumpUserConnections()
 
 void ConnectionManager::fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept
 {
-	fly_fire3(ConnectionManagerListener::FailedUpload(), hintedUser, reason, token);
+	fire(ConnectionManagerListener::FailedUpload(), hintedUser, reason, token);
 }
 
 void ConnectionManager::fireListenerStarted() noexcept
 {
-	fly_fire(ConnectionManagerListener::ListenerStarted());
+	fire(ConnectionManagerListener::ListenerStarted());
 }
 
 void ConnectionManager::fireListenerFailed(const char* type, int af, int errorCode) noexcept
 {
-	fly_fire2(ConnectionManagerListener::ListenerFailed(), type, af, errorCode);
+	fire(ConnectionManagerListener::ListenerFailed(), type, af, errorCode);
 }
 
 StringList ConnectionManager::getNmdcFeatures() const

@@ -966,6 +966,12 @@
     <ClInclude Include="client\maxminddb\maxminddb.h">
       <Filter>maxminddb</Filter>
     </ClInclude>
+    <ClInclude Include="client\BaseThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Locks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

@@ -21,6 +21,7 @@
 
 #include "Speaker.h"
 #include "Singleton.h"
+#include "Thread.h"
 #include "WaitableEvent.h"
 #include <atomic>
 

@@ -1163,7 +1163,7 @@ void HubFrame::processTasks()
 							if (client->getSuppressChatAndPM())
 							{
 								client->disconnect(false);
-								client->fly_fire1(ClientListener::NickError(), ClientListener::BadPassword);
+								client->fire(ClientListener::NickError(), ClientListener::BadPassword);
 							}
 							else
 							{
@@ -1184,7 +1184,7 @@ void HubFrame::processTasks()
 								else
 								{
 									client->disconnect(false);
-									client->fly_fire1(ClientListener::NickError(), ClientListener::BadPassword);
+									client->fire(ClientListener::NickError(), ClientListener::BadPassword);
 								}
 								showingPasswordDlg = false;
 							}

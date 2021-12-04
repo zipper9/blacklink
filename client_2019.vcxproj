@@ -699,6 +699,7 @@
   <ItemGroup>
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
+    <ClInclude Include="client\BaseThread.h" />
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\BusyCounter.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
@@ -740,6 +741,7 @@
     <ClInclude Include="client\IpTest.h" />
     <ClInclude Include="client\JobExecutor.h" />
     <ClInclude Include="client\LocationUtil.h" />
+    <ClInclude Include="client\Locks.h" />
     <ClInclude Include="client\LruCache.h" />
     <ClInclude Include="client\MagnetLink.h" />
     <ClInclude Include="client\Mapper.h" />

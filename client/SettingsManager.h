@@ -24,6 +24,7 @@
 #include "Util.h"
 #include "Speaker.h"
 #include "Singleton.h"
+#include "Exception.h"
 
 #define MAX_SOCKET_BUFFER_SIZE (64 * 1024)
 

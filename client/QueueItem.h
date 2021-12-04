@@ -25,7 +25,7 @@
 #include "RWLock.h"
 #include "Download.h"
 #include "TransferFlags.h"
-#include "Thread.h"
+#include "Locks.h"
 #include <atomic>
 #include <boost/container/flat_set.hpp>
 

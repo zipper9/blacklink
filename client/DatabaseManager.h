@@ -13,7 +13,7 @@
 #define FLYLINKDC_USE_LMDB
 
 #include "Singleton.h"
-#include "Thread.h"
+#include "Locks.h"
 #include "LruCache.h"
 #include "LogManager.h"
 #include "BaseUtil.h"

@@ -126,7 +126,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 		ou->getIdentity().setSID(sid);
 		ou->getUser()->addNick(nick, getHubUrl());
 		if (ou->getIdentity().isOp())
-			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
+			fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else // User
 	{
@@ -199,7 +199,7 @@ void AdcHub::putUser(const uint32_t sid, bool disconnect)
 		ClientManager::getInstance()->putOffline(ou, disconnect);
 	}
 	
-	fly_fire2(ClientListener::UserRemoved(), this, ou);
+	fire(ClientListener::UserRemoved(), this, ou);
 }
 
 void AdcHub::clearUsers()
@@ -248,7 +248,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 				// Same CID but different SID not allowed - buggy hub? [!] IRainman: yes - this is a bug in the hub - it must filter the users with the same cid not depending on the sid! This error is typically used to send spam, as it came from himself.
 				const string message = ou->getIdentity().getNick() + " (" + ou->getIdentity().getSIDString() +
 				                       ") has same CID {" + cidStr + "} as " + c.getNick() + " (" + AdcCommand::fromSID(c.getFrom()) + "), ignoring.";
-				fly_fire3(ClientListener::StatusMessage(), this, message, ClientListener::FLAG_IS_SPAM);
+				fire(ClientListener::StatusMessage(), this, message, ClientListener::FLAG_IS_SPAM);
 				
 				//LogManager::ddos_message("Magic spam message filtered on hub: " + getHubUrl() + " detail:" + l_message);
 				return;
@@ -441,7 +441,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	}
 	else if (ou->getIdentity().isHub())
 	{
-		fly_fire1(ClientListener::HubUpdated(), this);
+		fire(ClientListener::HubUpdated(), this);
 	}
 	else
 	{
@@ -478,7 +478,7 @@ void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 	
 	if (!baseOk)
 	{
-		fly_fire2(ClientListener::StatusMessage(), this, "Failed to negotiate base protocol"); // TODO: translate
+		fire(ClientListener::StatusMessage(), this, "Failed to negotiate base protocol"); // TODO: translate
 		disconnect(false);
 		return;
 	}
@@ -488,7 +488,7 @@ void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 		featureFlags |= FEATURE_FLAG_OLD_PASSWORD;
 		csState.unlock();
 		// Some hubs fake BASE support without TIGR support =/
-		fly_fire2(ClientListener::StatusMessage(), this, "Hub probably uses an old version of ADC, please encourage the owner to upgrade"); // TODO: translate
+		fire(ClientListener::StatusMessage(), this, "Hub probably uses an old version of ADC, please encourage the owner to upgrade"); // TODO: translate
 	}
 }
 
@@ -548,7 +548,7 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 	else
 	if (isChatMessageAllowed(*message, Util::emptyString))
 	{
-		fly_fire2(ClientListener::Message(), this, message);
+		fire(ClientListener::Message(), this, message);
 	}
 }
 
@@ -593,7 +593,7 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 			{
 				tmp = victim->getIdentity().getNick() + " was kicked: " + tmp;
 			}
-			fly_fire3(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_IS_SPAM);
+			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_IS_SPAM);
 		}
 		
 		putUser(s, c.getParam("DI", 1, tmp)); // TODO тут внутри повторно ищем юзера (OnlineUserPtr victim = findUser(s);)
@@ -621,11 +621,11 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 		}
 		if (!victim && c.getParam("MS", 1, tmp))
 		{
-			fly_fire2(ClientListener::StatusMessage(), this, tmp);
+			fire(ClientListener::StatusMessage(), this, tmp);
 		}
 		if (c.getParam("RD", 1, tmp))
 		{
-			fly_fire2(ClientListener::Redirect(), this, tmp);
+			fire(ClientListener::Redirect(), this, tmp);
 		}
 	}
 }
@@ -869,7 +869,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		}
 	}
 	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(1), ou));
-	fly_fire2(ClientListener::Message(), this, message);
+	fire(ClientListener::Message(), this, message);
 	ClientListener::NickErrorCode nickError = ClientListener::NoError;
 	if (lastErrorCode == AdcCommand::ERROR_NICK_INVALID)
 		nickError = ClientListener::Rejected;
@@ -883,7 +883,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		if (clientSock)
 			clientSock->disconnect(false);
 		csState.unlock();
-		fly_fire1(ClientListener::NickError(), nickError);
+		fire(ClientListener::NickError(), nickError);
 	}
 }
 
@@ -896,7 +896,7 @@ void AdcHub::handle(AdcCommand::SCH, const AdcCommand& c) noexcept
 		return;
 	}
 	
-	fly_fire3(ClientListener::AdcSearch(), this, c, ou);
+	fire(ClientListener::AdcSearch(), this, c, ou);
 }
 
 void AdcHub::handle(AdcCommand::RES, const AdcCommand& c) noexcept

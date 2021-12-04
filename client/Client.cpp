@@ -328,7 +328,7 @@ void Client::connect()
 	{
 		state = STATE_DISCONNECTED;
 		csState.unlock();
-		fly_fire2(ClientListener::ClientFailed(), this, e.getError());
+		fire(ClientListener::ClientFailed(), this, e.getError());
 		return;
 	}
 	csState.unlock();
@@ -351,7 +351,7 @@ void Client::connectIfNetworkOk()
 		}
 		csState.unlock();
 		if (sendStatusMessage)
-			fly_fire2(ClientListener::StatusMessage(), this, CSTRING(WAITING_NETWORK_CONFIG));
+			fire(ClientListener::StatusMessage(), this, CSTRING(WAITING_NETWORK_CONFIG));
 		return;
 	}
 	connect();
@@ -397,7 +397,7 @@ void Client::onConnected() noexcept
 			{
 				state = STATE_DISCONNECTED;
 				csState.unlock();
-				fly_fire2(ClientListener::ClientFailed(), this, "Keyprint mismatch");
+				fire(ClientListener::ClientFailed(), this, "Keyprint mismatch");
 				return;
 			}
 		}
@@ -406,7 +406,7 @@ void Client::onConnected() noexcept
 	csState.unlock();
 	auto fm = FavoriteManager::getInstance();
 	fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::SUCCESS);
-	fly_fire1(ClientListener::Connected(), this);
+	fire(ClientListener::Connected(), this);
 }
 
 void Client::onFailed(const string& line) noexcept
@@ -419,7 +419,7 @@ void Client::onFailed(const string& line) noexcept
 
 	if (!ClientManager::isBeforeShutdown() && !connected)
 		FavoriteManager::getInstance()->changeConnectionStatus(getHubUrl(), ConnectionStatus::FAILURE);
-	fly_fire2(ClientListener::ClientFailed(), this, line);
+	fire(ClientListener::ClientFailed(), this, line);
 }
 
 void Client::disconnect(bool graceless)
@@ -500,7 +500,7 @@ void Client::fireUserListUpdated(const OnlineUserList& userList)
 {
 	if (!userList.empty() && !ClientManager::isBeforeShutdown())
 	{
-		fly_fire2(ClientListener::UserListUpdated(), this, userList);
+		fire(ClientListener::UserListUpdated(), this, userList);
 	}
 }
 
@@ -508,7 +508,7 @@ void Client::fireUserUpdated(const OnlineUserPtr& aUser)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(ClientListener::UserUpdated(), aUser);
+		fire(ClientListener::UserUpdated(), aUser);
 	}
 }
 
@@ -836,7 +836,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	{
 		if (BOOLSETTING(IGNORE_HUB_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
-			fly_fire2(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
+			fire(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
 		}
 		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
@@ -845,7 +845,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	{
 		if (BOOLSETTING(IGNORE_BOT_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
-			fly_fire2(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
+			fire(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
 		}
 		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
@@ -871,7 +871,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 				}
 				if (BOOLSETTING(PROTECT_PRIVATE_SAY))
 				{
-					fly_fire2(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + " " + message.replyTo->getIdentity().getNick());
+					fire(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + " " + message.replyTo->getIdentity().getNick());
 				}
 				return false;
 			}
@@ -935,7 +935,7 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message)
 	string response;
 	OnlineUserPtr replyTo = message->replyTo;
 	if (isPrivateMessageAllowed(*message, &response))
-		fly_fire2(ClientListener::Message(), this, message);
+		fire(ClientListener::Message(), this, message);
 	else
 		logPM(*message);
 	if (!response.empty())
@@ -984,11 +984,11 @@ void Client::processPasswordRequest(const string& pwd)
 	if (!pwd.empty())
 	{
 		password(pwd, false);
-		fly_fire2(ClientListener::StatusMessage(), this, STRING(STORED_PASSWORD_SENT));
+		fire(ClientListener::StatusMessage(), this, STRING(STORED_PASSWORD_SENT));
 	}
 	else
 	{
-		fly_fire1(ClientListener::GetPassword(), this);
+		fire(ClientListener::GetPassword(), this);
 	}
 }
 

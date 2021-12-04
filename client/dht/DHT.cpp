@@ -407,7 +407,7 @@ namespace dht
 				// put him online so we can make a connection with him
 				node->setOnline(true);
 				ClientManager::getInstance()->putOnline(node, true);
-				fly_fire1(ClientListener::UserUpdated(), node);
+				fire(ClientListener::UserUpdated(), node);
 			}
 		}
 
@@ -440,7 +440,7 @@ namespace dht
 			auto cm = ClientManager::getInstance();
 			for (auto& ou : removedList)
 				cm->putOffline(ou);
-			fly_fire2(ClientListener::UserListRemoved(), this, removedList);
+			fire(ClientListener::UserListRemoved(), this, removedList);
 		}
 
 		{
@@ -1063,7 +1063,7 @@ namespace dht
 
 	void DHT::dumpUserInfo(const string& userReport)
 	{
-		fly_fire2(ClientListener::UserReport(), this, userReport);
+		fire(ClientListener::UserReport(), this, userReport);
 	}
 
 	void DHT::updateLocalIP(const IpAddress& localIP)

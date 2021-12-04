@@ -225,7 +225,7 @@ void ClientManager::putClient(const ClientBasePtr& cb)
 	}
 	if (!isBeforeShutdown()) // При закрытии не шлем уведомление (на него подписан только фрейм поиска)
 	{
-		fly_fire1(ClientManagerListener::ClientDisconnected(), client);
+		fire(ClientManagerListener::ClientDisconnected(), client);
 	}
 	client->shutdown();
 	client->clearDefaultUsers();
@@ -631,7 +631,7 @@ void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 		
 		if (!(user->setFlagEx(User::ONLINE) & User::ONLINE) && fireFlag)
 		{
-			fly_fire1(ClientManagerListener::UserConnected(), user);	
+			fire(ClientManagerListener::UserConnected(), user);
 		}
 	}
 }
@@ -671,7 +671,7 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noe
 			u->unsetFlag(User::ONLINE);
 			if (disconnectFlag)
 				ConnectionManager::getInstance()->disconnect(u);
-			fly_fire1(ClientManagerListener::UserDisconnected(), u);
+			fire(ClientManagerListener::UserDisconnected(), u);
 		}
 		else if (diff > 1)
 		{
@@ -898,7 +898,7 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const string& hub, const string& filter, ClientManagerListener::SearchReply reply)
 {
 	if (g_isSpyFrame)
-		Speaker<ClientManagerListener>::fly_fire5(ClientManagerListener::IncomingSearch(), protocol, seeker, hub, filter, reply);
+		Speaker<ClientManagerListener>::fire(ClientManagerListener::IncomingSearch(), protocol, seeker, hub, filter, reply);
 }
 
 static void getShareGroup(const OnlineUserPtr& ou, bool& hideShare, CID& shareGroup)
@@ -946,7 +946,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	if (g_isSpyFrame)
 	{
 		string description = param.getDescription();
-		Speaker<ClientManagerListener>::fly_fire5(ClientManagerListener::IncomingSearch(), ClientBase::TYPE_ADC, "Hub:" + ou->getIdentity().getNick(), c->getHubUrl(), description, re);
+		Speaker<ClientManagerListener>::fire(ClientManagerListener::IncomingSearch(), ClientBase::TYPE_ADC, "Hub:" + ou->getIdentity().getNick(), c->getHubUrl(), description, re);
 	}
 }
 
@@ -1040,7 +1040,7 @@ void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& ou)
 		WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
 		g_UserUpdateQueue.push_back(ou);
 #else
-		fly_fire1(ClientManagerListener::UserUpdated(), ou);
+		fire(ClientManagerListener::UserUpdated(), ou);
 #endif
 	}
 }
@@ -1053,7 +1053,7 @@ void ClientManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		READ_LOCK(*g_csOnlineUsersUpdateQueue);
 		for (auto i = g_UserUpdateQueue.cbegin(); i != g_UserUpdateQueue.cend(); ++i)
 		{
-			fly_fire1(ClientManagerListener::UserUpdated(), *i);
+			fire(ClientManagerListener::UserUpdated(), *i);
 		}
 	}
 	WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
@@ -1181,7 +1181,7 @@ void ClientManager::cancelSearch(void* owner)
 
 void ClientManager::on(Connected, const Client* c) noexcept
 {
-	fly_fire1(ClientManagerListener::ClientConnected(), c);
+	fire(ClientManagerListener::ClientConnected(), c);
 }
 
 void ClientManager::on(UserUpdated, const OnlineUserPtr& ou) noexcept
@@ -1217,14 +1217,14 @@ void ClientManager::updateNick(const OnlineUserPtr& ou)
 void ClientManager::on(HubUpdated, const Client* c) noexcept
 {
 	dcassert(!isBeforeShutdown());
-	fly_fire1(ClientManagerListener::ClientUpdated(), c);
+	fire(ClientManagerListener::ClientUpdated(), c);
 }
 
 void ClientManager::on(ClientFailed, const Client* client, const string&) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(ClientManagerListener::ClientDisconnected(), client);
+		fire(ClientManagerListener::ClientDisconnected(), client);
 	}
 }
 

@@ -55,12 +55,12 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 	public:
 		void outgoingPrivateMessage(const UserPtr& user, const string& hubHint, const tstring& message)
 		{
-			fly_fire3(UserManagerListener::OutgoingPrivateMessage(), user, hubHint, message);
+			fire(UserManagerListener::OutgoingPrivateMessage(), user, hubHint, message);
 		}
 		void openUserUrl(const UserPtr& user);
 		void collectSummaryInfo(const UserPtr& user, const string& hubHint)
 		{
-			fly_fire2(UserManagerListener::CollectSummaryInfo(), user, hubHint);
+			fire(UserManagerListener::CollectSummaryInfo(), user, hubHint);
 		}
 
 		enum PasswordStatus

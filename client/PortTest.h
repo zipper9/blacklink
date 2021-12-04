@@ -3,7 +3,7 @@
 
 #include "HttpConnectionListener.h"
 #include "CID.h"
-#include "Thread.h"
+#include "Locks.h"
 #include "TimerManager.h"
 #include <regex>
 

@@ -190,12 +190,12 @@ class Client : public ClientBase,
 		
 		void cheatMessage(const string& msg)
 		{
-			fly_fire1(ClientListener::CheatMessage(), msg);
+			fire(ClientListener::CheatMessage(), msg);
 		}
 		
 		void dumpUserInfo(const string& userReport)
 		{
-			fly_fire2(ClientListener::UserReport(), this, userReport);
+			fire(ClientListener::UserReport(), this, userReport);
 		}
 		void reconnect();
 		void shutdown() noexcept;
@@ -456,7 +456,7 @@ class Client : public ClientBase,
 		// BufferedSocketListener
 		virtual void onConnecting() noexcept override
 		{
-			fly_fire1(ClientListener::Connecting(), this);
+			fire(ClientListener::Connecting(), this);
 		}
 		virtual void onConnected() noexcept override;
 		virtual void onDataLine(const string&) noexcept override;

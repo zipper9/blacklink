@@ -290,7 +290,7 @@ void FavoriteManager::addFavoriteUser(const UserPtr& user)
 		favUser = i->second;
 		user->setFlag(User::FAVORITE);
 	}
-	fly_fire1(FavoriteManagerListener::UserAdded(), favUser);
+	fire(FavoriteManagerListener::UserAdded(), favUser);
 	favsDirty = true;
 }
 
@@ -306,7 +306,7 @@ void FavoriteManager::removeFavoriteUser(const UserPtr& user)
 		favUser = i->second;
 		favoriteUsers.erase(i);
 	}
-	fly_fire1(FavoriteManagerListener::UserRemoved(), favUser);
+	fire(FavoriteManagerListener::UserRemoved(), favUser);
 	favsDirty = true;
 }
 
@@ -341,7 +341,7 @@ bool FavoriteManager::addFavoriteHub(FavoriteHubEntry& entry, bool save)
 		entry.id = fhe->id = ++favHubId;
 		favoriteHubs.push_back(fhe);
 	}
-	fly_fire1(FavoriteManagerListener::FavoriteAdded(), &entry);
+	fire(FavoriteManagerListener::FavoriteAdded(), &entry);
 	if (save)
 		saveFavorites();
 	return true;
@@ -364,7 +364,7 @@ bool FavoriteManager::removeFavoriteHub(const string& server, bool save)
 	}
 	if (!entry)
 		return false;
-	fly_fire1(FavoriteManagerListener::FavoriteRemoved(), entry);
+	fire(FavoriteManagerListener::FavoriteRemoved(), entry);
 	delete entry;
 	if (save)
 		saveFavorites();
@@ -388,7 +388,7 @@ bool FavoriteManager::removeFavoriteHub(int id, bool save)
 	}
 	if (!entry)
 		return false;
-	fly_fire1(FavoriteManagerListener::FavoriteRemoved(), entry);
+	fire(FavoriteManagerListener::FavoriteRemoved(), entry);
 	delete entry;
 	if (save)
 		saveFavorites();
@@ -414,7 +414,7 @@ bool FavoriteManager::setFavoriteHub(const FavoriteHubEntry& entry)
 	if (result)
 	{
 		saveFavorites();
-		fly_fire1(FavoriteManagerListener::FavoriteChanged(), &entry);
+		fire(FavoriteManagerListener::FavoriteChanged(), &entry);
 	}
 	return result;
 }
@@ -550,12 +550,12 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 		saveFavorites();
 	if (hubAdded)
 	{
-		fly_fire1(FavoriteManagerListener::FavoriteAdded(), hubAdded);
+		fire(FavoriteManagerListener::FavoriteAdded(), hubAdded);
 		delete hubAdded;
 	}
 	if (hubChanged)
 	{
-		fly_fire1(FavoriteManagerListener::FavoriteChanged(), hubChanged);
+		fire(FavoriteManagerListener::FavoriteChanged(), hubChanged);
 		delete hubChanged;
 	}
 	return result;
@@ -585,7 +585,7 @@ bool FavoriteManager::setFavoriteHubAutoConnect(const string& server, bool autoC
 	if (hubChanged)
 	{
 		saveFavorites();
-		fly_fire1(FavoriteManagerListener::FavoriteChanged(), hubChanged);
+		fire(FavoriteManagerListener::FavoriteChanged(), hubChanged);
 		delete hubChanged;
 	}
 	return result;
@@ -615,7 +615,7 @@ bool FavoriteManager::setFavoriteHubAutoConnect(int id, bool autoConnect)
 	if (hubChanged)
 	{
 		saveFavorites();
-		fly_fire1(FavoriteManagerListener::FavoriteChanged(), hubChanged);
+		fire(FavoriteManagerListener::FavoriteChanged(), hubChanged);
 		delete hubChanged;
 	}
 	return result;
@@ -856,7 +856,7 @@ RecentHubEntry* FavoriteManager::addRecent(const RecentHubEntry& entry)
 	recent = new RecentHubEntry(entry);
 	recentHubs.push_back(recent);
 	recentsDirty = true;
-	fly_fire1(FavoriteManagerListener::RecentAdded(), recent);
+	fire(FavoriteManagerListener::RecentAdded(), recent);
 	return recent;
 }
 
@@ -866,7 +866,7 @@ void FavoriteManager::removeRecent(const RecentHubEntry* entry)
 	const auto& i = find(recentHubs.begin(), recentHubs.end(), entry);
 	if (i == recentHubs.end())
 		return;
-	fly_fire1(FavoriteManagerListener::RecentRemoved(), entry);
+	fire(FavoriteManagerListener::RecentRemoved(), entry);
 	recentHubs.erase(i);
 	recentsDirty = true;
 	delete entry;
@@ -880,7 +880,7 @@ void FavoriteManager::updateRecent(const RecentHubEntry* entry)
 		return;
 	recentsDirty = true;
 	if (!ClientManager::isBeforeShutdown())
-		fly_fire1(FavoriteManagerListener::RecentUpdated(), entry);
+		fire(FavoriteManagerListener::RecentUpdated(), entry);
 }
 
 void FavoriteManager::saveFavorites()
@@ -1647,7 +1647,7 @@ void FavoriteManager::on(UserDisconnected, const UserPtr& user) noexcept
 		}
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(FavoriteManagerListener::UserStatusChanged(), user);
+			fire(FavoriteManagerListener::UserStatusChanged(), user);
 		}
 	}
 }
@@ -1666,7 +1666,7 @@ void FavoriteManager::on(UserConnected, const UserPtr& user) noexcept
 		}
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(FavoriteManagerListener::UserStatusChanged(), user);
+			fire(FavoriteManagerListener::UserStatusChanged(), user);
 		}
 	}
 }
@@ -1676,7 +1676,7 @@ void FavoriteManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	if (recentsDirty && tick - recentsLastSave > SAVE_RECENTS_TIME)
 	{
 		recentsLastSave = tick;
-		fly_fire(FavoriteManagerListener::SaveRecents());
+		fire(FavoriteManagerListener::SaveRecents());
 	}
 	if (favsDirty && tick - favsLastSave > SAVE_FAVORITES_TIME)
 		saveFavorites();
@@ -1721,11 +1721,11 @@ void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& user
 	{
 		if (added)
 		{
-			fly_fire1(FavoriteManagerListener::UserAdded(), user);
+			fire(FavoriteManagerListener::UserAdded(), user);
 		}
 		else
 		{
-			fly_fire1(FavoriteManagerListener::UserStatusChanged(), user.user);
+			fire(FavoriteManagerListener::UserStatusChanged(), user.user);
 		}
 	}
 }

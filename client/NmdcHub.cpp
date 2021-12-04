@@ -205,7 +205,7 @@ void NmdcHub::putUser(const string& nick)
 	if (!ou->getUser()->getCID().isZero())
 		ClientManager::getInstance()->putOffline(ou);
 
-	fly_fire2(ClientListener::UserRemoved(), this, ou);
+	fire(ClientListener::UserRemoved(), this, ou);
 }
 
 void NmdcHub::clearUsers()
@@ -904,13 +904,13 @@ void NmdcHub::chatMessageParse(const string& line)
 	
 	if (lowerLine.find("hub-security") != string::npos && lowerLine.find("was kicked by") != string::npos)
 	{
-		fly_fire3(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
+		fire(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
 		return;
 	}
 	
 	if (lowerLine.find("is kicking") != string::npos && lowerLine.find("because:") != string::npos)
 	{
-		fly_fire3(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
+		fire(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
 		return;
 	}
 
@@ -948,7 +948,7 @@ void NmdcHub::chatMessageParse(const string& line)
 	}
 	if (nick.empty())
 	{
-		fly_fire2(ClientListener::StatusMessage(), this, utf8Line);
+		fire(ClientListener::StatusMessage(), this, utf8Line);
 		return;
 	}
 	
@@ -985,7 +985,7 @@ void NmdcHub::chatMessageParse(const string& line)
 		chatMessage->translateMe();
 		if (!isChatMessageAllowed(*chatMessage, nick))
 			return;
-		fly_fire2(ClientListener::Message(), this, chatMessage);
+		fire(ClientListener::Message(), this, chatMessage);
 	}
 }
 
@@ -1008,7 +1008,7 @@ void NmdcHub::hubNameParse(const string& paramIn)
 		getHubIdentity().setNick(unescape(param));
 		getHubIdentity().setDescription(Util::emptyString);
 	}
-	fly_fire1(ClientListener::HubUpdated(), this);
+	fire(ClientListener::HubUpdated(), this);
 }
 
 void NmdcHub::supportsParse(const string& param)
@@ -1429,7 +1429,7 @@ void NmdcHub::toParse(const string& param)
 #if 0
 	if (message->to->getUser() == message->from->getUser() && message->from->getUser() == message->replyTo->getUser())
 	{
-		fly_fire3(ClientListener::StatusMessage(), this, message->text, ClientListener::FLAG_IS_SPAM);
+		fire(ClientListener::StatusMessage(), this, message->text, ClientListener::FLAG_IS_SPAM);
 		LogManager::message("Magic spam message (from you to you) filtered on hub: " + getHubUrl() + ".");
 		return;
 	}
@@ -1548,11 +1548,11 @@ void NmdcHub::onLine(const string& aLine)
 		if (clientSock)
 			clientSock->disconnect(false);
 		csState.unlock();
-		fly_fire2(ClientListener::Redirect(), this, param);
+		fire(ClientListener::Redirect(), this, param);
 	}
 	else if (cmd == "HubIsFull")
 	{
-		fly_fire1(ClientListener::HubFull(), this);
+		fire(ClientListener::HubFull(), this);
 	}
 	else if (cmd == "ValidateDenide")        // Mind the spelling...
 	{
@@ -1561,7 +1561,7 @@ void NmdcHub::onLine(const string& aLine)
 		if (clientSock)
 			clientSock->disconnect(false);
 		csState.unlock();
-		fly_fire1(ClientListener::NickError(), ClientListener::Taken);
+		fire(ClientListener::NickError(), ClientListener::Taken);
 	}
 	else if (cmd == "UserIP")
 	{
@@ -1611,12 +1611,12 @@ void NmdcHub::onLine(const string& aLine)
 	else if (cmd == "HubTopic")
 	{
 		if (!param.empty())
-			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::HubTopic, this, param);
+			fire(ClientListener::HubInfoMessage(), ClientListener::HubTopic, this, param);
 	}
 #endif
 	else if (cmd == "LogedIn")
 	{
-		fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
+		fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else if (cmd == "BadNick")
 	{
@@ -1633,7 +1633,7 @@ void NmdcHub::onLine(const string& aLine)
 		if (clientSock)
 			clientSock->disconnect(false);
 		csState.unlock();
-		fly_fire1(ClientListener::NickError(), ClientListener::Rejected);
+		fire(ClientListener::NickError(), ClientListener::Rejected);
 	}
 	else if (cmd == "SearchRule")
 	{
@@ -2265,7 +2265,7 @@ void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, b
 	if (!isPrivateMessageAllowed(*chatMessage, nullptr))
 		return;
 		
-	fly_fire2(ClientListener::Message(), this, chatMessage);
+	fire(ClientListener::Message(), this, chatMessage);
 }
 
 void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
@@ -2461,7 +2461,7 @@ void NmdcHub::myInfoParse(const string& param)
 
 void NmdcHub::onDDoSSearchDetect(const string& p_error) noexcept
 {
-	fly_fire1(ClientListener::DDoSSearchDetect(), p_error);
+	fire(ClientListener::DDoSSearchDetect(), p_error);
 }
 
 void NmdcHub::onDataLine(const string& aLine) noexcept

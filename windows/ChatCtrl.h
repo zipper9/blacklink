@@ -22,7 +22,7 @@
 #include <atlwin.h>
 #include <atlcrack.h>
 #include "../client/typedefs.h"
-#include "../client/Thread.h"
+#include "../client/Locks.h"
 #include "UserMessages.h"
 #include "resource.h"
 

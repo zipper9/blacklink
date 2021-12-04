@@ -59,7 +59,7 @@ void ThemeManager::loadResourceLib()
 #ifdef IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
 		if (isResourceLibLoaded())
 		{
-			fly_fire1(ThemeManagerListener::ResourceLoaded(), themeDllName);
+			fire(ThemeManagerListener::ResourceLoaded(), themeDllName);
 		}
 #endif
 	}

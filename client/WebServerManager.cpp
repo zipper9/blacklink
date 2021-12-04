@@ -80,7 +80,7 @@ void WebServerManager::Start() noexcept
 	{
 		socket.listen(static_cast<uint16_t>(SETTING(WEBSERVER_PORT)), SETTING(WEBSERVER_BIND_ADDRESS));
 		socket.addListener(this);
-		fly_fire(WebServerListener::Setup());
+		fire(WebServerListener::Setup());
 	}
 	catch (const SocketException&) {}
 }
@@ -288,7 +288,7 @@ void WebServerManager::getPage(string& p_InOut, const string& IP, UserStatus Cur
 			} // system  managment
 			if (CurrentUser.ispower() && action >= 0)
 			{
-				fly_fire1(WebServerListener::ShutdownPC(), action);
+				fire(WebServerListener::ShutdownPC(), action);
 				pagehtml += "&nbsp;" + STRING(WEBSERVER_REGUEST_SENT_OK);
 				//LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 			}

@@ -2,7 +2,7 @@
 #define IP_TEST_H_
 
 #include "HttpConnectionListener.h"
-#include "Thread.h"
+#include "Locks.h"
 #include "TimerManager.h"
 #include <regex>
 

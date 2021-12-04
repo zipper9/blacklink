@@ -1,6 +1,6 @@
 #include "stdinc.h"
 #include "AutoDetectSocket.h"
-#include "Thread.h"
+#include "BaseThread.h"
 
 static const int POLL_TIME = 10;
 
@@ -17,7 +17,7 @@ bool AutoDetectSocket::waitAccepted(unsigned millis)
 		if (size >= 8) break;
 		if (millis < POLL_TIME) return false;
 		millis -= POLL_TIME;
-		Thread::sleep(POLL_TIME);
+		BaseThread::sleep(POLL_TIME);
 	}	
 	if (buf[0] == 22 && buf[1] == 3 && buf[6] == 0)
 		type = TYPE_SSL;

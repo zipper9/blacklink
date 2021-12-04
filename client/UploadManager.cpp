@@ -783,7 +783,7 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 		}
 	}
 	if (!tickList.empty())
-		fly_fire1(UploadManagerListener::Tick(), tickList);		
+		fire(UploadManagerListener::Tick(), tickList);
 }
 
 void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
@@ -891,7 +891,7 @@ void UploadManager::processSend(UserConnection* source) noexcept
 	
 	source->setState(UserConnection::STATE_RUNNING);
 	source->transmitFile(u->getReadStream());
-	fly_fire1(UploadManagerListener::Starting(), u);
+	fire(UploadManagerListener::Starting(), u);
 }
 
 void UploadManager::processGetBlock(UserConnection* source, const string& cmd, const string& param) noexcept
@@ -944,7 +944,7 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 			{
 				const string message = "Error UploadManager::on(GetBlock) path:" + u->getPath() + ", error: " + e.getError();
 				LogManager::message(message);
-				fly_fire2(UploadManagerListener::Failed(), u, message);
+				fire(UploadManagerListener::Failed(), u, message);
 				return;
 			}
 		}
@@ -954,7 +954,7 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 		u->setStartTime(source->getLastActivity());
 		source->setState(UserConnection::STATE_RUNNING);
 		source->transmitFile(u->getReadStream());
-		fly_fire1(UploadManagerListener::Starting(), u);
+		fire(UploadManagerListener::Starting(), u);
 	}
 	else
 	{
@@ -962,7 +962,7 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 		if (u)
 		{
 			u->setType(Transfer::TYPE_FILE);
-			fly_fire2(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
+			fire(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
 		}
 		else
 			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), STRING(UNABLE_TO_SEND_FILE), source->getConnectionQueueToken());
@@ -1008,7 +1008,7 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 			{
 				const string message = "Error UploadManager::on(AdcCommand::GET) path:" + u->getPath() + ", error: " + e.getError();
 				LogManager::message(message);
-				fly_fire2(UploadManagerListener::Failed(), u, message);
+				fire(UploadManagerListener::Failed(), u, message);
 				return;
 			}
 		}
@@ -1026,7 +1026,7 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 		u->setStartTime(source->getLastActivity());
 		source->setState(UserConnection::STATE_RUNNING);
 		source->transmitFile(u->getReadStream());
-		fly_fire1(UploadManagerListener::Starting(), u);
+		fire(UploadManagerListener::Starting(), u);
 	}
 	else
 	{
@@ -1035,7 +1035,7 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 		{
 			if (type == Transfer::fileTypeNames[Transfer::TYPE_FILE])
 				u->setType(Transfer::TYPE_FILE);
-			fly_fire2(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
+			fire(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
 		}
 		else
 			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), STRING(UNABLE_TO_SEND_FILE), source->getConnectionQueueToken());
@@ -1077,7 +1077,7 @@ void UploadManager::failed(UserConnection* source, const string& error) noexcept
 	
 	if (u)
 	{
-		fly_fire2(UploadManagerListener::Failed(), u, error);		
+		fire(UploadManagerListener::Failed(), u, error);
 		dcdebug("UM::onFailed (%s): Removing upload\n", error.c_str());
 		removeUpload(u);
 	}
@@ -1116,7 +1116,7 @@ void UploadManager::logUpload(const UploadPtr& upload)
 			upload->getParams(params);
 			LOG(UPLOAD, params);
 		}
-		fly_fire1(UploadManagerListener::Complete(), upload);
+		fire(UploadManagerListener::Complete(), upload);
 	}
 }
 
@@ -1151,7 +1151,7 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 			it->waitingFiles.push_back(uqi);
 	}
 	if (g_count_WaitingUsersFrame)
-		fly_fire1(UploadManagerListener::QueueAdd(), hintedUser, uqi);
+		fire(UploadManagerListener::QueueAdd(), hintedUser, uqi);
 	return queuePosition;
 }
 
@@ -1160,7 +1160,7 @@ void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (g_count_WaitingUsersFrame)
 		for (const UploadQueueFilePtr& uqi : wu.waitingFiles)
-			fly_fire1(UploadManagerListener::QueueItemRemove(), wu.hintedUser, uqi);
+			fire(UploadManagerListener::QueueItemRemove(), wu.hintedUser, uqi);
 }
 
 void UploadManager::clearUserFilesL(const UserPtr& user)
@@ -1175,7 +1175,7 @@ void UploadManager::clearUserFilesL(const UserPtr& user)
 		clearWaitingFilesL(*it);
 		if (g_count_WaitingUsersFrame && !ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(UploadManagerListener::QueueRemove(), user);
+			fire(UploadManagerListener::QueueRemove(), user);
 		}
 		slotQueue.erase(it);
 	}
@@ -1275,7 +1275,7 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 		if (wu.getUser()->isOnline())
 			ClientManager::getInstance()->connect(wu.hintedUser, wu.getToken(), false);
 		if (g_count_WaitingUsersFrame)
-			fly_fire1(UploadManagerListener::QueueRemove(), wu.getUser());
+			fire(UploadManagerListener::QueueRemove(), wu.getUser());
 	}
 }
 
@@ -1394,11 +1394,11 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		}
 	}
 	if (!tickList.empty())
-		fly_fire1(UploadManagerListener::Tick(), tickList);
+		fire(UploadManagerListener::Tick(), tickList);
 	notifyQueuedUsers(tick);
 	
 	if (g_count_WaitingUsersFrame)
-		fly_fire(UploadManagerListener::QueueUpdate());
+		fire(UploadManagerListener::QueueUpdate());
 	
 	if (!isFireball)
 	{

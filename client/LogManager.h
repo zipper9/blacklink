@@ -21,7 +21,7 @@
 #define DCPLUSPLUS_DCPP_LOG_MANAGER_H
 
 #include "File.h"
-#include "Thread.h"
+#include "Locks.h"
 
 namespace Util
 {

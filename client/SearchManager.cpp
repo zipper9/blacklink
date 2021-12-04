@@ -387,7 +387,7 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		SearchResult sr(user, type, slots, freeSlots, size, file, url, remoteIp, TTHValue(tth), 0);
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + Util::printIpAddress(remoteIp) + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, Util::printIpAddress(remoteIp));
-		SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
+		SearchManager::getInstance()->fire(SearchManagerListener::SR(), sr);
 		return true;
 	}
 	return false;
@@ -521,7 +521,7 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 		uint16_t slots = SearchResult::SLOTS_UNKNOWN;
 		ClientManager::getSlots(from->getCID(), slots);
 		SearchResult sr(from, type, slots, freeSlots, size, file, hub, remoteIp, TTHValue(tth), token);
-		fly_fire1(SearchManagerListener::SR(), sr);
+		fire(SearchManagerListener::SR(), sr);
 	}
 }
 

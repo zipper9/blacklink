@@ -6,7 +6,7 @@
 #include <atlwin.h>
 #include <atlcrack.h>
 #include "../client/typedefs.h"
-#include "../client/Thread.h"
+#include "../client/Locks.h"
 
 class SplashWindow : public CWindowImpl<SplashWindow>
 {
