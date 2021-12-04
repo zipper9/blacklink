@@ -1319,7 +1319,8 @@ LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	if (!files.empty())
 	{
 		string loadedFile = Util::getFileName(fileName);
-		files.erase(std::remove(files.begin(), files.end(), loadedFile));
+		auto i = std::remove(files.begin(), files.end(), loadedFile);
+		if (i != files.end()) files.erase(i);
 		if (!files.empty())
 		{
 			size_t titleLen = pattern.length() - 10;
@@ -2792,6 +2793,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	if (dest)
 	{
 		DirectoryListingFrame* newFrame = openWindow(dest, dl->getHintedUser(), speed, true);
+		newFrame->setFileName(fileName);
 		newFrame->originalId = id;
 	}
 
