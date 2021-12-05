@@ -671,34 +671,6 @@ class Identity
 class OnlineUser :  public UserInfoBase
 {
 	public:
-		enum
-		{
-			COLUMN_FIRST,
-			COLUMN_NICK = COLUMN_FIRST,
-			COLUMN_SHARED,
-			COLUMN_EXACT_SHARED,
-			COLUMN_P2P_GUARD,
-			COLUMN_DESCRIPTION,
-			COLUMN_CONNECTION,
-			COLUMN_IP,
-			COLUMN_LAST_IP,
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			COLUMN_UPLOAD,
-			COLUMN_DOWNLOAD,
-			COLUMN_MESSAGES,
-#endif
-			COLUMN_EMAIL,
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-			COLUMN_VERSION,
-			COLUMN_MODE,
-#endif
-			COLUMN_HUBS,
-			COLUMN_SLOTS,
-			COLUMN_CID,
-			COLUMN_TAG,
-			COLUMN_LAST
-		};
-		
 		struct Hash
 		{
 			size_t operator()(const OnlineUserPtr& x) const

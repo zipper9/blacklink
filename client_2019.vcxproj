@@ -525,6 +525,7 @@
     <ClCompile Include="client\FavoriteManager.cpp" />
     <ClCompile Include="client\File.cpp" />
     <ClCompile Include="client\FileTypes.cpp" />
+    <ClCompile Include="client\FinishedItem.cpp" />
     <ClCompile Include="client\FinishedManager.cpp" />
     <ClCompile Include="client\HashBloom.cpp" />
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
@@ -719,6 +720,7 @@
     <ClInclude Include="client\dht\TaskManager.h" />
     <ClInclude Include="client\dht\Utils.h" />
     <ClInclude Include="client\FileTypes.h" />
+    <ClInclude Include="client\FinishedItem.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
     <ClInclude Include="client\HashUtil.h" />
     <ClInclude Include="client\HintedUser.h" />
@@ -766,6 +768,7 @@
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
     <ClInclude Include="client\SockDefs.h" />
+    <ClInclude Include="client\SocketAddr.h" />
     <ClInclude Include="client\SpeedCalc.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />
     <ClInclude Include="client\sqlite\sqlite3ext.h" />

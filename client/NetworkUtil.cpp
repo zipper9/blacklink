@@ -1,7 +1,7 @@
 #include "stdinc.h"
 #include "NetworkUtil.h"
 #include "inet_compat.h"
-#include "Socket.h"
+#include "SocketAddr.h"
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
@@ -27,7 +27,7 @@ static unsigned getPrefixLen(const IP_ADAPTER_ADDRESSES* adapter, const IpAddres
 		{
 			IpAddressEx prefixAddr;
 			uint16_t port;
-			Socket::fromSockAddr(prefixAddr, port, *(const sockaddr_u*)(prefix->Address.lpSockaddr));
+			fromSockAddr(prefixAddr, port, *(const sockaddr_u*)(prefix->Address.lpSockaddr));
 			if (prefixAddr != address && Util::isSameNetwork(prefixAddr, address, prefix->PrefixLength))
 				prefixLen = prefix->PrefixLength;
 		}
@@ -80,7 +80,7 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcep
 					{
 						IpAddressEx address;
 						uint16_t port;
-						Socket::fromSockAddr(address, port, *(const sockaddr_u*)(ua->Address.lpSockaddr));
+						fromSockAddr(address, port, *(const sockaddr_u*)(ua->Address.lpSockaddr));
 						if (address.type)
 						{
 #ifdef OSVER_WIN_XP
@@ -115,12 +115,12 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcep
 				int prefix;
 				if (af == AF_INET6)
 				{
-					Socket::fromSockAddr(ip, port, *(const sockaddr_u*) p->ifa_addr);
+					fromSockAddr(ip, port, *(const sockaddr_u*) p->ifa_addr);
 					prefix = getPrefix(&((const sockaddr_in6*) p->ifa_netmask)->sin6_addr, 16);
 				}
 				else if (af == AF_INET)
 				{
-					Socket::fromSockAddr(ip, port, *(const sockaddr_u*) p->ifa_addr);
+					fromSockAddr(ip, port, *(const sockaddr_u*) p->ifa_addr);
 					prefix = getPrefix(&((const sockaddr_in*) p->ifa_netmask)->sin_addr, 4);
 				}
 				if (ip.type)

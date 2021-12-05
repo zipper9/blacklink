@@ -19,15 +19,12 @@
 #ifndef DCPLUSPLUS_DCPP_SOCKET_H
 #define DCPLUSPLUS_DCPP_SOCKET_H
 
+#include "SocketAddr.h"
+
 #ifdef _WIN32
 
 #include <ws2tcpip.h>
 #include "WinEvent.h"
-
-typedef int socklen_t;
-typedef SOCKET socket_t;
-#define SE_EWOULDBLOCK WSAEWOULDBLOCK
-#define SE_EADDRINUSE  WSAEADDRINUSE
 
 #else
 
@@ -40,17 +37,10 @@ typedef SOCKET socket_t;
 #include <errno.h>
 #include "PipeEvent.h"
 
-typedef int socket_t;
-static const int INVALID_SOCKET = -1;
-#define SOCKET_ERROR -1
-#define SE_EWOULDBLOCK EWOULDBLOCK
-#define SE_EADDRINUSE  EADDRINUSE
-
 #endif
 
 #include "Exception.h"
 #include "BaseUtil.h"
-#include "IpAddress.h"
 
 class SocketException : public Exception
 {
@@ -71,12 +61,6 @@ class SocketException : public Exception
 	private:
 		static string errorToString(int error) noexcept;
 		int errorCode;
-};
-
-union sockaddr_u
-{
-	sockaddr_in v4;
-	sockaddr_in6 v6;
 };
 
 class Socket
@@ -303,11 +287,6 @@ class Socket
 		void signalControlEvent();
 		void setConnected() { connected = true; }
 		void printSockName(string& s) const;
-
-		static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddress& ip, uint16_t port);
-		static void toSockAddr(sockaddr_u& sa, socklen_t& size, const IpAddressEx& ip, uint16_t port);
-		static void fromSockAddr(IpAddress& ip, uint16_t& port, const sockaddr_u& sa);
-		static void fromSockAddr(IpAddressEx& ip, uint16_t& port, const sockaddr_u& sa);
 
 	protected:
 		socket_t sock;

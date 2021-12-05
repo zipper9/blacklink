@@ -170,8 +170,8 @@ bool CompatibilityManager::detectWine()
 
 struct DllInfo
 {
-	TCHAR* dllName;
-	char* info;
+	const TCHAR* dllName;
+	const char* info;
 };
 
 // TODO - config

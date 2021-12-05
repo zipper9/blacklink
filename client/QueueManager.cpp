@@ -1908,18 +1908,10 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 				{
 					if (download->getType() != Transfer::TYPE_TREE)
 					{
-						bool isEmpty;
 						{
-							// TODO - убрать лок тут
-							QueueRLock(*QueueItem::g_cs);
+							QueueRLock(*QueueItem::g_cs); // ???
 							q->updateDownloadedBytesAndSpeedL();
-							isEmpty = q->getDownloadedBytes() == 0;
 						}
-						// Не затираем путь к временному файлу
-						//if (isEmpty)
-						//{
-						//  q->setTempTarget(Util::emptyString);
-						//}
 						if (q->isSet(QueueItem::FLAG_USER_LIST))
 						{
 							// Blah...no use keeping an unfinished file list...

@@ -88,8 +88,10 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 		const bool isFile = !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
 		if (isFile || (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 		{
+			HintedUser hintedUser = d->getHintedUser();
+			string hubs = Util::toString(ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString));
 			auto ip = d->getIP();
-			auto item = std::make_shared<FinishedItem>(qi->getTarget(), d->getHintedUser(),
+			auto item = std::make_shared<FinishedItem>(qi->getTarget(), hintedUser, hubs,
 			                                           qi->getSize(), d->getRunningAverage(),
 			                                           GET_TIME(), qi->getTTH(),
 			                                           ip, d->getActual());
@@ -116,8 +118,10 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 	const bool isFile = u->getType() == Transfer::TYPE_FILE;
 	if (isFile || (u->getType() == Transfer::TYPE_FULL_LIST && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 	{
+		HintedUser hintedUser = u->getHintedUser();
+		string hubs = Util::toString(ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString));
 		auto ip = u->getIP();
-		auto item = std::make_shared<FinishedItem>(u->getPath(), u->getHintedUser(),
+		auto item = std::make_shared<FinishedItem>(u->getPath(), hintedUser, hubs,
 		                                           u->getFileSize(), u->getRunningAverage(),
 		                                           GET_TIME(), u->getTTH(),
 		                                           ip, u->getActual());

@@ -107,15 +107,11 @@ void IpTest::on(Data, HttpConnection*, const uint8_t* data, size_t size) noexcep
 
 void IpTest::on(Failed, HttpConnection* conn, const string&) noexcept
 {
-	bool hasFailed = false;
 	bool addListener = false;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING && req[type].connID == conn->getID())
-		{
 			req[type].state = STATE_FAILURE;
-			hasFailed = true;
-		}
 	setConnectionUnusedL(conn);
 	if (!hasListener)
 	{

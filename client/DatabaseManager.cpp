@@ -12,13 +12,14 @@
 #include "DatabaseManager.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
-#include "FinishedManager.h"
+#include "FinishedItem.h"
 #include "TimerManager.h"
 #include "NetworkUtil.h"
 #include "BusyCounter.h"
-#include "Socket.h"
+#include "SocketAddr.h"
 #include "Tag16.h"
 #include "maxminddb/maxminddb.h"
+#include <boost/algorithm/string.hpp>
 
 using sqlite3x::database_error;
 using sqlite3x::sqlite3_transaction;
@@ -1512,7 +1513,7 @@ bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result)
 	if (!openGeoIPDatabaseL()) return false;
 	sockaddr_u sa;
 	socklen_t size;
-	Socket::toSockAddr(sa, size, ip, 0);
+	toSockAddr(sa, size, ip, 0);
 	result.known |= IPInfo::FLAG_COUNTRY;
 	int error = 0;
 	auto lres = MMDB_lookup_sockaddr(mmdb, (const sockaddr *) &sa, &error);
