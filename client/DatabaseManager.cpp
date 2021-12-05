@@ -1482,6 +1482,7 @@ bool DatabaseManager::openGeoIPDatabaseL()
 		return true;
 	}
 	delete mmdb;
+	mmdb = nullptr;
 	timeCheckMmdb = now + 600000; // 10 minutes
 	return false;
 }
