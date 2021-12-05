@@ -229,7 +229,7 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, const POINT& pt)
 	if (!bmp) return false;
 	if (!memDC) memDC = CreateCompatibleDC(dc);
 	HGDIOBJ oldBmp = SelectObject(memDC, bmp);
-	BitBlt(dc, pt.x, pt.y, pt.x + 25, pt.y + 16, memDC, 0, 0, SRCCOPY);
+	BitBlt(dc, pt.x, pt.y, FLAG_IMAGE_WIDTH, FLAG_IMAGE_HEIGHT, memDC, 0, 0, SRCCOPY);
 	SelectObject(memDC, oldBmp);
 	return true;
 }
@@ -251,7 +251,7 @@ bool FlagImage::drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 	if (!bmp) return false;
 	if (!memDC) memDC = CreateCompatibleDC(dc);
 	HGDIOBJ oldBmp = SelectObject(memDC, bmp);
-	BitBlt(dc, pt.x, pt.y, pt.x + 25, pt.y + 16, memDC, 0, 0, SRCCOPY);
+	BitBlt(dc, pt.x, pt.y, FLAG_IMAGE_WIDTH, FLAG_IMAGE_HEIGHT, memDC, 0, 0, SRCCOPY);
 	SelectObject(memDC, oldBmp);
 	return true;
 }

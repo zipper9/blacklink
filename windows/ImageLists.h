@@ -165,6 +165,9 @@ extern TransferTreeImage g_TransferTreeImage;
 class FlagImage
 {
 	public:
+		static const int FLAG_IMAGE_WIDTH  = 25;
+		static const int FLAG_IMAGE_HEIGHT = 16;
+
 		FlagImage() : memDC(NULL) {}
 		~FlagImage();
 		void init();
