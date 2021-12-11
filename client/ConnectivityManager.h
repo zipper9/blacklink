@@ -29,7 +29,8 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 	public:
 		void setupConnections(bool forcePortTest = false);
 		bool isSetupInProgress() const noexcept { return getRunningFlags() != 0; }
-		void processPortTestResult();
+		void processPortTestResult() noexcept;
+		void processGetIpResult(int req) noexcept;
 		void setReflectedIP(const IpAddress& ip) noexcept;
 		IpAddress getReflectedIP(int af) const noexcept;
 		void setLocalIP(const IpAddress& ip) noexcept;
@@ -54,7 +55,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		void listenTCP(int af);
 		void listenUDP(int af);
 		void setPassiveMode(int af);
-		void testPorts();
+		unsigned testPorts();
 		bool setup(int af);
 		void disconnect();
 		unsigned getRunningFlags() const noexcept;
@@ -64,6 +65,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		MappingManager mappers[2];
 		mutable FastCriticalSection cs;
 		unsigned running;
+		unsigned setupResult;
 		bool forcePortTest;
 		bool autoDetect[2];
 		static std::atomic_bool ipv6Supported;

@@ -27,6 +27,7 @@
 #include "DownloadManager.h"
 #include "CryptoManager.h"
 #include "PortTest.h"
+#include "IpTest.h"
 #include "NetworkUtil.h"
 #include "dht/DHT.h"
 
@@ -35,9 +36,17 @@ std::atomic_bool ConnectivityManager::ipv6Enabled(false);
 
 enum
 {
-	RUNNING_IPV4  = 1,
-	RUNNING_IPV6  = 2,
-	RUNNING_OTHER = 4
+	RUNNING_IPV4      = 1,
+	RUNNING_IPV6      = 2,
+	RUNNING_TEST_IPV4 = 4,
+	RUNNING_TEST_IPV6 = 8,
+	RUNNING_OTHER     = 16
+};
+
+enum
+{
+	STATUS_IPV4 = 1,
+	STATUS_IPV6 = 2
 };
 
 class ListenerException : public Exception
@@ -48,7 +57,7 @@ class ListenerException : public Exception
 		int errorCode;
 };
 
-ConnectivityManager::ConnectivityManager() : running(0), autoDetect{false, false}, forcePortTest(false)
+ConnectivityManager::ConnectivityManager() : running(0), setupResult(0), autoDetect{false, false}, forcePortTest(false)
 {
 	memset(reflectedIP, 0, sizeof(reflectedIP));
 	memset(localIP, 0, sizeof(localIP));
@@ -76,17 +85,7 @@ void ConnectivityManager::detectConnection(int af)
 	listenTCP(af);
 
 	IpAddress ip = getLocalIP(af);
-	bool isPrivate = false;
-	switch (ip.type)
-	{
-		case AF_INET:
-			isPrivate = Util::isPrivateIp(ip.data.v4);
-			break;
-		case AF_INET6:
-			isPrivate = Util::isPrivateIp(ip.data.v6);
-			break;
-	}
-	if (isPrivate)
+	if (Util::isPrivateIp(ip))
 	{
 		SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_UPNP);
 		log(STRING(CONN_DETECT_LOCAL), SEV_INFO, af);
@@ -98,25 +97,43 @@ void ConnectivityManager::detectConnection(int af)
 	}
 }
 
-void ConnectivityManager::testPorts()
+unsigned ConnectivityManager::testPorts()
 {
+	unsigned testFlags = 0;
 	bool force = false;
 	cs.lock();
 	std::swap(force, forcePortTest);
+	unsigned status = setupResult;
 	cs.unlock();
-	if (!force && !BOOLSETTING(AUTO_TEST_PORTS)) return;
-	int portTCP = SETTING(TCP_PORT);
-	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-	int portUDP = SETTING(UDP_PORT);
-	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
-	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
-	if (CryptoManager::TLSOk())
+	if (!force && !BOOLSETTING(AUTO_TEST_PORTS)) return 0;
+	if (status & STATUS_IPV4)
 	{
-		int portTLS = SETTING(TLS_PORT);
-		g_portTest.setPort(PortTest::PORT_TLS, portTLS);
-		mask |= 1<<PortTest::PORT_TLS;
+		int portTCP = SETTING(TCP_PORT);
+		g_portTest.setPort(PortTest::PORT_TCP, portTCP);
+		int portUDP = SETTING(UDP_PORT);
+		g_portTest.setPort(PortTest::PORT_UDP, portUDP);
+		int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
+		if (CryptoManager::TLSOk())
+		{
+			int portTLS = SETTING(TLS_PORT);
+			g_portTest.setPort(PortTest::PORT_TLS, portTLS);
+			mask |= 1<<PortTest::PORT_TLS;
+		}
+		if (g_portTest.runTest(mask))
+			testFlags |= RUNNING_TEST_IPV4;
 	}
-	g_portTest.runTest(mask);
+	if (!force && (status & STATUS_IPV6))
+	{
+		if (g_ipTest.runTest(IpTest::REQ_IP6))
+			testFlags |= RUNNING_TEST_IPV6;
+	}
+	if (testFlags)
+	{
+		cs.lock();
+		running |= testFlags;
+		cs.unlock();
+	}
+	return testFlags;
 }
 
 void ConnectivityManager::setupConnections(bool forcePortTest)
@@ -141,17 +158,23 @@ void ConnectivityManager::setupConnections(bool forcePortTest)
 	{
 		cs.lock();
 		running = 0;
+		setupResult = 0;
 		cs.unlock();
 		return;
 	}
+
+	cs.lock();
+	setupResult = 0;
+	if (hasIP4) setupResult |= STATUS_IPV4;
+	if (hasIP6) setupResult |= STATUS_IPV6;
+	cs.unlock();
 
 	dht::DHT::getInstance()->start();
 	SearchManager::getInstance()->start();
 	ConnectionManager::getInstance()->fireListenerStarted();
 	if (!(getRunningFlags() & (RUNNING_IPV4 | RUNNING_IPV6)))
 	{
-		testPorts();
-		if (!g_portTest.isRunning())
+		if (!testPorts())
 		{
 			cs.lock();
 			running = 0;
@@ -299,8 +322,7 @@ void ConnectivityManager::mappingFinished(const string& mapper, int af)
 			SettingsManager::set(af == AF_INET6 ? SettingsManager::MAPPER6 : SettingsManager::MAPPER, mapper);
 		if (!(runningFlags & (RUNNING_IPV4 | RUNNING_IPV6)))
 		{
-			testPorts();
-			if (!g_portTest.isRunning())
+			if (!testPorts())
 			{
 				cs.lock();
 				running = 0;
@@ -324,15 +346,16 @@ void ConnectivityManager::setPassiveMode(int af)
 	log(STRING(CONN_DETECT_NO_ACTIVE_MODE), SEV_WARNING, af);
 }
 
-void ConnectivityManager::processPortTestResult()
+void ConnectivityManager::processPortTestResult() noexcept
 {
 	if (g_portTest.isRunning()) return;
 	cs.lock();
-	if (!running)
+	if (!(running & RUNNING_TEST_IPV4))
 	{
 		cs.unlock();
 		return;
 	}
+	running &= ~RUNNING_TEST_IPV4;
 	bool autoDetectFlag = autoDetect[0];
 	autoDetect[0] = false;
 	unsigned runningFlags = running;
@@ -346,13 +369,33 @@ void ConnectivityManager::processPortTestResult()
 			setPassiveMode(AF_INET);
 		}
 	}
-	if (!(runningFlags & (RUNNING_IPV4 | RUNNING_IPV6)))
+	if (!(runningFlags & ~RUNNING_OTHER))
 	{
 		cs.lock();
 		running = 0;
 		cs.unlock();
 		log(getInformation(), SEV_INFO, 0);
 	}
+}
+
+void ConnectivityManager::processGetIpResult(int req) noexcept
+{
+	if (req != IpTest::REQ_IP6 || g_ipTest.isRunning(req)) return;
+	bool completed = false;
+	cs.lock();
+	if (!(running & RUNNING_TEST_IPV6))
+	{
+		cs.unlock();
+		return;
+	}
+	running &= ~RUNNING_TEST_IPV6;
+	if (!(running & ~RUNNING_OTHER))
+	{
+		running = 0;
+		completed = true;
+	}
+	cs.unlock();
+	if (completed) log(getInformation(), SEV_INFO, 0);
 }
 
 void ConnectivityManager::listenTCP(int af)

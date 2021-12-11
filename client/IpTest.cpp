@@ -108,10 +108,14 @@ void IpTest::on(Data, HttpConnection*, const uint8_t* data, size_t size) noexcep
 void IpTest::on(Failed, HttpConnection* conn, const string&) noexcept
 {
 	bool addListener = false;
+	int failedReqType = -1;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING && req[type].connID == conn->getID())
+		{
+			failedReqType = type;
 			req[type].state = STATE_FAILURE;
+		}
 	setConnectionUnusedL(conn);
 	if (!hasListener)
 	{
@@ -121,6 +125,8 @@ void IpTest::on(Failed, HttpConnection* conn, const string&) noexcept
 	cs.unlock();
 	if (addListener)
 		TimerManager::getInstance()->addListener(this);
+	if (failedReqType != -1)
+		ConnectivityManager::getInstance()->processGetIpResult(failedReqType);
 }
 
 void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
@@ -129,10 +135,12 @@ void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
 	memset(newReflectedAddress, 0, sizeof(newReflectedAddress));
 	// Reset connID to prevent on(Failed) from signalling the error
 	bool addListener = false;
+	int completedReqType = -1;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING && req[type].connID == conn->getID())
 		{
+			completedReqType = type;
 			req[type].state = STATE_FAILURE;
 			req[type].connID = 0;
 			req[type].reflectedAddress.clear();
@@ -178,9 +186,13 @@ void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
 	cs.unlock();
 	if (addListener)
 		TimerManager::getInstance()->addListener(this);
-	for (int type = 0; type < MAX_REQ; type++)
-		if (newReflectedAddress[type].type)
-			ConnectivityManager::getInstance()->setReflectedIP(newReflectedAddress[type]);
+	if (completedReqType != -1)
+	{
+		auto cm = ConnectivityManager::getInstance();
+		if (newReflectedAddress[completedReqType].type)
+			cm->setReflectedIP(newReflectedAddress[completedReqType]);
+		cm->processGetIpResult(completedReqType);
+	}
 }
 
 void IpTest::on(Second, uint64_t tick) noexcept
