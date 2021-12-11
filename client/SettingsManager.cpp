@@ -297,11 +297,11 @@ static const char* g_settingTags[] =
 	"SendExtJSON",
 	"SendDBParam",
 	"UseSaltPass",
+	"UseBotList",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
 	"MyInfoDelay",
-	"PSRDelay",
 
 	// Sharing
 	"AutoRefreshTime",
@@ -964,11 +964,11 @@ void SettingsManager::setDefaults()
 	setDefault(SEND_EXT_JSON, TRUE);
 	setDefault(SEND_DB_PARAM, TRUE);
 	setDefault(USE_SALT_PASS, TRUE);
+	setDefault(USE_BOT_LIST, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);
 	setDefault(MYINFO_DELAY, 35);
-	setDefault(PSR_DELAY, 30);
 
 	// Sharing (Ints)
 	setDefault(AUTO_REFRESH_TIME, 60);
@@ -1533,16 +1533,12 @@ void SettingsManager::loadOtherSettings()
 		auto cleanValue = value;\
 		boost::replace_all(cleanValue, " ", "");\
 		strSettings[key - STR_FIRST] = cleanValue;\
-		valueAdjusted = false;\
 	}
 
 bool SettingsManager::set(StrSetting key, const std::string& value)
 {
-	// [!] Please do not initialize valueAdjusted because when you make changes, you can quietly break logic,
-	// and so though the compiler will issue a warning of a potentially uninitialized variable.
-	bool valueAdjusted; // [+] IRainman
-	// [!]
-	
+	bool valueAdjusted = false;
+
 	switch (key)
 	{
 		case LOG_FORMAT_DOWNLOAD:
@@ -1595,36 +1591,30 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 					strSettings[key - STR_FIRST] = newValue;
 				}
 			}
-			valueAdjusted = false;
+			break;
 		}
-		break;
 		case BIND_ADDRESS:
+		case BIND_ADDRESS6:
 		case WEBSERVER_BIND_ADDRESS:
 		case URL_GET_IP:
 		case URL_GET_IP6:
 		case URL_DHT_BOOTSTRAP:
+		case URL_PORT_TEST:
 		{
 			string trimmedValue = value;
 			boost::algorithm::trim(trimmedValue);
 			strSettings[key - STR_FIRST] = trimmedValue;
-			valueAdjusted = false;
+			break;
 		}
-		break;
 		case DONT_BAN_PATTERN:
-		{
 			REPLACE_SPACES();
-		}
-		break;
+			break;
 		case AUTO_PRIORITY_PATTERNS:
-		{
 			REPLACE_SPACES();
-		}
-		break;
+			break;
 		case SKIPLIST_SHARE:
-		{
 			REPLACE_SPACES();
-		}
-		break;
+			break;
 		case NICK:
 			REDUCE_LENGTH(49); // [~] InfinitySky. 35 -> 49
 			break;
@@ -1642,12 +1632,10 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			string& path = strSettings[key - STR_FIRST];
 			path = value;
 			Util::appendPathSeparator(path);
-			valueAdjusted = false;
+			break;
 		}
-		break;
 		default:
 			strSettings[key - STR_FIRST] = value;
-			valueAdjusted = false;
 			break;
 			
 #undef REDUCE_LENGTH
@@ -1800,11 +1788,6 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MYINFO_DELAY:
 		{
 			VERIFY(0, 180);
-			break;
-		}
-		case PSR_DELAY:
-		{
-			VER_MIN(5);
 			break;
 		}
 		case POPUP_TIME:

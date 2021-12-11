@@ -1136,6 +1136,8 @@ void NmdcHub::lockParse(const string& aLine)
 				feat += " ExtJSON2";
 #endif
 			feat += " HubURL";
+			if (BOOLSETTING(USE_BOT_LIST))
+				feat += " BotList";
 			feat += " NickRule";
 			feat += " SearchRule";
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC

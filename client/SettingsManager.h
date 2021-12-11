@@ -272,11 +272,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEND_EXT_JSON,
 			SEND_DB_PARAM,
 			USE_SALT_PASS,
+			USE_BOT_LIST,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			MAX_HUB_USER_COMMANDS,
 			MYINFO_DELAY,
-			PSR_DELAY, // Unused, visible in UI
 
 			// Sharing (Ints)
 			AUTO_REFRESH_TIME,

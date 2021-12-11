@@ -31,15 +31,12 @@ static const DialogLayout::Item layoutItems[] =
 {
 	{ IDC_ADV_MISC, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_CAPTION_MAX_UC, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
-	{ IDC_PSR_DELAY_STR, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
 	{ IDC_RAW_TEXTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_MAX_UC, 0, UNSPEC, UNSPEC, 0, &align1 },
-	{ IDC_PSR_DELAY, 0, UNSPEC, UNSPEC, 0, &align1 }
+	{ IDC_MAX_UC, 0, UNSPEC, UNSPEC, 0, &align1 }
 };
 
 static const PropPage::Item items[] =
 {
-	{ IDC_PSR_DELAY, SettingsManager::PSR_DELAY, PropPage::T_INT },
 	{ IDC_MAX_UC, SettingsManager::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
 	{ IDC_RAW1_TEXT, SettingsManager::RAW1_TEXT, PropPage::T_STR },
 	{ IDC_RAW2_TEXT, SettingsManager::RAW2_TEXT, PropPage::T_STR },
@@ -56,6 +53,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
 	{ SettingsManager::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
 	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
+	{ SettingsManager::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },
 	{ 0, ResourceManager::Strings() }
 };
 

@@ -743,7 +743,6 @@
 #define IDC_PROTECT_OP                  1624
 #define IDC_ADV_MISC                    1625
 #define IDC_SPEED_UP_STR                1626
-#define IDC_PSR_DELAY_STR               1627
 #define IDC_TOP_UP_SPEED                1628
 #define IDC_STEALTHY_STYLE_ICO          1629
 #define IDC_OTHER                       1630
@@ -751,7 +750,6 @@
 #define IDC_STEALTHY_STYLE_ICO_SPEEDIGNORE 1632
 #define IDC_CAPTION_MAX_UC              1633
 #define IDC_MAX_UC                      1634
-#define IDC_PSR_DELAY                   1635
 #define IDC_POPUP_TYPE                  1638
 #define IDC_SHOW_JOINS                  1640
 #define IDC_CHANGE                      1641
