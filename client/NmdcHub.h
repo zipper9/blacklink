@@ -40,7 +40,7 @@ class NmdcHub : public Client, private Flags
 
 		int getType() const { return TYPE_NMDC; }
 		void hubMessage(const string& message, bool thirdPerson = false);
-		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false);
+		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
 		void password(const string& pwd, bool setPassword);
@@ -159,7 +159,7 @@ class NmdcHub : public Client, private Flags
 		void privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson);
 		void version()
 		{
-			send("$Version 1,0091|"); // TODO - ?
+			send("$Version 1,0091|");
 		}
 		void getNickList()
 		{
@@ -192,7 +192,7 @@ class NmdcHub : public Client, private Flags
 		void nickListParse(const string& param);
 		void opListParse(const string& param);
 		void toParse(const string& param);
-		void chatMessageParse(const string& aLine);
+		void chatMessageParse(const string& line);
 		void updateFromTag(Identity& id, const string& tag);
 		
 		void onConnected() noexcept override;

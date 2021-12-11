@@ -20,6 +20,9 @@
 #define DCPLUSPLUS_DCPP_CHAT_MESSAGE_H
 
 #include "forward.h"
+#include "typedefs.h"
+
+class Identity;
 
 class ChatMessage
 {
@@ -29,12 +32,12 @@ class ChatMessage
 		OnlineUserPtr to;
 		OnlineUserPtr replyTo;
 		bool thirdPerson;
-		
+
 		ChatMessage(const string& text, const OnlineUserPtr& from, const OnlineUserPtr& to = nullptr, const OnlineUserPtr& replyTo = nullptr, bool thirdPerson = false)
 			: text(text), from(from), to(to), replyTo(replyTo), thirdPerson(thirdPerson), timestamp(0)
 		{
 		}
-		
+
 		ChatMessage(const ChatMessage&) = delete;
 		ChatMessage& operator= (const ChatMessage&) = delete;
 
@@ -47,6 +50,8 @@ class ChatMessage
 		void translateMe();
 		void setTimestamp(time_t ts) { timestamp = ts; }
 		string format() const;
+		static string getExtra(const Identity& id);
+		void getUserParams(StringMap& params, const string& hubUrl, bool myMessage) const;
 
 	private:
 		time_t timestamp;

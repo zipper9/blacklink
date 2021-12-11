@@ -515,7 +515,7 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 {
 	if (getSuppressChatAndPM())
 		return;
-	
+
 	if (c.getParameters().empty())
 		return;
 	auto user = findUser(c.getFrom());
@@ -524,25 +524,32 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 		LogManager::message("Ignore message from SID = " + Util::toString(c.getFrom()) + " Message = " + c.getParam(0));
 		return;
 	}
+
+	bool isPM = false;
+	string pmSID;
+	if (c.getParam("PM", 1, pmSID))
+	{
+		if (user->getUser()->isMe()) return;
+		isPM = true;
+	}
+
 	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), user));
-	
-	string temp;
-	
 	message->thirdPerson = c.hasFlag("ME", 1);
-	
-	if (c.getParam("TS", 1, temp))
-		message->setTimestamp(Util::toInt64(temp));
-		
-	if (c.getParam("PM", 1, temp))  // add PM<group-cid> as well
+
+	string timestamp;
+	if (c.getParam("TS", 1, timestamp))
+		message->setTimestamp(Util::toInt64(timestamp));
+
+	if (isPM) // add PM<group-cid> as well
 	{
 		message->to = findUser(c.getTo());
 		if (!message->to)
 			return;
-			
-		message->replyTo = findUser(AdcCommand::toSID(temp));
+
+		message->replyTo = findUser(AdcCommand::toSID(pmSID));
 		if (!message->replyTo)
 			return;
-			
+
 		processIncomingPM(message);
 	}
 	else
@@ -1143,7 +1150,7 @@ void AdcHub::hubMessage(const string& message, bool thirdPerson)
 	send(cmd);
 }
 
-void AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson)
+void AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
 {
 	{
 		LOCK(csState);
@@ -1157,6 +1164,8 @@ void AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bo
 		cmd.addParam("ME", "1");
 	cmd.addParam("PM", getMySID());
 	send(cmd);
+
+	fireOutgoingPM(user, message, thirdPerson, automatic);
 }
 
 void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
@@ -1182,7 +1191,7 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 			{
 				if (i->second->getIdentity().getNick() == to)
 				{
-					privateMessage(i->second, cmd);
+					privateMessage(i->second, cmd, false, false);
 					return;
 				}
 			}

@@ -748,7 +748,7 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool fo
 	}
 }
 
-void ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson)
+void ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic)
 {
 	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 	OnlineUserPtr u;
@@ -761,9 +761,10 @@ void ClientManager::privateMessage(const HintedUser& user, const string& msg, bo
 	}
 	if (u)
 	{
-		u->getClientBase()->privateMessage(u, msg, thirdPerson);
+		u->getClientBase()->privateMessage(u, msg, thirdPerson, automatic);
 	}
 }
+
 void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)
 {
 	OnlineUserPtr ou;

@@ -27,6 +27,7 @@
 #include <boost/algorithm/string.hpp>
 
 static const size_t MAX_PM_FRAMES = 100;
+static const unsigned AWAY_MSG_COOLDOWN_TIME = 300000; // 5 minutes
 
 HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
 HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
@@ -35,7 +36,7 @@ PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
 
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
-	m_created(false), isOffline(false),
+	m_created(false), isOffline(false), awayMsgSendTime(0),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP)
 {
 	ctrlStatusCache.resize(1);
@@ -55,19 +56,12 @@ void PrivateFrame::doDestroyFrame()
 StringMap PrivateFrame::getFrameLogParams() const
 {
 	StringMap params;
-	params["hubNI"] = Util::toString(ClientManager::getHubNames(replyTo.user->getCID(), getHubHint()));
-	params["hubURL"] = Util::toString(ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
+	params["hubNI"] = ClientManager::getInstance()->getHubName(getHubHint());
+	params["hubURL"] = getHubHint();
 	params["userCID"] = replyTo.user->getCID().toBase32();
 	params["userNI"] = Text::fromT(replyToRealName);
 	params["myCID"] = ClientManager::getMyCID().toBase32();
 	return params;
-}
-
-void PrivateFrame::addMesageLogParams(StringMap& params, const Identity& from, const tstring& aLine, bool bThirdPerson, const tstring& extra)
-{
-	params["message"] = ChatMessage::formatNick(from.getNick(), bThirdPerson) + Text::fromT(aLine);
-	if (!extra.empty())
-		params["extra"] = Text::fromT(extra);
 }
 
 LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -145,9 +139,10 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		p = i->second;
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
 	}
-	if (!myMessage && Util::getAway())
+	if (!myMessage && Util::getAway() && !replyTo.isBotOrHub())
 	{
-		if (/*!(BOOLSETTING(NO_AWAYMSG_TO_BOTS) && */ !replyTo.isBotOrHub())
+		uint64_t tick = GET_TICK();
+		if (tick > p->awayMsgSendTime)
 		{
 			string awayMsg;
 			auto fm = FavoriteManager::getInstance();
@@ -161,8 +156,9 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 			StringMap params;
 			from.getParams(params, "user", false);
 			awayMsg = Util::getAwayMessage(awayMsg, params);
-				
+
 			p->sendMessage(Text::toT(awayMsg));
+			p->awayMsgSendTime = tick + AWAY_MSG_COOLDOWN_TIME;
 		}
 	}
 	return true;
@@ -271,6 +267,7 @@ void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& res
 	if (replyTo.user->isOnline())
 	{
 		sendMessage(fullMessageText);
+		awayMsgSendTime = GET_TICK() + AWAY_MSG_COOLDOWN_TIME;
 	}
 	else
 	{
@@ -310,7 +307,7 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 
 void PrivateFrame::sendMessage(const tstring& msg, bool thirdperson /*= false*/)
 {
-	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdperson);
+	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdperson, false);
 }
 
 LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -352,16 +349,18 @@ void PrivateFrame::addLine(const Identity& from, const bool myMessage, const boo
 			Create(WinUtil::g_mdiClient);
 	}
 	
-	tstring extra;
+	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, cf, extra);
-	
+
 	if (BOOLSETTING(LOG_PRIVATE_CHAT))
 	{
 		StringMap params = getFrameLogParams();
-		addMesageLogParams(params, from, line, thirdPerson, extra);
+		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
+		if (!extra.empty())
+			params["extra"] = " | " + extra;
 		LOG(PM, params);
 	}
-	
+
 	addStatus(TSTRING(LAST_CHANGE), false, false);
 	
 	if (BOOLSETTING(BOLD_PM))

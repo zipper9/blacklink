@@ -134,7 +134,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool sendAdcCommand(AdcCommand& c, const CID& to, const IpAddress& udpAddr, uint16_t udpPort);
 		static void resendMyInfo();
 		void connect(const HintedUser& user, const string& token, bool forcePassive);
-		static void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
+		static void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic);
 		static void userCommand(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		
 		static int getConnectivityMode(int af, int favHubMode);

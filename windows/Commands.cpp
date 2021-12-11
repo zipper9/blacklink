@@ -357,7 +357,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 	else if (stricmp(cmd.c_str(), _T("version")) == 0 || stricmp(cmd.c_str(), _T("ver")) == 0)
 	{
-		message = _T(APPNAME " " VERSION_STR " / " DCVERSIONSTRING);
+		message = _T(APPNAME " " VERSION_STR);
 	}
 	else if (stricmp(cmd.c_str(), _T("uptime")) == 0 || stricmp(cmd.c_str(), _T("ut")) == 0)
 	{
@@ -484,6 +484,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			Util::setAwayMessage(Text::fromT(param));
 			
 			StringMap sm;
+			sm["userNI"] = "<username>";
 			status = TSTRING(AWAY_MODE_ON) + _T(' ') + Text::toT(Util::getAwayMessage(Util::emptyString, sm));
 		}
 	}

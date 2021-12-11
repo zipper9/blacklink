@@ -180,6 +180,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		CContainedWindow ctrlChatContainer;
 
 		bool isOffline;
+		uint64_t awayMsgSendTime;
 
 		void updateTitle();
 		
@@ -202,8 +203,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void on(SettingsManagerListener::Repaint) override;
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
-		
-		void addMesageLogParams(StringMap& params, const Identity& from, const tstring& aLine, bool bThirdPerson, const tstring& extra);
 		StringMap getFrameLogParams() const;
 
 	public:

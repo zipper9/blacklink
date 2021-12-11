@@ -1698,7 +1698,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 
 void HubFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
-	tstring extra;
+	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxSmiles, cf, extra);
 	if (!ClientManager::isStartup())
 	{
@@ -1709,7 +1709,7 @@ void HubFrame::addLine(const Identity& from, const bool myMessage, const bool th
 		StringMap params;
 		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
 		if (!extra.empty())
-			params["extra"] = Text::fromT(extra);
+			params["extra"] = extra;
 		if (client)
 		{
 			client->getHubIdentity().getParams(params, "hub", false);

@@ -70,10 +70,11 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 			CHECKED,
 			WAITING
 		};
+
 		void setPMOpen(const UserPtr& user, bool flag);
 		bool checkPMOpen(const ChatMessage& pm, UserManager::PasswordStatus& passwordStatus);
-		bool checkOutgoingPM(const UserPtr& user);
-		PasswordStatus checkIncomingPM(const ChatMessage& pm, const string& password);
+		bool checkOutgoingPM(const UserPtr& user, bool automatic);
+		void addPMPassword(const UserPtr& user, const string& password);
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		void checkUser(const OnlineUserPtr& user) const;

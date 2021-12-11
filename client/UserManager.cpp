@@ -63,13 +63,11 @@ void UserManager::setPMOpen(const UserPtr& user, bool flag)
 
 bool UserManager::checkPMOpen(const ChatMessage& pm, UserManager::PasswordStatus& passwordStatus)
 {
+	passwordStatus = FIRST;
 	LOCK(csPM);
 	auto i = pmInfo.find(pm.replyTo->getUser());
 	if (i == pmInfo.end())
-	{
-		passwordStatus = FIRST;
 		return false;
-	}
 	auto& pmi = i->second;
 	if (pmi.flags & FLAG_PW_ACTIVITY)
 	{
@@ -80,36 +78,33 @@ bool UserManager::checkPMOpen(const ChatMessage& pm, UserManager::PasswordStatus
 			pmi.flags |= FLAG_GRANTED;
 			passwordStatus = CHECKED;
 		}
+		else
+			passwordStatus = WAITING;
 	}
 	return (pmi.flags & FLAG_OPEN) != 0;
 }
 
-UserManager::PasswordStatus UserManager::checkIncomingPM(const ChatMessage& pm, const string& password)
+void UserManager::addPMPassword(const UserPtr& user, const string& password)
 {
-	const UserPtr& user = pm.replyTo->getUser();
 	LOCK(csPM);
 	auto i = pmInfo.find(user);
 	if (i != pmInfo.end())
 	{
 		auto& pmi = i->second;
-		if (pmi.flags & FLAG_GRANTED) return GRANTED;
-		if (pm.text.find(pmi.password) != string::npos)
-		{
-			pmi.flags |= FLAG_GRANTED;
-			return CHECKED;
-		}
-		return WAITING;
+		dcassert(!(pmi.flags & FLAG_OPEN));
+		pmi.password = password;
+		pmi.flags |= FLAG_SENDING_REQUEST | FLAG_PW_ACTIVITY;
 	}
-	pmInfo.insert(make_pair(user, PMInfo{FLAG_SENDING_REQUEST | FLAG_PW_ACTIVITY, password}));
-	return FIRST;
+	else
+		pmInfo.insert(make_pair(user, PMInfo{FLAG_SENDING_REQUEST | FLAG_PW_ACTIVITY, password}));
 }
 
-bool UserManager::checkOutgoingPM(const UserPtr& user)
+bool UserManager::checkOutgoingPM(const UserPtr& user, bool automatic)
 {
 	LOCK(csPM);
 	auto i = pmInfo.find(user);
 	if (i == pmInfo.end())
-		return true;
+		return !automatic;
 
 	auto& flags = i->second.flags;
 	if (flags & FLAG_PW_ACTIVITY)
@@ -119,9 +114,9 @@ bool UserManager::checkOutgoingPM(const UserPtr& user)
 			flags ^= FLAG_SENDING_REQUEST;
 			return (flags & FLAG_OPEN) != 0;
 		}
-		flags |= FLAG_GRANTED;
+		if (!automatic) flags |= FLAG_GRANTED;
 	}
-	return true;
+	return !automatic || (flags & FLAG_OPEN) != 0;
 }
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK

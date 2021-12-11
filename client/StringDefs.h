@@ -940,7 +940,7 @@ enum Strings   // @DontAdd
 	REFRESH, // "&Refresh"
 	REFRESH_USER_LIST, // "Refresh user list"
 	REGEXP, // "RegExp"
-	REJECTED_PRIVATE_MESSAGE_FROM, // "Rejected private message from"
+	REJECTED_PRIVATE_MESSAGE_FROM, // "Ignored private message from"
 	RELIABILITY, // "Reliability"
 	REMAINED_ATTEMPTS, // "Remained attempts"
 	REMEMBER_SETTINGS_PAGE, // "Remember the page in the settings window"

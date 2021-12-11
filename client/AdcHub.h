@@ -29,13 +29,13 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 	public:
 		using Client::send;
 		using Client::connect;
-		
+
 		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 
 		int getType() const { return TYPE_ADC; }
 		void hubMessage(const string& message, bool thirdPerson = false);
-		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false);
+		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
 		void password(const string& pwd, bool setPassword);

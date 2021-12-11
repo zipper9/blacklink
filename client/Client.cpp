@@ -784,11 +784,11 @@ OnlineUserPtr Client::getUser(const UserPtr& aUser)
 }
 #endif
 
-bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* response)
+bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* response, bool automatic)
 {
 	if (isMe(message.replyTo))
 	{
-		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser())
+		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser(), automatic)
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		        || UploadManager::isBanReply(message.to->getUser())
 #endif
@@ -816,21 +816,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 		int uploadLimit;
 		bool isFav = FavoriteManager::getInstance()->getFavUserParam(message.replyTo->getUser(), flags, uploadLimit);
 		if (!isFav || (flags & FavoriteUser::FLAG_IGNORE_PRIVATE))
-		{
-			if (BOOLSETTING(LOG_IF_SUPPRESS_PMS))
-			{
-				string hubName = getHubName();
-				const string& hubUrl = getHubUrl();
-				if (hubName != hubUrl)
-				{
-					hubName += " (";
-					hubName += hubUrl;
-					hubName += ')';
-				}
-				LogManager::message(CSTRING_F(PM_IGNORED, message.replyTo->getIdentity().getNick() % hubName));
-			}
 			return false;
-		}
 	}
 	if (message.replyTo->getIdentity().isHub())
 	{
@@ -853,16 +839,14 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	auto pmFlags = FavoriteManager::getInstance()->getFlags(message.replyTo->getUser());
 	if (BOOLSETTING(PROTECT_PRIVATE) && !(pmFlags & (FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE)))
 	{
-		if (passwordStatus == UserManager::GRANTED) return true;
-		const string& password = SETTING(PM_PASSWORD);
-		switch (UserManager::getInstance()->checkIncomingPM(message, password))
+		switch (passwordStatus)
 		{
 			case UserManager::GRANTED:
 				return true;
-			case UserManager::WAITING:
-				return false;
 			case UserManager::FIRST:
 			{
+				const string& password = SETTING(PM_PASSWORD);
+				UserManager::getInstance()->addPMPassword(message.replyTo->getUser(), password);
 				if (response)
 				{
 					StringMap params;
@@ -875,16 +859,8 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 				}
 				return false;
 			}
-			case UserManager::CHECKED:
-			{
-				if (response) *response = SETTING(PM_PASSWORD_OK_HINT);
-				return true;
-			}
-			default: // Only for compiler.
-			{
-				dcassert(0);
+			default: // WAITING, CHECKED
 				return false;
-			}
 		}
 	}
 	else
@@ -918,28 +894,57 @@ void Client::logPM(const ChatMessage& message) const
 {
 	if (BOOLSETTING(LOG_PRIVATE_CHAT) && message.from && message.from->getUser())
 	{
-		const UserPtr& user = message.from->getUser();
+		const Identity& from = message.from->getIdentity();
+		bool myMessage = from.getUser()->isMe();
 		StringMap params;
-		params["hubNI"] = Util::toString(ClientManager::getHubNames(user->getCID(), hubURL));
-		params["hubURL"] = Util::toString(ClientManager::getHubs(user->getCID(), hubURL));
-		params["userNI"] = user->getLastNick();
-		params["myCID"] = ClientManager::getMyCID().toBase32();
-		params["message"] = message.text;
+		message.getUserParams(params, hubURL, myMessage);
+		params["message"] = ChatMessage::formatNick(from.getNick(), message.thirdPerson) + message.text;
+		const OnlineUserPtr& peer = myMessage ? message.to : message.replyTo;
+		string extra = ChatMessage::getExtra(peer->getIdentity());
+		if (!extra.empty())
+			params["extra"] = " | " + extra;
 		LOG(PM, params);
 	}
-	LogManager::speakStatusMessage(message.text);
 }
 
 void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message)
 {
 	string response;
 	OnlineUserPtr replyTo = message->replyTo;
-	if (isPrivateMessageAllowed(*message, &response))
+	if (isPrivateMessageAllowed(*message, &response, false))
 		fire(ClientListener::Message(), this, message);
 	else
+	{
 		logPM(*message);
+		if (BOOLSETTING(LOG_IF_SUPPRESS_PMS) && response.empty())
+		{
+			string hubName = getHubName();
+			const string& hubUrl = getHubUrl();
+			if (hubName != hubUrl)
+			{
+				hubName += " (";
+				hubName += hubUrl;
+				hubName += ')';
+			}
+			LogManager::message(CSTRING_F(PM_IGNORED, replyTo->getIdentity().getNick() % hubName));
+		}
+	}
 	if (!response.empty())
-		privateMessage(replyTo, response, true);
+		privateMessage(replyTo, response, true, true);
+}
+
+void Client::fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
+{
+	const OnlineUserPtr& me = getMyOnlineUser();
+
+	unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, me, user, me, thirdPerson));
+	if (!isPrivateMessageAllowed(*chatMessage, nullptr, automatic))
+	{
+		logPM(*chatMessage);
+		return;
+	}
+
+	fire(ClientListener::Message(), this, chatMessage);
 }
 
 bool Client::isInOperatorList(const string& userName) const

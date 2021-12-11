@@ -19,18 +19,21 @@
 #include "stdinc.h"
 #include "ChatMessage.h"
 #include "Util.h"
+#include "LocationUtil.h"
+#include "ClientManager.h"
+#include "SettingsManager.h"
 
 string ChatMessage::format() const
 {
 	dcassert(from);
 	string tmp;
-	
+
 	if (timestamp)
 	{
 		tmp += '[' + Util::getShortTimeString(timestamp) + "] ";
 	}
 	tmp += text;
-	
+
 	// Check all '<' and '[' after newlines as they're probably pastes...
 	size_t i = 0;
 	while ((i = tmp.find('\n', i)) != string::npos)
@@ -45,7 +48,7 @@ string ChatMessage::format() const
 		}
 		i++;
 	}
-	
+
 #ifdef _WIN32
 	return Text::toDOS(tmp);
 #else
@@ -60,4 +63,54 @@ void ChatMessage::translateMe()
 		thirdPerson = true;
 		text.erase(0, 4);
 	}
+}
+
+string ChatMessage::getExtra(const Identity& id)
+{
+	string result;
+	bool ipInChat = BOOLSETTING(IP_IN_CHAT);
+	int flags = 0;
+	if (BOOLSETTING(COUNTRY_IN_CHAT)) flags |= IPInfo::FLAG_COUNTRY;
+	if (BOOLSETTING(ISP_IN_CHAT)) flags |= IPInfo::FLAG_LOCATION;
+	if (ipInChat || flags)
+	{
+		IpAddress ip = id.getConnectIP();
+		if (Util::isValidIp(ip) && !id.isIPCached(ip.type))
+		{
+			if (ipInChat)
+				result += Util::printIpAddress(ip);
+			if (flags)
+			{
+				IPInfo ipInfo;
+				Util::getIpInfo(ip, ipInfo, flags);
+				if (flags & IPInfo::FLAG_COUNTRY)
+				{
+					if (!ipInfo.country.empty())
+					{
+						if (!result.empty()) result += " | ";
+						result += ipInfo.country;
+					}
+				}
+				if (flags & IPInfo::FLAG_LOCATION)
+				{
+					if (!ipInfo.location.empty())
+					{
+						if (!result.empty()) result += " | ";
+						result += ipInfo.location;
+					}
+				}
+			}
+		}
+	}
+	return result;
+}
+
+void ChatMessage::getUserParams(StringMap& params, const string& hubUrl, bool myMessage) const
+{
+	const OnlineUserPtr& ou = myMessage ? to : replyTo;
+	params["hubNI"] = ClientManager::getInstance()->getHubName(hubUrl);
+	params["hubURL"] = hubUrl;
+	params["userCID"] = ou->getUser()->getCID().toBase32();
+	params["userNI"] = ou->getIdentity().getNick();
+	params["myCID"] = ClientManager::getMyCID().toBase32();
 }

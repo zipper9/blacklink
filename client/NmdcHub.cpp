@@ -1408,24 +1408,21 @@ void NmdcHub::toParse(const string& param)
 	
 	unique_ptr<ChatMessage> message(new ChatMessage(unescape(msgText), findUser(fromNick), nullptr, user));
 	
-	//if (message.replyTo == nullptr || message.from == nullptr) [-] IRainman fix.
+	if (message->replyTo == nullptr)
 	{
-		if (message->replyTo == nullptr)
-		{
-			// Assume it's from the hub
-			message->replyTo = getUser(rtNick);
-			message->replyTo->getIdentity().setHub();
-		}
-		if (message->from == nullptr)
-		{
-			// Assume it's from the hub
-			message->from = getUser(fromNick);
-			message->from->getIdentity().setHub();
-		}
+		// Assume it's from the hub
+		message->replyTo = getUser(rtNick);
+		message->replyTo->getIdentity().setHub();
 	}
-	
+	if (message->from == nullptr)
+	{
+		// Assume it's from the hub
+		message->from = getUser(fromNick);
+		message->from->getIdentity().setHub();
+	}
+
 	message->to = getMyOnlineUser();
-	
+
 #if 0
 	if (message->to->getUser() == message->from->getUser() && message->from->getUser() == message->replyTo->getUser())
 	{
@@ -1439,30 +1436,30 @@ void NmdcHub::toParse(const string& param)
 	processIncomingPM(message);
 }
 
-void NmdcHub::onLine(const string& aLine)
+void NmdcHub::onLine(const string& line)
 {
-	if (aLine.empty())
+	if (line.empty())
 		return;
 		
-	if (aLine[0] != '$')
+	if (line[0] != '$')
 	{
-		chatMessageParse(aLine);
+		chatMessageParse(line);
 		return;
 	}
 	
 	string cmd;
 	string param;
-	string::size_type x = aLine.find(' ');
+	string::size_type x = line.find(' ');
 	int searchType = ST_NONE;
 	bool isMyInfo = false;
 	if (x == string::npos)
 	{
-		cmd = aLine.substr(1);
+		cmd = line.substr(1);
 	}
 	else
 	{
-		cmd = aLine.substr(1, x - 1);
-		param = toUtf8(aLine.substr(x + 1));
+		cmd = line.substr(1, x - 1);
+		param = toUtf8(line.substr(x + 1));
 		if (cmd.length() == 2 && cmd[0] == 'S')
 		{
 			if (cmd[1] == 'A')
@@ -1519,7 +1516,7 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "SR")
 	{
-		SearchManager::getInstance()->onSearchResult(aLine, getIp());
+		SearchManager::getInstance()->onSearchResult(line, getIp());
 	}
 	else if (cmd == "HubName")
 	{
@@ -1535,7 +1532,7 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "Lock")
 	{
-		lockParse(aLine); // aLine!
+		lockParse(line);
 	}
 	else if (cmd == "Hello")
 	{
@@ -1735,7 +1732,7 @@ void NmdcHub::onLine(const string& aLine)
 		send("$MyHubURL " + getHubUrl() + "|");
 	}
 	else
-		LogManager::message("Unknown command from hub " + getHubUrl() + ": " + aLine, false);
+		LogManager::message("Unknown command from hub " + getHubUrl() + ": " + line, false);
 	updateMyInfoState(isMyInfo);
 }
 
@@ -2243,7 +2240,7 @@ void NmdcHub::privateMessage(const string& nick, const string& myNick, const str
 	send(cmd);
 }
 
-void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson)
+void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
 {
 	if (getSuppressChatAndPM())
 		return;
@@ -2254,18 +2251,9 @@ void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, b
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
-	
+
 	privateMessage(user->getIdentity().getNick(), myNick, message, thirdPerson);
-	// Emulate a returning message...
-	// LOCK(cs); // !SMT!-fix: no data to lock
-	
-	const OnlineUserPtr& me = getMyOnlineUser();
-	
-	unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, me, user, me, thirdPerson));
-	if (!isPrivateMessageAllowed(*chatMessage, nullptr))
-		return;
-		
-	fire(ClientListener::Message(), this, chatMessage);
+	fireOutgoingPM(user, message, thirdPerson, automatic);
 }
 
 void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)

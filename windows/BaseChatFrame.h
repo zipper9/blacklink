@@ -58,7 +58,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 	public:
 		void createMessagePanel();
 		void destroyMessagePanel();
-		string getHubHint() const { return ctrlClient.getHubHint(); }
+		const string& getHubHint() const { return ctrlClient.getHubHint(); }
 
 	private:
 		void createChatCtrl();
@@ -116,23 +116,22 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 		tstring findTextPopup();
 		void findText(const tstring & needle) noexcept;
-		
+
 		virtual void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText) = 0;
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
-		
+
 		virtual void sendMessage(const tstring& msg, bool thirdperson = false) = 0;
-		virtual void addLine(const Identity& ou, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, tstring& extra);
 		virtual void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 
 		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& ou, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra);
 		void addSystemMessage(const tstring& line, CHARFORMAT2& cf);
-		
-		static tstring getIpCountry(const IpAddress& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
+
 		static TCHAR getChatRefferingToNick();
-		
+
 		void appendChatCtrlItems(OMenu& menu, bool isOp);
-		
+
 		void appendNickToChat(const tstring& nick);
 		void appendLogToChat(const string& path, const size_t linesCount);
 		virtual void readFrameLog() = 0;

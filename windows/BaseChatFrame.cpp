@@ -635,45 +635,6 @@ void BaseChatFrame::addSystemMessage(const tstring& line, CHARFORMAT2& cf)
 	addLine(_T("*** ") + line, 1, cf);
 }
 
-tstring BaseChatFrame::getIpCountry(const IpAddress& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat)
-{
-	tstring result;
-	if (Util::isValidIp(ip))
-	{
-		result = ts ? _T(" | ") : _T(" ");
-		if (ipInChat)
-			result += Util::printIpAddressT(ip);
-		if (countryInChat || locationInChat)
-		{
-			IPInfo ipInfo;
-			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
-			if (countryInChat)
-			{
-				if (!ipInfo.country.empty())
-				{
-					if (ipInChat) result += _T(" | ");
-					result += Text::toT(ipInfo.country);
-				}
-				else
-					countryInChat = false;
-			}				
-			if (locationInChat)
-			{
-				if (!ipInfo.location.empty())
-				{
-					if (ipInChat || countryInChat) result += _T(" | ");
-					result += Text::toT(ipInfo.location);
-				}
-				else
-					locationInChat = false;
-			}
-		}
-		if (!countryInChat && !locationInChat)
-			result += _T(" ");  // Fix Right Click Menu on IP without space after IP
-	}
-	return result;
-}
-
 void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
 {
 #ifdef _DEBUG
@@ -694,31 +655,27 @@ void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2
 	}
 }
 
-void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, tstring& extra)
+void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra)
 {
 	if (ctrlClient.IsWindow())
 	{
 		ctrlClient.adjustTextSize();
 	}
-	const bool ipInChat = BOOLSETTING(IP_IN_CHAT);
-	const bool countryInChat = BOOLSETTING(COUNTRY_IN_CHAT);
-	const bool ISPInChat = BOOLSETTING(ISP_IN_CHAT);
-	if (ipInChat || countryInChat || ISPInChat)
+	string additionalInfo;
+	if (showTimestamps) additionalInfo = Util::getShortTimeString();
+	extra = ChatMessage::getExtra(from);
+	if (!extra.empty())
 	{
-		IpAddress ip = from.getConnectIP();
-		if (ip.type && !from.isIPCached(ip.type))
-			extra = getIpCountry(ip, showTimestamps, ipInChat, countryInChat, ISPInChat);
+		if (!additionalInfo.empty()) additionalInfo += " | ";
+		additionalInfo += extra;
 	}
-	if (showTimestamps)
+	if (!additionalInfo.empty())
 	{
-		const ChatCtrl::Message message(&from, myMessage, thirdPerson, _T('[') + Text::toT(Util::getShortTimeString()) + extra + _T("] "), line, cf, true);
-		ctrlClient.appendText(message, maxSmiles);
+		additionalInfo.insert(0, "[");
+		additionalInfo += "] ";
 	}
-	else
-	{
-		const ChatCtrl::Message message(&from, myMessage, thirdPerson, !extra.empty() ? _T('[') + extra + _T("] ") : Util::emptyStringT, line, cf, true);
-		ctrlClient.appendText(message, maxSmiles);
-	}
+	const ChatCtrl::Message message(&from, myMessage, thirdPerson, Text::toT(additionalInfo), line, cf, true);
+	ctrlClient.appendText(message, maxSmiles);
 }
 
 LRESULT BaseChatFrame::onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)

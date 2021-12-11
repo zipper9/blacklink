@@ -102,7 +102,7 @@ namespace dht
 		void connect(const OnlineUserPtr& ou, const string& token, bool forcePassive);
 
 		/** Sends private message to online node */
-		void privateMessage(const OnlineUserPtr& ou, const string& message, bool thirdPerson);
+		void privateMessage(const OnlineUserPtr& ou, const string& message, bool thirdPerson, bool automatic);
 
 		/** Is DHT connected? */
 		bool isConnected() const;

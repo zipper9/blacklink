@@ -43,7 +43,7 @@ class ClientBase
 
 		ClientBase(const ClientBase&) = delete;
 		ClientBase& operator= (const ClientBase&) = delete;
-		
+
 	public:
 		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
 		virtual const string& getHubUrl() const = 0;
@@ -51,7 +51,7 @@ class ClientBase
 		virtual string getMyNick() const = 0;
 		virtual bool isOp() const = 0;
 		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
-		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0;
+		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
 		virtual int getType() const = 0;
 		virtual void dumpUserInfo(const string& userReport) = 0;
 };
@@ -83,7 +83,7 @@ class Client : public ClientBase,
 		virtual void connect();
 		virtual void disconnect(bool graceless);
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
-		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false) = 0;
+		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
 		unsigned searchInternal(const SearchParamToken& sp);
@@ -231,10 +231,11 @@ class Client : public ClientBase,
 		}
 
 	protected:
-		bool isPrivateMessageAllowed(const ChatMessage& message, string* response);
+		bool isPrivateMessageAllowed(const ChatMessage& message, string* response, bool automatic);
 		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
 		void logPM(const ChatMessage& message) const;
 		void processIncomingPM(std::unique_ptr<ChatMessage>& message);
+		void fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
 
 	private:
 		struct CFlyFloodCommand

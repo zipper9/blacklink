@@ -815,7 +815,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
 	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
 	{
-		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds), false);
+		ClientManager::privateMessage(hintedUser, STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds), true, true);
 	}
 	if (notifyUser)
 		ClientManager::getInstance()->connect(hintedUser, token, false);
@@ -833,7 +833,7 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
 	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
 	{
-		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_REMOVED_MSG), false);
+		ClientManager::privateMessage(hintedUser, STRING(SLOT_REMOVED_MSG), true, true);
 	}
 }
 
