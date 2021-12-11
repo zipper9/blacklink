@@ -172,6 +172,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 				bool isOnline() const { return online; }
 				const string& getHubUrl() const { return hubUrl; }
 				const string& getSecureHubUrl() const { return secureHubUrl; }
+				const string& getKeyPrint() const { return keyPrint; }
 				bool isFavorite() const { return favorite; }
 				void setFavorite(bool flag) { favorite = flag; }
 				int getCountryIndex() const { return countryIndex; }
@@ -179,6 +180,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			private:
 				string hubUrl;
 				string secureHubUrl;
+				string keyPrint;
 				tstring text[COLUMN_LAST];
 				int countryIndex;
 				int users;

@@ -2503,7 +2503,7 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			r.setServer(formattedUrl);
 			r.setOpenTab("+");
 			FavoriteManager::getInstance()->addRecent(r);
-			HubFrame::openHubWindow(formattedUrl);
+			HubFrame::openHubWindow(formattedUrl, Util::getQueryParam(query, "kp"));
 		}
 	}
 	return 0;

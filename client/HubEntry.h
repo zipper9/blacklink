@@ -44,19 +44,26 @@ class HubEntry
 {
 	public:
 		typedef vector<HubEntry> List;
-		
+
+		static bool checkKeyPrintFormat(const string& kp)
+		{
+			if (!(kp.length() == 52 + 7 && kp.compare(0, 7, "SHA256/", 7) == 0)) return false;
+			uint8_t dst[32];
+			bool error;
+			Encoder::fromBase32(kp.c_str() + 7, dst, sizeof(dst), &error);
+			return !error;
+		}
+
 		HubEntry() : reliability(0), shared(0), minShare(0), users(0), minSlots(0), maxHubs(0), maxUsers(0)
 		{
 		}
-		
+
 		HubEntry(const string& name, const string& server, const string& description, const string& users, const string& country,
 		         const string& shared, const string& minShare, const string& minSlots, const string& maxHubs, const string& maxUsers,
 		         const string& reliability, const string& rating, const string& encoding,
 				 const string& secureUrl, const string& website, const string& email,
 				 const string& software, const string& network) :
 			name(name),
-			server(Util::formatDchubUrl(server)),
-			secureUrl(Util::formatDchubUrl(secureUrl)),
 			description(description), country(country),
 			rating(rating), reliability((float) Util::toDouble(reliability) / 100.0f),
 			shared(Util::toInt64(shared)), minShare(Util::toInt64(minShare)),
@@ -65,14 +72,36 @@ class HubEntry
 			encoding(encoding), website(website), email(email),
 			software(software), network(network)
 		{
+			string proto, host, path, query, fragment, kp;
+			uint16_t port;
+			if (!server.empty())
+			{
+				Util::decodeUrl(server, proto, host, port, path, query, fragment);
+				this->server = Util::formatDchubUrl(proto, host, port);
+				kp = Util::getQueryParam(query, "kp");
+				if (!kp.empty() && checkKeyPrintFormat(kp))
+					keyPrint = std::move(kp);
+			}
+			if (!secureUrl.empty())
+			{
+				Util::decodeUrl(secureUrl, proto, host, port, path, query, fragment);
+				this->secureUrl = Util::formatDchubUrl(proto, host, port);
+				if (keyPrint.empty())
+				{
+					kp = Util::getQueryParam(query, "kp");
+					if (!kp.empty() && checkKeyPrintFormat(kp))
+						keyPrint = std::move(kp);
+				}
+			}
 		}
-		
+
 		GETSET(string, name, Name);
 		GETSET(string, server, Server);
+		GETSET(string, keyPrint, KeyPrint);
 		GETSET(string, description, Description);
 		GETSET(string, country, Country);
 		GETSET(string, rating, Rating);
-		
+
 		GETSET(float, reliability, Reliability);
 		GETSET(int64_t, shared, Shared);
 		GETSET(int64_t, minShare, MinShare);
@@ -116,17 +145,18 @@ class FavoriteHubEntry
 		{
 			return (!nick.empty() || !useDefault) ? nick : SETTING(NICK);
 		}
-		
+
 		void setNick(const string& newNick)
 		{
 			nick = newNick;
 		}
-		
+
 		GETSET(string, userDescription, UserDescription);
 		GETSET(string, awayMsg, AwayMsg);
 		GETSET(string, email, Email);
 		GETSET(string, name, Name);
 		GETSET(string, server, Server);
+		GETSET(string, keyPrint, KeyPrint);
 		GETSET(string, description, Description);
 		GETSET(string, password, Password);
 		GETSET(string, headerOrder, HeaderOrder);
@@ -158,7 +188,7 @@ class FavoriteHubEntry
 		GETSET(string, clientVersion, ClientVersion);
 		GETSET(bool, overrideId, OverrideId);
 		GETSET(CID, shareGroup, ShareGroup);
-		
+
 		GETSET(uint32_t, searchInterval, SearchInterval);
 		GETSET(uint32_t, searchIntervalPassive, SearchIntervalPassive);
 		GETSET(int, encoding, Encoding);
@@ -210,7 +240,7 @@ class RecentHubEntry
 {
 	public:
 		typedef vector<RecentHubEntry*> List;
-		
+
 		explicit RecentHubEntry() : name("*"),
 			description("*"),
 			users("*"),
@@ -220,7 +250,7 @@ class RecentHubEntry
 			autoopen(false),
 			redirect(false) {}
 		~RecentHubEntry() { }
-		
+
 		GETSET(string, name, Name);
 		GETSET(string, server, Server);
 		GETSET(string, description, Description);

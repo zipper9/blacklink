@@ -69,29 +69,29 @@ ClientManager::~ClientManager()
 
 ClientBasePtr ClientManager::getClient(const string& hubURL)
 {
-	dcassert(hubURL == Text::toLower(hubURL));
 	string scheme, address, file, query, fragment;
 	uint16_t port;
 	Util::decodeUrl(hubURL, scheme, address, port, file, query, fragment);
+	string formattedUrl = Util::formatDchubUrl(scheme, address, port);
 	int protocol = Util::getHubProtocol(scheme);
 	ClientBasePtr cb;
 	if (protocol == Util::HUB_PROTOCOL_ADC)
 	{
-		cb = AdcHub::create(hubURL, address, port, false);
+		cb = AdcHub::create(formattedUrl, address, port, false);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_ADCS)
 	{
-		cb = AdcHub::create(hubURL, address, port, true);
+		cb = AdcHub::create(formattedUrl, address, port, true);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_NMDCS)
 	{
-		cb = NmdcHub::create(hubURL, address, port, true);
+		cb = NmdcHub::create(formattedUrl, address, port, true);
 	}
 	else
 	{
-		cb = NmdcHub::create(hubURL, address, port, false);
+		cb = NmdcHub::create(formattedUrl, address, port, false);
 	}
-	
+
 	Client* c = static_cast<Client*>(cb.get());
 	if (!query.empty())
 	{
@@ -106,7 +106,7 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 		WRITE_LOCK(*g_csClients);
 		g_clients.insert(make_pair(c->getHubUrl(), cb));
 	}
-	
+
 	c->addListener(this);
 	c->initDefaultUsers();
 	return cb;

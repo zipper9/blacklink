@@ -54,6 +54,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		{
 			string server;
 			string name;
+			string keyPrint;
 			const string* rawCommands = nullptr;
 			int encoding = 0;
 			int windowPosX = 0;
@@ -188,7 +189,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void followRedirect();
 		
 		static HubFrame* openHubWindow(const Settings& cs);
-		static HubFrame* openHubWindow(const string& server);
+		static HubFrame* openHubWindow(const string& server, const string& keyPrint = Util::emptyString);
 		static HubFrame* findHubWindow(const string& server);
 		static void resortUsers();
 		static void closeDisconnected();

@@ -123,7 +123,7 @@ class Client : public ClientBase,
 		bool isSecure() const;
 		bool isTrusted() const;
 		string getCipherName() const;
-		vector<uint8_t> getKeyprint() const;
+		vector<uint8_t> getCertificateHash() const;
 		
 		bool isOp() const
 		{
@@ -380,6 +380,7 @@ class Client : public ClientBase,
 			hubOnlineUser.reset();
 		}
 		void initDefaultUsers();
+		const string& getKeyPrint() const { return keyprint; }
 
 	private:
 		bool overrideId;
@@ -462,7 +463,7 @@ class Client : public ClientBase,
 		virtual void onConnected() noexcept override;
 		virtual void onDataLine(const string&) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
-		
+
 		const string& getOpChat() const { return opChat; }
 		void setKeyPrint(const string& keyprint) { this->keyprint = keyprint; }
 

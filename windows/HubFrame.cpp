@@ -100,7 +100,9 @@ HubFrame::HubFrame(const Settings& cs) :
 	}
 	else
 	{
-		baseClient = ClientManager::getInstance()->getClient(serverUrl);
+		string url = serverUrl;
+		if (!cs.keyPrint.empty()) url += "?kp=" + cs.keyPrint;
+		baseClient = ClientManager::getInstance()->getClient(url);
 		client = static_cast<Client*>(baseClient.get());
 		client->setName(cs.name);
 		if (cs.rawCommands) client->setRawCommands(cs.rawCommands);
@@ -399,10 +401,11 @@ HubFrame* HubFrame::openHubWindow(const Settings& cs)
 	return frm;
 }
 
-HubFrame* HubFrame::openHubWindow(const string& server)
+HubFrame* HubFrame::openHubWindow(const string& server, const string& keyPrint)
 {
 	Settings cs;
 	cs.server = server;
+	cs.keyPrint = keyPrint;
 	return openHubWindow(cs);
 }
 
@@ -646,6 +649,7 @@ void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
 	entry.setServer(serverUrl);
 	entry.setName(client->getHubName());
 	entry.setDescription(client->getHubDescription());
+	entry.setKeyPrint(client->getKeyPrint());
 	entry.setAutoConnect(autoConnect);
 	if (client->getType() == ClientBase::TYPE_NMDC) entry.setEncoding(client->getEncoding());
 	string user, password;

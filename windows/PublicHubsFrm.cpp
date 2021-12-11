@@ -304,6 +304,7 @@ LRESULT PublicHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 		e.setName(Text::fromT(data->getText(COLUMN_NAME)));
 		e.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
 		e.setServer(server);
+		e.setKeyPrint(data->getKeyPrint());
 		if (!Util::isAdcHub(server))
 			e.setEncoding(Text::charsetFromString(Text::fromT(data->getText(COLUMN_ENCODING))));
 		if (fm->addFavoriteHub(e, false)) save = true;
@@ -472,6 +473,7 @@ void PublicHubsFrame::openHub(int ind)
 	string encoding = Text::fromT(data->getText(COLUMN_ENCODING));
 	HubFrame::Settings cs;
 	cs.server = server;
+	cs.keyPrint = data->getKeyPrint();
 	cs.encoding = Text::charsetFromString(encoding);
 	HubFrame::openHubWindow(cs);
 }
@@ -1030,8 +1032,12 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 			const int column = ctrlHubs.findColumn(cd->iSubItem);
 			if (column == COLUMN_COUNTRY)
 			{
-				uint16_t code = getCountryCode(data->getCountryIndex());
-				CustomDrawHelpers::drawCountry(customDrawState, cd, code, data->getText(COLUMN_COUNTRY));
+				const tstring& country = data->getText(COLUMN_COUNTRY);
+				if (!country.empty())
+				{
+					uint16_t code = getCountryCode(data->getCountryIndex());
+					CustomDrawHelpers::drawCountry(customDrawState, cd, code, country);
+				}
 				return CDRF_SKIPDEFAULT;
 			}
 			CDCHandle(cd->nmcd.hdc).SelectFont(column == 0 && data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
@@ -1095,6 +1101,7 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 	text[COLUMN_EMAIL] = Text::toT(hub.getEmail());
 	text[COLUMN_SOFTWARE] = Text::toT(hub.getSoftware());
 	text[COLUMN_NETWORK] = Text::toT(hub.getNetwork());
+	keyPrint = hub.getKeyPrint();
 	countryIndex = getCountryByName(country);
 	users = hub.getUsers();
 	shared = hub.getShared();

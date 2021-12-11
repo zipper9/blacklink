@@ -22,6 +22,7 @@
 #include "FavHubProperties.h"
 #include "KnownClients.h"
 #include "DialogLayout.h"
+#include <boost/algorithm/string/trim.hpp>
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -32,6 +33,7 @@ static const WinUtil::TextItem textsName[] =
 	{ IDC_FH_NAME,                  ResourceManager::HUB_NAME                        },
 	{ IDC_FH_ADDRESS,               ResourceManager::HUB_ADDRESS                     },
 	{ IDC_FH_HUB_DESC,              ResourceManager::DESCRIPTION                     },
+	{ IDC_CAPTION_KEYPRINT,         ResourceManager::HUB_KEYPRINT                    },
 	{ IDC_FAVGROUP,                 ResourceManager::GROUP                           },
 	{ 0,                            ResourceManager::Strings()                       }
 };
@@ -223,15 +225,29 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(proto)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
 		}
-	
+
 		if (host.empty())
 		{
 			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
 		}
 
+		WinUtil::getWindowText(tabName.ctrlKeyPrint, buf);
+		string keyPrint = Text::fromT(buf);
+		boost::trim(keyPrint);
+		if (keyPrint.empty())
+		{
+			keyPrint = Util::getQueryParam(query, "kp");
+			boost::trim(keyPrint);
+		}
+		if (!keyPrint.empty() && !HubEntry::checkKeyPrintFormat(keyPrint))
+		{
+			MessageBox(CTSTRING(INVALID_KEYPRINT), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+			return 0;
+		}
+
 		url = Util::formatDchubUrl(proto, host, port);
-		
+
 		if (tabName.addressChanged && FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
 		{
 			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
@@ -254,12 +270,13 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		}
 
 		entry->setServer(url);
-		
+		entry->setKeyPrint(keyPrint);
+
 		WinUtil::getWindowText(tabName.ctrlName, buf);
 		string name = Text::fromT(buf);
 		if (name.empty()) name = host;
 		entry->setName(name);
-		
+
 		WinUtil::getWindowText(tabName.ctrlDesc, buf);
 		entry->setDescription(Text::fromT(buf));
 		
@@ -366,17 +383,20 @@ LRESULT FavoriteHubTabName::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 
 	ctrlName.Attach(GetDlgItem(IDC_HUBNAME));
 	ctrlName.SetWindowText(Text::toT(entry->getName()).c_str());
-	
+
 	ctrlDesc.Attach(GetDlgItem(IDC_HUBDESCR));
 	ctrlDesc.SetWindowText(Text::toT(entry->getDescription()).c_str());
 
 	ctrlAddress.Attach(GetDlgItem(IDC_HUBADDR));
 	ctrlAddress.SetWindowText(Text::toT(entry->getServer()).c_str());
-	
+
+	ctrlKeyPrint.Attach(GetDlgItem(IDC_KEYPRINT));
+	ctrlKeyPrint.SetWindowText(Text::toT(entry->getKeyPrint()).c_str());
+
 	ctrlGroup.Attach(GetDlgItem(IDC_FAVGROUP_BOX));
 	ctrlGroup.AddString(_T("---"));
 	int selIndex = 0;
-	
+
 	{
 		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
 		const FavHubGroups& favHubGroups = lock.getFavHubGroups();

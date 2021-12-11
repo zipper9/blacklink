@@ -1150,6 +1150,7 @@
     <Image Include="res\UserBanOff.ico" />
     <Image Include="res\UserOff.ico" />
     <Image Include="res\Users.png" />
+    <Image Include="res\zz.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />

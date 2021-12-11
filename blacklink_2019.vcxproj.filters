@@ -1150,6 +1150,7 @@
     <Image Include="res\favorite.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="res\zz.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />

@@ -320,6 +320,8 @@
 #define IDC_REMOVEALL                   1160
 #define IDC_NATT                        1161
 #define IDC_AUTO_TEST_PORTS             1162
+#define IDC_KEYPRINT                    1163
+#define IDC_CAPTION_KEYPRINT            1164
 #define IDC_SOCKS_SERVER                1165
 #define IDC_SOCKS_PORT                  1166
 #define IDC_SOCKS_USER                  1167

@@ -260,6 +260,9 @@ void Client::reloadSettings(bool updateNick)
 			fakeShareSize = -1;
 			fakeShareFiles = -1;
 		}
+
+		const string& kp = hub->getKeyPrint();
+		if (!kp.empty()) setKeyPrint(kp);
 	}
 	else
 	{
@@ -397,7 +400,7 @@ void Client::onConnected() noexcept
 			{
 				state = STATE_DISCONNECTED;
 				csState.unlock();
-				fire(ClientListener::ClientFailed(), this, "Keyprint mismatch");
+				fire(ClientListener::ClientFailed(), this, STRING(KEYPRINT_MISMATCH));
 				return;
 			}
 		}
@@ -449,7 +452,7 @@ string Client::getCipherName() const
 	return clientSock ? clientSock->getCipherName() : Util::emptyString;
 }
 
-vector<uint8_t> Client::getKeyprint() const
+vector<uint8_t> Client::getCertificateHash() const
 {
 	LOCK(csState);
 	return clientSock ? clientSock->getKeyprint() : Util::emptyByteVector;

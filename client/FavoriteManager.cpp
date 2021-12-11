@@ -890,13 +890,13 @@ void FavoriteManager::saveFavorites()
 	try
 	{
 		SimpleXML xml;
-		
+
 		xml.addTag("Favorites");
 		xml.stepIn();
-		
+
 		xml.addTag("Hubs");
 		xml.stepIn();
-		
+
 		{
 			READ_LOCK(*csHubs);
 			for (auto i = favHubGroups.cbegin(), iend = favHubGroups.cend(); i != iend; ++i)
@@ -905,82 +905,86 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("Name", i->first);
 				xml.addChildAttrib("Private", i->second.priv);
 			}
-			for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
+			for (const FavoriteHubEntry* e : favoriteHubs)
 			{
+				string url = e->getServer();
+				const string& kp = e->getKeyPrint();
+				if (!kp.empty())
+					url += "?kp=" + kp;
 				xml.addTag("Hub");
-				xml.addChildAttrib("Name", (*i)->getName());
-				xml.addChildAttrib("Connect", (*i)->getAutoConnect());
-				xml.addChildAttrib("Description", (*i)->getDescription());
-				xml.addChildAttribIfNotEmpty("Nick", (*i)->getNick(false));
-				xml.addChildAttribIfNotEmpty("Password", (*i)->getPassword());
-				xml.addChildAttrib("Server", (*i)->getServer());
-				xml.addChildAttribIfNotEmpty("UserDescription", (*i)->getUserDescription());
-				if (!Util::isAdcHub((*i)->getServer()))
+				xml.addChildAttrib("Name", e->getName());
+				xml.addChildAttrib("Connect", e->getAutoConnect());
+				xml.addChildAttrib("Description", e->getDescription());
+				xml.addChildAttribIfNotEmpty("Nick", e->getNick(false));
+				xml.addChildAttribIfNotEmpty("Password", e->getPassword());
+				xml.addChildAttrib("Server", url);
+				xml.addChildAttribIfNotEmpty("UserDescription", e->getUserDescription());
+				if (!Util::isAdcHub(e->getServer()))
 				{
-					string encoding = Text::charsetToString((*i)->getEncoding());
+					string encoding = Text::charsetToString(e->getEncoding());
 					if (!encoding.empty())
 						xml.addChildAttrib("Encoding", encoding);
 				}
-				const CID& shareGroup = (*i)->getShareGroup();
-				if ((*i)->getHideShare())
+				const CID& shareGroup = e->getShareGroup();
+				if (e->getHideShare())
 					xml.addChildAttrib("HideShare", true);
 				else if (!shareGroup.isZero())
 					xml.addChildAttrib("ShareGroup", shareGroup.toBase32());
-				xml.addChildAttribIfNotEmpty("AwayMsg", (*i)->getAwayMsg());
-				xml.addChildAttribIfNotEmpty("Email", (*i)->getEmail());
-				xml.addChildAttrib("WindowPosX", (*i)->getWindowPosX());
-				xml.addChildAttrib("WindowPosY", (*i)->getWindowPosY());
-				xml.addChildAttrib("WindowSizeX", (*i)->getWindowSizeX());
-				xml.addChildAttrib("WindowSizeY", (*i)->getWindowSizeY());
-				xml.addChildAttrib("WindowType", (*i)->getWindowType());
-				xml.addChildAttrib("ChatUserSplitSize", (*i)->getChatUserSplit());
-				if ((*i)->getShowJoins())
+				xml.addChildAttribIfNotEmpty("AwayMsg", e->getAwayMsg());
+				xml.addChildAttribIfNotEmpty("Email", e->getEmail());
+				xml.addChildAttrib("WindowPosX", e->getWindowPosX());
+				xml.addChildAttrib("WindowPosY", e->getWindowPosY());
+				xml.addChildAttrib("WindowSizeX", e->getWindowSizeX());
+				xml.addChildAttrib("WindowSizeY", e->getWindowSizeY());
+				xml.addChildAttrib("WindowType", e->getWindowType());
+				xml.addChildAttrib("ChatUserSplitSize", e->getChatUserSplit());
+				if (e->getShowJoins())
 					xml.addChildAttrib("ShowJoins", true);
-				if ((*i)->getExclChecks())
+				if (e->getExclChecks())
 					xml.addChildAttrib("ExclChecks", true);
-				if ((*i)->getExclusiveHub())
+				if (e->getExclusiveHub())
 					xml.addChildAttrib("ExclusiveHub", true);
-				if ((*i)->getSuppressChatAndPM())
+				if (e->getSuppressChatAndPM())
 					xml.addChildAttrib("SuppressChatAndPM", true);
-				if ((*i)->getHideUserList())
+				if (e->getHideUserList())
 					xml.addChildAttrib("HideUserList", true);
-				if ((*i)->getSwapPanels())
+				if (e->getSwapPanels())
 					xml.addChildAttrib("SwapPanels", true);
-				xml.addChildAttrib("HeaderOrder", (*i)->getHeaderOrder());
-				xml.addChildAttrib("HeaderWidths", (*i)->getHeaderWidths());
-				xml.addChildAttrib("HeaderVisible", (*i)->getHeaderVisible());
-				xml.addChildAttrib("HeaderSort", (*i)->getHeaderSort());
-				xml.addChildAttrib("HeaderSortAsc", (*i)->getHeaderSortAsc());
-				const string* rawCommands = (*i)->getRawCommands();
+				xml.addChildAttrib("HeaderOrder", e->getHeaderOrder());
+				xml.addChildAttrib("HeaderWidths", e->getHeaderWidths());
+				xml.addChildAttrib("HeaderVisible", e->getHeaderVisible());
+				xml.addChildAttrib("HeaderSort", e->getHeaderSort());
+				xml.addChildAttrib("HeaderSortAsc", e->getHeaderSortAsc());
+				const string* rawCommands = e->getRawCommands();
 				xml.addChildAttribIfNotEmpty("RawOne", rawCommands[0]);
 				xml.addChildAttribIfNotEmpty("RawTwo", rawCommands[1]);
 				xml.addChildAttribIfNotEmpty("RawThree", rawCommands[2]);
 				xml.addChildAttribIfNotEmpty("RawFour", rawCommands[3]);
 				xml.addChildAttribIfNotEmpty("RawFive", rawCommands[4]);
-				int mode = (*i)->getMode();
+				int mode = e->getMode();
 				if (mode)
 					xml.addChildAttrib("Mode", mode);
-				xml.addChildAttribIfNotEmpty("IP", (*i)->getIP());
-				xml.addChildAttribIfNotEmpty("OpChat", (*i)->getOpChat());
-				uint32_t searchInterval = (*i)->getSearchInterval();
+				xml.addChildAttribIfNotEmpty("IP", e->getIP());
+				xml.addChildAttribIfNotEmpty("OpChat", e->getOpChat());
+				uint32_t searchInterval = e->getSearchInterval();
 				if (searchInterval)
 					xml.addChildAttrib("SearchInterval", searchInterval);
-				searchInterval = (*i)->getSearchIntervalPassive();
+				searchInterval = e->getSearchIntervalPassive();
 				if (searchInterval)
 					xml.addChildAttrib("SearchIntervalPassive", searchInterval);
-				xml.addChildAttribIfNotEmpty("ClientName", (*i)->getClientName());
-				xml.addChildAttribIfNotEmpty("ClientVersion", (*i)->getClientVersion());
-				if ((*i)->getOverrideId())
+				xml.addChildAttribIfNotEmpty("ClientName", e->getClientName());
+				xml.addChildAttribIfNotEmpty("ClientVersion", e->getClientVersion());
+				if (e->getOverrideId())
 					xml.addChildAttrib("OverrideId", true);
-				xml.addChildAttribIfNotEmpty("FakeShare", (*i)->getFakeShare());
-				int fakeFileCount = (*i)->getFakeFileCount();
+				xml.addChildAttribIfNotEmpty("FakeShare", e->getFakeShare());
+				int fakeFileCount = e->getFakeFileCount();
 				if (fakeFileCount > 0)
 					xml.addChildAttrib("FakeFiles", fakeFileCount);
-				int fakeClientStatus = (*i)->getFakeClientStatus();
+				int fakeClientStatus = e->getFakeClientStatus();
 				if (fakeClientStatus)
 					xml.addChildAttrib("FakeClientStatus", fakeClientStatus);
-				xml.addChildAttribIfNotEmpty("Group", (*i)->getGroup());
-				const auto& cs = (*i)->getConnectionStatus();
+				xml.addChildAttribIfNotEmpty("Group", e->getGroup());
+				const auto& cs = e->getConnectionStatus();
 				if (cs.status != ConnectionStatus::UNKNOWN)
 				{
 					xml.addChildAttrib("Status", (int) cs.status);
@@ -1025,7 +1029,7 @@ void FavoriteManager::saveFavorites()
 			}
 		}
 		xml.stepOut();
-		
+
 		xml.addTag("UserCommands");
 		xml.stepIn();
 		{
@@ -1045,7 +1049,7 @@ void FavoriteManager::saveFavorites()
 			}
 		}
 		xml.stepOut();
-		
+
 		//Favorite download to dirs
 		xml.addTag("FavoriteDirs");
 		xml.stepIn();
@@ -1060,7 +1064,7 @@ void FavoriteManager::saveFavorites()
 		}
 		xml.stepOut();
 		xml.stepOut();
-		
+
 		const string fname = getFavoritesFile();
 		const string tempFile = fname + ".tmp";
 		{
@@ -1217,21 +1221,27 @@ void FavoriteManager::load(SimpleXML& xml)
 		xml.resetCurrentChild();
 		while (xml.findChild("Hub"))
 		{
-			const bool isConnect = xml.getBoolChildAttrib("Connect");
-			const string currentServerUrl = Text::toLower(Util::formatDchubUrl(xml.getChildAttrib("Server")));
+			string currentServerUrl = xml.getChildAttrib("Server");
 #ifdef _DEBUG
 			LogManager::message("Load favorites item: " + currentServerUrl);
 #endif
+			uint16_t port = 0;
+			string proto, host, file, query, fragment;
+			Util::decodeUrl(currentServerUrl, proto, host, port, file, query, fragment);
+			if (host.empty()) continue;
+			currentServerUrl = Text::toLower(Util::formatDchubUrl(proto, host, port));
+
 			FavoriteHubEntry* e = new FavoriteHubEntry();
 			e->id = ++favHubId;
 			const string& name = xml.getChildAttrib("Name");
 			e->setName(name);
-				
-			e->setAutoConnect(isConnect);
+
+			e->setAutoConnect(xml.getBoolChildAttrib("Connect"));
 			const string& description = xml.getChildAttrib("Description");
 			const string& group = xml.getChildAttrib("Group");
 			e->setDescription(description);
 			e->setServer(currentServerUrl);
+			e->setKeyPrint(Util::getQueryParam(query, "kp"));
 			e->setSearchInterval(Util::toUInt32(xml.getChildAttrib("SearchInterval")));
 			e->setSearchIntervalPassive(Util::toUInt32(xml.getChildAttrib("SearchIntervalPassive")));
 			e->setHideUserList(xml.getBoolChildAttrib("HideUserList"));
