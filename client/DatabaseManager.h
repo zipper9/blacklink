@@ -169,7 +169,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		~DatabaseManager();
 		static void shutdown();
 
-		string getDBInfo(string& root);
+		string getDBInfo();
 		int64_t getDBSize() const { return dbSize; }
 		enum
 		{
@@ -198,7 +198,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 
 	private:
 		void deleteOldTransferHistoryL();
-		
+
 	public:
 		void errorDB(const string& text, int errorCode = SQLITE_ERROR);
 		void vacuum();
@@ -213,7 +213,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		void loadRegistry(DBRegistryMap& values, DBRegistryType type);
 		void saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues);
 		void clearRegistry(DBRegistryType type, int64_t tick);
-		
+
 		void setRegistryVarInt(DBRegistryType type, int64_t value);
 		int64_t getRegistryVarInt(DBRegistryType type);
 		void setRegistryVarString(DBRegistryType type, const string& value);
@@ -225,7 +225,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 			PG_DATA_IBLOCKLIST_COM = 3,
 			PG_DATA_MANUAL         = 64
 		};
-		
+
 		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
 		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
 		void removeManuallyBlockedIP(Ip4Address ip);

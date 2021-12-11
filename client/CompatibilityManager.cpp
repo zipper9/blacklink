@@ -641,12 +641,11 @@ string CompatibilityManager::generateGlobalMemoryStatusMessage()
 
 string CompatibilityManager::generateFullSystemStatusMessage()
 {
-	string root;
 	return
 	    getStartupInfo() +
 	    STRING(CURRENT_SYSTEM_STATE) + ":\r\n" + generateGlobalMemoryStatusMessage() +
 	    getIncompatibleSoftwareMessage() + "\r\n" +
-	    DatabaseManager::getInstance()->getDBInfo(root);
+	    DatabaseManager::getInstance()->getDBInfo();
 }
 
 string CompatibilityManager::generateNetworkStats()

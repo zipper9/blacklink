@@ -1104,6 +1104,11 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		localMessage = TSTRING(COMMAND_INVALID_ACTION);
 		return true;
 	}
+	else if (stricmp(cmd.c_str(), _T("dbinfo")) == 0)
+	{
+		localMessage = Text::toT(DatabaseManager::getInstance()->getDBInfo());
+		return true;
+	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	else if (stricmp(cmd.c_str(), _T("flushdb")) == 0)
 	{

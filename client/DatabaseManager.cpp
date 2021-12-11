@@ -112,7 +112,7 @@ bool DatabaseManager::safeAlter(const char* sql, bool verbose)
 	return false;
 }
 
-string DatabaseManager::getDBInfo(string& root)
+string DatabaseManager::getDBInfo()
 {
 	string message;
 	string path = Util::getConfigPath();
@@ -146,7 +146,7 @@ string DatabaseManager::getDBInfo(string& root)
 		uint64_t hashDbSize;
 		if (lmdb.getDBInfo(hashDbItems, hashDbSize))
 		{
-			string size = Util::formatExactSize(hashDbSize);
+			string size = Util::formatBytes(hashDbSize);
 			message += "  * ";
 			message += HashDatabaseLMDB::getDBPath();
 			message += " (";
@@ -183,8 +183,8 @@ void DatabaseManager::errorDB(const string& text, int errorCode)
 	if (!errorCallback)
 		return;
 
-	string root, message;
-	string dbInfo = getDBInfo(root);
+	string message;
+	string dbInfo = getDBInfo();
 	bool forceExit = false;	
 	
 	if (errorCode == SQLITE_READONLY)
@@ -203,6 +203,10 @@ void DatabaseManager::errorDB(const string& text, int errorCode)
 	else
 	if (errorCode == SQLITE_FULL)
 	{
+		string root = Util::getConfigPath();
+#ifdef _WIN32
+		root.erase(2);
+#endif
 		message = STRING_F(DATABASE_DISK_FULL, root);
 		message += "\n\n";
 		forceExit = true;
@@ -271,15 +275,14 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 				        + " Error: " +  Util::translateError());
 			}
 		}
-		
-		string root;
-		string dbInfo = getDBInfo(root);
+
+		string dbInfo = getDBInfo();
 		if (!dbInfo.empty())
 			LogManager::message(dbInfo, false);
 		const string l_thread_type = "sqlite3_threadsafe() = " + Util::toString(sqlite3_threadsafe());
 		LogManager::message(l_thread_type);
 		dcassert(sqlite3_threadsafe() >= 1);
-		
+
 		setPragma("page_size=4096");
 		if (g_DisableSQLJournal || BOOLSETTING(SQLITE_USE_JOURNAL_MEMORY))
 		{
@@ -321,28 +324,22 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		                              "cid blob primary key, nick text not null, last_ip text not null, message_count integer not null, pm_in integer not null, pm_out integer not null)");
 #endif
 
-		const int l_db_user_version = connection.executeint("PRAGMA user_version");
-		
-//		if (l_rev <= 379)
+		int userVersion = connection.executeint("PRAGMA user_version");
+
+		connection.executenonquery(
+			"CREATE TABLE IF NOT EXISTS fly_ignore(nick text PRIMARY KEY NOT NULL);");
+		connection.executenonquery(
+			"CREATE TABLE IF NOT EXISTS fly_registry(segment integer not null, key text not null,val_str text, val_number int64,tick_count int not null);");
+		try
 		{
-			connection.executenonquery(
-			    "CREATE TABLE IF NOT EXISTS fly_ignore(nick text PRIMARY KEY NOT NULL);");
+			connection.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_registry_key ON fly_registry(segment,key);");
 		}
-//     if (l_rev <= 381)
+		catch (const database_error&)
 		{
-			connection.executenonquery(
-			    "CREATE TABLE IF NOT EXISTS fly_registry(segment integer not null, key text not null,val_str text, val_number int64,tick_count int not null);");
-			try
-			{
-				connection.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_registry_key ON fly_registry(segment,key);");
-			}
-			catch (const database_error&)
-			{
-				connection.executenonquery("delete from fly_registry");
-				connection.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_registry_key ON fly_registry(segment,key);");
-			}
+			connection.executenonquery("delete from fly_registry");
+			connection.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_registry_key ON fly_registry(segment,key);");
 		}
-		
+
 		connection.executenonquery(
 		    "CREATE TABLE IF NOT EXISTS location_db.fly_p2pguard_ip(start_ip integer not null,stop_ip integer not null,note text,type integer);");
 		connection.executenonquery("CREATE INDEX IF NOT EXISTS location_db.i_fly_p2pguard_ip ON fly_p2pguard_ip(start_ip);");
@@ -355,9 +352,9 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		    
 		safeAlter("ALTER TABLE location_db.fly_location_ip add column location text");
 
-		connection.executenonquery("CREATE INDEX IF NOT EXISTS "
-		                              "location_db.i_fly_location_ip ON fly_location_ip(start_ip);");
-		                              
+		connection.executenonquery(
+			"CREATE INDEX IF NOT EXISTS location_db.i_fly_location_ip ON fly_location_ip(start_ip);");
+
 		connection.executenonquery("CREATE TABLE IF NOT EXISTS transfer_db.fly_transfer_file("
 		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,type int not null,day int64 not null,stamp int64 not null,"
 		                              "tth char(39),path text not null,nick text, hub text,size int64 not null,speed int,ip text, actual int64);");
@@ -365,30 +362,12 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 
 		safeAlter("ALTER TABLE transfer_db.fly_transfer_file add column actual int64");
 
-		if (l_db_user_version < 1)
-		{
-			connection.executenonquery("PRAGMA user_version=1");
-		}
-		if (l_db_user_version < 2)
-		{
-			// ”дал€ю уже на уровне конвертора файла.
-			// connection.executenonquery("delete from location_db.fly_p2pguard_ip where note like '%VimpelCom%'");
-			connection.executenonquery("PRAGMA user_version=2");
-		}
-		if (l_db_user_version < 3)
-		{
-			connection.executenonquery("PRAGMA user_version=3");
-		}
-		if (l_db_user_version < 4)
-		{
-			connection.executenonquery("PRAGMA user_version=4");
-		}
-		if (l_db_user_version < 5)
+		if (userVersion < 5)
 		{
 			deleteOldTransferHistoryL();
 			connection.executenonquery("PRAGMA user_version=5");
 		}
-		
+
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		if (!hasNewStatTables && (hasRatioTable || hasUserTable))
 			convertStatTables(hasRatioTable, hasUserTable);
