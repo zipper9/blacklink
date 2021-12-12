@@ -125,7 +125,7 @@ class FavoriteHubEntry
 		
 		FavoriteHubEntry() noexcept :
 			id(0),
-			autoConnect(false), encoding(Text::CHARSET_SYSTEM_DEFAULT),
+			autoConnect(false), encoding(Text::CHARSET_SYSTEM_DEFAULT), preferIP6(false),
 			windowposx(0), windowposy(0), windowsizex(0),
 			windowsizey(0), windowtype(0), chatUserSplit(0),
 			hideUserList(false),
@@ -188,10 +188,10 @@ class FavoriteHubEntry
 		GETSET(string, clientVersion, ClientVersion);
 		GETSET(bool, overrideId, OverrideId);
 		GETSET(CID, shareGroup, ShareGroup);
-
 		GETSET(uint32_t, searchInterval, SearchInterval);
 		GETSET(uint32_t, searchIntervalPassive, SearchIntervalPassive);
 		GETSET(int, encoding, Encoding);
+		GETSET(bool, preferIP6, PreferIP6);
 		GETSET(string, group, Group);
 
 		int getID() const { return id; }

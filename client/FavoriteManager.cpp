@@ -925,6 +925,8 @@ void FavoriteManager::saveFavorites()
 					if (!encoding.empty())
 						xml.addChildAttrib("Encoding", encoding);
 				}
+				if (e->getPreferIP6())
+					xml.addChildAttrib("PreferIP6", true);
 				const CID& shareGroup = e->getShareGroup();
 				if (e->getHideShare())
 					xml.addChildAttrib("HideShare", true);
@@ -1241,6 +1243,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			const string& group = xml.getChildAttrib("Group");
 			e->setDescription(description);
 			e->setServer(currentServerUrl);
+			e->setPreferIP6(xml.getBoolChildAttrib("PreferIP6"));
 			e->setKeyPrint(Util::getQueryParam(query, "kp"));
 			e->setSearchInterval(Util::toUInt32(xml.getChildAttrib("SearchInterval")));
 			e->setSearchIntervalPassive(Util::toUInt32(xml.getChildAttrib("SearchIntervalPassive")));

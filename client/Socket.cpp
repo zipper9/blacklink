@@ -704,6 +704,8 @@ bool Socket::waitAccepted(unsigned /*millis*/)
 	return true;
 }
 
+// af = AF_INET / AF_INET6 - return only IPv4 or IPv6
+// af = 0 - return both
 int Socket::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric) noexcept
 {
 	if (v4) *v4 = 0;
@@ -724,7 +726,7 @@ int Socket::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& 
 		Ip4Address ip4;
 		if (Util::parseIpAddress(ip4, host))
 		{
-			if (!(af == 0 || af == AF_INET)) return false;
+			if (!(af == 0 || af == AF_INET)) return 0;
 			if (v4) *v4 = ip4;
 			if (isNumeric) *isNumeric = true;
 			return RESOLVE_RESULT_V4;
@@ -795,25 +797,41 @@ int Socket::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& 
 	return outFlags;
 }
 
-bool Socket::resolveHost(IpAddressEx& addr, int af, const string& host, bool* isNumeric) noexcept
+bool Socket::resolveHost(IpAddressEx& addr, int type, const string& host, bool* isNumeric) noexcept
 {
+	int af = type & ~RESOLVE_TYPE_EXACT;
 	Ip4Address v4;
 	Ip6AddressEx v6;
-	int result = resolveHost(&v4, &v6, af, host, isNumeric);
+	int result = resolveHost(&v4, &v6, (type & RESOLVE_TYPE_EXACT) ? af : 0, host, isNumeric);
 	if (!result) return false;
-	// Prefer IPv4
-	if (result & RESOLVE_RESULT_V4)
+	unsigned flag[2];
+	if (af == AF_INET6)
 	{
-		addr.type = AF_INET;
-		addr.data.v4 = v4;
-		return true;
+		flag[0] = RESOLVE_RESULT_V6;
+		flag[1] = RESOLVE_RESULT_V4;
 	}
-	if (result & RESOLVE_RESULT_V6)
+	else
 	{
-		addr.type = AF_INET6;
-		addr.data.v6 = v6;
-		return true;
+		flag[0] = RESOLVE_RESULT_V4;
+		flag[1] = RESOLVE_RESULT_V6;
 	}
+	if (type & RESOLVE_TYPE_EXACT)
+		result &= ~flag[1];
+	for (int i = 0; i < 2; i++)
+		if (result & flag[i])
+		{
+			if (flag[i] == RESOLVE_RESULT_V4)
+			{
+				addr.type = AF_INET;
+				addr.data.v4 = v4;
+			}
+			else
+			{
+				addr.type = AF_INET6;
+				addr.data.v6 = v6;
+			}
+			return true;
+		}
 	return false;
 }
 

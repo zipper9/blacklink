@@ -6,7 +6,7 @@
 #include "Ip4Address.h"
 #include "Ip6Address.h"
 #include "LogManager.h"
-#include "SockDefs.h"
+#include "Socket.h"
 
 static const unsigned IP_TEST_TIMEOUT = 10000;
 
@@ -53,7 +53,7 @@ bool IpTest::runTest(int type) noexcept
 	conn->setMaxBodySize(0x10000);
 	conn->setMaxRedirects(0);
 	conn->setUserAgent(getHttpUserAgent());
-	conn->setIpVersion(type == REQ_IP4 ? AF_INET : AF_INET6);
+	conn->setIpVersion((type == REQ_IP4 ? AF_INET : AF_INET6) | Socket::RESOLVE_TYPE_EXACT);
 	conn->downloadFile(url);
 	return true;
 }

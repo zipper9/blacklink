@@ -304,10 +304,10 @@ class Client : public ClientBase,
 		GETSET(int, favMode, FavMode);
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
-		
-		bool isUserListLoaded() const { return userListLoaded; }
-
 		GETSET(int, encoding, Encoding);
+		GETSET(bool, preferIP6, PreferIP6);
+
+		bool isUserListLoaded() const { return userListLoaded; }
 
 		void setRegistered()
 		{

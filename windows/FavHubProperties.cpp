@@ -28,16 +28,6 @@ using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;
 
-static const WinUtil::TextItem textsName[] =
-{
-	{ IDC_FH_NAME,                  ResourceManager::HUB_NAME                        },
-	{ IDC_FH_ADDRESS,               ResourceManager::HUB_ADDRESS                     },
-	{ IDC_FH_HUB_DESC,              ResourceManager::DESCRIPTION                     },
-	{ IDC_CAPTION_KEYPRINT,         ResourceManager::HUB_KEYPRINT                    },
-	{ IDC_FAVGROUP,                 ResourceManager::GROUP                           },
-	{ 0,                            ResourceManager::Strings()                       }
-};
-
 static const WinUtil::TextItem textsIdent[] =
 {
 	{ IDC_CAPTION_BLANK,            ResourceManager::LEAVE_BLANK_FOR_DEFAULTS        },
@@ -81,6 +71,29 @@ static const WinUtil::TextItem texts[] =
 	{ IDOK,                         ResourceManager::OK                              },
 	{ IDCANCEL,                     ResourceManager::CANCEL                          },
 	{ 0,                            ResourceManager::Strings()                       }
+};
+
+static const DialogLayout::Align align4 = { -1, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align5 = { 5,  DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align align6 = { -1, DialogLayout::SIDE_LEFT,  0 };
+static const DialogLayout::Align align7 = { -1, DialogLayout::SIDE_RIGHT, 0 };
+
+static const DialogLayout::Item layoutItemsName[] =
+{
+	{ IDC_FH_NAME, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_FH_ADDRESS, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_FH_HUB_DESC, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
+	{ IDC_HUBNAME, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_HUBADDR, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_HUBDESCR, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_CAPTION_KEYPRINT, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align4 },
+	{ IDC_FAVGROUP, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align4 },
+	{ IDC_KEYPRINT, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_FAVGROUP_BOX, 0, UNSPEC, UNSPEC, 0, &align4 },
+	{ IDC_PREFER_IPV6, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align5 },
+	{ IDC_FH_NAME, 0, UNSPEC, UNSPEC, 0, &align6, &align7 },
+	{ IDC_FH_ADDRESS, 0, UNSPEC, UNSPEC, 0, &align6, &align7 },
+	{ IDC_FH_HUB_DESC, 0, UNSPEC, UNSPEC, 0, &align6, &align7 }
 };
 
 static const DialogLayout::Align align1 = { 4, DialogLayout::SIDE_RIGHT, U_DU(4) };
@@ -271,6 +284,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		entry->setServer(url);
 		entry->setKeyPrint(keyPrint);
+		entry->setPreferIP6(tabName.ctrlPreferIP6.GetCheck() == BST_CHECKED);
 
 		WinUtil::getWindowText(tabName.ctrlName, buf);
 		string name = Text::fromT(buf);
@@ -279,13 +293,13 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		WinUtil::getWindowText(tabName.ctrlDesc, buf);
 		entry->setDescription(Text::fromT(buf));
-		
+
 		WinUtil::getWindowText(tabIdent.ctrlNick, buf);
 		entry->setNick(Text::fromT(buf));
-		
+
 		WinUtil::getWindowText(tabIdent.ctrlPassword, buf);
 		entry->setPassword(Text::fromT(buf));
-		
+
 		WinUtil::getWindowText(tabIdent.ctrlDesc, buf);
 		entry->setUserDescription(Text::fromT(buf));
 
@@ -379,7 +393,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 LRESULT FavoriteHubTabName::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
-	WinUtil::translate(*this, textsName);
+	DialogLayout::layout(m_hWnd, layoutItemsName, _countof(layoutItemsName));
 
 	ctrlName.Attach(GetDlgItem(IDC_HUBNAME));
 	ctrlName.SetWindowText(Text::toT(entry->getName()).c_str());
@@ -389,6 +403,9 @@ LRESULT FavoriteHubTabName::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 
 	ctrlAddress.Attach(GetDlgItem(IDC_HUBADDR));
 	ctrlAddress.SetWindowText(Text::toT(entry->getServer()).c_str());
+
+	ctrlPreferIP6.Attach(GetDlgItem(IDC_PREFER_IPV6));
+	ctrlPreferIP6.SetCheck(entry->getPreferIP6() ? BST_CHECKED : BST_UNCHECKED);
 
 	ctrlKeyPrint.Attach(GetDlgItem(IDC_KEYPRINT));
 	ctrlKeyPrint.SetWindowText(Text::toT(entry->getKeyPrint()).c_str());

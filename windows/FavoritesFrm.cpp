@@ -25,6 +25,12 @@
 #include "ExMessageBox.h"
 #include "../client/ShareManager.h"
 
+#ifdef _UNICODE
+static const WCHAR PASSWORD_CHAR = L'\x25CF';
+#else
+static const char PASSWORD_CHAR = '*';
+#endif
+
 HIconWrapper FavoriteHubsFrame::stateIconOn(IDR_ONLINE_ICO);
 HIconWrapper FavoriteHubsFrame::stateIconOff(IDR_OFFLINE_ICO);
 
@@ -266,7 +272,7 @@ static void getAttributes(TStringList& l, const FavoriteHubEntry* entry)
 	l.push_back(Text::toT(entry->getName()));
 	l.push_back(Text::toT(entry->getDescription()));
 	l.push_back(Text::toT(entry->getNick(false)));
-	l.push_back(tstring(entry->getPassword().size(), '*'));
+	l.push_back(tstring(entry->getPassword().size(), PASSWORD_CHAR));
 	l.push_back(Text::toT(entry->getServer()));
 	l.push_back(Text::toT(entry->getUserDescription()));
 	l.push_back(Text::toT(entry->getEmail()));

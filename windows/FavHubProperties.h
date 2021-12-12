@@ -48,6 +48,7 @@ class FavoriteHubTabName : public CDialogImpl<FavoriteHubTabName>
 		CEdit ctrlAddress;
 		CEdit ctrlKeyPrint;
 		CComboBox ctrlGroup;
+		CButton ctrlPreferIP6;
 		FavoriteHubEntry* entry;
 		bool addressChanged;
 };

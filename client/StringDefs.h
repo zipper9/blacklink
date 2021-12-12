@@ -1712,6 +1712,7 @@ enum Strings   // @DontAdd
 	FAV_HUB_CHEATS, // "Cheats"
 	FAV_HUB_ADVANCED, // "Advanced"
 	HUB_KEYPRINT, // "Certificate fingerprint"
+	HUB_PREFER_IPV6, // "Prefer IPv6"
 	OVERRIDE_CLIENT_STATUS, // "Override client status (NMDC only)"
 	CLIENT_STATUS_NORMAL, // "Normal"
 	CONNECTION_TYPE, // "Connection type"

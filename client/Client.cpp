@@ -62,6 +62,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	fakeShareFiles(-1),
 	fakeClientStatus(0),
 	favMode(0),
+	preferIP6(false),
 	csUserCommands(RWLock::create())
 {
 	dcassert(hubURL == Text::toLower(hubURL));
@@ -183,7 +184,7 @@ void Client::reloadSettings(bool updateNick)
 			csState.unlock();
 			myOnlineUser->getIdentity().setNick(nick);
 		}
-		
+
 		if (!hub->getUserDescription().empty())
 		{
 			setCurrentDescription(
@@ -210,13 +211,15 @@ void Client::reloadSettings(bool updateNick)
 		{
 			setCurrentEmail(SETTING(EMAIL));
 		}
-		
+
 		if (!hub->getPassword().empty())
 		{
 			LOCK(csState);
 			storedPassword = hub->getPassword();
 		}
-		
+
+		preferIP6 = hub->getPreferIP6();
+
 		hideShare = hub->getHideShare();
 		shareGroup = hub->getShareGroup();
 
@@ -224,7 +227,7 @@ void Client::reloadSettings(bool updateNick)
 		boost::algorithm::trim(ip);
 		setFavIp(ip);
 		favMode = hub->getMode();
-		
+
 		int hubEncoding = hub->getEncoding();
 		if (hubEncoding)
 			setEncoding(hubEncoding);
@@ -318,11 +321,18 @@ void Client::connect()
 	reloadSettings(true);
 	resetRegistered();
 	resetOp();
-	
+
+	bool hasIP6 = ConnectivityManager::getInstance()->hasIP6();
 	csState.lock();
 	try
 	{
 		clientSock = BufferedSocket::getBufferedSocket(separator, this);
+		if (hasIP6)
+		{
+			if (preferIP6) clientSock->setIpVersion(AF_INET6);
+		}
+		else
+			clientSock->setIpVersion(AF_INET | Socket::RESOLVE_TYPE_EXACT);
 		clientSock->connect(address, port, secure, BOOLSETTING(ALLOW_UNTRUSTED_HUBS), true, proto);
 		clientSock->start();
 		dcdebug("Client::connect() %p\n", this);

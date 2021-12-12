@@ -207,10 +207,11 @@ class Socket
 		virtual int wait(int millis, int waitFor);
 
 		static int resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric = nullptr) noexcept;		
+		static bool resolveHost(IpAddressEx& addr, int type, const string& host, bool* isNumeric = nullptr) noexcept;
+
 		static const int RESOLVE_RESULT_V4 = 1;
 		static const int RESOLVE_RESULT_V6 = 2;
-
-		static bool resolveHost(IpAddressEx& addr, int af, const string& host, bool* isNumeric = nullptr) noexcept;
+		static const int RESOLVE_TYPE_EXACT = 1024;
 
 		void setBlocking(bool block) noexcept;
 		uint16_t getLocalPort() const;
