@@ -170,6 +170,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		
 		void setHubParam(const string& url, const string& nick);
 		const string& getHubHint() const { return hubHint; }
+		void setHubHint(const string& hint) { hubHint = hint; }
 
 		void Clear();
 		static void SetTextStyleMyNick(const CHARFORMAT2& ts);

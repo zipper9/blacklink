@@ -32,11 +32,11 @@ static const unsigned AWAY_MSG_COOLDOWN_TIME = 300000; // 5 minutes
 HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
 HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
 
-PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
+PrivateFrame::FrameMap PrivateFrame::frames;
 
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
-	m_created(false), isOffline(false), awayMsgSendTime(0),
+	created(false), isOffline(false), awayMsgSendTime(0),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP)
 {
 	ctrlStatusCache.resize(1);
@@ -56,8 +56,8 @@ void PrivateFrame::doDestroyFrame()
 StringMap PrivateFrame::getFrameLogParams() const
 {
 	StringMap params;
-	params["hubNI"] = ClientManager::getInstance()->getHubName(getHubHint());
-	params["hubURL"] = getHubHint();
+	params["hubNI"] = ClientManager::getInstance()->getHubName(replyTo.hint);
+	params["hubURL"] = replyTo.hint;
 	params["userCID"] = replyTo.user->getCID().toBase32();
 	params["userNI"] = Text::fromT(replyToRealName);
 	params["myCID"] = ClientManager::getMyCID().toBase32();
@@ -74,7 +74,7 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	pLoop->AddMessageFilter(this);
 
 	PostMessage(WM_SPEAKER, PM_USER_UPDATED);
-	m_created = true;
+	created = true;
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	UserManager::getInstance()->setPMOpen(replyTo.user, true);
@@ -108,10 +108,10 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 	const auto& myId = myMessage ? replyTo : to;
 	
 	PrivateFrame* p;
-	const auto i = g_pm_frames.find(id.getUser());
-	if (i == g_pm_frames.end())
+	const auto i = frames.find(id.getUser());
+	if (i == frames.end())
 	{
-		if (notOpenNewWindow || g_pm_frames.size() > MAX_PM_FRAMES)
+		if (notOpenNewWindow || frames.size() > MAX_PM_FRAMES)
 		{
 			string oneLineMessage = Text::fromT(message);
 			removeLineBreaks(oneLineMessage);
@@ -121,7 +121,7 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		}
 		// TODO - Add antispam!
 		p = new PrivateFrame(HintedUser(id.getUser(), hubHint), myId.getNick());
-		g_pm_frames.insert(make_pair(id.getUser(), p));
+		frames.insert(make_pair(id.getUser(), p));
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
 		if (BOOLSETTING(POPUP_PM_PREVIEW))
 			SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick()), message, 250, TSTRING(PRIVATE_MESSAGE));
@@ -183,26 +183,28 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 		if (myNick.empty())
 			myNick = SETTING(NICK);
 	}
-	
+
 	PrivateFrame* p = nullptr;
-	const auto i = g_pm_frames.find(replyTo.user);
-	if (i == g_pm_frames.end())
+	const auto i = frames.find(replyTo.user);
+	if (i == frames.end())
 	{
-		if (g_pm_frames.size() > MAX_PM_FRAMES)
+		if (frames.size() > MAX_PM_FRAMES)
 		{
 			LogManager::message("Lock > 100 open private message windows! Hub+nick: " + replyTo.hint + " " + myNick + " Message: " + Text::fromT(msg));
 			return;
 		}
-		
+
 		if (ou)
 			replyTo.user->setLastNick(ou->getIdentity().getNick());
 		p = new PrivateFrame(replyTo, myNick);
-		g_pm_frames.insert(make_pair(replyTo.user, p));
+		frames.insert(make_pair(replyTo.user, p));
 		p->Create(WinUtil::g_mdiClient);
 	}
 	else
 	{
 		p = i->second;
+		if (!replyTo.hint.empty())
+			p->selectHub(replyTo.hint);
 		if (::IsIconic(p->m_hWnd))
 			::ShowWindow(p->m_hWnd, SW_RESTORE);
 			
@@ -323,7 +325,7 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	else
 	{
-		g_pm_frames.erase(replyTo.user);
+		frames.erase(replyTo.user);
 		bHandled = FALSE;
 		return 0;
 	}
@@ -341,7 +343,7 @@ void PrivateFrame::readFrameLog()
 
 void PrivateFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
-	if (!m_created)
+	if (!created)
 	{
 		if (BOOLSETTING(POPUNDER_PM))
 			WinUtil::hiddenCreateEx(this);
@@ -370,22 +372,22 @@ void PrivateFrame::addLine(const Identity& from, const bool myMessage, const boo
 LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-	
+
 	OMenu tabMenu;
 	tabMenu.CreatePopupMenu();
 	clearUserMenu();
-	
+
 	tabMenu.InsertSeparatorFirst(replyToRealName);
 	reinitUserMenu(replyTo.user, replyTo.hint);
 	appendAndActivateUserItems(tabMenu);
-	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
+	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), replyTo.hint));
 	WinUtil::appendSeparator(tabMenu);
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_PM, CTSTRING(MENU_CLOSE_ALL_OFFLINE_PM));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_PM, CTSTRING(MENU_CLOSE_ALL_PM));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
-	
+
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-	
+
 	cleanUcMenu(tabMenu);
 	WinUtil::unlinkStaticMenus(tabMenu);
 	return TRUE;
@@ -444,7 +446,7 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		if (ctrlClient.IsWindow())
 			ctrlClient.MoveWindow(rc);
 
-		const int buttonPanelWidth = MessagePanel::getPanelWidth();
+		const int buttonPanelWidth = msgPanel ? msgPanel->getPanelWidth() : 0;
 
 		rc = rect;
 		rc.left += 2;
@@ -467,15 +469,16 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	}
 }
 
-void PrivateFrame::updateTitle()
+void PrivateFrame::updateHubList()
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
 	if (!replyTo.user)
 		return;
-	pair<tstring, bool> hubs = WinUtil::getHubNames(replyTo.user, replyTo.hint);
-	
+	OnlineUserList lst;
+	ClientManager::getOnlineUsers(replyTo.user->getCID(), lst);
+
 #if 0 // FIXME
 	bool banIcon = false;
 	Flags::MaskType flags;
@@ -485,23 +488,45 @@ void PrivateFrame::updateTitle()
 #endif
 
 	tstring fullUserName;
-	if (hubs.second)
+	hubList.clear();
+	if (!lst.empty())
 	{
 #if 0 // FIXME		
 		if (banIcon)
 			setCustomIcon(WinUtil::g_banIconOnline);
 		else
 			unsetIconState();
-#endif			
+#endif
 		setDisconnected(false);
+		bool found = false;
+		for (const auto& ou : lst)
+		{
+			const auto& client = ou->getClientBase();
+			tstring hubName = Text::toT(client->getHubName());
+			hubList.emplace_back(client->getHubUrl(), hubName);
+			if (client->getHubUrl() == replyTo.hint)
+			{
+				replyToRealName = Text::toT(ou->getIdentity().getNick());
+				lastHubName = hubName;
+				found = true;
+			}
+		}
+		if (!found)
+		{
+			const auto& ou = lst.front();
+			const auto& client = ou->getClientBase();
+			replyToRealName = Text::toT(ou->getIdentity().getNick());
+			replyTo.hint = client->getHubUrl();
+			lastHubName = Text::toT(client->getHubName());
+		}
 		if (replyToRealName.empty())
 			replyToRealName = Text::toT(replyTo.user->getLastNick());
 		fullUserName = replyToRealName;
 		fullUserName += _T(" - ");
-		lastHubName = hubs.first;
 		fullUserName += lastHubName;
 		if (isOffline)
 			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + fullUserName + _T("]"));
+		ctrlClient.setHubHint(replyTo.hint);
 		isOffline = false;
 	}
 	else
@@ -517,13 +542,69 @@ void PrivateFrame::updateTitle()
 		setDisconnected(true);
 		fullUserName = replyToRealName;
 		fullUserName += _T(" - ");
-		tstring hubName = lastHubName.empty() ? Text::toT(getHubHint()) : lastHubName;
+		tstring hubName = lastHubName.empty() ? Text::toT(replyTo.hint) : lastHubName;
 		if (hubName.empty())
 			hubName = CTSTRING(OFFLINE);
 		fullUserName += hubName;
 		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + fullUserName + _T("]"));
 	}
+	if (msgPanel)
+	{
+		CButton& button = msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB);
+		button.EnableWindow(hubList.size() > 1);
+	}
 	SetWindowText(fullUserName.c_str());
+}
+
+void PrivateFrame::selectHub(const string& url)
+{
+	if (replyTo.hint == url) return;
+	bool found = false;
+	for (const auto& hub : hubList)
+		if (hub.first == url)
+		{
+			found = true;
+			break;
+		}
+	if (found)
+	{
+		replyTo.hint = url;
+		updateHubList();
+	}
+}
+
+LRESULT PrivateFrame::onShowHubMenu(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
+{
+	if (hubList.empty()) return 0;
+	CMenu menu;
+	menu.CreatePopupMenu();
+	CMenuItemInfo mi;
+	int n = 0;
+	vector<pair<string, tstring>> menuHubList;
+	for (const auto& hub : hubList)
+	{
+		menuHubList.push_back(hub);
+		mi.fMask = MIIM_ID | MIIM_TYPE | MIIM_STATE;
+		mi.fType = MFT_STRING | MFT_RADIOCHECK;
+		mi.dwTypeData = const_cast<TCHAR*>(menuHubList.back().second.c_str());
+		mi.fState = MFS_ENABLED;
+		if (replyTo.hint == hub.first) mi.fState |= MFS_CHECKED;
+		mi.wID = IDC_PM_HUB + n;
+		menu.InsertMenuItem(n, TRUE, &mi);
+		if (++n == 100) break;
+	}
+	CPoint pt;
+	CRect rc;
+	CButton button(hWndCtl);
+	button.GetClientRect(&rc);
+	pt.x = rc.Width() / 2;
+	pt.y = rc.Height() / 2;
+	button.ClientToScreen(&pt);
+	int cmd = menu.TrackPopupMenu(TPM_RETURNCMD | TPM_RIGHTALIGN | TPM_BOTTOMALIGN, pt.x, pt.y, m_hWnd);
+	cmd -= IDC_PM_HUB;
+	if (cmd >= 0 && cmd < (int) menuHubList.size())
+		selectHub(menuHubList[cmd].first);
+	return 0;
 }
 
 LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -582,7 +663,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			
 			reinitUserMenu(replyTo.user, replyTo.hint);
 			
-			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
+			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), replyTo.hint));
 			WinUtil::appendSeparator(*userMenu);
 			userMenu->InsertSeparatorFirst(replyToRealName);
 			appendAndActivateUserItems(*userMenu);
@@ -608,23 +689,23 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 
 void PrivateFrame::closeAll()
 {
-	dcdrun(const auto l_size_g_frames = g_pm_frames.size());
-	for (auto i = g_pm_frames.cbegin(); i != g_pm_frames.cend(); ++i)
+	dcdrun(const auto l_size_g_frames = frames.size());
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		i->second->PostMessage(WM_CLOSE, 0, 0);
 	}
-	dcassert(l_size_g_frames == g_pm_frames.size());
+	dcassert(l_size_g_frames == frames.size());
 }
 
 void PrivateFrame::closeAllOffline()
 {
-	dcdrun(const auto l_size_g_frames = g_pm_frames.size());
-	for (auto i = g_pm_frames.cbegin(); i != g_pm_frames.cend(); ++i)
+	dcdrun(const auto l_size_g_frames = frames.size());
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->first->isOnline())
 			i->second->PostMessage(WM_CLOSE, 0, 0);
 	}
-	dcassert(l_size_g_frames == g_pm_frames.size());
+	dcassert(l_size_g_frames == frames.size());
 }
 
 void PrivateFrame::on(SettingsManagerListener::Repaint)
@@ -643,8 +724,8 @@ void PrivateFrame::on(SettingsManagerListener::Repaint)
 
 bool PrivateFrame::closeUser(const UserPtr& u)
 {
-	const auto i = g_pm_frames.find(u);
-	if (i == g_pm_frames.end())
+	const auto i = frames.find(u);
+	if (i == frames.end())
 	{
 		return false;
 	}
@@ -654,12 +735,12 @@ bool PrivateFrame::closeUser(const UserPtr& u)
 
 void PrivateFrame::onBeforeActiveTab(HWND aWnd)
 {
-	dcdrun(const auto l_size_g_frames = g_pm_frames.size());
-	for (auto i = g_pm_frames.cbegin(); i != g_pm_frames.cend(); ++i)
+	dcdrun(const auto l_size_g_frames = frames.size());
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		i->second->destroyMessagePanel(false);
 	}
-	dcassert(l_size_g_frames == g_pm_frames.size());
+	dcassert(l_size_g_frames == frames.size());
 }
 
 void PrivateFrame::onAfterActiveTab(HWND aWnd)
@@ -686,7 +767,8 @@ void PrivateFrame::createMessagePanel()
 			restoreStatusFromCache(); // ¬осстанавливать статус нужно после UpdateLayout
 			ctrlMessage.SetFocus();
 		}
-		BaseChatFrame::createMessagePanel();
+		auto flags = replyTo.user ? replyTo.user->getFlags() : 0;
+		BaseChatFrame::createMessagePanel((flags & User::NMDC) == 0);
 		setCountMessages(0);
 	}
 }

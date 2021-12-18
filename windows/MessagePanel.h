@@ -42,6 +42,9 @@ class MessagePanel
 #endif
 		END_MSG_MAP()
 
+	public:
+		static const int MIN_INPUT_BOX_HEIGHT = 26;
+
 		enum
 		{
 			BUTTON_SEND,
@@ -55,30 +58,30 @@ class MessagePanel
 			BUTTON_UNDERLINE,
 			BUTTON_STRIKETHROUGH,
 			BUTTON_COLOR,
+			BUTTON_SELECT_HUB,
 			MAX_BUTTONS
 		};
-
-	public:
-		static const int MIN_INPUT_BOX_HEIGHT = 26;
 
 		explicit MessagePanel(CEdit& ctrlMessage);
 		void initPanel(HWND hWnd);
 		void destroyPanel();
 		void updatePanel(const CRect& rect);
-		static int getPanelWidth();
+		int getPanelWidth() const;
 #ifdef IRAINMAN_INCLUDE_SMILE
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		void pasteText(const tstring& text);
 #endif
+		CButton& getButton(int index) { return ctrlButtons[index]; }
 		BOOL onContextMenu(POINT& pt, WPARAM& wParam);
 
 		bool initialized;
+		bool showSelectHubButton;
 
 	private:
 		CFlyToolTipCtrl tooltip;
 		CEdit& ctrlMessage;
-		
+
 		CButton ctrlShowUsers;
 		CButton ctrlButtons[MAX_BUTTONS];
 #ifdef OSVER_WIN_XP

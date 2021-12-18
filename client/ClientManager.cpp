@@ -249,6 +249,14 @@ StringList ClientManager::getNicks(const CID& cid, const string& hintUrl)
 	return getNicks(cid, hintUrl, isPrivate);
 }
 
+void ClientManager::getOnlineUsers(const CID& cid, OnlineUserList& lst)
+{
+	READ_LOCK(*g_csOnlineUsers);
+	const auto op = g_onlineUsers.equal_range(cid);
+	for (auto i = op.first; i != op.second; ++i)
+		lst.push_back(i->second);
+}
+
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool priv)
 {
 	StringList lst;

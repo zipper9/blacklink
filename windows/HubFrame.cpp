@@ -284,7 +284,7 @@ void HubFrame::createMessagePanel()
 			if (isDHT) ctrlUsers.insertDHTUsers();
 			updateFlag = true;
 		}
-		BaseChatFrame::createMessagePanel();
+		BaseChatFrame::createMessagePanel(false);
 		setCountMessages(0);
 		if (!ctrlChatContainer && ctrlClient.m_hWnd)
 		{
@@ -1213,7 +1213,7 @@ void HubFrame::processTasks()
 					     BOOLSETTING(POPUP_PMS_BOT) && replyTo.isBot() ||
 					     BOOLSETTING(POPUP_PMS_OTHER)) || isOpen)
 					{
-						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, 0, getHubHint(), myPM, pm->thirdPerson);
+						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, 0, client->getHubUrl(), myPM, pm->thirdPerson);
 					}
 					if (!isPrivateFrameOk)
 					{
@@ -1395,7 +1395,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		
 		if (msgPanel->initialized)
 		{
-			int buttonPanelWidth = MessagePanel::getPanelWidth();
+			int buttonPanelWidth = msgPanel->getPanelWidth();
 			rc = rect;
 			rc.left += 2;
 			rc.bottom -= 4;
@@ -1656,7 +1656,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 			{
 				try
 				{
-					QueueManager::getInstance()->addList(HintedUser(ui->getUser(), getHubHint()), QueueItem::FLAG_CLIENT_VIEW);
+					QueueManager::getInstance()->addList(HintedUser(ui->getUser(), baseClient->getHubUrl()), QueueItem::FLAG_CLIENT_VIEW);
 				}
 				catch (const Exception& e)
 				{
@@ -1679,7 +1679,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 						break;
 					}
 					case 2:
-						ui->pm(getHubHint());
+						if (client) ui->pm(client->getHubUrl());
 						break;
 					case 3:
 						ui->getList();
@@ -1688,7 +1688,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 						ui->matchQueue();
 						break;
 					case 5:
-						ui->grantSlotPeriod(getHubHint(), 600);
+						ui->grantSlotPeriod(baseClient->getHubUrl(), 600);
 						break;
 					case 6:
 						ui->addFav();
@@ -1785,7 +1785,7 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 				const OnlineUserPtr& ou = ui->getOnlineUser();
 				if (ou->getUser()->isMe())
 					ctx |= UserCommand::CONTEXT_FLAG_ME;
-				reinitUserMenu(ou, getHubHint());
+				reinitUserMenu(ou, baseClient->getHubUrl());
 			}
 		}
 
@@ -1830,7 +1830,7 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		{
 			ui = findUserByNick(ChatCtrl::g_sSelectedUserName);
 		}
-		reinitUserMenu(ui ? ui->getOnlineUser() : nullptr, getHubHint());
+		reinitUserMenu(ui ? ui->getOnlineUser() : nullptr, baseClient->getHubUrl());
 		
 		appendHubAndUsersItems(*userMenu, true);
 		
@@ -2106,7 +2106,7 @@ void HubFrame::followRedirect()
 		if (ClientManager::isConnected(redirect))
 		{
 			addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, false, Colors::g_ChatTextServer);
-			LogManager::message("HubFrame::onFollow " + getHubHint() + " -> " + redirect + " ALREADY CONNECTED", false);
+			LogManager::message("HubFrame::onFollow " + baseClient->getHubUrl() + " -> " + redirect + " ALREADY CONNECTED", false);
 			return;
 		}
 		if (originalServerUrl.empty())

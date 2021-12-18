@@ -36,6 +36,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		ClientBasePtr getClient(const string& hubURL);
 		void putClient(const ClientBasePtr& cb);
 		static void prepareClose();
+		static void getOnlineUsers(const CID& cid, OnlineUserList& lst);
 		static StringList getHubs(const CID& cid, const string& hintUrl);
 		static StringList getHubNames(const CID& cid, const string& hintUrl);
 		static StringList getNicks(const CID& cid, const string& hintUrl);

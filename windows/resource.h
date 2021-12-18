@@ -1208,6 +1208,7 @@
 #define IDC_UNDERLINE                   2277
 #define IDC_STRIKE                      2278
 #define IDC_COLOR                       2279
+#define IDC_SELECT_HUB                  2280
 #define IDC_OPTION_CHECKBOX             2281
 #define IDC_USE_TREE                    2282
 #define IDC_PAUSE                       2283
@@ -1359,6 +1360,7 @@
 #define IDC_PM                          7300
 #define IDC_READD                       7400
 #define IDC_PREVIEW_APP                 7500
+#define IDC_PM_HUB                      7600
 #define ID_TOGGLE_TOOLBAR               32771
 #define ID_TOGGLE_QSEARCH               32772
 #define ID_VIEW_TRANSFER_VIEW           32773

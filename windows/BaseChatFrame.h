@@ -56,9 +56,8 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		END_MSG_MAP()
 
 	public:
-		void createMessagePanel();
+		void createMessagePanel(bool showSelectHubButton);
 		void destroyMessagePanel();
-		const string& getHubHint() const { return ctrlClient.getHubHint(); }
 
 	private:
 		void createChatCtrl();

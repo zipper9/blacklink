@@ -271,13 +271,14 @@ void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 	}
 }
 
-void BaseChatFrame::createMessagePanel()
+void BaseChatFrame::createMessagePanel(bool showSelectHubButton)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	
 	if (!msgPanel && !ClientManager::isStartup())
 	{
 		msgPanel = new MessagePanel(ctrlMessage);
+		msgPanel->showSelectHubButton = showSelectHubButton;
 		msgPanel->initPanel(messagePanelHwnd);
 		ctrlClient.restoreChatCache();
 	}

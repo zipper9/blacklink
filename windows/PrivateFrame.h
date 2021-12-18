@@ -39,7 +39,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		static void openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick = Util::emptyString, const tstring& aMessage = Util::emptyStringT);
 		static bool isOpen(const UserPtr& u)
 		{
-			return g_pm_frames.find(u) != g_pm_frames.end();
+			return frames.find(u) != frames.end();
 		}
 		static bool closeUser(const UserPtr& u);
 		static void closeAll();
@@ -73,6 +73,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_PM, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
+		COMMAND_ID_HANDLER(IDC_SELECT_HUB, onShowHubMenu);
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uiBase)
 		CHAIN_MSG_MAP(baseClass)
@@ -93,6 +94,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			openFrameLog();
 			return 0;
 		}
+		LRESULT onShowHubMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled); // !Decker!
 		
 		virtual void onBeforeActiveTab(HWND aWnd) override;
@@ -129,10 +131,10 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /* bHandled */)
 		{
-			updateTitle();
+			updateHubList();
 			return 0;
 		}
-		
+
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			if (ctrlMessage)
@@ -141,18 +143,18 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 				ctrlClient.goToEnd(false);
 			return 0;
 		}
-		
+
 		void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem)
 		{
-			if (!m_created)
+			if (!created)
 			{
 				Create(WinUtil::g_mdiClient);
 			}
 			BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
 		}
-		
+
 		void sendMessage(const tstring& msg, bool thirdperson = false) override;
-		
+
 		const UserPtr& getUser() const
 		{
 			return replyTo.user;
@@ -161,46 +163,50 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			return replyTo.hint;
 		}
+		void selectHub(const string& url);
 
 	private:
 		PrivateFrame(const HintedUser& replyTo, const string& myNick);
 		~PrivateFrame();
 		virtual void doDestroyFrame();
-		
-		bool m_created; // TODO: fix me please.
+
+		bool created; // TODO: fix me please.
 		typedef boost::unordered_map<UserPtr, PrivateFrame*, User::Hash> FrameMap;
-		static FrameMap g_pm_frames;
+		static FrameMap frames;
 
 		static HIconWrapper frameIconOn, frameIconOff;
-		
-		const HintedUser replyTo;
+
+		HintedUser replyTo;
 		tstring replyToRealName;
 		tstring lastHubName;
+		vector<pair<string, tstring>> hubList;
 
 		CContainedWindow ctrlChatContainer;
 
 		bool isOffline;
 		uint64_t awayMsgSendTime;
 
-		void updateTitle();
-		
+		void updateHubList();
+
 		// ClientManagerListener
-		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& aUser) noexcept override
+		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& ou) noexcept override
 		{
-			on(ClientManagerListener::UserDisconnected(), aUser->getUser());
+			updateUser(ou->getUser());
 		}
-		void on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept override
+		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override
 		{
-			on(ClientManagerListener::UserDisconnected(), aUser);
+			updateUser(user);
 		}
-		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override
+		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override
 		{
-			if (aUser == replyTo.user)
-			{
-				PostMessage(WM_SPEAKER, PM_USER_UPDATED);
-			}
+			updateUser(user);
 		}
 		void on(SettingsManagerListener::Repaint) override;
+		void updateUser(const UserPtr& user)
+		{
+			if (user == replyTo.user)
+				PostMessage(WM_SPEAKER, PM_USER_UPDATED);
+		}
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		StringMap getFrameLogParams() const;

@@ -1813,6 +1813,7 @@ enum Strings   // @DontAdd
 	IPV6_NOT_DETECTED, // "IPv6 support is not detected on this system.\nPlease check your settings."
 	SHOW_LEGEND, // "Show legend"
 	MAGNET_LINKS_NOT_FOUND, // "Magnet links not found"
+	SELECT_HUB, // "Select hub"
 	CONNECTION_CHECK, // "Connection check"
 	COMMAND_ARG_REQUIRED, // "This command requires an argument"
 	COMMAND_N_ARGS_REQUIRED, // "This command requires %1% arguments"

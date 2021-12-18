@@ -50,7 +50,7 @@ int MessagePanel::emoMenuItemCount = 0;
 #endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
-	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false)
+	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false), showSelectHubButton(false)
 {
 }
 
@@ -85,6 +85,7 @@ void MessagePanel::initPanel(HWND hWnd)
 	createButton(BUTTON_UNDERLINE, g_hUndelineIco, IDC_UNDERLINE, ResourceManager::BBCODE_PANEL_UNDERLINE);
 	createButton(BUTTON_STRIKETHROUGH, g_hStrikeIco, IDC_STRIKE, ResourceManager::BBCODE_PANEL_STRIKE);
 	createButton(BUTTON_COLOR, g_hColorIco, IDC_COLOR, ResourceManager::BBCODE_PANEL_COLOR);
+	createButton(BUTTON_SELECT_HUB, g_iconBitmaps.getIcon(IconBitmaps::HUB_ONLINE, 0), IDC_SELECT_HUB, ResourceManager::SELECT_HUB);
 
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 	ctrlSizeSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS |
@@ -137,7 +138,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 	tooltip.Activate(FALSE);
 	if (m_hWnd == NULL)
 		return;
-		
+
 	CRect rc = rect;
 
 	rc.right = rc.left + 2;
@@ -153,12 +154,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 	{
 		updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
 		for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_COLOR; ++i)
-		{
-			rc.left = rc.right;
-			rc.right += BUTTON_WIDTH;
-			ctrlButtons[i].ShowWindow(SW_SHOW);
-			ctrlButtons[i].MoveWindow(rc);
-		}
+			updateButton(dwp, true, i, rc);
 		updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 		// Size Selection
@@ -171,18 +167,19 @@ void MessagePanel::updatePanel(const CRect& rect)
 	}
 	else
 	{
-		for (int i = BUTTON_TRANSCODE; i < MAX_BUTTONS; ++i)
+		for (int i = BUTTON_TRANSCODE; i <= BUTTON_COLOR; ++i)
 			updateButton(dwp, false, i, rc);
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 		ctrlSizeSel.ShowWindow(SW_HIDE);
 #endif
 	}
+	updateButton(dwp, showSelectHubButton, BUTTON_SELECT_HUB, rc);
 	EndDeferWindowPos(dwp);
 	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
 }
 
-int MessagePanel::getPanelWidth()
+int MessagePanel::getPanelWidth() const
 {
 	int width = 4;
 	width += BOOLSETTING(SHOW_MULTI_CHAT_BTN) ? BUTTON_WIDTH : 0;
@@ -192,6 +189,7 @@ int MessagePanel::getPanelWidth()
 	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? BUTTON_WIDTH : 0;
 	if (BOOLSETTING(SHOW_BBCODE_PANEL))
 		width += BUTTON_WIDTH * (BOOLSETTING(SHOW_TRANSCODE_BTN) ? 6 : 5);
+	width += showSelectHubButton ? BUTTON_WIDTH : 0;
 	return width;
 }
 
