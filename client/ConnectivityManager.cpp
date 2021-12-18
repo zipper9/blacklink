@@ -189,7 +189,7 @@ bool ConnectivityManager::setup(int af)
 	int index = af == AF_INET6 ? 1 : 0;
 	SettingsManager::IPSettings ips;
 	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
 
 	cs.lock();
 	autoDetect[index] = autoDetectFlag;
@@ -402,7 +402,7 @@ void ConnectivityManager::listenTCP(int af)
 {
 	SettingsManager::IPSettings ips;
 	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
 
 	bool fixedPort = af == AF_INET6 || (!autoDetectFlag && SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_NAT);
 	auto cm = ConnectionManager::getInstance();
@@ -457,7 +457,7 @@ void ConnectivityManager::listenUDP(int af)
 {
 	SettingsManager::IPSettings ips;
 	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
 
 	bool fixedPort = af == AF_INET6 || (!autoDetectFlag && SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_NAT);
 	for (int i = 0; i < 2; ++i)

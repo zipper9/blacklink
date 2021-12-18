@@ -74,7 +74,7 @@ void SearchManager::listenUDP(int af)
 	int index = af == AF_INET6 ? 1 : 0;
 	SettingsManager::IPSettings ips;
 	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::get(ips.autoDetect);
+	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
 #ifdef _WIN32
 	events[index].create();
 #endif

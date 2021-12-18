@@ -558,16 +558,17 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 			{
 				d->getDownloadFile()->flushBuffers(false);
 			}
+#ifdef _DEBUG
 			catch (const Exception& e)
 			{
-#ifdef _DEBUG
-				//dcassert(0);
 				LogManager::message("DownloadManager::removeDownload error =" + string(e.what()));
-#endif // _DEBUG
 			}
+#else
+			catch (const Exception&) {}
+#endif
 		}
 	}
-	
+
 	{
 		WRITE_LOCK(*g_csDownload);
 		if (!g_download_map.empty())
