@@ -55,6 +55,7 @@ class Download : public Transfer, public Flags
 		TigerTree& getTigerTree() { return tigerTree; }
 		const TigerTree& getTigerTree() const { return tigerTree; }
 		string& getFileListBuffer() { return fileListBuffer; }
+		const QueueItemPtr& getQueueItem() const { return qi; }
 		
 		/** @internal */
 		void getCommand(AdcCommand& cmd, bool zlib) const;

@@ -134,16 +134,25 @@ class QueueManager : public Singleton<QueueManager>,
 
 		class FileMoverJob : public JobExecutor::Job
 		{
+			public:
+				enum JobType
+				{
+					MOVE_FILE,
+					MOVE_FILE_RETRY,
+					COPY_QI_FILE
+				};
+
+				FileMoverJob(QueueManager& manager, JobType type, const string& source, const string& target, bool moveToOtherDir, const QueueItemPtr& qi) :
+					manager(manager), type(type), source(source), target(target), moveToOtherDir(moveToOtherDir), qi(qi) {}
+				virtual void run();
+
+			private:
 				QueueManager& manager;
 				const string source;
 				const string target;
 				const bool moveToOtherDir;
+				const JobType type;
 				QueueItemPtr qi;
-
-			public:
-				FileMoverJob(QueueManager& manager, const string& source, const string& target, bool moveToOtherDir, const QueueItemPtr& qi) :
-					manager(manager), source(source), target(target), moveToOtherDir(moveToOtherDir), qi(qi) {}
-				virtual void run();
 		};
 
 		JobExecutor fileMover;
@@ -263,7 +272,7 @@ class QueueManager : public Singleton<QueueManager>,
 				QueueItemPtr findTarget(const string& target) const;
 				int findQueueItems(QueueItemList& ql, const TTHValue& tth, int maxCount = 0) const;
 				QueueItemPtr findQueueItem(const TTHValue& tth) const;
-				static uint8_t getMaxSegments(const uint64_t filesize);
+				static uint8_t getMaxSegments(uint64_t filesize);
 				// find some PFS sources to exchange parts info
 				void findPFSSources(QueueItem::SourceList& sl, uint64_t now) const;
 				
@@ -381,8 +390,8 @@ class QueueManager : public Singleton<QueueManager>,
 		void processList(const string& name, const HintedUser& hintedUser, int flags, const DirectoryItem* dirItem);
 		void deleteFileLists();
 		
-		bool moveFile(const string& source, const string& target);
-		bool internalMoveFile(const string& source, const string& target, bool moveToOtherDir);
+		void moveFile(const string& source, const string& target);
+		static void keepFileInTempDir(const string& source, const string& target);
 		void moveStuckFile(const QueueItemPtr& qi);
 		void copyFile(const string& source, const string& target, QueueItemPtr& qi);
 		void rechecked(const QueueItemPtr& qi);

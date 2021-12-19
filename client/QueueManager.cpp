@@ -1011,7 +1011,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 				if (flags & QueueItem::FLAG_COPYING)
 				{
 					newItem = false;
-					FileMoverJob* job = new FileMoverJob(*this, sharedFilePath, targetPath, false, q);
+					FileMoverJob* job = new FileMoverJob(*this, FileMoverJob::COPY_QI_FILE, sharedFilePath, targetPath, false, q);
 					if (!fileMover.addJob(job))
 						delete job;
 				}
@@ -1370,7 +1370,7 @@ bool QueueManager::getQueueInfo(const UserPtr& user, string& target, int64_t& si
 	return true;
 }
 
-uint8_t QueueManager::FileQueue::getMaxSegments(const uint64_t filesize)
+uint8_t QueueManager::FileQueue::getMaxSegments(uint64_t filesize)
 {
 	unsigned value;
 	if (BOOLSETTING(SEGMENTS_MANUAL))
@@ -1555,27 +1555,22 @@ void QueueManager::setFile(const DownloadPtr& d)
 		
 		// open stream for both writing and reading, because UploadManager can request reading from it
 		const auto fileSize = d->getTigerTree().getFileSize();
-		
+
 		auto f = new SharedFileStream(target, File::RW, File::OPEN | File::CREATE | File::SHARED | File::NO_CACHE_HINT, fileSize);
-		// Only use antifrag if we don't have a previous non-antifrag part
-		// if (BOOLSETTING(ANTI_FRAG))
-		// Всегда юзаем антифрагментатор
+		if (qi->getSize() != qi->getLastSize())
 		{
-			if (qi->getSize() != qi->getLastSize())
+			if (f->getFastFileSize() != qi->getSize())
 			{
-				if (f->getFastFileSize() != qi->getSize())
-				{
-					dcassert(fileSize == d->getTigerTree().getFileSize());
-					f->setSize(fileSize);
-					qi->setLastSize(fileSize);
-				}
-			}
-			else
-			{
-				dcdebug("Skip for file %s qi->getSize() == qi->getLastSize()\r\n", target.c_str());
+				dcassert(fileSize == d->getTigerTree().getFileSize());
+				f->setSize(fileSize);
+				qi->setLastSize(fileSize);
 			}
 		}
-		
+		else
+		{
+			dcdebug("Skip for file %s qi->getSize() == qi->getLastSize()\r\n", target.c_str());
+		}
+
 		f->setPos(d->getSegment().getStart());
 		d->setDownloadFile(f);
 	}
@@ -1607,7 +1602,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 	}
 }
 
-bool QueueManager::moveFile(const string& source, const string& target)
+void QueueManager::moveFile(const string& source, const string& target)
 {
 	string sourcePath = Util::getFilePath(source);
 	string destPath = Util::getFilePath(target);
@@ -1622,35 +1617,39 @@ bool QueueManager::moveFile(const string& source, const string& target)
 	}
 	if (useMover)
 	{
-		FileMoverJob* job = new FileMoverJob(*this, source, target, moveToOtherDir, QueueItemPtr());
+		FileMoverJob* job = new FileMoverJob(*this, FileMoverJob::MOVE_FILE, source, target, moveToOtherDir, QueueItemPtr());
 		if (!fileMover.addJob(job))
-		{
 			delete job;
-			return false;
-		}
-		return true;
+		return;
 	}
-	return internalMoveFile(source, target, moveToOtherDir);
+	if (File::renameFile(source, target))
+		return;
+	LogManager::message(STRING_F(UNABLE_TO_RENAME_FMT, source % target % Util::translateError()));
+	int64_t size = File::getSize(source);
+	if (size < 0)
+		return;
+	if (size > MOVER_LIMIT)
+	{
+		FileMoverJob* job = new FileMoverJob(*this, FileMoverJob::MOVE_FILE_RETRY, source, target, moveToOtherDir, QueueItemPtr());
+		if (!fileMover.addJob(job))
+			delete job;
+		return;
+	}
+	if (File::copyFile(source, target))
+	{
+		File::deleteFile(source);
+		return;
+	}
+	if (moveToOtherDir)
+		keepFileInTempDir(source, target);
 }
 
-bool QueueManager::internalMoveFile(const string& source, const string& target, bool moveToOtherDir)
+// try to remove the .dctmp suffix keeping it in the temp directory
+void QueueManager::keepFileInTempDir(const string& source, const string& target)
 {
-	if (File::renameFile(source, target))
-		return true;
-	string error = Util::translateError();
-	if (!moveToOtherDir)
-	{
-		LogManager::message(STRING_F(UNABLE_TO_RENAME_FMT, source % target % error));
-		return false;
-	}
-	const string newTarget = Util::getFilePath(source) + Util::getFileName(target);
+	string newTarget = Util::getFilePath(source) + Util::getFileName(target);
 	if (!File::renameFile(source, newTarget))
-	{
 		LogManager::message(STRING_F(UNABLE_TO_RENAME_FMT, source % newTarget % Util::translateError()));
-		return false;
-	}
-	LogManager::message(STRING_F(UNABLE_TO_MOVE_FMT, target % error % newTarget));
-	return true;
 }
 
 void QueueManager::moveStuckFile(const QueueItemPtr& qi)
@@ -1721,15 +1720,6 @@ void QueueManager::rechecked(const QueueItemPtr& qi)
 
 void QueueManager::putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish) noexcept
 {
-#if 0
-	dcassert(!ClientManager::isBeforeShutdown());
-	// fix https://drdump.com/Problem.aspx?ProblemID=112136
-	if (!ClientManager::isBeforeShutdown())
-	{
-		// TODO - check and delete download?
-		// return;
-	}
-#endif
 	UserList getConn;
 	unique_ptr<DirectoryItem> processListDirItem;
 	string processListFileName;
@@ -1972,7 +1962,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						SharedFileStream::deleteFile(tmpTarget);
 				}
 			}
-			else if (download->getType() != Transfer::TYPE_TREE)
+			else if (download->getType() != Transfer::TYPE_TREE && download->getQueueItem()->removed)
 			{
 				const string tmpTarget = download->getTempTarget();
 				if (!tmpTarget.empty() && tmpTarget != path)
@@ -3049,10 +3039,32 @@ bool QueueManager::addDclstFile(const string& path)
 
 void QueueManager::FileMoverJob::run()
 {
-	if (qi)
-		manager.copyFile(source, target, qi);
-	else
-		manager.internalMoveFile(source, target, moveToOtherDir);
+	switch (type)
+	{
+		case MOVE_FILE:
+		case MOVE_FILE_RETRY:
+			if (type == MOVE_FILE)
+			{
+				if (File::renameFile(source, target))
+					return;
+				LogManager::message(STRING_F(UNABLE_TO_RENAME_FMT, source % target % Util::translateError()));
+			}
+			if (!File::isExist(source))
+				return;
+			if (File::copyFile(source, target))
+			{
+				File::deleteFile(source);
+				return;
+			}
+			if (moveToOtherDir)
+				keepFileInTempDir(source, target);
+			break;
+
+		case COPY_QI_FILE:
+			dcassert(qi);
+			manager.copyFile(source, target, qi);
+			break;
+	}
 }
 
 bool QueueManager::recheck(const string& target)
