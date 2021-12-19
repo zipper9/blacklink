@@ -30,12 +30,9 @@
 #include "ZUtils.h"
 #include "FilteredFile.h"
 
-std::unique_ptr<RWLock> DownloadManager::g_csDownload = std::unique_ptr<RWLock>(RWLock::create());
-DownloadList DownloadManager::g_download_map;
-UserConnectionList DownloadManager::g_idlers;
 int64_t DownloadManager::g_runningAverage;
 
-DownloadManager::DownloadManager()
+DownloadManager::DownloadManager() : csDownloads(RWLock::create())
 {
 	TimerManager::getInstance()->addListener(this);
 }
@@ -46,23 +43,20 @@ DownloadManager::~DownloadManager()
 	while (true)
 	{
 		{
-			READ_LOCK(*g_csDownload);
-			if (g_download_map.empty())
+			READ_LOCK(*csDownloads);
+			if (downloads.empty())
 			{
 				break;
 			}
 		}
 		Thread::sleep(50);
-		// dcassert(0);
-		// TODO - возможно мы тут висим и не даем разрушиться менеджеру?
-		// Добавить логирование тиков на флай сервер
 	}
 }
 
-size_t DownloadManager::getDownloadCount()
+size_t DownloadManager::getDownloadCount() const
 {
-	READ_LOCK(*g_csDownload);
-	return g_download_map.size();
+	READ_LOCK(*csDownloads);
+	return downloads.size();
 }
 
 void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
@@ -75,10 +69,10 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	
 	DownloadArray tickList;
 	{
-		READ_LOCK(*g_csDownload);
+		READ_LOCK(*csDownloads);
 		// Tick each ongoing download
-		tickList.reserve(g_download_map.size());
-		for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
+		tickList.reserve(downloads.size());
+		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			auto d = *i;
 			if (d->getPos() > 0) // https://drdump.com/DumpGroup.aspx?DumpGroupID=614035&Login=guest (Wine)
@@ -155,31 +149,31 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 
 void DownloadManager::removeIdleConnection(UserConnection* source)
 {
-	WRITE_LOCK(*g_csDownload);
+	WRITE_LOCK(*csDownloads);
 	if (!ClientManager::isBeforeShutdown())
 	{
 		dcassert(source->getUser());
-		auto i = find(g_idlers.begin(), g_idlers.end(), source);
-		if (i == g_idlers.end())
+		auto i = find(idlers.begin(), idlers.end(), source);
+		if (i == idlers.end())
 		{
-			//dcassert(i != g_idlers.end());
+			//dcassert(i != idlers.end());
 			return;
 		}
-		g_idlers.erase(i);
+		idlers.erase(i);
 	}
 	else
 	{
-		g_idlers.clear();
+		idlers.clear();
 	}
 }
 
-void DownloadManager::checkIdle(const UserPtr& user)
+void DownloadManager::checkIdle(const UserPtr& user) const
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		READ_LOCK(*g_csDownload);
+		READ_LOCK(*csDownloads);
 		dcassert(user);
-		for (auto i = g_idlers.begin(); i != g_idlers.end(); ++i)
+		for (auto i = idlers.begin(); i != idlers.end(); ++i)
 		{
 			UserConnection* uc = *i;
 			if (uc->getUser() == user)
@@ -211,12 +205,12 @@ void DownloadManager::addConnection(UserConnection* conn)
 	checkDownloads(conn);
 }
 
-bool DownloadManager::isStartDownload(QueueItem::Priority prio)
+bool DownloadManager::isStartDownload(QueueItem::Priority prio) const
 {
 	const size_t downloadCount = getDownloadCount();
 	const size_t slots = SETTING(DOWNLOAD_SLOTS);
 	const int64_t maxSpeed = SETTING(MAX_DOWNLOAD_SPEED);
-	
+
 	if ((slots && downloadCount >= slots) || (maxSpeed && getRunningAverage() >= maxSpeed << 10))
 	{
 		if (prio != QueueItem::HIGHEST)
@@ -259,9 +253,9 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 		conn->setState(UserConnection::STATE_IDLE);
 		if (!ClientManager::isBeforeShutdown())
 		{
-			WRITE_LOCK(*g_csDownload);
+			WRITE_LOCK(*csDownloads);
 			dcassert(conn->getUser());
-			g_idlers.push_back(conn);
+			idlers.push_back(conn);
 		}
 		return;
 	}
@@ -274,9 +268,9 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 	}
 	
 	{
-		WRITE_LOCK(*g_csDownload);
+		WRITE_LOCK(*csDownloads);
 		dcassert(d->getUser());
-		g_download_map.push_back(d);
+		downloads.push_back(d);
 	}
 	fire(DownloadManagerListener::Requesting(), d);
 	
@@ -570,14 +564,14 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 	}
 
 	{
-		WRITE_LOCK(*g_csDownload);
-		if (!g_download_map.empty())
+		WRITE_LOCK(*csDownloads);
+		if (!downloads.empty())
 		{
-			//dcassert(find(g_download_map.begin(), g_download_map.end(), d) != g_download_map.end());
-			auto l_end = remove(g_download_map.begin(), g_download_map.end(), d);
-			if (l_end != g_download_map.end())
+			//dcassert(find(downloads.begin(), downloads.end(), d) != downloads.end());
+			auto l_end = remove(downloads.begin(), downloads.end(), d);
+			if (l_end != downloads.end())
 			{
-				g_download_map.erase(l_end, g_download_map.end());
+				downloads.erase(l_end, downloads.end());
 			}
 		}
 	}
@@ -585,8 +579,8 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 
 void DownloadManager::abortDownload(const string& target)
 {
-	READ_LOCK(*g_csDownload);
-	for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
+	READ_LOCK(*csDownloads);
+	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto& d = *i;
 		if (d->getPath() == target)
@@ -667,10 +661,10 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	checkDownloads(source);
 }
 
-bool DownloadManager::checkFileDownload(const UserPtr& user)
+bool DownloadManager::checkFileDownload(const UserPtr& user) const
 {
-	READ_LOCK(*g_csDownload);
-	for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
+	READ_LOCK(*csDownloads);
+	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto d = *i;
 		if (d->getUser() == user &&
@@ -685,10 +679,10 @@ bool DownloadManager::checkFileDownload(const UserPtr& user)
 void DownloadManager::checkUserIP(UserConnection* source) noexcept
 {
 	auto d = source->getDownload();
-	
+
 	dcassert(d);
 	removeDownload(d);
 	QueueManager::getInstance()->putDownload(d->getPath(), d, true);
-	
+
 	source->disconnect();
 }

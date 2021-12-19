@@ -553,7 +553,7 @@ ok:
 	if (!hasReserved)
 	{
 		if (slotTimeout) source->getUser()->unsetFlag(User::RESERVED_SLOT);
-		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(source->getUser());// !SMT!-S
+		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::getInstance()->checkFileDownload(source->getUser());
 	}
 	const bool isFavorite = FavoriteManager::getInstance()->hasAutoGrantSlot(source->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN

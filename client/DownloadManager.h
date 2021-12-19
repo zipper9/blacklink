@@ -38,19 +38,19 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 	public:
 		/** @internal */
 		void addConnection(UserConnection* p_conn);
-		static void checkIdle(const UserPtr& user);
+		void checkIdle(const UserPtr& user) const;
 		
 		/** @internal */
-		static void abortDownload(const string& target);
+		void abortDownload(const string& target);
 		
 		/** @return Running average download speed in Bytes/s */
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		
-		static size_t getDownloadCount();
+		size_t getDownloadCount() const;
 		
-		static bool isStartDownload(QueueItem::Priority prio);
-		static bool checkFileDownload(const UserPtr& user);
+		bool isStartDownload(QueueItem::Priority prio) const;
+		bool checkFileDownload(const UserPtr& user) const;
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
 		void processUpdatedConnection(UserConnection* source) noexcept;
@@ -63,17 +63,16 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		void processSND(UserConnection* source, const AdcCommand& cmd) noexcept;
 
 	private:
-		static std::unique_ptr<RWLock> g_csDownload;
-		static DownloadList g_download_map;
-		static UserConnectionList g_idlers;
-		static void removeIdleConnection(UserConnection* source);
-		
+		std::unique_ptr<RWLock> csDownloads;
+		DownloadList downloads;
+		UserConnectionList idlers;
+		void removeIdleConnection(UserConnection* source);
+
 		static int64_t g_runningAverage;
 		
-		static void removeDownload(const DownloadPtr& download);
-		
+		void removeDownload(const DownloadPtr& download);
 		void failDownload(UserConnection* source, const string& reason);
-		
+
 		friend class Singleton<DownloadManager>;
 		
 		DownloadManager();

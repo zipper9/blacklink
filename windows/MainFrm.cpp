@@ -639,6 +639,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		
 		if (!processingStats)
 		{
+			auto dm = DownloadManager::getInstance();
 			auto um = UploadManager::getInstance();
 			dcassert(!ClientManager::isStartup());
 			const tstring dlstr = Util::formatBytesT(DownloadManager::getRunningAverage());
@@ -657,7 +658,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesT(currentUp));
 			const bool throttleEnabled = BOOLSETTING(THROTTLE_ENABLE);
 			auto tm = ThrottleManager::getInstance();
-			stats->push_back(TSTRING(D) + _T(" [") + Util::toStringT(DownloadManager::getDownloadCount()) + _T("][")
+			stats->push_back(TSTRING(D) + _T(" [") + Util::toStringT(dm->getDownloadCount()) + _T("][")
 			                 + ((!throttleEnabled || tm->getDownloadLimitInKBytes() == 0) ?
 			                    TSTRING(N) : Util::toStringT(tm->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
 			                 + dlstr + _T('/') + TSTRING(S));
@@ -1299,7 +1300,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, shutdownIcon);
 					shutdownStatusDisplayed = true;
 				}
-				if (DownloadManager::getDownloadCount() > 0)
+				if (DownloadManager::getInstance()->getDownloadCount() > 0)
 				{
 					shutdownTime = second;
 					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
@@ -2233,7 +2234,7 @@ LRESULT MainFrame::onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 			nid.uFlags = NIF_TIP;
 			_tcsncpy(nid.szTip, (
 				TSTRING(D) + _T(' ') + Util::formatBytesT(DownloadManager::getRunningAverage()) + _T('/') + TSTRING(S) + _T(" (") +
-				Util::toStringT(DownloadManager::getDownloadCount()) + _T(")\r\n") +
+				Util::toStringT(DownloadManager::getInstance()->getDownloadCount()) + _T(")\r\n") +
 				TSTRING(U) + _T(' ') + Util::formatBytesT(UploadManager::getRunningAverage()) + _T('/') + TSTRING(S) + _T(" (") +
 				Util::toStringT(UploadManager::getInstance()->getUploadCount()) + _T(")") + _T("\r\n") +
 				TSTRING(UPTIME) + _T(' ') + Util::formatSecondsT(Util::getUpTime())).c_str(), 63);

@@ -786,7 +786,7 @@ string CompatibilityManager::Speedinfo()
 	result += "-=[ ";
 	result += "Dn. speed: ";
 	result += Util::formatBytes(DownloadManager::getRunningAverage()) + "/s  (";
-	result += Util::toString(DownloadManager::getDownloadCount()) + " fls.)";
+	result += Util::toString(DownloadManager::getInstance()->getDownloadCount()) + " fls.)";
 	//result += " =- ";
 	//result += " -= ";
 	result += ". ";

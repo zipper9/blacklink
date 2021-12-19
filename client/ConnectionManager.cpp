@@ -670,7 +670,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 				{
 					if (cqi->getLastAttempt() == 0 || (attempts < maxAttempts && cqi->getLastAttempt() + RETRY_CONNECTION_DELAY * 1000 * getDelayFactor(errorCount) < tick))
 					{
-						if (DownloadManager::isStartDownload(prio))
+						if (DownloadManager::getInstance()->isStartDownload(prio))
 						{
 							cqi->setLastAttempt(tick);
 							cqi->setState(ConnectionQueueItem::CONNECTING);
@@ -688,7 +688,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 						}
 					}
 				}
-				else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && DownloadManager::isStartDownload(prio))
+				else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && DownloadManager::getInstance()->isStartDownload(prio))
 				{
 					cqi->setLastAttempt(tick);
 					cqi->setState(ConnectionQueueItem::WAITING);
@@ -758,7 +758,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 	for (auto i = idleList.cbegin(); i != idleList.cend(); ++i)
 	{
-		DownloadManager::checkIdle(*i);
+		DownloadManager::getInstance()->checkIdle(*i);
 	}
 #endif
 }

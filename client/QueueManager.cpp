@@ -2316,7 +2316,7 @@ void QueueManager::setPriority(const string& target, QueueItem::Priority p, bool
 	if (p == QueueItem::PAUSED)
 	{
 		if (isRunning)
-			DownloadManager::abortDownload(target);
+			DownloadManager::getInstance()->abortDownload(target);
 	}
 	else
 	{

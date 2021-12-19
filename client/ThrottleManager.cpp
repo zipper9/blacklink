@@ -45,7 +45,7 @@ ThrottleManager::~ThrottleManager()
  */
 int ThrottleManager::read(Socket* sock, void* buffer, size_t len)
 {
-	const size_t downs = downLimit ? DownloadManager::getDownloadCount() : 0;
+	const size_t downs = downLimit ? DownloadManager::getInstance()->getDownloadCount() : 0;
 	if (downLimit == 0 || downs == 0)
 		return sock->read(buffer, len);
 		
