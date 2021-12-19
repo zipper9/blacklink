@@ -1464,17 +1464,17 @@ void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAd
 	if (std::find_if(adapters.cbegin(), adapters.cend(),
 		[&defaultAdapter](const auto &v) { return v.ip == defaultAdapter; }) == adapters.cend())
 	{
-		adapters.insert(adapters.begin(), Util::AdapterInfo(TSTRING(DEFAULT_ADAPTER), defaultAdapter, 0, 0));
+		adapters.insert(adapters.begin(), Util::AdapterInfo(Util::emptyString, TSTRING(DEFAULT_ADAPTER), defaultAdapter, 0, 0));
 	}
 	int selected = -1;
 	for (size_t i = 0; i < adapters.size(); ++i)
 	{
 		string address = Util::printIpAddress(adapters[i].ip);
 		tstring text = Text::toT(address);
-		if (!adapters[i].adapterName.empty())
+		if (!adapters[i].description.empty())
 		{
 			text += _T(" (");
-			text += adapters[i].adapterName;
+			text += adapters[i].description;
 			text += _T(')');
 		}
 		bindCombo.AddString(text.c_str());

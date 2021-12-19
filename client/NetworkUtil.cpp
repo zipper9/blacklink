@@ -6,6 +6,7 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
+#include "CompatibilityManager.h"
 #else
 #include <arpa/inet.h>
 #include <netinet/ip6.h>
@@ -58,10 +59,10 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcep
 	adapterInfos.clear();
 #ifdef _WIN32
 	ULONG len = 15360;
+	ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST;
 #ifdef OSVER_WIN_XP
-	const ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_INCLUDE_PREFIX;
-#else
-	const ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST;
+	if (!CompatibilityManager::isOsVistaPlus())
+		flags |= GAA_FLAG_INCLUDE_PREFIX;
 #endif
 	for (int i = 0; i < 3; ++i)
 	{
@@ -78,18 +79,23 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcep
 				{
 					for (PIP_ADAPTER_UNICAST_ADDRESS ua = pAdapterInfo->FirstUnicastAddress; ua; ua = ua->Next)
 					{
+						const IP_ADAPTER_UNICAST_ADDRESS_LH* ualh = (const IP_ADAPTER_UNICAST_ADDRESS_LH*) ua;
 						IpAddressEx address;
 						uint16_t port;
 						fromSockAddr(address, port, *(const sockaddr_u*)(ua->Address.lpSockaddr));
 						if (address.type)
 						{
+							unsigned prefixLen;
 #ifdef OSVER_WIN_XP
-							unsigned prefixLen = getPrefixLen(pAdapterInfo, address, af);
+							if (CompatibilityManager::isOsVistaPlus())
+								prefixLen = ualh->OnLinkPrefixLength;
+							else
+								prefixLen = getPrefixLen(pAdapterInfo, address, af);
 #else
-							unsigned prefixLen = ua->OnLinkPrefixLength;
+							prefixLen = ualh->OnLinkPrefixLength;
 #endif
 							int index = af == AF_INET6 ? pAdapterInfo->Ipv6IfIndex : pAdapterInfo->IfIndex;
-							adapterInfos.emplace_back(pAdapterInfo->FriendlyName, address, prefixLen, index);
+							adapterInfos.emplace_back(pAdapterInfo->AdapterName, pAdapterInfo->FriendlyName, address, prefixLen, index);
 						}
 					}
 				}
@@ -124,7 +130,10 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcep
 					prefix = getPrefix(&((const sockaddr_in*) p->ifa_netmask)->sin_addr, 4);
 				}
 				if (ip.type)
-					adapterInfos.emplace_back(p->ifa_name, ip, prefix, if_nametoindex(p->ifa_name));
+				{
+					string name(p->ifa_name);
+					adapterInfos.emplace_back(name, name, ip, prefix, if_nametoindex(p->ifa_name));
+				}
 			}
 		freeifaddrs(addr);
 	}
@@ -215,7 +224,7 @@ IpAddressEx Util::getLocalIp(int af)
 		for (const AdapterInfo& ai : adapters)
 			if (isSameNetwork(ai.ip, defRoute, ai.prefix))
 				return ai.ip;
-	}	
+	}
 	// fallback
 	return adapters[0].ip;
 }

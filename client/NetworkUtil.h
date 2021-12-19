@@ -8,8 +8,9 @@ namespace Util
 {
 	struct AdapterInfo
 	{
-		AdapterInfo(const tstring& name, const IpAddressEx& ip, int prefix, int index) : adapterName(name), ip(ip), prefix(prefix), index(index) { }
-		tstring adapterName;
+		AdapterInfo(const string& name, const tstring& description, const IpAddressEx& ip, int prefix, int index) : name(name), description(description), ip(ip), prefix(prefix), index(index) { }
+		string name;
+		tstring description;
 		IpAddressEx ip;
 		int prefix;
 		int index;
@@ -24,7 +25,7 @@ namespace Util
 		        (ip & 0xffff0000) == 0xa9fe0000 || // 169.254.0.0/16
 		        (ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
 		        (ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
-	}		
+	}
 	inline bool isPublicIp(Ip4Address ip)
 	{
 		return !(isPrivateIp(ip) ||
