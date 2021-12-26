@@ -2523,6 +2523,9 @@ IDR_ONLINE_ICO          ICON                    "res\\online.ico"
 
 IDR_ERROR               ICON                    "res\\Error.ico"
 
+IDR_PADLOCK_CLOSED      ICON                    "res\\padlock_closed.ico"
+
+IDR_PADLOCK_OPEN        ICON                    "res\\padlock_open.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //

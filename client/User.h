@@ -56,6 +56,7 @@ class User final
 			NMDC_BIT,
 			PASSIVE_BIT, // DHT only
 			TLS_BIT,
+			CCPM_BIT,
 
 			NO_ADC_1_0_PROTOCOL_BIT,
 			NO_ADCS_0_10_PROTOCOL_BIT,
@@ -93,6 +94,7 @@ class User final
 			PASSIVE = 1 << PASSIVE_BIT,
 			TLS = 1 << TLS_BIT,             //< Client supports TLS
 			ADCS = TLS,                     //< Client supports TLS
+			CCPM = 1 << CCPM_BIT,
 			
 			NO_ADC_1_0_PROTOCOL = 1 << NO_ADC_1_0_PROTOCOL_BIT,
 			NO_ADCS_0_10_PROTOCOL = 1 << NO_ADCS_0_10_PROTOCOL_BIT,

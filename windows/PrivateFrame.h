@@ -20,6 +20,7 @@
 #define PRIVATE_FRAME_H
 
 #include "../client/ClientManagerListener.h"
+#include "../client/ConnectionManagerListener.h"
 #include "BaseChatFrame.h"
 #include "FlatTabCtrl.h"
 #include "UCHandler.h"
@@ -28,7 +29,8 @@
 #define PM_MESSAGE_MAP 9
 
 class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
-	private ClientManagerListener, public UCHandler<PrivateFrame>,
+	private ClientManagerListener, private ConnectionManagerListener,
+	public UCHandler<PrivateFrame>,
 	public CMessageFilter,
 	public UserInfoBaseHandler<PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG>,
 	private SettingsManagerListener,
@@ -47,7 +49,9 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		
 		enum
 		{
-			PM_USER_UPDATED
+			PM_USER_UPDATED,
+			PM_CHANNEL_CONNECTED,
+			PM_CHANNEL_DISCONNECTED
 		};
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("PrivateFrame"), IDR_PRIVATE, 0, COLOR_3DFACE);
@@ -55,7 +59,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		typedef MDITabChildWindowImpl<PrivateFrame> baseClass;
 		typedef UCHandler<PrivateFrame> ucBase;
 		typedef UserInfoBaseHandler < PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG > uiBase;
-		
+
 		BEGIN_MSG_MAP(PrivateFrame)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
@@ -74,6 +78,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
 		COMMAND_ID_HANDLER(IDC_SELECT_HUB, onShowHubMenu);
+		COMMAND_ID_HANDLER(IDC_CCPM, onCCPM);
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uiBase)
 		CHAIN_MSG_MAP(baseClass)
@@ -81,7 +86,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		MESSAGE_HANDLER(WM_KEYDOWN, onKeyDown)
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		END_MSG_MAP()
-		
+
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -95,11 +100,12 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			return 0;
 		}
 		LRESULT onShowHubMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCCPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled); // !Decker!
-		
+
 		virtual void onBeforeActiveTab(HWND aWnd) override;
 		virtual void onAfterActiveTab(HWND aWnd) override;
-		
+
 		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
@@ -129,9 +135,12 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			return 0;
 		}
 		
-		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /* bHandled */)
+		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /* bHandled */)
 		{
-			updateHubList();
+			if (wParam == PM_USER_UPDATED)
+				updateHubList();
+			else
+				updateCCPM(wParam == PM_CHANNEL_CONNECTED);
 			return 0;
 		}
 
@@ -153,7 +162,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
 		}
 
-		void sendMessage(const tstring& msg, bool thirdperson = false) override;
+		bool sendMessage(const tstring& msg, bool thirdPerson = false) override;
 
 		const UserPtr& getUser() const
 		{
@@ -187,6 +196,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		uint64_t awayMsgSendTime;
 
 		void updateHubList();
+		void updateCCPM(bool connected);
 
 		// ClientManagerListener
 		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& ou) noexcept override
@@ -207,6 +217,19 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			if (user == replyTo.user)
 				PostMessage(WM_SPEAKER, PM_USER_UPDATED);
 		}
+
+		// ConnectionManagerListener
+		void on(ConnectionManagerListener::PMChannelConnected, const CID& cid) noexcept override
+		{
+			if (cid == replyTo.user->getCID())
+				PostMessage(WM_SPEAKER, PM_CHANNEL_CONNECTED);
+		}
+		void on(ConnectionManagerListener::PMChannelDisconnected, const CID& cid) noexcept override
+		{
+			if (cid == replyTo.user->getCID())
+				PostMessage(WM_SPEAKER, PM_CHANNEL_DISCONNECTED);
+		}
+
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		StringMap getFrameLogParams() const;

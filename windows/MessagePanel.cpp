@@ -50,7 +50,7 @@ int MessagePanel::emoMenuItemCount = 0;
 #endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
-	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false), showSelectHubButton(false)
+	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false), showSelectHubButton(false), showCCPMButton(false), ccpmState(CCPM_STATE_DISCONNECTED)
 {
 }
 
@@ -86,6 +86,7 @@ void MessagePanel::initPanel(HWND hWnd)
 	createButton(BUTTON_STRIKETHROUGH, g_hStrikeIco, IDC_STRIKE, ResourceManager::BBCODE_PANEL_STRIKE);
 	createButton(BUTTON_COLOR, g_hColorIco, IDC_COLOR, ResourceManager::BBCODE_PANEL_COLOR);
 	createButton(BUTTON_SELECT_HUB, g_iconBitmaps.getIcon(IconBitmaps::HUB_ONLINE, 0), IDC_SELECT_HUB, ResourceManager::SELECT_HUB);
+	createButton(BUTTON_CCPM, g_iconBitmaps.getIcon(IconBitmaps::PADLOCK_OPEN, 0), IDC_CCPM, ResourceManager::CONNECT_CCPM);
 
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 	ctrlSizeSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS |
@@ -174,6 +175,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 #endif
 	}
 	updateButton(dwp, showSelectHubButton, BUTTON_SELECT_HUB, rc);
+	updateButton(dwp, showCCPMButton, BUTTON_CCPM, rc);
 	EndDeferWindowPos(dwp);
 	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
@@ -189,8 +191,36 @@ int MessagePanel::getPanelWidth() const
 	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? BUTTON_WIDTH : 0;
 	if (BOOLSETTING(SHOW_BBCODE_PANEL))
 		width += BUTTON_WIDTH * (BOOLSETTING(SHOW_TRANSCODE_BTN) ? 6 : 5);
-	width += showSelectHubButton ? BUTTON_WIDTH : 0;
+	if (showSelectHubButton)
+		width += BUTTON_WIDTH;
+	if (showCCPMButton)
+		width += BUTTON_WIDTH;
 	return width;
+}
+
+void MessagePanel::setCCPMState(int state)
+{
+	if (ccpmState == state) return;
+	ccpmState = state;
+	if (ctrlButtons[BUTTON_CCPM])
+	{
+		HICON icon = g_iconBitmaps.getIcon(state == CCPM_STATE_CONNECTED || state == CCPM_STATE_CONNECTING ? IconBitmaps::PADLOCK_CLOSED : IconBitmaps::PADLOCK_OPEN, 0);
+		ctrlButtons[BUTTON_CCPM].SetIcon(icon);
+		ResourceManager::Strings caption;
+		switch (state)
+		{
+			case CCPM_STATE_CONNECTED:
+				caption = ResourceManager::DISCONNECT_CCPM;
+				break;
+			case CCPM_STATE_CONNECTING:
+				caption = ResourceManager::CCPM_IN_PROGRESS;
+				break;
+			default:
+				caption = ResourceManager::CONNECT_CCPM;
+		}
+		tooltip.AddTool(ctrlButtons[BUTTON_CCPM], caption);
+		ctrlButtons[BUTTON_CCPM].EnableWindow(state != CCPM_STATE_CONNECTING);
+	}
 }
 
 #if 0

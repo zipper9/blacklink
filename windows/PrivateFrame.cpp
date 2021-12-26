@@ -24,6 +24,7 @@
 #include "../client/ClientManager.h"
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"
+#include "../client/ConnectionManager.h"
 #include <boost/algorithm/string.hpp>
 
 static const size_t MAX_PM_FRAMES = 100;
@@ -76,6 +77,7 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	PostMessage(WM_SPEAKER, PM_USER_UPDATED);
 	created = true;
 	ClientManager::getInstance()->addListener(this);
+	ConnectionManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	UserManager::getInstance()->setPMOpen(replyTo.user, true);
 
@@ -268,7 +270,8 @@ void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& res
 {
 	if (replyTo.user->isOnline())
 	{
-		sendMessage(fullMessageText);
+		if (!sendMessage(fullMessageText))
+			resetInputMessageText = false;
 		awayMsgSendTime = GET_TICK() + AWAY_MSG_COOLDOWN_TIME;
 	}
 	else
@@ -296,20 +299,31 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 	}
 	else if (stricmp(cmd.c_str(), _T("getlist")) == 0 || stricmp(cmd.c_str(), _T("gl")) == 0)
 	{
-		BOOL bTmp;
+		BOOL unused;
 		clearUserMenu();
 		reinitUserMenu(replyTo.user, replyTo.hint);
-		onGetList(0, 0, 0, bTmp);
+		onGetList(0, 0, 0, unused);
 	}
 	else if (stricmp(cmd.c_str(), _T("log")) == 0)
 	{
 		openFrameLog();
 	}
+	else if (stricmp(cmd.c_str(), _T("ccpm")) == 0)
+	{
+		BOOL unused;
+		onCCPM(0, 0, 0, unused);
+	}
 }
 
-void PrivateFrame::sendMessage(const tstring& msg, bool thirdperson /*= false*/)
+bool PrivateFrame::sendMessage(const tstring& msg, bool thirdPerson /*= false*/)
 {
-	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdperson, false);
+	int ccpm = msgPanel->getCCPMState();
+	if (ccpm == MessagePanel::CCPM_STATE_CONNECTING)
+		return false;
+	if (ccpm == MessagePanel::CCPM_STATE_CONNECTED)
+		return ConnectionManager::getInstance()->sendCCPMMessage(replyTo, Text::fromT(msg), thirdPerson, false);
+	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdPerson, false);
+	return true;
 }
 
 LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -318,6 +332,7 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	{
 		closed = true;
 		ClientManager::getInstance()->removeListener(this);
+		ConnectionManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		UserManager::getInstance()->setPMOpen(replyTo.user, false);
 		PostMessage(WM_CLOSE);
@@ -573,7 +588,63 @@ void PrivateFrame::selectHub(const string& url)
 	}
 }
 
-LRESULT PrivateFrame::onShowHubMenu(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
+void PrivateFrame::updateCCPM(bool connected)
+{
+	if (connected)
+	{
+		const tstring& text = TSTRING(CCPM_CONNECTED);
+		addSystemMessage(text, Colors::g_ChatTextSystem);
+		addStatus(text, false);
+		if (msgPanel)
+		{
+			if (!msgPanel->showCCPMButton)
+			{
+				msgPanel->showCCPMButton = true;
+				UpdateLayout();
+			}
+			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTED);
+		}
+	}
+	else
+	{
+		const tstring& text = TSTRING(CCPM_DISCONNECTED);
+		addSystemMessage(text, Colors::g_ChatTextSystem);
+		addStatus(text, false);
+		if (msgPanel)
+			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_DISCONNECTED);
+	}
+}
+
+LRESULT PrivateFrame::onCCPM(WORD, WORD, HWND, BOOL&)
+{
+	auto cm = ConnectionManager::getInstance();
+	int state = cm->getCCPMState(replyTo.user->getCID());
+	if (state == ConnectionManager::CCPM_STATE_CONNECTING)
+	{
+		if (msgPanel)
+			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
+		// TODO: show MessageBox
+		return 0;
+	}
+	if (state == ConnectionManager::CCPM_STATE_DISCONNECTED)
+	{
+		if (!cm->connectCCPM(replyTo))
+		{
+			addSystemMessage(TSTRING(CCPM_FAILURE), Colors::g_ChatTextSystem);
+			return 0;
+		}
+		if (msgPanel)
+			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
+		addStatus(TSTRING(CCPM_IN_PROGRESS), false);
+	}
+	else
+	{
+		cm->disconnectCCPM(replyTo.user->getCID());
+	}
+	return 0;
+}
+
+LRESULT PrivateFrame::onShowHubMenu(WORD, WORD, HWND hWndCtl, BOOL&)
 {
 	if (hubList.empty()) return 0;
 	CMenu menu;
@@ -768,7 +839,16 @@ void PrivateFrame::createMessagePanel()
 			ctrlMessage.SetFocus();
 		}
 		auto flags = replyTo.user ? replyTo.user->getFlags() : 0;
-		BaseChatFrame::createMessagePanel((flags & User::NMDC) == 0);
+		bool showSelectHub = (flags & User::NMDC) == 0;
+		bool showCCPM = showSelectHub && (flags & (User::MYSELF | User::CCPM)) == User::CCPM;
+		BaseChatFrame::createMessagePanel(showSelectHub, showCCPM);
+		if (showCCPM && replyTo.user)
+		{
+			int state = ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID());
+			msgPanel->setCCPMState(state);
+			if (state == ConnectionManager::CCPM_STATE_CONNECTING)
+				addStatus(TSTRING(CCPM_IN_PROGRESS), false);
+		}
 		setCountMessages(0);
 	}
 }

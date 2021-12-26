@@ -501,7 +501,7 @@ void Client::decBytesShared(int64_t bytes)
 	bytesShared -= bytes;
 }
 
-void Client::changeBytesShared(Identity& id, const int64_t bytes)
+void Client::changeBytesShared(Identity& id, int64_t bytes)
 {
 	dcassert(bytes >= 0);
 	int64_t old = id.getBytesShared();
@@ -920,10 +920,8 @@ void Client::logPM(const ChatMessage& message) const
 	}
 }
 
-void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message)
+void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message, string& response)
 {
-	string response;
-	OnlineUserPtr replyTo = message->replyTo;
 	if (isPrivateMessageAllowed(*message, &response, false))
 		fire(ClientListener::Message(), this, message);
 	else
@@ -939,11 +937,9 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message)
 				hubName += hubUrl;
 				hubName += ')';
 			}
-			LogManager::message(CSTRING_F(PM_IGNORED, replyTo->getIdentity().getNick() % hubName));
+			LogManager::message(CSTRING_F(PM_IGNORED, message->replyTo->getIdentity().getNick() % hubName));
 		}
 	}
-	if (!response.empty())
-		privateMessage(replyTo, response, true, true);
 }
 
 void Client::fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)

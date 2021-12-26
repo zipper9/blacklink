@@ -367,7 +367,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 
 	public:
 		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
-		void sendMessage(const tstring& msg, bool thirdperson = false) override;
+		bool sendMessage(const tstring& msg, bool thirdPerson = false) override;
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		

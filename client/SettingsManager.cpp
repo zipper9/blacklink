@@ -298,6 +298,7 @@ static const char* g_settingTags[] =
 	"SendDBParam",
 	"UseSaltPass",
 	"UseBotList",
+	"UseCCPM",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
@@ -965,6 +966,7 @@ void SettingsManager::setDefaults()
 	setDefault(SEND_DB_PARAM, TRUE);
 	setDefault(USE_SALT_PASS, TRUE);
 	setDefault(USE_BOT_LIST, TRUE);
+	setDefault(USE_CCPM, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);

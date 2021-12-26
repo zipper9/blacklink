@@ -118,6 +118,7 @@ class AdcCommand
 		C(RNT, 'R', 'N', 'T');
 		C(PSR, 'P', 'S', 'R');
 		C(PUB, 'P', 'U', 'B');
+		C(PMI, 'P', 'M', 'I');
 		// ZLIF support
 		C(ZON, 'Z', 'O', 'N');
 		C(ZOF, 'Z', 'O', 'F');
@@ -270,6 +271,7 @@ class CommandHandler
 					CALL_CMD(NAT);
 					CALL_CMD(RNT);
 					CALL_CMD(PSR);
+					CALL_CMD(PMI);
 					// ZLIF support
 					CALL_CMD(ZON);
 					CALL_CMD(ZOF);

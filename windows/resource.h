@@ -18,6 +18,8 @@
 #define IDR_FAVORITES                   115
 #define IDR_ADLSEARCH                   116
 #define IDR_FILELIST                    117
+#define IDR_PADLOCK_CLOSED              118
+#define IDR_PADLOCK_OPEN                119
 #define IDR_NETWORK_STATISTICS_ICON     122
 #define IDR_HUB                         129
 #define IDR_HUB_OFF                     130
@@ -1203,6 +1205,7 @@
 #define IDC_REPORT                      2271
 #define IDC_CHECKLIST                   2272
 #define IDC_ADD_MAGNET                  2273
+#define IDC_CCPM                        2274
 #define IDC_BOLD                        2275
 #define IDC_ITALIC                      2276
 #define IDC_UNDERLINE                   2277

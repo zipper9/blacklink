@@ -56,7 +56,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		END_MSG_MAP()
 
 	public:
-		void createMessagePanel(bool showSelectHubButton);
+		void createMessagePanel(bool showSelectHubButton, bool showCCPMButton);
 		void destroyMessagePanel();
 
 	private:
@@ -119,7 +119,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		virtual void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText) = 0;
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 
-		virtual void sendMessage(const tstring& msg, bool thirdperson = false) = 0;
+		virtual bool sendMessage(const tstring& msg, bool thirdperson = false) = 0;
 		virtual void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 

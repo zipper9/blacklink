@@ -154,7 +154,7 @@ class Identity
 		{
 			return slots;
 		}
-		void setBytesShared(const int64_t bytes) // "SS"
+		void setBytesShared(int64_t bytes) // "SS"
 		{
 			dcassert(bytes >= 0);
 			getUser()->setBytesShared(bytes);

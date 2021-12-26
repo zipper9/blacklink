@@ -58,6 +58,7 @@ const string AdcSupports::UDP4_FEATURE("UDP4");
 const string AdcSupports::UDP6_FEATURE("UDP6");
 const string AdcSupports::NAT0_FEATURE("NAT0");
 const string AdcSupports::SEGA_FEATURE("SEGA");
+const string AdcSupports::CCPM_FEATURE("CCPM");
 const string AdcSupports::BASE_SUPPORT("ADBASE");
 const string AdcSupports::BAS0_SUPPORT("ADBAS0");
 const string AdcSupports::TIGR_SUPPORT("ADTIGR");
@@ -482,7 +483,7 @@ void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 		disconnect(false);
 		return;
 	}
-	else if (!tigrOk)
+	if (!tigrOk)
 	{
 		csState.lock();
 		featureFlags |= FEATURE_FLAG_OLD_PASSWORD;
@@ -521,7 +522,10 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 	auto user = findUser(c.getFrom());
 	if (!user)
 	{
-		LogManager::message("Ignore message from SID = " + Util::toString(c.getFrom()) + " Message = " + c.getParam(0));
+		if (c.getFrom() == AdcCommand::HUB_SID)
+			fire(ClientListener::StatusMessage(), this, c.getParam(0));
+		else
+			LogManager::message("Ignored message from unknown SID " + Util::toString(c.getFrom()) + " Message = " + c.getParam(0));
 		return;
 	}
 
@@ -550,7 +554,11 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 		if (!message->replyTo)
 			return;
 
-		processIncomingPM(message);
+		string response;
+		OnlineUserPtr replyTo = message->replyTo;
+		processIncomingPM(message, response);
+		if (!response.empty())
+			privateMessage(replyTo, response, true, true);
 	}
 	else
 	if (isChatMessageAllowed(*message, Util::emptyString))
@@ -559,11 +567,23 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 	}
 }
 
+void AdcHub::processCCPMMessage(const AdcCommand& c, const OnlineUserPtr& ou) noexcept
+{
+	dcassert(!c.getParameters().empty());
+	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), ou, nullptr, nullptr, c.hasFlag("ME", 1)));
+	message->to = getMyOnlineUser();
+	message->replyTo = ou;
+	string response;
+	processIncomingPM(message, response);
+	if (!response.empty())
+		ConnectionManager::getInstance()->sendCCPMMessage(ou, response, true, true);
+}
+
 void AdcHub::handle(AdcCommand::GPA, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().empty())
 		return;
-	
+
 	setRegistered();
 	csState.lock();
 	salt = c.getParam(0);
@@ -580,7 +600,6 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 	OnlineUserPtr victim = findUser(s);
 	if (victim)
 	{
-	
 		string tmp;
 		if (c.getParam("MS", 1, tmp))
 		{
@@ -602,14 +621,12 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 			}
 			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_IS_SPAM);
 		}
-		
-		putUser(s, c.getParam("DI", 1, tmp)); // TODO тут внутри повторно ищем юзера (OnlineUserPtr victim = findUser(s);)
+		putUser(s, c.getParam("DI", 1, tmp));
 	}
-	
+
 	if (s == sid)
 	{
 		// this QUI is directed to us
-		
 		string tmp;
 		if (c.getParam("TL", 1, tmp))
 		{
@@ -663,13 +680,14 @@ void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 		unknownProtocol(c.getFrom(), protocol, token);
 		return;
 	}
-	
-	if (!ou->getIdentity().isTcpActive())
+
+	IpAddress ip = ou->getIdentity().getConnectIP();
+	if (!ip.type)
 	{
 		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "IP unknown", AdcCommand::TYPE_DIRECT).setTo(c.getFrom()));
 		return;
 	}
-	
+
 #ifdef _DEBUG
 	if (suppressUserConn)
 	{
@@ -1572,7 +1590,9 @@ void AdcHub::info(bool/* forceUpdate*/)
 		}
 	}
 	if (!active && hasIP && optionNatTraversal)
-		su += "," + AdcSupports::NAT0_FEATURE;
+		su += ',' + AdcSupports::NAT0_FEATURE;
+	if (BOOLSETTING(USE_CCPM))
+		su += ',' + AdcSupports::CCPM_FEATURE;
 
 	addInfoParam(c, "SU", su);
 

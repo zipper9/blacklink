@@ -27,30 +27,31 @@ string AdcSupports::getSupports(const Identity& id)
 	string tmp;
 	const auto& u = id.getUser();
 	const auto flags = u->getFlags();
-	
+
 #define CHECK_FEAT(feat) if (flags & User::feat) { tmp += feat##_FEATURE + ' '; }
-	
+
 #define CHECK_SUP(sup) if (flags & User::sup) { tmp += sup##_SUPPORT + ' '; }
-	
+
 	CHECK_FEAT(TCP4);
 	CHECK_FEAT(UDP4);
 	CHECK_FEAT(TCP6);
 	CHECK_FEAT(UDP6);
 	CHECK_FEAT(ADCS);
 	CHECK_FEAT(NAT0);
-	
+	CHECK_FEAT(CCPM);
+
 #undef CHECK_FEAT
-	
+
 #undef CHECK_SUP
-	
+
 	const auto su = id.getKnownSupports();
-	
+
 #define CHECK_FEAT(feat) if (su & feat##_FEATURE_BIT) { tmp += feat##_FEATURE + ' '; }
-	
+
 	CHECK_FEAT(SEGA);
-	
+
 #undef CHECK_FEAT
-	
+
 	return tmp;
 }
 
@@ -62,21 +63,22 @@ void AdcSupports::setSupports(Identity& id, const StringList& su)
 
 	for (auto i = su.cbegin(); i != su.cend(); ++i)
 	{
-	
+
 #define CHECK_FEAT(feat) if (*i == feat##_FEATURE) { flags |= User::feat; }
 
 #define CHECK_SUP(feat) if (*i == feat##_SUPPORT) { flags |= User::feat; }
 
 #define CHECK_SUP_BIT(feat) if (*i == feat##_FEATURE) { knownSupports |= feat##_FEATURE_BIT; }
-	
+
 		CHECK_FEAT(TCP4) else
 		CHECK_FEAT(UDP4) else
 		CHECK_FEAT(TCP6) else
 		CHECK_FEAT(UDP6) else
 		CHECK_FEAT(ADCS) else
 		CHECK_FEAT(NAT0) else
+		CHECK_FEAT(CCPM) else
 		CHECK_SUP_BIT(SEGA)
-							
+
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		else
 		{
@@ -84,11 +86,11 @@ void AdcSupports::setSupports(Identity& id, const StringList& su)
 			g_debugUnknownAdcFeatures[*i] = Util::toString(su);
 		}
 #endif
-								
+
 #undef CHECK_FEAT
 #undef CHECK_SUP
 #undef CHECK_SUP_BIT
-								
+
 	}
 	u->setFlag(flags);
 	id.setKnownSupports(knownSupports);
@@ -113,9 +115,9 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 		else
 		{
 			auto postfix = connection.substr(i);
-			
+
 #define CHECK_SPEED(s, c) if (postfix == s) { coef = c; }
-			
+
 			CHECK_SPEED("KiB/s", 1024)
 			/*
 			else CHECK_SPEED("MiB/s", 1024 * 1024)
@@ -139,12 +141,12 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 		con *= coef;
 		id.setDownloadSpeed(static_cast<uint32_t>(con));
 	}
-	
+
 	const auto& u = id.getUser();
 	User::MaskType setUserFlags = 0;
 	User::MaskType unsetUserFlags = 0;
 	uint8_t statusFlags = 0;
-	
+
 	if (status & AWAY)
 		statusFlags |= Identity::SF_AWAY;
 	if (status & SERVER)

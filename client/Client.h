@@ -234,7 +234,9 @@ class Client : public ClientBase,
 		bool isPrivateMessageAllowed(const ChatMessage& message, string* response, bool automatic);
 		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
 		void logPM(const ChatMessage& message) const;
-		void processIncomingPM(std::unique_ptr<ChatMessage>& message);
+		void processIncomingPM(std::unique_ptr<ChatMessage>& message, string& response);
+
+	public:
 		void fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
 
 	private:

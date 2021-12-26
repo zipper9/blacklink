@@ -35,9 +35,14 @@
 #include "NetworkUtil.h"
 #include "SimpleStringTokenizer.h"
 #include "HttpConnection.h"
+#include "AdcHub.h"
 
 static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
+
+static const unsigned UC_IDLE_TIME = 60;
+static const unsigned CCPM_IDLE_TIME = 6 * 60;
+static const unsigned CCPM_KEEP_ALIVE_TIME = 180;
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
 
@@ -103,14 +108,30 @@ void TokenManager::getList(vector<pair<string, TokenData>>& result) const noexce
 	}
 }
 
-void TokenManager::removeExpired(uint64_t now) noexcept
+void TokenManager::removeExpired(uint64_t now, StringList& ccpmTokens) noexcept
 {
 	LOCK(cs);
 	for (auto i = tokens.begin(); i != tokens.end();)
-		if (now > i->second.expires)
+	{
+		TokenData& td = i->second;
+		if (now > td.expires)
+		{
+			if (td.type == TYPE_CCPM) ccpmTokens.emplace_back(i->first);
 			tokens.erase(i++);
+		}
 		else
 			i++;
+	}
+}
+
+int TokenManager::getTokenType(const string& token) const noexcept
+{
+	int type = -1;
+	LOCK(cs);
+	auto p = tokens.find(token);
+	if (p != tokens.end())
+		type = p->second.type;
+	return type;
 }
 
 bool ExpectedNmdcMap::add(const string& nick, const string& myNick, const string& hubUrl, const string& token, int encoding, uint64_t expires) noexcept
@@ -485,6 +506,10 @@ UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcep
 
 void ConnectionManager::putConnection(UserConnection* conn)
 {
+	const UserPtr& user = conn->getUser();
+	bool ccpm = conn->isAnySet(UserConnection::FLAG_CCPM);
+	if (ccpm && user)
+		fire(ConnectionManagerListener::PMChannelDisconnected(), user->getCID());
 	conn->disconnect(true);
 	{
 		WRITE_LOCK(*csConnections);
@@ -498,6 +523,12 @@ void ConnectionManager::putConnection(UserConnection* conn)
 				if (is) is->closeStream();
 			}
 			uc->state = UserConnection::STATE_UNUSED;
+		}
+		if (ccpm && user)
+		{
+			auto j = ccpmConn.find(user->getCID());
+			if (j != ccpmConn.end())
+				ccpmConn.erase(j);
 		}
 	}
 	if (CMD_DEBUG_ENABLED()) 
@@ -768,7 +799,10 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	removeUnusedConnections();
 	if (ClientManager::isBeforeShutdown())
 		return;
-	tokenManager.removeExpired(tick);
+	StringList ccpmTokens;
+	tokenManager.removeExpired(tick, ccpmTokens);
+	for (const string& token : ccpmTokens)
+		removeExpiredCCPMToken(token);
 	vector<ExpectedNmdcMap::NextConnectionInfo> vnci;
 	expectedNmdc.removeExpired(tick, vnci);
 	for (const auto& nci : vnci)
@@ -777,9 +811,21 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	READ_LOCK(*csConnections);
 	for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
 	{
-		auto& connection = *j;
-		if ((connection->getLastActivity() + 60 * 1000) < tick)
-			connection->disconnect(true);
+		UserConnection* uc = *j;
+		uint64_t lastActivity = uc->getLastActivity();
+		if (uc->isAnySet(UserConnection::FLAG_CCPM))
+		{
+			if (lastActivity + CCPM_IDLE_TIME * 1000 < tick)
+				uc->disconnect();
+			else if (lastActivity + CCPM_KEEP_ALIVE_TIME * 1000 < tick)
+			{
+				AdcCommand c(AdcCommand::CMD_PMI);
+				c.addParam("\n");
+				uc->send(c);
+			}
+		}
+		else if (lastActivity + UC_IDLE_TIME * 1000 < tick)
+			uc->disconnect(true);
 	}
 }
 
@@ -1227,11 +1273,10 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 	if (!cmd.getParam("ID", 0, cidStr))
 	{
 		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_INF_MISSING, "ID missing").addParam("FL", "ID"));
-		dcdebug("CM::onINF missing ID\n");
 		source->disconnect();
 		return;
 	}
-	
+
 	CID cid(cidStr);
 	string token;
 	if (source->isSet(UserConnection::FLAG_INCOMING))
@@ -1251,30 +1296,73 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		}
 		source->setConnectionQueueToken(token);
 		source->setHubUrl(ed.hubUrl);
+		int type = tokenManager.getTokenType(token);
+		if (type == TokenManager::TYPE_CCPM)
+		{
+			tokenManager.removeToken(token);
+			source->setFlag(UserConnection::FLAG_CCPM);
+		}
 	}
+	else
+		token = source->getUserConnectionToken();
 
 	source->setUser(ClientManager::findUser(cid));
-	
+
 	if (!source->getUser())
 	{
-		dcdebug("CM::onINF: User not found");
 		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "User not found"));
 		putConnection(source);
 		return;
 	}
-	
+
 	if (!checkKeyprint(source))
 	{
 		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "Keyprint validation failed"));
 		putConnection(source);
 		return;
 	}
-	
+
+	if (cmd.hasFlag("PM", 0))
+		source->setFlag(UserConnection::FLAG_CCPM);
+	if (source->isSet(UserConnection::FLAG_CCPM))
+	{
+		const CID& cid = source->getUser()->getCID();
+		bool result = true;
+		{
+			WRITE_LOCK(*csConnections);
+			auto i = ccpmConn.find(cid);
+			if (i == ccpmConn.end())
+			{
+				if (token.empty())
+					result = false;
+				else
+					ccpmConn.insert(make_pair(cid, PMConnInfo{source, token}));
+			}
+			else
+			{
+				auto& ci = i->second;
+				if (ci.uc)
+					result = false;
+				else
+					ci.uc = source;
+			}
+		}
+		if (!result)
+		{
+			// TODO: send error
+			putConnection(source);
+			return;
+		}
+		if (source->isSet(UserConnection::FLAG_INCOMING))
+			source->inf(false);
+		source->setState(UserConnection::STATE_IDLE);
+		fire(ConnectionManagerListener::PMChannelConnected(), cid);
+		return;
+	}
+
 	if (source->isSet(UserConnection::FLAG_INCOMING))
 		source->inf(false);
-	else
-		token = source->getUserConnectionToken();
-	
+
 	dcassert(!token.empty());
 	bool down;
 	{
@@ -1288,7 +1376,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		else
 			down = false;
 	}
-	
+
 	if (down)
 	{
 		source->setFlag(UserConnection::FLAG_DOWNLOAD);
@@ -1299,6 +1387,35 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		source->setFlag(UserConnection::FLAG_UPLOAD);
 		addUploadConnection(source);
 	}
+}
+
+void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd) noexcept
+{
+	if (cmd.getParameters().empty())
+		return;
+	if (!source->getUser())
+	{
+		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "User not found"));
+		putConnection(source);
+		return;
+	}
+	if (!source->isAnySet(UserConnection::FLAG_CCPM))
+	{
+		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "Unsupported command"));
+		putConnection(source);
+		return;
+	}
+
+	OnlineUserPtr ou = ClientManager::findOnlineUser(source->getUser()->getCID(), Util::emptyString, false);
+	if (!ou)
+	{
+		// got CCPM message from an offline user
+		return;
+	}
+	ClientBase* clientBase = ou->getClientBase().get();
+	if (clientBase->getType() != ClientBase::TYPE_ADC)
+		return;
+	static_cast<AdcHub*>(clientBase)->processCCPMMessage(cmd, ou);
 }
 
 void ConnectionManager::force(const UserPtr& user)
@@ -1352,7 +1469,6 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 				reasonItem.hintedUser = cqi->getHintedUser();
 				reasonItem.reason = error;
 				reasonItem.token = cqi->getConnectionQueueToken();
-				//!!! putCQI_L(cqi); не делаем отключение - теряем докачку https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1679
 			}
 		}
 		else if (source->isSet(UserConnection::FLAG_UPLOAD))
@@ -1379,10 +1495,6 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		{
 			fire(ConnectionManagerListener::FailedDownload(), reasonItem.hintedUser, reasonItem.reason, token);
 		}
-	}
-	else
-	{
-		//dcassert(0);
 	}
 	putConnection(source);
 }
@@ -1416,6 +1528,114 @@ void ConnectionManager::disconnect(const UserPtr& user, bool isDownload)
 				DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
 		}
 	}
+}
+
+bool ConnectionManager::connectCCPM(const HintedUser& hintedUser)
+{
+	const CID& cid = hintedUser.user->getCID();
+	OnlineUserPtr ou = ClientManager::findOnlineUser(cid, hintedUser.hint, true);
+	if (!ou) return false;
+	ClientBasePtr& client = ou->getClientBase();
+	if (client->getType() != ClientBase::TYPE_ADC) return false;
+	bool result;
+	uint64_t expires = GET_TICK() + 60000;
+	string token = tokenManager.makeToken(TokenManager::TYPE_CCPM, expires);
+	{
+		WRITE_LOCK(*csConnections);
+		PMConnInfo ci = { nullptr, token };
+		auto i = ccpmConn.insert(make_pair(cid, ci));
+		result = i.second;
+	}
+	if (!result)
+	{
+		tokenManager.removeToken(token);
+		return false;
+	}
+	client->connect(ou, token, false);
+	return true;
+}
+
+bool ConnectionManager::disconnectCCPM(const CID& cid)
+{
+	bool result = false;
+	UserConnection* uc = nullptr;
+	string token;
+	{
+		WRITE_LOCK(*csConnections);
+		auto i = ccpmConn.find(cid);
+		if (i != ccpmConn.end())
+		{
+			result = true;
+			uc = i->second.uc;
+			token = std::move(i->second.token);
+			ccpmConn.erase(i);
+		}
+	}
+	if (!token.empty())
+		tokenManager.removeToken(token);
+	if (uc)
+		uc->disconnect();
+	return result;
+}
+
+int ConnectionManager::getCCPMState(const CID& cid) const
+{
+	READ_LOCK(*csConnections);
+	auto i = ccpmConn.find(cid);
+	if (i == ccpmConn.end()) return CCPM_STATE_DISCONNECTED;
+	return i->second.uc ? CCPM_STATE_CONNECTED : CCPM_STATE_CONNECTING;
+}
+
+void ConnectionManager::removeExpiredCCPMToken(const string& token)
+{
+	bool found = false;
+	CID cid;
+	{
+		WRITE_LOCK(*csConnections);
+		for (auto i = ccpmConn.begin(); i != ccpmConn.end(); ++i)
+		{
+			PMConnInfo& ci = i->second;
+			if (ci.token == token)
+			{
+				if (!ci.uc)
+				{
+					cid = i->first;
+					found = true;
+					ccpmConn.erase(i);
+				}
+				break;
+			}
+		}
+	}
+	if (found)
+		fire(ConnectionManagerListener::PMChannelDisconnected(), cid);
+}
+
+bool ConnectionManager::sendCCPMMessage(const HintedUser& hintedUser, const string& text, bool thirdPerson, bool automatic)
+{
+	OnlineUserPtr ou = ClientManager::findOnlineUser(hintedUser.user->getCID(), hintedUser.hint, false);
+	if (!ou) return false;
+	return sendCCPMMessage(ou, text, thirdPerson, automatic);
+}
+
+bool ConnectionManager::sendCCPMMessage(const OnlineUserPtr& ou, const string& text, bool thirdPerson, bool automatic)
+{
+	ClientBase* clientBase = ou->getClientBase().get();
+	if (clientBase->getType() != ClientBase::TYPE_ADC) return false;
+	AdcCommand cmd(AdcCommand::CMD_MSG);
+	cmd.addParam(text);
+	if (thirdPerson) cmd.addParam("ME1");
+	string message = cmd.toString(0);
+	{
+		READ_LOCK(*csConnections);
+		auto i = ccpmConn.find(ou->getUser()->getCID());
+		if (i == ccpmConn.end()) return false;
+		const auto& ci = i->second;
+		if (!ci.uc) return false;
+		ci.uc->send(message);
+	}
+	static_cast<AdcHub*>(clientBase)->fireOutgoingPM(ou, text, thirdPerson, automatic);
+	return true;
 }
 
 void ConnectionManager::stopServers()
@@ -1597,13 +1817,15 @@ string ConnectionManager::getTokenInfo() const
 			auto i = find(uploads.begin(), uploads.end(), p.first);
 			if (i != uploads.end()) cqi = *i;
 		}
-		else
+		else if (data.type == TokenManager::TYPE_DOWNLOAD)
 		{
 			res += "download";
 			READ_LOCK(*csDownloads);
 			auto i = find(downloads.begin(), downloads.end(), p.first);
 			if (i != downloads.end()) cqi = *i;
 		}
+		else
+			res += "ccpm";
 		if (data.expires != UINT64_MAX)
 		{
 			int64_t t = data.expires - now;

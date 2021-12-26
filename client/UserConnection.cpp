@@ -577,12 +577,20 @@ void UserConnection::handle(AdcCommand::GFI t, const AdcCommand& cmd)
 		UploadManager::getInstance()->processGFI(this, cmd);
 }
 
+void UserConnection::handle(AdcCommand::MSG t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_IDLE, cmd)) return;
+	ConnectionManager::getInstance()->processMSG(this, cmd);
+}
+
 void UserConnection::inf(bool withToken)
 {
 	AdcCommand c(AdcCommand::CMD_INF);
 	c.addParam("ID", ClientManager::getMyCID().toBase32());
 	if (withToken)
 		c.addParam("TO", getUserConnectionToken());
+	if (isSet(FLAG_CCPM))
+		c.addParam("PM1");
 	send(c);
 }
 

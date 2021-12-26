@@ -284,7 +284,7 @@ void HubFrame::createMessagePanel()
 			if (isDHT) ctrlUsers.insertDHTUsers();
 			updateFlag = true;
 		}
-		BaseChatFrame::createMessagePanel(false);
+		BaseChatFrame::createMessagePanel(false, false);
 		setCountMessages(0);
 		if (!ctrlChatContainer && ctrlClient.m_hWnd)
 		{
@@ -445,16 +445,16 @@ void HubFrame::readFrameLog()
 	ctrlClient.goToEnd(true);
 }
 
-void HubFrame::sendMessage(const tstring& msg, bool thirdperson)
+bool HubFrame::sendMessage(const tstring& msg, bool thirdPerson)
 {
 	if (isDHT)
 	{
 		MessageBox(CTSTRING(DHT_NO_CHAT), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
-		return;
+		return false;
 	}
-	dcassert(client);
-	if (client)
-		client->hubMessage(Text::fromT(msg), thirdperson);
+	if (!client) return false;
+	client->hubMessage(Text::fromT(msg), thirdPerson);
+	return true;
 }
 
 void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText)

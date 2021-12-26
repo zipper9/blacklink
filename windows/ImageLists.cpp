@@ -393,6 +393,8 @@ IconBitmaps::IconBitmaps()
 	init(CLEAR,              SOURCE_ICON,     IDR_PURGE);
 	init(PAUSE,              SOURCE_ICON,     IDR_PAUSE);
 	init(EXCLAMATION,        SOURCE_ICON,     IDR_ERROR);
+	init(PADLOCK_CLOSED,     SOURCE_ICON,     IDR_PADLOCK_CLOSED);
+	init(PADLOCK_OPEN,       SOURCE_ICON,     IDR_PADLOCK_OPEN);
 }
 
 bool IconBitmaps::loadIcon(int index, int size)

@@ -74,7 +74,8 @@ class UserConnection :
 			FLAG_DOWNLOAD       = FLAG_INTERNAL_FIRST << 3,
 			FLAG_INCOMING       = FLAG_INTERNAL_FIRST << 4,
 			FLAG_ASSOCIATED     = FLAG_INTERNAL_FIRST << 5,
-			FLAG_SECURE         = FLAG_INTERNAL_FIRST << 6
+			FLAG_SECURE         = FLAG_INTERNAL_FIRST << 6,
+			FLAG_CCPM           = FLAG_INTERNAL_FIRST << 7
 		};
 		
 		enum States
@@ -82,22 +83,22 @@ class UserConnection :
 			// ConnectionManager
 			STATE_UNCONNECTED,
 			STATE_CONNECT,
-			
+
 			// Handshake
 			STATE_SUPNICK,      // ADC: SUP, Nmdc: $Nick
 			STATE_INF,
 			STATE_LOCK,
 			STATE_DIRECTION,
 			STATE_KEY,
-			
+
 			// UploadManager
 			STATE_GET,          // Waiting for GET
 			STATE_SEND,         // Waiting for $Send
-			
+
 			// DownloadManager
 			STATE_SND,  // Waiting for SND
 			STATE_IDLE, // No more downloads for the moment
-			
+
 			// Up & down
 			STATE_RUNNING,      // Transmitting data
 
@@ -259,6 +260,7 @@ class UserConnection :
 		void handle(AdcCommand::SND t, const AdcCommand& c);
 		void handle(AdcCommand::STA t, const AdcCommand& c);
 		void handle(AdcCommand::GFI t, const AdcCommand& c);
+		void handle(AdcCommand::MSG t, const AdcCommand& c);
 
 		// Ignore any other ADC commands for now
 		template<typename T> void handle(T, const AdcCommand&) { }

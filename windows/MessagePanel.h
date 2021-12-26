@@ -59,13 +59,23 @@ class MessagePanel
 			BUTTON_STRIKETHROUGH,
 			BUTTON_COLOR,
 			BUTTON_SELECT_HUB,
+			BUTTON_CCPM,
 			MAX_BUTTONS
+		};
+
+		enum
+		{
+			CCPM_STATE_DISCONNECTED,
+			CCPM_STATE_CONNECTED,
+			CCPM_STATE_CONNECTING
 		};
 
 		explicit MessagePanel(CEdit& ctrlMessage);
 		void initPanel(HWND hWnd);
 		void destroyPanel();
 		void updatePanel(const CRect& rect);
+		void setCCPMState(int state);
+		int getCCPMState() const { return ccpmState; }
 		int getPanelWidth() const;
 #ifdef IRAINMAN_INCLUDE_SMILE
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
@@ -77,6 +87,7 @@ class MessagePanel
 
 		bool initialized;
 		bool showSelectHubButton;
+		bool showCCPMButton;
 
 	private:
 		CFlyToolTipCtrl tooltip;
@@ -96,6 +107,7 @@ class MessagePanel
 		static int emoMenuItemCount;
 #endif
 		HWND m_hWnd;
+		int ccpmState;
 
 		static HIconWrapper g_hSendMessageIco;
 		static HIconWrapper g_hMultiChatIco;

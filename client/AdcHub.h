@@ -52,6 +52,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			return AdcCommand::escape(str, false);
 		}
 		bool send(const AdcCommand& cmd);
+		void processCCPMMessage(const AdcCommand& cmd, const OnlineUserPtr& ou) noexcept;
 		
 		string getMySID() const
 		{

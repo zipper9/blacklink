@@ -243,6 +243,8 @@ class IconBitmaps
 			CLEAR,
 			PAUSE,
 			EXCLAMATION,
+			PADLOCK_CLOSED,
+			PADLOCK_OPEN,
 			MAX_BITMAPS
 		};
 

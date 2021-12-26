@@ -1435,7 +1435,11 @@ void NmdcHub::toParse(const string& param)
 #endif
 
 	message->translateMe();
-	processIncomingPM(message);
+	string response;
+	OnlineUserPtr replyTo = message->replyTo;
+	processIncomingPM(message, response);
+	if (!response.empty())
+		privateMessage(replyTo, response, true, true);
 }
 
 void NmdcHub::onLine(const string& line)

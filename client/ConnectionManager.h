@@ -33,7 +33,8 @@ class TokenManager
 		enum
 		{
 			TYPE_DOWNLOAD,
-			TYPE_UPLOAD
+			TYPE_UPLOAD,
+			TYPE_CCPM
 		};
 
 		string makeToken(int type, uint64_t expires) noexcept;
@@ -41,7 +42,8 @@ class TokenManager
 		bool isToken(const string& token) const noexcept;
 		void removeToken(const string& token) noexcept;
 		size_t getTokenCount() const noexcept;
-		void removeExpired(uint64_t now) noexcept;
+		void removeExpired(uint64_t now, StringList& ccpmTokens) noexcept;
+		int getTokenType(const string& token) const noexcept;
 
 		struct TokenData
 		{
@@ -173,6 +175,13 @@ class ConnectionManager :
 			SERVER_TYPE_AUTO_DETECT
 		};
 
+		enum
+		{
+			CCPM_STATE_DISCONNECTED,
+			CCPM_STATE_CONNECTED,
+			CCPM_STATE_CONNECTING
+		};
+
 		static TokenManager tokenManager;
 		bool nmdcExpect(const string& nick, const string& myNick, const string& hubUrl, const string& token, int encoding, uint64_t expires)
 		{
@@ -182,18 +191,24 @@ class ConnectionManager :
 		{
 			expectedAdc.add(token, cid, hubUrl, expires);
 		}
-		
+
 		void nmdcConnect(const IpAddress& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);
 		void nmdcConnect(const IpAddress& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure);
 		void adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure);
 		void adcConnect(const OnlineUser& user, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
-		
+
 		void getDownloadConnection(const UserPtr& user);
 		void force(const UserPtr& user);
 		void setUploadLimit(const UserPtr& user, int lim);
-		
+
 		void disconnect(const UserPtr& user);
 		void disconnect(const UserPtr& user, bool isDownload);
+
+		bool connectCCPM(const HintedUser& hintedUser);
+		bool disconnectCCPM(const CID& cid);
+		int getCCPMState(const CID& cid) const;
+		bool sendCCPMMessage(const HintedUser& hintedUser, const string& text, bool thirdPerson, bool automatic);
+		bool sendCCPMMessage(const OnlineUserPtr& ou, const string& text, bool thirdPerson, bool automatic);
 
 		void stopServers();
 		void shutdown();
@@ -203,7 +218,7 @@ class ConnectionManager :
 		void stopServer(int af) noexcept;
 		void fireListenerStarted() noexcept;
 		void fireListenerFailed(const char* type, int af, int errorCode) noexcept;
-		
+
 		uint16_t getPort() const { return ports[0]; }
 		uint16_t getSecurePort() const { return ports[1]; }
 
@@ -217,6 +232,7 @@ class ConnectionManager :
 		void processMyNick(UserConnection* source, const string& nick) noexcept;
 		void processKey(UserConnection* source) noexcept;
 		void processINF(UserConnection* source, const AdcCommand& cmd) noexcept;
+		void processMSG(UserConnection* source, const AdcCommand& cmd) noexcept;
 		void fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept;
 		void failed(UserConnection* source, const string& error, bool protocolError);
 
@@ -254,16 +270,24 @@ class ConnectionManager :
 				IpAddressEx bindIp;
 		};
 
+		// All active connections
+		boost::unordered_set<UserConnection*> userConnections;
 		mutable std::unique_ptr<RWLock> csConnections;
-		mutable std::unique_ptr<RWLock> csDownloads;
-		mutable CriticalSection csUploads;
-		
-		/** All ConnectionQueueItems */
+
+		// All ConnectionQueueItems
 		std::set<ConnectionQueueItemPtr> downloads;
 		std::set<ConnectionQueueItemPtr> uploads;
-		
-		/** All active connections */
-		boost::unordered_set<UserConnection*> userConnections;
+		mutable std::unique_ptr<RWLock> csDownloads;
+		mutable CriticalSection csUploads;
+
+		// CCPM connections
+		struct PMConnInfo
+		{
+			UserConnection* uc;
+			string token;
+		};
+
+		boost::unordered_map<CID, PMConnInfo> ccpmConn;
 		
 	private:
 		static const int SERVER_SECURE = 1;
@@ -272,7 +296,7 @@ class ConnectionManager :
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		UserList checkIdle;
 #endif
-		
+
 		StringList nmdcFeatures;
 		StringList adcFeatures;
 		
@@ -290,15 +314,14 @@ class ConnectionManager :
 		uint16_t ports[2];
 		
 		bool shuttingDown;
-		
+
 		SpeedCalc<32> uploadSpeed;
 		SpeedCalc<32> downloadSpeed;
 
 		friend class Singleton<ConnectionManager>;
 		ConnectionManager();
-		
 		~ConnectionManager();
-		
+
 		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi);
 		UserConnection* getConnection(bool nmdc, bool secure) noexcept;
 		void deleteConnection(UserConnection* conn);
@@ -312,13 +335,12 @@ class ConnectionManager :
 		void addUploadConnection(UserConnection* conn);
 		void addDownloadConnection(UserConnection* conn);
 		void updateAverageSpeed(uint64_t tick);
-		
+
 		void putCQI_L(ConnectionQueueItemPtr& cqi);
-		
 		void accept(const Socket& sock, int type, Server* server) noexcept;
-		
 		bool checkKeyprint(UserConnection *source);
-		
+		void removeExpiredCCPMToken(const string& token);
+
 	public:
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;

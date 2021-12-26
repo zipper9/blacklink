@@ -19,6 +19,13 @@
 #ifndef CONNECTION_MANAGER_LISTENER_H
 #define CONNECTION_MANAGER_LISTENER_H
 
+#include "typedefs.h"
+
+class HintedUser;
+class CID;
+class ChatMessage;
+class Client;
+
 class ConnectionManagerListener
 {
 	public:
@@ -27,7 +34,7 @@ class ConnectionManagerListener
 		{
 			enum { TYPE = I };
 		};
-		
+
 		typedef X<0> Added;
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
 		typedef X<1> Connected;
@@ -43,7 +50,12 @@ class ConnectionManagerListener
 		typedef X<8> ListenerStarted;
 		typedef X<9> ListenerFailed;
 		typedef X<10> RemoveToken;
-		
+
+		typedef X<11> PMChannelConnected;
+		typedef X<12> PMChannelDisconnected;
+		typedef X<13> PrivateMessage;
+		typedef X<14> StatusMessage;
+
 		virtual void on(Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
 		virtual void on(Connected, const ConnectionQueueItemPtr&) noexcept { }
@@ -59,6 +71,10 @@ class ConnectionManagerListener
 #endif
 		virtual void on(ListenerStarted) noexcept { }
 		virtual void on(ListenerFailed, const char* type, int af, int errorCode) noexcept { }
+		virtual void on(PMChannelConnected, const CID& cid) noexcept { }
+		virtual void on(PMChannelDisconnected, const CID& cid) noexcept { }
+		virtual void on(PrivateMessage, std::unique_ptr<ChatMessage>&) noexcept { }
+		virtual void on(StatusMessage, Client*, const string&) noexcept { }
 };
 
 #endif // !defined(CONNECTION_MANAGER_LISTENER_H)
