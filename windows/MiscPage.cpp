@@ -66,7 +66,5 @@ LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 
 void MiscPage::write()
 {
-	PropPage::write(*this, items);
-	/*if(SETTING(PSR_DELAY) < 5)
-	    g_settings->set(SettingsManager::PSR_DELAY, 5);*/
+	PropPage::write(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
 }
