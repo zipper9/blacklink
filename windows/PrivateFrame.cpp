@@ -37,7 +37,7 @@ PrivateFrame::FrameMap PrivateFrame::frames;
 
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
-	created(false), isOffline(false), awayMsgSendTime(0),
+	created(false), isOffline(false), isMultipleHubs(false), awayMsgSendTime(0),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP)
 {
 	ctrlStatusCache.resize(1);
@@ -356,7 +356,7 @@ void PrivateFrame::readFrameLog()
 	}
 }
 
-void PrivateFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
+void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
 	if (!created)
 	{
@@ -480,6 +480,8 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		{
 			rc.top++;
 			msgPanel->updatePanel(rc);
+			if (msgPanel->showSelectHubButton)
+				msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
 		}
 	}
 }
@@ -563,11 +565,9 @@ void PrivateFrame::updateHubList()
 		fullUserName += hubName;
 		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + fullUserName + _T("]"));
 	}
+	isMultipleHubs = hubList.size() > 1;
 	if (msgPanel)
-	{
-		CButton& button = msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB);
-		button.EnableWindow(hubList.size() > 1);
-	}
+		msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
 	SetWindowText(fullUserName.c_str());
 }
 

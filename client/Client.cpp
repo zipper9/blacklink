@@ -246,8 +246,11 @@ void Client::reloadSettings(bool updateNick)
 			overrideSearchIntervalPassive = true;
 		setSearchIntervalPassive(searchInterval * 1000);
 
+		csOpChat.lock();
 		opChat = hub->getOpChat();
 		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
+		csOpChat.unlock();
+
 		exclChecks = hub->getExclChecks();
 		fakeHubCount = hub->getExclusiveHub();
 		fakeClientStatus = hub->getFakeClientStatus();
@@ -958,6 +961,7 @@ void Client::fireOutgoingPM(const OnlineUserPtr& user, const string& message, bo
 
 bool Client::isInOperatorList(const string& userName) const
 {
+	LOCK(csOpChat);
 	return !opChat.empty() && std::regex_match(userName, reOpChat);
 }
 
@@ -1108,4 +1112,10 @@ void Client::getUserCommands(vector<UserCommand>& result) const
 	READ_LOCK(*csUserCommands);
 	for (const UserCommand& uc : userCommands)
 		result.push_back(uc);
+}
+
+string Client::getOpChat() const
+{
+	LOCK(csOpChat);
+	return opChat;
 }

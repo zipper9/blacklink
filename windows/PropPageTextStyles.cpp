@@ -312,7 +312,7 @@ void PropPageTextStyles::refreshPreview()
 		for (int i = 0; i < TS_LAST; i++)
 		{
 			const ChatCtrl::Message message(nullptr, false, true, _T("12:34 "), CTSTRING_I(textStyles[i].name), textStyles[i], false);
-			preview.appendText(message, 0);
+			preview.appendText(message, 0, false);
 		}
 	}
 	preview.InvalidateRect(NULL);

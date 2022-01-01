@@ -119,13 +119,13 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		virtual void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText) = 0;
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 
-		virtual bool sendMessage(const tstring& msg, bool thirdperson = false) = 0;
-		virtual void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
+		virtual bool sendMessage(const tstring& msg, bool thirdPerson = false) = 0;
+		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 
-		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		void addLine(const Identity& ou, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra);
-		void addSystemMessage(const tstring& line, CHARFORMAT2& cf);
+		void addLine(const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& ou, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra);
+		void addSystemMessage(const tstring& line, const CHARFORMAT2& cf);
 
 		static TCHAR getChatRefferingToNick();
 

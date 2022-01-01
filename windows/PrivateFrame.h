@@ -106,7 +106,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		virtual void onBeforeActiveTab(HWND aWnd) override;
 		virtual void onAfterActiveTab(HWND aWnd) override;
 
-		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void readFrameLog();
@@ -114,27 +114,27 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
 		}
-		
+
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		
+
 		LRESULT onCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAll();
 			return 0;
 		}
-		
+
 		LRESULT onCloseAllOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAllOffline();
 			return 0;
 		}
-		
+
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /* bHandled */)
 		{
 			if (wParam == PM_USER_UPDATED)
@@ -153,13 +153,13 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			return 0;
 		}
 
-		void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem)
+		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem)
 		{
 			if (!created)
 			{
 				Create(WinUtil::g_mdiClient);
 			}
-			BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
+			BaseChatFrame::addStatus(line, inChat, history, cf);
 		}
 
 		bool sendMessage(const tstring& msg, bool thirdPerson = false) override;
@@ -192,6 +192,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 
 		CContainedWindow ctrlChatContainer;
 
+		bool isMultipleHubs;
 		bool isOffline;
 		uint64_t awayMsgSendTime;
 

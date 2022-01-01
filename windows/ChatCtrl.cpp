@@ -213,17 +213,6 @@ void ChatCtrl::restoreChatCache()
 {
 	CWaitCursor waitCursor;
 	{
-#if 0
-		for (int i = 0; i < 3000; ++i)
-		{
-			Message message(nullptr, false, true,
-			                _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "),
-			                Util::toStringT(i) + _T(" ]Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!Test!"),
-			                Colors::g_ChatTextOldHistory, false);
-			message.nick = _T("FlylinkDC-Debug-TEST");
-			chatCache.push_back(message);
-		}
-#endif
 		std::list<Message> tempChatCache;
 		bool cacheDisabled = true;
 		{
@@ -253,7 +242,7 @@ void ChatCtrl::restoreChatCache()
 				oldText.clear();
 			}
 			if (!cacheDisabled)
-				appendText(*i, 0);
+				appendText(*i, UINT_MAX, false);
 		}
 	}
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -277,7 +266,7 @@ void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startP
 	}
 }
 
-void ChatCtrl::appendText(const Message& message, unsigned maxSmiles)
+void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highlightNick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
@@ -344,24 +333,24 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles)
 		insertAndFormat(message.nick, currentCF, selBegin, selEnd);
 		insertAndFormat(g_close, message.cf, selBegin, selEnd);
 	}
-	
-	appendTextInternal(text, message, maxSmiles);
+
+	appendTextInternal(text, message, maxSmiles, highlightNick);
 	SetSel(selBeginSaved, selEndSaved);
 	goToEnd(cr, false);
 }
 
-void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles)
+void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
-		parseText(text, message, maxSmiles);
+		parseText(text, message, maxSmiles, highlightNick);
 }
 
-void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles)
+void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
-		parseText(text, message, maxSmiles);
+		parseText(text, message, maxSmiles, highlightNick);
 }
 
 static inline void shiftPos(tstring::size_type& pos, tstring::size_type movePos, int shift)
@@ -389,7 +378,7 @@ void ChatCtrl::applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring
 	}
 }
 
-void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmiles)
+void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick)
 {
 	SetRedraw(FALSE);
 	const auto& cf = message.myMessage ? Colors::g_ChatTextMyOwn : message.cf;
@@ -565,12 +554,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 	}
 
 #ifdef IRAINMAN_INCLUDE_SMILE
-	extern DWORD g_GDI_count;
-	if (g_GDI_count >= 8000)
-	{
-		LogManager::message("[!] GDI count >= 8000 - disable smiles!");
-	}
-	if (message.useEmoticons && !outOfMemory && g_GDI_count < 8000)
+	if (message.useEmoticons && !outOfMemory)
 	{		
 		HWND mainFrameWnd = MainFrame::getMainFrame()->m_hWnd;
 		const vector<Emoticon*>& emoticons = EmoticonPack::current->getSortedEmoticons();
@@ -579,7 +563,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		size_t currentLink = 0;
 		tstring::size_type pos = 0;
 		unsigned messageEmoticons = 0;
-		while (imageIndex < emoticons.size() && !outOfMemory && messageEmoticons < MAX_EMOTICONS_PER_MESSAGE && (maxSmiles == 0 || totalEmoticons < maxSmiles))
+		while (imageIndex < emoticons.size() && !outOfMemory && messageEmoticons < MAX_EMOTICONS_PER_MESSAGE && totalEmoticons < maxSmiles)
 		{
 			const tstring& emoticonText = emoticons[imageIndex]->getText();
 			findSubstringAvoidingLinks(pos, text, emoticonText, currentLink);
@@ -624,7 +608,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 	}
 #endif // IRAINMAN_INCLUDE_SMILE
 	
-	if (!myNick.empty())
+	if (!myNick.empty() && highlightNick)
 	{
 		bool nickFound = false;
 		size_t currentLink = 0;
@@ -1193,7 +1177,7 @@ LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	if (!pRichEditOle)
 	{
 		initRichEditOle();
-		if (pRichEditOle) return 0;
+		if (!pRichEditOle) return 0;
 	}
 	LONG start, end;
 	GetSel(start, end);

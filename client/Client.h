@@ -466,7 +466,7 @@ class Client : public ClientBase,
 		virtual void onDataLine(const string&) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
 
-		const string& getOpChat() const { return opChat; }
+		string getOpChat() const;
 		void setKeyPrint(const string& keyprint) { this->keyprint = keyprint; }
 
 		void clearUserCommands(int ctx);
@@ -481,10 +481,12 @@ class Client : public ClientBase,
 		uint64_t lastActivity;
 		
 		string keyprint;
+		bool exclChecks;
+
+		mutable FastCriticalSection csOpChat;
 		string opChat;
 		std::regex reOpChat;
-		bool exclChecks;
-		
+
 		const char separator;
 		const Socket::Protocol proto;
 

@@ -183,8 +183,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 		
 		void UpdateLayout(BOOL resizeBars = TRUE);
-		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
+		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void runUserCommand(UserCommand& uc);
 		void followRedirect();
 		
@@ -353,9 +353,10 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 
 		struct StatusTask : public Task
 		{
-			explicit StatusTask(const string& msg, bool isInChat) : str(msg), isInChat(isInChat) { }
+			explicit StatusTask(const string& msg, bool isInChat, bool isSystem) : str(msg), isInChat(isInChat), isSystem(isSystem) { }
 			const string str;
 			const bool isInChat;
+			const bool isSystem;
 		};
 		void updateUserJoin(const OnlineUserPtr& ou);
 		void doDisconnected();

@@ -943,7 +943,7 @@ void HubFrame::doConnected()
 			fm->updateRecent(r);
 		}
 
-		addStatus(TSTRING(CONNECTED), true, true, Colors::g_ChatTextServer);
+		addStatus(TSTRING(CONNECTED));
 		setDisconnected(false);
 		
 		setHubParam();
@@ -1116,7 +1116,7 @@ void HubFrame::processTasks()
 						{
 							const Identity& from = msg->from->getIdentity();
 							const bool myMessage = msg->from->getUser()->isMe();
-							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), 0, Colors::g_ChatTextGeneral);
+							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), UINT_MAX, Colors::g_ChatTextGeneral);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 							auto& user = msg->from->getUser();
 							user->incMessageCount();
@@ -1127,7 +1127,7 @@ void HubFrame::processTasks()
 						}
 						else
 						{
-							BaseChatFrame::addLine(Text::toT(msg->text), 0, Colors::g_ChatTextPrivate);
+							BaseChatFrame::addLine(Text::toT(msg->text), UINT_MAX, Colors::g_ChatTextPrivate);
 						}
 					}
 				}
@@ -1148,7 +1148,7 @@ void HubFrame::processTasks()
 					if (!ClientManager::isBeforeShutdown())
 					{
 						const StatusTask& status = static_cast<StatusTask&>(*i->second);
-						addStatus(Text::toT(status.str), status.isInChat, true, Colors::g_ChatTextServer);
+						addStatus(Text::toT(status.str), status.isInChat, true, status.isSystem ? Colors::g_ChatTextSystem : Colors::g_ChatTextServer);
 					}
 				}
 				break;
@@ -1213,7 +1213,7 @@ void HubFrame::processTasks()
 					     BOOLSETTING(POPUP_PMS_BOT) && replyTo.isBot() ||
 					     BOOLSETTING(POPUP_PMS_OTHER)) || isOpen)
 					{
-						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, 0, client->getHubUrl(), myPM, pm->thirdPerson);
+						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, UINT_MAX, client->getHubUrl(), myPM, pm->thirdPerson);
 					}
 					if (!isPrivateFrameOk)
 					{
@@ -1244,7 +1244,7 @@ void HubFrame::processTasks()
 				case USER_REPORT:
 				{
 					const StatusTask& task = static_cast<StatusTask&>(*i->second);
-					BaseChatFrame::addLine(Text::toT(task.str), 1, Colors::g_ChatTextSystem);
+					BaseChatFrame::addLine(Text::toT(task.str), 0, Colors::g_ChatTextSystem);
 					if (BOOLSETTING(LOG_MAIN_CHAT))
 					{
 						StringMap params;
@@ -1700,7 +1700,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 	return 0;
 }
 
-void HubFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
+void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
 	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxSmiles, cf, extra);
@@ -2291,7 +2291,7 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	addTask(ADD_STATUS_LINE, new StatusTask(Text::toDOS(line), !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM)));
+	addTask(ADD_STATUS_LINE, new StatusTask(Text::toDOS(line), !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM), false));
 }
 
 void HubFrame::on(ClientListener::UserListUpdated, const ClientBase*, const OnlineUserList& userList) noexcept
@@ -2323,7 +2323,7 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 	bool doubleRedir = false;
 	if (ClientManager::isConnected(redirAddr))
 	{
-		addTask(ADD_STATUS_LINE, new StatusTask(STRING(REDIRECT_ALREADY_CONNECTED), true));
+		addTask(ADD_STATUS_LINE, new StatusTask(STRING(REDIRECT_ALREADY_CONNECTED), true, true));
 		doubleRedir = true;
 	}
 	
@@ -2331,15 +2331,13 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 	if (BOOLSETTING(AUTO_FOLLOW) || doubleRedir)
 		PostMessage(WM_COMMAND, IDC_FOLLOW, 0);
 	else
-		addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(PRESS_FOLLOW_FMT, redirAddr), true));
+		addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(PRESS_FOLLOW_FMT, redirAddr), true, true));
 }
 
 void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& line) noexcept
 {
 	if (!isClosedOrShutdown())
-	{
-		addTask(ADD_STATUS_LINE, new StatusTask(line, true));
-	}
+		addTask(ADD_STATUS_LINE, new StatusTask(line, true, true));
 	addTask(DISCONNECTED, nullptr);
 }
 
@@ -2458,7 +2456,7 @@ void HubFrame::on(ClientListener::HubFull, const Client*) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
-	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_FULL), true));
+	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_FULL), true, false));
 }
 
 void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept
@@ -2492,9 +2490,9 @@ void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickE
 				client->setAutoReconnect(true);
 				client->setReconnDelay(30);
 				if (nickError == ClientListener::Rejected)
-					status = new StatusTask(STRING_F(NICK_ERROR_REJECTED_AUTO, oldNick % nick), true);
+					status = new StatusTask(STRING_F(NICK_ERROR_REJECTED_AUTO, oldNick % nick), true, false);
 				else
-					status = new StatusTask(STRING_F(NICK_ERROR_TAKEN_AUTO, oldNick % nick), true);
+					status = new StatusTask(STRING_F(NICK_ERROR_TAKEN_AUTO, oldNick % nick), true, false);
 			}
 		}
 	}
@@ -2502,13 +2500,13 @@ void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickE
 		switch (nickError)
 		{
 			case ClientListener::Rejected:
-				status = new StatusTask(STRING_F(NICK_ERROR_REJECTED, client->getMyNick()), true);
+				status = new StatusTask(STRING_F(NICK_ERROR_REJECTED, client->getMyNick()), true, false);
 				break;
 			case ClientListener::Taken:
-				status = new StatusTask(STRING_F(NICK_ERROR_TAKEN, client->getMyNick()), true);
+				status = new StatusTask(STRING_F(NICK_ERROR_TAKEN, client->getMyNick()), true, false);
 				break;
 			default:
-				status = new StatusTask(STRING_F(NICK_ERROR_BAD_PASSWORD, client->getMyNick()), true);
+				status = new StatusTask(STRING_F(NICK_ERROR_BAD_PASSWORD, client->getMyNick()), true, false);
 		}
 	addTask(ADD_STATUS_LINE, status);
 }
@@ -2518,14 +2516,14 @@ void HubFrame::on(ClientListener::CheatMessage, const string& line) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	addTask(CHEATING_USER, new StatusTask(line, true));
+	addTask(CHEATING_USER, new StatusTask(line, true, true));
 }
 
 void HubFrame::on(ClientListener::UserReport, const ClientBase*, const string& report) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
-	addTask(USER_REPORT, new StatusTask(report, true));
+	addTask(USER_REPORT, new StatusTask(report, true, true));
 }
 
 void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept
@@ -2533,11 +2531,11 @@ void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode co
 	switch (code)
 	{
 		case ClientListener::LoggedIn:
-			addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(YOU_ARE_OP_MSG, baseClient->getHubUrl()), true));
+			addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(YOU_ARE_OP_MSG, baseClient->getHubUrl()), true, false));
 			break;
 
 		case ClientListener::HubTopic:
-			addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true));
+			addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true, false));
 			break;
 	}
 }

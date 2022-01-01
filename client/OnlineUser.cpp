@@ -663,7 +663,7 @@ void Identity::getReport(string& report)
 		appendIfValueNotEmpty("DC client", getStringParam("AP"));
 		appendIfValueNotEmpty("Client version", getStringParam("VE"));
 
-		appendIfValueNotEmpty("Public key fingerprint", keyPrint);
+		appendIfValueNotEmpty("Certificate fingerprint", keyPrint);
 
 		appendIfValueNotEmpty("P2P Guard", getP2PGuard());
 		appendIfValueNotEmpty("Support info", getExtJSONSupportInfo());

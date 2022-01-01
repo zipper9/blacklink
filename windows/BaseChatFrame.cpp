@@ -629,15 +629,15 @@ void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/,
 	}
 	
 	if (inChat && BOOLSETTING(STATUS_IN_CHAT))
-		addSystemMessage(line, Colors::g_ChatTextServer);
+		addSystemMessage(line, cf);
 }
 
-void BaseChatFrame::addSystemMessage(const tstring& line, CHARFORMAT2& cf)
+void BaseChatFrame::addSystemMessage(const tstring& line, const CHARFORMAT2& cf)
 {
-	addLine(_T("*** ") + line, 1, cf);
+	addLine(_T("*** ") + line, 0, cf);
 }
 
-void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
+void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
 {
 #ifdef _DEBUG
 	if (line.find(_T("&#124")) != tstring::npos)
@@ -648,16 +648,16 @@ void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2
 	if (showTimestamps)
 	{
 		const ChatCtrl::Message message(nullptr, false, true, _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "), line, cf, false);
-		ctrlClient.appendText(message, maxSmiles);
+		ctrlClient.appendText(message, maxSmiles, true);
 	}
 	else
 	{
 		const ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, line, cf, false);
-		ctrlClient.appendText(message, maxSmiles);
+		ctrlClient.appendText(message, maxSmiles, true);
 	}
 }
 
-void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra)
+void BaseChatFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra)
 {
 	if (ctrlClient.IsWindow())
 	{
@@ -677,7 +677,7 @@ void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bo
 		additionalInfo += "] ";
 	}
 	const ChatCtrl::Message message(&from, myMessage, thirdPerson, Text::toT(additionalInfo), line, cf, true);
-	ctrlClient.appendText(message, maxSmiles);
+	ctrlClient.appendText(message, maxSmiles, true);
 }
 
 LRESULT BaseChatFrame::onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -828,7 +828,7 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	{
 		message.msg = Text::toT(lines[i]);
 		message.msg += _T('\n');
-		ctrlClient.appendText(message, 1);
+		ctrlClient.appendText(message, UINT_MAX, false);
 	}
 }
 

@@ -97,9 +97,9 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 			}
 		};
 
-		void appendText(const Message& message, unsigned maxSmiles);
+		void appendText(const Message& message, unsigned maxSmiles, bool highlightNick);
 		void adjustTextSize();
-		
+
 	protected:
 		bool hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos);
 		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);
@@ -146,9 +146,9 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 
 		void initRichEditOle();
 		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
-		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles);
-		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles);
-		void parseText(tstring& text, const Message& message, unsigned maxSmiles);
+		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
+		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick);
+		void parseText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);		
 		static bool processTag(TagItem& item, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
 		static void processLink(const tstring& text, LinkItem& li);
