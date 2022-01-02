@@ -274,6 +274,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			USE_SALT_PASS,
 			USE_BOT_LIST,
 			USE_CCPM,
+			USE_CPMI,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			MAX_HUB_USER_COMMANDS,

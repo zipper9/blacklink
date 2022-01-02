@@ -25,6 +25,7 @@
 #include "FlatTabCtrl.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"
+#include "TimerHelper.h"
 
 #define PM_MESSAGE_MAP 9
 
@@ -51,7 +52,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			PM_USER_UPDATED,
 			PM_CHANNEL_CONNECTED,
-			PM_CHANNEL_DISCONNECTED
+			PM_CHANNEL_DISCONNECTED,
+			PM_CPMI_RECEIVED
 		};
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("PrivateFrame"), IDR_PRIVATE, 0, COLOR_3DFACE);
@@ -69,6 +71,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
+		MESSAGE_HANDLER(WM_TIMER, onTimer)
+		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		CHAIN_MSG_MAP(BaseChatFrame)
@@ -135,23 +139,21 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			return 0;
 		}
 
-		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /* bHandled */)
-		{
-			if (wParam == PM_USER_UPDATED)
-				updateHubList();
-			else
-				updateCCPM(wParam == PM_CHANNEL_CONNECTED);
-			return 0;
-		}
+		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /* bHandled */);
 
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
+			if (newMessageReceived)
+				sendSeenIndication();
 			if (ctrlMessage)
 				ctrlMessage.SetFocus();
 			if (ctrlClient.IsWindow())
 				ctrlClient.goToEnd(false);
 			return 0;
 		}
+
+		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 
 		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem)
 		{
@@ -161,8 +163,14 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			}
 			BaseChatFrame::addStatus(line, inChat, history, cf);
 		}
+		void setLocation(const Identity& id);
+		void setStatusText(int index, const tstring& text);
+		int getStatusTextWidth(int indx, const tstring& text) const;
+		void updateStatusTextWidth();
+		void updateStatusParts();
 
 		bool sendMessage(const tstring& msg, bool thirdPerson = false) override;
+		void onTextEdited() override;
 
 		const UserPtr& getUser() const
 		{
@@ -175,8 +183,15 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void selectHub(const string& url);
 
 	private:
+		enum
+		{
+			STATUS_TEXT,
+			STATUS_CPMI,
+			STATUS_LOCATION,
+			STATUS_LAST
+		};
+
 		PrivateFrame(const HintedUser& replyTo, const string& myNick);
-		~PrivateFrame();
 		virtual void doDestroyFrame();
 
 		bool created; // TODO: fix me please.
@@ -191,13 +206,28 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		vector<pair<string, tstring>> hubList;
 
 		CContainedWindow ctrlChatContainer;
+		int statusSizes[STATUS_LAST];
 
 		bool isMultipleHubs;
 		bool isOffline;
 		uint64_t awayMsgSendTime;
+		uint32_t currentLocation;
+
+		bool sendCPMI;
+		bool newMessageSent;
+		bool newMessageReceived;
+		uint64_t sendTimeTyping;
+		uint64_t typingTimeout[2];
+		uint64_t lastSentTime;
+		TimerHelper timer;
 
 		void updateHubList();
 		void updateCCPM(bool connected);
+		void processCPMI(const CPMINotification& info);
+		void setLocalTyping(bool status);
+		void setRemoteTyping(bool status);
+		void sendSeenIndication();
+		void checkTimer();
 
 		// ClientManagerListener
 		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& ou) noexcept override
@@ -220,15 +250,20 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		}
 
 		// ConnectionManagerListener
-		void on(ConnectionManagerListener::PMChannelConnected, const CID& cid) noexcept override
+		void on(ConnectionManagerListener::PMChannelConnected, const CID& cid, bool cpmiSupported) noexcept override
 		{
 			if (cid == replyTo.user->getCID())
-				PostMessage(WM_SPEAKER, PM_CHANNEL_CONNECTED);
+				PostMessage(WM_SPEAKER, PM_CHANNEL_CONNECTED, (WPARAM) cpmiSupported);
 		}
 		void on(ConnectionManagerListener::PMChannelDisconnected, const CID& cid) noexcept override
 		{
 			if (cid == replyTo.user->getCID())
 				PostMessage(WM_SPEAKER, PM_CHANNEL_DISCONNECTED);
+		}
+		void on(ConnectionManagerListener::CPMIReceived, const CID& cid, const CPMINotification& info) noexcept override
+		{
+			if (cid == replyTo.user->getCID())
+				WinUtil::postSpeakerMsg(m_hWnd, PM_CPMI_RECEIVED, new CPMINotification(info));
 		}
 
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);

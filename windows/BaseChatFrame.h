@@ -78,7 +78,8 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 			messagePanelRect{},
 			lastMessageSelPos(0),
 			userMenu(nullptr),
-			suppressChat(false)
+			suppressChat(false),
+			ctrlStatusOwnerDraw(0)
 		{
 		}
 
@@ -118,6 +119,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 
 		virtual void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText) = 0;
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
+		virtual void onTextEdited() {}
 
 		virtual bool sendMessage(const tstring& msg, bool thirdPerson = false) = 0;
 		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
@@ -143,11 +145,13 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		CFlyToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl ctrlStatus;
 		bool suppressChat;
-		
+
+		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
+		unsigned ctrlStatusOwnerDraw;
+
 		void createStatusCtrl(HWND hWnd);
 		void destroyStatusCtrl();
-		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
-		void setStatusText(unsigned char index, const tstring& text);
+		void setStatusText(int index, const tstring& text);
 		void restoreStatusFromCache();
 		void destroyStatusbar();
 		

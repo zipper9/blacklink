@@ -295,23 +295,30 @@ void BaseChatFrame::destroyMessagePanel()
 	}
 }
 
-void BaseChatFrame::setStatusText(unsigned char index, const tstring& text)
+void BaseChatFrame::setStatusText(int index, const tstring& text)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(index < ctrlStatusCache.size());
-	if (index >= ctrlStatusCache.size()) return;
+	if ((unsigned) index >= ctrlStatusCache.size()) return;
 	if (!ctrlStatus || ctrlStatusCache[index] != text)
 	{
 		ctrlStatusCache[index] = text;
-		if (ctrlStatus) ctrlStatus.SetText(index, text.c_str(), SBT_NOTABPARSING);
+		if (ctrlStatus)
+			if (ctrlStatusOwnerDraw & 1<<index)
+				ctrlStatus.SetText(index, nullptr, SBT_OWNERDRAW);
+			else
+				ctrlStatus.SetText(index, text.c_str(), SBT_NOTABPARSING);
 	}
 }
 
 void BaseChatFrame::restoreStatusFromCache()
 {
 	CLockRedraw<true> lockRedraw(ctrlStatus.m_hWnd);
-	for (size_t i = 0 ; i < ctrlStatusCache.size(); ++i)
-		ctrlStatus.SetText(i, ctrlStatusCache[i].c_str(), SBT_NOTABPARSING);
+	for (size_t i = 0; i < ctrlStatusCache.size(); ++i)
+		if (ctrlStatusOwnerDraw & 1<<i)
+			ctrlStatus.SetText(i, nullptr, SBT_OWNERDRAW);
+		else
+			ctrlStatus.SetText(i, ctrlStatusCache[i].c_str(), SBT_NOTABPARSING);
 }
 
 void BaseChatFrame::checkMultiLine()
@@ -430,6 +437,7 @@ LRESULT BaseChatFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 LRESULT BaseChatFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	checkMultiLine();
+	onTextEdited();
 	return 0;
 }
 

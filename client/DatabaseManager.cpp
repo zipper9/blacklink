@@ -1495,6 +1495,7 @@ bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result)
 	socklen_t size;
 	toSockAddr(sa, size, ip, 0);
 	result.known |= IPInfo::FLAG_COUNTRY;
+	result.countryCode = 0;
 	int error = 0;
 	auto lres = MMDB_lookup_sockaddr(mmdb, (const sockaddr *) &sa, &error);
 	if (error) return false;

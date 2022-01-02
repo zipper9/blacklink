@@ -240,7 +240,18 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			UNSET = -1,
 			SET = 1,
 		};
-		
+
+		enum
+		{
+			STATUS_TEXT,
+			STATUS_CIPHER_SUITE,
+			STATUS_USERS,
+			STATUS_SHARED,
+			STATUS_SIZE_PER_USER,
+			STATUS_HUB_ICON,
+			STATUS_LAST
+		};
+
 		HubFrame(const Settings& cs);
 		~HubFrame();
 		

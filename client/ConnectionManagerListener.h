@@ -26,6 +26,12 @@ class CID;
 class ChatMessage;
 class Client;
 
+struct CPMINotification
+{
+	uint64_t seenTime;
+	int isTyping; // -1 = unknown, 1 = typing, 0 = not typing
+};
+
 class ConnectionManagerListener
 {
 	public:
@@ -55,6 +61,7 @@ class ConnectionManagerListener
 		typedef X<12> PMChannelDisconnected;
 		typedef X<13> PrivateMessage;
 		typedef X<14> StatusMessage;
+		typedef X<15> CPMIReceived;
 
 		virtual void on(Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
@@ -71,10 +78,11 @@ class ConnectionManagerListener
 #endif
 		virtual void on(ListenerStarted) noexcept { }
 		virtual void on(ListenerFailed, const char* type, int af, int errorCode) noexcept { }
-		virtual void on(PMChannelConnected, const CID& cid) noexcept { }
+		virtual void on(PMChannelConnected, const CID& cid, bool useCPMI) noexcept { }
 		virtual void on(PMChannelDisconnected, const CID& cid) noexcept { }
 		virtual void on(PrivateMessage, std::unique_ptr<ChatMessage>&) noexcept { }
 		virtual void on(StatusMessage, Client*, const string&) noexcept { }
+		virtual void on(CPMIReceived, const CID&, const CPMINotification&) noexcept { }
 };
 
 #endif // !defined(CONNECTION_MANAGER_LISTENER_H)

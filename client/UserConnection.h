@@ -45,6 +45,7 @@ class UserConnection :
 		static const string FEATURE_ADC_BASE;
 		static const string FEATURE_ADC_BZIP;
 		static const string FEATURE_ADC_TIGR;
+		static const string FEATURE_ADC_CPMI;
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
 		static const string FEATURE_BANMSG;
 #endif
@@ -53,7 +54,7 @@ class UserConnection :
 #if defined (FLYLINKDC_USE_DOS_GUARD) && defined (IRAINMAN_DISALLOWED_BAN_MSG)
 		static const string PLEASE_UPDATE_YOUR_CLIENT;
 #endif
-		
+
 		enum KnownSupports
 		{
 			FLAG_SUPPORTS_MINISLOTS     = 1,
@@ -62,10 +63,11 @@ class UserConnection :
 			FLAG_SUPPORTS_ZLIB_GET      = 1 << 3,
 			FLAG_SUPPORTS_TTHL          = 1 << 4,
 			FLAG_SUPPORTS_TTHF          = 1 << 5,
-			FLAG_SUPPORTS_BANMSG        = 1 << 6,
+			FLAG_SUPPORTS_CPMI          = 1 << 6,
+			FLAG_SUPPORTS_BANMSG        = 1 << 7,
 			FLAG_SUPPORTS_LAST = FLAG_SUPPORTS_BANMSG
 		};
-		
+
 		enum Flags
 		{
 			FLAG_INTERNAL_FIRST = FLAG_SUPPORTS_LAST,
@@ -77,7 +79,7 @@ class UserConnection :
 			FLAG_SECURE         = FLAG_INTERNAL_FIRST << 6,
 			FLAG_CCPM           = FLAG_INTERNAL_FIRST << 7
 		};
-		
+
 		enum States
 		{
 			// ConnectionManager
@@ -104,7 +106,7 @@ class UserConnection :
 
 			STATE_UNUSED        // Connection should be removed by ConnectionManager
 		};
-		
+
 		enum SlotTypes
 		{
 			NOSLOT      = 0,
@@ -261,6 +263,7 @@ class UserConnection :
 		void handle(AdcCommand::STA t, const AdcCommand& c);
 		void handle(AdcCommand::GFI t, const AdcCommand& c);
 		void handle(AdcCommand::MSG t, const AdcCommand& c);
+		void handle(AdcCommand::PMI t, const AdcCommand& c);
 
 		// Ignore any other ADC commands for now
 		template<typename T> void handle(T, const AdcCommand&) { }

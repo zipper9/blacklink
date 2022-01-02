@@ -2,7 +2,6 @@
 #define IMAGE_LISTS_H
 
 #include "../client/typedefs.h"
-#include "../client/IPInfo.h"
 #include <boost/unordered_map.hpp>
 #include <atlctrls.h>
 
@@ -172,7 +171,7 @@ class FlagImage
 		~FlagImage();
 		void init();
 		bool drawCountry(HDC dc, uint16_t countryCode, const POINT& pt);
-		bool drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt);
+		bool drawLocation(HDC dc, int locationImage, const POINT& pt);
 
 	private:
 		boost::unordered_map<uint32_t, HBITMAP> bitmaps;

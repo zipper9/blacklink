@@ -1326,6 +1326,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		source->setFlag(UserConnection::FLAG_CCPM);
 	if (source->isSet(UserConnection::FLAG_CCPM))
 	{
+		bool cpmiSupported = source->isSet(UserConnection::FLAG_SUPPORTS_CPMI);
 		const CID& cid = source->getUser()->getCID();
 		bool result = true;
 		{
@@ -1336,15 +1337,18 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 				if (token.empty())
 					result = false;
 				else
-					ccpmConn.insert(make_pair(cid, PMConnInfo{source, token}));
+					ccpmConn.insert(make_pair(cid, PMConnInfo{ source, token, cpmiSupported, false, 0 }));
 			}
 			else
 			{
 				auto& ci = i->second;
-				if (ci.uc)
-					result = false;
-				else
+				if (!ci.uc)
+				{
 					ci.uc = source;
+					ci.cpmiSupported = cpmiSupported;
+				}
+				else
+					result = false;
 			}
 		}
 		if (!result)
@@ -1356,7 +1360,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		if (source->isSet(UserConnection::FLAG_INCOMING))
 			source->inf(false);
 		source->setState(UserConnection::STATE_IDLE);
-		fire(ConnectionManagerListener::PMChannelConnected(), cid);
+		fire(ConnectionManagerListener::PMChannelConnected(), cid, cpmiSupported);
 		return;
 	}
 
@@ -1406,15 +1410,55 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 		return;
 	}
 
-	OnlineUserPtr ou = ClientManager::findOnlineUser(source->getUser()->getCID(), Util::emptyString, false);
+	const CID& cid = source->getUser()->getCID();
+	OnlineUserPtr ou = ClientManager::findOnlineUser(cid, Util::emptyString, false);
 	if (!ou)
 	{
 		// got CCPM message from an offline user
 		return;
 	}
+
+	if (cmd.getCommand() == AdcCommand::CMD_PMI)
+	{
+		string valTyping, valSeen;
+		bool resTyping = cmd.getParam("TP", 0, valTyping);
+		bool resSeen = cmd.getParam("SN", 0, valSeen);
+		CPMINotification info;
+		bool notify = false;
+		if (resTyping || resSeen)
+		{
+			uint64_t now = GET_TICK();
+			{
+				WRITE_LOCK(*csConnections);
+				auto i = ccpmConn.find(cid);
+				if (i != ccpmConn.end())
+				{
+					notify = true;
+					auto& data = i->second;
+					if (resTyping)
+					{
+						data.isTyping = valTyping == "1";
+						info.isTyping = data.isTyping ? 1 : 0;
+					}
+					else
+						info.isTyping = -1;
+					if (valSeen == "1") data.seenTime = now;
+					info.seenTime = data.seenTime;
+				}
+			}
+		}
+		if (notify) fire(ConnectionManagerListener::CPMIReceived(), cid, info);
+		return;
+	}
+
 	ClientBase* clientBase = ou->getClientBase().get();
 	if (clientBase->getType() != ClientBase::TYPE_ADC)
 		return;
+	{
+		WRITE_LOCK(*csConnections);
+		auto i = ccpmConn.find(cid);
+		if (i != ccpmConn.end()) i->second.isTyping = 0;
+	}
 	static_cast<AdcHub*>(clientBase)->processCCPMMessage(cmd, ou);
 }
 
@@ -1542,8 +1586,7 @@ bool ConnectionManager::connectCCPM(const HintedUser& hintedUser)
 	string token = tokenManager.makeToken(TokenManager::TYPE_CCPM, expires);
 	{
 		WRITE_LOCK(*csConnections);
-		PMConnInfo ci = { nullptr, token };
-		auto i = ccpmConn.insert(make_pair(cid, ci));
+		auto i = ccpmConn.insert(make_pair(cid, PMConnInfo{ nullptr, token, false, false, 0 }));
 		result = i.second;
 	}
 	if (!result)
@@ -1578,12 +1621,23 @@ bool ConnectionManager::disconnectCCPM(const CID& cid)
 	return result;
 }
 
-int ConnectionManager::getCCPMState(const CID& cid) const
+void ConnectionManager::getCCPMState(const CID& cid, PMConnState& s) const
 {
 	READ_LOCK(*csConnections);
 	auto i = ccpmConn.find(cid);
-	if (i == ccpmConn.end()) return CCPM_STATE_DISCONNECTED;
-	return i->second.uc ? CCPM_STATE_CONNECTED : CCPM_STATE_CONNECTING;
+	if (i == ccpmConn.end())
+	{
+		s.state = CCPM_STATE_DISCONNECTED;
+		s.cpmiSupported = false;
+		s.cpmi.isTyping = -1;
+		s.cpmi.seenTime = 0;
+		return;
+	}
+	const auto& data = i->second;
+	s.state = data.uc ? CCPM_STATE_CONNECTED : CCPM_STATE_CONNECTING;
+	s.cpmiSupported = data.cpmiSupported;
+	s.cpmi.isTyping = data.isTyping ? 1 : 0;
+	s.cpmi.seenTime = data.seenTime;
 }
 
 void ConnectionManager::removeExpiredCCPMToken(const string& token)
@@ -1625,16 +1679,20 @@ bool ConnectionManager::sendCCPMMessage(const OnlineUserPtr& ou, const string& t
 	AdcCommand cmd(AdcCommand::CMD_MSG);
 	cmd.addParam(text);
 	if (thirdPerson) cmd.addParam("ME1");
-	string message = cmd.toString(0);
-	{
-		READ_LOCK(*csConnections);
-		auto i = ccpmConn.find(ou->getUser()->getCID());
-		if (i == ccpmConn.end()) return false;
-		const auto& ci = i->second;
-		if (!ci.uc) return false;
-		ci.uc->send(message);
-	}
+	if (!sendCCPMMessage(ou->getUser()->getCID(), cmd)) return false;
 	static_cast<AdcHub*>(clientBase)->fireOutgoingPM(ou, text, thirdPerson, automatic);
+	return true;
+}
+
+bool ConnectionManager::sendCCPMMessage(const CID& cid, AdcCommand& cmd)
+{
+	string message = cmd.toString(0);
+	READ_LOCK(*csConnections);
+	auto i = ccpmConn.find(cid);
+	if (i == ccpmConn.end()) return false;
+	const auto& ci = i->second;
+	if (!ci.uc) return false;
+	ci.uc->send(message);
 	return true;
 }
 
@@ -1884,5 +1942,7 @@ StringList ConnectionManager::getAdcFeatures() const
 	StringList features = adcFeatures;
 	if (BOOLSETTING(COMPRESS_TRANSFERS))
 		features.push_back(UserConnection::FEATURE_ZLIB_GET);
+	if (BOOLSETTING(USE_CCPM) && BOOLSETTING(USE_CPMI))
+		features.push_back(UserConnection::FEATURE_ADC_CPMI);
 	return features;
 }

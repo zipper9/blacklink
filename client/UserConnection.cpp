@@ -43,6 +43,7 @@ const string UserConnection::FEATURE_ADC_BAS0 = "BAS0";
 const string UserConnection::FEATURE_ADC_BASE = "BASE";
 const string UserConnection::FEATURE_ADC_BZIP = "BZIP";
 const string UserConnection::FEATURE_ADC_TIGR = "TIGR";
+const string UserConnection::FEATURE_ADC_CPMI = "CPMI";
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
 const string UserConnection::FEATURE_BANMSG = "BanMsg"; // !SMT!-B
 #endif
@@ -512,17 +513,13 @@ void UserConnection::handle(AdcCommand::SUP t, const AdcCommand& cmd)
 				);
 			}
 			else if (feat == FEATURE_ZLIB_GET)
-			{
 				setFlag(FLAG_SUPPORTS_ZLIB_GET);
-			}
 			else if (feat == FEATURE_ADC_BZIP)
-			{
 				setFlag(FLAG_SUPPORTS_XML_BZLIST);
-			}
 			else if (feat == FEATURE_ADC_TIGR)
-			{
 				tigrOk = true; // Variable 'tigrOk' is assigned a value that is never used.
-			}
+			else if (feat == FEATURE_ADC_CPMI)
+				setFlag(FLAG_SUPPORTS_CPMI);
 		}
 	}
 
@@ -578,6 +575,12 @@ void UserConnection::handle(AdcCommand::GFI t, const AdcCommand& cmd)
 }
 
 void UserConnection::handle(AdcCommand::MSG t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_IDLE, cmd)) return;
+	ConnectionManager::getInstance()->processMSG(this, cmd);
+}
+
+void UserConnection::handle(AdcCommand::PMI t, const AdcCommand& cmd)
 {
 	if (!checkState(STATE_IDLE, cmd)) return;
 	ConnectionManager::getInstance()->processMSG(this, cmd);

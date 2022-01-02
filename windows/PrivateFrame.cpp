@@ -30,6 +30,17 @@
 static const size_t MAX_PM_FRAMES = 100;
 static const unsigned AWAY_MSG_COOLDOWN_TIME = 300000; // 5 minutes
 
+static const unsigned LOCAL_TYPING_SEND_PERIOD = 120000; // When local isTyping flag is set, send TP1 every 2 minutes
+static const unsigned LOCAL_TYPING_TIMEOUT     = 30000;  // Reset local isTyping flag after 30 seconds of inactivity
+static const unsigned REMOTE_TYPING_TIMEOUT    = 150000; // Reset remote isTyping flag if nothing is received for 2.5 minutes
+
+static const int STATUS_PART_PADDING = 12;
+static const uint32_t FLAG_COUNTRY = 0x10000;
+
+static const int iconSize = 16;
+static const int flagIconWidth = 25;
+static const int iconTextMargin = 2;
+
 HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
 HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
 
@@ -38,14 +49,15 @@ PrivateFrame::FrameMap PrivateFrame::frames;
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
 	created(false), isOffline(false), isMultipleHubs(false), awayMsgSendTime(0),
-	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP)
+	currentLocation(0),
+	sendCPMI(false), newMessageSent(false), newMessageReceived(false),
+	sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
+	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
+	statusSizes{0, 220, 60}
 {
-	ctrlStatusCache.resize(1);
+	ctrlStatusCache.resize(STATUS_LAST);
+	ctrlStatusOwnerDraw = 1<<STATUS_LOCATION;
 	ctrlClient.setHubParam(replyTo.hint, myNick);
-}
-
-PrivateFrame::~PrivateFrame()
-{
 }
 
 void PrivateFrame::doDestroyFrame()
@@ -87,6 +99,7 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 
 LRESULT PrivateFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	timer.destroyTimer();
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->RemoveMessageFilter(this);
@@ -121,7 +134,6 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 			LogManager::message("Lock > 100 open private message windows! Hub: " + key + " Message: " + oneLineMessage);
 			return false;
 		}
-		// TODO - Add antispam!
 		p = new PrivateFrame(HintedUser(id.getUser(), hubHint), myId.getNick());
 		frames.insert(make_pair(id.getUser(), p));
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
@@ -137,7 +149,6 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 				SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick()), message, 250, TSTRING(PRIVATE_MESSAGE));
 			PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
 		}
-		// Add block spam???
 		p = i->second;
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
 	}
@@ -321,7 +332,19 @@ bool PrivateFrame::sendMessage(const tstring& msg, bool thirdPerson /*= false*/)
 	if (ccpm == MessagePanel::CCPM_STATE_CONNECTING)
 		return false;
 	if (ccpm == MessagePanel::CCPM_STATE_CONNECTED)
-		return ConnectionManager::getInstance()->sendCCPMMessage(replyTo, Text::fromT(msg), thirdPerson, false);
+	{
+		bool result = ConnectionManager::getInstance()->sendCCPMMessage(replyTo, Text::fromT(msg), thirdPerson, false);
+		if (result)
+		{
+			lastSentTime = GET_TICK();
+			newMessageSent = true;
+			typingTimeout[0] = sendTimeTyping = 0;
+			if (!typingTimeout[1])
+				setStatusText(STATUS_CPMI, Util::emptyStringT);
+			checkTimer();
+		}
+		return result;
+	}
 	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdPerson, false);
 	return true;
 }
@@ -365,7 +388,7 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 		else
 			Create(WinUtil::g_mdiClient);
 	}
-	
+
 	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, cf, extra);
 
@@ -378,10 +401,22 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 		LOG(PM, params);
 	}
 
-	addStatus(TSTRING(LAST_CHANGE), false, false);
-	
+	addStatus(myMessage ? TSTRING(MESSAGE_SENT) : TSTRING(MESSAGE_RECEIVED), false, false);
+
 	if (BOOLSETTING(BOLD_PM))
 		setDirty();
+
+	if (!myMessage)
+	{
+		setLocation(from);
+		newMessageReceived = true;
+		if (typingTimeout[1])
+		{
+			typingTimeout[1] = 0;
+			checkTimer();
+			setStatusText(STATUS_CPMI, Util::emptyStringT);
+		}
+	}
 }
 
 LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
@@ -441,18 +476,6 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		GetClientRect(&rect);
 		// position bars and offset their dimensions
 		UpdateBarsPosition(rect, bResizeBars);
-		if (ctrlStatus && ctrlLastLinesToolTip)
-		{
-			if (ctrlStatus.IsWindow() && ctrlLastLinesToolTip.IsWindow())
-			{
-				CRect sr;
-				int w[1];
-				ctrlStatus.GetClientRect(sr);
-				w[0] = sr.right - 16;
-				ctrlStatus.SetParts(1, w);
-				ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
-			}
-		}
 		const int h = getInputBoxHeight();
 		int panelHeight = h + 6;
 
@@ -484,6 +507,77 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
 		}
 	}
+	updateStatusParts();
+}
+
+void PrivateFrame::setLocation(const Identity& id)
+{
+	IpAddress ip = id.getConnectIP();
+	if (!Util::isValidIp(ip) || id.isIPCached(ip.type)) return;
+	IPInfo ipInfo;
+	Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_LOCATION | IPInfo::FLAG_COUNTRY);
+	uint32_t location = 0;
+	tstring text;
+	if (ipInfo.locationImage > 0)
+	{
+		location = ipInfo.locationImage;
+		text = Text::toT(ipInfo.location);
+	}
+	else if (ipInfo.countryCode)
+	{
+		location = FLAG_COUNTRY| ipInfo.countryCode;
+		text = Text::toT(ipInfo.country);
+	}
+	if (location == currentLocation) return;
+	currentLocation = location;
+	setStatusText(STATUS_LOCATION, text);
+}
+
+void PrivateFrame::setStatusText(int index, const tstring& text)
+{
+	if (index != STATUS_TEXT && ctrlStatus)
+	{
+		int w = getStatusTextWidth(index, text);
+		if (w > statusSizes[index])
+		{
+			statusSizes[index] = w;
+			if (ctrlStatus) updateStatusParts();
+		}
+	}
+	BaseChatFrame::setStatusText(index, text);
+}
+
+int PrivateFrame::getStatusTextWidth(int index, const tstring& text) const
+{
+	int w = WinUtil::getTextWidth(text, ctrlStatus) + STATUS_PART_PADDING;
+	if (index == STATUS_LOCATION) w += flagIconWidth + iconTextMargin;
+	return w;
+}
+
+void PrivateFrame::updateStatusTextWidth()
+{
+	for (int i = 1; i < STATUS_LAST; i++)
+	{
+		int w = getStatusTextWidth(i, ctrlStatusCache[i]);
+		if (w > statusSizes[i]) statusSizes[i] = w;
+	}
+}
+
+void PrivateFrame::updateStatusParts()
+{
+	if (!(ctrlStatus && ctrlLastLinesToolTip)) return;
+	CRect sr;
+	ctrlStatus.GetClientRect(sr);
+	int sum = 0;
+	for (int i = 1; i < STATUS_LAST; i++)
+		sum += statusSizes[i];
+	int w[STATUS_LAST];
+	w[STATUS_TEXT] = std::max(int(sr.right) - sum, 120);
+	for (int i = 1; i < STATUS_LAST; i++)
+		w[i] = w[i - 1] + statusSizes[i];
+	ctrlStatus.SetParts(STATUS_LAST, w);
+	ctrlLastLinesToolTip.SetMaxTipWidth(max(w[STATUS_TEXT], 400));
+	restoreStatusFromCache();
 }
 
 void PrivateFrame::updateHubList()
@@ -615,18 +709,100 @@ void PrivateFrame::updateCCPM(bool connected)
 	}
 }
 
+void PrivateFrame::setLocalTyping(bool status)
+{
+	bool sendStatus = false;
+	if (status)
+	{
+		uint64_t now = GET_TICK();
+		if (!typingTimeout[0])
+		{
+			sendStatus = true;
+			sendTimeTyping = now + LOCAL_TYPING_SEND_PERIOD;
+		}
+		typingTimeout[0] = now + LOCAL_TYPING_TIMEOUT;
+	}
+	else if (typingTimeout[0])
+	{
+		sendStatus = true;
+		typingTimeout[0] = 0;
+		sendTimeTyping = 0;
+	}
+	if (sendStatus)
+	{
+		AdcCommand c(AdcCommand::CMD_PMI);
+		c.addParam(typingTimeout[0] ? "TP1" : "TP0");
+		ConnectionManager::getInstance()->sendCCPMMessage(replyTo.user->getCID(), c);
+	}
+	checkTimer();
+}
+
+void PrivateFrame::setRemoteTyping(bool status)
+{
+	if (status)
+	{
+		if (!typingTimeout[1])
+			setStatusText(STATUS_CPMI, TSTRING_F(CPMI_TYPING, replyToRealName));
+		typingTimeout[1] = GET_TICK() + REMOTE_TYPING_TIMEOUT;
+	}
+	else if (typingTimeout[1])
+	{
+		typingTimeout[1] = 0;
+		setStatusText(STATUS_CPMI, Util::emptyStringT);
+	}
+	checkTimer();
+}
+
+void PrivateFrame::processCPMI(const CPMINotification& info)
+{
+	if (info.isTyping != -1)
+		setRemoteTyping(info.isTyping == 1);
+	if (newMessageSent && info.seenTime >= lastSentTime)
+	{
+		newMessageSent = false;
+		if (!typingTimeout[1])
+			setStatusText(STATUS_CPMI, TSTRING_F(CPMI_SEEN, replyToRealName));
+	}
+}
+
+void PrivateFrame::sendSeenIndication()
+{
+	newMessageReceived = false;
+	if (sendCPMI)
+	{
+		AdcCommand c(AdcCommand::CMD_PMI);
+		c.addParam("SN1");
+		ConnectionManager::getInstance()->sendCCPMMessage(replyTo.user->getCID(), c);
+	}
+}
+
+void PrivateFrame::checkTimer()
+{
+	if (typingTimeout[0] || typingTimeout[1])
+		timer.createTimer(500, 3);
+	else
+		timer.destroyTimer();
+}
+
+void PrivateFrame::onTextEdited()
+{
+	if (sendCPMI && ctrlMessage.GetWindowTextLength())
+		setLocalTyping(true);
+}
+
 LRESULT PrivateFrame::onCCPM(WORD, WORD, HWND, BOOL&)
 {
 	auto cm = ConnectionManager::getInstance();
-	int state = cm->getCCPMState(replyTo.user->getCID());
-	if (state == ConnectionManager::CCPM_STATE_CONNECTING)
+	ConnectionManager::PMConnState s;
+	cm->getCCPMState(replyTo.user->getCID(), s);
+	if (s.state == ConnectionManager::CCPM_STATE_CONNECTING)
 	{
 		if (msgPanel)
 			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
 		// TODO: show MessageBox
 		return 0;
 	}
-	if (state == ConnectionManager::CCPM_STATE_DISCONNECTED)
+	if (s.state == ConnectionManager::CCPM_STATE_DISCONNECTED)
 	{
 		if (!cm->connectCCPM(replyTo))
 		{
@@ -640,6 +816,57 @@ LRESULT PrivateFrame::onCCPM(WORD, WORD, HWND, BOOL&)
 	else
 	{
 		cm->disconnectCCPM(replyTo.user->getCID());
+	}
+	return 0;
+}
+
+LRESULT PrivateFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	if (!timer.checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
+	uint64_t now = GET_TICK();
+	if (typingTimeout[0])
+	{
+		if (now > typingTimeout[0] || !WinUtil::g_tabCtrl->isActive(m_hWnd))
+			setLocalTyping(false);
+		else if (now > sendTimeTyping)
+		{
+			sendTimeTyping = now + LOCAL_TYPING_SEND_PERIOD;
+			AdcCommand c(AdcCommand::CMD_PMI);
+			c.addParam("TP1");
+			ConnectionManager::getInstance()->sendCCPMMessage(replyTo.user->getCID(), c);
+		}
+	}
+	if (typingTimeout[1] && now > typingTimeout[1])
+		setRemoteTyping(false);
+	return 0;
+}
+
+LRESULT PrivateFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /* bHandled */)
+{
+	switch (wParam)
+	{
+		case PM_CHANNEL_CONNECTED:
+			sendCPMI = BOOLSETTING(USE_CPMI) && wParam;
+			updateCCPM(true);
+			break;
+		case PM_CHANNEL_DISCONNECTED:
+			sendCPMI = false;
+			updateCCPM(false);
+			break;
+		case PM_CPMI_RECEIVED:
+		{
+			auto info = reinterpret_cast<CPMINotification*>(lParam);
+			processCPMI(*info);
+			delete info;
+			break;
+		}
+		default:
+			dcassert(wParam == PM_USER_UPDATED);
+			updateHubList();
 	}
 	return 0;
 }
@@ -680,17 +907,15 @@ LRESULT PrivateFrame::onShowHubMenu(WORD, WORD, HWND hWndCtl, BOOL&)
 
 LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-
 	bHandled = FALSE;
 	POINT cpt;
 	GetCursorPos(&cpt);
-	
+
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-	
-	
+
 	if (msgPanel && msgPanel->onContextMenu(pt, wParam))
 		return TRUE;
-		
+
 	if (reinterpret_cast<HWND>(wParam) == ctrlClient && ctrlClient.IsWindow())
 	{
 		if (pt.x == -1 && pt.y == -1)
@@ -758,25 +983,48 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 	return S_OK;
 }
 
+LRESULT PrivateFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	const DRAWITEMSTRUCT* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == STATUS_LOCATION)
+	{
+		if (currentLocation)
+		{
+			RECT rc = dis->rcItem;
+			POINT pt = { rc.left, (rc.top + rc.bottom - iconSize) / 2 };
+			if (currentLocation & FLAG_COUNTRY)
+				g_flagImage.drawCountry(dis->hDC, currentLocation & ~FLAG_COUNTRY, pt);
+			else
+				g_flagImage.drawLocation(dis->hDC, currentLocation, pt);
+			pt.x += flagIconWidth;
+			const tstring& desc = ctrlStatusCache[STATUS_LOCATION];
+			rc.left = pt.x + iconTextMargin;
+			int oldMode = GetBkMode(dis->hDC);
+			SetBkMode(dis->hDC, TRANSPARENT);
+			DrawText(dis->hDC, desc.c_str(), desc.length(), &rc, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
+			SetBkMode(dis->hDC, oldMode);
+		}
+	}
+	else
+		bHandled = FALSE;
+	return 0;
+}
+
 void PrivateFrame::closeAll()
 {
-	dcdrun(const auto l_size_g_frames = frames.size());
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		i->second->PostMessage(WM_CLOSE, 0, 0);
 	}
-	dcassert(l_size_g_frames == frames.size());
 }
 
 void PrivateFrame::closeAllOffline()
 {
-	dcdrun(const auto l_size_g_frames = frames.size());
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->first->isOnline())
 			i->second->PostMessage(WM_CLOSE, 0, 0);
 	}
-	dcassert(l_size_g_frames == frames.size());
 }
 
 void PrivateFrame::on(SettingsManagerListener::Repaint)
@@ -835,7 +1083,7 @@ void PrivateFrame::createMessagePanel()
 				ctrlChatContainer.SubclassWindow(ctrlClient.m_hWnd);
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
-			restoreStatusFromCache(); // ¬осстанавливать статус нужно после UpdateLayout
+			updateStatusTextWidth();
 			ctrlMessage.SetFocus();
 		}
 		auto flags = replyTo.user ? replyTo.user->getFlags() : 0;
@@ -844,10 +1092,17 @@ void PrivateFrame::createMessagePanel()
 		BaseChatFrame::createMessagePanel(showSelectHub, showCCPM);
 		if (showCCPM && replyTo.user)
 		{
-			int state = ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID());
-			msgPanel->setCCPMState(state);
-			if (state == ConnectionManager::CCPM_STATE_CONNECTING)
+			ConnectionManager::PMConnState s;
+			ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID(), s);
+			msgPanel->setCCPMState(s.state);
+			sendCPMI = false;
+			if (s.state == ConnectionManager::CCPM_STATE_CONNECTING)
 				addStatus(TSTRING(CCPM_IN_PROGRESS), false);
+			else if (s.state == ConnectionManager::CCPM_STATE_CONNECTED)
+			{
+				sendCPMI = BOOLSETTING(USE_CPMI) && s.cpmiSupported;
+				if (s.cpmi.isTyping == 1) setRemoteTyping(true);
+			}
 		}
 		setCountMessages(0);
 	}

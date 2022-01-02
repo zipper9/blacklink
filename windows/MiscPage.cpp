@@ -52,6 +52,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
 	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
 	{ SettingsManager::USE_CCPM, ResourceManager::SETTINGS_USE_CCPM },
+	{ SettingsManager::USE_CPMI, ResourceManager::SETTINGS_USE_CPMI },
 	{ SettingsManager::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
 	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
 	{ SettingsManager::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },

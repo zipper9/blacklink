@@ -1153,6 +1153,12 @@
     <Image Include="res\zz.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="res\padlock_open.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\padlock_closed.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />

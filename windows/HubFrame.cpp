@@ -1313,62 +1313,59 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	UpdateBarsPosition(rect, resizeBars);
 	if (ctrlStatus)
 	{
-		if (ctrlStatus.IsWindow() && ctrlLastLinesToolTip.IsWindow())
-		{
-			CRect sr;
-			ctrlStatus.GetClientRect(sr);
-			const int tmp = sr.Width() > 332 ? 232 : (sr.Width() > 132 ? sr.Width() - 100 : 32);
-			const tstring& cipherName = ctrlStatusCache[1];
-			int cipherLen = 0;
-			if (!cipherName.empty())
-				cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus) + STATUS_PART_PADDING;
-			int hubPic = 0;
-			const int hubIconSize = 22;
-			hubPic += hubIconSize;
-			if (showUsers) hubPic += 20;
-			int w[6];
-			w[0] = sr.right - tmp - 55 - hubPic - cipherLen;
-			w[1] = w[0] + cipherLen;
-			w[2] = w[1] + (tmp - 30) / 2;
-			w[3] = w[1] + (tmp - 64);
-			w[4] = w[3] + 100;
-			w[5] = w[4] + 18 + hubPic;
-			ctrlStatus.SetParts(6, w);
-			
-			ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
-			
-			// Strange, can't get the correct width of the last field...
-			ctrlStatus.GetRect(4, sr);
-			
-			// Icon hub Mode : Active, Passive, Offline
-			if (ctrlModeIcon)
-			{
-				sr.left = sr.right + 2;
-				sr.right = sr.left + hubIconSize;
-				ctrlModeIcon.MoveWindow(sr);
-			}
+		CRect sr;
+		ctrlStatus.GetClientRect(sr);
+		const int tmp = sr.Width() > 332 ? 232 : (sr.Width() > 132 ? sr.Width() - 100 : 32);
+		const tstring& cipherName = ctrlStatusCache[1];
+		int cipherLen = 0;
+		if (!cipherName.empty())
+			cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus) + STATUS_PART_PADDING;
+		int hubPic = 0;
+		const int hubIconSize = 22;
+		hubPic += hubIconSize;
+		if (showUsers) hubPic += 20;
+		int w[STATUS_LAST];
+		w[STATUS_TEXT] = sr.right - tmp - 55 - hubPic - cipherLen;
+		w[STATUS_CIPHER_SUITE] = w[STATUS_TEXT] + cipherLen;
+		w[STATUS_USERS] = w[STATUS_CIPHER_SUITE] + (tmp - 30) / 2;
+		w[STATUS_SHARED] = w[STATUS_CIPHER_SUITE] + (tmp - 64);
+		w[STATUS_SIZE_PER_USER] = w[STATUS_SHARED] + 100;
+		w[STATUS_HUB_ICON] = w[STATUS_SIZE_PER_USER] + 18 + hubPic;
+		ctrlStatus.SetParts(STATUS_LAST, w);
 
-			// Icon-button Switch panels. Analog for command /switch
-			if (ctrlSwitchPanels)
-			{
-				if (showUsers)
-				{
-					sr.left = sr.right; // + 2;
-					sr.right = sr.left + 20;
-					ctrlSwitchPanels.MoveWindow(sr);
-				}
-				else
-				{
-					ctrlSwitchPanels.MoveWindow(0, 0, 0, 0);
-				}
-			}
-			
-			// Checkbox Show/Hide userlist
+		ctrlLastLinesToolTip.SetMaxTipWidth(max(w[STATUS_TEXT], 400));
+
+		// Strange, can't get the correct width of the last field...
+		ctrlStatus.GetRect(4, sr);
+
+		// Hub mode icon: active, passive, offline
+		if (ctrlModeIcon)
+		{
 			sr.left = sr.right + 2;
-			sr.right = sr.left + 16;
-			if (ctrlShowUsers)
-				ctrlShowUsers.MoveWindow(sr);
-		}   // end  if (ctrlStatus->IsWindow()...
+			sr.right = sr.left + hubIconSize;
+			ctrlModeIcon.MoveWindow(sr);
+		}
+
+		// Switch panels button, same as /switch command
+		if (ctrlSwitchPanels)
+		{
+			if (showUsers)
+			{
+				sr.left = sr.right; // + 2;
+				sr.right = sr.left + 20;
+				ctrlSwitchPanels.MoveWindow(sr);
+			}
+			else
+			{
+				ctrlSwitchPanels.MoveWindow(0, 0, 0, 0);
+			}
+		}
+			
+		// Checkbox Show/Hide userlist
+		sr.left = sr.right + 2;
+		sr.right = sr.left + 16;
+		if (ctrlShowUsers)
+			ctrlShowUsers.MoveWindow(sr);
 	}
 	if (msgPanel)
 	{

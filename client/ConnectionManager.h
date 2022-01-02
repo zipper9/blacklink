@@ -204,11 +204,19 @@ class ConnectionManager :
 		void disconnect(const UserPtr& user);
 		void disconnect(const UserPtr& user, bool isDownload);
 
+		struct PMConnState
+		{
+			int state;
+			bool cpmiSupported;
+			CPMINotification cpmi;
+		};
+
 		bool connectCCPM(const HintedUser& hintedUser);
 		bool disconnectCCPM(const CID& cid);
-		int getCCPMState(const CID& cid) const;
+		void getCCPMState(const CID& cid, PMConnState& s) const;
 		bool sendCCPMMessage(const HintedUser& hintedUser, const string& text, bool thirdPerson, bool automatic);
 		bool sendCCPMMessage(const OnlineUserPtr& ou, const string& text, bool thirdPerson, bool automatic);
+		bool sendCCPMMessage(const CID& cid, AdcCommand& cmd);
 
 		void stopServers();
 		void shutdown();
@@ -285,10 +293,13 @@ class ConnectionManager :
 		{
 			UserConnection* uc;
 			string token;
+			bool cpmiSupported;
+			bool isTyping;
+			uint64_t seenTime;
 		};
 
 		boost::unordered_map<CID, PMConnInfo> ccpmConn;
-		
+
 	private:
 		static const int SERVER_SECURE = 1;
 		static const int SERVER_V6     = 2;
@@ -341,7 +352,6 @@ class ConnectionManager :
 		bool checkKeyprint(UserConnection *source);
 		void removeExpiredCCPMToken(const string& token);
 
-	public:
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
@@ -349,7 +359,7 @@ class ConnectionManager :
 		// ClientManagerListener
 		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override;
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
-		
+
 		void onUserUpdated(const UserPtr& user);
 };
 

@@ -234,15 +234,15 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, const POINT& pt)
 	return true;
 }
 
-bool FlagImage::drawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
+bool FlagImage::drawLocation(HDC dc, int locationImage, const POINT& pt)
 {
 	if (customLocationsPath.empty()) return false;
-	uint32_t index = (uint32_t) ipInfo.locationImage << 16;
+	uint32_t index = (uint32_t) locationImage << 16;
 	auto i = bitmaps.find(index);
 	HBITMAP bmp;
 	if (i == bitmaps.end())
 	{
-		tstring imagePath = customLocationsPath + Util::toStringT(ipInfo.locationImage) + _T(".bmp");
+		tstring imagePath = customLocationsPath + Util::toStringT(locationImage) + _T(".bmp");
 		bmp = (HBITMAP) ::LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 		bitmaps.insert(make_pair(index, bmp));
 	}
