@@ -1188,7 +1188,7 @@ LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 		if (SUCCEEDED(pTextDoc->Range(start, end, &pRange)))
 		{
 			BSTR text;
-			if (SUCCEEDED(pRange->GetText(&text)))
+			if (SUCCEEDED(pRange->GetText(&text)) && text)
 			{
 				tstring s = text;
 				SysFreeString(text);
