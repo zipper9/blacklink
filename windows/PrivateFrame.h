@@ -216,6 +216,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool sendCPMI;
 		bool newMessageSent;
 		bool newMessageReceived;
+		bool remoteChatClosed;
 		uint64_t sendTimeTyping;
 		uint64_t typingTimeout[2];
 		uint64_t lastSentTime;
@@ -226,6 +227,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void processCPMI(const CPMINotification& info);
 		void setLocalTyping(bool status);
 		void setRemoteTyping(bool status);
+		void setRemoteChatClosed(bool status);
 		void sendSeenIndication();
 		void checkTimer();
 

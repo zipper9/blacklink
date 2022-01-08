@@ -1780,6 +1780,7 @@ enum Strings   // @DontAdd
 	MESSAGE_RECEIVED, // "Message received."
 	CPMI_TYPING, // "%1% is typing..."
 	CPMI_SEEN, // "%1% has read your message."
+	CPMI_CLOSED, // "%1% has closed chat."
 	CONNECTION_CHECK, // "Connection check"
 	COMMAND_ARG_REQUIRED, // "This command requires an argument"
 	COMMAND_N_ARGS_REQUIRED, // "This command requires %1% arguments"

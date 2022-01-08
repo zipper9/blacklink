@@ -51,7 +51,7 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	created(false), isOffline(false), isMultipleHubs(false), awayMsgSendTime(0),
 	currentLocation(0),
 	sendCPMI(false), newMessageSent(false), newMessageReceived(false),
-	sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
+	remoteChatClosed(false), sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
 	statusSizes{0, 220, 60}
 {
@@ -285,7 +285,7 @@ void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& res
 	}
 	else
 	{
-		setStatusText(0, CTSTRING(USER_WENT_OFFLINE));
+		setStatusText(STATUS_TEXT, CTSTRING(USER_WENT_OFFLINE));
 		resetInputMessageText = false;
 	}
 }
@@ -369,7 +369,7 @@ bool PrivateFrame::sendMessage(const string& msg, bool thirdPerson /*= false*/)
 			lastSentTime = GET_TICK();
 			newMessageSent = true;
 			typingTimeout[0] = sendTimeTyping = 0;
-			if (!typingTimeout[1])
+			if (!typingTimeout[1] && !remoteChatClosed)
 				setStatusText(STATUS_CPMI, Util::emptyStringT);
 			checkTimer();
 		}
@@ -383,6 +383,12 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 {
 	if (!closed)
 	{
+		if (sendCPMI)
+		{
+			AdcCommand c(AdcCommand::CMD_PMI);
+			c.addParam("QU1");
+			ConnectionManager::getInstance()->sendCCPMMessage(replyTo.user->getCID(), c);
+		}
 		closed = true;
 		ClientManager::getInstance()->removeListener(this);
 		ConnectionManager::getInstance()->removeListener(this);
@@ -439,11 +445,13 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 	if (!myMessage)
 	{
 		setLocation(from);
+		setRemoteChatClosed(false);
 		newMessageReceived = true;
 		if (typingTimeout[1])
 		{
 			typingTimeout[1] = 0;
 			checkTimer();
+			remoteChatClosed = false;
 			setStatusText(STATUS_CPMI, Util::emptyStringT);
 		}
 	}
@@ -771,6 +779,7 @@ void PrivateFrame::setRemoteTyping(bool status)
 {
 	if (status)
 	{
+		remoteChatClosed = false;
 		if (!typingTimeout[1])
 			setStatusText(STATUS_CPMI, TSTRING_F(CPMI_TYPING, replyToRealName));
 		typingTimeout[1] = GET_TICK() + REMOTE_TYPING_TIMEOUT;
@@ -778,9 +787,20 @@ void PrivateFrame::setRemoteTyping(bool status)
 	else if (typingTimeout[1])
 	{
 		typingTimeout[1] = 0;
-		setStatusText(STATUS_CPMI, Util::emptyStringT);
+		if (!remoteChatClosed)
+			setStatusText(STATUS_CPMI, Util::emptyStringT);
 	}
 	checkTimer();
+}
+
+void PrivateFrame::setRemoteChatClosed(bool status)
+{
+	if (remoteChatClosed == status) return;
+	remoteChatClosed = status;
+	if (remoteChatClosed)
+		setStatusText(STATUS_CPMI, TSTRING_F(CPMI_CLOSED, replyToRealName));
+	else if (!typingTimeout[1])
+		setStatusText(STATUS_CPMI, Util::emptyStringT);
 }
 
 void PrivateFrame::processCPMI(const CPMINotification& info)
@@ -791,8 +811,12 @@ void PrivateFrame::processCPMI(const CPMINotification& info)
 	{
 		newMessageSent = false;
 		if (!typingTimeout[1])
+		{
+			remoteChatClosed = false;
 			setStatusText(STATUS_CPMI, TSTRING_F(CPMI_SEEN, replyToRealName));
+		}
 	}
+	setRemoteChatClosed(info.isClosed);
 }
 
 void PrivateFrame::sendSeenIndication()
@@ -1131,7 +1155,13 @@ void PrivateFrame::createMessagePanel()
 			else if (s.state == ConnectionManager::CCPM_STATE_CONNECTED)
 			{
 				sendCPMI = BOOLSETTING(USE_CPMI) && s.cpmiSupported;
-				if (s.cpmi.isTyping == 1) setRemoteTyping(true);
+				if (s.cpmi.isTyping == 1)
+				{
+					remoteChatClosed = false;
+					setRemoteTyping(true);
+				}
+				else
+					setRemoteChatClosed(s.cpmi.isClosed);
 			}
 		}
 		setCountMessages(0);

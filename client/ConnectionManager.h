@@ -295,6 +295,7 @@ class ConnectionManager :
 			string token;
 			bool cpmiSupported;
 			bool isTyping;
+			bool isClosed;
 			uint64_t seenTime;
 		};
 

@@ -30,6 +30,7 @@ struct CPMINotification
 {
 	uint64_t seenTime;
 	int isTyping; // -1 = unknown, 1 = typing, 0 = not typing
+	bool isClosed;
 };
 
 class ConnectionManagerListener

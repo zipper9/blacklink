@@ -1337,7 +1337,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 				if (token.empty())
 					result = false;
 				else
-					ccpmConn.insert(make_pair(cid, PMConnInfo{ source, token, cpmiSupported, false, 0 }));
+					ccpmConn.insert(make_pair(cid, PMConnInfo{ source, token, cpmiSupported, false, false, 0 }));
 			}
 			else
 			{
@@ -1420,12 +1420,13 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 
 	if (cmd.getCommand() == AdcCommand::CMD_PMI)
 	{
-		string valTyping, valSeen;
+		string valTyping, valSeen, valQuit;
 		bool resTyping = cmd.getParam("TP", 0, valTyping);
 		bool resSeen = cmd.getParam("SN", 0, valSeen);
+		bool resQuit = cmd.getParam("QU", 0, valQuit);
 		CPMINotification info;
 		bool notify = false;
-		if (resTyping || resSeen)
+		if (resTyping || resSeen || resQuit)
 		{
 			uint64_t now = GET_TICK();
 			{
@@ -1435,15 +1436,23 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 				{
 					notify = true;
 					auto& data = i->second;
+					if (valQuit == "1")
+						data.isClosed = true;
 					if (resTyping)
 					{
 						data.isTyping = valTyping == "1";
+						data.isClosed = false;
 						info.isTyping = data.isTyping ? 1 : 0;
 					}
 					else
 						info.isTyping = -1;
-					if (valSeen == "1") data.seenTime = now;
+					if (valSeen == "1")
+					{
+						data.seenTime = now;
+						data.isClosed = false;
+					}
 					info.seenTime = data.seenTime;
+					info.isClosed = data.isClosed;
 				}
 			}
 		}
@@ -1457,7 +1466,12 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 	{
 		WRITE_LOCK(*csConnections);
 		auto i = ccpmConn.find(cid);
-		if (i != ccpmConn.end()) i->second.isTyping = 0;
+		if (i != ccpmConn.end())
+		{
+			auto& data = i->second;
+			data.isTyping = false;
+			data.isClosed = false;
+		}
 	}
 	static_cast<AdcHub*>(clientBase)->processCCPMMessage(cmd, ou);
 }
@@ -1586,7 +1600,7 @@ bool ConnectionManager::connectCCPM(const HintedUser& hintedUser)
 	string token = tokenManager.makeToken(TokenManager::TYPE_CCPM, expires);
 	{
 		WRITE_LOCK(*csConnections);
-		auto i = ccpmConn.insert(make_pair(cid, PMConnInfo{ nullptr, token, false, false, 0 }));
+		auto i = ccpmConn.insert(make_pair(cid, PMConnInfo{ nullptr, token, false, false, false, 0 }));
 		result = i.second;
 	}
 	if (!result)
@@ -1630,6 +1644,7 @@ void ConnectionManager::getCCPMState(const CID& cid, PMConnState& s) const
 		s.state = CCPM_STATE_DISCONNECTED;
 		s.cpmiSupported = false;
 		s.cpmi.isTyping = -1;
+		s.cpmi.isClosed = false;
 		s.cpmi.seenTime = 0;
 		return;
 	}
@@ -1637,6 +1652,7 @@ void ConnectionManager::getCCPMState(const CID& cid, PMConnState& s) const
 	s.state = data.uc ? CCPM_STATE_CONNECTED : CCPM_STATE_CONNECTING;
 	s.cpmiSupported = data.cpmiSupported;
 	s.cpmi.isTyping = data.isTyping ? 1 : 0;
+	s.cpmi.isClosed = data.isClosed;
 	s.cpmi.seenTime = data.seenTime;
 }
 
