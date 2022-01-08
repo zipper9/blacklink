@@ -279,22 +279,23 @@ bool FavoriteManager::isFavoriteUser(const UserPtr& user, bool& isBanned) const
 	return result;
 }
 
-void FavoriteManager::addFavoriteUser(const UserPtr& user)
+bool FavoriteManager::addFavoriteUser(const UserPtr& user)
 {
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	{
 		WRITE_LOCK(*csUsers);
 		if (!addUserL(user, i))
-			return;
+			return false;
 		favUser = i->second;
 		user->setFlag(User::FAVORITE);
 	}
 	fire(FavoriteManagerListener::UserAdded(), favUser);
 	favsDirty = true;
+	return true;
 }
 
-void FavoriteManager::removeFavoriteUser(const UserPtr& user)
+bool FavoriteManager::removeFavoriteUser(const UserPtr& user)
 {
 	FavoriteUser favUser;
 	{
@@ -302,12 +303,13 @@ void FavoriteManager::removeFavoriteUser(const UserPtr& user)
 		user->unsetFlag(User::FAVORITE | User::BANNED);
 		auto i = favoriteUsers.find(user->getCID());
 		if (i == favoriteUsers.end())
-			return;
+			return false;
 		favUser = i->second;
 		favoriteUsers.erase(i);
 	}
 	fire(FavoriteManagerListener::UserRemoved(), favUser);
 	favsDirty = true;
+	return true;
 }
 
 string FavoriteManager::getUserUrl(const UserPtr& user) const

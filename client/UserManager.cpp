@@ -156,14 +156,14 @@ void UserManager::getIgnoreList(StringSet& result) const
 	result = ignoreList;
 }
 
-tstring UserManager::getIgnoreListAsString() const
+string UserManager::getIgnoreListAsString() const
 {
-	tstring result;
+	string result;
 	READ_LOCK(*csIgnoreList);
 	for (auto i = ignoreList.cbegin(); i != ignoreList.cend(); ++i)
 	{
-		result += _T(' ');
-		result += Text::toT((*i));
+		result += ' ';
+		result += *i;
 	}
 	return result;
 }

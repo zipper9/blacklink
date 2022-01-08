@@ -47,7 +47,8 @@ class ChatMessage
 			// let's *not* obey the spec here and add a space after the star. :P
 			return thirdPerson ? "* " + nick + ' ' : '<' + nick + "> ";
 		}
-		void translateMe();
+		void translateMe() { translateMe(text, thirdPerson); }
+		static void translateMe(string& text, bool& thirdPerson);
 		void setTimestamp(time_t ts) { timestamp = ts; }
 		string format() const;
 		static string getExtra(const Identity& id);

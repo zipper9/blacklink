@@ -742,6 +742,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="windows\AboutCmdsDlg.cpp" />
     <ClCompile Include="windows\AddMagnet.cpp" />
     <ClCompile Include="windows\ADLSearchFrame.cpp" />
     <ClCompile Include="windows\ADLSProperties.cpp" />
@@ -758,7 +759,6 @@
     <ClCompile Include="windows\Colors.cpp" />
     <ClCompile Include="windows\CommandDlg.cpp" />
     <ClCompile Include="windows\CommandLine.cpp" />
-    <ClCompile Include="windows\Commands.cpp" />
     <ClCompile Include="windows\CountryList.cpp" />
     <ClCompile Include="windows\CrashHandler.cpp" />
     <ClCompile Include="windows\CustomDrawHelpers.cpp" />
@@ -822,6 +822,7 @@
     <ClCompile Include="windows\MagnetDlg.cpp" />
     <ClCompile Include="windows\main.cpp" />
     <ClCompile Include="windows\MainFrm.cpp" />
+    <ClCompile Include="windows\MainFrmCommands.cpp" />
     <ClCompile Include="windows\MessageEdit.cpp" />
     <ClCompile Include="windows\MessagePanel.cpp" />
     <ClCompile Include="windows\MessagesChatPage.cpp" />
@@ -918,7 +919,6 @@
     <ClInclude Include="windows\Colors.h" />
     <ClInclude Include="windows\CommandDlg.h" />
     <ClInclude Include="windows\CommandLine.h" />
-    <ClInclude Include="windows\Commands.h" />
     <ClInclude Include="windows\CompiledDateTime.h" />
     <ClInclude Include="windows\CountryList.h" />
     <ClInclude Include="windows\CustomDrawHelpers.h" />

@@ -91,13 +91,12 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				FavoriteManager* const fm;
 		};
 
-		void addFavoriteUser(const UserPtr& user);
+		bool addFavoriteUser(const UserPtr& user);
 		bool isFavoriteUser(const UserPtr& user, bool& isBanned) const;
 		bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const;
 		bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit) const;
 		bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit, CID& shareGroup) const;
-
-		void removeFavoriteUser(const UserPtr& user);
+		bool removeFavoriteUser(const UserPtr& user);
 
 		void setUserAttributes(const UserPtr& user, FavoriteUser::Flags flags, int uploadLimit, const CID& shareGroup, const string& description);
 		bool hasAutoGrantSlot(const UserPtr& user) const

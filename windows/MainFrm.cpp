@@ -2855,7 +2855,7 @@ void MainFrame::shareFolderFromShell(const tstring& infolder)
 
 void MainFrame::on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hint, const tstring& message) noexcept
 {
-	PrivateFrame::openWindow(nullptr, HintedUser(to, hint), Util::emptyString, message);
+	PrivateFrame::openWindow(nullptr, HintedUser(to, hint), Util::emptyString, Text::fromT(message));
 }
 
 void MainFrame::on(UserManagerListener::OpenHub, const string& url) noexcept

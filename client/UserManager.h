@@ -81,7 +81,7 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 #endif
 
 		void getIgnoreList(StringSet& ignoreList) const;
-		tstring getIgnoreListAsString() const;
+		string getIgnoreListAsString() const;
 		bool addToIgnoreList(const string& userName);
 		void removeFromIgnoreList(const string& userName);
 		void removeFromIgnoreList(const vector<string>& userNames);

@@ -56,7 +56,7 @@ string ChatMessage::format() const
 #endif
 }
 
-void ChatMessage::translateMe()
+void ChatMessage::translateMe(string& text, bool& thirdPerson)
 {
 	if (Text::isAsciiPrefix2(text, string("/me ")) || Text::isAsciiPrefix2(text, string("+me ")))
 	{

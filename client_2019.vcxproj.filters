@@ -364,6 +364,9 @@
     <ClCompile Include="client\FinishedItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\Commands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -979,6 +982,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\SocketAddr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

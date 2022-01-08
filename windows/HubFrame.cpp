@@ -232,25 +232,25 @@ void HubFrame::createMessagePanel()
 			tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
 			dcassert(tooltip.IsWindow());
 			tooltip.SetMaxTipWidth(255);
-			
+
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
-			
+
 			switchPanelsContainer = new CContainedWindow(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
 			ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
 			ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
 			ctrlSwitchPanels.SetIcon(iconSwitchPanels);
 			switchPanelsContainer->SubclassWindow(ctrlSwitchPanels.m_hWnd);
-			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
+			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
 
 			ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 			ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
 			ctrlShowUsers.SetFont(Fonts::g_systemFont);
 			ctrlShowUsers.SetCheck(showUsersStore ? BST_CHECKED : BST_UNCHECKED);
-			
+
 			showUsersContainer = new CContainedWindow(WC_BUTTON, this, EDIT_MESSAGE_MAP);
 			showUsersContainer->SubclassWindow(ctrlShowUsers.m_hWnd);
-			tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_USERLIST);
+			tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_HELP_TOGGLE_USER_LIST);
 			ctrlModeIcon.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
 			//  ctrlModeIcon.SetIcon(iconModeActive);
 
@@ -425,7 +425,7 @@ void HubFrame::processFrameMessage(const tstring& fullMessageText, bool& resetIn
 	}
 	else
 	{
-		sendMessage(fullMessageText);
+		sendMessage(Text::fromT(fullMessageText));
 	}
 }
 
@@ -445,7 +445,7 @@ void HubFrame::readFrameLog()
 	ctrlClient.goToEnd(true);
 }
 
-bool HubFrame::sendMessage(const tstring& msg, bool thirdPerson)
+bool HubFrame::sendMessage(const string& msg, bool thirdPerson)
 {
 	if (isDHT)
 	{
@@ -453,191 +453,166 @@ bool HubFrame::sendMessage(const tstring& msg, bool thirdPerson)
 		return false;
 	}
 	if (!client) return false;
-	client->hubMessage(Text::fromT(msg), thirdPerson);
+	client->hubMessage(msg, thirdPerson);
 	return true;
 }
 
-void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText)
+bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res)
 {
-	if (stricmp(cmd.c_str(), _T("join")) == 0)
+	if (!Commands::checkArguments(pc, res.text))
 	{
-		if (!param.empty())
-		{
-			redirect = Util::formatDchubUrl(Text::fromT(param));
+		res.what = Commands::RESULT_ERROR_MESSAGE;
+		return true;
+	}
+	switch (pc.command)
+	{
+		case Commands::COMMAND_CLOSE:
+			res.what = Commands::RESULT_NO_TEXT;
+			PostMessage(WM_CLOSE);
+			return true;
+		case Commands::COMMAND_JOIN:
+			res.what = Commands::RESULT_NO_TEXT;
+			redirect = Util::formatDchubUrl(pc.args[1]);
 			if (BOOLSETTING(JOIN_OPEN_NEW_WINDOW))
 				openHubWindow(redirect);
 			else
 				followRedirect();
-		}
-		else
-		{
-			addStatus(TSTRING(SPECIFY_SERVER));
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("password")) == 0)
-	{
-		if (waitingForPassword)
-		{
-			if (client) client->password(Text::fromT(param), true);
-			waitingForPassword = false;
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("showjoins")) == 0)
-	{
-		showJoins = !showJoins;
-		if (showJoins)
-		{
-			addStatus(TSTRING(JOIN_SHOWING_ON));
-		}
-		else
-		{
-			addStatus(TSTRING(JOIN_SHOWING_OFF));
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("favshowjoins")) == 0)
-	{
-		showFavJoins = !showFavJoins;
-		if (showFavJoins)
-		{
-			addStatus(TSTRING(FAV_JOIN_SHOWING_ON));
-		}
-		else
-		{
-			addStatus(TSTRING(FAV_JOIN_SHOWING_OFF));
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("close")) == 0) // TODO
-	{
-		PostMessage(WM_CLOSE);
-	}
-	else if (stricmp(cmd.c_str(), _T("userlist")) == 0)
-	{
-		if (ctrlShowUsers)
-		{
-			showUsers = !showUsers;
-			ctrlShowUsers.SetCheck(showUsers ? BST_CHECKED : BST_UNCHECKED);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("connection")) == 0 || stricmp(cmd.c_str(), _T("con")) == 0)
-	{
-		const string desc = ConnectivityManager::getInstance()->getInformation();
-		string ipAddress;
-		if (isDHT)
-		{
-			bool isFirewalled;
-			dht::DHT::getInstance()->getPublicIPInfo(ipAddress, isFirewalled);
-		}
-		else if (client)
-		{
-			Ip4Address ip4;
-			Ip6Address ip6;
-			client->getLocalIp(ip4, ip6);
-			if (Util::isValidIp4(ip4))
-				ipAddress = Util::printIpAddress(ip4);
-			if (Util::isValidIp6(ip6))
+			return true;
+		case Commands::COMMAND_PASSWORD:
+			res.what = Commands::RESULT_NO_TEXT;
+			if (waitingForPassword)
 			{
-				if (!ipAddress.empty()) ipAddress += ", ";
-				ipAddress += Util::printIpAddress(ip6);
+				if (client) client->password(pc.args[1], true);
+				waitingForPassword = false;
 			}
-		}
-		else
-			ipAddress = "?";
-		tstring conn = _T("\r\n") + TSTRING(IP) + _T(": ") + Text::toT(ipAddress) + _T("\r\n") + Text::toT(desc);
-		
-		if (param == _T("pub"))
-			sendMessage(conn);
-		else
-			addStatus(conn);
-	}
-	else if (stricmp(cmd.c_str(), _T("favorite")) == 0 || stricmp(cmd.c_str(), _T("fav")) == 0)
-	{
-		AutoConnectType autoConnect;
-		if (param == _T("a"))
-			autoConnect = SET;
-		else if (param == _T("-a"))
-			autoConnect = UNSET;
-		else
-			autoConnect = DONT_CHANGE;
-		addAsFavorite(autoConnect);
-	}
-	else if ((stricmp(cmd.c_str(), _T("removefavorite")) == 0) || (stricmp(cmd.c_str(), _T("removefav")) == 0) || (stricmp(cmd.c_str(), _T("remfav")) == 0))
-	{
-		removeFavoriteHub();
-	}
-	else if (stricmp(cmd.c_str(), _T("getlist")) == 0 || stricmp(cmd.c_str(), _T("gl")) == 0)
-	{
-		if (!param.empty())
-		{
-			UserInfo* ui = findUserByNick(param);
-			if (ui)
+			return true;
+		case Commands::COMMAND_SHOW_JOINS:
+			res.what = Commands::RESULT_NO_TEXT;
+			showJoins = !showJoins;
+			if (showJoins)
+				addStatus(TSTRING(JOIN_SHOWING_ON));
+			else
+				addStatus(TSTRING(JOIN_SHOWING_OFF));
+			return true;
+		case Commands::COMMAND_FAV_SHOW_JOINS:
+			res.what = Commands::RESULT_NO_TEXT;
+			showFavJoins = !showFavJoins;
+			if (showFavJoins)
+				addStatus(TSTRING(FAV_JOIN_SHOWING_ON));
+			else
+				addStatus(TSTRING(FAV_JOIN_SHOWING_OFF));
+			return true;
+		case Commands::COMMAND_TOGGLE_USER_LIST:
+			res.what = Commands::RESULT_NO_TEXT;
+			if (ctrlShowUsers)
 			{
-				ui->getList();
+				showUsers = !showUsers;
+				ctrlShowUsers.SetCheck(showUsers ? BST_CHECKED : BST_UNCHECKED);
 			}
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("log")) == 0)
-	{
-		if (param.empty())
+			return true;
+		case Commands::COMMAND_USER_LIST_LOCATION:
+			res.what = Commands::RESULT_NO_TEXT;
+			if (showUsers) switchPanels();
+			return true;
+		case Commands::COMMAND_INFO_CONNECTION:
 		{
-			openFrameLog();
+			const string desc = ConnectivityManager::getInstance()->getInformation();
+			string ipAddress;
+			if (isDHT)
+			{
+				bool isFirewalled;
+				dht::DHT::getInstance()->getPublicIPInfo(ipAddress, isFirewalled);
+			}
+			else if (client)
+			{
+				Ip4Address ip4;
+				Ip6Address ip6;
+				client->getLocalIp(ip4, ip6);
+				if (Util::isValidIp4(ip4))
+					ipAddress = Util::printIpAddress(ip4);
+				if (Util::isValidIp6(ip6))
+				{
+					if (!ipAddress.empty()) ipAddress += ", ";
+					ipAddress += Util::printIpAddress(ip6);
+				}
+			}
+			else
+				ipAddress = "?";
+			res.text = STRING(IP) + ": " + ipAddress + '\n' + desc;
+			res.what = Commands::isPublic(pc.args) ? Commands::RESULT_TEXT : Commands::RESULT_LOCAL_TEXT;
+			return true;
 		}
-		else if (stricmp(param.c_str(), _T("status")) == 0)
+		case Commands::COMMAND_ADD_FAVORITE:
 		{
-			WinUtil::openLog(SETTING(LOG_FILE_STATUS), getFrameLogParams(), TSTRING(NO_LOG_FOR_STATUS));
+			res.what = Commands::RESULT_NO_TEXT;
+			AutoConnectType autoConnect;
+			string param;
+			if (pc.args.size() >= 2)
+			{
+				param = pc.args[1];
+				Text::asciiMakeLower(param);
+			}
+			if (param == "a")
+				autoConnect = SET;
+			else if (param == "-a")
+				autoConnect = UNSET;
+			else
+				autoConnect = DONT_CHANGE;
+			addAsFavorite(autoConnect);
+			return true;
 		}
-	}
-	else if (stricmp(cmd.c_str(), _T("pm")) == 0)
-	{
-		if (!client) return;
-		tstring::size_type j = param.find(_T(' '));
-		if (j != tstring::npos)
+		case Commands::COMMAND_REMOVE_FAVORITE:
+			res.what = Commands::RESULT_NO_TEXT;
+			removeFavoriteHub();
+			return true;
+		case Commands::COMMAND_LAST_NICK:
+			if (!lastUserName.empty())
+				res.text = Text::fromT(lastUserName + getChatRefferingToNick() + _T(' '));
+			if (pc.args.size() >= 2)
+				res.text += pc.args[1];
+			res.what = Commands::RESULT_TEXT;
+			return true;
+		case Commands::COMMAND_OPEN_LOG:
+			res.what = Commands::RESULT_NO_TEXT;
+			if (pc.args.size() < 2)
+			{
+				openFrameLog();
+				return true;
+			}
+			if (stricmp(pc.args[1].c_str(), "status") == 0)
+			{
+				WinUtil::openLog(SETTING(LOG_FILE_STATUS), getFrameLogParams(), TSTRING(NO_LOG_FOR_STATUS));
+				return true;
+			}
+			break;
+		case Commands::COMMAND_GET_LIST:
 		{
-			tstring nick = param.substr(0, j);
-			const OnlineUserPtr ou = client->findUser(Text::fromT(nick));
-			
+			if (pc.args.size() < 2)
+			{
+				res.what = Commands::RESULT_ERROR_MESSAGE;
+				res.text = STRING(COMMAND_ARG_REQUIRED);
+				return true;
+			}
+			res.what = Commands::RESULT_NO_TEXT;
+			UserInfo* ui = findUserByNick(Text::toT(pc.args[1]));
+			if (ui) ui->getList();
+			return true;
+		}
+		case Commands::COMMAND_PRIVATE_MESSAGE:
+		{
+			res.what = Commands::RESULT_NO_TEXT;
+			if (!client) return true;
+			const OnlineUserPtr ou = client->findUser(pc.args[1]);
 			if (ou)
 			{
-				if (param.size() > j + 1)
-					PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), client->getHubUrl()), client->getMyNick(), param.substr(j + 1));
-				else
-					PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), client->getHubUrl()), client->getMyNick());
+				string message;
+				if (pc.args.size() >= 3) message = pc.args[2];
+				PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), client->getHubUrl()), client->getMyNick(), message);
 			}
-		}
-		else if (!param.empty())
-		{
-			const OnlineUserPtr ou = client->findUser(Text::fromT(param));
-			if (ou)
-			{
-				PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), client->getHubUrl()), client->getMyNick());
-			}
+			return true;
 		}
 	}
-	else if (stricmp(cmd.c_str(), _T("switch")) == 0)
-	{
-		if (showUsers)
-			switchPanels();
-	}
-	else if (stricmp(cmd.c_str(), _T("nick")) == 0 || stricmp(cmd.c_str(), _T("n")) == 0)
-	{
-		tstring sayMessage;
-		if (!lastUserName.empty())
-			sayMessage = lastUserName + getChatRefferingToNick() + _T(' ');
-			
-		sayMessage += param;
-		sendMessage(sayMessage);
-		clearInputBox();
-	}
-	else
-	{
-		if (BOOLSETTING(SEND_UNKNOWN_COMMANDS))
-		{
-			sendMessage(fullMessageText);
-		}
-		else
-		{
-			addStatus(TSTRING(UNKNOWN_COMMAND) + _T(' ') + cmd);
-		}
-	}
+	return BaseChatFrame::processFrameCommand(pc, res);
 }
 
 void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
@@ -2664,7 +2639,7 @@ LRESULT HubFrame::onBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, 
 {
 	if (!ChatCtrl::g_sSelectedIP.empty())
 	{
-		const tstring s = _T("!banip ") + ChatCtrl::g_sSelectedIP;
+		const string s = "!banip " + Text::fromT(ChatCtrl::g_sSelectedIP);
 		sendMessage(s);
 	}
 	return 0;
@@ -2674,7 +2649,7 @@ LRESULT HubFrame::onUnBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 {
 	if (!ChatCtrl::g_sSelectedIP.empty())
 	{
-		const tstring s = _T("!unban ") + ChatCtrl::g_sSelectedIP;
+		const string s = "!unban " + Text::fromT(ChatCtrl::g_sSelectedIP);
 		sendMessage(s);
 	}
 	return 0;

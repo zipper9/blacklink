@@ -379,9 +379,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 
 	public:
 		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
-		bool sendMessage(const tstring& msg, bool thirdPerson = false) override;
-		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
-		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		
 		StringMap getFrameLogParams() const;
 		void readFrameLog();
@@ -390,6 +387,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
 		}
 		UserListWindow::CtrlUsers& getUserList() { return ctrlUsers.getUserList(); }
+
+	protected:
+		bool sendMessage(const string& msg, bool thirdPerson = false) override;
+		bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res) override;
+		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
 
 	private:
 		bool hubParamUpdated;

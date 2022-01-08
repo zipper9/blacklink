@@ -25,6 +25,7 @@
 #include "BaseHandlers.h"
 #include "Colors.h"
 #include "../client/ClientManager.h"
+#include "../client/Commands.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::Callback
 {
@@ -117,11 +118,11 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		tstring findTextPopup();
 		void findText(const tstring & needle) noexcept;
 
-		virtual void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText) = 0;
+		virtual bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res);
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 		virtual void onTextEdited() {}
 
-		virtual bool sendMessage(const tstring& msg, bool thirdPerson = false) = 0;
+		virtual bool sendMessage(const string& msg, bool thirdPerson = false) = 0;
 		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 
@@ -184,6 +185,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 	protected:
 		bool handleAutoComplete() override { return false; }
 		void clearAutoComplete() override {}
+		void sendCommandResult(Commands::Result& res);
 };
 
 #endif // BASE_CHAT_FRAME_H_

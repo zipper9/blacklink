@@ -289,9 +289,6 @@
     <ClCompile Include="windows\CountryList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\Commands.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\CustomDrawHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -383,6 +380,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\ShareGroupList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\MainFrmCommands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\AboutCmdsDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -808,9 +811,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\CountryList.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\CustomDrawHelpers.h">

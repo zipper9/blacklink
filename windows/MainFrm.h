@@ -24,6 +24,7 @@
 #include "../client/WebServerManager.h"
 #include "../client/UserManager.h"
 #include "../client/FinishedManagerListener.h"
+#include "../client/Commands.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
 #include "TimerHelper.h"
@@ -449,6 +450,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		CImageList& getToolbarHotImages() { return largeImagesHot; }
 		CImageList& getSmallToolbarImages() { return smallImages; }
 		CImageList& getSettingsImages() { return settingsImages; }
+
+		bool processCommand(const Commands::ParsedCommand& cmd, Commands::Result& res);
 
 	private:
 		static MainFrame* instance;

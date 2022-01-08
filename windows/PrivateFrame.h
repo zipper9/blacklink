@@ -39,7 +39,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 {
 	public:
 		static bool gotMessage(const Identity& from, const Identity& to, const Identity& replyTo, const tstring& message, unsigned maxEmoticons, const string& hubHint, bool myMessage, bool thirdPerson, bool notOpenNewWindow = false);
-		static void openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick = Util::emptyString, const tstring& aMessage = Util::emptyStringT);
+		static void openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick = Util::emptyString, const string& message = Util::emptyString);
 		static bool isOpen(const UserPtr& u)
 		{
 			return frames.find(u) != frames.end();
@@ -169,7 +169,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void updateStatusTextWidth();
 		void updateStatusParts();
 
-		bool sendMessage(const tstring& msg, bool thirdPerson = false) override;
+		bool sendMessage(const string& msg, bool thirdPerson = false) override;
 		void onTextEdited() override;
 
 		const UserPtr& getUser() const
@@ -266,8 +266,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 				WinUtil::postSpeakerMsg(m_hWnd, PM_CPMI_RECEIVED, new CPMINotification(info));
 		}
 
-		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
-		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
+		bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res) override;
+		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
 		StringMap getFrameLogParams() const;
 
 	public:

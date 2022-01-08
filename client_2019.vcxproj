@@ -501,6 +501,7 @@
     <ClCompile Include="client\CID.cpp" />
     <ClCompile Include="client\Client.cpp" />
     <ClCompile Include="client\ClientManager.cpp" />
+    <ClCompile Include="client\Commands.cpp" />
     <ClCompile Include="client\CompatibilityManager.cpp" />
     <ClCompile Include="client\ConnectionManager.cpp" />
     <ClCompile Include="client\ConnectivityManager.cpp" />
@@ -704,6 +705,7 @@
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\BusyCounter.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
+    <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\compiler_flylinkdc.h" />
     <ClInclude Include="client\ConnectivityManager.h" />

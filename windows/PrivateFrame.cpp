@@ -170,14 +170,14 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 			from.getParams(params, "user", false);
 			awayMsg = Util::getAwayMessage(awayMsg, params);
 
-			p->sendMessage(Text::toT(awayMsg));
+			p->sendMessage(awayMsg);
 			p->awayMsgSendTime = tick + AWAY_MSG_COOLDOWN_TIME;
 		}
 	}
 	return true;
 }
 
-void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick, const tstring& msg)
+void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick, const string& msg)
 {
 	if (myNick.empty())
 	{
@@ -203,7 +203,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 	{
 		if (frames.size() > MAX_PM_FRAMES)
 		{
-			LogManager::message("Lock > 100 open private message windows! Hub+nick: " + replyTo.hint + " " + myNick + " Message: " + Text::fromT(msg));
+			LogManager::message("Lock > 100 open private message windows! Hub+nick: " + replyTo.hint + " " + myNick + " Message: " + msg);
 			return;
 		}
 
@@ -224,9 +224,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 		p->MDIActivate(p->m_hWnd);
 	}
 	if (!msg.empty())
-	{
 		p->sendMessage(msg);
-	}
 }
 
 LRESULT PrivateFrame::onKeyDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -281,7 +279,7 @@ void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& res
 {
 	if (replyTo.user->isOnline())
 	{
-		if (!sendMessage(fullMessageText))
+		if (!sendMessage(Text::fromT(fullMessageText)))
 			resetInputMessageText = false;
 		awayMsgSendTime = GET_TICK() + AWAY_MSG_COOLDOWN_TIME;
 	}
@@ -292,48 +290,80 @@ void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& res
 	}
 }
 
-void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText)
+bool PrivateFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res)
 {
-	if (stricmp(cmd.c_str(), _T("grant")) == 0)
+	if (!Commands::checkArguments(pc, res.text))
 	{
-		UploadManager::getInstance()->reserveSlot(replyTo, 600);
-		addStatus(TSTRING(SLOT_GRANTED));
+		res.what = Commands::RESULT_ERROR_MESSAGE;
+		return true;
 	}
-	else if (stricmp(cmd.c_str(), _T("close")) == 0) // TODO
+	switch (pc.command)
 	{
-		PostMessage(WM_CLOSE);
+		case Commands::COMMAND_CLOSE:
+			res.what = Commands::RESULT_NO_TEXT;
+			PostMessage(WM_CLOSE);
+			return true;
+		case Commands::COMMAND_OPEN_LOG:
+			if (pc.args.size() < 2)
+			{
+				res.what = Commands::RESULT_NO_TEXT;
+				openFrameLog();
+				return true;
+			}
+			break;
+		case Commands::COMMAND_GRANT_EXTRA_SLOT:
+			// TODO: add time parameter
+			UploadManager::getInstance()->reserveSlot(replyTo, 600);
+			res.what = Commands::RESULT_LOCAL_TEXT;
+			res.text = STRING(SLOT_GRANTED);
+			return true;
+		case Commands::COMMAND_GET_LIST:
+			UserInfoSimple(replyTo.user, replyTo.hint).getList();
+			res.what = Commands::RESULT_NO_TEXT;
+			return true;
+		case Commands::COMMAND_ADD_FAVORITE:
+			if (FavoriteManager::getInstance()->addFavoriteUser(getUser()))
+			{
+				res.what = Commands::RESULT_LOCAL_TEXT;
+				res.text = STRING(FAVORITE_USER_ADDED);
+			}
+			else
+			{
+				res.what = Commands::RESULT_ERROR_MESSAGE;
+				res.text = STRING(FAVORITE_USER_ALREADY_EXISTS);
+			}
+			return true;
+		case Commands::COMMAND_REMOVE_FAVORITE:
+			if (FavoriteManager::getInstance()->removeFavoriteUser(getUser()))
+			{
+				res.what = Commands::RESULT_LOCAL_TEXT;
+				res.text = STRING(FAVORITE_USER_REMOVED);
+			}
+			else
+			{
+				res.what = Commands::RESULT_ERROR_MESSAGE;
+				res.text = STRING(FAVORITE_USER_DOES_NOT_EXIST);
+			}
+			return true;
+		case Commands::COMMAND_CCPM:
+		{
+			BOOL unused;
+			onCCPM(0, 0, 0, unused);
+			res.what = Commands::RESULT_NO_TEXT;
+			return true;
+		}
 	}
-	else if (stricmp(cmd.c_str(), _T("favorite")) == 0 || stricmp(cmd.c_str(), _T("fav")) == 0)
-	{
-		FavoriteManager::getInstance()->addFavoriteUser(getUser());
-		addStatus(TSTRING(FAVORITE_USER_ADDED));
-	}
-	else if (stricmp(cmd.c_str(), _T("getlist")) == 0 || stricmp(cmd.c_str(), _T("gl")) == 0)
-	{
-		BOOL unused;
-		clearUserMenu();
-		reinitUserMenu(replyTo.user, replyTo.hint);
-		onGetList(0, 0, 0, unused);
-	}
-	else if (stricmp(cmd.c_str(), _T("log")) == 0)
-	{
-		openFrameLog();
-	}
-	else if (stricmp(cmd.c_str(), _T("ccpm")) == 0)
-	{
-		BOOL unused;
-		onCCPM(0, 0, 0, unused);
-	}
+	return BaseChatFrame::processFrameCommand(pc, res);
 }
 
-bool PrivateFrame::sendMessage(const tstring& msg, bool thirdPerson /*= false*/)
+bool PrivateFrame::sendMessage(const string& msg, bool thirdPerson /*= false*/)
 {
 	int ccpm = msgPanel->getCCPMState();
 	if (ccpm == MessagePanel::CCPM_STATE_CONNECTING)
 		return false;
 	if (ccpm == MessagePanel::CCPM_STATE_CONNECTED)
 	{
-		bool result = ConnectionManager::getInstance()->sendCCPMMessage(replyTo, Text::fromT(msg), thirdPerson, false);
+		bool result = ConnectionManager::getInstance()->sendCCPMMessage(replyTo, msg, thirdPerson, false);
 		if (result)
 		{
 			lastSentTime = GET_TICK();
@@ -345,7 +375,7 @@ bool PrivateFrame::sendMessage(const tstring& msg, bool thirdPerson /*= false*/)
 		}
 		return result;
 	}
-	ClientManager::privateMessage(replyTo, Text::fromT(msg), thirdPerson, false);
+	ClientManager::privateMessage(replyTo, msg, thirdPerson, false);
 	return true;
 }
 

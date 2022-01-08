@@ -20,8 +20,8 @@
 #include "BaseChatFrame.h"
 #include "WinUtil.h"
 #include "Fonts.h"
-#include "Commands.h"
 #include "LineDlg.h"
+#include "MainFrm.h"
 #include "../client/StringTokenizer.h"
 #include <tom.h>
 #include <comdef.h>
@@ -212,6 +212,7 @@ void BaseChatFrame::createChatCtrl()
 		}
 		else
 		{
+			ctrlClient.SetTabStops(120);
 			ctrlClient.LimitText(0);
 			ctrlClient.SetFont(Fonts::g_font);
 			ctrlClient.SetAutoURLDetect(FALSE);
@@ -449,68 +450,74 @@ LRESULT BaseChatFrame::onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 	return 0;
 }
 
+bool BaseChatFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res)
+{
+	switch (pc.command)
+	{
+		case Commands::COMMAND_CLEAR:
+		{
+			if (ctrlClient.IsWindow())
+				ctrlClient.Clear();
+			res.what = Commands::RESULT_NO_TEXT;
+			return true;
+		}
+		case Commands::COMMAND_TIMESTAMPS:
+			showTimestamps = !showTimestamps;
+			res.text = showTimestamps ? STRING(TIMESTAMPS_ENABLED) : STRING(TIMESTAMPS_DISABLED);
+			res.what = Commands::RESULT_LOCAL_TEXT;
+			return true;
+		case Commands::COMMAND_FIND_TEXT:
+		{
+			res.what = Commands::RESULT_NO_TEXT;
+			tstring param;
+			if (pc.args.size() >= 2)
+				param = Text::toT(pc.args[1]);
+			else
+				param = findTextPopup();
+			findText(param);
+			return true;
+		}
+		case Commands::COMMAND_ME:
+			if (pc.args.size() >= 2)
+				sendMessage(pc.args[1], true);
+			return true;
+	}
+	if (MainFrame::getMainFrame()->processCommand(pc, res)) return true;
+	return Commands::processCommand(pc, res);
+}
+
 void BaseChatFrame::onEnter()
 {
 	bool updateLayout = false;
 	bool resetInputMessageText = true;
+	Commands::ParsedCommand pc;
+	pc.command = -1;
 	dcassert(ctrlMessage);
 	if (ctrlMessage && ctrlMessage.GetWindowTextLength() > 0)
 	{
 		tstring fullMessageText;
 		WinUtil::getWindowText(ctrlMessage, fullMessageText);
 		ctrlMessage.saveCommand(fullMessageText);
-		
-		// Process special commands
-		if (fullMessageText[0] == '/')
+
+		// Process commands
+		if (fullMessageText[0] == _T('/'))
 		{
-			tstring cmd = fullMessageText;
-			tstring param;
-			tstring message;
-			tstring localMessage;
-			tstring status;
-			if (Commands::processCommand(cmd, param, message, status, localMessage))
+			bool result = Commands::parseCommand(Text::fromT(fullMessageText), pc);
+			if (!result)
 			{
-				if (!message.empty())
-					sendMessage(message);
-				if (!status.empty())
-					addStatus(status);
-				if (!localMessage.empty())
-					addLine(localMessage, 0, Colors::g_ChatTextSystem);
-			}
-			else if (stricmp(cmd.c_str(), _T("clear")) == 0 ||
-			         stricmp(cmd.c_str(), _T("cls")) == 0 ||
-			         stricmp(cmd.c_str(), _T("c")) == 0)
-			{
-				if (ctrlClient.IsWindow())
-					ctrlClient.Clear();
-			}
-			else if (stricmp(cmd.c_str(), _T("ts")) == 0)
-			{
-				showTimestamps = !showTimestamps;
-				if (showTimestamps)
-					addStatus(TSTRING(TIMESTAMPS_ENABLED));
+				if (BOOLSETTING(SEND_UNKNOWN_COMMANDS))
+					sendMessage(Text::fromT(fullMessageText));
 				else
-					addStatus(TSTRING(TIMESTAMPS_DISABLED));
-			}
-			else if (stricmp(cmd.c_str(), _T("find")) == 0)
-			{
-				if (param.empty())
-					param = findTextPopup();
-				findText(param);
-			}
-			else if (stricmp(cmd.c_str(), _T("me")) == 0)
-			{
-				sendMessage(param, true);
-			}
-			else
-			{
-				processFrameCommand(fullMessageText, cmd, param, resetInputMessageText);
+				{
+					tstring msg = TSTRING(UNKNOWN_COMMAND);
+					if (!pc.args.empty())
+						msg += _T(" /") + Text::toT(pc.args[0]);
+					addStatus(msg);
+				}
 			}
 		}
 		else
-		{
 			processFrameMessage(fullMessageText, resetInputMessageText);
-		}
 		if (resetInputMessageText)
 		{
 			clearInputBox();
@@ -520,45 +527,76 @@ void BaseChatFrame::onEnter()
 	else
 		MessageBeep(MB_ICONEXCLAMATION);
 
+	if (pc.command != -1)
+	{
+		Commands::Result res;
+		if (processFrameCommand(pc, res))
+			sendCommandResult(res);
+	}
+
 	if (updateLayout)
 		UpdateLayout();
 }
 
+static void appendMyNick(string& text, bool thirdPerson)
+{
+	if (thirdPerson)
+		text.insert(0, ChatMessage::formatNick(SETTING(NICK), true));
+}
+
+void BaseChatFrame::sendCommandResult(Commands::Result& res)
+{
+	bool thirdPerson = false;
+	ChatMessage::translateMe(res.text, thirdPerson);
+	switch (res.what)
+	{
+		case Commands::RESULT_TEXT:
+			sendMessage(res.text, thirdPerson);
+			break;
+
+		case Commands::RESULT_LOCAL_TEXT:
+			appendMyNick(res.text, thirdPerson);
+			addSystemMessage(Text::toT(res.text), Colors::g_ChatTextSystem);
+			break;
+
+		case Commands::RESULT_ERROR_MESSAGE:
+			appendMyNick(res.text, thirdPerson);
+			addStatus(Text::toT(res.text), true, false);
+	}
+}
+
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring cmd, param, message, status, localMessage;
+	Commands::ParsedCommand pc;
 	if (SETTING(MEDIA_PLAYER) == SettingsManager::WinAmp)
 	{
-		cmd = _T("/winamp");
+		pc.args = { "/winamp" };
 	}
 	else if (SETTING(MEDIA_PLAYER) == SettingsManager::WinMediaPlayer)
 	{
-		cmd = _T("/wmp");
+		pc.args = { "/wmp" };
 	}
 	else if (SETTING(MEDIA_PLAYER) == SettingsManager::iTunes)
 	{
-		cmd = _T("/itunes");
+		pc.args = { "/itunes" };
 	}
 	else if (SETTING(MEDIA_PLAYER) == SettingsManager::WinMediaPlayerClassic)
 	{
-		cmd = _T("/mpc");
+		pc.args = { "/mpc" };
 	}
 	else if (SETTING(MEDIA_PLAYER) == SettingsManager::JetAudio)
 	{
-		cmd = _T("/ja");
+		pc.args = { "/ja" };
 	}
 	else
 	{
 		addStatus(TSTRING(NO_MEDIA_SPAM));
 		return 0;
 	}
-	if (Commands::processCommand(cmd, param, message, status, localMessage))
-	{
-		if (!message.empty())
-			sendMessage(message);
-		if (!status.empty())
-			addStatus(status);
-	}
+	pc.command = Commands::COMMAND_MEDIA_PLAYER;
+	Commands::Result res;
+	if (MainFrame::getMainFrame()->processCommand(pc, res))
+		sendCommandResult(res);
 	return 0;
 }
 

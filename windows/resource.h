@@ -280,7 +280,7 @@
 #define IDC_BUFFERSIZE                  1117
 #define IDC_LANGUAGE                    1118
 #define IDC_BROWSE                      1119
-#define IDC_THANKS                      1120
+#define IDC_COMMANDS                    1120
 #define IDC_DOWNLOADS                   1121
 #define IDC_THIRD_PARTY_SOFTWARE        1122
 #define IDC_SLOTSSPIN                   1123
