@@ -19,10 +19,10 @@
 #include "stdinc.h"
 #include "Mapper_MiniUPnPc.h"
 
-#include "Socket.h"
 #include "StrUtil.h"
 #include "NetworkUtil.h"
 #include "Util.h"
+#include "Resolver.h"
 
 extern "C"
 {
@@ -77,7 +77,7 @@ bool Mapper_MiniUPnPc::init()
 			Util::decodeUrl(controlUrl, protoTmp, routerIp, portTmp, pathTmp, queryTmp, fragmentTmp);
 
 			IpAddressEx addr;
-			if (Socket::resolveHost(addr, af, routerIp))
+			if (Resolver::resolveHost(addr, af, routerIp))
 			{
 				vector<Util::AdapterInfo> adapters;
 				Util::getNetworkAdapters(af, adapters);

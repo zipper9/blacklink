@@ -19,6 +19,7 @@
 #include "stdinc.h"
 
 #include "StrUtil.h"
+#include "Random.h"
 #include "Ip4Address.h"
 #include "File.h"
 #include "StringTokenizer.h"
@@ -35,7 +36,6 @@
 #endif
 
 #include <boost/algorithm/string.hpp>
-#include <openssl/rand.h>
 
 /** In local mode, all config and temp files are kept in the same dir as the executable */
 static bool localMode;
@@ -99,8 +99,6 @@ const string& getHttpUserAgent()
 {
 	return httpUserAgent;
 }
-
-static void initRand();
 
 extern "C" void bz_internal_error(int errcode)
 {
@@ -1224,77 +1222,6 @@ string Util::formatCurrentDate() noexcept
 {
 	static const string defaultDateFormat("%Y-%m-%d");
 	return formatDateTime(defaultDateFormat, GET_TIME());
-}
-
-/* Below is a high-speed random number generator with much
-   better granularity than the CRT one in msvc...(no, I didn't
-   write it...see copyright) */
-/* Copyright (C) 1997 Makoto Matsumoto and Takuji Nishimura.
-   Any feedback is very welcome. For any question, comments,
-   see http://www.math.keio.ac.jp/matumoto/emt.html or email
-   matumoto@math.keio.ac.jp */
-/* Period parameters */
-
-#define N 624
-#define M 397
-#define MATRIX_A 0x9908b0df   /* constant vector a */
-#define UPPER_MASK 0x80000000 /* most significant w-r bits */
-#define LOWER_MASK 0x7fffffff /* least significant r bits */
-
-/* Tempering parameters */
-#define TEMPERING_MASK_B 0x9d2c5680
-#define TEMPERING_MASK_C 0xefc60000
-#define TEMPERING_SHIFT_U(y)  (y >> 11)
-#define TEMPERING_SHIFT_S(y)  (y << 7)
-#define TEMPERING_SHIFT_T(y)  (y << 15)
-#define TEMPERING_SHIFT_L(y)  (y >> 18)
-
-static std::vector<unsigned long> g_mt(N + 1); /* the array for the state vector  */
-static int g_mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
-
-/* initializing the array with a NONZERO seed */
-static void initRand()
-{
-	RAND_pseudo_bytes((unsigned char*) &g_mt[0], (N + 1)*sizeof(unsigned long));
-	g_mti = N;
-}
-
-uint32_t Util::rand()
-{
-	unsigned long y;
-	/* mag01[x] = x * MATRIX_A  for x=0,1 */
-	
-	if (g_mti >= N)   /* generate N words at one time */
-	{
-		static unsigned long mag01[2] = {0x0, MATRIX_A};
-		int kk;
-	
-		if (g_mti == N + 1)
-			initRand();
-	
-		for (kk = 0; kk < N - M; kk++)
-		{
-			y = (g_mt[kk] & UPPER_MASK) | (g_mt[kk + 1] & LOWER_MASK);
-			g_mt[kk] = g_mt[kk + M] ^ (y >> 1) ^ mag01[y & 0x1];
-		}
-		for (; kk < N - 1; kk++)
-		{
-			y = (g_mt[kk] & UPPER_MASK) | (g_mt[kk + 1] & LOWER_MASK);
-			g_mt[kk] = g_mt[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x1];
-		}
-		y = (g_mt[N - 1] & UPPER_MASK) | (g_mt[0] & LOWER_MASK);
-		g_mt[N - 1] = g_mt[M - 1] ^ (y >> 1) ^ mag01[y & 0x1];
-	
-		g_mti = 0;
-	}
-	
-	y = g_mt[g_mti++];
-	y ^= TEMPERING_SHIFT_U(y);
-	y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
-	y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
-	y ^= TEMPERING_SHIFT_L(y);
-	
-	return y;
 }
 
 string Util::getRandomNick(size_t maxLength /*= 20*/)

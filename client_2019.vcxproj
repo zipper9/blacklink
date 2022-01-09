@@ -619,6 +619,8 @@
     <ClCompile Include="client\PortTest.cpp" />
     <ClCompile Include="client\QueueItem.cpp" />
     <ClCompile Include="client\QueueManager.cpp" />
+    <ClCompile Include="client\Random.cpp" />
+    <ClCompile Include="client\Resolver.cpp" />
     <ClCompile Include="client\ResourceManager.cpp" />
     <ClCompile Include="client\RWLockWin.cpp" />
     <ClCompile Include="client\RWLockWinDynamic.cpp" />
@@ -760,6 +762,8 @@
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />
+    <ClInclude Include="client\Random.h" />
+    <ClInclude Include="client\Resolver.h" />
     <ClInclude Include="client\RWLock.h" />
     <ClInclude Include="client\RWLockWin.h" />
     <ClInclude Include="client\RWLockWinDynamic.h" />

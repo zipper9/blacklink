@@ -27,6 +27,7 @@
 #include "SearchManager.h"
 #include "Wildcards.h"
 #include "ParamExpander.h"
+#include "Resolver.h"
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
@@ -335,7 +336,7 @@ void Client::connect()
 			if (preferIP6) clientSock->setIpVersion(AF_INET6);
 		}
 		else
-			clientSock->setIpVersion(AF_INET | Socket::RESOLVE_TYPE_EXACT);
+			clientSock->setIpVersion(AF_INET | Resolver::RESOLVE_TYPE_EXACT);
 		clientSock->connect(address, port, secure, BOOLSETTING(ALLOW_UNTRUSTED_HUBS), true, proto);
 		clientSock->start();
 		dcdebug("Client::connect() %p\n", this);

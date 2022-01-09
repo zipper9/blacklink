@@ -17,6 +17,7 @@
 #include "NetworkUtil.h"
 #include "BusyCounter.h"
 #include "SocketAddr.h"
+#include "Random.h"
 #include "Tag16.h"
 #include "maxminddb/maxminddb.h"
 #include <boost/algorithm/string.hpp>

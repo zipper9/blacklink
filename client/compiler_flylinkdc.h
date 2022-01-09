@@ -151,6 +151,7 @@
 #define FLYLINKDC_USE_SOCKET_COUNTER
 
 #define HAVE_NATPMP_H
+#define HAVE_OPENSSL
 
 #if defined _POSIX_SOURCE || defined _GNU_SOURCE
 #define HAVE_TIME_R

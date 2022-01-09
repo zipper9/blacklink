@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "BufferedSocket.h"
+#include "Resolver.h"
 #include "ThrottleManager.h"
 #include "ResourceManager.h"
 #include "Streams.h"
@@ -704,7 +705,7 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 			{
 				IpAddressEx addr;
 				bool isNumeric;
-				if (!Socket::resolveHost(addr, getIp().type, ci->addr, &isNumeric)) // FIXME
+				if (!Resolver::resolveHost(addr, getIp().type, ci->addr, &isNumeric)) // FIXME
 				{
 					if (doLog)
 						LogManager::message("Error resolving " + ci->addr, false);
@@ -768,7 +769,7 @@ void BufferedSocket::checkSocksReply()
 	proxyStage = PROXY_STAGE_NONE;
 	mode = MODE_LINE;
 	IpAddressEx ip;
-	Socket::resolveHost(ip, getIp().type, connectInfo->addr);
+	Resolver::resolveHost(ip, getIp().type, connectInfo->addr);
 	sock->setIp(ip);
 	sock->setPort(connectInfo->port);
 	if (connectInfo->secure)
@@ -830,7 +831,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 				}
 				IpAddressEx ip;
 				bool isNumeric;
-				if (!Socket::resolveHost(ip, ipVersion, *host, &isNumeric))
+				if (!Resolver::resolveHost(ip, ipVersion, *host, &isNumeric))
 				{
 					if (doLog)
 						LogManager::message("Error resolving " + *host, false);

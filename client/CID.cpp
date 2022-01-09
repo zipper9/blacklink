@@ -18,12 +18,12 @@
 
 #include "stdinc.h"
 #include "CID.h"
-#include "Util.h"
+#include "Random.h"
 
 void CID::generate(uint8_t *data)
 {
 	for (size_t i = 0; i < SIZE; ++i)
-		data[i] = (uint8_t)Util::rand();
+		data[i] = (uint8_t) Util::rand();
 }
 
 CID CID::generate()

@@ -24,6 +24,7 @@
 #include "HintedUser.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
+#include "HashValue.h"
 #include "IPInfo.h"
 #include "IpAddress.h"
 

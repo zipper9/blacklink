@@ -367,6 +367,12 @@
     <ClCompile Include="client\Commands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\Resolver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\Random.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -985,6 +991,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\Commands.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Random.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Resolver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

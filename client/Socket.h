@@ -160,13 +160,6 @@ class Socket
 		virtual void connect(const IpAddressEx& ip, uint16_t port, const string& host);
 		void connect(const string& host, uint16_t port);
 
-		/**
-		 * Sends data, will block until all data has been sent or an exception occurs
-		 * @param buffer Buffer with data
-		 * @param len Data length
-		 * @throw SocketExcpetion Send failed.
-		 */
-		int writeAll(const void* buffer, int len, unsigned timeout = 0);
 		virtual int write(const void* buffer, int len);
 		int write(const string& data)
 		{
@@ -175,10 +168,10 @@ class Socket
 		virtual void shutdown() noexcept;
 		virtual void close() noexcept;
 		void disconnect() noexcept;
-		
+
 		virtual bool waitConnected(unsigned millis);
 		virtual bool waitAccepted(unsigned millis);
-		
+
 		/**
 		 * Reads zero to bufLen characters from this socket,
 		 * @param buffer A buffer to store the data in.
@@ -206,27 +199,20 @@ class Socket
 
 		virtual int wait(int millis, int waitFor);
 
-		static int resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric = nullptr) noexcept;		
-		static bool resolveHost(IpAddressEx& addr, int type, const string& host, bool* isNumeric = nullptr) noexcept;
-
-		static const int RESOLVE_RESULT_V4 = 1;
-		static const int RESOLVE_RESULT_V6 = 2;
-		static const int RESOLVE_TYPE_EXACT = 1024;
-
 		void setBlocking(bool block) noexcept;
 		uint16_t getLocalPort() const;
 		IpAddress getLocalIp() const;
-		
+
 		// Low level interface
 		virtual void create(int af, SocketType type);
-		
+
 		/** Binds a socket to a certain local port and possibly IP. */
 		virtual uint16_t bind(uint16_t port, const IpAddressEx& addr);
 		virtual void listen();
 		/** Accept a socket.
 		@return remote port */
 		virtual uint16_t accept(const Socket& listeningSocket);
-		
+
 		int getSocketOptInt(int level, int option) const;
 		void setSocketOpt(int level, int option, int value);
 		void setInBufSize();
@@ -252,15 +238,13 @@ class Socket
 		{
 			return true;
 		}
-		
-		/** When socks settings are updated, this has to be called... */
-		static void socksUpdated(const ProxyConfig* proxy);
+
 		static string getRemoteHost(const IpAddress& ip);
-		
+
 		void setIp(const IpAddress& ip) { this->ip = ip; }
 		void setIp(const IpAddressEx& ip);
 		const IpAddress& getIp() const { return ip; }
-		
+
 		void setPort(uint16_t port) { this->port = port; }
 		uint16_t getPort() const { return port; }
 
@@ -269,7 +253,7 @@ class Socket
 
 		void setCurrentBucket(int64_t currentBucket) { this->currentBucket = currentBucket; }
 		int64_t getCurrentBucket() const { return currentBucket; }
-		
+
 		void updateSocketBucket(int connectionCount, uint64_t tick)
 		{
 			if (connectionCount <= 0)
@@ -302,7 +286,7 @@ class Socket
 #ifdef _WIN32
 		unsigned lastWaitResult;
 #endif
-		
+
 		struct StatsItem
 		{
 			uint64_t downloaded = 0;
@@ -315,9 +299,6 @@ class Socket
 			StatsItem udp;
 			StatsItem ssl;
 		};
-		
-		static string g_udpServer;
-		static uint16_t g_udpPort;
 
 	public:
 		static Stats g_stats;

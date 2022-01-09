@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "Socket.h"
+#include "Resolver.h"
 #include "TimerManager.h"
 #include "IpGuard.h"
 #include "LogManager.h"
@@ -37,9 +38,6 @@
 #define EADDRNOTAVAIL WSAEADDRNOTAVAIL
 #endif
 #endif
-
-string Socket::g_udpServer;
-uint16_t Socket::g_udpPort;
 
 #ifdef _DEBUG
 
@@ -73,7 +71,7 @@ static bool isAnyAddr(const sockaddr_u& sa)
 
 		case AF_INET6:
 			return IN6_IS_ADDR_UNSPECIFIED(&sa.v6.sin6_addr);
-	
+
 		default:
 			return false;
 	}
@@ -103,7 +101,7 @@ string SocketException::errorToString(int error) noexcept
 		snprintf(tmp, sizeof(tmp), CSTRING(UNKNOWN_ERROR), error);
 		msg = tmp;
 	}
-	
+
 	return msg;
 }
 
@@ -131,7 +129,7 @@ void Socket::create(int af, SocketType type)
 {
 	if (sock != INVALID_SOCKET)
 		disconnect();
-		
+
 	switch (type)
 	{
 		case TYPE_TCP:
@@ -169,7 +167,7 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	}
 	while (sock == SOCKET_ERROR && getLastError() == EINTR);
 #endif
-	
+
 	if (sock == INVALID_SOCKET)
 	{
 		if (doLog)
@@ -177,7 +175,7 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 				": Accept error #" + Util::toString(getLastError()), false);
 		throw SocketException(getLastError());
 	}
-	
+
 	IpAddress remoteIp;
 	uint16_t port;
 	fromSockAddr(remoteIp, port, sockAddr);
@@ -268,7 +266,7 @@ void Socket::connect(const string& host, uint16_t port)
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	IpAddressEx ip;
 	bool isNumeric;
-	if (!resolveHost(ip, 0, host, &isNumeric))
+	if (!Resolver::resolveHost(ip, 0, host, &isNumeric))
 	{
 		if (doLog)
 			LogManager::message("Error resolving " + host, false);
@@ -326,7 +324,7 @@ void Socket::connect(const IpAddressEx& ip, uint16_t port, const string& host)
 	while (result < 0 && getLastError() == EINTR);
 #endif
 	check(result, true);
-	
+
 	setIp(ip);
 	setPort(port);
 }
@@ -372,10 +370,10 @@ void Socket::setSocketOpt(int level, int option, int val)
 int Socket::read(void* aBuffer, int aBufLen)
 {
 	int len = 0;
-	
+
 	dcassert(type == TYPE_TCP || type == TYPE_UDP);
 	dcassert(sock != INVALID_SOCKET);
-	
+
 	if (type == TYPE_TCP)
 	{
 #ifdef _WIN32
@@ -401,7 +399,7 @@ int Socket::read(void* aBuffer, int aBufLen)
 		while (len < 0 && getLastError() == EINTR);
 #endif
 	}
-	
+
 	check(len, true);
 	if (len > 0)
 	{
@@ -438,39 +436,10 @@ int Socket::readAll(void* aBuffer, int aBufLen, unsigned timeout)
 	return i;
 }
 
-int Socket::writeAll(const void* aBuffer, int aLen, unsigned timeout)
-{
-	const uint8_t* buf = (const uint8_t*)aBuffer;
-	int pos = 0;
-	// No use sending more than this at a time...
-#if 0
-	const int sendSize = getSocketOptInt(SOL_SOCKET, SO_SNDBUF);
-#else
-	const int sendSize = MAX_SOCKET_BUFFER_SIZE;
-#endif
-	
-	while (pos < aLen)
-	{
-		const int i = write(buf + static_cast<size_t>(pos), (int)min(aLen - pos, sendSize)); // [!] PVS V104 Implicit conversion of 'pos' to memsize type in an arithmetic expression: buf + pos socket.cpp 464
-		if (i == -1)
-		{
-			wait(timeout, WAIT_WRITE);
-		}
-		else
-		{
-			dcassert(i >= 0); // [+] IRainman fix.
-			pos += i;
-			// [-] IRainman fix: please see Socket::write
-			// [-] g_stats.totalUp += i;
-		}
-	}
-	return pos;
-}
-
 int Socket::write(const void* buffer, int len)
 {
 	dcassert(sock != INVALID_SOCKET);
-	
+
 	int sent = 0;
 #ifdef _WIN32
 	sent = ::send(sock, (const char*)buffer, len, 0);
@@ -511,7 +480,7 @@ int Socket::sendPacket(const void* buffer, int bufLen, const IpAddress& ip, uint
 int Socket::receivePacket(void* buffer, int bufLen, IpAddress& ip, uint16_t& port) noexcept
 {
 	dcassert(type == TYPE_UDP);
-	sockaddr_u sockAddr;	
+	sockaddr_u sockAddr;
 	socklen_t sockLen = sizeof(sockAddr);
 	int res = recvfrom(sock, static_cast<char*>(buffer), bufLen, 0, (sockaddr*) &sockAddr, &sockLen);
 	if (res > 0)
@@ -704,137 +673,6 @@ bool Socket::waitAccepted(unsigned /*millis*/)
 	return true;
 }
 
-// af = AF_INET / AF_INET6 - return only IPv4 or IPv6
-// af = 0 - return both
-int Socket::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric) noexcept
-{
-	if (v4) *v4 = 0;
-	if (v6) memset(v6, 0, sizeof(*v6));
-	if (host.find(':') != string::npos)
-	{
-		if (!(af == 0 || af == AF_INET6)) return 0;
-		Ip6AddressEx ip6;
-		if (Util::parseIpAddress(ip6, host))
-		{
-			if (v6) *v6 = ip6;
-			if (isNumeric) *isNumeric = true;
-			return RESOLVE_RESULT_V6;
-		}
-	}
-	else
-	{
-		Ip4Address ip4;
-		if (Util::parseIpAddress(ip4, host))
-		{
-			if (!(af == 0 || af == AF_INET)) return 0;
-			if (v4) *v4 = ip4;
-			if (isNumeric) *isNumeric = true;
-			return RESOLVE_RESULT_V4;
-		}
-	}
-	addrinfo hints;
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = af;
-	if (!af) hints.ai_flags = AI_V4MAPPED | AI_ALL;
-	addrinfo* result = nullptr;
-	if (getaddrinfo(host.c_str(), nullptr, &hints, &result))
-		return 0;
-	const addrinfo* ai = result;
-	const sockaddr* v4Result = nullptr;
-	const sockaddr* v6Result = nullptr;
-	int outFlags = 0;
-	while (ai)
-	{
-		if (ai->ai_family == AF_INET)
-		{
-			if ((af == 0 || af == AF_INET) && !v4Result)
-				v4Result = ai->ai_addr;
-		}
-		else if (ai->ai_family == AF_INET6)
-		{
-			const sockaddr_in6* sa = (const sockaddr_in6*) ai->ai_addr;
-			if (IN6_IS_ADDR_V4MAPPED(&sa->sin6_addr))
-			{
-				if ((af == 0 || af == AF_INET) && !v4Result)
-					v4Result = ai->ai_addr;
-			}
-			else
-			{
-				if ((af == 0 || af == AF_INET6) && !v6Result)
-					v6Result = ai->ai_addr;
-			}
-		}
-		ai = ai->ai_next;
-	}
-	if (v4Result)
-	{
-		outFlags |= RESOLVE_RESULT_V4;
-		if (v4)
-		{
-			if (v4Result->sa_family == AF_INET6)
-			{
-				const sockaddr_in6* sa = (const sockaddr_in6*) v4Result;
-				uint32_t val = *(const uint32_t *) (((const uint8_t *) &sa->sin6_addr) + 12);
-				*v4 = ntohl(val);
-			}
-			else
-			{
-				const sockaddr_in* sa = (const sockaddr_in*) v4Result;
-				*v4 = ntohl(sa->sin_addr.s_addr);
-			}
-		}
-	}
-	if (v6Result)
-	{
-		outFlags |= RESOLVE_RESULT_V6;
-		if (v6)
-		{
-			const sockaddr_in6* sa = (const sockaddr_in6*) v6Result;
-			memcpy(v6, &sa->sin6_addr, sizeof(*v6));
-		}
-	}
-	freeaddrinfo(result);
-	return outFlags;
-}
-
-bool Socket::resolveHost(IpAddressEx& addr, int type, const string& host, bool* isNumeric) noexcept
-{
-	int af = type & ~RESOLVE_TYPE_EXACT;
-	Ip4Address v4;
-	Ip6AddressEx v6;
-	int result = resolveHost(&v4, &v6, (type & RESOLVE_TYPE_EXACT) ? af : 0, host, isNumeric);
-	if (!result) return false;
-	unsigned flag[2];
-	if (af == AF_INET6)
-	{
-		flag[0] = RESOLVE_RESULT_V6;
-		flag[1] = RESOLVE_RESULT_V4;
-	}
-	else
-	{
-		flag[0] = RESOLVE_RESULT_V4;
-		flag[1] = RESOLVE_RESULT_V6;
-	}
-	if (type & RESOLVE_TYPE_EXACT)
-		result &= ~flag[1];
-	for (int i = 0; i < 2; i++)
-		if (result & flag[i])
-		{
-			if (flag[i] == RESOLVE_RESULT_V4)
-			{
-				addr.type = AF_INET;
-				addr.data.v4 = v4;
-			}
-			else
-			{
-				addr.type = AF_INET6;
-				addr.data.v6 = v6;
-			}
-			return true;
-		}
-	return false;
-}
-
 uint16_t Socket::getLocalPort() const
 {
 	if (sock == INVALID_SOCKET)
@@ -884,57 +722,6 @@ IpAddress Socket::getLocalIp() const
 		}
 	}
 	return ip;
-}
-
-void Socket::socksUpdated(const ProxyConfig* proxy)
-{
-#if 0 // FIXME
-	g_udpServer.clear();
-	g_udpPort = 0;
-	
-	if (proxy)
-	{
-		try
-		{
-			Socket s;
-			s.setBlocking(false);
-			s.connect(proxy->host, proxy->port);
-			s.socksAuth(*proxy, SOCKS_TIMEOUT);
-			
-			uint8_t connStr[10];
-			connStr[0] = 5; // SOCKSv5
-			connStr[1] = 3; // UDP Associate
-			connStr[2] = 0; // Reserved
-			connStr[3] = 1; // Address type: IPv4;
-			*(uint32_t*) &connStr[4] = 0; // No specific outgoing UDP address
-			*(uint16_t*) &connStr[8] = 0; // No specific port...
-			
-			s.writeAll(connStr, 10, SOCKS_TIMEOUT);
-			
-			// We assume we'll get a ipv4 address back...therefore, 10 bytes...if not, things
-			// will break, but hey...noone's perfect (and I'm tired...)...
-			if (s.readAll(connStr, 10, SOCKS_TIMEOUT) != 10)
-			{
-				return;
-			}
-			
-			if (connStr[0] != 5 || connStr[1] != 0)
-			{
-				return;
-			}
-			
-			g_udpPort = static_cast<uint16_t>(ntohs(*((uint16_t*)(&connStr[8]))));
-			
-			in_addr addr;
-			addr.s_addr = *(unsigned long *) &connStr[4];
-			g_udpServer = inet_ntoa(addr);
-		}
-		catch (const SocketException&)
-		{
-			dcdebug("Socket: Failed to register with socks server\n");
-		}
-	}
-#endif
 }
 
 void Socket::shutdown() noexcept

@@ -425,16 +425,6 @@ namespace Util
 
 	string getFilenameForRenaming(const string& filename);
 
-	uint32_t rand();
-	inline uint32_t rand(uint32_t high)
-	{
-		dcassert(high > 0);
-		return rand() % high;
-	}
-	inline uint32_t rand(uint32_t low, uint32_t high)
-	{
-		return rand(high - low) + low;
-	}
 	string getRandomNick(size_t maxLength = 20);
 
 	void setLimiter(bool aLimiter);
