@@ -1097,6 +1097,7 @@ bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr)
 void DirectoryListing::Directory::addFile(DirectoryListing::File *f)
 {
 	files.push_back(f);
+	f->setParent(this);
 	totalSize += f->getSize();
 	totalHits += f->getHit();
 	if (f->getTS() > maxTS) maxTS = f->getTS();

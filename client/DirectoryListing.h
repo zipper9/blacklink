@@ -95,6 +95,7 @@ class DirectoryListing : public UserInfoBase
 
 				const string& getName() const { return name; }	
 				Directory* getParent() { return parent; }
+				void setParent(Directory* dir) { parent = dir; }
 				const Directory* getParent() const { return parent; }
 				const MediaInfo* getMedia() const { return media.get(); }
 

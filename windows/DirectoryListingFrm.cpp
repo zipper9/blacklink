@@ -2368,7 +2368,7 @@ static void translateDuration(const string& src, tstring& columnAudio, tstring& 
 			{
 				Text::toT(src.substr(0, pos - 1), columnDuration);
 				if (pos + 2 < src.length())
-				Text::toT(src.substr(pos + 2), columnAudio);
+					Text::toT(src.substr(pos + 2), columnAudio);
 			}
 			else
 			{
