@@ -109,88 +109,6 @@ bool isAscii(const string& str) noexcept
 	return true;
 }
 
-int utf8ToWc(const char* str, wchar_t& c)
-{
-	dcassert(c == 0);
-	uint8_t c0 = (uint8_t)str[0];
-	if (c0 & 0x80)                                  // 1xxx xxxx
-	{
-		if (c0 & 0x40)                              // 11xx xxxx
-		{
-			if (c0 & 0x20)                          // 111x xxxx
-			{
-				if (c0 & 0x10)                      // 1111 xxxx
-				{
-					int n = -4;
-					if (c0 & 0x08)                  // 1111 1xxx
-					{
-						n = -5;
-						if (c0 & 0x04)              // 1111 11xx
-						{
-							if (c0 & 0x02)          // 1111 111x
-							{
-								return -1;
-							}
-							n = -6;
-						}
-					}
-					int i = -1;
-					while (i > n && (str[abs(i)] & 0x80) == 0x80)
-						--i;
-					return i;
-				}
-				else        // 1110xxxx
-				{
-					uint8_t c1 = (uint8_t)str[1];
-					if ((c1 & (0x80 | 0x40)) != 0x80)
-						return -1;
-						
-					uint8_t c2 = (uint8_t)str[2];
-					if ((c2 & (0x80 | 0x40)) != 0x80)
-						return -2;
-						
-					// Ugly utf-16 surrogate catch
-					if ((c0 & 0x0f) == 0x0d && (c1 & 0x3c) >= (0x08 << 2))
-						return -3;
-						
-					// Overlong encoding
-					if (c0 == (0x80 | 0x40 | 0x20) && (c1 & (0x80 | 0x40 | 0x20)) == 0x80)
-						return -3;
-						
-					c = (((wchar_t)c0 & 0x0f) << 12) |
-					    (((wchar_t)c1 & 0x3f) << 6) |
-					    ((wchar_t)c2 & 0x3f);
-					    
-					return 3;
-				}
-			}
-			else                // 110xxxxx
-			{
-				uint8_t c1 = (uint8_t)str[1];
-				if ((c1 & (0x80 | 0x40)) != 0x80)
-					return -1;
-					
-				// Overlong encoding
-				if ((c0 & ~1) == (0x80 | 0x40))
-					return -2;
-					
-				c = (((wchar_t)c0 & 0x1f) << 6) |
-				    ((wchar_t)c1 & 0x3f);
-				return 2;
-			}
-		}
-		else                    // 10xxxxxx
-		{
-			return -1;
-		}
-	}
-	else                        // 0xxxxxxx
-	{
-		c = (unsigned char)str[0];
-		return 1;
-	}
-}
-
 const string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcept
 {
 	wstring wtmp;
@@ -339,15 +257,47 @@ const string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 	return tgt;
 }
 
+int utf8ToWc(const char* s, size_t pos, size_t len, wchar_t& wc) noexcept
+{
+	if (!(s[pos] & 0x80)) // 1 byte
+	{
+		wc = s[pos];
+		return 1;
+	}
+	if ((s[pos] & 0xC0) == 0x80) return -1;
+	if ((s[pos] & 0xE0) == 0xC0) // 2 bytes
+	{
+		if (len - pos < 2) return -2;
+		if ((s[pos + 1] & 0xC0) != 0x80) return -2;
+		wc = (s[pos] & 0x1F)<<6 | (s[pos + 1] & 0x3F);
+		return 2;
+	}
+	if ((s[pos] & 0xF0) == 0xE0) // 3 bytes
+	{
+		if (len - pos < 3) return -3;
+		if ((s[pos + 1] & 0xC0) != 0x80 || (s[pos + 2] & 0xC0) != 0x80) return -3;
+		wc = (s[pos] & 0xF)<<12 | (s[pos + 1] & 0x3F)<<6 | (s[pos + 2] & 0x3F);
+		return 3;
+	}
+	if ((s[pos] & 0xF8) == 0xF0) // 4 bytes
+	{
+		if (len - pos < 4) return -4;
+		if ((s[pos + 1] & 0xC0) != 0x80 || (s[pos + 2] & 0xC0) != 0x80 || (s[pos + 3] & 0xC0) != 0x80) return -4;
+		wc = (s[pos] & 0x7)<<18 | (s[pos + 1] & 0x3F)<<12 | (s[pos + 2] & 0x3F)<<6 | (s[pos + 3] & 0x3F);
+		return 4;
+	}
+	return -1;
+}
+
 bool validateUtf8(const string& str, size_t pos /* = 0 */) noexcept
 {
-	while (pos < str.length())
+	size_t len = str.length();
+	while (pos < len)
 	{
-		wchar_t dummy = 0;
-		const int j = utf8ToWc(&str[pos], dummy);
-		if (j < 0)
-			return false;
-		pos += j;
+		wchar_t unused;
+		int b = utf8ToWc(str.data(), pos, len, unused);
+		if (b < 0) return false;
+		pos += b;
 	}
 	return true;
 }

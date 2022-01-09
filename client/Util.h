@@ -478,20 +478,20 @@ struct noCaseStringHash
 	size_t operator()(const string& s) const
 	{
 		size_t x = 0;
-		const char* end = s.data() + s.size();
-		for (const char* str = s.data(); str < end;)
+		size_t i = 0, len = s.length();
+		while (i < len)
 		{
-			wchar_t c = 0;
-			int n = Text::utf8ToWc(str, c);
+			wchar_t c;
+			int n = Text::utf8ToWc(s.data(), i, len, c);
 			if (n < 0)
 			{
-				x = x * 32 - x + '_'; //-V112
-				str += static_cast<size_t>(abs(n));
+				x = x * 31 + (unsigned char) s[i];
+				i -= n;
 			}
 			else
 			{
-				x = x * 32 - x + (size_t)Text::toLower(c); //-V112
-				str += static_cast<size_t>(n);
+				x = x * 31 + (size_t) Text::toLower(c);
+				i += n;
 			}
 		}
 		return x;
