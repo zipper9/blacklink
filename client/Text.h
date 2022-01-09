@@ -103,7 +103,7 @@ inline string wideToUtf8(const wstring& str) noexcept
 
 // Returns the number of bytes used or a negative value in case of error.
 // The error value indicates how many bytes should be skipped.
-int utf8ToWc(const char* s, size_t pos, size_t len, wchar_t& wc) noexcept;
+int utf8ToWc(const char* s, size_t pos, size_t len, uint32_t& wc) noexcept;
 
 #ifdef _UNICODE
 inline const tstring& toT(const string& str, tstring& tmp) noexcept

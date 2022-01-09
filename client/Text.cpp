@@ -257,7 +257,7 @@ const string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 	return tgt;
 }
 
-int utf8ToWc(const char* s, size_t pos, size_t len, wchar_t& wc) noexcept
+int utf8ToWc(const char* s, size_t pos, size_t len, uint32_t& wc) noexcept
 {
 	if (!(s[pos] & 0x80)) // 1 byte
 	{
@@ -294,7 +294,7 @@ bool validateUtf8(const string& str, size_t pos /* = 0 */) noexcept
 	size_t len = str.length();
 	while (pos < len)
 	{
-		wchar_t unused;
+		uint32_t unused;
 		int b = utf8ToWc(str.data(), pos, len, unused);
 		if (b < 0) return false;
 		pos += b;

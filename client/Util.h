@@ -481,7 +481,7 @@ struct noCaseStringHash
 		size_t i = 0, len = s.length();
 		while (i < len)
 		{
-			wchar_t c;
+			uint32_t c;
 			int n = Text::utf8ToWc(s.data(), i, len, c);
 			if (n < 0)
 			{
@@ -490,7 +490,8 @@ struct noCaseStringHash
 			}
 			else
 			{
-				x = x * 31 + (size_t) Text::toLower(c);
+				if (c < 0x10000) c = Text::toLower(c);
+				x = x * 31 + (size_t) c;
 				i += n;
 			}
 		}
