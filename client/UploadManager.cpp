@@ -339,12 +339,6 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 					          fileName.c_str());
 					LogManager::ddos_message(l_buf);
 				}
-#ifdef IRAINMAN_DISALLOWED_BAN_MSG
-				if (source->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
-				{
-					source->error(UserConnection::PLEASE_UPDATE_YOUR_CLIENT);
-				}
-#endif
 				if (isTypePartialList)
 				{
 					/*

@@ -49,11 +49,7 @@ class UserConnection :
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
 		static const string FEATURE_BANMSG;
 #endif
-		
 		static const string FILE_NOT_AVAILABLE;
-#if defined (FLYLINKDC_USE_DOS_GUARD) && defined (IRAINMAN_DISALLOWED_BAN_MSG)
-		static const string PLEASE_UPDATE_YOUR_CLIENT;
-#endif
 
 		enum KnownSupports
 		{

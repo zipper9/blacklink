@@ -60,8 +60,6 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		NOTIFY_HANDLER(IDC_RECENTS, NM_RETURN, onEnter)
 		NOTIFY_HANDLER(IDC_RECENTS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_RECENTS, LVN_ITEMCHANGED, onItemchangedDirectories)
-		//NOTIFY_HANDLER(IDC_RECENTS, NM_CUSTOMDRAW, ctrlHubs.onCustomDraw) // [+] IRainman
-		NOTIFY_HANDLER(IDC_RECENTS, NM_CUSTOMDRAW, onCustomDraw)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
 		

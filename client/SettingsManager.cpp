@@ -523,10 +523,6 @@ static const char* g_settingTags[] =
 	"ColorRunning2",
 	"ColorDownloaded",
 	"BanColor",
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-	"FavHubBackColor",
-	"FavHubConnectBackColor",
-#endif
 
 	// Assorted UI settings (Ints)
 	"ShowGrid",
@@ -1130,10 +1126,6 @@ void SettingsManager::setDefaults()
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
 	setDefault(BAN_COLOR, RGB(116, 154, 179));
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-	setDefault(HUB_IN_FAV_BK_COLOR, RGB(191, 180, 26));
-	setDefault(HUB_IN_FAV_CONNECT_BK_COLOR, RGB(191, 236, 26));
-#endif
 
 	// Assorted UI settings (Ints)
 	setDefault(SHOW_INFOTIPS, TRUE);
@@ -2270,11 +2262,6 @@ void SettingsManager::importDcTheme(const tstring& file)
 			importData("BadClientColour", BAD_CLIENT_COLOR);
 			importData("BadFilelistColour", BAD_FILELIST_COLOR);
 			importData("ProgressbaroDCStyle", PROGRESSBAR_ODC_STYLE);
-			// Favorite Hubs Colors
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-			importData("HubInFavoriteBkColor", HUB_IN_FAV_BK_COLOR);
-			importData("HubInFavoriteConnectBkColor", HUB_IN_FAV_CONNECT_BK_COLOR);
-#endif
 			// FileList Colors
 			importData("BanColor", BAN_COLOR);
 			// Popup Colors
@@ -2398,11 +2385,6 @@ void SettingsManager::exportDcTheme(const tstring& filename)
 	exportData("BadClientColour", BAD_CLIENT_COLOR);
 	exportData("BadFilelistColour", BAD_FILELIST_COLOR);
 	exportData("ProgressbaroDCStyle", PROGRESSBAR_ODC_STYLE);
-	// Favorite Hubs Colors
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-	exportData("HubInFavoriteBkColor", HUB_IN_FAV_BK_COLOR);
-	exportData("HubInFavoriteConnectBkColor", HUB_IN_FAV_CONNECT_BK_COLOR);
-#endif
 	// FileList Colors
 	exportData("BanColor", BAN_COLOR);
 	// Popup Colors

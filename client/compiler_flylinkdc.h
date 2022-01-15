@@ -97,10 +97,6 @@
 # define IRAINMAN_ENABLE_OP_VIP_MODE_ON_NMDC
 #endif
 //#define IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
-//#define IRAINMAN_DISALLOWED_BAN_MSG
-#ifndef IRAINMAN_DISALLOWED_BAN_MSG
-// #define SMT_ENABLE_FEATURE_BAN_MSG // please DON'T enable this!
-#endif
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 //#endif
 

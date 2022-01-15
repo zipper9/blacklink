@@ -1209,15 +1209,6 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 void ConnectionManager::addUploadConnection(UserConnection* conn)
 {
 	dcassert(conn->isSet(UserConnection::FLAG_UPLOAD));
-	
-#ifdef IRAINMAN_DISALLOWED_BAN_MSG
-	if (uc->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
-	{
-		uc->error(UserConnection::PLEASE_UPDATE_YOUR_CLIENT);
-		return;
-	}
-#endif
-	
 	ConnectionQueueItemPtr cqi;
 	{
 		//WRITE_LOCK(*csUploads);

@@ -39,11 +39,7 @@ PropPageTextStyles::ColorSettings PropPageTextStyles::colors[] =
 	{ ResourceManager::PROGRESS_DOWNLOADED,          SettingsManager::COLOR_DOWNLOADED,            0 },
 	{ ResourceManager::PROGRESS_RUNNING,             SettingsManager::COLOR_RUNNING,               0 },
 	{ ResourceManager::PROGRESS_RUNNING_COMPLETED,   SettingsManager::COLOR_RUNNING_COMPLETED,     0 },
-	{ ResourceManager::BAN_COLOR_DLG,                SettingsManager::BAN_COLOR,                   0 },
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-	{ ResourceManager::HUB_IN_FAV_BK_COLOR,          SettingsManager::HUB_IN_FAV_BK_COLOR,         0 },
-	{ ResourceManager::HUB_IN_FAV_CONNECT_BK_COLOR,  SettingsManager::HUB_IN_FAV_CONNECT_BK_COLOR, 0 },
-#endif
+	{ ResourceManager::BAN_COLOR_DLG,                SettingsManager::BAN_COLOR,                   0 }
 };
 
 PropPageTextStyles::PropPageTextStyles() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(SETTINGS_TEXT_STYLES))

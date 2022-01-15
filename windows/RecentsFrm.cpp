@@ -293,40 +293,6 @@ LRESULT RecentHubsFrame::onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, 
 	return 0;
 }
 
-LRESULT RecentHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-{
-	return CDRF_DODEFAULT;
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
-	
-	switch (cd->nmcd.dwDrawStage)
-	{
-		case CDDS_PREPAINT:
-			return CDRF_NOTIFYITEMDRAW;
-			
-		case CDDS_ITEMPREPAINT:
-		{
-			cd->clrText = Colors::g_textColor;
-			const auto fhe = FavoriteManager::getFavoriteHubEntry(getRecentServer((int)cd->nmcd.dwItemSpec));
-			if (fhe)
-			{
-				if (fhe->getConnect())
-				{
-					cd->clrTextBk = SETTING(HUB_IN_FAV_CONNECT_BK_COLOR);
-				}
-				else
-				{
-					cd->clrTextBk = SETTING(HUB_IN_FAV_BK_COLOR);
-				}
-			}
-			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW;
-		}
-		default:
-			return CDRF_DODEFAULT;
-	}
-#endif
-}
-
 LRESULT RecentHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);

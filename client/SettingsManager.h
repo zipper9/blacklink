@@ -498,10 +498,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			COLOR_RUNNING_COMPLETED,
 			COLOR_DOWNLOADED,
 			BAN_COLOR,
-#ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-			HUB_IN_FAV_BK_COLOR,
-			HUB_IN_FAV_CONNECT_BK_COLOR,
-#endif
 
 			// Assorted UI settings (Ints)
 			SHOW_GRIDLINES,
