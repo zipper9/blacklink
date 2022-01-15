@@ -51,6 +51,7 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
 	created(false), isOffline(false), isMultipleHubs(false), awayMsgSendTime(0),
 	currentLocation(0),
+	ccpmState(ConnectionManager::CCPM_STATE_DISCONNECTED),
 	autoStartCCPM(true), sendCPMI(false), newMessageSent(false), newMessageReceived(false),
 	remoteChatClosed(false), sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
@@ -359,10 +360,9 @@ bool PrivateFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comman
 
 bool PrivateFrame::sendMessage(const string& msg, bool thirdPerson /*= false*/)
 {
-	int ccpm = msgPanel->getCCPMState();
-	if (ccpm == MessagePanel::CCPM_STATE_CONNECTING)
+	if (ccpmState == MessagePanel::CCPM_STATE_CONNECTING)
 		return false;
-	if (ccpm == MessagePanel::CCPM_STATE_CONNECTED)
+	if (ccpmState == MessagePanel::CCPM_STATE_CONNECTED)
 	{
 		bool result = ConnectionManager::getInstance()->sendCCPMMessage(replyTo, msg, thirdPerson, false);
 		if (result)
@@ -736,6 +736,7 @@ void PrivateFrame::connectCCPM()
 		addSystemMessage(TSTRING(CCPM_FAILURE), Colors::g_ChatTextSystem);
 		return;
 	}
+	ccpmState = ConnectionManager::CCPM_STATE_CONNECTING;
 	if (msgPanel)
 		msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
 	addStatus(TSTRING(CCPM_IN_PROGRESS), false);
@@ -745,6 +746,7 @@ void PrivateFrame::updateCCPM(bool connected)
 {
 	if (connected)
 	{
+		ccpmState = ConnectionManager::CCPM_STATE_CONNECTED;
 		const tstring& text = TSTRING(CCPM_CONNECTED);
 		addSystemMessage(text, Colors::g_ChatTextSystem);
 		addStatus(text, false);
@@ -760,6 +762,7 @@ void PrivateFrame::updateCCPM(bool connected)
 	}
 	else
 	{
+		ccpmState = ConnectionManager::CCPM_STATE_DISCONNECTED;
 		const tstring& text = TSTRING(CCPM_DISCONNECTED);
 		addSystemMessage(text, Colors::g_ChatTextSystem);
 		addStatus(text, false);
@@ -871,6 +874,7 @@ LRESULT PrivateFrame::onCCPM(WORD, WORD, HWND, BOOL&)
 	ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID(), s);
 	if (s.state == ConnectionManager::CCPM_STATE_CONNECTING)
 	{
+		ccpmState = s.state;
 		if (msgPanel)
 			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
 		// TODO: show MessageBox
@@ -1117,12 +1121,10 @@ bool PrivateFrame::closeUser(const UserPtr& u)
 
 void PrivateFrame::onBeforeActiveTab(HWND aWnd)
 {
-	dcdrun(const auto l_size_g_frames = frames.size());
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		i->second->destroyMessagePanel(false);
 	}
-	dcassert(l_size_g_frames == frames.size());
 }
 
 void PrivateFrame::onAfterActiveTab(HWND aWnd)
@@ -1157,6 +1159,7 @@ void PrivateFrame::createMessagePanel()
 		{
 			ConnectionManager::PMConnState s;
 			ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID(), s);
+			ccpmState = s.state;
 			msgPanel->setCCPMState(s.state);
 			sendCPMI = false;
 			if (s.state == ConnectionManager::CCPM_STATE_CONNECTING)

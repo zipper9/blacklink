@@ -75,7 +75,6 @@ class MessagePanel
 		void destroyPanel();
 		void updatePanel(const CRect& rect);
 		void setCCPMState(int state);
-		int getCCPMState() const { return ccpmState; }
 		int getPanelWidth() const;
 #ifdef IRAINMAN_INCLUDE_SMILE
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);

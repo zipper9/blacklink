@@ -213,6 +213,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		uint64_t awayMsgSendTime;
 		uint32_t currentLocation;
 
+		int ccpmState;
 		bool autoStartCCPM;
 		bool sendCPMI;
 		bool newMessageSent;
