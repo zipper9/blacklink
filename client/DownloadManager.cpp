@@ -282,7 +282,8 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 
 void DownloadManager::processSND(UserConnection* source, const AdcCommand& cmd) noexcept
 {
-	if (!source->getDownload())
+	auto d = source->getDownload();
+	if (!d)
 	{
 		dcassert(0);
 		source->disconnect(true);
@@ -293,7 +294,7 @@ void DownloadManager::processSND(UserConnection* source, const AdcCommand& cmd) 
 	const int64_t start = Util::toInt64(cmd.getParam(2));
 	const int64_t bytes = Util::toInt64(cmd.getParam(3));
 	
-	if (type != Transfer::fileTypeNames[source->getDownload()->getType()])
+	if (type != Transfer::fileTypeNames[d->getType()])
 	{
 		// Uhh??? We didn't ask for this...
 		dcassert(0);
@@ -301,6 +302,8 @@ void DownloadManager::processSND(UserConnection* source, const AdcCommand& cmd) 
 		return;
 	}
 	
+	if (cmd.hasFlag("TL", 4))
+		d->setFlag(Download::FLAG_TTH_LIST);
 	startData(source, start, bytes, cmd.hasFlag("ZL", 4));
 }
 

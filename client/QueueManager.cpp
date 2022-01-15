@@ -1286,6 +1286,51 @@ int QueueManager::matchListing(DirectoryListing& dl) noexcept
 	return matches;
 }
 
+int QueueManager::matchTTHList(const string& data, const UserPtr& user) noexcept
+{
+	boost::unordered_set<TTHValue> tthSet;
+	SimpleStringTokenizer<char> st(data, ' ');
+	string tok;
+	while (st.getNextToken(tok))
+	{
+		if (tok.length() != 39) break;
+		tthSet.insert(TTHValue(tok));
+	}
+	if (tthSet.empty()) return 0;
+	int matches = 0;
+	bool sourceAdded = false;
+	{
+		QueueWLock(*QueueItem::g_cs);
+		{
+			QueueRLock(*fileQueue.csFQ);
+			for (auto i = fileQueue.getQueueL().cbegin(); i != fileQueue.getQueueL().cend(); ++i)
+			{
+				const QueueItemPtr& qi = i->second;
+				if (qi->isFinished())
+					continue;
+				if (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
+					continue;
+				if (tthSet.find(qi->getTTH()) != tthSet.end())
+				{
+					matches++;
+					try
+					{
+						addSourceL(qi, user, QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
+						sourceAdded = true;
+					}
+					catch (const Exception&)
+					{
+						// Ignore...
+					}
+				}
+			}
+		}
+	}
+	if (sourceAdded)
+		getDownloadConnection(user);
+	return matches;
+}
+
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 void QueueManager::FileListQueue::execute(const DirectoryListInfoPtr& list) // [+] IRainman fix: moved form MainFrame to core.
 {
@@ -1761,6 +1806,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					{
 						processListFileName = std::move(download->getFileListBuffer());
 						processListFlags = dirFlags | QueueItem::FLAG_TEXT;
+						if (download->isSet(Download::FLAG_TTH_LIST)) processListFlags |= QueueItem::FLAG_TTH_LIST;
 					}
 					else
 					{
@@ -2007,6 +2053,12 @@ static void logMatchedFiles(const UserPtr& user, int count)
 void QueueManager::processList(const string& name, const HintedUser& hintedUser, int flags, const DirectoryItem* dirItem)
 {
 	dcassert(hintedUser.user);
+	if ((flags & (QueueItem::FLAG_TEXT | QueueItem::FLAG_TTH_LIST)) == (QueueItem::FLAG_TEXT | QueueItem::FLAG_TTH_LIST))
+	{
+		logMatchedFiles(hintedUser.user, matchTTHList(name, hintedUser.user));
+		return;
+	}
+
 	std::atomic_bool unusedAbortFlag(false);
 	DirectoryListing dirList(unusedAbortFlag);
 	dirList.setHintedUser(hintedUser);

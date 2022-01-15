@@ -189,6 +189,7 @@ class QueueManager : public Singleton<QueueManager>,
 
 	private:
 		void removeItem(const QueueItemPtr& qi, bool removeFromUserQueue);
+		int matchTTHList(const string& data, const UserPtr& user) noexcept;
 
 	public:
 		static bool getTTH(const string& target, TTHValue& tth)

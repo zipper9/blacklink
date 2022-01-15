@@ -84,7 +84,8 @@ class QueueItem
 			FLAG_DOWNLOAD_CONTENTS  = 0x0800,
 			FLAG_RECURSIVE_LIST     = 0x1000,
 			FLAG_WANT_END           = 0x2000,
-			FLAG_COPYING            = 0x4000
+			FLAG_COPYING            = 0x4000,
+			FLAG_TTH_LIST           = 0x8000  // Used by QueueManager::processList
 		};
 
 		bool isUserList() const

@@ -302,6 +302,7 @@ static const char* g_settingTags[] =
 	"UseCPMI",
 	"CCPMAutoStart",
 	"CCPMIdleTimeout",
+	"UseTL",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
@@ -968,6 +969,7 @@ void SettingsManager::setDefaults()
 	setDefault(USE_CCPM, TRUE);
 	setDefault(USE_CPMI, TRUE);
 	setDefault(CCPM_IDLE_TIMEOUT, 10);
+	setDefault(USE_TTH_LIST, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);

@@ -1197,6 +1197,7 @@ enum Strings   // @DontAdd
 	SETTINGS_USE_BOTLIST, // "Use BotList extension (NMDC)"
 	SETTINGS_USE_CCPM, // "Enable CCPM extension (client-to-client private messages)"
 	SETTINGS_USE_CPMI, // "Use CPMI extension"
+	SETTINGS_USE_TTH_LIST, // "Use TL extension"
 	SETTINGS_SEND_UNKNOWN_COMMANDS, // "Send unknown /commands to the hub"
 	SETTINGS_SHARE_HIDDEN, // "Share hidden files"
 	SETTINGS_SHARE_SIZE, // "Total size:"

@@ -28,7 +28,9 @@ class Download : public Transfer, public Flags
 			FLAG_USER_CHECK       = 0x080,
 #endif
 			FLAG_RECURSIVE_LIST   = 0x100,
-			FLAG_USER_GET_IP      = 0x200
+			FLAG_USER_GET_IP      = 0x200,
+			FLAG_MATCH_QUEUE      = 0x400,
+			FLAG_TTH_LIST         = 0x800
 		};
 		
 		Download(UserConnection* conn, const QueueItemPtr& qi, const string& remoteIp, const string& cipherName) noexcept;
