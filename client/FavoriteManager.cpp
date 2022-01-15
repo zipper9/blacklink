@@ -44,7 +44,7 @@ FavoriteManager::FavoriteManager()
 	csDirs = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
-	
+
 	File::ensureDirectory(Util::getHubListsPath());
 }
 
@@ -54,8 +54,8 @@ FavoriteManager::~FavoriteManager()
 	TimerManager::getInstance()->removeListener(this);
 
 	shutdown();
-	
-	for_each(favoriteHubs.begin(), favoriteHubs.end(), [](auto p) { delete p; });
+
+	for_each(hubs.begin(), hubs.end(), [](auto p) { delete p; });
 	for_each(recentHubs.begin(), recentHubs.end(), [](auto p) { delete p; });
 	for_each(previewApplications.begin(), previewApplications.end(), [](auto p) { delete p; });
 }
@@ -96,7 +96,7 @@ UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType f
 	}
 	if (!uc.isSet(UserCommand::FLAG_NOSAVE))
 		saveFavorites();
-	
+
 	return uc;
 }
 
@@ -326,7 +326,9 @@ string FavoriteManager::getUserUrl(const UserPtr& user) const
 bool FavoriteManager::isFavoriteHub(const string& server, int excludeID) const
 {
 	READ_LOCK(*csHubs);
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
+	if (!excludeID)
+		return getFavoriteHubByUrlL(server) != nullptr;
+	for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
 		if ((*i)->getID() != excludeID && (*i)->getServer() == server)
 			return true;
 	return false;
@@ -336,12 +338,12 @@ bool FavoriteManager::addFavoriteHub(FavoriteHubEntry& entry, bool save)
 {
 	{
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-			if ((*i)->getServer() == entry.getServer())
-				return false;
+		if (getFavoriteHubByUrlL(entry.getServer()))
+			return false;
 		FavoriteHubEntry* fhe = new FavoriteHubEntry(entry);
 		entry.id = fhe->id = ++favHubId;
-		favoriteHubs.push_back(fhe);
+		hubs.push_back(fhe);
+		hubsByUrl[entry.getServer()] = fhe;
 	}
 	fire(FavoriteManagerListener::FavoriteAdded(), &entry);
 	if (save)
@@ -354,15 +356,17 @@ bool FavoriteManager::removeFavoriteHub(const string& server, bool save)
 	FavoriteHubEntry* entry = nullptr;
 	{
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-		{
-			if ((*i)->getServer() == server)
+		auto j = hubsByUrl.find(server);
+		if (j == hubsByUrl.end()) return false;
+		auto fhe = j->second;
+		hubsByUrl.erase(j);
+		for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
+			if (*i == fhe)
 			{
-				entry = *i;
-				favoriteHubs.erase(i);
+				entry = fhe;
+				hubs.erase(i);
 				break;
 			}
-		}
 	}
 	if (!entry)
 		return false;
@@ -370,7 +374,7 @@ bool FavoriteManager::removeFavoriteHub(const string& server, bool save)
 	delete entry;
 	if (save)
 		saveFavorites();
-	return true; 
+	return true;
 }
 
 bool FavoriteManager::removeFavoriteHub(int id, bool save)
@@ -378,15 +382,13 @@ bool FavoriteManager::removeFavoriteHub(int id, bool save)
 	FavoriteHubEntry* entry = nullptr;
 	{
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-		{
+		for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
 			if ((*i)->getID() == id)
 			{
 				entry = *i;
-				favoriteHubs.erase(i);
+				hubs.erase(i);
 				break;
 			}
-		}
 	}
 	if (!entry)
 		return false;
@@ -394,23 +396,32 @@ bool FavoriteManager::removeFavoriteHub(int id, bool save)
 	delete entry;
 	if (save)
 		saveFavorites();
-	return true; 
+	return true;
 }
 
 bool FavoriteManager::setFavoriteHub(const FavoriteHubEntry& entry)
 {
 	bool result = false;
 	{
+		FavoriteHubEntry* fhe = nullptr;
+		string prevUrl;
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
+		for (auto i = hubs.begin(); i != hubs.end(); ++i)
 		{
-			FavoriteHubEntry* fhe = *i;
+			fhe = *i;
 			if (fhe->getID() == entry.getID())
 			{
+				prevUrl = fhe->getServer();
 				*fhe = entry;
 				result = true;
 				break;
 			}
+		}
+		if (result && prevUrl != entry.getServer())
+		{
+			auto j = hubsByUrl.find(prevUrl);
+			if (j != hubsByUrl.end()) hubsByUrl.erase(j);
+			hubsByUrl[fhe->getServer()] = fhe;
 		}
 	}
 	if (result)
@@ -424,22 +435,16 @@ bool FavoriteManager::setFavoriteHub(const FavoriteHubEntry& entry)
 bool FavoriteManager::getFavoriteHub(const string& server, FavoriteHubEntry& entry) const
 {
 	READ_LOCK(*csHubs);
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-	{
-		FavoriteHubEntry* fhe = *i;
-		if (fhe->getServer() == server)
-		{
-			entry = *fhe;
-			return true;
-		}
-	}
-	return false;
+	const FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);
+	if (!fhe) return false;
+	entry = *fhe;
+	return true;
 }
 
 bool FavoriteManager::getFavoriteHub(int id, FavoriteHubEntry& entry) const
 {
 	READ_LOCK(*csHubs);
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
+	for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
 	{
 		FavoriteHubEntry* fhe = *i;
 		if (fhe->getID() == id)
@@ -453,87 +458,67 @@ bool FavoriteManager::getFavoriteHub(int id, FavoriteHubEntry& entry) const
 
 bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const WindowInfo& wi)
 {
-	bool result = false;
 	WRITE_LOCK(*csHubs);
-	for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
+	FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);
+	if (!fhe) return false;
+	if (wi.windowSizeX != -1 && wi.windowSizeY != -1)
 	{
-		FavoriteHubEntry* fhe = *i;
-		if (fhe->getServer() == server)
-		{
-			if (wi.windowSizeX != -1 && wi.windowSizeY != -1)
-			{
-				fhe->setWindowPosX(wi.windowPosX);
-				fhe->setWindowPosY(wi.windowPosY);
-				fhe->setWindowSizeX(wi.windowSizeX);
-				fhe->setWindowSizeY(wi.windowSizeY);
-			}
-			fhe->setWindowType(wi.windowType);
-			fhe->setChatUserSplit(wi.chatUserSplit);
-			fhe->setSwapPanels(wi.swapPanels);
-			fhe->setHideUserList(wi.hideUserList);
-			fhe->setHeaderOrder(wi.headerOrder);
-			fhe->setHeaderWidths(wi.headerWidths);
-			fhe->setHeaderVisible(wi.headerVisible);
-			fhe->setHeaderSort(wi.headerSort);
-			fhe->setHeaderSortAsc(wi.headerSortAsc);
-			favsDirty = true;
-			result = true;
-			break;
-		}
+		fhe->setWindowPosX(wi.windowPosX);
+		fhe->setWindowPosY(wi.windowPosY);
+		fhe->setWindowSizeX(wi.windowSizeX);
+		fhe->setWindowSizeY(wi.windowSizeY);
 	}
-	return result;
+	fhe->setWindowType(wi.windowType);
+	fhe->setChatUserSplit(wi.chatUserSplit);
+	fhe->setSwapPanels(wi.swapPanels);
+	fhe->setHideUserList(wi.hideUserList);
+	fhe->setHeaderOrder(wi.headerOrder);
+	fhe->setHeaderWidths(wi.headerWidths);
+	fhe->setHeaderVisible(wi.headerVisible);
+	fhe->setHeaderSort(wi.headerSort);
+	fhe->setHeaderSortAsc(wi.headerSortAsc);
+	favsDirty = true;
+	return true;
 }
 
 bool FavoriteManager::getFavoriteHubWindowInfo(const string& server, WindowInfo& wi) const
 {
-	bool result = false;
 	READ_LOCK(*csHubs);
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-	{
-		const FavoriteHubEntry* fhe = *i;
-		if (fhe->getServer() == server)
-		{
-			wi.windowPosX = fhe->getWindowPosX();
-			wi.windowPosY = fhe->getWindowPosY();
-			wi.windowSizeX = fhe->getWindowSizeX();
-			wi.windowSizeY = fhe->getWindowSizeY();
-			wi.windowType = fhe->getWindowType();
-			wi.chatUserSplit = fhe->getChatUserSplit();
-			wi.swapPanels = fhe->getSwapPanels();
-			wi.hideUserList = fhe->getHideUserList();
-			wi.headerOrder = fhe->getHeaderOrder();
-			wi.headerWidths = fhe->getHeaderWidths();
-			wi.headerVisible = fhe->getHeaderVisible();
-			wi.headerSort = fhe->getHeaderSort();
-			wi.headerSortAsc = fhe->getHeaderSortAsc();
-			result = true;
-			break;
-		}
-	}
-	return result;
+	const FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);
+	if (!fhe) return false;
+	wi.windowPosX = fhe->getWindowPosX();
+	wi.windowPosY = fhe->getWindowPosY();
+	wi.windowSizeX = fhe->getWindowSizeX();
+	wi.windowSizeY = fhe->getWindowSizeY();
+	wi.windowType = fhe->getWindowType();
+	wi.chatUserSplit = fhe->getChatUserSplit();
+	wi.swapPanels = fhe->getSwapPanels();
+	wi.hideUserList = fhe->getHideUserList();
+	wi.headerOrder = fhe->getHeaderOrder();
+	wi.headerWidths = fhe->getHeaderWidths();
+	wi.headerVisible = fhe->getHeaderVisible();
+	wi.headerSort = fhe->getHeaderSort();
+	wi.headerSortAsc = fhe->getHeaderSortAsc();
+	return true;
 }
 
 bool FavoriteManager::setFavoriteHubPassword(const string& server, const string& nick, const string& password, bool addIfNotFound)
 {
-	bool result = false;	
+	bool result = false;
 	FavoriteHubEntry* hubAdded = nullptr;
 	FavoriteHubEntry* hubChanged = nullptr;
 	{
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
+		FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);
+		if (fhe)
 		{
-			FavoriteHubEntry* fhe = *i;
-			if (fhe->getServer() == server)
+			if (fhe->getNick() != nick || fhe->getPassword() != password)
 			{
-				if (fhe->getNick() != nick || fhe->getPassword() != password)
-				{
-					fhe->setNick(nick);
-					fhe->setPassword(password);
-					hubChanged = new FavoriteHubEntry(*fhe);
-				}
-				result = true;
-				break;
+				fhe->setNick(nick);
+				fhe->setPassword(password);
+				hubChanged = new FavoriteHubEntry(*fhe);
 			}
+			result = true;
 		}
 		if (!result && addIfNotFound)
 		{
@@ -544,7 +529,8 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 			hubAdded->setNick(nick);
 			hubAdded->setPassword(password);
 			FavoriteHubEntry* fhe = new FavoriteHubEntry(*hubAdded);
-			favoriteHubs.push_back(fhe);
+			hubs.push_back(fhe);
+			hubsByUrl[fhe->getServer()] = fhe;
 			result = true;
 		}
 	}
@@ -565,22 +551,17 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 
 bool FavoriteManager::setFavoriteHubAutoConnect(const string& server, bool autoConnect)
 {
-	bool result = false;
+	FavoriteHubEntry* fhe;
 	FavoriteHubEntry* hubChanged = nullptr;
 	{
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
+		fhe = getFavoriteHubByUrlL(server);
+		if (fhe)
 		{
-			FavoriteHubEntry* fhe = *i;
-			if (fhe->getServer() == server)
+			if (fhe->getAutoConnect() != autoConnect)
 			{
-				if (fhe->getAutoConnect() != autoConnect)
-				{
-					fhe->setAutoConnect(autoConnect);
-					hubChanged = new FavoriteHubEntry(*fhe);
-				}
-				result = true;
-				break;
+				fhe->setAutoConnect(autoConnect);
+				hubChanged = new FavoriteHubEntry(*fhe);
 			}
 		}
 	}
@@ -590,7 +571,7 @@ bool FavoriteManager::setFavoriteHubAutoConnect(const string& server, bool autoC
 		fire(FavoriteManagerListener::FavoriteChanged(), hubChanged);
 		delete hubChanged;
 	}
-	return result;
+	return fhe != nullptr;
 }
 
 bool FavoriteManager::setFavoriteHubAutoConnect(int id, bool autoConnect)
@@ -599,7 +580,7 @@ bool FavoriteManager::setFavoriteHubAutoConnect(int id, bool autoConnect)
 	FavoriteHubEntry* hubChanged = nullptr;
 	{
 		WRITE_LOCK(*csHubs);
-		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
+		for (auto i = hubs.begin(); i != hubs.end(); ++i)
 		{
 			FavoriteHubEntry* fhe = *i;
 			if (fhe->getID() == id)
@@ -626,19 +607,15 @@ bool FavoriteManager::setFavoriteHubAutoConnect(int id, bool autoConnect)
 const FavoriteHubEntry* FavoriteManager::getFavoriteHubEntryPtr(const string& server) const noexcept
 {
 	csHubs->acquireShared();
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-	{
-		if ((*i)->getServer() == server)
-			return (*i);
-	}
-	csHubs->releaseShared();
-	return nullptr;
+	const FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);
+	if (!fhe) csHubs->releaseShared();
+	return fhe;
 }
 
 const FavoriteHubEntry* FavoriteManager::getFavoriteHubEntryPtr(int id) const noexcept
 {
 	csHubs->acquireShared();
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
+	for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
 	{
 		if ((*i)->getID() == id)
 			return (*i);
@@ -657,18 +634,10 @@ bool FavoriteManager::isPrivateHub(const string& url) const
 {
 	if (url.empty()) return false;
 	READ_LOCK(*csHubs);
-	const FavoriteHubEntry* fav = nullptr;
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
+	const FavoriteHubEntry* fhe = getFavoriteHubByUrlL(url);
+	if (fhe)
 	{
-		if ((*i)->getServer() == url)
-		{
-			fav = *i;
-			break;
-		}
-	}
-	if (fav)
-	{
-		const string& name = fav->getGroup();
+		const string& name = fhe->getGroup();
 		if (!name.empty())
 		{
 			auto group = favHubGroups.find(name);
@@ -682,19 +651,28 @@ bool FavoriteManager::isPrivateHub(const string& url) const
 void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status)
 {
 	WRITE_LOCK(*csHubs);
-	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
+	FavoriteHubEntry* fhe = getFavoriteHubByUrlL(hubUrl);
+	if (fhe)
 	{
-		if ((*i)->getServer() == hubUrl)
-		{
-			auto& cs = (*i)->getConnectionStatus();
-			time_t now = GET_TIME();
-			cs.status = status;
-			cs.lastAttempt = now;
-			if (status == ConnectionStatus::SUCCESS)
-				cs.lastSuccess = now;
-			break;
-		}
+		auto& cs = fhe->getConnectionStatus();
+		time_t now = GET_TIME();
+		cs.status = status;
+		cs.lastAttempt = now;
+		if (status == ConnectionStatus::SUCCESS)
+			cs.lastSuccess = now;
 	}
+}
+
+const FavoriteHubEntry* FavoriteManager::getFavoriteHubByUrlL(const string& url) const
+{
+	auto i = hubsByUrl.find(url);
+	return i == hubsByUrl.cend() ? nullptr : i->second;
+}
+
+FavoriteHubEntry* FavoriteManager::getFavoriteHubByUrlL(const string& url)
+{
+	auto i = hubsByUrl.find(url);
+	return i == hubsByUrl.end() ? nullptr : i->second;
 }
 
 bool FavoriteManager::addFavHubGroup(const string& name, bool priv)
@@ -907,7 +885,7 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("Name", i->first);
 				xml.addChildAttrib("Private", i->second.priv);
 			}
-			for (const FavoriteHubEntry* e : favoriteHubs)
+			for (const FavoriteHubEntry* e : hubs)
 			{
 				string url = e->getServer();
 				const string& kp = e->getKeyPrint();
@@ -1094,7 +1072,7 @@ void FavoriteManager::saveRecents()
 		recentsLastSave = GET_TICK();
 		DBRegistryMap values;
 		for (auto i = recentHubs.cbegin(); i != recentHubs.cend(); ++i)
-		{		
+		{
 			const auto recent = *i;
 			string recentHubsStr;
 			recentHubsStr += recent->getDescription();
@@ -1337,7 +1315,8 @@ void FavoriteManager::load(SimpleXML& xml)
 				}
 			}
 			WRITE_LOCK(*csHubs);
-			favoriteHubs.push_back(e);
+			hubs.push_back(e);
+			hubsByUrl[e->getServer()] = e;
 		}
 		xml.stepOut();
 	}

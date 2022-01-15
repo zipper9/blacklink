@@ -883,6 +883,4 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 #define SOUND_BEEP_BOOLSETTING(k) SettingsManager::getBeepEnabled(SettingsManager::k)
 #define POPUP_ENABLED(k) SettingsManager::getPopupEnabled(SettingsManager::k)
 
-#define SPLIT_SETTING_AND_LOWER(key) Util::splitSettingAndLower(SETTING(key))
-
 #endif // !defined(SETTINGS_MANAGER_H)

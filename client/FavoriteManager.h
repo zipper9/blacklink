@@ -190,7 +190,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				}
 				FavoriteHubEntryList& getFavoriteHubs() const
 				{
-					return fm->favoriteHubs;
+					return fm->hubs;
 				}
 		};
 
@@ -277,7 +277,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void saveRecents();
 		
 	private:
-		FavoriteHubEntryList favoriteHubs;
+		FavoriteHubEntryList hubs;
+		boost::unordered_map<string, FavoriteHubEntry*> hubsByUrl;
 		FavHubGroups favHubGroups;
 		mutable std::unique_ptr<RWLock> csHubs;
 		int favHubId;
@@ -315,6 +316,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		~FavoriteManager();
 
 		string getFavoriteDir(const string& ext) const;
+		const FavoriteHubEntry* getFavoriteHubByUrlL(const string& url) const;
+		FavoriteHubEntry* getFavoriteHubByUrlL(const string& url);
 		
 		// ClientManagerListener
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
