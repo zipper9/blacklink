@@ -25,18 +25,30 @@ using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;
 
-static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align1 = { 5, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 6, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align3 = { 8, DialogLayout::SIDE_RIGHT, U_DU(6) };
 
 static const DialogLayout::Item layoutItems[] =
 {
 	{ IDC_ADV_MISC, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_ENABLE_CCPM, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_ENABLE_CPMI, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CCPM_AUTO_START, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_CCPM_TIMEOUT, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CCPM_TIMEOUT, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CAPTION_MINUTES, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
 	{ IDC_CAPTION_MAX_UC, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
 	{ IDC_RAW_TEXTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_MAX_UC, 0, UNSPEC, UNSPEC, 0, &align1 }
+	{ IDC_MAX_UC, 0, UNSPEC, UNSPEC, 0, &align3 }
 };
 
 static const PropPage::Item items[] =
 {
+	{ IDC_ENABLE_CCPM, SettingsManager::USE_CCPM, PropPage::T_BOOL },
+	{ IDC_ENABLE_CPMI, SettingsManager::USE_CPMI, PropPage::T_BOOL },
+	{ IDC_CCPM_AUTO_START, SettingsManager::CCPM_AUTO_START, PropPage::T_BOOL },
+	{ IDC_CCPM_TIMEOUT, SettingsManager::CCPM_IDLE_TIMEOUT, PropPage::T_INT },
 	{ IDC_MAX_UC, SettingsManager::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
 	{ IDC_RAW1_TEXT, SettingsManager::RAW1_TEXT, PropPage::T_STR },
 	{ IDC_RAW2_TEXT, SettingsManager::RAW2_TEXT, PropPage::T_STR },
@@ -51,8 +63,6 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
 	{ SettingsManager::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
 	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
-	{ SettingsManager::USE_CCPM, ResourceManager::SETTINGS_USE_CCPM },
-	{ SettingsManager::USE_CPMI, ResourceManager::SETTINGS_USE_CPMI },
 	{ SettingsManager::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
 	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
 	{ SettingsManager::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },
@@ -63,10 +73,22 @@ LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
+	CUpDownCtrl spin(GetDlgItem(IDC_CCPM_TIMEOUT_SPIN));
+	spin.SetRange32(0, 30);
+	spin.SetBuddy(GetDlgItem(IDC_CCPM_TIMEOUT));
+	fixControls();
 	return TRUE;
 }
 
 void MiscPage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
+}
+
+void MiscPage::fixControls()
+{
+	BOOL enable = IsDlgButtonChecked(IDC_ENABLE_CCPM);
+	GetDlgItem(IDC_ENABLE_CPMI).EnableWindow(enable);
+	GetDlgItem(IDC_CCPM_AUTO_START).EnableWindow(enable);
+	GetDlgItem(IDC_CCPM_TIMEOUT).EnableWindow(enable);
 }

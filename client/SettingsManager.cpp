@@ -300,6 +300,8 @@ static const char* g_settingTags[] =
 	"UseBotList",
 	"UseCCPM",
 	"UseCPMI",
+	"CCPMAutoStart",
+	"CCPMIdleTimeout",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
@@ -965,6 +967,7 @@ void SettingsManager::setDefaults()
 	setDefault(USE_BOT_LIST, TRUE);
 	setDefault(USE_CCPM, TRUE);
 	setDefault(USE_CPMI, TRUE);
+	setDefault(CCPM_IDLE_TIMEOUT, 10);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);
@@ -1903,7 +1906,12 @@ bool SettingsManager::set(IntSetting key, int value)
 			VERIFY(0, 999);
 			break;
 		}
-		
+		case CCPM_IDLE_TIMEOUT:
+		{
+			VERIFY(0, 30);
+			break;
+		}
+
 #undef VER_MIN
 #undef VER_MAX
 #undef VER_DEF_VAL

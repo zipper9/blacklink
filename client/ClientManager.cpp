@@ -417,11 +417,21 @@ OnlineUserPtr ClientManager::findOnlineUser(const CID& cid, const string& hintUr
 	return findOnlineUserL(cid, hintUrl, priv);
 }
 
+void ClientManager::findOnlineUsers(const CID& cid, OnlineUserList& res, int clientType)
+{
+	res.clear();
+	READ_LOCK(*g_csOnlineUsers);
+	auto op = g_onlineUsers.equal_range(cid);
+	for (auto i = op.first; i != op.second; ++i)
+		if (!clientType || clientType == i->second->getClientBase()->getType())
+			res.push_back(i->second);
+}
+
 OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
 {
 	READ_LOCK(*g_csOnlineUsers);	
-	OnlinePairC op = g_onlineUsers.equal_range(cid);
-	for (OnlineIterC i = op.first; i != op.second; ++i)
+	auto op = g_onlineUsers.equal_range(cid);
+	for (auto i = op.first; i != op.second; ++i)
 	{
 		const OnlineUserPtr& ou = i->second;
 

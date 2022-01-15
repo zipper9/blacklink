@@ -61,6 +61,7 @@ UserConnection::UserConnection() noexcept :
 	chunkSize(0),
 	socket(nullptr),
 	lastActivity(0),
+	lastMessageActivity(0),
 	lastDownloadSpeed(0),
 	lastUploadSpeed(0),
 	slotType(NOSLOT),

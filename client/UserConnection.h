@@ -282,11 +282,12 @@ class UserConnection :
 		{
 			return hintedUser.hint;
 		}
-		
+
 		GETSET(string, userConnectionToken, UserConnectionToken);
 		GETSET(string, connectionQueueToken, ConnectionQueueToken);
 		GETSET(int64_t, speed, Speed);
-		
+		GETSET(uint64_t, lastMessageActivity, LastMessageActivity); // CCPM only
+
 		void updateLastActivity();
 		uint64_t getLastActivity() const { return lastActivity; }
 

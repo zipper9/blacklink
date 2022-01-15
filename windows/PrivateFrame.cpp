@@ -25,6 +25,7 @@
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/ConnectionManager.h"
+#include "../client/dht/DHT.h"
 #include <boost/algorithm/string.hpp>
 
 static const size_t MAX_PM_FRAMES = 100;
@@ -50,7 +51,7 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
 	created(false), isOffline(false), isMultipleHubs(false), awayMsgSendTime(0),
 	currentLocation(0),
-	sendCPMI(false), newMessageSent(false), newMessageReceived(false),
+	autoStartCCPM(true), sendCPMI(false), newMessageSent(false), newMessageReceived(false),
 	remoteChatClosed(false), sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
 	statusSizes{0, 220, 60}
@@ -703,9 +704,9 @@ void PrivateFrame::updateHubList()
 	SetWindowText(fullUserName.c_str());
 }
 
-void PrivateFrame::selectHub(const string& url)
+bool PrivateFrame::selectHub(const string& url)
 {
-	if (replyTo.hint == url) return;
+	if (replyTo.hint == url) return true;
 	bool found = false;
 	for (const auto& hub : hubList)
 		if (hub.first == url)
@@ -718,6 +719,26 @@ void PrivateFrame::selectHub(const string& url)
 		replyTo.hint = url;
 		updateHubList();
 	}
+	return found;
+}
+
+void PrivateFrame::connectCCPM()
+{
+	if (replyTo.hint == dht::NetworkName)
+	{
+		OnlineUserList ouList;
+		ClientManager::getInstance()->findOnlineUsers(replyTo.user->getCID(), ouList, ClientBase::TYPE_ADC);
+		for (OnlineUserPtr& ou : ouList)
+			if (selectHub(ou->getClientBase()->getHubUrl())) break;
+	}
+	if (!ConnectionManager::getInstance()->connectCCPM(replyTo))
+	{
+		addSystemMessage(TSTRING(CCPM_FAILURE), Colors::g_ChatTextSystem);
+		return;
+	}
+	if (msgPanel)
+		msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
+	addStatus(TSTRING(CCPM_IN_PROGRESS), false);
 }
 
 void PrivateFrame::updateCCPM(bool connected)
@@ -846,9 +867,8 @@ void PrivateFrame::onTextEdited()
 
 LRESULT PrivateFrame::onCCPM(WORD, WORD, HWND, BOOL&)
 {
-	auto cm = ConnectionManager::getInstance();
 	ConnectionManager::PMConnState s;
-	cm->getCCPMState(replyTo.user->getCID(), s);
+	ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID(), s);
 	if (s.state == ConnectionManager::CCPM_STATE_CONNECTING)
 	{
 		if (msgPanel)
@@ -857,20 +877,9 @@ LRESULT PrivateFrame::onCCPM(WORD, WORD, HWND, BOOL&)
 		return 0;
 	}
 	if (s.state == ConnectionManager::CCPM_STATE_DISCONNECTED)
-	{
-		if (!cm->connectCCPM(replyTo))
-		{
-			addSystemMessage(TSTRING(CCPM_FAILURE), Colors::g_ChatTextSystem);
-			return 0;
-		}
-		if (msgPanel)
-			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_CONNECTING);
-		addStatus(TSTRING(CCPM_IN_PROGRESS), false);
-	}
+		connectCCPM();
 	else
-	{
-		cm->disconnectCCPM(replyTo.user->getCID());
-	}
+		ConnectionManager::getInstance()->disconnectCCPM(replyTo.user->getCID());
 	return 0;
 }
 
@@ -1162,6 +1171,11 @@ void PrivateFrame::createMessagePanel()
 				}
 				else
 					setRemoteChatClosed(s.cpmi.isClosed);
+			}
+			else if (autoStartCCPM && BOOLSETTING(CCPM_AUTO_START))
+			{
+				autoStartCCPM = false;
+				connectCCPM();
 			}
 		}
 		setCountMessages(0);

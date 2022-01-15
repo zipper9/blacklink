@@ -47,7 +47,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		static bool closeUser(const UserPtr& u);
 		static void closeAll();
 		static void closeAllOffline();
-		
+
 		enum
 		{
 			PM_USER_UPDATED,
@@ -55,9 +55,9 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			PM_CHANNEL_DISCONNECTED,
 			PM_CPMI_RECEIVED
 		};
-		
+
 		DECLARE_FRAME_WND_CLASS_EX(_T("PrivateFrame"), IDR_PRIVATE, 0, COLOR_3DFACE);
-		
+
 		typedef MDITabChildWindowImpl<PrivateFrame> baseClass;
 		typedef UCHandler<PrivateFrame> ucBase;
 		typedef UserInfoBaseHandler < PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG > uiBase;
@@ -180,7 +180,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			return replyTo.hint;
 		}
-		void selectHub(const string& url);
+		bool selectHub(const string& url);
 
 	private:
 		enum
@@ -213,6 +213,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		uint64_t awayMsgSendTime;
 		uint32_t currentLocation;
 
+		bool autoStartCCPM;
 		bool sendCPMI;
 		bool newMessageSent;
 		bool newMessageReceived;
@@ -223,6 +224,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		TimerHelper timer;
 
 		void updateHubList();
+		void connectCCPM();
 		void updateCCPM(bool connected);
 		void processCPMI(const CPMINotification& info);
 		void setLocalTyping(bool status);

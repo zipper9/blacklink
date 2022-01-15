@@ -29,13 +29,19 @@ class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP_EX(MiscPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ENABLE_CCPM, onToggleCCPM)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
+		LRESULT onToggleCCPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			fixControls();
+			return 0;
+		}
+
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -47,6 +53,9 @@ class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
+	private:
+		void fixControls();
 };
 
 #endif // !defined(MISC_PAGE_H)

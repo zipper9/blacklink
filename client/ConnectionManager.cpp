@@ -41,8 +41,8 @@ static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
 
 static const unsigned UC_IDLE_TIME = 60;
-static const unsigned CCPM_IDLE_TIME = 6 * 60;
-static const unsigned CCPM_KEEP_ALIVE_TIME = 180;
+static const unsigned CCPM_IDLE_TIME = 360; // 6 minutes
+static const unsigned CCPM_KEEP_ALIVE_TIME = 180; // 3 minutes
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
 
@@ -808,6 +808,7 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	for (const auto& nci : vnci)
 		connectNextNmdcUser(nci);
 	expectedAdc.removeExpired(tick);
+	unsigned ccpmIdleTimeout = SETTING(CCPM_IDLE_TIMEOUT) * 60000;
 	READ_LOCK(*csConnections);
 	for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
 	{
@@ -815,8 +816,11 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		uint64_t lastActivity = uc->getLastActivity();
 		if (uc->isAnySet(UserConnection::FLAG_CCPM))
 		{
-			if (lastActivity + CCPM_IDLE_TIME * 1000 < tick)
+			if (lastActivity + CCPM_IDLE_TIME * 1000 < tick ||
+			    (ccpmIdleTimeout && uc->getLastMessageActivity() && uc->getLastMessageActivity() + ccpmIdleTimeout < tick))
+			{
 				uc->disconnect();
+			}
 			else if (lastActivity + CCPM_KEEP_ALIVE_TIME * 1000 < tick)
 			{
 				AdcCommand c(AdcCommand::CMD_PMI);
@@ -1351,6 +1355,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		if (source->isSet(UserConnection::FLAG_INCOMING))
 			source->inf(false);
 		source->setState(UserConnection::STATE_IDLE);
+		source->setLastMessageActivity(GET_TICK());
 		fire(ConnectionManagerListener::PMChannelConnected(), cid, cpmiSupported);
 		return;
 	}
@@ -1402,12 +1407,14 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 	}
 
 	const CID& cid = source->getUser()->getCID();
-	OnlineUserPtr ou = ClientManager::findOnlineUser(cid, Util::emptyString, false);
-	if (!ou)
+	OnlineUserList ouList;
+	ClientManager::findOnlineUsers(cid, ouList, ClientBase::TYPE_ADC);
+	if (ouList.empty())
 	{
 		// got CCPM message from an offline user
 		return;
 	}
+	auto ou = ouList.front();
 
 	if (cmd.getCommand() == AdcCommand::CMD_PMI)
 	{
@@ -1451,9 +1458,8 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 		return;
 	}
 
+	source->setLastMessageActivity(GET_TICK());
 	ClientBase* clientBase = ou->getClientBase().get();
-	if (clientBase->getType() != ClientBase::TYPE_ADC)
-		return;
 	{
 		WRITE_LOCK(*csConnections);
 		auto i = ccpmConn.find(cid);
@@ -1699,6 +1705,8 @@ bool ConnectionManager::sendCCPMMessage(const CID& cid, AdcCommand& cmd)
 	if (i == ccpmConn.end()) return false;
 	const auto& ci = i->second;
 	if (!ci.uc) return false;
+	if (cmd.getType() == AdcCommand::CMD_MSG)
+		ci.uc->setLastMessageActivity(GET_TICK());
 	ci.uc->send(message);
 	return true;
 }
