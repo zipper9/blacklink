@@ -70,7 +70,7 @@ void PrivateFrame::doDestroyFrame()
 StringMap PrivateFrame::getFrameLogParams() const
 {
 	StringMap params;
-	params["hubNI"] = ClientManager::getInstance()->getHubName(replyTo.hint);
+	params["hubNI"] = ClientManager::getInstance()->getOnlineHubName(replyTo.hint);
 	params["hubURL"] = replyTo.hint;
 	params["userCID"] = replyTo.user->getCID().toBase32();
 	params["userNI"] = Text::fromT(replyToRealName);

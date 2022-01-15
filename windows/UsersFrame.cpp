@@ -481,7 +481,7 @@ void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 	shareGroup = u.shareGroup;
 	flags = u.getFlags();
 	columns[COLUMN_NICK] = Text::toT(u.nick);
-	columns[COLUMN_HUB] = isOnline ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
+	columns[COLUMN_HUB] = Text::toT(WinUtil::getHubDisplayName(u.url));
 	columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : formatLastSeenTime(lastSeen);
 	columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
 	columns[COLUMN_SLOTS] = Util::toStringT(u.user->getSlots());

@@ -580,7 +580,7 @@ void SpyFrame::ItemInfo::updateNickList()
 					}
 				}
 			}
-			string hubName = ClientManager::getHubName(seekers[j].hub);
+			string hubName = ClientManager::getOnlineHubName(seekers[j].hub);
 			if (!hubName.empty())
 			{
 				if (!hubList.empty()) hubList += _T(", ");

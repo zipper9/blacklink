@@ -240,6 +240,7 @@ class WinUtil
 		static pair<tstring, bool> getHubNames(const UserPtr& u, const string& hintUrl);
 		static pair<tstring, bool> getHubNames(const CID& cid, const string& hintUrl, bool priv);
 		static pair<tstring, bool> getHubNames(const HintedUser& user);
+		static string getHubDisplayName(const string& hunUrl);
 		static int splitTokens(int* result, const string& tokens, int maxItems) noexcept;
 		static int splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue = 100) noexcept;
 		static void saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting order,

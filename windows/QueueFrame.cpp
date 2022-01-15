@@ -134,8 +134,8 @@ static tstring getSourceName(const UserPtr& user, bool partial)
 	if (user->getLastNickAndHub(nick, hubUrl))
 	{
 		nick += " - ";
-		auto p = WinUtil::getHubNames(user, hubUrl);
-		res = Text::toT(nick) + (p.second ? p.first : Text::toT(hubUrl));
+		nick += WinUtil::getHubDisplayName(hubUrl);
+		res = Text::toT(nick);
 	}
 #endif
 	if (res.empty()) res = Text::toT(user->getLastNick());

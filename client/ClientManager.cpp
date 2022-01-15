@@ -354,7 +354,7 @@ bool ClientManager::isConnected(const string& hubUrl)
 	return g_clients.find(hubUrl) != g_clients.end();
 }
 
-string ClientManager::getHubName(const string& hubUrl)
+string ClientManager::getOnlineHubName(const string& hubUrl)
 {
 	READ_LOCK(*g_csClients);
 	auto i = g_clients.find(hubUrl);

@@ -1212,7 +1212,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 					for (string& token : st.getWritableTokens())
 					{
 						boost::algorithm::trim(token);
-						string hubName = ClientManager::getHubName(token);
+						string hubName = ClientManager::getOnlineHubName(token);
 						if (!hubName.empty())
 						{
 							if (!result.empty()) result += _T(", ");
@@ -1225,7 +1225,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 				}
 				else
 				{
-					string hubName = ClientManager::getHubName(s);
+					string hubName = ClientManager::getOnlineHubName(s);
 					if (!hubName.empty())
 					{
 						result += Text::toT(hubName);

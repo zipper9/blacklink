@@ -1296,6 +1296,21 @@ pair<tstring, bool> WinUtil::getHubNames(const HintedUser& user)
 	return getHubNames(user.user, user.hint);
 }
 
+string WinUtil::getHubDisplayName(const string& hubUrl)
+{
+	if (hubUrl == "DHT") return hubUrl;
+	auto fm = FavoriteManager::getInstance();
+	const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(hubUrl);
+	if (fhe)
+	{
+		string name = fhe->getName();
+		fm->releaseFavoriteHubEntryPtr(fhe);
+		return name;
+	}
+	string name = ClientManager::getOnlineHubName(hubUrl);
+	return name.empty() ? hubUrl : name;
+}
+
 void WinUtil::getContextMenuPos(const CListViewCtrl& list, POINT& pt)
 {
 	int pos = list.GetNextItem(-1, LVNI_SELECTED | LVNI_FOCUSED);

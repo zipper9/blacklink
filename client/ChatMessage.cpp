@@ -108,7 +108,7 @@ string ChatMessage::getExtra(const Identity& id)
 void ChatMessage::getUserParams(StringMap& params, const string& hubUrl, bool myMessage) const
 {
 	const OnlineUserPtr& ou = myMessage ? to : replyTo;
-	params["hubNI"] = ClientManager::getInstance()->getHubName(hubUrl);
+	params["hubNI"] = ClientManager::getInstance()->getOnlineHubName(hubUrl);
 	params["hubURL"] = hubUrl;
 	params["userCID"] = ou->getUser()->getCID().toBase32();
 	params["userNI"] = ou->getIdentity().getNick();
