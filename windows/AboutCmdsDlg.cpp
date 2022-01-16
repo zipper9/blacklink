@@ -75,5 +75,6 @@ LRESULT AboutCmdsDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	formattedHelp += "\\par}\n";
 	CRichEditCtrl ctrlCommands(GetDlgItem(IDC_COMMANDS));
 	ctrlCommands.SetTextEx((LPCTSTR) formattedHelp.c_str());
+	ctrlCommands.PostMessage(EM_SCROLL, SB_TOP);
 	return TRUE;
 }

@@ -67,6 +67,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
 	{ SettingsManager::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },
 	{ SettingsManager::USE_TTH_LIST, ResourceManager::SETTINGS_USE_TTH_LIST },
+	{ SettingsManager::SEND_DB_PARAM, ResourceManager::SETTINGS_SEND_DB_PARAM },
 	{ 0, ResourceManager::Strings() }
 };
 

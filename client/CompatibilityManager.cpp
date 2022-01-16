@@ -251,9 +251,9 @@ string CompatibilityManager::getFormattedOsVersion()
 	if (getOsSpMajor() > 0)
 		s += " SP" + Util::toString(getOsSpMajor());
 	if (isWine())
-		s += " (Wine)";
+		s += " Wine";
 	if (runningIsWow64())
-		s += " (WOW64)";
+		s += " WOW64";
 	return s;
 }
 
@@ -278,17 +278,47 @@ string CompatibilityManager::getProcArchString()
 	return s;
 }
 
+#include "winprod.h"
+
+struct
+{
+	DWORD type;
+	const char* name;
+} static const productNames[] =
+{
+	{ PRODUCT_ULTIMATE,                     "Ultimate Edition"                            },
+	{ PRODUCT_PROFESSIONAL,                 "Professional"                                },
+	{ PRODUCT_PROFESSIONAL_N,               "Professional N"                              },
+	{ PRODUCT_HOME_PREMIUM,                 "Home Premium Edition"                        },
+	{ PRODUCT_HOME_BASIC,                   "Home Basic Edition"                          },
+	{ PRODUCT_ENTERPRISE,                   "Enterprise Edition"                          },
+	{ PRODUCT_BUSINESS,                     "Business Edition"                            },
+	{ PRODUCT_STARTER,                      "Starter Edition"                             },
+	{ PRODUCT_CLUSTER_SERVER,               "Cluster Server Edition"                      },
+	{ PRODUCT_DATACENTER_SERVER,            "Datacenter Edition"                          },
+	{ PRODUCT_DATACENTER_SERVER_CORE,       "Datacenter Edition (core installation)"      },
+	{ PRODUCT_ENTERPRISE_SERVER,            "Enterprise Edition"                          },
+	{ PRODUCT_ENTERPRISE_SERVER_CORE,       "Enterprise Edition (core installation)"      },
+	{ PRODUCT_ENTERPRISE_SERVER_IA64,       "Server Enterprise for Itanium-based Systems" },
+	{ PRODUCT_SMALLBUSINESS_SERVER,         "Small Business Server"                       },
+	{ PRODUCT_SMALLBUSINESS_SERVER_PREMIUM, "Small Business Server Premium Edition"       },
+	{ PRODUCT_STANDARD_SERVER,              "Standard Edition"                            },
+	{ PRODUCT_STANDARD_SERVER_CORE,         "Standard Edition (core installation)"        },
+	{ PRODUCT_WEB_SERVER,                   "Web Server Edition"                          },
+	{ PRODUCT_IOTUAP,                       "IoT Core"                                    },
+	{ PRODUCT_EDUCATION,                    "Education"                                   },
+	{ PRODUCT_ENTERPRISE_S,                 "Enterprise 2015 LTSB"                        },
+	{ PRODUCT_ENTERPRISE_S_N,               "Enterprise 2015 LTSB N"                      },
+	{ PRODUCT_CORE,                         "Home"                                        },
+	{ PRODUCT_CORE_SINGLELANGUAGE,          "Home Single Language"                        },
+	{ PRODUCT_UNLICENSED,                   "Unlicensed"                                  }
+};
+
 string CompatibilityManager::getWindowsVersionName()
 {
-	string l_OS = "Microsoft Windows ";
+	string text = "Microsoft Windows ";
 	DWORD dwType;
 	
-// Check for unsupported OS
-//	if (VER_PLATFORM_WIN32_NT != g_osvi.dwPlatformId || getOsMajor() <= 4)
-//	{
-//		return false;
-//	}
-
 	// Test for the specific product.
 	// https://msdn.microsoft.com/ru-ru/library/windows/desktop/ms724833(v=vs.85).aspx
 	if (getOsMajor() == 6 || getOsMajor() == 10)
@@ -298,9 +328,9 @@ string CompatibilityManager::getWindowsVersionName()
 			if (getOsMinor() == 0)
 			{
 				if (getOsType() == VER_NT_WORKSTATION)
-					l_OS += "10 ";
+					text += "10";
 				else
-					l_OS += "Windows Server 2016 Technical Preview ";
+					text += "Windows Server 2016 Technical Preview";
 			}
 			// check type for Win10: Desktop, Mobile, etc...
 		}
@@ -309,30 +339,30 @@ string CompatibilityManager::getWindowsVersionName()
 			if (getOsMinor() == 0)
 			{
 				if (getOsType() == VER_NT_WORKSTATION)
-					l_OS += "Vista ";
+					text += "Vista";
 				else
-					l_OS += "Server 2008 ";
+					text += "Server 2008";
 			}
 			if (getOsMinor() == 1)
 			{
 				if (getOsType() == VER_NT_WORKSTATION)
-					l_OS += "7 ";
+					text += "7";
 				else
-					l_OS += "Server 2008 R2 ";
+					text += "Server 2008 R2";
 			}
 			if (getOsMinor() == 2)
 			{
 				if (getOsType() == VER_NT_WORKSTATION)
-					l_OS += "8 ";
+					text += "8";
 				else
-					l_OS += "Server 2012 ";
+					text += "Server 2012";
 			}
 			if (getOsMinor() == 3)
 			{
 				if (getOsType() == VER_NT_WORKSTATION)
-					l_OS += "8.1 ";
+					text += "8.1";
 				else
-					l_OS += "Server 2012 R2 ";
+					text += "Server 2012 R2";
 			}
 		}
 		// Product Info  https://msdn.microsoft.com/en-us/library/windows/desktop/ms724358(v=vs.85).aspx
@@ -341,96 +371,17 @@ string CompatibilityManager::getWindowsVersionName()
 		if (pGPI)
 		{
 			pGPI(getOsMajor(), getOsMinor(), 0, 0, &dwType);
-			switch (dwType)
+			const char* name = nullptr;
+			for (size_t i = 0; i < sizeof(productNames)/sizeof(productNames[0]); ++i)
+				if (productNames[i].type == dwType)
+				{
+					name = productNames[i].name;
+					break;
+				}
+			if (name)
 			{
-				case PRODUCT_ULTIMATE:
-					l_OS += "Ultimate Edition";
-					break;
-				case PRODUCT_PROFESSIONAL:
-					l_OS += "Professional";
-					break;
-				case PRODUCT_PROFESSIONAL_N:
-					l_OS += "Professional N";
-					break;
-				case PRODUCT_HOME_PREMIUM:
-					l_OS += "Home Premium Edition";
-					break;
-				case PRODUCT_HOME_BASIC:
-					l_OS += "Home Basic Edition";
-					break;
-				case PRODUCT_ENTERPRISE:
-					l_OS += "Enterprise Edition";
-					break;
-				case PRODUCT_BUSINESS:
-					l_OS += "Business Edition";
-					break;
-				case PRODUCT_STARTER:
-					l_OS += "Starter Edition";
-					break;
-				case PRODUCT_CLUSTER_SERVER:
-					l_OS += "Cluster Server Edition";
-					break;
-				case PRODUCT_DATACENTER_SERVER:
-					l_OS += "Datacenter Edition";
-					break;
-				case PRODUCT_DATACENTER_SERVER_CORE:
-					l_OS += "Datacenter Edition (core installation)";
-					break;
-				case PRODUCT_ENTERPRISE_SERVER:
-					l_OS += "Enterprise Edition";
-					break;
-				case PRODUCT_ENTERPRISE_SERVER_CORE:
-					l_OS += "Enterprise Edition (core installation)";
-					break;
-				case PRODUCT_ENTERPRISE_SERVER_IA64:
-					l_OS += "Enterprise Edition for Itanium-based Systems";
-					break;
-				case PRODUCT_SMALLBUSINESS_SERVER:
-					l_OS += "Small Business Server";
-					break;
-				case PRODUCT_SMALLBUSINESS_SERVER_PREMIUM:
-					l_OS += "Small Business Server Premium Edition";
-					break;
-				case PRODUCT_STANDARD_SERVER:
-					l_OS += "Standard Edition";
-					break;
-				case PRODUCT_STANDARD_SERVER_CORE:
-					l_OS += "Standard Edition (core installation)";
-					break;
-				case PRODUCT_WEB_SERVER:
-					l_OS += "Web Server Edition";
-					break;
-				case PRODUCT_UNLICENSED:
-					l_OS += "Unlicensed";
-					break;
-					// Only Windows 10 support:
-					// VC 2015 not supported these defines :(
-					/*
-					case PRODUCT_MOBILE_CORE:
-					l_OS += "Mobile";
-					break;
-					case PRODUCT_MOBILE_ENTERPRISE:
-					l_OS += "Mobile Enterprise";
-					break;
-					case PRODUCT_IOTUAP:
-					l_OS += "IoT Core";
-					break;
-					case PRODUCT_IOTUAPCOMMERCIAL:
-					l_OS += "IoT Core Commercial";
-					break;
-					case PRODUCT_EDUCATION:
-					l_OS += "Education";
-					break;
-					case PRODUCT_ENTERPRISE_S:
-					l_OS += "Enterprise 2015 LTSB";
-					break;
-					case PRODUCT_CORE:
-					l_OS += "Home";
-					break;
-					case PRODUCT_CORE_SINGLELANGUAGE:
-					l_OS += "Home Single Language";
-					break;
-					*/
+				text += ' ';
+				text += name;
 			}
 		}
 	}
@@ -439,90 +390,90 @@ string CompatibilityManager::getWindowsVersionName()
 		if (getOsMinor() == 2)
 		{
 			if (GetSystemMetrics(SM_SERVERR2))
-				l_OS += "Server 2003 R2, ";
+				text += "Server 2003 R2, ";
 			else if (getOsSuiteMask() & VER_SUITE_STORAGE_SERVER)
-				l_OS += "Storage Server 2003";
+				text += "Storage Server 2003";
 			else if (getOsSuiteMask() & VER_SUITE_WH_SERVER)
-				l_OS += "Home Server";
+				text += "Home Server";
 			else if (getOsType() == VER_NT_WORKSTATION && getProcArch() == PROCESSOR_ARCHITECTURE_AMD64)
 			{
-				l_OS += "XP Professional x64 Edition";
+				text += "XP Professional x64 Edition";
 			}
 			else
-				l_OS += "Server 2003, ";  // Test for the server type.
+				text += "Server 2003, ";  // Test for the server type.
 			if (getOsType() != VER_NT_WORKSTATION)
 			{
 				if (getProcArch() == PROCESSOR_ARCHITECTURE_IA64)
 				{
 					if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-						l_OS += "Datacenter Edition for Itanium-based Systems";
+						text += "Datacenter Edition for Itanium-based Systems";
 					else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-						l_OS += "Enterprise Edition for Itanium-based Systems";
+						text += "Enterprise Edition for Itanium-based Systems";
 				}
 				else if (getProcArch() == PROCESSOR_ARCHITECTURE_AMD64)
 				{
 					if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-						l_OS += "Datacenter x64 Edition";
+						text += "Datacenter x64 Edition";
 					else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-						l_OS += "Enterprise x64 Edition";
+						text += "Enterprise x64 Edition";
 					else
-						l_OS += "Standard x64 Edition";
+						text += "Standard x64 Edition";
 				}
 				else
 				{
 					if (getOsSuiteMask() & VER_SUITE_COMPUTE_SERVER)
-						l_OS += "Compute Cluster Edition";
+						text += "Compute Cluster Edition";
 					else if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-						l_OS += "Datacenter Edition";
+						text += "Datacenter Edition";
 					else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-						l_OS += "Enterprise Edition";
+						text += "Enterprise Edition";
 					else if (getOsSuiteMask() & VER_SUITE_BLADE)
-						l_OS += "Web Edition";
+						text += "Web Edition";
 					else
-						l_OS += "Standard Edition";
+						text += "Standard Edition";
 				}
 			}
 		}
 		if (getOsMinor() == 1)
 		{
-			l_OS += "XP ";
+			text += "XP ";
 			if (getOsSuiteMask() & VER_SUITE_PERSONAL)
-				l_OS += "Home Edition";
+				text += "Home Edition";
 			else
-				l_OS += "Professional";
+				text += "Professional";
 		}
 		if (getOsMinor() == 0)
 		{
-			l_OS += "2000 ";
+			text += "2000 ";
 			if (getOsType() == VER_NT_WORKSTATION)
 			{
-				l_OS += "Professional";
+				text += "Professional";
 			}
 			else
 			{
 				if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-					l_OS += "Datacenter Server";
+					text += "Datacenter Server";
 				else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-					l_OS += "Advanced Server";
+					text += "Advanced Server";
 				else
-					l_OS += "Server";
+					text += "Server";
 			}
 		}
 	}
 	// Include service pack (if any) and build number.
 	if (g_osvi.szCSDVersion[0] != 0)
 	{
-		l_OS += ' ' + Text::fromT(g_osvi.szCSDVersion);
+		text += ' ' + Text::fromT(g_osvi.szCSDVersion);
 	}
-	/*  l_OS = l_OS + " (build " + g_osvi.dwBuildNumber + ")";*/
+	text += " (build " + Util::toString(g_osvi.dwBuildNumber) + ")";
 	if (g_osvi.dwMajorVersion >= 6)
 	{
 		if ((getProcArch() == PROCESSOR_ARCHITECTURE_AMD64) || runningIsWow64())
-			l_OS += ", 64-bit";
+			text += ", 64-bit";
 		else if (getProcArch() == PROCESSOR_ARCHITECTURE_INTEL)
-			l_OS += ", 32-bit";
+			text += ", 32-bit";
 	}
-	return l_OS;
+	return text;
 }
 
 void CompatibilityManager::generateSystemInfoForApp()
@@ -541,17 +492,14 @@ void CompatibilityManager::generateSystemInfoForApp()
 	g_startupInfo += "\tRunning in ";
 #ifndef _WIN64
 	if (runningIsWow64())
-	{
-		g_startupInfo += "Windows WOW64 ";
-		g_startupInfo += "\r\n\r\n\tPlease consider using the x64 version!";
-	}
+		g_startupInfo += "Windows WOW64\r\n\tPlease consider using the x64 version!";
 	else
 #endif
 		g_startupInfo += "Windows native ";
 		
 	g_startupInfo += "\r\n\t";
 	g_startupInfo += getWindowsVersionName();
-	g_startupInfo += "  (" + CompatibilityManager::getFormattedOsVersion() + ")";
+	g_startupInfo += " (" + CompatibilityManager::getFormattedOsVersion() + ")";
 	
 	g_startupInfo += "\r\n\r\n";
 }

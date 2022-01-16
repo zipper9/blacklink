@@ -1751,8 +1751,7 @@ LRESULT QueueFrame::onBrowseList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			const UserPtr* s = static_cast<const UserPtr*>(data);
 			try
 			{
-				auto hubs = ClientManager::getHubNames((*s)->getCID(), Util::emptyString);
-				QueueManager::getInstance()->addList(HintedUser(*s, !hubs.empty() ? hubs[0] : Util::emptyString), QueueItem::FLAG_CLIENT_VIEW);
+				QueueManager::getInstance()->addList(*s, QueueItem::FLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)
 			{
