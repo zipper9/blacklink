@@ -1073,10 +1073,13 @@ void SettingsManager::setDefaults()
 	
 	// Startup & shutdown
 	setDefault(SHUTDOWN_TIMEOUT, 150);
-	setDefault(REGISTER_URL_HANDLER, TRUE);
-	setDefault(REGISTER_MAGNET_HANDLER, TRUE);
-	setDefault(REGISTER_DCLST_HANDLER, TRUE);
-	
+	if (!Util::isLocalMode())
+	{
+		setDefault(REGISTER_URL_HANDLER, TRUE);
+		setDefault(REGISTER_MAGNET_HANDLER, TRUE);
+		setDefault(REGISTER_DCLST_HANDLER, TRUE);
+	}
+
 	// Colors & text styles
 	setDefault(BACKGROUND_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_COLOR, RGB(0, 0, 0));

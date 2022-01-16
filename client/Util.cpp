@@ -334,6 +334,11 @@ void Util::initialize()
 	File::ensureDirectory(getTempPath());
 }
 
+bool Util::isLocalMode() noexcept
+{
+	return localMode;
+}
+
 void Util::migrate(const string& file) noexcept
 {
 	if (localMode)

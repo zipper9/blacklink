@@ -104,7 +104,7 @@ namespace Util
 #endif
 		SYS_PATH_LAST
 	};
-	
+
 	extern string paths[PATH_LAST];
 	extern string sysPaths[SYS_PATH_LAST];
 	extern bool away;
@@ -131,6 +131,7 @@ namespace Util
 #endif
 
 	void initialize();
+	bool isLocalMode() noexcept;
 
 	bool isAdc(const string& url);
 	bool isAdcS(const string& url);
