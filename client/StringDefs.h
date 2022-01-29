@@ -641,6 +641,7 @@ enum Strings   // @DontAdd
 	MENU_CDMDEBUG_MESSAGES, // "CDM debug messages"
 	MENU_CLOSE_ALL_DIR_LIST, // "Close all file list windows"
 	MENU_CLOSE_ALL_HUBS, // "Close all hubs"
+	MENU_CLOSE_ALL_OFFLINE_DIR_LIST, // "Close all offline file list windows"
 	MENU_CLOSE_ALL_OFFLINE_PM, // "Close all offline PM windows\tCtrl+Alt+P"
 	MENU_CLOSE_ALL_PM, // "Close all PM windows"
 	MENU_CLOSE_ALL_SEARCHFRAME, // "Close all search windows\tAlt+G"

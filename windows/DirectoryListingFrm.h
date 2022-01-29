@@ -52,6 +52,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static void openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t aSpeed, bool isDCLST = false);
 		static void openWindow(const HintedUser& aUser, const string& txt, int64_t aSpeed);
 		static void closeAll();
+		static void closeAllOffline();
 
 		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
@@ -156,6 +157,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_NAME, onCopyFolder)
 		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_PATH, onCopyFolder)
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_DIR_LIST, onCloseAll)
+		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_OFFLINE_DIR_LIST, onCloseOffline)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDcLst)
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDcLst)
@@ -309,6 +311,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAll();
+			return 0;
+		}
+
+		LRESULT onCloseOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			closeAllOffline();
 			return 0;
 		}
 

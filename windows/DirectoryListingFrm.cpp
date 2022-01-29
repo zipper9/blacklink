@@ -1968,6 +1968,15 @@ void DirectoryListingFrame::closeAll()
 		i->second->PostMessage(WM_CLOSE, 0, 0);
 }
 
+void DirectoryListingFrame::closeAllOffline()
+{
+	for (auto i = activeFrames.cbegin(); i != activeFrames.cend(); ++i)
+	{
+		auto frame = i->second;
+		if (frame->offline) frame->PostMessage(WM_CLOSE, 0, 0);
+	}
+}
+
 LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDC_COPY_NICK)
@@ -2088,6 +2097,8 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 
 		if (addFavMenu(tabMenu))
 			tabMenu.AppendMenu(MF_SEPARATOR);
+		if (offline)
+			tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_OFFLINE_DIR_LIST));
 		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_DIR_LIST));
 		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 

@@ -2442,6 +2442,9 @@ LRESULT MainFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 		case IDC_CLOSE_ALL_DIR_LIST:
 			DirectoryListingFrame::closeAll();
 			break;
+		case IDC_CLOSE_ALL_OFFLINE_DIR_LIST:
+			DirectoryListingFrame::closeAllOffline();
+			break;
 		case IDC_CLOSE_ALL_SEARCH_FRAME:
 			SearchFrame::closeAll();
 			break;

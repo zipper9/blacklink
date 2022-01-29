@@ -228,6 +228,7 @@
 #define IDC_EMAIL                       1061
 #define IDC_DESCRIPTION                 1062
 #define IDC_USERS                       1064
+#define IDC_CLOSE_ALL_OFFLINE_DIR_LIST  1065
 #define IDC_CONNECTION                  1066
 #define IDC_GENDER                      1068
 #define IDC_PORT                        1069
