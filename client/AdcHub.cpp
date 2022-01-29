@@ -107,12 +107,18 @@ void AdcHub::getUserList(OnlineUserList& result) const
 	}
 }
 
-OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& nick)
+OnlineUserPtr AdcHub::getUser(uint32_t sid, const CID& cid, const string& nick)
 {
 	OnlineUserPtr ou = findUser(sid);
 	if (ou)
 		return ou;
-		
+
+	return addUser(sid, cid, nick);
+}
+
+OnlineUserPtr AdcHub::addUser(uint32_t sid, const CID& cid, const string& nick)
+{
+	OnlineUserPtr ou;
 	if (cid.isZero())
 	{
 		WRITE_LOCK(*csUsers);
@@ -126,8 +132,6 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 		}
 		ou->getIdentity().setSID(sid);
 		ou->getUser()->addNick(nick, getHubUrl());
-		if (ou->getIdentity().isOp())
-			fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else // User
 	{
@@ -137,7 +141,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& 
 		WRITE_LOCK(*csUsers);
 		ou = users.insert(make_pair(sid, newUser)).first->second;
 	}
-	
+
 	if (sid != AdcCommand::HUB_SID)
 	{
 		ClientManager::getInstance()->putOnline(ou, true);
@@ -161,7 +165,7 @@ OnlineUserPtr AdcHub::findUser(const string& nick) const
 	return nullptr;
 }
 
-OnlineUserPtr AdcHub::findUser(const uint32_t sid) const
+OnlineUserPtr AdcHub::findUser(uint32_t sid) const
 {
 	READ_LOCK(*csUsers);
 	const auto& i = users.find(sid);
@@ -181,7 +185,7 @@ OnlineUserPtr AdcHub::findUser(const CID& cid) const
 	return nullptr;
 }
 
-void AdcHub::putUser(const uint32_t sid, bool disconnect)
+void AdcHub::putUser(uint32_t sid, bool disconnect)
 {
 	OnlineUserPtr ou;
 	{
@@ -234,9 +238,9 @@ void AdcHub::clearUsers()
 
 void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 {
-	if (c.getParameters().empty())
-		return;
-	OnlineUserPtr ou; // [!] IRainman fix: use OnlineUserPtr here!
+	if (c.getParameters().empty()) return;
+	OnlineUserPtr ou;
+	bool newUser = false;
 	string cidStr;
 	if (c.getParam("ID", 0, cidStr))
 	{
@@ -257,7 +261,12 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		}
 		else
 		{
-			ou = getUser(c.getFrom(), cid, c.getNick());
+			ou = findUser(sid);
+			if (!ou)
+			{
+				newUser = true;
+				ou = addUser(c.getFrom(), cid, c.getNick());
+			}
 		}
 	}
 	else if (c.getFrom() == AdcCommand::HUB_SID)
@@ -429,7 +438,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		if (Util::parseIpAddress(ip, ip6) && Util::isValidIp6(ip))
 			id.setIP6(ip);
 	}
-	
+
 	if (isMe(ou))
 	{
 		csState.lock();
@@ -439,6 +448,8 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		setAutoReconnect(true);
 		updateCounts(false);
 		fireUserUpdated(ou);
+		if (newUser && ou->getIdentity().isOp())
+			fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else if (ou->getIdentity().isHub())
 	{

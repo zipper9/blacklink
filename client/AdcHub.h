@@ -99,31 +99,32 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		StringMap lastInfoMap;
 
 		void addInfoParam(AdcCommand& c, const string& var, const string& value);
-		
+
 		bool isFeatureSupported(unsigned feature) const
 		{
 			LOCK(csState);
 			return (featureFlags & feature) != 0;
 		}
-		
+
 		string salt;
 		uint32_t sid;
-		
+
 		boost::unordered_set<uint32_t> forbiddenCommands;
-		
+
 		static const vector<StringList> searchExts;
-		
-		OnlineUserPtr getUser(const uint32_t sid, const CID& cid, const string& nick);
-		OnlineUserPtr findUser(const uint32_t sid) const;
+
+		OnlineUserPtr getUser(uint32_t sid, const CID& cid, const string& nick);
+		OnlineUserPtr addUser(uint32_t sid, const CID& cid, const string& nick);
+		OnlineUserPtr findUser(uint32_t sid) const;
 		OnlineUserPtr findUser(const CID& cid) const;
-		
+
 		// just a workaround
 		OnlineUserPtr findUser(const string& nick) const;
-		
-		void putUser(const uint32_t sid, bool disconnect);
-		
+
+		void putUser(uint32_t sid, bool disconnect);
+
 		void clearUsers();
-		
+
 		void handle(AdcCommand::SUP, const AdcCommand& c) noexcept;
 		void handle(AdcCommand::SID, const AdcCommand& c) noexcept;
 		void handle(AdcCommand::MSG, const AdcCommand& c) noexcept;
