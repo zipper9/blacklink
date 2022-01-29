@@ -1538,6 +1538,7 @@ void Util::readTextFile(File& file, std::function<bool(const string&)> func)
 	unique_ptr<char[]> buf(new char[BUF_SIZE]);
 	size_t writePtr = 0;
 	bool eof = false;
+	bool firstLine = true;
 	while (!eof)
 	{
 		size_t size = BUF_SIZE - writePtr;
@@ -1546,6 +1547,12 @@ void Util::readTextFile(File& file, std::function<bool(const string&)> func)
 		if (!size) eof = true;
 
 		size_t readPtr = 0;
+		if (firstLine)
+		{
+			const uint8_t* data = reinterpret_cast<const uint8_t*>(buf.get());
+			if (writePtr >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF) readPtr = 3;
+			firstLine = false;
+		}
 		while (readPtr < writePtr)
 		{
 			size_t endPtr;
