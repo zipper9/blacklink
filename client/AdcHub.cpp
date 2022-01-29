@@ -261,7 +261,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		}
 		else
 		{
-			ou = findUser(sid);
+			ou = findUser(c.getFrom());
 			if (!ou)
 			{
 				newUser = true;
