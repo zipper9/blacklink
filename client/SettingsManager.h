@@ -282,6 +282,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			HUB_USER_COMMANDS,
 			MAX_HUB_USER_COMMANDS,
 			MYINFO_DELAY,
+			NMDC_ENCODING_FROM_DOMAIN,
 
 			// Sharing (Ints)
 			AUTO_REFRESH_TIME,

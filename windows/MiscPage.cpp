@@ -60,6 +60,7 @@ static const PropPage::Item items[] =
 
 static const PropPage::ListItem listItems[] =
 {
+	{ SettingsManager::NMDC_ENCODING_FROM_DOMAIN, ResourceManager::SETTINGS_NMDC_ENCODING_FROM_DOMAIN },
 	{ SettingsManager::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
 	{ SettingsManager::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
 	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },

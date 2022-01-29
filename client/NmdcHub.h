@@ -194,7 +194,8 @@ class NmdcHub : public Client, private Flags
 		void toParse(const string& param);
 		void chatMessageParse(const string& line);
 		void updateFromTag(Identity& id, const string& tag);
-		
+		static int getEncodingFromDomain(const string& domain);
+
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;
 		void onDDoSSearchDetect(const string&) noexcept override;

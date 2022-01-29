@@ -36,6 +36,7 @@
 #include "CompatibilityManager.h"
 #include "LogManager.h"
 #include "../jsoncpp/include/json/json.h"
+#include "Tag16.h"
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
@@ -2588,4 +2589,54 @@ bool NmdcHub::NickRule::convertNick(string& nick, bool& suffixAppended) const no
 	if (maxLen && nick.length() > maxLen)
 		return false;
 	return true;
+}
+
+struct CountryCodepage
+{
+	uint16_t domain;
+	uint16_t encoding;
+};
+
+// This table is incomplete
+static const CountryCodepage domainToEncoding[] =
+{
+	// 1250
+	{ TAG('a','l'), 1250 }, { TAG('c','z'), 1250 }, { TAG('h','r'), 1250 }, { TAG('h','u'), 1250 },
+	{ TAG('p','l'), 1250 }, { TAG('s','i'), 1250 }, { TAG('s','k'), 1250 },
+	// 1251
+	{ TAG('b','g'), 1251 }, { TAG('b','y'), 1251 }, { TAG('r','s'), 1251 }, { TAG('r','u'), 1251 },
+	{ TAG('u','a'), 1251 },
+	// 1252
+	{ TAG('a','t'), 1252 }, { TAG('b','e'), 1252 }, { TAG('c','h'), 1252 }, { TAG('d','e'), 1252 },
+	{ TAG('d','k'), 1252 }, { TAG('e','s'), 1252 }, { TAG('f','i'), 1252 }, { TAG('f','r'), 1252 },
+	{ TAG('i','e'), 1252 }, { TAG('i','t'), 1252 }, { TAG('n','l'), 1252 }, { TAG('n','o'), 1252 },
+	{ TAG('r','o'), 1252 }, { TAG('s','e'), 1252 }, { TAG('u','k'), 1252 },
+	// 1253
+	{ TAG('g','r'), 1253 },
+	// 1254
+	{ TAG('t','r'), 1254 },
+	// 1255
+	{ TAG('i','l'), 1255 },
+	// 1256
+	{ TAG('e','g'), 1256 }, { TAG('i','r'), 1256 }, { TAG('p','k'), 1256 },
+	// 1257
+	{ TAG('e','e'), 1257 }, { TAG('l','t'), 1257 }, { TAG('l','v'), 1257 },
+	// 1258
+	{ TAG('v','n'), 1258 }
+};
+
+int NmdcHub::getEncodingFromDomain(const string& domain)
+{
+	if (domain.length() < 4) return 0;
+	string::size_type end = domain.length();
+	if (domain.back() == '.') end--;
+	string::size_type start = domain.rfind('.', end-1);
+	if (start == string::npos || end - start != 3) return 0;
+	int c1 = Text::asciiToLower(domain[start+1]);
+	int c2 = Text::asciiToLower(domain[start+2]);
+	uint16_t tag = TAG(c1, c2);
+	for (size_t i = 0; i < _countof(domainToEncoding); ++i)
+		if (domainToEncoding[i].domain == tag)
+			return domainToEncoding[i].encoding;
+	return 0;
 }

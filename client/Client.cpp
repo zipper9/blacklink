@@ -71,20 +71,6 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	++clientCount;
 #endif
 	encoding = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
-	const auto l_lower_url = Text::toLower(hubURL);
-	if (!Util::isAdcHub(l_lower_url))
-	{
-		const auto l_pos_ru = l_lower_url.rfind(".ru");
-		if (l_pos_ru != string::npos)
-		{
-			if (l_pos_ru == l_lower_url.size() - 3 ||
-			        l_pos_ru < l_lower_url.size() - 4 && l_lower_url[l_pos_ru + 3] == ':')
-			{
-				encoding = 1251;
-			}
-		}
-	}
-
 	TimerManager::getInstance()->addListener(this);
 }
 

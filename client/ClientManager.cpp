@@ -93,6 +93,11 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 	}
 
 	Client* c = static_cast<Client*>(cb.get());
+	if (c->getType() == Client::TYPE_NMDC && BOOLSETTING(NMDC_ENCODING_FROM_DOMAIN))
+	{
+		int encoding = NmdcHub::getEncodingFromDomain(address);
+		if (encoding) c->setEncoding(encoding);
+	}
 	if (!query.empty())
 	{
 		string keyprint = Util::getQueryParam(query, "kp");

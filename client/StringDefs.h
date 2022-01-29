@@ -1200,6 +1200,7 @@ enum Strings   // @DontAdd
 	SETTINGS_USE_TTH_LIST, // "Use TL (TTH list) extension"
 	SETTINGS_SEND_DB_PARAM, // "Send DB (downloaded bytes) parameter"
 	SETTINGS_SEND_UNKNOWN_COMMANDS, // "Send unknown /commands to the hub"
+	SETTINGS_NMDC_ENCODING_FROM_DOMAIN, // "Guess NMDC encoding from domain name"
 	SETTINGS_SHARE_HIDDEN, // "Share hidden files"
 	SETTINGS_SHARE_SIZE, // "Total size:"
 	SETTINGS_SHARE_SYSTEM, // "Share system files"

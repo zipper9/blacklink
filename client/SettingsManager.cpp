@@ -307,6 +307,7 @@ static const char* g_settingTags[] =
 	"HubUserCommands",
 	"MaxHubUserCommands",
 	"MyInfoDelay",
+	"NMDCEncodingFromDomain",
 
 	// Sharing
 	"AutoRefreshTime",
@@ -974,6 +975,7 @@ void SettingsManager::setDefaults()
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(MAX_HUB_USER_COMMANDS, 100);
 	setDefault(MYINFO_DELAY, 35);
+	setDefault(NMDC_ENCODING_FROM_DOMAIN, TRUE);
 
 	// Sharing (Ints)
 	setDefault(AUTO_REFRESH_TIME, 60);
