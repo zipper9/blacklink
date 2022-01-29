@@ -3,9 +3,14 @@
 #include "WinUtil.h"
 #include "ResourceLoader.h"
 #include "CustomDrawHelpers.h"
+#include "DialogLayout.h"
 #include "../client/Util.h"
 #include "../client/SearchManager.h"
 #include "../client/BusyCounter.h"
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
 template<typename C>
 bool isTTH(const std::basic_string<C>& s)
@@ -14,22 +19,24 @@ bool isTTH(const std::basic_string<C>& s)
 	return Encoder::isBase32<C>(s.c_str());
 }
 
-static const WinUtil::TextItem texts[] =
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_CAPTION_SEARCH_STRING,  ResourceManager::SEARCH_STRING              },
-	{ IDC_CAPTION_FILE_TYPE,      ResourceManager::FILE_TYPE                  },
-	{ IDC_CAPTION_MIN_FILE_SIZE,  ResourceManager::MIN_FILE_SIZE              },
-	{ IDC_CAPTION_MAX_FILE_SIZE,  ResourceManager::MAX_FILE_SIZE              },
-	{ IDC_CAPTION_SIZE_TYPE,      ResourceManager::SIZE_TYPE                  },
-	{ IDC_MATCH_CASE,             ResourceManager::MATCH_CASE                 },
-	{ IDC_REGEXP,                 ResourceManager::REGULAR_EXPRESSION         },
-	{ IDC_ONLY_NEW_FILES,         ResourceManager::ONLY_FILES_I_DONT_HAVE     },
-	{ IDC_NEW_WINDOW,             ResourceManager::OPEN_RESULTS_IN_NEW_WINDOW },
-	{ IDC_CAPTION_SHARED_AT_LAST, ResourceManager::SHARED_AT_LAST             },
-	{ IDC_CAPTION_DAYS,           ResourceManager::SHARED_DAYS                },
-	{ IDOK,                       ResourceManager::OK                         },
-	{ IDCANCEL,                   ResourceManager::CANCEL                     },
-	{ 0,                          ResourceManager::Strings()                  }
+	{ IDC_CAPTION_SEARCH_STRING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_MATCH_CASE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_REGEXP, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_FILE_TYPE, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_MIN_FILE_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_MAX_FILE_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_SIZE_TYPE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_SHARED_AT_LAST, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_DAYS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_SKIP_EMPTY, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SKIP_OWNED, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_SKIP_CANCELED, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_NEW_WINDOW, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CLEAR_RESULTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDOK, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDCANCEL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
 
 SearchDlg::~SearchDlg()
@@ -41,12 +48,12 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 {
 	BusyCounter<bool> busy(initializing);
 	SetWindowText(CTSTRING(SEARCH));
-	WinUtil::translate(*this, texts);
+	DialogLayout::layout(*this, layoutItems, _countof(layoutItems));
 
 	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);	
-	
+
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, imgSearchTypes, 16, 16);
 
 	ctrlText.Attach(GetDlgItem(IDC_SEARCH_STRING));
@@ -89,8 +96,12 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlNewWindow.Attach(GetDlgItem(IDC_NEW_WINDOW));
 	ctrlNewWindow.SetCheck(options.newWindow ? BST_CHECKED : BST_UNCHECKED);
 
-	ctrlOnlyNewFiles.Attach(GetDlgItem(IDC_ONLY_NEW_FILES));
-	ctrlOnlyNewFiles.SetCheck(options.onlyNewFiles ? BST_CHECKED : BST_UNCHECKED);
+	ctrlSkipEmpty.Attach(GetDlgItem(IDC_SKIP_EMPTY));
+	ctrlSkipEmpty.SetCheck(options.skipEmpty ? BST_CHECKED : BST_UNCHECKED);
+	ctrlSkipOwned.Attach(GetDlgItem(IDC_SKIP_OWNED));
+	ctrlSkipOwned.SetCheck(options.skipOwned ? BST_CHECKED : BST_UNCHECKED);
+	ctrlSkipCanceled.Attach(GetDlgItem(IDC_SKIP_CANCELED));
+	ctrlSkipCanceled.SetCheck(options.skipCanceled ? BST_CHECKED : BST_UNCHECKED);
 
 	CenterWindow(GetParent());
 
@@ -129,7 +140,9 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		options.sharedDays = ts.empty() ? -1 : Util::toInt(ts);
 
 		options.newWindow = ctrlNewWindow.GetCheck() == BST_CHECKED;
-		options.onlyNewFiles = ctrlOnlyNewFiles.GetCheck() == BST_CHECKED;
+		options.skipEmpty = ctrlSkipEmpty.GetCheck() == BST_CHECKED;
+		options.skipOwned = ctrlSkipOwned.GetCheck() == BST_CHECKED;
+		options.skipCanceled = ctrlSkipCanceled.GetCheck() == BST_CHECKED;
 	}
 	EndDialog(wID);
 	return 0;

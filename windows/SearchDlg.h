@@ -19,7 +19,9 @@ struct SearchOptions
 	int sizeUnit;
 	int sharedDays;
 	bool newWindow;
-	bool onlyNewFiles;
+	bool skipEmpty;
+	bool skipOwned;
+	bool skipCanceled;
 	bool enableSharedDays;
 
 	SearchOptions()
@@ -37,7 +39,9 @@ struct SearchOptions
 		sizeUnit = 2;
 		sharedDays = 0;
 		newWindow = false;
-		onlyNewFiles = false;
+		skipEmpty = true;
+		skipOwned = false;
+		skipCanceled = false;
 		enableSharedDays = true;
 	}
 };
@@ -85,7 +89,9 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		CComboBox ctrlSizeUnit;
 		CEdit ctrlSharedDays;
 		CButton ctrlNewWindow;
-		CButton ctrlOnlyNewFiles;
+		CButton ctrlSkipEmpty;
+		CButton ctrlSkipOwned;
+		CButton ctrlSkipCanceled;
 		CImageList imgSearchTypes;
 };
 

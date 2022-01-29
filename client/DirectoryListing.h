@@ -207,14 +207,15 @@ class DirectoryListing : public UserInfoBase
 			public:
 				enum
 				{
-					FLAG_STRING         = 1,
-					FLAG_WSTRING        = 2,
-					FLAG_REGEX          = 4,
-					FLAG_MATCH_CASE     = 8,
-					FLAG_TYPE           = 16,
-					FLAG_SIZE           = 32,
-					FLAG_TIME_SHARED    = 64,
-					FLAG_ONLY_NEW_FILES = 128
+					FLAG_STRING        = 0x001,
+					FLAG_WSTRING       = 0x002,
+					FLAG_REGEX         = 0x004,
+					FLAG_MATCH_CASE    = 0x008,
+					FLAG_TYPE          = 0x010,
+					FLAG_SIZE          = 0x020,
+					FLAG_TIME_SHARED   = 0x040,
+					FLAG_SKIP_OWNED    = 0x080,
+					FLAG_SKIP_CANCELED = 0x100
 				};
 
 				SearchQuery(): flags(0) {}

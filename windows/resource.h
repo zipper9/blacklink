@@ -912,8 +912,11 @@
 #define IDC_HUB_POSITION_COMBO          1847
 #define IDC_HUB_POSITION_TEXT           1848
 #define IDC_STATUS_AWAY_ON_OFF          1849
-#define IDC_COPY_FOLDER_NAME            1852
-#define IDC_COPY_FOLDER_PATH            1853
+#define IDC_SKIP_OWNED                  1850
+#define IDC_SKIP_EMPTY                  1851
+#define IDC_SKIP_CANCELED               1852
+#define IDC_COPY_FOLDER_NAME            1853
+#define IDC_COPY_FOLDER_PATH            1854
 #define IDC_DISCONNECT_RAW              1855
 #define IDC_TIMEOUT_RAW                 1856
 #define IDC_FAKE_RAW                    1857
@@ -1247,7 +1250,6 @@
 #define IDC_PROTECT_PRIVATE_RND         2318
 #define IDC_PASSWORD_OK_HINT            2319
 #define IDC_SETTINGS_PASSWORD_OK_HINT   2320
-#define IDC_ONLY_NEW_FILES              2321
 #define IDC_POPUP_AWAY                  2322
 #define IDC_POPUP_MINIMIZED             2323
 #define IDC_SOUNDS_COMBO                2324

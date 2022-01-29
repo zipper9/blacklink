@@ -2767,8 +2767,21 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_TIME_SHARED;
 	}
 
-	if (searchOptions.onlyNewFiles)
-		sq.flags |= DirectoryListing::SearchQuery::FLAG_ONLY_NEW_FILES;
+	if (searchOptions.skipEmpty)
+	{
+		if (!(sq.flags & DirectoryListing::SearchQuery::FLAG_SIZE))
+		{
+			sq.minSize = 1;
+			sq.maxSize = std::numeric_limits<int64_t>::max();
+			sq.flags |= DirectoryListing::SearchQuery::FLAG_SIZE;
+		}
+		else if (!sq.minSize)
+			sq.minSize = 1;
+	}
+	if (searchOptions.skipOwned)
+		sq.flags |= DirectoryListing::SearchQuery::FLAG_SKIP_OWNED;
+	if (searchOptions.skipCanceled)
+		sq.flags |= DirectoryListing::SearchQuery::FLAG_SKIP_CANCELED;
 
 	DirectoryListing *dest = searchOptions.newWindow ? new DirectoryListing(abortFlag, true, dl.get()) : nullptr;
 

@@ -1518,10 +1518,13 @@ void DirectoryListing::SearchContext::clear()
 
 bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const
 {
-	if (sq.flags & SearchQuery::FLAG_ONLY_NEW_FILES)
-	{
-		if (getFlags() & (FLAG_DOWNLOADED | FLAG_SHARED)) return false;
-	}
+	Flags::MaskType skipFlags = 0;
+	if (sq.flags & SearchQuery::FLAG_SKIP_OWNED)
+		skipFlags |= FLAG_DOWNLOADED | FLAG_SHARED;
+	if (sq.flags & SearchQuery::FLAG_SKIP_CANCELED)
+		skipFlags |= FLAG_CANCELED;
+	if (getFlags() & skipFlags)
+		return false;
 	if (sq.flags & SearchQuery::FLAG_TYPE)
 	{
 		if (sq.type == FILE_TYPE_DIRECTORY) return false;
