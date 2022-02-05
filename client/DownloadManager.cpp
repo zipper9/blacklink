@@ -251,12 +251,9 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 		}
 		
 		conn->setState(UserConnection::STATE_IDLE);
-		if (!ClientManager::isBeforeShutdown())
-		{
-			WRITE_LOCK(*csDownloads);
-			dcassert(conn->getUser());
-			idlers.push_back(conn);
-		}
+		WRITE_LOCK(*csDownloads);
+		dcassert(conn->getUser());
+		idlers.push_back(conn);
 		return;
 	}
 	
@@ -321,14 +318,14 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 		}
 		else
 		{
-			failDownload(source, STRING(INVALID_SIZE));
+			failDownload(source, STRING(INVALID_SIZE), true);
 			return;
 		}
 	}
 	else if (d->getSize() != bytes || d->getStartPos() != start)
 	{
 		// This is not what we requested...
-		failDownload(source, STRING(INVALID_SIZE));
+		failDownload(source, STRING(INVALID_SIZE), true);
 		return;
 	}
 	
@@ -338,12 +335,12 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 	}
 	catch (const FileException& e)
 	{
-		failDownload(source, STRING(COULD_NOT_OPEN_TARGET_FILE) + e.getError());
+		failDownload(source, STRING(COULD_NOT_OPEN_TARGET_FILE) + e.getError(), true);
 		return;
 	}
 	catch (const QueueException& e)
 	{
-		failDownload(source, e.getError());
+		failDownload(source, e.getError(), true);
 		return;
 	}
 	
@@ -362,7 +359,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 	}
 	catch (const Exception& e)
 	{
-		failDownload(source, e.getError());
+		failDownload(source, e.getError(), true);
 		return;
 	}
 	
@@ -399,7 +396,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 		}
 		catch (const Exception& e)
 		{
-			failDownload(source, e.getError());
+			failDownload(source, e.getError(), true);
 		}
 	}
 	else
@@ -426,7 +423,7 @@ void DownloadManager::onData(UserConnection* source, const uint8_t* data, size_t
 	catch (const Exception& e)
 	{
 		// d->resetPos(); // is there a better way than resetting the position?
-		failDownload(source, e.getError());
+		failDownload(source, e.getError(), true);
 	}
 	
 }
@@ -477,7 +474,7 @@ void DownloadManager::endData(UserConnection* source)
 		catch (const Exception& e) //http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2154
 		{
 			d->resetPos();
-			failDownload(source, e.getError());
+			failDownload(source, e.getError(), true);
 			return;
 		}
 		
@@ -505,16 +502,17 @@ void DownloadManager::endData(UserConnection* source)
 void DownloadManager::noSlots(UserConnection* source, const string& param) noexcept
 {
 	string extra = param.empty() ? Util::emptyString : " - " + STRING(QUEUED) + ' ' + param;
-	failDownload(source, STRING(NO_SLOTS_AVAILABLE) + extra);
+	source->setState(UserConnection::STATE_TRY_AGAIN);
+	failDownload(source, STRING(NO_SLOTS_AVAILABLE) + extra, false);
 }
 
 void DownloadManager::fail(UserConnection* source, const string& error) noexcept
 {
 	removeIdleConnection(source);
-	failDownload(source, error);
+	failDownload(source, error, true);
 }
 
-void DownloadManager::failDownload(UserConnection* source, const string& reason)
+void DownloadManager::failDownload(UserConnection* source, const string& reason, bool disconnect)
 {
 	auto d = source->getDownload();
 	if (d)
@@ -542,7 +540,8 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason)
 #ifdef _DEBUG
 	LogManager::message("DownloadManager::failDownload reason =" + reason);
 #endif // _DEBUG
-	source->disconnect();
+	if (disconnect)
+		source->disconnect();
 }
 
 void DownloadManager::removeDownload(const DownloadPtr& d)

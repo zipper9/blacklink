@@ -96,6 +96,7 @@ class UserConnection :
 			// DownloadManager
 			STATE_SND,  // Waiting for SND
 			STATE_IDLE, // No more downloads for the moment
+			STATE_TRY_AGAIN,
 
 			// Up & down
 			STATE_RUNNING,      // Transmitting data

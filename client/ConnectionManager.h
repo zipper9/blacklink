@@ -311,24 +311,27 @@ class ConnectionManager :
 
 		StringList nmdcFeatures;
 		StringList adcFeatures;
-		
+
 		FastCriticalSection csUpdatedUsers;
 		UserSet updatedUsers;
 		void addUpdatedUser(const UserPtr& user);
 		void flushUpdatedUsers();
-		
+
 		ExpectedNmdcMap expectedNmdc;
 		ExpectedAdcMap expectedAdc;
-		
+
 		uint64_t m_floodCounter;
-		
+
 		Server* servers[4];
 		uint16_t ports[2];
-		
+
 		bool shuttingDown;
 
 		SpeedCalc<32> uploadSpeed;
 		SpeedCalc<32> downloadSpeed;
+
+		uint64_t timeRemoveExpired;
+		uint64_t timeCheckConnections;
 
 		friend class Singleton<ConnectionManager>;
 		ConnectionManager();
@@ -339,7 +342,8 @@ class ConnectionManager :
 		void deleteConnection(UserConnection* conn);
 		void connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci);
 		void removeExpectedToken(const string& token);
-		
+
+		void checkConnections(uint64_t tick);
 		void removeUnusedConnections();
 #ifdef DEBUG_USER_CONNECTION
 		void dumpUserConnections();
@@ -355,7 +359,6 @@ class ConnectionManager :
 
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
-		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
 
 		// ClientManagerListener
 		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override;

@@ -535,7 +535,6 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	}
 	
 ok:
-
 	auto slotType = source->getSlotType();
 	uint64_t slotTimeout = 0;
 	{
@@ -614,7 +613,6 @@ ok:
 			{
 				delete is;
 				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
-				source->disconnect();
 				return false;
 			}
 		}

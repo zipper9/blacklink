@@ -41,6 +41,7 @@ static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
 
 static const unsigned UC_IDLE_TIME = 60;
+static const unsigned UC_RETRY_TIME = 10;
 static const unsigned CCPM_IDLE_TIME = 360; // 6 minutes
 static const unsigned CCPM_KEEP_ALIVE_TIME = 180; // 3 minutes
 
@@ -365,6 +366,7 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), shuttingDown(false),
 {
 	servers[0] = servers[1] = servers[2] = servers[3] = nullptr;
 	ports[0] = ports[1] = 0;
+	timeRemoveExpired = timeCheckConnections = 0;
 
 	nmdcFeatures.reserve(5);
 	nmdcFeatures.push_back(UserConnection::FEATURE_MINISLOTS);
@@ -792,27 +794,43 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		DownloadManager::getInstance()->checkIdle(*i);
 	}
 #endif
+
+	if (tick > timeRemoveExpired)
+	{
+		timeRemoveExpired = tick + 60000;
+		StringList ccpmTokens;
+		tokenManager.removeExpired(tick, ccpmTokens);
+		vector<ExpectedNmdcMap::NextConnectionInfo> vnci;
+		expectedNmdc.removeExpired(tick, vnci);
+		expectedAdc.removeExpired(tick);
+		if (!ClientManager::isBeforeShutdown())
+		{
+			for (const string& token : ccpmTokens)
+				removeExpiredCCPMToken(token);
+			for (const auto& nci : vnci)
+				connectNextNmdcUser(nci);
+		}
+	}
+	if (tick > timeCheckConnections)
+	{
+		timeCheckConnections = tick + 15000;
+		checkConnections(tick);
+	}
 }
 
-void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
+void ConnectionManager::checkConnections(uint64_t tick)
 {
-	removeUnusedConnections();
-	if (ClientManager::isBeforeShutdown())
-		return;
-	StringList ccpmTokens;
-	tokenManager.removeExpired(tick, ccpmTokens);
-	for (const string& token : ccpmTokens)
-		removeExpiredCCPMToken(token);
-	vector<ExpectedNmdcMap::NextConnectionInfo> vnci;
-	expectedNmdc.removeExpired(tick, vnci);
-	for (const auto& nci : vnci)
-		connectNextNmdcUser(nci);
-	expectedAdc.removeExpired(tick);
 	unsigned ccpmIdleTimeout = SETTING(CCPM_IDLE_TIMEOUT) * 60000;
 	READ_LOCK(*csConnections);
-	for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
+	for (auto j = userConnections.cbegin(); j != userConnections.cend();)
 	{
 		UserConnection* uc = *j;
+		if (uc->state == UserConnection::STATE_UNUSED)
+		{
+			delete uc;
+			userConnections.erase(j++);
+			continue;
+		}
 		uint64_t lastActivity = uc->getLastActivity();
 		if (uc->isAnySet(UserConnection::FLAG_CCPM))
 		{
@@ -828,8 +846,11 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 				uc->send(c);
 			}
 		}
+		else if (uc->getState() == UserConnection::STATE_TRY_AGAIN && lastActivity + UC_RETRY_TIME * 1000 < tick)
+			uc->updated();
 		else if (lastActivity + UC_IDLE_TIME * 1000 < tick)
 			uc->disconnect(true);
+		++j;
 	}
 }
 

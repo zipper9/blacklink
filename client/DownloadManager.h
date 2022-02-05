@@ -69,19 +69,19 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		void removeIdleConnection(UserConnection* source);
 
 		static int64_t g_runningAverage;
-		
+
 		void removeDownload(const DownloadPtr& download);
-		void failDownload(UserConnection* source, const string& reason);
+		void failDownload(UserConnection* source, const string& reason, bool disconnect);
 
 		friend class Singleton<DownloadManager>;
-		
+
 		DownloadManager();
 		~DownloadManager();
-		
+
 		void checkDownloads(UserConnection* conn);
 		void startData(UserConnection* source, int64_t start, int64_t newSize, bool z);
 		void endData(UserConnection* source);
-		
+
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 };
