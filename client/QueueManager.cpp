@@ -1036,15 +1036,14 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 			// FIXME: flags must be immutable
 			q->flags |= flags; // why ?
 		}
-		if (user && !(user->getFlags() & User::FAKE) && q && priority != QueueItem::PAUSED)
+		if (user && !(user->getFlags() & User::FAKE) && q)
 		{
 			QueueWLock(*QueueItem::g_cs);
 			wantConnection = addSourceL(q, user, (QueueItem::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
+			if (priority == QueueItem::PAUSED) wantConnection = false;
 		}
 		else
-		{
 			wantConnection = false;
-		}
 		setDirty();
 	}
 	
