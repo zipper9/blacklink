@@ -57,6 +57,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			string keyPrint;
 			const string* rawCommands = nullptr;
 			int encoding = 0;
+			int favoriteId = 0;
 			int windowPosX = 0;
 			int windowPosY = 0;
 			int windowSizeX = 0;

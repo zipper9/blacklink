@@ -308,6 +308,7 @@ class Client : public ClientBase,
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		GETSET(int, encoding, Encoding);
 		GETSET(bool, preferIP6, PreferIP6);
+		GETSET(int, favoriteId, FavoriteId);
 
 		bool isUserListLoaded() const { return userListLoaded; }
 

@@ -64,6 +64,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	fakeClientStatus(0),
 	favMode(0),
 	preferIP6(false),
+	favoriteId(0),
 	csUserCommands(RWLock::create())
 {
 	dcassert(hubURL == Text::toLower(hubURL));
@@ -134,7 +135,7 @@ void Client::reloadSettings(bool updateNick)
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	string speedDescription;
 #endif
-	const FavoriteHubEntry* hub = fm->getFavoriteHubEntryPtr(getHubUrl());
+	const FavoriteHubEntry* hub = favoriteId ? fm->getFavoriteHubEntryPtr(favoriteId) : fm->getFavoriteHubEntryPtr(getHubUrl());
 	string clientName, clientVersion;
 	bool overrideClientId = false;
 	if (hub && hub->getOverrideId())
