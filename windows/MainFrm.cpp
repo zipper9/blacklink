@@ -2428,7 +2428,7 @@ LRESULT MainFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 			HubFrame::closeAll(0);
 			break;
 		case IDC_CLOSE_HUBS_BELOW:
-			HubFrame::closeAll(SETTING(USER_THERSHOLD));
+			HubFrame::closeAll(SETTING(USER_THRESHOLD));
 			break;
 		case IDC_CLOSE_HUBS_NO_USR:
 			HubFrame::closeAll(2);

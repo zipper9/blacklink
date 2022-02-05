@@ -649,7 +649,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SORT_FAVUSERS_FIRST,
 			FILTER_ENTER,
 			JOIN_OPEN_NEW_WINDOW,
-			USER_THERSHOLD,
+			USER_THRESHOLD,
 			POPUP_PMS_HUB,
 			POPUP_PMS_BOT,
 			POPUP_PMS_OTHER,

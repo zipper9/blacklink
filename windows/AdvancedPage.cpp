@@ -42,7 +42,7 @@ static const PropPage::Item items[] =
 {
 	{ IDC_EWMAGNET_TEMPL, SettingsManager::WMLINK_TEMPLATE, PropPage::T_STR},
 	{ IDC_RATIOMSG, SettingsManager::RATIO_MESSAGE, PropPage::T_STR},
-	{ IDC_THOLD, SettingsManager::USER_THERSHOLD, PropPage::T_INT },
+	{ IDC_THOLD, SettingsManager::USER_THRESHOLD, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 

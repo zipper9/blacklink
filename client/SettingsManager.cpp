@@ -850,7 +850,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_STATUS, "%Y-%m" PATH_SEPARATOR_STR  "%[hubURL]_status.log");
 	setDefault(LOG_FILE_WEBSERVER, "Webserver.log");
 	setDefault(LOG_FILE_SYSTEM, "System.log");
-	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
+	setDefault(LOG_FILE_SQLITE_TRACE, "SQLTrace.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
 	setDefault(LOG_FILE_TORRENT_TRACE, "torrent.log");
 	setDefault(LOG_FILE_SEARCH_TRACE, "Found.log");
@@ -936,9 +936,9 @@ void SettingsManager::setDefaults()
 	setDefault(SOCKS_RESOLVE, TRUE);		
 
 	// Slots & policy
-	setDefault(SLOTS, 15); // [!] PPA 2->15
-	setDefault(MINISLOT_SIZE, 1024);
-	setDefault(EXTRA_SLOTS, 10);
+	setDefault(SLOTS, 15);
+	setDefault(MINISLOT_SIZE, 64);
+	setDefault(EXTRA_SLOTS, 5);
 	setDefault(EXTRA_SLOT_TO_DL, TRUE);
 	setDefault(EXTRA_PARTIAL_SLOTS, 1);
 	setDefault(AUTO_SLOTS, 5);
@@ -1199,7 +1199,6 @@ void SettingsManager::setDefaults()
 	setDefault(POPUP_ON_FAVORITE_CONNECTED, TRUE);
 	setDefault(POPUP_ON_FAVORITE_DISCONNECTED, TRUE);
 	setDefault(POPUP_ON_CHEATING_USER, TRUE);
-	setDefault(POPUP_ON_DOWNLOAD_STARTED, TRUE);
 	setDefault(POPUP_ON_DOWNLOAD_FINISHED, TRUE);
 	setDefault(POPUP_ON_NEW_PM, TRUE);
 	setDefault(POPUP_ON_FOLDER_SHARED, TRUE);
@@ -1263,7 +1262,7 @@ void SettingsManager::setDefaults()
 	setDefault(FILTER_MESSAGES, TRUE);
 	setDefault(ENABLE_COUNTRY_FLAG, TRUE);
 	setDefault(HUB_POSITION, POS_RIGHT);
-	setDefault(USER_THERSHOLD, 1000);
+	setDefault(USER_THRESHOLD, 1000);
 	setDefault(POPUP_PMS_HUB, TRUE);
 	setDefault(POPUP_PMS_BOT, TRUE);
 	setDefault(POPUP_PMS_OTHER, TRUE);
@@ -1434,7 +1433,7 @@ void SettingsManager::load(const string& aFileName)
 	{
 		//dcassert(0);
 	}
-	catch (const SimpleXMLException&) // TODO Битый конфиг XML https://crash-server.com/Problem.aspx?ProblemID=15638
+	catch (const SimpleXMLException&)
 	{
 		dcassert(0);
 	}
