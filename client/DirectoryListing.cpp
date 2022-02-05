@@ -1518,6 +1518,8 @@ void DirectoryListing::SearchContext::clear()
 
 bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const
 {
+	if (!size && (sq.flags & SearchQuery::FLAG_SKIP_EMPTY))
+		return false;
 	Flags::MaskType skipFlags = 0;
 	if (sq.flags & SearchQuery::FLAG_SKIP_OWNED)
 		skipFlags |= FLAG_DOWNLOADED | FLAG_SHARED;

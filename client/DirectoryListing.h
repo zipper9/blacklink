@@ -215,7 +215,8 @@ class DirectoryListing : public UserInfoBase
 					FLAG_SIZE          = 0x020,
 					FLAG_TIME_SHARED   = 0x040,
 					FLAG_SKIP_OWNED    = 0x080,
-					FLAG_SKIP_CANCELED = 0x100
+					FLAG_SKIP_CANCELED = 0x100,
+					FLAG_SKIP_EMPTY    = 0x200
 				};
 
 				SearchQuery(): flags(0) {}

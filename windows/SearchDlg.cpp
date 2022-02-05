@@ -72,10 +72,10 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	if (options.fileType == FILE_TYPE_TTH) autoSwitchToTTH = true;
 
 	ctrlMinSize.Attach(GetDlgItem(IDC_MIN_FILE_SIZE));
-	if (options.sizeMin > 0) ctrlMinSize.SetWindowText(Util::toStringT(options.sizeMin).c_str());
+	if (options.sizeMin >= 0) ctrlMinSize.SetWindowText(Util::toStringT(options.sizeMin).c_str());
 	
 	ctrlMaxSize.Attach(GetDlgItem(IDC_MAX_FILE_SIZE));
-	if (options.sizeMax > 0) ctrlMaxSize.SetWindowText(Util::toStringT(options.sizeMax).c_str());
+	if (options.sizeMax >= 0) ctrlMaxSize.SetWindowText(Util::toStringT(options.sizeMax).c_str());
 
 	ctrlSizeUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
 	ctrlSizeUnit.AddString(CTSTRING(B));
@@ -116,7 +116,7 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		WinUtil::getWindowText(ctrlText, ts);
 		string text = Text::fromT(ts);
 		int fileType = ctrlFileType.GetCurSel();
-		
+
 		if (fileType == FILE_TYPE_TTH && !isTTH(text))
 		{
 			MessageBox(CTSTRING(INVALID_TTH), CTSTRING(SEARCH), MB_OK | MB_ICONWARNING);

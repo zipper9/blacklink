@@ -2779,16 +2779,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	}
 
 	if (searchOptions.skipEmpty)
-	{
-		if (!(sq.flags & DirectoryListing::SearchQuery::FLAG_SIZE))
-		{
-			sq.minSize = 1;
-			sq.maxSize = std::numeric_limits<int64_t>::max();
-			sq.flags |= DirectoryListing::SearchQuery::FLAG_SIZE;
-		}
-		else if (!sq.minSize)
-			sq.minSize = 1;
-	}
+		sq.flags |= DirectoryListing::SearchQuery::FLAG_SKIP_EMPTY;
 	if (searchOptions.skipOwned)
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_SKIP_OWNED;
 	if (searchOptions.skipCanceled)
