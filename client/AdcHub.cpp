@@ -25,6 +25,7 @@
 #include "ParamExpander.h"
 #include "SimpleStringTokenizer.h"
 #include "ConnectionManager.h"
+#include "ConnectivityManager.h"
 #include "UserCommand.h"
 #include "CryptoManager.h"
 #include "LogManager.h"
@@ -313,7 +314,14 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('S', 'U'):
 			{
-				AdcSupports::setSupports(id, i->substr(2));
+				uint32_t parsedFeatures;
+				AdcSupports::setSupports(id, i->substr(2), &parsedFeatures);
+				bool isPassive = true;
+				if (parsedFeatures & User::TCP4)
+					isPassive = false;
+				if ((parsedFeatures & User::TCP6) && ConnectivityManager::hasIP6())
+					isPassive = false;
+				id.setStatusBit(Identity::SF_PASSIVE, isPassive);
 				break;
 			}
 			case TAG('S', 'F'):

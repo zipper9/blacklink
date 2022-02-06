@@ -38,7 +38,7 @@ CID ClientManager::cid;
 volatile bool g_isShutdown = false;
 volatile bool g_isBeforeShutdown = false;
 bool g_isStartupProcess = true;
-bool ClientManager::g_isSpyFrame = false;
+bool ClientManager::searchSpyEnabled = false;
 ClientManager::ClientMap ClientManager::g_clients;
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 OnlineUserList ClientManager::g_UserUpdateQueue;
@@ -921,7 +921,7 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 
 void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const string& hub, const string& filter, ClientManagerListener::SearchReply reply)
 {
-	if (g_isSpyFrame)
+	if (searchSpyEnabled)
 		Speaker<ClientManagerListener>::fire(ClientManagerListener::IncomingSearch(), protocol, seeker, hub, filter, reply);
 }
 
@@ -967,7 +967,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 		re = ClientManagerListener::SEARCH_MISS;
 	else
 		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIp, hubPort);
-	if (g_isSpyFrame)
+	if (searchSpyEnabled)
 	{
 		string description = param.getDescription();
 		Speaker<ClientManagerListener>::fire(ClientManagerListener::IncomingSearch(), ClientBase::TYPE_ADC, "Hub:" + ou->getIdentity().getNick(), c->getHubUrl(), description, re);
@@ -1459,27 +1459,26 @@ void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString
 }
 #endif // IRAINMAN_INCLUDE_USER_CHECK
 
-void ClientManager::setSupports(const UserPtr& p, const StringList & aSupports, const uint8_t knownUcSupports)
+void ClientManager::setSupports(const UserPtr& user, uint8_t knownUcSupports)
 {
-	WRITE_LOCK(*g_csOnlineUsers);
-	const auto i = g_onlineUsers.find(p->getCID());
-	if (i != g_onlineUsers.end())
+	OnlineUserPtr ou;
 	{
-		auto& id = i->second->getIdentity();
-		id.setKnownUcSupports(knownUcSupports);
-		{
-			AdcSupports::setSupports(id, aSupports);
-		}
+		READ_LOCK(*g_csOnlineUsers);
+		auto i = g_onlineUsers.find(user->getCID());
+		if (i != g_onlineUsers.end()) ou = i->second;
 	}
+	if (ou) ou->getIdentity().setKnownUcSupports(knownUcSupports);
 }
-void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCommand)
+
+void ClientManager::setUnknownCommand(const UserPtr& user, const string& unknownCommand)
 {
-	WRITE_LOCK(*g_csOnlineUsers);
-	const auto i = g_onlineUsers.find(p->getCID());
-	if (i != g_onlineUsers.end())
+	OnlineUserPtr ou;
 	{
-		i->second->getIdentity().setStringParam("UC", aUnknownCommand);
+		READ_LOCK(*g_csOnlineUsers);
+		auto i = g_onlineUsers.find(user->getCID());
+		if (i != g_onlineUsers.end()) ou = i->second;
 	}
+	if (ou) ou->getIdentity().setStringParam("UC", unknownCommand);
 }
 
 void ClientManager::dumpUserInfo(const HintedUser& user)

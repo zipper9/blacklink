@@ -647,8 +647,15 @@ namespace dht
 					break;
 
 				case TAG('S', 'U'):
-					AdcSupports::setSupports(id, i->substr(2));
+				{
+					uint32_t parsedFeatures;
+					AdcSupports::setSupports(id, i->substr(2), &parsedFeatures);
+					bool isPassive = true;
+					if (parsedFeatures & User::TCP4)
+						isPassive = false;
+					id.setStatusBit(Identity::SF_PASSIVE, isPassive);
 					break;
+				}
 
 				case TAG('S', 'F'):
 					id.setSharedFiles(Util::toInt(i->c_str() + 2));

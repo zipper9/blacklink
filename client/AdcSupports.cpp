@@ -55,7 +55,7 @@ string AdcSupports::getSupports(const Identity& id)
 	return tmp;
 }
 
-void AdcSupports::setSupports(Identity& id, const StringList& su)
+void AdcSupports::setSupports(Identity& id, const StringList& su, uint32_t* parsedFeatures)
 {
 	uint8_t knownSupports = 0;
 	auto& u = id.getUser();
@@ -65,8 +65,6 @@ void AdcSupports::setSupports(Identity& id, const StringList& su)
 	{
 
 #define CHECK_FEAT(feat) if (*i == feat##_FEATURE) { flags |= User::feat; }
-
-#define CHECK_SUP(feat) if (*i == feat##_SUPPORT) { flags |= User::feat; }
 
 #define CHECK_SUP_BIT(feat) if (*i == feat##_FEATURE) { knownSupports |= feat##_FEATURE_BIT; }
 
@@ -88,20 +86,20 @@ void AdcSupports::setSupports(Identity& id, const StringList& su)
 #endif
 
 #undef CHECK_FEAT
-#undef CHECK_SUP
 #undef CHECK_SUP_BIT
 
 	}
 	u->setFlag(flags);
 	id.setKnownSupports(knownSupports);
+	if (parsedFeatures) *parsedFeatures = flags;
 }
 
-void AdcSupports::setSupports(Identity& id, const string & su)
+void AdcSupports::setSupports(Identity& id, const string& su, uint32_t* parsedFeatures)
 {
-	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens());
+	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens(), parsedFeatures);
 }
 
-void NmdcSupports::setStatus(Identity& id, const char status, const string& connection /* = Util::emptyString */)
+void NmdcSupports::setStatus(Identity& id, const char statusChar, const char modeChar, const string& connection)
 {
 	if (!connection.empty())
 	{
@@ -146,22 +144,33 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 	User::MaskType setUserFlags = 0;
 	User::MaskType unsetUserFlags = 0;
 	uint8_t statusFlags = 0;
+	uint8_t statusMask = Identity::SF_AWAY | Identity::SF_SERVER | Identity::SF_FIREBALL;
 
-	if (status & AWAY)
+	if (statusChar & AWAY)
 		statusFlags |= Identity::SF_AWAY;
-	if (status & SERVER)
+	if (statusChar & SERVER)
 		statusFlags |= Identity::SF_SERVER;
-	if (status & FIREBALL)
+	if (statusChar & FIREBALL)
 		statusFlags |= Identity::SF_FIREBALL;
-	if (status & TLS)
+	if (statusChar & TLS)
 		setUserFlags |= User::TLS;
 	else
 		unsetUserFlags |= User::TLS;
-	if (status & NAT0)
+	if (statusChar & NAT0)
 		setUserFlags |= User::NAT0;
 	else
 		unsetUserFlags |= User::NAT0;
-
-	id.setStatus(statusFlags);
+	if (modeChar == 'A')
+	{
+		unsetUserFlags |= User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE;
+		statusMask |= Identity::SF_PASSIVE;
+	}
+	else if (modeChar == 'P' || modeChar == '5')
+	{
+		statusFlags |= Identity::SF_PASSIVE;
+		setUserFlags |= User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE;
+		statusMask |= Identity::SF_PASSIVE;
+	}
+	id.setStatusBits(statusFlags, statusMask);
 	u->changeFlags(setUserFlags, unsetUserFlags);
 }

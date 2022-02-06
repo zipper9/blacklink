@@ -281,9 +281,15 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 			if (tok.length() == 3)
 			{
 				if (tok[2] == 'A')
+				{
 					id.getUser()->unsetFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
+					id.setStatusBit(Identity::SF_PASSIVE, false);
+				}
 				else
+				{
 					id.getUser()->setFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
+					id.setStatusBit(Identity::SF_PASSIVE, true);
+				}
 			}
 		}
 		else if ((j = tok.find("V:")) != string::npos || (j = tok.find("v:")) != string::npos)
@@ -2367,6 +2373,7 @@ void NmdcHub::myInfoParse(const string& param)
 	}
 	i = j + 1;
 	
+	char modeChar = 0;
 	OnlineUserPtr ou = getUser(nick);
 	//ou->getUser()->setFlag(User::IS_MYINFO);
 	j = param.find('$', i);
@@ -2375,7 +2382,7 @@ void NmdcHub::myInfoParse(const string& param)
 		return;
 	string tmpDesc = unescape(param.substr(i, j - i));
 	// Look for a tag...
-	if (!tmpDesc.empty() && tmpDesc[tmpDesc.size() - 1] == '>')
+	if (!tmpDesc.empty() && tmpDesc.back() == '>')
 	{
 		const string::size_type x = tmpDesc.rfind('<');
 		if (x != string::npos)
@@ -2393,21 +2400,9 @@ void NmdcHub::myInfoParse(const string& param)
 	else
 	{
 		ou->getIdentity().setDescription(tmpDesc);
-		dcassert(param.size() > j + 2);
-		if (param.size() > j + 3)
-		{
-			if (param[j] == '$')
-			{
-				if (param[j + 1] == 'A')
-				{
-					ou->getIdentity().getUser()->unsetFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
-				}
-				else if (param[j + 1] == 'P')
-				{
-					ou->getIdentity().getUser()->setFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
-				}
-			}
-		}
+		dcassert(param.length() > j + 2);
+		if (param.length() > j + 3 && param[j] == '$')
+			modeChar = param[j + 1];
 	}
 	
 	i = j + 3;
@@ -2421,11 +2416,11 @@ void NmdcHub::myInfoParse(const string& param)
 		// No connection = bot...
 		ou->getIdentity().setBot();
 #endif
-		NmdcSupports::setStatus(ou->getIdentity(), param[j - 1]);
+		NmdcSupports::setStatus(ou->getIdentity(), param[j - 1], modeChar, Util::emptyString);
 	}
 	else
 	{
-		NmdcSupports::setStatus(ou->getIdentity(), param[j - 1], param.substr(i, j - i - 1));
+		NmdcSupports::setStatus(ou->getIdentity(), param[j - 1], modeChar, param.substr(i, j - i - 1));
 	}
 	
 	i = j + 1;
@@ -2521,7 +2516,7 @@ static string keySubst(const uint8_t* key, size_t len, size_t n)
 
 string NmdcHub::makeKeyFromLock(const string& lock)
 {
-	if (lock.size() < 3 || lock.length() > 512) // How long can it be?
+	if (lock.length() < 3 || lock.length() > 512) // How long can it be?
 		return Util::emptyString;
 		
 	uint8_t* temp = static_cast<uint8_t*>(alloca(lock.length()));

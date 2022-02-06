@@ -292,6 +292,7 @@ void MainFrame::createTrayMenu()
 
 LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	LogManager::message("Main window created (Thread: " + Util::toString(BaseThread::getCurrentThreadId()) + ')', false);
 	if (CompatibilityManager::isIncompatibleSoftwareFound())
 	{
 		if (DatabaseManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())

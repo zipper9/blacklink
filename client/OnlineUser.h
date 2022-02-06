@@ -51,7 +51,8 @@ class Identity
 		{
 			SF_AWAY     = 0x01,
 			SF_SERVER   = 0x02,
-			SF_FIREBALL = 0x04
+			SF_FIREBALL = 0x04,
+			SF_PASSIVE  = 0x08
 		};
 
 		Identity()
@@ -204,15 +205,20 @@ class Identity
 #define GC_INC_UINT(bits, x)\
 	uint##bits##_t  inc##x() { return ++values.info_uint##bits[e_##x]; }
 
-#define GSUINTBIT(bits,x)\
-	bool get##x##Bit(const uint##bits##_t mask) const\
+#define GSUINTBIT(bits, x)\
+	bool get##x##Bit(uint##bits##_t mask) const\
 	{\
 		return (get_uint##bits(e_##x) & mask) != 0;\
 	}\
-	void set##x##Bit(const uint##bits##_t mask, bool enable)\
+	void set##x##Bit(uint##bits##_t mask, bool enable)\
 	{\
 		auto& val = get_uint##bits(e_##x);\
 		if (enable) val |= mask; else val &= ~mask;\
+	}\
+	void set##x##Bits(uint##bits##_t mask, uint##bits##_t changeMask)\
+	{\
+		auto& val = get_uint##bits(e_##x);\
+		val = (val & ~changeMask) | mask;\
 	}
 
 #define GSUINTBITS(bits)\
@@ -360,7 +366,6 @@ class Identity
 		{
 			e_SID,
 			e_HubNormalRegOper, // 30 bit.
-			e_InfoBitMap,
 			e_DownloadSpeed,
 			e_SharedFiles,
 			e_ExtJSONRAMWorkingSet,
@@ -374,7 +379,6 @@ class Identity
 			e_ExtJSONQueueSrc,
 			e_ExtJSONTimesStartCore,
 			e_ExtJSONTimesStartGUI,
-			//e_ExtJSONGDI,
 			e_TypeUInt32AttrLast
 		};
 		GSUINTBITS(32);

@@ -352,9 +352,8 @@ class UserConnection :
 class UcSupports
 {
 	public:
-		static StringList setSupports(UserConnection* conn, const StringList& feat, uint8_t& knownUcSupports)
+		static void setSupports(UserConnection* conn, const StringList& feat, uint8_t& knownUcSupports, StringList* unknownUcSupports)
 		{
-			StringList unknownSupports;
 			for (auto i = feat.cbegin(); i != feat.cend(); ++i)
 			{
 			
@@ -370,13 +369,13 @@ class UcSupports
 				CHECK_FEAT(BANMSG) else
 #endif
 				{
-					unknownSupports.push_back(*i);
+					if (unknownUcSupports)
+						unknownUcSupports->push_back(*i);
 				}
 										
 #undef CHECK_FEAT
 										
 			}
-			return unknownSupports;
 		}
 		
 		static string getSupports(const Identity& id)

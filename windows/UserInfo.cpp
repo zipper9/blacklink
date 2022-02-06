@@ -362,43 +362,17 @@ uint8_t UserInfo::getImageIndex() const
 		{
 			speed = id.getDownloadSpeed();
 		}
-		/*
-		if (!speed)
-		{
-		    // TODO: needs icon for user with no limit?
-		}
-		*/
 		if (speed >= 10 * 1024 * 1024) // over 10 MB
-		{
-			image = 2;
-		}
+			image = 2; // fast user
 		else if (speed > 1024 * 1024 / 10) // over 100 KB
-		{
-			image = 3;
-		}
+			image = 3; // normal user
 		else
-		{
-			image = 4; //-V112
-		}
+			image = 4; // slow user
 	}
 	
 	if (id.getStatusBit(Identity::SF_AWAY))
-	{
-		//User away...
 		image += 5;
-	}
-	
-	/* TODO const string freeSlots = identity.get("FS");
-	if(!freeSlots.empty() && identity.supports(AdcHub::ADCS_FEATURE) && identity.supports(AdcHub::SEGA_FEATURE) &&
-	    ((identity.supports(AdcHub::TCP4_FEATURE) && identity.supports(AdcHub::UDP4_FEATURE)) || identity.supports(AdcHub::NAT0_FEATURE)))
-	{
-	    image += 10;
-	}*/
-	
-	if (!id.isTcpActive())
-	{
-		// Users we can't connect to...
-		image += 10;// 20
-	}
+	if (id.getStatusBit(Identity::SF_PASSIVE))
+		image += 10;
 	return image;
 }

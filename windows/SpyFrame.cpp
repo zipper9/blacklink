@@ -131,7 +131,7 @@ LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	if (logToFile) openLogFile();
 
 	timer.createTimer(TIMER_VAL);
-	ClientManager::g_isSpyFrame = true;
+	ClientManager::searchSpyEnabled = true;
 	bHandled = FALSE;
 	return 1;
 }
@@ -189,7 +189,7 @@ void SpyFrame::saveLogFile()
 
 LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	ClientManager::g_isSpyFrame = false;
+	ClientManager::searchSpyEnabled = false;
 	timer.destroyTimer();
 	tasks.setDisabled(true);
 	closeLogFile();

@@ -879,7 +879,7 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
 		{
 			bool isFav = false;
-			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
+			if (user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
 				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
 			else
 				flags = (flags & ~IS_AUTOBAN);
@@ -895,7 +895,7 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	}
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
-	if (isOp && onlineUser)
+	if (isOp)
 	{
 	
 		const auto fc = onlineUser->getIdentity().getFakeCard();
@@ -921,7 +921,7 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
 	{
 		flags &= ~IS_IGNORED_USER;
-		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
+		if (UserManager::getInstance()->isInIgnoreList(onlineUser->getIdentity().getNick()))
 			flags |= IS_IGNORED_USER_ON;
 	}
 	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
@@ -952,7 +952,7 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 		else
 			fg = SETTING(FAVORITE_COLOR);
 	}
-	else if (onlineUser && onlineUser->getIdentity().isOp())
+	else if (onlineUser->getIdentity().isOp())
 	{
 		fg = SETTING(OP_COLOR);
 	}
@@ -968,7 +968,7 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	{
 		fg = SETTING(SERVER_COLOR);
 	}
-	else if (onlineUser && !onlineUser->getIdentity().isTcpActive())
+	else if (statusFlags & Identity::SF_PASSIVE)
 	{
 		fg = SETTING(PASSIVE_COLOR);
 	}

@@ -392,8 +392,8 @@ void UserConnection::onDataLine(const string& line) noexcept
 			if (getUser())
 			{
 				uint8_t knownUcSupports = 0;
-				auto unknownUcSupports = UcSupports::setSupports(this, feat, knownUcSupports);
-				ClientManager::setSupports(getUser(), unknownUcSupports, knownUcSupports);
+				UcSupports::setSupports(this, feat, knownUcSupports, nullptr);
+				ClientManager::setSupports(getUser(), knownUcSupports);
 			}
 			else
 				LogManager::message("Error UserConnectionListener::Supports conn->getUser() == nullptr, url = " + getHintedUser().hint);

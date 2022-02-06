@@ -48,8 +48,8 @@ class AdcSupports
 		};
 
 		static string getSupports(const Identity& id);
-		static void setSupports(Identity& id, const StringList & su);
-		static void setSupports(Identity& id, const string & su);
+		static void setSupports(Identity& id, const StringList& su, uint32_t* parsedFeatures);
+		static void setSupports(Identity& id, const string& su, uint32_t* parsedFeatures);
 
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		static FastCriticalSection g_debugCsUnknownAdcFeatures;
@@ -69,7 +69,7 @@ class NmdcSupports
 			TLS         = 0x10,
 			NAT0        = 0x20, // TODO
 		};
-		static void setStatus(Identity& id, const char status, const string& connection = Util::emptyString);
+		static void setStatus(Identity& id, const char statusChar, const char modeChar, const string& connection);
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		static FastCriticalSection g_debugCsUnknownNmdcConnection;
 		static boost::unordered_set<string> g_debugUnknownNmdcConnection;

@@ -30,8 +30,6 @@ class UserCommand;
 class ClientManager : public Speaker<ClientManagerListener>,
 	private ClientListener, public Singleton<ClientManager>
 {
-		friend class SpyFrame;
-
 	public:
 		ClientBasePtr getClient(const string& hubURL);
 		void putClient(const ClientBasePtr& cb);
@@ -124,6 +122,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 
 		static void getOnlineClients(StringSet& onlineClients);
 
+		static bool searchSpyEnabled;
+
 	private:
 		static void cheatMessage(Client* client, const string& report);
 		static void getUserCommandParams(const OnlineUserPtr& ou, const UserCommand& uc, StringMap& params, bool compatibility);
@@ -154,8 +154,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 #endif
 		static void setClientStatus(const UserPtr& p, const string& aCheatString, const int aRawCommand, bool aBadClient);
 		
-		static void setSupports(const UserPtr& p, const StringList& aSupports, const uint8_t knownUcSupports);
-		static void setUnknownCommand(const UserPtr& p, const string& aUnknownCommand);
+		static void setSupports(const UserPtr& user, uint8_t knownUcSupports);
+		static void setUnknownCommand(const UserPtr& user, const string& unknownCommand);
 		static void dumpUserInfo(const HintedUser& user);
 		
 		static void shutdown();
@@ -245,8 +245,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void on(ClientFailed, const Client*, const string&) noexcept override;
 		void on(HubUpdated, const Client* c) noexcept override;
 		void on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept override;
-
-		static bool g_isSpyFrame;
 };
 
 #endif // !defined(CLIENT_MANAGER_H)
