@@ -21,6 +21,7 @@
 #include "SearchFrm.h"
 #include "WinUtil.h"
 #include "../client/Client.h"
+#include "../client/LocationUtil.h"
 #include "../client/Tag16.h"
 
 static const unsigned TIMER_VAL = 1000;

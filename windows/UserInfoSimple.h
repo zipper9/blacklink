@@ -20,6 +20,7 @@
 #define USERINFOSIMPLE_H
 
 #include "UserInfo.h"
+#include "../client/ClientManager.h"
 
 class UserInfoSimple: public UserInfoBase
 {

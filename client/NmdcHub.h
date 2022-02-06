@@ -40,7 +40,7 @@ class NmdcHub : public Client, private Flags
 
 		int getType() const { return TYPE_NMDC; }
 		void hubMessage(const string& message, bool thirdPerson = false);
-		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
+		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
 		void password(const string& pwd, bool setPassword);

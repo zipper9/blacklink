@@ -51,7 +51,7 @@ class ClientBase
 		virtual string getMyNick() const = 0;
 		virtual bool isOp() const = 0;
 		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
-		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
+		virtual bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
 		virtual int getType() const = 0;
 		virtual void dumpUserInfo(const string& userReport) = 0;
 };
@@ -83,7 +83,7 @@ class Client : public ClientBase,
 		virtual void connect();
 		virtual void disconnect(bool graceless);
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
-		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
+		virtual bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
 		unsigned searchInternal(const SearchParamToken& sp);

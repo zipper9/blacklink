@@ -524,7 +524,7 @@ namespace dht
 	/*
 	 * Sends private message to online node
 	 */
-	void DHT::privateMessage(const OnlineUserPtr& /*ou*/, const string& /*message*/, bool /*thirdPerson*/, bool /*automatic*/)
+	bool DHT::privateMessage(const OnlineUserPtr& /*ou*/, const string& /*message*/, bool /*thirdPerson*/, bool /*automatic*/)
 	{
 		//AdcCommand cmd(AdcCommand::CMD_MSG, AdcCommand::TYPE_UDP);
 		//cmd.addParam(aMessage);
@@ -532,6 +532,7 @@ namespace dht
 		//	cmd.addParam("ME", "1");
 		//
 		//send(cmd, ou.getIdentity().getIP4(), static_cast<uint16_t>(Util::toInt(ou.getIdentity().getUdp4Port())));
+		return false;
 	}
 
 	/*

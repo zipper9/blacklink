@@ -65,7 +65,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			int windowType = SW_MAXIMIZE;
 			int chatUserSplit = 5000;
 			bool hideUserList = false;
-			bool suppressChatAndPM = false;
 
 			void copySettings(const FavoriteHubEntry& entry);
 		};
@@ -301,13 +300,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			showUsersStore = value;
 			ctrlUsers.setShowUsers(value);
 		}
-		bool isSuppressChatAndPM() const
-		{
-			return client && client->getSuppressChatAndPM();
-		}
-		
 		unsigned asyncUpdate;
 		unsigned asyncUpdateSaved;
+		bool disableChat;
 		
 		void onTimerInternal();
 		void processTasks();
@@ -355,6 +350,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void on(ClientListener::UserReport, const ClientBase*, const string&) noexcept override;
 		void on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept override;
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
+		void on(SettingsLoaded, const Client*) noexcept override;
 		void on(ClientListener::DDoSSearchDetect, const string&) noexcept override;
 		
 		// UserListWindow::HubFrameCallbacks
@@ -430,6 +426,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void updateModeIcon();
 
 		void setSplitterPanes();
+		void updateDisabledChatSettings();
 		void addPasswordCommand();
 		void createTabMenu();
 

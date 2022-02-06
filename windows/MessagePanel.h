@@ -87,6 +87,7 @@ class MessagePanel
 		bool initialized;
 		bool showSelectHubButton;
 		bool showCCPMButton;
+		bool disableChat;
 
 	private:
 		CFlyToolTipCtrl tooltip;

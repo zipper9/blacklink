@@ -909,6 +909,9 @@
     <ClInclude Include="windows\ShareGroupList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\HubFrameTasks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

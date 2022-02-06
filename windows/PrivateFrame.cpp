@@ -376,8 +376,12 @@ bool PrivateFrame::sendMessage(const string& msg, bool thirdPerson /*= false*/)
 		}
 		return result;
 	}
-	ClientManager::privateMessage(replyTo, msg, thirdPerson, false);
-	return true;
+	int pmRes = ClientManager::privateMessage(replyTo, msg, thirdPerson, false);
+	if (pmRes == ClientManager::PM_OK)
+		return true;
+	if (pmRes == ClientManager::PM_DISABLED)
+		addStatus(TSTRING(PM_DISABLED_NOTICE), true, false);
+	return false;
 }
 
 LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -1143,7 +1147,7 @@ void PrivateFrame::createMessagePanel()
 	{
 		if (!ctrlStatus.m_hWnd && !ClientManager::isStartup())
 		{
-			BaseChatFrame::createMessageCtrl(this, PM_MESSAGE_MAP, false); // TODO - проверить hub
+			BaseChatFrame::createMessageCtrl(this, PM_MESSAGE_MAP);
 			if (!ctrlChatContainer.IsWindow())
 				ctrlChatContainer.SubclassWindow(ctrlClient.m_hWnd);
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);

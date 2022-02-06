@@ -30,6 +30,7 @@ class ClientListener
 		typedef X<10> HubUpdated;
 		typedef X<11> Message;
 		typedef X<12> StatusMessage;
+		typedef X<13> SettingsLoaded;
 		typedef X<14> HubFull;
 		typedef X<15> NickError;
 		typedef X<18> AdcSearch;
@@ -70,6 +71,7 @@ class ClientListener
 		virtual void on(HubUpdated, const Client*) noexcept { }
 		virtual void on(Message, const Client*, std::unique_ptr<ChatMessage>&) noexcept { }
 		virtual void on(StatusMessage, const Client*, const string&, int = FLAG_NORMAL) noexcept { }
+		virtual void on(SettingsLoaded, const Client*) noexcept { }
 		virtual void on(HubFull, const Client*) noexcept { }
 		virtual void on(NickError, NickErrorCode) noexcept { }
 		virtual void on(AdcSearch, const Client*, const AdcCommand&, const OnlineUserPtr&) noexcept { }

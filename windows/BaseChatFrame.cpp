@@ -219,21 +219,14 @@ void BaseChatFrame::createChatCtrl()
 			ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
 			ctrlClient.SetUndoLimit(0);
-			if (suppressChat)
-			{
-				//   ctrlClient.ShowWindow(SW_HIDE);
-			}
-			else
-			{
+			if (!disableChat)
 				readFrameLog();
-			}
 		}
 	}
 }
 
-void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID, bool suppressChat)
+void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID)
 {
-	this->suppressChat = suppressChat;
 	dcassert(ctrlMessage == nullptr);
 	createChatCtrl();
 	ctrlMessage.setCallback(this);
@@ -251,9 +244,9 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 	ctrlMessage.SetFont(Fonts::g_font);
 	ctrlMessage.SetLimitText(9999);
 	//ctrlMessage.SetWindowPos(ctrlClient, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE); // Set Tab order
-	if (suppressChat)
+	if (disableChat)
 	{
-		ctrlMessage.SetReadOnly();
+		ctrlMessage.SetWindowText(CTSTRING(CHAT_DISABLED_NOTICE));
 		ctrlMessage.EnableWindow(FALSE);
 	}
 }
@@ -281,6 +274,7 @@ void BaseChatFrame::createMessagePanel(bool showSelectHubButton, bool showCCPMBu
 		msgPanel = new MessagePanel(ctrlMessage);
 		msgPanel->showSelectHubButton = showSelectHubButton;
 		msgPanel->showCCPMButton = showCCPMButton;
+		msgPanel->disableChat = disableChat;
 		msgPanel->initPanel(messagePanelHwnd);
 		ctrlClient.restoreChatCache();
 	}
@@ -427,7 +421,7 @@ LRESULT BaseChatFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	{
 		return Colors::setColor(hDC);
 	}
-	else if (!suppressChat && ctrlMessage && hWnd == ctrlMessage.m_hWnd)
+	else if (!disableChat && ctrlMessage && hWnd == ctrlMessage.m_hWnd)
 	{
 		return Colors::setColor(hDC);
 	}
@@ -973,4 +967,23 @@ bool BaseChatFrame::handleKey(int key)
 void BaseChatFrame::typingNotification()
 {
 	PLAY_SOUND(SOUND_TYPING_NOTIFY);
+}
+
+void BaseChatFrame::setChatDisabled(bool disabled)
+{
+	if (disableChat == disabled) return;
+	disableChat = disabled;
+	if (!ctrlMessage) return;
+	if (disabled)
+	{
+		ctrlMessage.SetWindowText(CTSTRING(CHAT_DISABLED_NOTICE));
+		ctrlMessage.EnableWindow(FALSE);
+	}
+	else
+	{
+		ctrlMessage.SetWindowText(_T(""));
+		ctrlMessage.EnableWindow(TRUE);
+	}
+	if (msgPanel)
+		msgPanel->disableChat = disabled;
 }

@@ -977,8 +977,7 @@ void NmdcHub::chatMessageParse(const string& line)
 		chatMessage->text = utf8Line;
 		// если юзер подставной - не создаем его в списке
 	}
-	// [~] IRainman fix.
-	
+
 	if (!chatMessage->from)
 	{
 		if (user)
@@ -987,13 +986,9 @@ void NmdcHub::chatMessageParse(const string& line)
 			chatMessage->from->getIdentity().setHub();
 		}
 	}
-	if (!getSuppressChatAndPM())
-	{
-		chatMessage->translateMe();
-		if (!isChatMessageAllowed(*chatMessage, nick))
-			return;
+	chatMessage->translateMe();
+	if (isChatMessageAllowed(*chatMessage, nick))
 		fire(ClientListener::Message(), this, chatMessage);
-	}
 }
 
 void NmdcHub::hubNameParse(const string& paramIn)
@@ -1353,16 +1348,11 @@ void NmdcHub::getUserList(OnlineUserList& result) const
 
 void NmdcHub::toParse(const string& param)
 {
-	if (getSuppressChatAndPM())
-		return;
-	// string param = "FlylinkDC-dev4 From: FlylinkDC-dev4 $<!> ";
-	//"SCALOlaz From: 13382 $<k> "
-	//string param = p_param;
 	string::size_type pos_a = param.find(" From: ");
-	
+
 	if (pos_a == string::npos)
 		return;
-		
+
 	pos_a += 7;
 	string::size_type pos_b = param.find(" $<", pos_a);
 	
@@ -2253,20 +2243,21 @@ void NmdcHub::privateMessage(const string& nick, const string& myNick, const str
 	send(cmd);
 }
 
-void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
+bool NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
 {
 	if (getSuppressChatAndPM())
-		return;
+		return false;
 
 	string myNick;
 	{
 		LOCK(csState);
-		if (state != STATE_NORMAL) return;
+		if (state != STATE_NORMAL) return false;
 		myNick = this->myNick;
 	}
 
 	privateMessage(user->getIdentity().getNick(), myNick, message, thirdPerson);
 	fireOutgoingPM(user, message, thirdPerson, automatic);
+	return true;
 }
 
 void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)

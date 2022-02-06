@@ -257,6 +257,7 @@ void Client::reloadSettings(bool updateNick)
 
 		const string& kp = hub->getKeyPrint();
 		if (!kp.empty()) setKeyPrint(kp);
+		setSuppressChatAndPM(hub->getSuppressChatAndPM());
 	}
 	else
 	{
@@ -290,8 +291,10 @@ void Client::reloadSettings(bool updateNick)
 		fakeClientStatus = 0;
 		fakeShareSize = -1;
 		fakeShareFiles = -1;
+		setSuppressChatAndPM(false);
 	}
 	fm->releaseFavoriteHubEntryPtr(hub);
+	fire(ClientListener::SettingsLoaded(), this);
 }
 
 void Client::connect()
@@ -790,6 +793,8 @@ OnlineUserPtr Client::getUser(const UserPtr& aUser)
 
 bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* response, bool automatic)
 {
+	if (suppressChatAndPM)
+		return false;
 	if (isMe(message.replyTo))
 	{
 		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser(), automatic)
@@ -881,6 +886,8 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 
 bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick) const
 {
+	if (suppressChatAndPM)
+		return false;
 	if (!message.from)
 		return nick.empty() || !UserManager::getInstance()->isInIgnoreList(nick);
 	if (isMe(message.from))

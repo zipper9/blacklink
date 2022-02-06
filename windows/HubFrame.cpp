@@ -18,9 +18,11 @@
 
 #include "stdafx.h"
 #include "HubFrame.h"
+#include "HubFrameTasks.h"
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
 #include "MainFrm.h"
+#include "../client/LocationUtil.h"
 #include "../client/QueueManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/dht/DHT.h"
@@ -56,7 +58,6 @@ void HubFrame::Settings::copySettings(const FavoriteHubEntry& entry)
 	windowType = entry.getWindowType();
 	chatUserSplit = entry.getChatUserSplit();
 	hideUserList = entry.getHideUserList();
-	suppressChatAndPM = entry.getSuppressChatAndPM();
 }
 
 HubFrame::HubFrame(const Settings& cs) :
@@ -81,7 +82,8 @@ HubFrame::HubFrame(const Settings& cs) :
 	hubParamUpdated(false),
 	m_is_ddos_detect(false),
 	asyncUpdate(0),
-	asyncUpdateSaved(0)
+	asyncUpdateSaved(0),
+	disableChat(false)
 {
 	ctrlStatusCache.resize(5);
 	showUsersStore = !cs.hideUserList;
@@ -109,7 +111,6 @@ HubFrame::HubFrame(const Settings& cs) :
 		client->setFavoriteId(cs.favoriteId);
 		if (cs.rawCommands) client->setRawCommands(cs.rawCommands);
 		if (cs.encoding && client->getType() == ClientBase::TYPE_NMDC) client->setEncoding(cs.encoding);
-		client->setSuppressChatAndPM(cs.suppressChatAndPM);
 		client->addListener(this);
 		isDHT = false;
 		currentDHTState = 0;
@@ -228,7 +229,8 @@ void HubFrame::createMessagePanel()
 			++activateCounter;
 			if (!ctrlUsers)
 				ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
-			BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP, isSuppressChatAndPM());
+			BaseChatFrame::setChatDisabled(disableChat);
+			BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP);
 
 			tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 			tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
@@ -888,10 +890,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 
 void HubFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
 {
-	dcassert(!isClosedOrShutdown());
-	if (isClosedOrShutdown())
-		return;
-	if (!isSuppressChatAndPM())
+	if (!disableChat)
 		BaseChatFrame::addStatus(line, inChat, history, cf);
 	if (BOOLSETTING(LOG_STATUS_MESSAGES))
 	{
@@ -1231,7 +1230,11 @@ void HubFrame::processTasks()
 					}
 				}
 				break;
-		
+
+				case SETTINGS_LOADED:
+					updateDisabledChatSettings();
+					break;
+
 				default:
 					dcassert(0);
 					break;
@@ -1354,16 +1357,6 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		if (ctrlStatus)
 		{
 			setSplitterPanes();
-			if (!showUsers)
-			{
-				if (GetSinglePaneMode() == SPLIT_PANE_NONE)
-					SetSinglePaneMode(swapPanels ? SPLIT_PANE_RIGHT : SPLIT_PANE_LEFT);
-			}
-			else
-			{
-				if (GetSinglePaneMode() != SPLIT_PANE_NONE)
-					SetSinglePaneMode(SPLIT_PANE_NONE);
-			}
 			SetSplitterRect(rc);
 		}
 		
@@ -1399,18 +1392,42 @@ void HubFrame::setSplitterPanes()
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (isSuppressChatAndPM())
-	{
-		m_nProportionalPos = 0;
-		swapPanels = false;
-	}
 	if (ctrlUsers && ctrlClient.IsWindow())
 	{
-		if (swapPanels)
+		if (swapPanels && !disableChat)
 			SetSplitterPanes(ctrlUsers.m_hWnd, ctrlClient.m_hWnd, false);
 		else
 			SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false);
 	}
+	int newMode = SPLIT_PANE_NONE;
+	if (disableChat)
+		newMode = SPLIT_PANE_RIGHT;
+	else if (!showUsers)
+		newMode = swapPanels ? SPLIT_PANE_RIGHT : SPLIT_PANE_LEFT;
+	if (GetSinglePaneMode() != newMode)
+		SetSinglePaneMode(newMode);
+}
+
+void HubFrame::updateDisabledChatSettings()
+{
+	if (!client) return;
+	bool flag = client->getSuppressChatAndPM();
+	if (flag == disableChat) return;
+	disableChat = flag;
+	if (disableChat)
+	{
+		showUsers = true;
+		swapPanels = false;
+		ctrlShowUsers.SetCheck(BST_CHECKED);
+		ctrlShowUsers.EnableWindow(FALSE);
+	}
+	else
+		ctrlShowUsers.EnableWindow(TRUE);
+	setChatDisabled(disableChat);
+	if (msgPanel)
+		UpdateLayout();
+	else
+		setSplitterPanes();
 }
 
 void HubFrame::updateModeIcon()
@@ -2266,6 +2283,11 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 	if (isClosedOrShutdown())
 		return;
 	addTask(ADD_STATUS_LINE, new StatusTask(Text::toDOS(line), !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM), false));
+}
+
+void HubFrame::on(ClientListener::SettingsLoaded, const Client*) noexcept
+{
+	addTask(SETTINGS_LOADED, new Task);
 }
 
 void HubFrame::on(ClientListener::UserListUpdated, const ClientBase*, const OnlineUserList& userList) noexcept

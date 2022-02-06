@@ -771,21 +771,19 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool fo
 	}
 }
 
-void ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic)
+int ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic)
 {
 	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 	OnlineUserPtr u;
 	{
-		// # u->getClientBase().privateMessage Нельзя выполнять под локом - там внутри есть fire
-		// Есть дампы от Mikhail Korbakov где вешаемся в дедлоке.
-		// http://www.flickr.com/photos/96019675@N02/11424193335/
 		READ_LOCK(*g_csOnlineUsers);
 		u = findOnlineUserL(user, priv);
 	}
-	if (u)
-	{
-		u->getClientBase()->privateMessage(u, msg, thirdPerson, automatic);
-	}
+	if (!u) return PM_NO_USER;
+	auto& cb = u->getClientBase();
+	if (cb->getType() == ClientBase::TYPE_DHT) return PM_DISABLED;
+	if (cb->privateMessage(u, msg, thirdPerson, automatic)) return PM_OK;
+	return static_cast<const Client*>(cb.get())->getSuppressChatAndPM() ? PM_DISABLED : PM_ERROR;
 }
 
 void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)

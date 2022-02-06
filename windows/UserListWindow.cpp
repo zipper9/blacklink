@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UserListWindow.h"
+#include "HubFrameTasks.h"
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "../client/UploadManager.h"

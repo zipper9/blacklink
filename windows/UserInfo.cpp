@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "UserInfo.h"
 #include "resource.h"
+#include "LocationUtil.h"
 #include "../client/CFlyProfiler.h"
 
 int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)

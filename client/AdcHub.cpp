@@ -533,9 +533,6 @@ void AdcHub::handle(AdcCommand::SID, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 {
-	if (getSuppressChatAndPM())
-		return;
-
 	if (c.getParameters().empty())
 		return;
 	auto user = findUser(c.getFrom());
@@ -1187,12 +1184,14 @@ void AdcHub::hubMessage(const string& message, bool thirdPerson)
 	send(cmd);
 }
 
-void AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
+bool AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
 {
+	if (getSuppressChatAndPM())
+		return false;
+
 	{
 		LOCK(csState);
-		if (state != STATE_NORMAL)
-			return;
+		if (state != STATE_NORMAL) return false;
 	}
 
 	AdcCommand cmd(AdcCommand::CMD_MSG, user->getIdentity().getSID(), AdcCommand::TYPE_ECHO);
@@ -1203,6 +1202,7 @@ void AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bo
 	send(cmd);
 
 	fireOutgoingPM(user, message, thirdPerson, automatic);
+	return true;
 }
 
 void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
@@ -1244,9 +1244,9 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 StringList AdcHub::parseSearchExts(int flag)
 {
 	StringList ret;
-	for (auto i = searchExts.cbegin(); i != searchExts.cend(); ++i)
-		if (flag & (1 << (i - searchExts.cbegin())))
-			ret.insert(ret.begin(), i->begin(), i->end());
+	for (size_t i = 0; i < searchExts.size(); ++i)
+		if (flag & (1 << i))
+			ret.insert(ret.begin(), searchExts[i].begin(), searchExts[i].end());
 	return ret;
 }
 

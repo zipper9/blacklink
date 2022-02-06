@@ -9,6 +9,7 @@
 #include "CustomDrawHelpers.h"
 #include "UserInfo.h"
 #include "TaskQueue.h"
+#include "../client/ClientManager.h"
 
 #ifdef OSVER_WIN_XP
 #include "ImageButton.h"

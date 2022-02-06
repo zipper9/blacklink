@@ -50,7 +50,9 @@ int MessagePanel::emoMenuItemCount = 0;
 #endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
-	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false), showSelectHubButton(false), showCCPMButton(false), ccpmState(CCPM_STATE_DISCONNECTED)
+	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false),
+	showSelectHubButton(false), showCCPMButton(false), disableChat(false),
+	ccpmState(CCPM_STATE_DISCONNECTED)
 {
 }
 
@@ -146,36 +148,37 @@ void MessagePanel::updatePanel(const CRect& rect)
 	rc.bottom = rc.top + BUTTON_HEIGHT;
 
 	HDWP dwp = BeginDeferWindowPos(MAX_BUTTONS);
-	updateButton(dwp, BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON), BUTTON_SEND, rc);
-	updateButton(dwp, BOOLSETTING(SHOW_MULTI_CHAT_BTN), BUTTON_MULTILINE, rc);
-#ifdef IRAINMAN_INCLUDE_SMILE
-	updateButton(dwp, BOOLSETTING(SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
-#endif
-	if (BOOLSETTING(SHOW_BBCODE_PANEL))
+	if (disableChat)
 	{
-		updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
-		for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_COLOR; ++i)
-			updateButton(dwp, true, i, rc);
-		updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
-#ifdef FLYLINKDC_USE_BB_SIZE_CODE
-		// Size Selection
-		//rc.left = rc.right + 1;
-		//rc.right += 40;
-		//ctrlSizeSel.ShowWindow(SW_SHOW);
-		//ctrlSizeSel.MoveWindow(rc);
-		ctrlSizeSel.ShowWindow(SW_HIDE);// [!] SSA - Will enable on implementation of size-BBCode
-#endif // FLYLINKDC_USE_BB_SIZE_CODE
+		for (int i = 0; i < MAX_BUTTONS; i++)
+			DeferWindowPos(dwp, ctrlButtons[i], nullptr,
+				0, 0, 0, 0, SWP_NOZORDER | SWP_HIDEWINDOW);
 	}
 	else
 	{
-		for (int i = BUTTON_TRANSCODE; i <= BUTTON_COLOR; ++i)
-			updateButton(dwp, false, i, rc);
-#ifdef FLYLINKDC_USE_BB_SIZE_CODE
-		ctrlSizeSel.ShowWindow(SW_HIDE);
+		updateButton(dwp, BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON), BUTTON_SEND, rc);
+		updateButton(dwp, BOOLSETTING(SHOW_MULTI_CHAT_BTN), BUTTON_MULTILINE, rc);
+#ifdef IRAINMAN_INCLUDE_SMILE
+		updateButton(dwp, BOOLSETTING(SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
 #endif
+		if (BOOLSETTING(SHOW_BBCODE_PANEL))
+		{
+			updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
+			for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_COLOR; ++i)
+				updateButton(dwp, true, i, rc);
+			updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
+		}
+		else
+		{
+			for (int i = BUTTON_TRANSCODE; i <= BUTTON_COLOR; ++i)
+				updateButton(dwp, false, i, rc);
+#ifdef FLYLINKDC_USE_BB_SIZE_CODE
+			ctrlSizeSel.ShowWindow(SW_HIDE);
+#endif
+		}
+		updateButton(dwp, showSelectHubButton, BUTTON_SELECT_HUB, rc);
+		updateButton(dwp, showCCPMButton, BUTTON_CCPM, rc);
 	}
-	updateButton(dwp, showSelectHubButton, BUTTON_SELECT_HUB, rc);
-	updateButton(dwp, showCCPMButton, BUTTON_CCPM, rc);
 	EndDeferWindowPos(dwp);
 	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
@@ -184,6 +187,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 int MessagePanel::getPanelWidth() const
 {
 	int width = 4;
+	if (disableChat) return width;
 	width += BOOLSETTING(SHOW_MULTI_CHAT_BTN) ? BUTTON_WIDTH : 0;
 #ifdef IRAINMAN_INCLUDE_SMILE
 	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? BUTTON_WIDTH : 0;

@@ -67,8 +67,9 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		OMenu* userMenu;
 		OMenu* createUserMenu();
 		void destroyUserMenu();
-		void createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID, bool suppressChat);
+		void createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID);
 		void destroyMessageCtrl(bool isShutdown);
+		void setChatDisabled(bool disabled);
 
 		BaseChatFrame() :
 			multiChatLines(0),
@@ -79,7 +80,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 			messagePanelRect{},
 			lastMessageSelPos(0),
 			userMenu(nullptr),
-			suppressChat(false),
+			disableChat(false),
 			ctrlStatusOwnerDraw(0)
 		{
 		}
@@ -145,7 +146,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		MessagePanel* msgPanel;
 		CFlyToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl ctrlStatus;
-		bool suppressChat;
+		bool disableChat;
 
 		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
 		unsigned ctrlStatusOwnerDraw;

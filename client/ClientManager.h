@@ -31,6 +31,14 @@ class ClientManager : public Speaker<ClientManagerListener>,
 	private ClientListener, public Singleton<ClientManager>
 {
 	public:
+		enum
+		{
+			PM_OK,
+			PM_NO_USER,
+			PM_DISABLED,
+			PM_ERROR
+		};
+
 		ClientBasePtr getClient(const string& hubURL);
 		void putClient(const ClientBasePtr& cb);
 		static void prepareClose();
@@ -136,7 +144,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool sendAdcCommand(AdcCommand& c, const CID& to, const IpAddress& udpAddr, uint16_t udpPort);
 		static void resendMyInfo();
 		void connect(const HintedUser& user, const string& token, bool forcePassive);
-		static void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic);
+		static int privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic);
 		static void userCommand(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		
 		static int getConnectivityMode(int af, int favHubMode);
