@@ -7,7 +7,11 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include <string>
+#include "SearchHistory.h"
+
+#ifdef OSVER_WIN_XP
+#include "ImageButton.h"
+#endif
 
 struct SearchOptions
 {
@@ -62,17 +66,23 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		COMMAND_ID_HANDLER(IDC_CLEAR_RESULTS, onClearResults)
-		COMMAND_HANDLER(IDC_SEARCH_STRING, EN_CHANGE, onEditChange)
+		COMMAND_ID_HANDLER(IDC_PURGE, onPurge)
+		COMMAND_HANDLER(IDC_SEARCH_STRING, CBN_EDITCHANGE, onEditChange)
+		COMMAND_HANDLER(IDC_SEARCH_STRING, CBN_SELCHANGE, onSelChange)
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onMeasureItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		bool clearResults() const { return clearResultsFlag; }
+
+		static SearchHistory lastSearches;
 
 	private:
 		SearchOptions& options;
@@ -80,7 +90,7 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		bool autoSwitchToTTH;
 		bool initializing;
 
-		CEdit ctrlText;
+		CComboBox ctrlText;
 		CButton ctrlMatchCase;
 		CButton ctrlRegExp;
 		CEdit ctrlMinSize;
@@ -92,7 +102,13 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		CButton ctrlSkipEmpty;
 		CButton ctrlSkipOwned;
 		CButton ctrlSkipCanceled;
+		CButton ctrlPurge;
+#ifdef OSVER_WIN_XP
+		ImageButton ctrlPurgeSubclass;
+#endif
 		CImageList imgSearchTypes;
+
+		void checkTTH(const tstring& str);
 };
 
 #endif /* SEARCH_DLG_H */

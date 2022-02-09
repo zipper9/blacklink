@@ -24,13 +24,13 @@
 #include "Colors.h"
 #include "BarShader.h"
 #include "ImageLists.h"
+#include "ExMessageBox.h"
 
 #include "../client/Client.h"
 #include "../client/QueueManager.h"
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
-#include "../client/DatabaseManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
@@ -38,7 +38,7 @@
 
 #define USE_DOWNLOAD_DIR
 
-std::list<tstring> SearchFrame::g_lastSearches;
+SearchHistory SearchFrame::lastSearches;
 HIconWrapper SearchFrame::iconUdpOk(IDR_ICON_SUCCESS_ICON);
 HIconWrapper SearchFrame::iconUdpFail(IDR_ICON_FAIL_ICON);
 HIconWrapper SearchFrame::iconUdpWait(IDR_ICON_WARN_ICON);
@@ -184,31 +184,6 @@ SearchFrame::~SearchFrame()
 	searchTypesImageList.Destroy();
 }
 
-void SearchFrame::loadSearchHistory()
-{
-	DBRegistryMap values;
-	DatabaseManager::getInstance()->loadRegistry(values, e_SearchHistory);
-	g_lastSearches.clear();
-	unsigned key = 0;
-	while (true)
-	{
-		auto i = values.find(Util::toString(++key));
-		if (i == values.end()) break;
-		g_lastSearches.push_back(Text::toT(i->second.sval));
-	}
-}
-
-void SearchFrame::saveSearchHistory()
-{
-	DBRegistryMap values;	
-	auto dm = DatabaseManager::getInstance();
-	unsigned key = 0;
-	for (auto i = g_lastSearches.cbegin(); i != g_lastSearches.cend(); ++i)
-		values.insert(DBRegistryMap::value_type(Util::toString(++key), DBRegistryValue(Text::fromT(*i))));
-	dm->clearRegistry(e_SearchHistory, 0);
-	dm->saveRegistry(values, e_SearchHistory, true);
-}
-
 void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
 {
 	SearchFrame* pChild = new SearchFrame();
@@ -263,8 +238,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlStatus.Attach(m_hWndStatusBar);
 	
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP, 0);
-	loadSearchHistory();
+	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP, 0, IDC_SEARCH_STRING);
+	lastSearches.load(e_SearchHistory);
 	initSearchHistoryBox();
 	searchBoxContainer.SubclassWindow(ctrlSearchBox.m_hWnd);
 	ctrlSearchBox.SetExtendedUI();
@@ -532,9 +507,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	clearFound();
 	if (!initialString.empty())
 	{
-		g_lastSearches.push_front(initialString);
-		ctrlSearchBox.InsertString(0, initialString.c_str());
-		ctrlSearchBox.SetCurSel(0);
+		ctrlSearchBox.SetWindowText(initialString.c_str());
 		ctrlMode.SetCurSel(initialMode);
 		ctrlSize.SetWindowText(Util::toStringT(initialSize).c_str());
 		ctrlFiletype.SetCurSel(initialType);
@@ -634,10 +607,9 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 void SearchFrame::initSearchHistoryBox()
 {
 	ctrlSearchBox.ResetContent();
-	for (auto i = g_lastSearches.cbegin(); i != g_lastSearches.cend(); ++i)
-	{
-		ctrlSearchBox.AddString(i->c_str());
-	}
+	const auto& data = lastSearches.getData();
+	for (const tstring& s : data)
+		ctrlSearchBox.AddString(s.c_str());
 }
 
 void SearchFrame::onEnter()
@@ -657,16 +629,9 @@ void SearchFrame::onEnter()
 	// Add new searches to the last-search dropdown list
 	if (!BOOLSETTING(FORGET_SEARCH_REQUEST))
 	{
-		g_lastSearches.remove(s);
-		const int i = max(SETTING(SEARCH_HISTORY) - 1, 0);
-		
-		while (g_lastSearches.size() > TStringList::size_type(i))
-		{
-			g_lastSearches.pop_back();
-		}
-		g_lastSearches.push_front(s);
+		lastSearches.addItem(s, SETTING(SEARCH_HISTORY));
 		initSearchHistoryBox();
-		saveSearchHistory();
+		lastSearches.save(e_SearchHistory);
 	}
 	MainFrame::getMainFrame()->updateQuickSearches();
 	// Change Default Settings If Changed
@@ -2481,11 +2446,19 @@ LRESULT SearchFrame::onItemChangedHub(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* b
 
 LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (MessageBox(CTSTRING(CONFIRM_CLEAR_SEARCH), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
+	bool hasHistory = !lastSearches.empty();
+	if (hasHistory && BOOLSETTING(CONFIRM_CLEAR_SEARCH_HISTORY))
+	{
+		UINT check = BST_UNCHECKED;
+		if (MessageBoxWithCheck(m_hWnd, CTSTRING(CONFIRM_CLEAR_SEARCH), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION, check) != IDYES)
+			return 0;
+		if (check == BST_CHECKED)
+			SET_SETTING(CONFIRM_CLEAR_SEARCH_HISTORY, FALSE);
+	}
 	tooltip.Activate(FALSE);
 	ctrlSearchBox.ResetContent();
-	g_lastSearches.clear();
-	DatabaseManager::getInstance()->clearRegistry(e_SearchHistory, 0);
+	if (hasHistory)
+		lastSearches.clear(e_SearchHistory);
 	MainFrame::getMainFrame()->updateQuickSearches(true);
 	tooltip.Activate(TRUE);
 	return 0;
@@ -2933,9 +2906,26 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		}
 		if (autoSwitchToTTH)
 		{
-			ctrlFiletype.SetCurSel(ctrlFiletype.FindStringExact(0, CTSTRING(ANY)));
+			ctrlFiletype.SetCurSel(FILE_TYPE_ANY);
 			autoSwitchToTTH = false;
 		}
+	}
+	return 0;
+}
+
+LRESULT SearchFrame::onEditSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int index = ctrlSearchBox.GetCurSel();
+	tstring text = WinUtil::getComboBoxItemText(ctrlSearchBox, index);
+	if (isTTH(text))
+	{
+		ctrlFiletype.SetCurSel(FILE_TYPE_TTH);
+		autoSwitchToTTH = true;
+	}
+	else if (autoSwitchToTTH)
+	{
+		ctrlFiletype.SetCurSel(FILE_TYPE_ANY);
+		autoSwitchToTTH = false;
 	}
 	return 0;
 }

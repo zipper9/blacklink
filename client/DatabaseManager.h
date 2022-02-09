@@ -139,7 +139,8 @@ enum DBRegistryType
 	e_TimeStampCustomLocation = 8,
 	e_IncopatibleSoftwareList = 10,
 	e_TimeStampIBlockListCom = 17,
-	e_TimeStampP2PGuard = 18	
+	e_TimeStampP2PGuard = 18,
+	e_FileListSearchHistory = 73
 };
 
 struct DBRegistryValue

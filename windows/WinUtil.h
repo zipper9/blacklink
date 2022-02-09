@@ -335,6 +335,7 @@ class WinUtil
 		static tstring getAutoRunShortcutName();
 
 		static void getWindowText(HWND hwnd, tstring& text);
+		static tstring getComboBoxItemText(HWND hwnd, int index);
 		
 		static void appendPrioItems(OMenu& menu, int idFirst);
 

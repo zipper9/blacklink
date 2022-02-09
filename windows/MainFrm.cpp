@@ -1153,10 +1153,11 @@ void MainFrame::updateQuickSearches(bool clear /*= false*/)
 	quickSearchBox.ResetContent();
 	if (!clear)
 	{
-		if (SearchFrame::g_lastSearches.empty())
-			SearchFrame::loadSearchHistory();
-		for (auto& str : SearchFrame::g_lastSearches)
-			quickSearchBox.AddString(str.c_str());
+		if (SearchFrame::lastSearches.empty())
+			SearchFrame::lastSearches.load(e_SearchHistory);
+		const auto& data = SearchFrame::lastSearches.getData();
+		for (const tstring& s : data)
+			quickSearchBox.AddString(s.c_str());
 	}
 	if (BOOLSETTING(CLEAR_SEARCH))
 		quickSearchBox.SetWindowText(_T(""));

@@ -599,6 +599,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			CONFIRM_HUBGROUP_REMOVAL,
 			CONFIRM_USER_REMOVAL, 			
 			CONFIRM_SHARE_FROM_SHELL,
+			CONFIRM_CLEAR_SEARCH_HISTORY,
 	
 			// Password (Ints)
 			PROTECT_TRAY, PROTECT_START, PROTECT_CLOSE,

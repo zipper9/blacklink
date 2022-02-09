@@ -25,6 +25,7 @@
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
+#include "SearchHistory.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
@@ -113,7 +114,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_PURGE, onPurge)
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_SEARCH_FRAME, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
-		COMMAND_CODE_HANDLER(CBN_EDITCHANGE, onEditChange)
+		COMMAND_HANDLER(IDC_SEARCH_STRING, CBN_EDITCHANGE, onEditChange)
+		COMMAND_HANDLER(IDC_SEARCH_STRING, CBN_SELCHANGE, onEditSelChange)
 		COMMAND_ID_HANDLER(IDC_FILETYPES, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZEMODE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZE, onFiletypeChange)
@@ -166,6 +168,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEditSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		LRESULT onDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWhole(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -528,14 +531,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		uint64_t searchStartTime;
 		tstring searchTarget;
 		tstring statusLine;
-		
+
 		FastCriticalSection csSearch;
-		
+
 	public:
-		static std::list<tstring> g_lastSearches;
-		static void loadSearchHistory();
-		static void saveSearchHistory();
-		
+		static SearchHistory lastSearches;
+
 	private:
 		static HIconWrapper iconUdpOk;
 		static HIconWrapper iconUdpFail;

@@ -1746,6 +1746,20 @@ void WinUtil::getWindowText(HWND hwnd, tstring& text)
 	text.resize(len);
 }
 
+tstring WinUtil::getComboBoxItemText(HWND hwnd, int index)
+{
+	int len = SendMessage(hwnd, CB_GETLBTEXTLEN, index, 0);
+	tstring res;
+	if (len > 0)
+	{
+		res.resize(len + 1);
+		TCHAR* buf = &res[0];
+		SendMessage(hwnd, CB_GETLBTEXT, index, reinterpret_cast<LPARAM>(buf));
+		res.resize(len);
+	}
+	return res;
+}
+
 bool WinUtil::setExplorerTheme(HWND hWnd)
 {
 	if (!IsAppThemed()) return false;

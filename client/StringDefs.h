@@ -1063,6 +1063,7 @@ enum Strings   // @DontAdd
 	SETTINGS_CONFIRM_HUB_REMOVAL, // "Confirm favorite hub removal"
 	SETTINGS_CONFIRM_USER_REMOVAL, // "Confirm favorite user removal"
 	SETTINGS_CONFIRM_ITEM_REMOVAL, // "Confirm item removal in download queue"
+	SETTINGS_CONFIRM_CLEAR_SEARCH_HISTORY, // "Confirm clearing search history"
 	SETTINGS_WAN_IP_MANUAL, // "Manual WAN IP"
 	SETTINGS_CZDC_EXTRA_DOWNLOADS, // "Highest priority extra download slots"
 	SETTINGS_DCLS_PAGE, // "DcLst support"

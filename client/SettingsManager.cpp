@@ -624,6 +624,7 @@ static const char* g_settingTags[] =
 	"ConfirmHubgroupRemoval",
 	"ConfirmUserRemoval", 
 	"ConfirmShareFromShell",
+	"ConfirmClearSearchHistory",
 
 	// Password (Ints)
 	"ProtectTray", "ProtectStart", "ProtectClose",
@@ -1226,6 +1227,7 @@ void SettingsManager::setDefaults()
 	setDefault(CONFIRM_HUBGROUP_REMOVAL, TRUE);
 	setDefault(CONFIRM_USER_REMOVAL, TRUE);
 	setDefault(CONFIRM_SHARE_FROM_SHELL, TRUE);
+	setDefault(CONFIRM_CLEAR_SEARCH_HISTORY, TRUE);
 
 	// Media player
 	setDefault(USE_MAGNETS_IN_PLAYERS_SPAM, TRUE);
