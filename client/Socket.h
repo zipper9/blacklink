@@ -239,8 +239,6 @@ class Socket
 			return true;
 		}
 
-		static string getRemoteHost(const IpAddress& ip);
-
 		void setIp(const IpAddress& ip) { this->ip = ip; }
 		void setIp(const IpAddressEx& ip);
 		const IpAddress& getIp() const { return ip; }

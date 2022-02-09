@@ -11,6 +11,7 @@ namespace Resolver
 
 		int resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string& host, bool* isNumeric = nullptr) noexcept;
 		bool resolveHost(IpAddressEx& addr, int type, const string& host, bool* isNumeric = nullptr) noexcept;
+		string getHostName(const IpAddress& ip);
 }
 
 #endif // RESOLVER_H_

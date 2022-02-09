@@ -23,6 +23,7 @@
 #include "LocationUtil.h"
 #include "UserConnection.h"
 #include "ConnectivityManager.h"
+#include "Resolver.h"
 #include "Tag16.h"
 
 #ifdef _DEBUG
@@ -463,7 +464,7 @@ string Identity::formatIpString(const IpAddress& ip)
 	if (Util::isValidIp(ip))
 	{
 		string desc;
-		string hostname = Socket::getRemoteHost(ip);
+		string hostname = Resolver::getHostName(ip);
 		IPInfo loc;
 		Util::getIpInfo(ip, loc, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 		const string& location = Util::getDescription(loc);

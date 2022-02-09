@@ -1,5 +1,7 @@
 #include "stdinc.h"
 #include "Resolver.h"
+#include "BaseUtil.h"
+#include "SocketAddr.h"
 
 #ifdef _WIN32
 
@@ -142,4 +144,15 @@ bool Resolver::resolveHost(IpAddressEx& addr, int type, const string& host, bool
 			return true;
 		}
 	return false;
+}
+
+string Resolver::getHostName(const IpAddress& ip)
+{
+	char buf[NI_MAXHOST];
+	sockaddr_u sa;
+	socklen_t size;
+	toSockAddr(sa, size, ip, 0);
+	if (!size) return Util::emptyString;
+	if (getnameinfo((struct sockaddr*) &sa, size, buf, sizeof(buf), nullptr, 0, NI_NAMEREQD)) return Util::emptyString;
+	return buf;
 }

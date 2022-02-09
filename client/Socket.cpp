@@ -749,32 +749,6 @@ void Socket::disconnect() noexcept
 	close();
 }
 
-string Socket::getRemoteHost(const IpAddress& ip)
-{
-	uint32_t ip4;
-	const char* paddr;
-	int addrSize;
-	switch (ip.type)
-	{
-		case AF_INET:
-			ip4 = htonl(ip.data.v4);
-			paddr = reinterpret_cast<const char*>(&ip4);
-			addrSize = sizeof(ip4);
-			break;
-
-		case AF_INET6:
-			paddr = reinterpret_cast<const char*>(&ip.data.v6);
-			addrSize = sizeof(ip.data.v6);
-			break;
-
-		default:
-			return Util::emptyString;
-	}
-
-	hostent* h = gethostbyaddr(paddr, addrSize, ip.type);
-	return h ? h->h_name : Util::emptyString;
-}
-
 bool Socket::getProxyConfig(Socket::ProxyConfig& proxy)
 {
 	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)
