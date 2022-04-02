@@ -20,6 +20,7 @@
 
 #include "HubEntry.h"
 #include "HublistManager.h"
+#include "HttpClient.h"
 #include "BZUtils.h"
 #include "FilteredFile.h"
 #include "SimpleXML.h"
@@ -27,14 +28,7 @@
 
 static const unsigned MAX_CACHED_AGE = 3600 * 24 * 2; // 2 days
 
-static const string strHTTP("http://");
-static const string strHTTPS("https://");
 static const string strBZ2(".bz2");
-
-static inline bool isValidURL(const string &s)
-{
-	return Text::isAsciiPrefix2(s, strHTTP) || Text::isAsciiPrefix2(s, strHTTPS);
-}
 
 class XmlListLoader : public SimpleXMLReader::CallBack
 {
@@ -95,23 +89,20 @@ HublistManager::HubList::HubList(uint64_t id, const string &url) noexcept : id(i
 {
 	state = STATE_IDLE;
 	flags = 0;
-	conn = nullptr;
+	reqId = 0;
 	lastModified = 0;
-	doRedirect = false;
 }
 
 HublistManager::HubList::HubList(HubList &&src) noexcept : id(src.id), url(src.url)
 {
 	lastRedirUrl = std::move(src.lastRedirUrl);
-	doRedirect = src.doRedirect;
 	list = std::move(src.list);
 	state = src.state;
 	flags = src.flags;
-	conn = src.conn;
-	downloadBuf = std::move(src.downloadBuf);
+	reqId = src.reqId;
 	error = std::move(src.error);
 	lastModified = src.lastModified;
-	src.conn = nullptr;
+	src.reqId = 0;
 }
 
 void HublistManager::HubList::getInfo(HublistManager::HubListInfo &info) const noexcept
@@ -119,16 +110,15 @@ void HublistManager::HubList::getInfo(HublistManager::HubListInfo &info) const n
 	info.id = id;
 	info.url = url;
 	info.lastRedirUrl = lastRedirUrl;
-	info.doRedirect = doRedirect;
 	info.list = list;
 	info.state = state;
 	info.error = error;
 	info.lastModified = lastModified;
 }
 
-void HublistManager::HubList::parse(int listType) noexcept
+void HublistManager::HubList::parse(const string &data, int listType) noexcept
 {
-	if (downloadBuf.empty())
+	if (data.empty())
 	{
 		state = STATE_PARSE_FAILED;
 		return;
@@ -137,7 +127,7 @@ void HublistManager::HubList::parse(int listType) noexcept
 	{
 		list.clear();
 		XmlListLoader loader(list);
-		MemoryInputStream mis(downloadBuf);
+		MemoryInputStream mis(data);
 
 		if (listType == TYPE_BZIP2)
 		{
@@ -158,14 +148,14 @@ void HublistManager::HubList::parse(int listType) noexcept
 	}
 }
 
-void HublistManager::HubList::save() const noexcept
+void HublistManager::HubList::save(const string &data) const noexcept
 {
 	try
 	{
 		string path = getHublistPath(url);
 		File::ensureDirectory(path);
 		File f(path, File::WRITE, File::CREATE | File::TRUNCATE);
-		f.write(downloadBuf);
+		f.write(data);
 	}
 	catch (const FileException &)
 	{
@@ -179,6 +169,7 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 		string path = getHublistPath(url);
 		if (File::getSize(path) > 0)
 		{
+			string data;
 			int listType = Util::checkFileExt(path, strBZ2) ? TYPE_BZIP2 : TYPE_NORMAL;
 			try
 			{
@@ -186,48 +177,48 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 				uint64_t cachedTime = File::timeStampToUnixTime(cached.getTimeStamp());
 				if (cachedTime + MAX_CACHED_AGE >= static_cast<uint64_t>(time(nullptr)))
 				{
-					downloadBuf = cached.read();
+					data = cached.read();
 					lastModified = cachedTime;
 				}
 				else
-					downloadBuf.clear();
+					data.clear();
 			}
 			catch (const FileException &)
 			{
-				downloadBuf.clear();
+				data.clear();
 			}
-			if (!downloadBuf.empty())
+			if (!data.empty())
 			{
-				parse(listType);
+				parse(data, listType);
 				if (state != STATE_PARSE_FAILED) state = STATE_FROM_CACHE;
 				return;
 			}
 		}
 	}
-	if (!conn)
-	{
-		conn = new HttpConnection(id);
-		conn->addListener(manager);
-	}
-	downloadBuf.clear();
 	lastRedirUrl.clear();
+	HttpClient::Request req;
+	req.type = Http::METHOD_GET;
+	req.url = url;
+	req.maxRedirects = 5;
+	req.maxRespBodySize = 1024 * 1204;
+	req.userAgent = getHttpUserAgent();
+	reqId = httpClient.addRequest(req);
+	if (!reqId)
+	{
+		state = STATE_DOWNLOAD_FAILED;
+		error = STRING(HTTP_INVALID_URL);
+		return;
+	}
 	state = STATE_DOWNLOADING;
-	conn->setMaxBodySize(1024*1024);
-	conn->setUserAgent(getHttpUserAgent());
-	conn->downloadFile(url);
+	if (!manager->hasListener)
+	{
+		httpClient.addListener(manager);
+		manager->hasListener = true;
+	}
+	httpClient.startRequest(reqId);
 }
 
-bool HublistManager::HubList::processRediect() noexcept
-{
-	if (!conn || !doRedirect || lastRedirUrl.empty()) return false;
-	doRedirect = false;
-	downloadBuf.clear();
-	state = STATE_DOWNLOADING;
-	conn->downloadFile(lastRedirUrl);
-	return true;
-}
-
-HublistManager::HublistManager(): nextID(0)
+HublistManager::HublistManager(): nextID(0), hasListener(false)
 {
 }
 
@@ -238,32 +229,12 @@ HublistManager::~HublistManager() noexcept
 
 void HublistManager::shutdown() noexcept
 {
-	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
+	if (hasListener)
 	{
-		HubList &hl = *i;
-		if (hl.conn)
-		{
-			hl.conn->removeListeners();
-			delete hl.conn;
-		}
+		httpClient.removeListener(this);
+		hasListener = false;
 	}
 	hubLists.clear();
-}
-
-void HublistManager::removeUnusedConnections() noexcept
-{
-	cs.lock();
-	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
-	{
-		HubList &hl = *i;
-		if (hl.state != STATE_DOWNLOADING && !hl.doRedirect && hl.conn)
-		{
-			hl.conn->removeListeners();
-			delete hl.conn;
-			hl.conn = nullptr;
-		}
-	}
-	cs.unlock();
 }
 
 void HublistManager::getHubLists(vector<HubListInfo> &result) const noexcept
@@ -333,25 +304,6 @@ bool HublistManager::refresh(uint64_t id) noexcept
 	return true;
 }
 
-bool HublistManager::processRedirect(uint64_t id) noexcept
-{
-	bool result = false;
-	cs.lock();
-	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
-	{
-		HubList &hl = *i;
-		if (hl.id == id)
-		{
-			result = hl.processRediect();
-			break;
-		}
-	}
-	cs.unlock();
-	if (!result) return false;
-	fire(HublistManagerListener::StateChanged(), id);
-	return true;
-}
-
 void HublistManager::setServerList(const string &str) noexcept
 {
 	static const int FLAG_UNUSED = 1;
@@ -362,7 +314,7 @@ void HublistManager::setServerList(const string &str) noexcept
 	string server;
 	while (tokenizer.getNextNonEmptyToken(server))
 	{
-		if (!isValidURL(server)) continue;
+		if (!HttpConnection::checkUrl(server)) continue;
 		bool found = false;
 		for (auto j = hubLists.begin(); j != hubLists.end(); ++j)
 		{
@@ -379,98 +331,92 @@ void HublistManager::setServerList(const string &str) noexcept
 			newHubLists.emplace_back(++nextID, server);
 	}
 	for (HubList& hl : hubLists)
-		if ((hl.flags & FLAG_UNUSED) && hl.conn)
-		{
-			hl.conn->removeListeners();
-			delete hl.conn;
-		}
+		if (hl.flags & FLAG_UNUSED)
+			hl.reqId = 0;
 	hubLists = std::move(newHubLists);
 	cs.unlock();
 }
 
-// HttpConnectionListener
-void HublistManager::on(Data, HttpConnection *conn, const uint8_t *buf, size_t len) noexcept
+// HttpClientListener
+void HublistManager::on(Failed, uint64_t id, const string& error) noexcept
 {
-	auto id = conn->getID();
+	uint64_t listId = 0;
 	cs.lock();
 	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
 	{
 		HubList &hl = *i;
-		if (hl.id == id)
-		{
-			if (hl.state == STATE_DOWNLOADING)
-				hl.downloadBuf.append((const char *) buf, len);
-			break;
-		}
-	}
-	cs.unlock();
-}
-
-void HublistManager::on(Failed, HttpConnection *conn, const string &aLine) noexcept
-{
-	auto id = conn->getID();
-	cs.lock();
-	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
-	{
-		HubList &hl = *i;
-		if (hl.id == id)
+		if (hl.reqId == id)
 		{
 			if (hl.state == STATE_DOWNLOADING)
 			{
 				hl.state = STATE_DOWNLOAD_FAILED;
-				hl.error = aLine;
-				hl.downloadBuf.clear();
+				hl.error = error;
+				listId = hl.id;
 			}
+			hl.reqId = 0;
 			break;
 		}
 	}
 	cs.unlock();
-	fire(HublistManagerListener::StateChanged(), id);
+	if (listId) fire(HublistManagerListener::StateChanged(), listId);
 }
 
-void HublistManager::on(Complete, HttpConnection *conn, const string &) noexcept
+void HublistManager::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
 {
-	int listType =
-		(conn->getMimeType() == "application/x-bzip2" ||
-		Util::checkFileExt(conn->getPath(), strBZ2)) ? TYPE_BZIP2 : TYPE_NORMAL;
-	auto id = conn->getID();
+	uint64_t listId = 0;
+	int listType = TYPE_NORMAL;
+	if (resp.getResponseCode() == 200)
+	{
+		string mimeType, params;
+		resp.parseContentType(mimeType, params);
+		if (mimeType == "application/x-bzip2" || Util::checkFileExt(data.url, strBZ2))
+			listType = TYPE_BZIP2;
+	}
 	cs.lock();
 	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
 	{
 		HubList &hl = *i;
-		if (hl.id == id)
+		if (hl.reqId == id)
 		{
 			if (hl.state == STATE_DOWNLOADING)
 			{
-				hl.parse(listType);
-				hl.save();
-				hl.downloadBuf.clear();
+				listId = hl.id;
+				if (resp.getResponseCode() == 200)
+				{
+					hl.parse(data.responseBody, listType);
+					hl.save(data.responseBody);
+				}
+				else
+				{
+					hl.state = STATE_DOWNLOAD_FAILED;
+					hl.error = Util::toString(resp.getResponseCode()) + ' ' + resp.getResponsePhrase();
+				}
 			}
+			hl.reqId = 0;
 			break;
 		}
 	}
 	cs.unlock();
-	fire(HublistManagerListener::StateChanged(), id);
+	if (listId) fire(HublistManagerListener::StateChanged(), listId);
 }
 
-void HublistManager::on(Redirected, HttpConnection *conn, const string &location) noexcept
+void HublistManager::on(Redirected, uint64_t id, const string& redirUrl) noexcept
 {
-	auto id = conn->getID();
+	uint64_t listId = 0;
 	cs.lock();
 	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
 	{
 		HubList &hl = *i;
-		if (hl.id == id)
+		if (hl.reqId == id)
 		{
 			if (hl.state == STATE_DOWNLOADING)
 			{
-				hl.state = STATE_DOWNLOAD_FAILED;
-				hl.lastRedirUrl = location;
-				hl.doRedirect = true;
+				hl.lastRedirUrl = redirUrl;
+				listId = hl.id;
 			}
 			break;
 		}
 	}
 	cs.unlock();
-	fire(HublistManagerListener::Redirected(), id);
+	if (listId) fire(HublistManagerListener::Redirected(), listId);
 }

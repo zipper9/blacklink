@@ -34,7 +34,7 @@
 #include "NmdcHub.h"
 #include "NetworkUtil.h"
 #include "SimpleStringTokenizer.h"
-#include "HttpConnection.h"
+#include "HttpClient.h"
 #include "AdcHub.h"
 
 static const unsigned RETRY_CONNECTION_DELAY = 10;
@@ -1745,7 +1745,7 @@ void ConnectionManager::shutdown()
 	g_portTest.shutdown();
 	g_ipTest.shutdown();
 	removeUnusedConnections();
-	HttpConnection::cleanup();
+	httpClient.shutdown();
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	{

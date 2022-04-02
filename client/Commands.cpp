@@ -9,6 +9,7 @@
 #include "UploadManager.h"
 #include "HashUtil.h"
 #include "ParamExpander.h"
+#include "HttpClient.h"
 #include "dht/DHT.h"
 #include "dht/DHTSearchManager.h"
 #include "dht/IndexManager.h"
@@ -85,6 +86,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_DEBUG_DISABLE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DEBUG_BLOOM
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     0, UINT_MAX, 0                                             }, // COMMAND_DEBUG_GDI_INFO
+	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, UINT_MAX, 0                                             }, // COMMAND_DEBUG_HTTP
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, 2,        0                                             }, // COMMAND_DEBUG_DIVIDE
 	{ CTX_GENERAL_CHAT,                                 1, 1,        ResourceManager::CMD_HELP_ME                  }, // COMMAND_ME
 	{ CTX_HUB,                                          1, 1,        ResourceManager::CMD_HELP_LAST_NICK           }, // COMMAND_LAST_NICK
@@ -136,6 +138,7 @@ static const CommandName names[] =
 	{ "grants",         COMMAND_SHOW_EXTRA_SLOTS    },
 	{ "h",              COMMAND_HELP                },
 	{ "help",           COMMAND_HELP                },
+	{ "http",           COMMAND_DEBUG_HTTP          },
 	{ "ignorelist",     COMMAND_SHOW_IGNORE_LIST    },
 	{ "il",             COMMAND_SHOW_IGNORE_LIST    },
 	{ "itunes",         COMMAND_MEDIA_PLAYER        },
@@ -366,6 +369,13 @@ enum
 {
 	ACTION_BLOOM_INFO = 1,
 	ACTION_BLOOM_MATCH
+};
+
+static const char* actionsHttp[] = { "get", "post", nullptr };
+enum
+{
+	ACTION_HTTP_GET = 1,
+	ACTION_HTTP_POST
 };
 
 bool Commands::isPublic(const StringList& args)
@@ -1099,6 +1109,37 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				string textLower = Text::toLower(pc.args[2]);
 				res.text = textLower;
 				res.text += ShareManager::getInstance()->matchBloom(textLower) ? ": Match found" : ": No match";
+				res.what = RESULT_LOCAL_TEXT;
+				return true;
+			}
+			res.text = STRING(COMMAND_INVALID_ACTION);
+			res.what = RESULT_ERROR_MESSAGE;
+			return true;
+		}
+		case COMMAND_DEBUG_HTTP:
+		{
+			int action = getAction(pc, actionsHttp);
+			if (action == ACTION_HTTP_GET)
+			{
+				if (pc.args.size() < 3)
+				{
+					res.text = STRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				HttpClient::Request req;
+				req.outputPath = Util::getConfigPath() + "HttpDownloads" PATH_SEPARATOR_STR;
+				File::ensureDirectory(req.outputPath);
+				req.url = pc.args[2];
+				req.maxRedirects = 5;
+				uint64_t id = httpClient.addRequest(req);
+				if (id)
+				{
+					res.text = "Starting request " + Util::toString(id);
+					httpClient.startRequest(id);
+				}
+				else
+					res.text = "Unable to add request";
 				res.what = RESULT_LOCAL_TEXT;
 				return true;
 			}

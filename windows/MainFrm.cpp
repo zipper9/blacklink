@@ -70,6 +70,7 @@
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/dht/DHT.h"
 #include "../client/DCPlusPlus.h"
+#include "../client/HttpClient.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -681,8 +682,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 
 void MainFrame::onMinute(uint64_t tick)
 {
-	HublistManager::getInstance()->removeUnusedConnections();
-	HttpConnection::cleanup();
+	httpClient.removeUnusedConnections();
 	if (tick >= timeUsersCleanup)
 	{
 		ClientManager::usersCleanup();

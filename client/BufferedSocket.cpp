@@ -422,7 +422,15 @@ void BufferedSocket::consumeData()
 		size_t size = rb.writePtr - rb.readPtr;
 		if (remainingSize != -1 && remainingSize < size) size = remainingSize;
 		if (listener) listener->onData(rb.buf + rb.readPtr, size);
-		if (remainingSize != -1) remainingSize -= size;
+		if (remainingSize != -1)
+		{
+			remainingSize -= size;
+			if (!remainingSize)
+			{
+				mode = MODE_LINE;
+				if (listener) listener->onModeChange();
+			}
+		}
 		rb.readPtr += size;
 		if (mode != MODE_DATA) break;
 	}

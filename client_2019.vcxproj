@@ -532,6 +532,7 @@
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
     <ClCompile Include="client\HashManager.cpp" />
     <ClCompile Include="client\HashUtil.cpp" />
+    <ClCompile Include="client\HttpClient.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
     <ClCompile Include="client\HttpHeaders.cpp" />
     <ClCompile Include="client\HttpMessage.cpp" />
@@ -728,6 +729,7 @@
     <ClInclude Include="client\HashDatabaseLMDB.h" />
     <ClInclude Include="client\HashUtil.h" />
     <ClInclude Include="client\HintedUser.h" />
+    <ClInclude Include="client\HttpClient.h" />
     <ClInclude Include="client\HttpConnection.h" />
     <ClInclude Include="client\HttpConnectionListener.h" />
     <ClInclude Include="client\HttpHeaders.h" />

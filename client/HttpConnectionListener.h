@@ -29,15 +29,13 @@ public:
 
 	typedef X<0> Data;
 	typedef X<1> Failed;
-	typedef X<2> Complete;
-	typedef X<3> Redirected;
-	typedef X<4> Retried;
+	typedef X<2> Completed;
+	typedef X<3> Disconnected;
 
-	virtual void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept = 0;
-	virtual void on(Failed, HttpConnection*, const string&) noexcept = 0;
-	virtual void on(Complete, HttpConnection*, const string&) noexcept = 0;
-	virtual void on(Redirected, HttpConnection*, const string&) noexcept { }
-	virtual void on(Retried, HttpConnection*) noexcept { }
+	virtual void on(Data, HttpConnection* conn, const uint8_t* data, size_t size) noexcept = 0;
+	virtual void on(Failed, HttpConnection* conn, const string& error) noexcept = 0;
+	virtual void on(Completed, HttpConnection* conn, const string& requestUrl) noexcept = 0;
+	virtual void on(Disconnected, HttpConnection* conn) noexcept { }
 };
 
 #endif // !defined(DCPLUSPLUS_DCPP_HTTP_CONNECTION_LISTENER_H)

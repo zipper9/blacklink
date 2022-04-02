@@ -1,6 +1,6 @@
 #include "stdinc.h"
 #include "IpTest.h"
-#include "HttpConnection.h"
+#include "HttpClient.h"
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"
 #include "Resolver.h"
@@ -10,49 +10,54 @@ static const unsigned IP_TEST_TIMEOUT = 10000;
 
 IpTest g_ipTest;
 
-IpTest::IpTest(): nextID(0), hasListener(false), shutDown(false),
+IpTest::IpTest(): hasListener(false), shutDown(false),
 	reflectedAddrRe("Current IP Address:\\s*([a-fA-F0-9.:]+)", std::regex_constants::ECMAScript)
 {
 }
 
 bool IpTest::runTest(int type) noexcept
 {
-	uint64_t id = ++nextID;
-	HttpConnection* conn = new HttpConnection(id);
+	string url = type == REQ_IP4 ? SETTING(URL_GET_IP) : SETTING(URL_GET_IP6);
+	HttpClient::Request cr;
+	cr.type = Http::METHOD_GET;
+	cr.url = url;
+	cr.ipVersion = (type == REQ_IP4 ? AF_INET : AF_INET6) | Resolver::RESOLVE_TYPE_EXACT;
+	cr.maxRedirects = 0;
+	cr.noCache = true;
+	cr.closeConn = true;
+	cr.userAgent = getHttpUserAgent();
+	cr.maxErrorBodySize = cr.maxRespBodySize = 64 * 1024;
+	uint64_t id = httpClient.addRequest(cr);
+	if (!id) return false;
 
+	bool addListener = false;
 	uint64_t tick = GET_TICK();
 	cs.lock();
 	if (shutDown)
 	{
 		cs.unlock();
-		delete conn;
+		httpClient.cancelRequest(id);
 		return false;
 	}
-
 	if (req[type].state == STATE_RUNNING && tick < req[type].timeout)
 	{
 		cs.unlock();
-		delete conn;
+		httpClient.cancelRequest(id);
 		return false;
 	}
 	req[type].state = STATE_RUNNING;
 	req[type].timeout = tick + IP_TEST_TIMEOUT;
-	req[type].connID = id;
-
-	connections.emplace_back(Connection{ conn, true });
+	req[type].reqId = id;
+	if (!hasListener)
+		hasListener = addListener = true;
 	cs.unlock();
 
-	string url = type == REQ_IP4 ? SETTING(URL_GET_IP) : SETTING(URL_GET_IP6);
 	if (BOOLSETTING(LOG_SYSTEM))
 		LogManager::message(string("Detecting public IPv") + (type == REQ_IP4 ? '4' : '6') + " using URL " + url);
 
-	responseBody.clear();
-	conn->addListener(this);
-	conn->setMaxBodySize(0x10000);
-	conn->setMaxRedirects(0);
-	conn->setUserAgent(getHttpUserAgent());
-	conn->setIpVersion((type == REQ_IP4 ? AF_INET : AF_INET6) | Resolver::RESOLVE_TYPE_EXACT);
-	conn->downloadFile(url);
+	if (addListener)
+		addListeners();
+	httpClient.startRequest(id);
 	return true;
 }
 
@@ -88,63 +93,43 @@ int IpTest::getState(int type, string* reflectedAddress) const noexcept
 	return state;
 }
 
-void IpTest::setConnectionUnusedL(HttpConnection* conn) noexcept
-{
-	for (auto i = connections.begin(); i != connections.end(); ++i)
-		if (i->conn == conn)
-		{
-			i->used = false;
-			break;
-		}
-}
-
-void IpTest::on(Data, HttpConnection*, const uint8_t* data, size_t size) noexcept
-{
-	responseBody.append(reinterpret_cast<const char*>(data), size);
-}
-
-void IpTest::on(Failed, HttpConnection* conn, const string&) noexcept
+void IpTest::on(Failed, uint64_t id, const string& error) noexcept
 {
 	bool addListener = false;
 	int failedReqType = -1;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
-		if (req[type].state == STATE_RUNNING && req[type].connID == conn->getID())
+		if (req[type].state == STATE_RUNNING && req[type].reqId == id)
 		{
 			failedReqType = type;
 			req[type].state = STATE_FAILURE;
 		}
-	setConnectionUnusedL(conn);
 	if (!hasListener)
-	{
-		hasListener = true;
-		addListener = true;
-	}
+		hasListener = addListener = true;
 	cs.unlock();
 	if (addListener)
-		TimerManager::getInstance()->addListener(this);
+		addListeners();
 	if (failedReqType != -1)
 		ConnectivityManager::getInstance()->processGetIpResult(failedReqType);
 }
 
-void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
+void IpTest::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
 {
 	IpAddress newReflectedAddress[MAX_REQ];
 	memset(newReflectedAddress, 0, sizeof(newReflectedAddress));
-	// Reset connID to prevent on(Failed) from signalling the error
 	bool addListener = false;
 	int completedReqType = -1;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
-		if (req[type].state == STATE_RUNNING && req[type].connID == conn->getID())
+		if (req[type].state == STATE_RUNNING && req[type].reqId == id)
 		{
 			completedReqType = type;
 			req[type].state = STATE_FAILURE;
-			req[type].connID = 0;
+			req[type].reqId = 0;
 			req[type].reflectedAddress.clear();
 			std::smatch sm;
 			bool result = false;
-			if (std::regex_search(responseBody, sm, reflectedAddrRe))
+			if (resp.getResponseCode() == 200 && std::regex_search(data.responseBody, sm, reflectedAddrRe))
 			{
 				string s = sm[1].str();
 				if (type == REQ_IP4)
@@ -177,13 +162,10 @@ void IpTest::on(Complete, HttpConnection* conn, const string&) noexcept
 				req[type].reflectedAddress.clear();
 		}
 	if (!hasListener)
-	{
-		hasListener = true;
-		addListener = true;
-	}
+		hasListener = addListener = true;
 	cs.unlock();
 	if (addListener)
-		TimerManager::getInstance()->addListener(this);
+		addListeners();
 	if (completedReqType != -1)
 	{
 		auto cm = ConnectivityManager::getInstance();
@@ -197,16 +179,6 @@ void IpTest::on(Second, uint64_t tick) noexcept
 {
 	bool hasRunning = false;
 	cs.lock();
-	auto i = connections.begin();
-	while (i != connections.end())
-	{
-		if (!i->used)
-		{
-			i->conn->removeListeners();
-			delete i->conn;
-			connections.erase(i++);
-		} else i++;
-	}
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING)
 		{
@@ -218,7 +190,7 @@ void IpTest::on(Second, uint64_t tick) noexcept
 	if (!hasRunning) hasListener = false;
 	cs.unlock();
 	if (!hasRunning)
-		TimerManager::getInstance()->removeListener(this);
+		removeListeners();
 }
 
 void IpTest::shutdown() noexcept
@@ -227,18 +199,24 @@ void IpTest::shutdown() noexcept
 	shutDown = true;
 	bool removeListener = hasListener;
 	hasListener = false;
-	for (auto i = connections.begin(); i != connections.end(); ++i)
-	{
-		i->conn->removeListeners();
-		delete i->conn;
-	}
-	connections.clear();
 	for (int type = 0; type < MAX_REQ; type++)
 	{
 		req[type].state = STATE_UNKNOWN;
-		req[type].connID = 0;
+		req[type].reqId = 0;
 	}
 	cs.unlock();
 	if (removeListener)
-		TimerManager::getInstance()->removeListener(this);
+		removeListeners();
+}
+
+void IpTest::addListeners()
+{
+	httpClient.addListener(this);
+	TimerManager::getInstance()->addListener(this);
+}
+
+void IpTest::removeListeners()
+{
+	httpClient.removeListener(this);
+	TimerManager::getInstance()->removeListener(this);
 }

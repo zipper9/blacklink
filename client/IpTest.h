@@ -1,12 +1,12 @@
 #ifndef IP_TEST_H_
 #define IP_TEST_H_
 
-#include "HttpConnectionListener.h"
+#include "HttpClientListener.h"
 #include "Locks.h"
 #include "TimerManager.h"
 #include <regex>
 
-class IpTest: private HttpConnectionListener, private TimerManagerListener
+class IpTest: private HttpClientListener, private TimerManagerListener
 {
 public:
 	enum
@@ -36,34 +36,23 @@ private:
 	{
 		int state;
 		uint64_t timeout;
-		uint64_t connID;
+		uint64_t reqId;
 		string reflectedAddress;
-		Request(): state(STATE_UNKNOWN), timeout(0), connID(0) {}
-	};
-
-	struct Connection
-	{
-		HttpConnection* conn;
-		bool used;
+		Request(): state(STATE_UNKNOWN), timeout(0), reqId(0) {}
 	};
 
 	Request req[MAX_REQ];
 	mutable CriticalSection cs;
-	uint64_t nextID;
-	std::list<Connection> connections;
 	bool hasListener;
 	bool shutDown;
-	string responseBody;
 	const std::regex reflectedAddrRe;
 
-	void setConnectionUnusedL(HttpConnection* conn) noexcept;
+	void addListeners();
+	void removeListeners();
 
-	void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept;
-	void on(Failed, HttpConnection*, const string&) noexcept;
-	void on(Complete, HttpConnection*, const string&) noexcept;
-	/*
-	void on(Redirected, HttpConnection*, const string&) noexcept;
-	*/
+	void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept;
+	void on(Failed, uint64_t id, const string& error) noexcept;
+	void on(Redirected, uint64_t id, const string& redirUrl) noexcept {}
 
 	void on(Second, uint64_t) noexcept;
 };

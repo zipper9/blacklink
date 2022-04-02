@@ -21,7 +21,7 @@
 
 #include "HublistManagerListener.h"
 #include "HubEntry.h"
-#include "HttpConnection.h"
+#include "HttpClientListener.h"
 #include "Singleton.h"
 #include "Speaker.h"
 #include "Locks.h"
@@ -29,7 +29,7 @@
 /**
  * Assumed to be called only by UI thread.
  */
-class HublistManager : public Speaker<HublistManagerListener>, private HttpConnectionListener, public Singleton<HublistManager>
+class HublistManager : public Speaker<HublistManagerListener>, private HttpClientListener, public Singleton<HublistManager>
 {
 public:
 	HublistManager();
@@ -50,7 +50,6 @@ public:
 		uint64_t id;
 		string url;
 		string lastRedirUrl;
-		bool doRedirect;
 		HubEntry::List list;
 		int state;
 		string error;
@@ -62,9 +61,7 @@ public:
 	bool getHubList(HubListInfo &result, uint64_t id) const noexcept;
 	bool refreshAndGetHubList(HubListInfo &result, uint64_t id) noexcept;
 	bool refresh(uint64_t id) noexcept;
-	bool processRedirect(uint64_t id) noexcept;
 	void shutdown() noexcept;
-	void removeUnusedConnections() noexcept;
 
 private:
 	enum
@@ -78,34 +75,31 @@ private:
 		const uint64_t id;
 		const string url;
 		string lastRedirUrl;
-		bool doRedirect;
 		HubEntry::List list;
 		int state;
 		int flags;
-		HttpConnection *conn;
-		string downloadBuf;
+		uint64_t reqId;
 		string error;
 		time_t lastModified;
 
 		HubList(uint64_t id, const string &url) noexcept;
 		HubList(HubList &&src) noexcept;
 
-		void parse(int listType) noexcept;
-		void save() const noexcept;		
+		void parse(const string &data, int listType) noexcept;
+		void save(const string &data) const noexcept;
 		void getListData(bool forceDownload, HublistManager *manager) noexcept;
-		bool processRediect() noexcept;
 		void getInfo(HubListInfo &info) const noexcept;
 	};
 	
 	mutable CriticalSection cs;
 	std::list<HubList> hubLists;
 	uint64_t nextID;
+	bool hasListener;
 
-	// HttpConnectionListener
-	void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept;
-	void on(Failed, HttpConnection*, const string&) noexcept;
-	void on(Complete, HttpConnection*, const string&) noexcept;
-	void on(Redirected, HttpConnection*, const string&) noexcept;
+	// HttpClientListener
+	void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
+	void on(Failed, uint64_t id, const string& error) noexcept override;
+	void on(Redirected, uint64_t id, const string& redirUrl) noexcept override;
 };
 
 

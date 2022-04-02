@@ -1,6 +1,6 @@
 #include "stdinc.h"
 #include "PortTest.h"
-#include "HttpConnection.h"
+#include "HttpClient.h"
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
@@ -12,7 +12,7 @@ static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
 
 PortTest g_portTest;
 
-PortTest::PortTest(): nextID(0), hasListener(false), shutDown(false),
+PortTest::PortTest(): hasListener(false), shutDown(false),
 	reflectedAddrRe(R"|("ip"\s*:\s*"([^"]+)")|", std::regex_constants::ECMAScript)
 {
 }
@@ -21,21 +21,31 @@ bool PortTest::runTest(int typeMask) noexcept
 {
 	int portToTest[PortTest::MAX_PORTS];
 
-	uint64_t id = ++nextID;
-	HttpConnection* conn = new HttpConnection(id);
-
 	CID pid;
 	pid.regenerate();
 	TigerHash tiger;
 	tiger.update(pid.data(), CID::SIZE);
 	string strCID = CID(tiger.finalize()).toBase32();
 
+	HttpClient::Request req;
+	req.type = Http::METHOD_POST;
+	req.url = SETTING(URL_PORT_TEST);
+	req.requestBody = createBody(pid.toBase32(), strCID, typeMask);
+	req.maxRedirects = 0;
+	req.noCache = true;
+	req.closeConn = true;
+	req.userAgent = getHttpUserAgent();
+	req.maxErrorBodySize = req.maxRespBodySize = 64 * 1024;
+	uint64_t id = httpClient.addRequest(req);
+	if (!id) return false;
+
+	bool addListener = false;
 	uint64_t tick = GET_TICK();
 	cs.lock();
 	if (shutDown)
 	{
 		cs.unlock();
-		delete conn;
+		httpClient.cancelRequest(id);
 		return false;
 	}
 
@@ -43,7 +53,7 @@ bool PortTest::runTest(int typeMask) noexcept
 		if ((typeMask & 1<<type) && ports[type].state == STATE_RUNNING && tick < ports[type].timeout)
 		{
 			cs.unlock();
-			delete conn;
+			httpClient.cancelRequest(id);
 			return false;
 		}
 	uint64_t timeout = tick + PORT_TEST_TIMEOUT;
@@ -52,15 +62,12 @@ bool PortTest::runTest(int typeMask) noexcept
 		{
 			ports[type].state = STATE_RUNNING;
 			ports[type].timeout = timeout;
-			ports[type].connID = id;
+			ports[type].reqId = id;
 			ports[type].cid = strCID;
 			portToTest[type] = ports[type].value;
 		} else portToTest[type] = 0;
-	string body = createBody(pid.toBase32(), strCID, typeMask);
-	Connection ci;
-	ci.conn = conn;
-	ci.used = true;
-	connections.push_back(ci);
+	if (!hasListener)
+		hasListener = addListener = true;
 	cs.unlock();
 
 	if (BOOLSETTING(LOG_SYSTEM))
@@ -70,12 +77,9 @@ bool PortTest::runTest(int typeMask) noexcept
 				LogManager::message("Starting test for " + string(protoName[type]) + " port " + Util::toString(portToTest[type]), false);
 	}
 
-	responseBody.clear();
-	conn->addListener(this);
-	conn->setMaxBodySize(0x10000);
-	conn->setMaxRedirects(0);
-	conn->setUserAgent(getHttpUserAgent());
-	conn->postData(SETTING(URL_PORT_TEST), body);
+	if (addListener)
+		addListeners();
+	httpClient.startRequest(id);
 	return true;
 }
 
@@ -261,33 +265,17 @@ string PortTest::createBody(const string& pid, const string& cid, int typeMask) 
 	return f.getResult();
 }
 
-void PortTest::setConnectionUnusedL(HttpConnection* conn) noexcept
-{
-	for (auto i = connections.begin(); i != connections.end(); ++i)
-		if (i->conn == conn)
-		{
-			i->used = false;
-			break;
-		}
-}
-
-void PortTest::on(Data, HttpConnection*, const uint8_t* data, size_t size) noexcept
-{
-	responseBody.append(reinterpret_cast<const char*>(data), size);
-}
-
-void PortTest::on(Failed, HttpConnection* conn, const string&) noexcept
+void PortTest::on(Failed, uint64_t id, const string& error) noexcept
 {
 	bool hasFailed = false;
 	bool addListener = false;
 	cs.lock();
 	for (int type = 0; type < MAX_PORTS; type++)
-		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
+		if (ports[type].state == STATE_RUNNING && ports[type].reqId == id)
 		{
 			ports[type].state = STATE_FAILURE;
 			hasFailed = true;
 		}
-	setConnectionUnusedL(conn);
 	if (!hasListener)
 	{
 		hasListener = true;
@@ -295,17 +283,18 @@ void PortTest::on(Failed, HttpConnection* conn, const string&) noexcept
 	}
 	cs.unlock();
 	if (addListener)
-		TimerManager::getInstance()->addListener(this);
+		addListeners();
 	if (hasFailed)
 		ConnectivityManager::getInstance()->processPortTestResult();
 }
 
-void PortTest::on(Complete, HttpConnection* conn, const string&) noexcept
+void PortTest::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
 {
+	bool hasFailed = false;
+	bool success = resp.getResponseCode() == 200;
 	std::smatch sm;
-	bool hasAddress = std::regex_search(responseBody, sm, reflectedAddrRe);
+	bool hasAddress = success && std::regex_search(data.responseBody, sm, reflectedAddrRe);
 
-	// Reset connID to prevent on(Failed) from signalling the error
 	bool addListener = false;
 	cs.lock();
 	if (hasAddress)
@@ -313,9 +302,15 @@ void PortTest::on(Complete, HttpConnection* conn, const string&) noexcept
 	else
 		reflectedAddrFromResponse.clear();
 	for (int type = 0; type < MAX_PORTS; type++)
-		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
-			ports[type].connID = 0;
-	setConnectionUnusedL(conn);
+		if (ports[type].state == STATE_RUNNING && ports[type].reqId == id)
+		{
+			ports[type].reqId = 0;
+			if (!success)
+			{
+				ports[type].state = STATE_FAILURE;
+				hasFailed = true;
+			}
+		}
 	if (!hasListener)
 	{
 		hasListener = true;
@@ -323,7 +318,9 @@ void PortTest::on(Complete, HttpConnection* conn, const string&) noexcept
 	}
 	cs.unlock();
 	if (addListener)
-		TimerManager::getInstance()->addListener(this);
+		addListeners();
+	if (hasFailed)
+		ConnectivityManager::getInstance()->processPortTestResult();
 }
 
 void PortTest::on(Second, uint64_t tick) noexcept
@@ -331,16 +328,6 @@ void PortTest::on(Second, uint64_t tick) noexcept
 	bool hasRunning = false;
 	bool hasFailed = false;
 	cs.lock();
-	auto i = connections.begin();
-	while (i != connections.end())
-	{
-		if (!i->used)
-		{
-			i->conn->removeListeners();
-			delete i->conn;
-			connections.erase(i++);
-		} else i++;
-	}
 	for (int type = 0; type < MAX_PORTS; type++)
 		if (ports[type].state == STATE_RUNNING)
 		{
@@ -357,7 +344,7 @@ void PortTest::on(Second, uint64_t tick) noexcept
 	cs.unlock();
 	if (!hasRunning)
 	{
-		TimerManager::getInstance()->removeListener(this);
+		removeListeners();
 		if (hasFailed)
 		{
 			auto cm = ConnectivityManager::getInstance();
@@ -378,18 +365,24 @@ void PortTest::shutdown()
 	shutDown = true;
 	bool removeListener = hasListener;
 	hasListener = false;
-	for (auto i = connections.begin(); i != connections.end(); ++i)
-	{
-		i->conn->removeListeners();
-		delete i->conn;
-	}
-	connections.clear();
 	for (int type = 0; type < MAX_PORTS; type++)
 	{
 		ports[type].state = STATE_UNKNOWN;
-		ports[type].connID = 0;
+		ports[type].reqId = 0;
 	}
 	cs.unlock();
 	if (removeListener)
-		TimerManager::getInstance()->removeListener(this);
+		removeListeners();
+}
+
+void PortTest::addListeners()
+{
+	httpClient.addListener(this);
+	TimerManager::getInstance()->addListener(this);
+}
+
+void PortTest::removeListeners()
+{
+	httpClient.removeListener(this);
+	TimerManager::getInstance()->removeListener(this);
 }

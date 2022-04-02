@@ -23,13 +23,13 @@
 #include "KBucket.h"
 
 #include "../CID.h"
-#include "../HttpConnectionListener.h"
+#include "../HttpClientListener.h"
 #include "../Singleton.h"
 
 namespace dht
 {
 
-	class BootstrapManager : public Singleton<BootstrapManager>, private HttpConnectionListener
+	class BootstrapManager : public Singleton<BootstrapManager>, private HttpClientListener
 	{
 	public:
 		BootstrapManager();
@@ -38,15 +38,14 @@ namespace dht
 		void bootstrap();
 		void process();
 		void addBootstrapNode(const string& ip, uint16_t udpPort, const CID& targetCID, const UDPKey& udpKey);
-		void cleanup(bool force = false);
+		void cleanup();
 		bool hasBootstrapNodes() const;
 
 	private:
 		mutable CriticalSection csNodes;
 		CriticalSection csState;
-		HttpConnection* conn;
-		string downloadBuf;
-		bool downloading;
+		uint64_t downloadRequest;
+		bool hasListener;
 
 		struct BootstrapNode
 		{
@@ -59,9 +58,9 @@ namespace dht
 		/** List of bootstrap nodes */
 		deque<BootstrapNode> bootstrapNodes;
 
-		void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept override;
-		void on(Complete, HttpConnection*, const string&) noexcept override;
-		void on(Failed, HttpConnection*, const string&) noexcept override;
+		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
+		void on(Failed, uint64_t id, const string& error) noexcept override;
+		void on(Redirected, uint64_t id, const string& redirUrl) noexcept override {}
 	};
 
 }

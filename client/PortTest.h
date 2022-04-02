@@ -1,13 +1,13 @@
 #ifndef PORT_TEST_H
 #define PORT_TEST_H
 
-#include "HttpConnectionListener.h"
+#include "HttpClientListener.h"
 #include "CID.h"
 #include "Locks.h"
 #include "TimerManager.h"
 #include <regex>
 
-class PortTest: private HttpConnectionListener, private TimerManagerListener
+class PortTest: private HttpClientListener, private TimerManagerListener
 {
 public:
 	enum
@@ -43,38 +43,27 @@ private:
 		int value;
 		int state;
 		uint64_t timeout;
-		uint64_t connID;
+		uint64_t reqId;
 		string cid;
 		string reflectedAddress;
-		Port(): value(0), state(STATE_UNKNOWN), timeout(0), connID(0) {}
+		Port(): value(0), state(STATE_UNKNOWN), timeout(0), reqId(0) {}
 	};
 	
-	struct Connection
-	{
-		HttpConnection* conn;
-		bool used;
-	};
-
 	Port ports[MAX_PORTS];
 	mutable CriticalSection cs;
-	uint64_t nextID;
-	std::list<Connection> connections;
 	bool hasListener;
 	bool shutDown;
-	string responseBody;
 	string reflectedAddrFromResponse;
 	const std::regex reflectedAddrRe;
 
 	string createBody(const string& pid, const string& cid, int typeMask) const noexcept;
-	void setConnectionUnusedL(HttpConnection* conn) noexcept;
+	void addListeners();
+	void removeListeners();
 
-	void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept;
-	void on(Failed, HttpConnection*, const string&) noexcept;
-	void on(Complete, HttpConnection*, const string&) noexcept;
-	/*
-	void on(Redirected, HttpConnection*, const string&) noexcept;
-	*/
-	
+	void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept;
+	void on(Failed, uint64_t id, const string& error) noexcept;
+	void on(Redirected, uint64_t id, const string& redirUrl) noexcept {}
+
 	void on(Second, uint64_t) noexcept;
 };
 

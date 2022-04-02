@@ -111,7 +111,7 @@ namespace dht
 
 		state = STATE_STOPPING;
 		if (BootstrapManager::isValidInstance())
-			BootstrapManager::getInstance()->cleanup(true);
+			BootstrapManager::getInstance()->cleanup();
 
 		if (!BOOLSETTING(USE_DHT) || exiting)
 		{

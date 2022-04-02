@@ -80,6 +80,13 @@ class File : public IOStream
 			src.h = INVALID_FILE_HANDLE;
 		}
 
+		File& operator=(File&& src)
+		{
+			h = src.h;
+			src.h = INVALID_FILE_HANDLE;
+			return *this;
+		}
+
 		File(const File&) = delete;
 		File& operator= (const File&) = delete;
 
@@ -248,8 +255,9 @@ class FileFindIter
 
 class FileAttributes
 {
-	friend class File;
-        public:
+		friend class File;
+
+	public:
 		bool isDirectory() const;
 		bool isReadOnly() const;
 		bool isHidden() const;

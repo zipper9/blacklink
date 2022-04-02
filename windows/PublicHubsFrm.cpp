@@ -567,7 +567,6 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 {
 	switch (wParam)
 	{
-		case WPARAM_PROCESS_REDIRECT:
 		case WPARAM_UPDATE_STATE:
 		{
 			uint64_t *val = reinterpret_cast<uint64_t*>(lParam);
@@ -578,11 +577,6 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 					index = i;
 					break;
 				}
-			if (wParam == WPARAM_PROCESS_REDIRECT)
-			{
-				HublistManager::getInstance()->processRedirect(*val);
-			}
-			else
 			if (index >= 0)
 			{
 				HublistManager::getInstance()->getHubList(hubLists[index], *val);
@@ -1003,7 +997,7 @@ void PublicHubsFrame::on(HublistManagerListener::StateChanged, uint64_t id) noex
 void PublicHubsFrame::on(HublistManagerListener::Redirected, uint64_t id) noexcept
 {
 	uint64_t *ptr = new uint64_t(id);
-	WinUtil::postSpeakerMsg(m_hWnd, WPARAM_PROCESS_REDIRECT, ptr);
+	WinUtil::postSpeakerMsg(m_hWnd, WPARAM_UPDATE_STATE, ptr);
 }
 
 LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled */)

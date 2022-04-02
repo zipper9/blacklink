@@ -24,35 +24,45 @@
 #include "HttpMessage.h"
 #include "Speaker.h"
 #include <limits>
+#include <atomic>
 
 class BufferedSocket;
 
 class HttpConnection : BufferedSocketListener, public Speaker<HttpConnectionListener>
 {
 public:
+	enum Flags
+	{
+		FLAG_CLOSE_CONN = 1,
+		FLAG_NO_CACHE   = 2
+	};
+
 	HttpConnection(int id): id(id) {}
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
 
-	virtual ~HttpConnection() { detachSocket(); }
-	static void cleanup();
+	virtual ~HttpConnection();
 
-	void downloadFile(const string& url);
-	void postData(const string& url, const StringMap& data);
-	void postData(const string& url, const string& body);
+	bool startRequest(int type, const string& url, int flags = 0);
+	void disconnect() noexcept;
 
 	const string& getCurrentUrl() const { return currentUrl; }
 	const string& getServer() const { return server; }
 	uint16_t getPort() const { return port; }
 	const string& getPath() const { return path; }
-	const string& getMimeType() const { return mimeType; }
 	void setUserAgent(const string& agent) { userAgent = agent; }
-	void setMaxBodySize(int64_t size) { maxBodySize = size; }
+	void setMaxRespBodySize(int64_t size) { maxRespBodySize = size; }
+	void setMaxErrorBodySize(int64_t size) { maxErrorBodySize = size; }
+	void setRequestBody(const string& body, const string& type);
+	void setRequestBody(string& body, const string& type);
 
 	uint64_t getID() const { return id; }
-	void clearRedirCount() { redirCount = 0; }
-	void setMaxRedirects(int count) { maxRedirects = count; }
 	void setIpVersion(int af) { ipVersion = af; }
+	const Http::Response& getResponse() const { return resp; }
+	int getResponseCode() const { return resp.getResponseCode(); }
+	int getRequestType() const { return requestType; }
+	bool isReceivingData() const { return receivingData; }
+	static bool checkUrl(const string& url);
 
 private:
 	enum ConnectionStates
@@ -77,24 +87,27 @@ private:
 	int64_t bodySize = -1;
 	int64_t receivedBodySize = 0;
 	size_t receivedHeadersSize = 0;
-	int redirCount = 0;
 	string requestBody;
+	string requestBodyType;
 	string userAgent;
-	string mimeType;
-	int64_t maxBodySize = std::numeric_limits<int64_t>::max();
-	int maxRedirects = 5;
+	int64_t maxRespBodySize = std::numeric_limits<int64_t>::max();
+	int64_t maxErrorBodySize = 128 * 1024;
 	int ipVersion = 0;
+	int reqFlags = 0;
 
 	ConnectionStates connState = STATE_IDLE;
+	std::atomic_bool receivingData = false;
 	int requestType = -1;
 	Http::Response resp;
 
 	BufferedSocket* socket = nullptr;
 
-	void prepareRequest(int type);
+	void prepareRequest(int type) noexcept;
+	void sendRequest() noexcept;
 	void parseResponseHeader(const string &line) noexcept;
-	void detachSocket() noexcept;
-	void disconnect() noexcept;
+	void destroySocket() noexcept;
+	void setFailedState(const string& error) noexcept;
+	void setIdleState() noexcept;
 
 	// BufferedSocketListener
 	void onConnected() noexcept override;
@@ -102,9 +115,6 @@ private:
 	void onData(const uint8_t*, size_t) noexcept override;
 	void onModeChange() noexcept override;
 	void onFailed(const string&) noexcept override;
-
-	static vector<BufferedSocket*> oldSockets;
-	static FastCriticalSection csOldSockets;
 };
 
 #endif // !defined(HTTP_CONNECTION_H)

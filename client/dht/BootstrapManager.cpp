@@ -23,24 +23,21 @@
 #include "../AdcCommand.h"
 #include "../ClientManager.h"
 #include "../LogManager.h"
-#include "../HttpConnection.h"
+#include "../HttpClient.h"
 #include "../ResourceManager.h"
 #include <zlib.h>
 
 namespace dht
 {
 
-	BootstrapManager::BootstrapManager() : conn(nullptr), downloading(false)
+	BootstrapManager::BootstrapManager() : downloadRequest(0), hasListener(false)
 	{
 	}
 
 	BootstrapManager::~BootstrapManager()
 	{
-		if (conn)
-		{
-			conn->removeListeners();
-			delete conn;
-		}
+		if (hasListener)
+			httpClient.removeListener(this);
 	}
 
 	void BootstrapManager::bootstrap()
@@ -69,57 +66,75 @@ namespace dht
 				url += "&u4=" + Util::toString(port);
 		}
 
-		LOCK(csState);
-		if (downloading) return;
+		HttpClient::Request req;
+		req.url = url;
+		req.userAgent = "StrongDC++ v2.43";
+		req.maxRespBodySize = 1024 * 1024;
+		req.maxRedirects = 5;
+		uint64_t requestId = httpClient.addRequest(req);
+		if (!requestId) return;
+		
+		csState.lock();
+		if (downloadRequest)
+		{
+			csState.unlock();
+			httpClient.cancelRequest(requestId);
+			return;
+		}
 
 		if (BOOLSETTING(LOG_DHT_TRACE))
 			LOG(DHT_TRACE, "Using bootstrap URL " + url);
 		LogManager::message(STRING(DHT_BOOTSTRAPPING_STARTED));
 
-		delete conn;
-		conn = new HttpConnection(0);
-		conn->addListener(this);
-		conn->setMaxBodySize(1024*1024);
-		conn->setUserAgent("StrongDC++ v2.43");
-		conn->downloadFile(url);
-		downloading = true;
-		downloadBuf.clear();
-		csState.unlock();
-	}
-
-	// HttpConnectionListener
-	void BootstrapManager::on(Data, HttpConnection *conn, const uint8_t *buf, size_t len) noexcept
-	{
-		LOCK(csState);
-		if (downloading)
-			downloadBuf.append((const char *) buf, len);
-	}
-
-
-	void BootstrapManager::on(Failed, HttpConnection *conn, const string &line) noexcept
-	{
-		csState.lock();
-		downloadBuf.clear();
-		downloading = false;
+		downloadRequest = requestId;
+		hasListener = true;
 		csState.unlock();
 
-		DHT::getInstance()->state = DHT::STATE_FAILED;
-		LogManager::message(STRING_F(DHT_BOOTSTRAP_ERROR, line));
+		httpClient.addListener(this);
+		httpClient.startRequest(requestId);
 	}
 
-	void BootstrapManager::on(Complete, HttpConnection *conn, const string &) noexcept
+	void BootstrapManager::on(Failed, uint64_t id, const string& error) noexcept
 	{
 		csState.lock();
-		if (!downloading)
+		bool failed = id == downloadRequest;
+		if (failed)
+		{
+			downloadRequest = 0;
+			hasListener = false;
+		}
+		csState.unlock();
+
+		if (failed)
+		{
+			DHT::getInstance()->state = DHT::STATE_FAILED;
+			LogManager::message(STRING_F(DHT_BOOTSTRAP_ERROR, error));
+			httpClient.removeListener(this);
+		}
+	}
+
+	void BootstrapManager::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
+	{
+		csState.lock();
+		if (downloadRequest != id)
 		{
 			csState.unlock();
 			return;
 		}
-		string s = std::move(downloadBuf);
-		downloadBuf.clear();
-		downloading = false;
+		downloadRequest = 0;
+		hasListener = false;
 		csState.unlock();
 
+		httpClient.removeListener(this);
+		if (resp.getResponseCode() != 200)
+		{
+			DHT::getInstance()->state = DHT::STATE_FAILED;
+			string error = Util::toString(resp.getResponseCode()) + ' ' + resp.getResponsePhrase();
+			LogManager::message(STRING_F(DHT_BOOTSTRAP_ERROR, error));
+			return;
+		}
+
+		const string& s = data.responseBody;
 		try
 		{
 			uLongf destLen = s.length();
@@ -198,16 +213,15 @@ namespace dht
 		DHT::getInstance()->send(cmd, address, node.udpPort, node.cid, key);
 	}
 
-	void BootstrapManager::cleanup(bool force)
+	void BootstrapManager::cleanup()
 	{
-		LOCK(csState);
-		if (conn && (force || !downloading))
-		{
-			conn->removeListeners();
-			delete conn;
-			conn = nullptr;
-			downloading = false;
-		}
+		bool removeListener = false;
+		csState.lock();
+		downloadRequest = 0;
+		removeListener = hasListener;
+		hasListener = false;
+		csState.unlock();
+		if (removeListener) httpClient.removeListener(this);
 	}
 
 	bool BootstrapManager::hasBootstrapNodes() const

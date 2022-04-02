@@ -142,7 +142,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		enum
 		{
 			WPARAM_UPDATE_STATE = 1,
-			WPARAM_PROCESS_REDIRECT,
 			WPARAM_HUB_CONNECTED,
 			WPARAM_HUB_DISCONNECTED,
 			WPARAM_FAVORITE_ADDED,

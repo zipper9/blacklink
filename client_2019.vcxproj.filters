@@ -373,6 +373,9 @@
     <ClCompile Include="client\Random.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\HttpClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -997,6 +1000,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\Resolver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\HttpClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
