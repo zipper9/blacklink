@@ -783,7 +783,7 @@ int ClientManager::privateMessage(const HintedUser& user, const string& msg, boo
 	auto& cb = u->getClientBase();
 	if (cb->getType() == ClientBase::TYPE_DHT) return PM_DISABLED;
 	if (cb->privateMessage(u, msg, thirdPerson, automatic)) return PM_OK;
-	return static_cast<const Client*>(cb.get())->getSuppressChatAndPM() ? PM_DISABLED : PM_ERROR;
+	return PM_ERROR;
 }
 
 void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)

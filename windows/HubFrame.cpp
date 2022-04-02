@@ -890,8 +890,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 
 void HubFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
 {
-	if (!disableChat)
-		BaseChatFrame::addStatus(line, inChat, history, cf);
+	BaseChatFrame::addStatus(line, inChat, history, cf);
 	if (BOOLSETTING(LOG_STATUS_MESSAGES))
 	{
 		StringMap params;

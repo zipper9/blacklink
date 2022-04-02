@@ -592,8 +592,6 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 
 unsigned Client::searchInternal(const SearchParamToken& sp)
 {
-	//dcdebug("Queue search %s\n", sp.m_filter.c_str());
-	
 	if (searchQueue.interval)
 	{
 		Search s;
@@ -793,8 +791,6 @@ OnlineUserPtr Client::getUser(const UserPtr& aUser)
 
 bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* response, bool automatic)
 {
-	if (suppressChatAndPM)
-		return false;
 	if (isMe(message.replyTo))
 	{
 		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser(), automatic)
@@ -811,6 +807,8 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 		*response = SETTING(PM_PASSWORD_OK_HINT);
 	if (isOpen)
 		return true;
+	if (suppressChatAndPM)
+		return false;
 	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 		return false;
 	if (UserManager::getInstance()->isInIgnoreList(message.replyTo->getIdentity().getNick()))
@@ -935,7 +933,9 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message, string& re
 				hubName += hubUrl;
 				hubName += ')';
 			}
-			LogManager::message(CSTRING_F(PM_IGNORED, message->replyTo->getIdentity().getNick() % hubName));
+			string nick = message->replyTo->getIdentity().getNick();
+			LogManager::message(CSTRING_F(PM_IGNORED, nick % hubName));
+			fire(ClientListener::StatusMessage(), this, CSTRING_F(PM_IGNORED2, nick));
 		}
 	}
 }

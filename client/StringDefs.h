@@ -581,6 +581,7 @@ enum Strings   // @DontAdd
 	LOGGING_NOT_ENABLED_SYSTEM, // "System logging not enabled."
 	LOGGING_NOT_ENABLED_WEBSERVER, // "WebServer logging not enabled."
 	PM_IGNORED, // "Ignored private message from %1% on hub %2%"
+	PM_IGNORED2, // "Ignored private message from %1%"
 	LOG_IN, // "Log In"
 	LOG_OFF, // "Log off"
 	LOG_OUT, // "Log Out"

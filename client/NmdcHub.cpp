@@ -2245,9 +2245,6 @@ void NmdcHub::privateMessage(const string& nick, const string& myNick, const str
 
 bool NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
 {
-	if (getSuppressChatAndPM())
-		return false;
-
 	string myNick;
 	{
 		LOCK(csState);

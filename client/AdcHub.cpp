@@ -1186,9 +1186,6 @@ void AdcHub::hubMessage(const string& message, bool thirdPerson)
 
 bool AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
 {
-	if (getSuppressChatAndPM())
-		return false;
-
 	{
 		LOCK(csState);
 		if (state != STATE_NORMAL) return false;
