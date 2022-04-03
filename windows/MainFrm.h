@@ -69,6 +69,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			const char* type;
 			int af;
 			int errorCode;
+			string errorText;
 		};
 
 		typedef CSplitterImpl<MainFrame> splitterBase;

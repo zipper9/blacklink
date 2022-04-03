@@ -206,6 +206,12 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	return port;
 }
 
+static inline bool fallbackDisabled(int af)
+{
+	int options = SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);
+	return (options & SettingsManager::BIND_OPTION_NO_FALLBACK) != 0;
+}
+
 uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
@@ -224,12 +230,13 @@ uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 
 	if (::bind(sock, (sockaddr*) &sockAddr, sockAddrSize) == SOCKET_ERROR)
 	{
-		if (isAnyAddr(sockAddr))
+		bool anyAddr = isAnyAddr(sockAddr);
+		if (anyAddr || fallbackDisabled(addr.type))
 		{
 			if (doLog)
 				LogManager::message(sockName +
 					": Error #" + Util::toString(getLastError()) +
-					" binding to :" + Util::toString(port), false);
+					" binding to " + (anyAddr ? Util::emptyString : Util::printIpAddress(addr, true)) + ":" + Util::toString(port), false);
 			throw SocketException(getLastError());
 		}
 		if (doLog)

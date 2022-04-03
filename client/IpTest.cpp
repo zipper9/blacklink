@@ -52,8 +52,7 @@ bool IpTest::runTest(int type) noexcept
 		hasListener = addListener = true;
 	cs.unlock();
 
-	if (BOOLSETTING(LOG_SYSTEM))
-		LogManager::message(string("Detecting public IPv") + (type == REQ_IP4 ? '4' : '6') + " using URL " + url);
+	LogManager::message(STRING_F(PORT_TEST_GETTING_IP, (type == REQ_IP4 ? 4 : 6) % url));
 
 	if (addListener)
 		addListeners();

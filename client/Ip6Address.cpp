@@ -74,6 +74,12 @@ bool Util::isEmpty(const Ip6Address& ip) noexcept
 	       ip.data[4] == 0 && ip.data[5] == 0 && ip.data[6] == 0 && ip.data[7] == 0;
 }
 
+bool Util::isEmpty(const Ip6AddressEx& ip) noexcept
+{
+	return ip.data[0] == 0 && ip.data[1] == 0 && ip.data[2] == 0 && ip.data[3] == 0 &&
+	       ip.data[4] == 0 && ip.data[5] == 0 && ip.data[6] == 0 && ip.data[7] == 0;
+}
+
 bool Util::isValidIp6(const Ip6Address& ip) noexcept
 {
 	if (isEmpty(ip)) return false;

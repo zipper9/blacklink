@@ -20,7 +20,7 @@
 #define NETWORK_PAGE_H
 
 #include "PropPage.h"
-#include "../client/typedefs.h"
+#include "../client/NetworkUtil.h"
 
 class NetworkPage;
 
@@ -33,6 +33,8 @@ struct NetworkSettings
 	bool autoDetect[2];
 	int incomingConn[2];
 	string bindAddr[2];
+	string bindDev[2];
+	int bindOptions[2];
 	string mapper[2];
 
 	void get();
@@ -57,6 +59,9 @@ class NetworkIPTab : public CDialogImpl<NetworkIPTab>
 		COMMAND_ID_HANDLER(IDC_FIREWALL_NAT, onChange)
 		COMMAND_ID_HANDLER(IDC_WAN_IP_MANUAL, onChange)
 		COMMAND_ID_HANDLER(IDC_GETIP, onTestPorts)
+		COMMAND_ID_HANDLER(IDC_OPTIONS, onOptions)
+		COMMAND_HANDLER(IDC_BIND_ADDRESS, CBN_EDITCHANGE, onEditChange)
+		COMMAND_HANDLER(IDC_BIND_ADDRESS, CBN_SELCHANGE, onSelChange)
 		END_MSG_MAP()
 
 		int getConnectionType() const;
@@ -81,9 +86,19 @@ class NetworkIPTab : public CDialogImpl<NetworkIPTab>
 		}
 		LRESULT onEnable(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTestPorts(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+		string getDeviceName(const vector<Util::AdapterInfo>& adapters) const;
+		void updateOptionsButton();
+		void updateOptionsButton(const tstring& ts);
 
 		NetworkPage* const parent;
 		const bool v6;
+		int options;
+		vector<Util::AdapterInfo> adapters;
+		CComboBox bindCombo;
 };
 
 class NetworkFirewallTab : public CDialogImpl<NetworkFirewallTab>

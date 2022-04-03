@@ -41,7 +41,6 @@
 #include "../client/QueueManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/MagnetLink.h"
-#include "../client/NetworkUtil.h"
 #include "Colors.h"
 #include "Fonts.h"
 #include "MagnetDlg.h"
@@ -1467,9 +1466,9 @@ tstring WinUtil::getNicks(const HintedUser& user)
 	return getNicks(user.user, user.hint);
 }
 
-void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAddress)
+void WinUtil::getAdapterList(int af, vector<Util::AdapterInfo>& adapters)
 {
-	vector<Util::AdapterInfo> adapters;
+	adapters.clear();
 	Util::getNetworkAdapters(af, adapters);
 	IpAddressEx defaultAdapter;
 	memset(&defaultAdapter, 0, sizeof(defaultAdapter));
@@ -1479,7 +1478,11 @@ void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAd
 	{
 		adapters.insert(adapters.begin(), Util::AdapterInfo(Util::emptyString, TSTRING(DEFAULT_ADAPTER), defaultAdapter, 0, 0));
 	}
-	int selected = -1;
+}
+
+int WinUtil::fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, CComboBox& bindCombo, const string& selected, int options)
+{
+	int selIndex = -1;
 	for (size_t i = 0; i < adapters.size(); ++i)
 	{
 		string address = Util::printIpAddress(adapters[i].ip);
@@ -1491,13 +1494,34 @@ void WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& bindAd
 			text += _T(')');
 		}
 		bindCombo.AddString(text.c_str());
-		if (address == bindAddress)
-			selected = i;
+		if (options & SettingsManager::BIND_OPTION_USE_DEV)
+		{
+			if (adapters[i].name == selected) selIndex = i;
+		}
+		else
+		{
+			if (address == selected) selIndex = i;
+		}
 	}
-	if (bindAddress.empty()) selected = 0;
-	if (selected == -1)
-		selected = bindCombo.InsertString(-1, Text::toT(bindAddress).c_str());
-	bindCombo.SetCurSel(selected);
+	if (selected.empty())
+		selIndex = 0;
+	int result = selIndex;
+	if (selIndex == -1)
+	{
+		if (options & SettingsManager::BIND_OPTION_USE_DEV)
+			selIndex = 0;
+		else
+			selIndex = bindCombo.InsertString(-1, Text::toT(selected).c_str());
+	}
+	bindCombo.SetCurSel(selIndex);
+	return result;
+}
+
+int WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& selected, int options)
+{
+	vector<Util::AdapterInfo> adapters;
+	getAdapterList(af, adapters);
+	return fillAdapterList(af, adapters, bindCombo, selected, options);
 }
 
 string WinUtil::getSelectedAdapter(const CComboBox& bindCombo)

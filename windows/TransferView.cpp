@@ -1545,12 +1545,13 @@ void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
 	::PostMessage(*MainFrame::getMainFrame(), WMU_LISTENER_INIT, 0, 0);
 }
 
-void TransferView::on(ConnectionManagerListener::ListenerFailed, const char* type, int af, int errorCode) noexcept
+void TransferView::on(ConnectionManagerListener::ListenerFailed, const char* type, int af, int errorCode, const string& errorText) noexcept
 {
 	MainFrame::ListenerError* error = new MainFrame::ListenerError;
 	error->type = type;
 	error->af = af;
 	error->errorCode = errorCode;
+	error->errorText = errorText;
 	::PostMessage(*MainFrame::getMainFrame(), WMU_LISTENER_INIT, 1, reinterpret_cast<LPARAM>(error));
 }
 

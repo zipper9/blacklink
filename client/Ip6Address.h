@@ -59,6 +59,7 @@ namespace Util
 	}
 
 	bool isEmpty(const Ip6Address& ip) noexcept;
+	bool isEmpty(const Ip6AddressEx& ip) noexcept;
 
 	string printIpAddress(const Ip6Address& ip, bool brackets = false) noexcept;
 	string printIpAddress(const Ip6AddressEx& ip, bool brackets = false) noexcept;

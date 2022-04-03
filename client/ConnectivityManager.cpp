@@ -52,7 +52,7 @@ enum
 class ListenerException : public Exception
 {
 	public:
-		ListenerException(const char* type, int errorCode) : type(type), errorCode(errorCode) {}
+		ListenerException(const char* type, int errorCode, const string& errorText) : Exception(errorText), type(type), errorCode(errorCode) {}
 		const char* type;
 		int errorCode;
 };
@@ -79,6 +79,8 @@ void ConnectivityManager::detectConnection(int af)
 
 	// restore connectivity settings to their default value.
 	SettingsManager::unset(ips.bindAddress);
+	SettingsManager::unset(ips.bindDevice);
+	SettingsManager::unset(ips.bindOptions);
 
 	log(STRING(CONN_DETECT_START), SEV_INFO, af);
 	SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
@@ -196,6 +198,8 @@ bool ConnectivityManager::setup(int af)
 	cs.unlock();
 
 	const string savedBindAddress = SettingsManager::get(ips.bindAddress);
+	const string savedBindDevice = SettingsManager::get(ips.bindDevice);
+	const int savedBindOptions = SettingsManager::get(ips.bindOptions);
 	try
 	{
 		if (autoDetectFlag)
@@ -216,10 +220,12 @@ bool ConnectivityManager::setup(int af)
 		{
 			SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
 			SettingsManager::set(ips.bindAddress, savedBindAddress);
+			SettingsManager::set(ips.bindDevice, savedBindDevice);
+			SettingsManager::set(ips.bindOptions, savedBindOptions);
 			SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
 			log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, af);
 		}
-		ConnectionManager::getInstance()->fireListenerFailed(e.type, af, e.errorCode);
+		ConnectionManager::getInstance()->fireListenerFailed(e.type, af, e.errorCode, e.getError());
 		return false;
 	}
 	return true;
@@ -254,32 +260,41 @@ static string getModeString(int af)
 
 string ConnectivityManager::getInformation() const
 {
-	if (isSetupInProgress())
+	cs.lock();
+	unsigned rf = running;
+	unsigned result = setupResult;
+	cs.unlock();
+
+	if (rf)
 		return STRING(CONNECTIVITY_RUNNING);
-	
+
+	if (!result)
+		return STRING(NO_CONNECTIVITY);
+
 	string s = STRING(CONNECTIVITY_TITLE);
-	s += "\n\t";
-	string mode = getModeString(AF_INET);
-	s += mode;
-	s += '\n';
-	IpAddress ip = getReflectedIP(AF_INET);
-	if (!Util::isEmpty(ip))
+	s += "\n";
+	if (result & STATUS_IPV4)
 	{
-		s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 4 % Util::printIpAddress(ip));
+		s += "\t" + getModeString(AF_INET);
 		s += '\n';
+		IpAddress ip = getReflectedIP(AF_INET);
+		if (!Util::isEmpty(ip))
+		{
+			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 4 % Util::printIpAddress(ip));
+			s += '\n';
+		}
+		const string& bindV4 = SETTING(BIND_ADDRESS);
+		if (!bindV4.empty())
+		{
+			s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 4 % bindV4);
+			s += '\n';
+		}
 	}
-	const string& bindV4 = SETTING(BIND_ADDRESS);
-	if (!bindV4.empty())
+	if (result & STATUS_IPV6)
 	{
-		s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 4 % bindV4);
+		s += "\t" + getModeString(AF_INET6);
 		s += '\n';
-	}
-	if (ipv6Enabled)
-	{
-		mode = getModeString(AF_INET6);
-		s += "\t" + mode;
-		s += '\n';
-		ip = getReflectedIP(AF_INET6);
+		IpAddress ip = getReflectedIP(AF_INET6);
 		if (!Util::isEmpty(ip))
 		{
 			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 6 % Util::printIpAddress(ip));
@@ -421,9 +436,9 @@ void ConnectivityManager::listenTCP(int af)
 		catch (const SocketException& e)
 		{
 			LogManager::message("Could not start TCPv" + Util::toString(af == AF_INET6 ? 6 : 4) +
-				" listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+				" listener: " + e.getError() + " (i=" + Util::toString(i) + ')');
 			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
-				throw ListenerException("TCP", e.getErrorCode());
+				throw ListenerException("TCP", e.getErrorCode(), e.getError());
 			SET_SETTING(TCP_PORT, 0);
 			continue;
 		}
@@ -442,9 +457,9 @@ void ConnectivityManager::listenTCP(int af)
 			catch (const SocketException& e)
 			{
 				LogManager::message("Could not start TLSv" + Util::toString(af == AF_INET6 ? 6 : 4) +
-					" listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+					" listener: " + e.getError() + " (i=" + Util::toString(i) + ')');
 				if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
-					throw ListenerException("TLS", e.getErrorCode());
+					throw ListenerException("TLS", e.getErrorCode(), e.getError());
 				SET_SETTING(TLS_PORT, 0);
 				continue;
 			}
@@ -469,9 +484,9 @@ void ConnectivityManager::listenUDP(int af)
 		catch (const SocketException& e)
 		{
 			LogManager::message("Could not start UDPv" + Util::toString(af == AF_INET6 ? 6 : 4) +
-				" listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+				" listener: " + e.getError() + " (i=" + Util::toString(i) + ')');
 			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
-				throw ListenerException("UDP", e.getErrorCode());
+				throw ListenerException("UDP", e.getErrorCode(), e.getError());
 			SET_SETTING(UDP_PORT, 0);
 			continue;
 		}

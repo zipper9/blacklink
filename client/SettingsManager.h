@@ -60,6 +60,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// Network settings
 			BIND_ADDRESS,
 			BIND_ADDRESS6,
+			BIND_DEVICE,
+			BIND_DEVICE6,
 			EXTERNAL_IP,
 			EXTERNAL_IP6,
 			MAPPER,
@@ -242,6 +244,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			IPUPDATE,
 			WAN_IP_MANUAL,
 			WAN_IP_MANUAL6,
+			BIND_OPTIONS,
+			BIND_OPTIONS6,
 			IPUPDATE_INTERVAL, // Unused, visible in UI
 			NO_IP_OVERRIDE,
 			NO_IP_OVERRIDE6,
@@ -741,8 +745,14 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		enum { POS_LEFT, POS_RIGHT };
 		
 		enum { TABS_TOP, TABS_BOTTOM };
-		
-		enum PlayerSelected
+
+		enum
+		{
+			BIND_OPTION_NO_FALLBACK = 1,
+			BIND_OPTION_USE_DEV = 2
+		};
+
+		enum
 		{
 			WinAmp,
 			WinMediaPlayer,
@@ -753,7 +763,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PlayersCount,
 			UnknownPlayer = PlayersCount
 		};
-		
+
 		static const string& get(StrSetting key, const bool useDefault = true);
 		static int get(IntSetting key, const bool useDefault = true);
 		static bool getBool(IntSetting key, const bool useDefault = true)
@@ -832,6 +842,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			IntSetting manualIp;
 			IntSetting noIpOverride;
 			StrSetting bindAddress;
+			StrSetting bindDevice;
+			IntSetting bindOptions;
 			StrSetting externalIp;
 			StrSetting mapper;
 		};

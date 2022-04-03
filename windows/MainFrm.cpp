@@ -1170,7 +1170,7 @@ LRESULT MainFrame::onListenerInit(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		ListenerError* error = reinterpret_cast<ListenerError*>(lParam);
 		string type = error->type;
 		type += error->af == AF_INET6 ? "v6" : "v4";
-		MessageBox(CTSTRING_F(LISTENING_SOCKET_ERROR, type.c_str() % error->errorCode),
+		MessageBox(CTSTRING_F(LISTENING_SOCKET_ERROR, type.c_str() % Text::toT(error->errorText)),
 			getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
 		delete error;
 		ClientManager::stopStartup();

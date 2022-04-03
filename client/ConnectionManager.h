@@ -225,7 +225,7 @@ class ConnectionManager :
 		void updateLocalIp(int af);
 		void stopServer(int af) noexcept;
 		void fireListenerStarted() noexcept;
-		void fireListenerFailed(const char* type, int af, int errorCode) noexcept;
+		void fireListenerFailed(const char* type, int af, int errorCode, const string& errorText) noexcept;
 
 		uint16_t getPort() const { return ports[0]; }
 		uint16_t getSecurePort() const { return ports[1]; }

@@ -24,6 +24,7 @@
 
 #include "resource.h"
 #include "../client/Util.h"
+#include "../client/NetworkUtil.h"
 #include "../client/SettingsManager.h"
 #include "UserInfoSimple.h"
 #include "OMenu.h"
@@ -306,24 +307,16 @@ class WinUtil
 		static bool processWhoisMenu(WORD wID, const tstring& ip);
 		static void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
 #endif
-		static void fillAdapterList(int af, CComboBox& bindCombo, const string& bindAddress);
+		static void getAdapterList(int af, vector<Util::AdapterInfo>& adapters);
+		static int fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, CComboBox& bindCombo, const string& selected, int options);
+		static int fillAdapterList(int af, CComboBox& bindCombo, const string& selected, int options);
 		static string getSelectedAdapter(const CComboBox& bindCombo);
-		static bool isTeredo();
-		
+
 		static void fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs);
 		static int getSelectedCharset(const CComboBox& comboBox);
 
 		static void fillTimeValues(CComboBox& comboBox);
-	
-		struct userStreamIterator
-		{
-			userStreamIterator() : position(0), length(0) {}
-			
-			unique_ptr<uint8_t[]> data;
-			int position;
-			int length;
-		};
-		
+
 #ifdef SSA_SHELL_INTEGRATION
 		static tstring getShellExtDllPath();
 		static bool registerShellExt(bool unregister);

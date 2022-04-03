@@ -1025,6 +1025,7 @@
 #define IDC_UL_VALUE                    1984
 #define IDC_CAPTION_DISABLE_COMP        1985
 #define IDC_COMPRESSED_PATTERN          1986
+#define IDC_OPTIONS                     1987
 #define IDC_WIZARD_NICK_RND             2002
 #define IDC_SOUND_ENABLE                2009
 #define IDC_DOWNLOAD_ASK_COMBO          2011

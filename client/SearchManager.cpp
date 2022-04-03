@@ -85,21 +85,24 @@ void SearchManager::listenUDP(int af)
 		sockets[index]->setInBufSize();
 
 		IpAddressEx bindIp;
+		memset(&bindIp, 0, sizeof(bindIp));
 		if (autoDetectFlag)
 		{
-			memset(&bindIp, 0, sizeof(bindIp));
 			bindIp.type = af;
 			int port = SETTING(UDP_PORT);
 			udpPort = sockets[index]->bind(static_cast<uint16_t>(port), bindIp);
 		}
 		else
 		{
-			if (!(Util::parseIpAddress(bindIp, SettingsManager::get(ips.bindAddress)) &&
-			      bindIp.type == af && Util::isValidIp(bindIp)))
+			int options = SettingsManager::get(ips.bindOptions);
+			if (options & SettingsManager::BIND_OPTION_USE_DEV)
 			{
-				memset(&bindIp, 0, sizeof(bindIp));
-				bindIp.type = af;
+				string bindDev = SettingsManager::get(ips.bindDevice);
+				if (!bindDev.empty() && !Util::getDeviceAddress(af, bindDev, bindIp) && (options & SettingsManager::BIND_OPTION_NO_FALLBACK))
+					throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
 			}
+			if (!bindIp.type)
+				BufferedSocket::getBindAddress(bindIp, af, SettingsManager::get(ips.bindAddress));
 			int port = SETTING(UDP_PORT);
 			udpPort = sockets[index]->bind(static_cast<uint16_t>(port), bindIp);
 		}

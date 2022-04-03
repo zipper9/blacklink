@@ -88,6 +88,8 @@ static const char* g_settingTags[] =
 	// Network settings
 	"BindAddress",
 	"BindAddress6",
+	"BindDevice",
+	"BindDevice6",
 	"ExternalIp",
 	"ExternalIp6",
 	"Mapper",
@@ -267,6 +269,8 @@ static const char* g_settingTags[] =
 	"AutoUpdateIP",
 	"WANIPManual",
 	"WANIPManual6",
+	"BindOptions",
+	"BindOptions6",
 	"AutoUpdateIPInterval",
 	"NoIPOverride",
 	"NoIPOverride6",
@@ -2170,6 +2174,8 @@ void SettingsManager::getIPSettings(IPSettings& s, bool v6)
 		s.noIpOverride = NO_IP_OVERRIDE6;
 		s.incomingConnections = INCOMING_CONNECTIONS6;
 		s.bindAddress = BIND_ADDRESS6;
+		s.bindDevice = BIND_DEVICE6;
+		s.bindOptions = BIND_OPTIONS6;
 		s.externalIp = EXTERNAL_IP6;
 		s.mapper = MAPPER6;
 	}
@@ -2180,6 +2186,8 @@ void SettingsManager::getIPSettings(IPSettings& s, bool v6)
 		s.noIpOverride = NO_IP_OVERRIDE;
 		s.incomingConnections = INCOMING_CONNECTIONS;
 		s.bindAddress = BIND_ADDRESS;
+		s.bindDevice = BIND_DEVICE;
+		s.bindOptions = BIND_OPTIONS;
 		s.externalIp = EXTERNAL_IP;
 		s.mapper = MAPPER;
 	}

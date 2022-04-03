@@ -1012,7 +1012,7 @@ void BufferedSocket::getBindAddress(IpAddressEx& ip, int af, const string& s)
 	if (af == AF_INET6)
 	{
 		Ip6AddressEx v6;
-		if (!s.empty() && Util::parseIpAddress(v6, s))
+		if (!s.empty() && Util::parseIpAddress(v6, s) && Util::isValidIp6(v6))
 			ip.data.v6 = v6;
 		else
 			memset(&ip.data.v6, 0, sizeof(ip.data.v6));
@@ -1021,7 +1021,7 @@ void BufferedSocket::getBindAddress(IpAddressEx& ip, int af, const string& s)
 	else
 	{
 		Ip4Address v4;
-		if (!s.empty() && Util::parseIpAddress(v4, s))
+		if (!s.empty() && Util::parseIpAddress(v4, s) && Util::isValidIp4(v4))
 			ip.data.v4 = v4;
 		else
 			ip.data.v4 = 0;

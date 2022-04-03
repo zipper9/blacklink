@@ -404,12 +404,36 @@ void ConnectionManager::startListen(int af, int type)
 	SettingsManager::IPSettings ips;
 	SettingsManager::getIPSettings(ips, af == AF_INET6);
 	SettingsManager::IntSetting portSetting = type == SERVER_TYPE_SSL ? SettingsManager::TLS_PORT : SettingsManager::TCP_PORT;
-	if (!SettingsManager::get(ips.autoDetect))
-		bind = SettingsManager::get(ips.bindAddress);
-	uint16_t port = SettingsManager::get(portSetting);
 
 	IpAddressEx bindIp;
-	BufferedSocket::getBindAddress(bindIp, af, bind);
+	bindIp.type = 0;
+	if (!SettingsManager::get(ips.autoDetect))
+	{
+		int options = SettingsManager::get(ips.bindOptions);
+		if (options & SettingsManager::BIND_OPTION_USE_DEV)
+		{
+			string bindDev = SettingsManager::get(ips.bindDevice);
+			if (!bindDev.empty())
+			{
+				if (Util::getDeviceAddress(af, bindDev, bindIp))
+				{
+					SettingsManager::set(ips.bindAddress, Util::printIpAddress(bindIp));
+				}
+				else
+				{
+					if (options & SettingsManager::BIND_OPTION_NO_FALLBACK)
+						throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
+					LogManager::message(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
+					SettingsManager::unset(ips.bindAddress);
+				}
+			}
+		}
+		if (!bindIp.type)
+			bind = SettingsManager::get(ips.bindAddress);
+	}
+	uint16_t port = SettingsManager::get(portSetting);
+
+	if (!bindIp.type) BufferedSocket::getBindAddress(bindIp, af, bind);
 	auto newServer = new Server(type, bindIp, port);
 	SettingsManager::set(portSetting, newServer->getServerPort());
 	int index = type == SERVER_TYPE_SSL ? SERVER_SECURE : 0;
@@ -1960,9 +1984,9 @@ void ConnectionManager::fireListenerStarted() noexcept
 	fire(ConnectionManagerListener::ListenerStarted());
 }
 
-void ConnectionManager::fireListenerFailed(const char* type, int af, int errorCode) noexcept
+void ConnectionManager::fireListenerFailed(const char* type, int af, int errorCode, const string& errorText) noexcept
 {
-	fire(ConnectionManagerListener::ListenerFailed(), type, af, errorCode);
+	fire(ConnectionManagerListener::ListenerFailed(), type, af, errorCode, errorText);
 }
 
 StringList ConnectionManager::getNmdcFeatures() const

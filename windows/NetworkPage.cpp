@@ -29,7 +29,6 @@
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 #include "../client/IpTest.h"
-#include "../client/NetworkUtil.h"
 #include "../client/webrtc/talk/base/winfirewall.h"
 
 #ifdef OSVER_WIN_XP
@@ -56,18 +55,39 @@ enum
 	IconDisabled
 };
 
+static bool isEmptyAddress(const string& s, int af)
+{
+	if (s.empty()) return true;
+	switch (af)
+	{
+		case AF_INET:
+		{
+			Ip4Address ip;
+			return Util::parseIpAddress(ip, s) && ip == 0;
+		}
+		case AF_INET6:
+		{
+			Ip6Address ip;
+			return Util::parseIpAddress(ip, s) && Util::isEmpty(ip);
+		}
+	}
+	return false;
+}
+
 static const DialogLayout::Align align1 = { 2, DialogLayout::SIDE_RIGHT, U_DU(6) };
 static const DialogLayout::Align align2 = { 1, DialogLayout::SIDE_RIGHT, U_DU(6) };
-static const DialogLayout::Align align3 = { 17, DialogLayout::SIDE_LEFT, U_DU(6) };
-static const DialogLayout::Align align4 = { 21, DialogLayout::SIDE_RIGHT, U_DU(6) };
-static const DialogLayout::Align align5 = { 15, DialogLayout::SIDE_LEFT, U_PX(-1) };
-static const DialogLayout::Align align6 = { 16, DialogLayout::SIDE_RIGHT, U_PX(-1) };
+static const DialogLayout::Align align3 = { 18, DialogLayout::SIDE_LEFT, U_DU(6) };
+static const DialogLayout::Align align4 = { 22, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align5 = { 16, DialogLayout::SIDE_LEFT, U_PX(-1) };
+static const DialogLayout::Align align6 = { 17, DialogLayout::SIDE_RIGHT, U_PX(-1) };
+static const DialogLayout::Align align7 = { 3, DialogLayout::SIDE_LEFT, U_DU(1) };
 
 static const DialogLayout::Item layoutItems1[] =
 {
 	{ IDC_SETTINGS_BIND_ADDRESS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_SETTINGS_BIND_ADDRESS_HELP, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_BIND_ADDRESS, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
+	{ IDC_OPTIONS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, nullptr, &align2 },
+	{ IDC_BIND_ADDRESS, 0, UNSPEC, UNSPEC, 0, &align1, &align7 },
 	{ IDC_SETTINGS_INCOMING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_CONNECTION_DETECTION, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_DIRECT, FLAG_TRANSLATE, AUTO, UNSPEC },
@@ -162,6 +182,7 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 			break;
 	}
 
+	options = SettingsManager::get(ips.bindOptions);
 	CButton ctrlEnable(GetDlgItem(IDC_ENABLE));
 	ctrlEnable.SetWindowText(CTSTRING_I(enableStr));
 	if (v6)
@@ -179,8 +200,11 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	for (int i = 0; i < 3; ++i)
 		CEdit(GetDlgItem(controlInfo[i].edit)).LimitText(5);
 
-	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
-	WinUtil::fillAdapterList(af, bindCombo, SettingsManager::get(ips.bindAddress));
+	bindCombo.Attach(GetDlgItem(IDC_BIND_ADDRESS));
+	WinUtil::getAdapterList(af, adapters);
+	const string& selAdapter = SettingsManager::get((options & SettingsManager::BIND_OPTION_USE_DEV) ? ips.bindDevice : ips.bindAddress);
+	if (WinUtil::fillAdapterList(af, adapters, bindCombo, selAdapter, options) < 0)
+		options &= ~SettingsManager::BIND_OPTION_USE_DEV;
 
 	CEdit ctrlExternalIP(GetDlgItem(IDC_EXTERNAL_IP));
 	ctrlExternalIP.SetWindowText(Text::toT(SettingsManager::get(ips.externalIp)).c_str());
@@ -222,6 +246,7 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		}
 	}
 
+	updateOptionsButton();
 	fixControls();
 	return 0;
 }
@@ -249,6 +274,49 @@ LRESULT NetworkIPTab::onTestPorts(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	else
 		parent->testPorts();
 	return 0;
+}
+
+LRESULT NetworkIPTab::onOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+{
+	CMenu menu;
+	menu.CreatePopupMenu();
+	menu.AppendMenu(MF_STRING | ((options & SettingsManager::BIND_OPTION_NO_FALLBACK) ? MF_CHECKED : 0), SettingsManager::BIND_OPTION_NO_FALLBACK, CTSTRING(SETTINGS_BIND_NO_FALLBACK));
+	menu.AppendMenu(MF_STRING | ((options & SettingsManager::BIND_OPTION_USE_DEV) ? MF_CHECKED : 0), SettingsManager::BIND_OPTION_USE_DEV, CTSTRING(SETTINGS_BIND_USE_DEV));
+	RECT rc;
+	CWindow(hWndCtl).GetWindowRect(&rc);
+	int result = menu.TrackPopupMenu(TPM_NONOTIFY | TPM_RETURNCMD, rc.left, rc.bottom, m_hWnd);
+	if (result == SettingsManager::BIND_OPTION_NO_FALLBACK || SettingsManager::BIND_OPTION_USE_DEV)
+		options ^= result;
+	return 0;
+}
+
+LRESULT NetworkIPTab::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	updateOptionsButton();
+	return 0;
+}
+
+LRESULT NetworkIPTab::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int index = bindCombo.GetCurSel();
+	updateOptionsButton(WinUtil::getComboBoxItemText(bindCombo, index));
+	return 0;
+}
+
+void NetworkIPTab::updateOptionsButton()
+{
+	tstring str;
+	WinUtil::getWindowText(bindCombo, str);
+	updateOptionsButton(str);
+}
+
+void NetworkIPTab::updateOptionsButton(const tstring& ts)
+{
+	string str = Text::fromT(ts);
+	boost::trim(str);
+	string::size_type pos = str.find(_T(' '));
+	if (pos != string::npos) str.erase(pos);
+	GetDlgItem(IDC_OPTIONS).EnableWindow(!isEmptyAddress(str, v6 ? AF_INET6 : AF_INET));
 }
 
 void NetworkIPTab::copyPortSettings(NetworkIPTab& copyTo) const
@@ -288,7 +356,7 @@ void NetworkIPTab::fixControls()
 	GetDlgItem(IDC_PORT_TCP).EnableWindow(portEnabled);
 	GetDlgItem(IDC_PORT_UDP).EnableWindow(portEnabled);
 	GetDlgItem(IDC_PORT_TLS).EnableWindow(portEnabled && useTLS);
-	GetDlgItem(IDC_BIND_ADDRESS).EnableWindow(enabled && !autoDetect);
+	bindCombo.EnableWindow(enabled && !autoDetect);
 
 	GetDlgItem(IDC_CONNECTION_DETECTION).EnableWindow(enabled);
 	GetDlgItem(IDC_WAN_IP_MANUAL).EnableWindow(enabled);
@@ -335,7 +403,6 @@ static void setIcon(HWND hwnd, int stateIcon)
 	static HIconWrapper g_hModeFailIco(IDR_ICON_FAIL_ICON);
 	static HIconWrapper g_hModePauseIco(IDR_ICON_PAUSE_ICON);
 	static HIconWrapper g_hModeProcessIco(IDR_NETWORK_STATISTICS_ICON);
-	//static HIconWrapper g_hModeDisableTestIco(IDR_SKULL_RED_ICO);
 
 	HICON icon;
 	switch (stateIcon)
@@ -516,7 +583,18 @@ void NetworkIPTab::writeOtherSettings()
 	else
 		SettingsManager::set(ips.externalIp, Util::emptyString);
 
-	SettingsManager::set(ips.bindAddress, WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS))));
+	if (options & SettingsManager::BIND_OPTION_USE_DEV)
+	{
+		string dev = getDeviceName(adapters);
+		SettingsManager::set(ips.bindDevice, dev);
+		if (dev.empty())
+			options ^= SettingsManager::BIND_OPTION_USE_DEV;
+	}
+	if (!(options & SettingsManager::BIND_OPTION_USE_DEV))
+		SettingsManager::set(ips.bindAddress, WinUtil::getSelectedAdapter(bindCombo));
+	else
+		SettingsManager::set(ips.bindAddress, Util::emptyString);
+	SettingsManager::set(ips.bindOptions, options);
 	SettingsManager::set(ips.incomingConnections, getConnectionType());
 
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
@@ -548,13 +626,41 @@ void NetworkIPTab::getOtherSettingsFromUI(NetworkSettings& settings) const
 	if (v6) settings.enableV6 = IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED;
 	settings.autoDetect[index] = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
 	settings.incomingConn[index] = getConnectionType();
-	settings.bindAddr[index] = WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS)));
+
+	settings.bindOptions[index] = options;
+	if (options & SettingsManager::BIND_OPTION_USE_DEV)
+	{
+		settings.bindDev[index] = getDeviceName(adapters);
+		if (settings.bindDev[index].empty())
+			settings.bindOptions[index] ^= SettingsManager::BIND_OPTION_USE_DEV;
+	}
+	if (!(settings.bindOptions[index] & SettingsManager::BIND_OPTION_USE_DEV))
+		settings.bindAddr[index] = WinUtil::getSelectedAdapter(bindCombo);
+	else
+		settings.bindAddr[index].clear();
 
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
 	int selIndex = mapperCombo.GetCurSel();
 	StringList mappers = ConnectivityManager::getInstance()->getMapper(v6 ? AF_INET6 : AF_INET).getMappers();
 	if (selIndex >= 0 && selIndex < (int) mappers.size())
 		settings.mapper[index] = mappers[selIndex];
+}
+
+string NetworkIPTab::getDeviceName(const vector<Util::AdapterInfo>& adapters) const
+{
+	tstring ts;
+	WinUtil::getWindowText(bindCombo, ts);
+	string str = Text::fromT(ts);
+	boost::trim(str);
+	string::size_type pos = str.find(' ');
+	if (pos != string::npos) str.erase(pos);
+	if (str.empty()) return Util::emptyString;
+	int af = v6 ? AF_INET6 : AF_INET;
+	IpAddressEx ip;
+	if (!Util::parseIpAddress(ip, str) || ip.type != af || Util::isEmpty(ip)) return Util::emptyString;
+	for (const auto& ai : adapters)
+		if (ai.ip == ip) return ai.name;
+	return Util::emptyString;
 }
 
 LRESULT NetworkFirewallTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
@@ -810,33 +916,21 @@ void NetworkSettings::get()
 	incomingConn[1] = SETTING(INCOMING_CONNECTIONS6);
 	bindAddr[0] = SETTING(BIND_ADDRESS);
 	bindAddr[1] = SETTING(BIND_ADDRESS6);
+	bindDev[0] = SETTING(BIND_DEVICE);
+	bindDev[1] = SETTING(BIND_DEVICE6);
+	bindOptions[0] = SETTING(BIND_OPTIONS);
+	bindOptions[1] = SETTING(BIND_OPTIONS6);
 	mapper[0] = SETTING(MAPPER);
 	mapper[1] = SETTING(MAPPER6);
 }
 
-static bool isEmptyAddress(const string& s, int af)
+static bool compareBindAddress(const NetworkSettings& s1, const NetworkSettings& s2, int af)
 {
-	switch (af)
-	{
-		case AF_INET:
-		{
-			Ip4Address ip;
-			return Util::parseIpAddress(ip, s) && ip == 0;
-		}
-		case AF_INET6:
-		{
-			Ip6Address ip;
-			return Util::parseIpAddress(ip, s) && Util::isEmpty(ip);
-		}
-	}
-	return false;
-}
-
-static bool compareBindAddress(const string& s1, const string& s2, int af)
-{
-	if (s1 == s2) return true;
-	if (s1.empty() && isEmptyAddress(s2, af)) return true;
-	if (s2.empty() && isEmptyAddress(s1, af)) return true;
+	int index = af == AF_INET6 ? 1 : 0;
+	if ((s1.bindOptions[index] ^ s2.bindOptions[index]) & SettingsManager::BIND_OPTION_USE_DEV) return false;
+	if (s1.bindOptions[index] & SettingsManager::BIND_OPTION_USE_DEV) return s1.bindDev[index] == s2.bindDev[index];
+	if (s1.bindAddr[index] == s2.bindAddr[index]) return true;
+	if (isEmptyAddress(s1.bindAddr[index], af) && isEmptyAddress(s2.bindAddr[index], af)) return true;
 	return false;
 }
 
@@ -848,12 +942,12 @@ bool NetworkSettings::compare(const NetworkSettings& other) const
           enableV6 == other.enableV6 &&
           autoDetect[0] == other.autoDetect[0] &&
           incomingConn[0] == other.incomingConn[0] &&
-          compareBindAddress(bindAddr[0],  other.bindAddr[0], AF_INET) &&
+          compareBindAddress(*this, other, AF_INET) &&
           mapper[0] == other.mapper[0])) return false;
 	if (enableV6 &&
 	    !(autoDetect[1] == other.autoDetect[1] &&
           incomingConn[1] == other.incomingConn[1] &&
-          compareBindAddress(bindAddr[1],  other.bindAddr[1], AF_INET6) &&
+          compareBindAddress(*this, other, AF_INET6) &&
           mapper[1] == other.mapper[1])) return false;
 	return true;
 }

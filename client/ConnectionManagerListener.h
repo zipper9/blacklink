@@ -78,7 +78,7 @@ class ConnectionManagerListener
 		virtual void on(Forced, const ConnectionQueueItemPtr&) noexcept { }
 #endif
 		virtual void on(ListenerStarted) noexcept { }
-		virtual void on(ListenerFailed, const char* type, int af, int errorCode) noexcept { }
+		virtual void on(ListenerFailed, const char* type, int af, int errorCode, const string& errorText) noexcept { }
 		virtual void on(PMChannelConnected, const CID& cid, bool useCPMI) noexcept { }
 		virtual void on(PMChannelDisconnected, const CID& cid) noexcept { }
 		virtual void on(PrivateMessage, std::unique_ptr<ChatMessage>&) noexcept { }

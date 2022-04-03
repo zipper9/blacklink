@@ -70,6 +70,7 @@ bool PortTest::runTest(int typeMask) noexcept
 		hasListener = addListener = true;
 	cs.unlock();
 
+	LogManager::message(STRING_F(PORT_TEST_STARTED, req.url));
 	if (BOOLSETTING(LOG_SYSTEM))
 	{
 		for (int type = 0; type < MAX_PORTS; type++)
