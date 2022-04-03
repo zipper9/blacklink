@@ -99,7 +99,7 @@ string Util::printIpAddress(const Ip6Address& ip, bool brackets) noexcept
 
 string Util::printIpAddress(const Ip6AddressEx& ip, bool brackets) noexcept
 {
-	if (!ip.scopeId) return printIpAddress(static_cast<const Ip6Address&>(ip));
+	if (!ip.scopeId) return printIpAddress(static_cast<const Ip6Address&>(ip), brackets);
 	string s = printIpAddress(static_cast<const Ip6Address&>(ip));
 	char buf[64];
 	int len = sprintf(buf, "%%%u", ip.scopeId);
