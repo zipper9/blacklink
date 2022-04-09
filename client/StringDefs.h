@@ -360,6 +360,7 @@ enum Strings   // @DontAdd
 	FAILED_TO_SHUTDOWN, // "Failed to shutdown!"
 	FAKE_FILE_COUNT, // "Number of files"
 	FAKE_SHARE_SIZE, // "Fake share size"
+	FAKE_SLOTS, // "Fake slots"
 	FAKESHARE_RAW, // "Fake share raw"
 	FAVORITE_DIR_NAME, // "Favorite name"
 	FAVORITE_DIR_NAME_LONG, // "Under what name you see the directory"

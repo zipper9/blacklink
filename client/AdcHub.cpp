@@ -1483,8 +1483,8 @@ void AdcHub::info(bool/* forceUpdate*/)
 	addInfoParam(c, "PD", ClientManager::getMyPID().toBase32());
 	addInfoParam(c, "NI", nick);
 	addInfoParam(c, "DE", getCurrentDescription());
-	addInfoParam(c, "SL", Util::toString(UploadManager::getSlots()));
-	addInfoParam(c, "FS", Util::toString(UploadManager::getFreeSlots()));
+	addInfoParam(c, "SL", Util::toString(getSlots()));
+	addInfoParam(c, "FS", Util::toString(getFreeSlots()));
 	if (hideShare)
 	{
 		addInfoParam(c, "SS", "0");

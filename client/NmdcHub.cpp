@@ -294,7 +294,6 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 		}
 		else if ((j = tok.find("V:")) != string::npos || (j = tok.find("v:")) != string::npos)
 		{
-			//dcassert(j > 1);
 			if (j > 1)
 				id.setStringParam("AP", tok.substr(0, j - 1));
 			id.setStringParam("VE", tok.substr(j + 2));
@@ -306,7 +305,6 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 		}
 		else if ((j = tok.find(' ')) != string::npos)
 		{
-			//dcassert(j > 1);
 			if (j > 1)
 				id.setStringParam("AP", tok.substr(0, j - 1));
 			id.setStringParam("VE", tok.substr(j + 1));
@@ -1945,7 +1943,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	currentMyInfo += modeChar;
 	currentMyInfo += hubCounts;
 	currentMyInfo += ",S:";
-	currentMyInfo += Util::toString(UploadManager::getSlots());
+	currentMyInfo += Util::toString(getSlots());
 	currentMyInfo += ">$ $";
 	currentMyInfo += uploadSpeed;
 	currentMyInfo += status;

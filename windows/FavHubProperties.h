@@ -125,12 +125,14 @@ class FavoriteHubTabCheats : public CDialogImpl<FavoriteHubTabCheats>
 		BEGIN_MSG_MAP(FavoriteHubTabCheats)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_FAKE_SHARE, onChangeFakeShare);
+		COMMAND_ID_HANDLER(IDC_FAKE_SLOTS, onChangeFakeSlots);
 		COMMAND_ID_HANDLER(IDC_OVERRIDE_STATUS, onChangeOverrideStatus);
 		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomFileCount);
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onChangeFakeShare(WORD, WORD, HWND, BOOL&);
+		LRESULT onChangeFakeSlots(WORD, WORD, HWND, BOOL&);
 		LRESULT onChangeOverrideStatus(WORD, WORD, HWND, BOOL&);
 		LRESULT onRandomFileCount(WORD, WORD, HWND, BOOL&);
 
@@ -140,6 +142,8 @@ class FavoriteHubTabCheats : public CDialogImpl<FavoriteHubTabCheats>
 		CComboBox ctrlFakeShareUnit;
 		CEdit ctrlFakeCount;
 		CButton ctrlRandomCount;
+		CButton ctrlEnableFakeSlots;
+		CEdit ctrlFakeSlots;
 		CButton ctrlOverrideStatus;
 		CComboBox ctrlFakeStatus;
 		FavoriteHubEntry* entry;

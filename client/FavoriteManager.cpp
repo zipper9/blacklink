@@ -962,6 +962,9 @@ void FavoriteManager::saveFavorites()
 				int fakeFileCount = e->getFakeFileCount();
 				if (fakeFileCount > 0)
 					xml.addChildAttrib("FakeFiles", fakeFileCount);
+				int fakeSlots = e->getFakeSlots();
+				if (fakeSlots >= 0)
+					xml.addChildAttrib("FakeSlots", fakeSlots);
 				int fakeClientStatus = e->getFakeClientStatus();
 				if (fakeClientStatus)
 					xml.addChildAttrib("FakeClientStatus", fakeClientStatus);
@@ -1295,6 +1298,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setOverrideId(isOverrideId);
 			e->setFakeShare(xml.getChildAttrib("FakeShare"));
 			e->setFakeFileCount(xml.getIntChildAttrib("FakeFiles"));
+			e->setFakeSlots(xml.getIntChildAttrib("FakeSlots", "-1"));
 			e->setFakeClientStatus(xml.getIntChildAttrib("FakeClientStatus"));
 
 			e->setGroup(group);

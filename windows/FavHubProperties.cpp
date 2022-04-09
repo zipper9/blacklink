@@ -108,6 +108,7 @@ static const DialogLayout::Item layoutItemsCheats[] =
 	{ IDC_CAPTION_FILE_COUNT, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_FILE_COUNT, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
 	{ IDC_WIZARD_NICK_RND, FLAG_TRANSLATE, UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_FAKE_SLOTS, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_OVERRIDE_STATUS, FLAG_TRANSLATE, AUTO, UNSPEC }
 };
 
@@ -374,6 +375,14 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		}
 		entry->setFakeFileCount(fakeCount);
 
+		int fakeSlots = -1;
+		if (tabCheats.ctrlEnableFakeSlots.GetCheck() == BST_CHECKED)
+		{
+			WinUtil::getWindowText(tabCheats.ctrlFakeSlots, buf);
+			if (!buf.empty()) fakeSlots = Util::toInt(buf);
+		}
+		entry->setFakeSlots(fakeSlots);
+
 		int fakeClientStatus = 0;
 		if (tabCheats.ctrlOverrideStatus.GetCheck() == BST_CHECKED)
 			fakeClientStatus = tabCheats.ctrlFakeStatus.GetCurSel() + 1;
@@ -606,6 +615,8 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlFakeShareUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
 	ctrlFakeCount.Attach(GetDlgItem(IDC_FILE_COUNT));
 	ctrlRandomCount.Attach(GetDlgItem(IDC_WIZARD_NICK_RND));
+	ctrlEnableFakeSlots.Attach(GetDlgItem(IDC_FAKE_SLOTS));
+	ctrlFakeSlots.Attach(GetDlgItem(IDC_FAKE_SLOTS_EDIT));
 	ctrlOverrideStatus.Attach(GetDlgItem(IDC_OVERRIDE_STATUS));
 	ctrlFakeStatus.Attach(GetDlgItem(IDC_FAKE_STATUS));
 
@@ -652,6 +663,19 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	if (entry->getFakeFileCount() > 0)
 		ctrlFakeCount.SetWindowText(Util::toStringT(entry->getFakeFileCount()).c_str());
 
+	int fakeSlots = entry->getFakeSlots();
+	if (fakeSlots >= 0)
+	{
+		ctrlFakeSlots.SetWindowText(Util::toStringT(fakeSlots).c_str());
+		ctrlFakeSlots.EnableWindow(TRUE);
+		ctrlEnableFakeSlots.SetCheck(BST_CHECKED);
+	}
+	else
+	{
+		ctrlFakeSlots.EnableWindow(FALSE);
+		ctrlEnableFakeSlots.SetCheck(BST_UNCHECKED);
+	}
+
 	int fakeStatus = entry->getFakeClientStatus();
 	if (fakeStatus < 0 || fakeStatus > 3) fakeStatus = 0;
 	ctrlOverrideStatus.SetCheck(fakeStatus ? BST_CHECKED : BST_UNCHECKED);
@@ -669,6 +693,13 @@ LRESULT FavoriteHubTabCheats::onChangeFakeShare(WORD /*wNotifyCode*/, WORD /*wID
 	ctrlFakeShareUnit.EnableWindow(state);
 	ctrlFakeCount.EnableWindow(state);
 	ctrlRandomCount.EnableWindow(state);
+	return 0;
+}
+
+LRESULT FavoriteHubTabCheats::onChangeFakeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	BOOL state = ctrlEnableFakeSlots.GetCheck() == BST_CHECKED;
+	ctrlFakeSlots.EnableWindow(state);
 	return 0;
 }
 

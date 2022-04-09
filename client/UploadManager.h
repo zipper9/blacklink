@@ -99,6 +99,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 			return uploads.size();
 		}
 		
+		static int getRunningCount() { return g_running; }
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		

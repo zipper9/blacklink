@@ -62,6 +62,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	fakeShareSize(-1),
 	fakeShareFiles(-1),
 	fakeClientStatus(0),
+	fakeSlots(-1),
 	favMode(0),
 	preferIP6(false),
 	favoriteId(0),
@@ -255,6 +256,7 @@ void Client::reloadSettings(bool updateNick)
 			fakeShareFiles = -1;
 		}
 
+		fakeSlots = hub->getFakeSlots();
 		const string& kp = hub->getKeyPrint();
 		if (!kp.empty()) setKeyPrint(kp);
 		setSuppressChatAndPM(hub->getSuppressChatAndPM());
@@ -291,6 +293,7 @@ void Client::reloadSettings(bool updateNick)
 		fakeClientStatus = 0;
 		fakeShareSize = -1;
 		fakeShareFiles = -1;
+		fakeSlots = -1;
 		setSuppressChatAndPM(false);
 	}
 	fm->releaseFavoriteHubEntryPtr(hub);
@@ -990,6 +993,16 @@ const string& Client::getRawCommand(int command) const
 	if (command < 0 || command >= 5)
 		return Util::emptyString;
 	return rawCommands[command];
+}
+
+int Client::getSlots() const
+{
+	return fakeSlots < 0 ? UploadManager::getSlots() : fakeSlots;
+}
+
+int Client::getFreeSlots() const
+{
+	return std::max(getSlots() - UploadManager::getRunningCount(), 0);
 }
 
 void Client::processPasswordRequest(const string& pwd)

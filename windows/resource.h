@@ -495,6 +495,8 @@
 #define IDC_CAPTION_MIN_MULTI_CHUNK_SIZE 1339
 #define IDC_NORMAL                      1340
 #define IDC_TOOLBAR_IMAGE_BOX           1341
+#define IDC_FAKE_SLOTS                  1342
+#define IDC_FAKE_SLOTS_EDIT             1343
 #define IDC_MAGNET_QUEUE                1345
 #define IDC_MAGNET_SEARCH               1346
 #define IDC_MAGNET_OPEN                 1347

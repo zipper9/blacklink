@@ -174,6 +174,8 @@ class Client : public ClientBase,
 		void getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op) const;
 		void setRawCommands(const string commands[]);
 		const string& getRawCommand(int command) const;
+		int getSlots() const;
+		int getFreeSlots() const;
 
 		void escapeParams(StringMap& sm) const;
 		void setSearchInterval(unsigned interval);
@@ -444,6 +446,7 @@ class Client : public ClientBase,
 		int64_t fakeShareSize;
 		int64_t fakeShareFiles;
 		int fakeClientStatus;
+		int fakeSlots;
 		CID shareGroup;
 		
 		void updateCounts(bool remove);
