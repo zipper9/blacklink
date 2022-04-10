@@ -441,9 +441,7 @@ typedef uLong FAR uLongf;
 
 #ifdef STDC
 #  ifndef Z_SOLO
-#ifndef _WIN32 // [+] FlylinkDC++
 #    include <sys/types.h>      /* for off_t */
-#endif
 #  endif
 #endif
 
@@ -455,7 +453,7 @@ typedef uLong FAR uLongf;
 
 #ifdef _WIN32
 #  ifndef Z_SOLO
-// [-] FlylinkDC++ #    include <stddef.h>         /* for wchar_t */
+#    include <stddef.h>         /* for wchar_t */
 #  endif
 #endif
 
