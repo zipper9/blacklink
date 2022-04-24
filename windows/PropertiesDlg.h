@@ -49,12 +49,10 @@ class PropertiesDlg : public TreePropertySheet
 		virtual int getItemImage(int page) const override;
 		virtual void pageChanged(int oldPage, int newPage) override;
 
-		static const size_t numPages = 41;
+		static const size_t numPages = 42;
 		PropPage *pages[numPages];
 
 	private:
-		NetworkPage *networkPage;
-		
 		virtual void onTimerSec();
 };
 

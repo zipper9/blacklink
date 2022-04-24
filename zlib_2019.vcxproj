@@ -476,6 +476,10 @@
     <ClCompile Include="zlib\compress.c" />
     <ClCompile Include="zlib\crc32.c" />
     <ClCompile Include="zlib\deflate.c" />
+    <ClCompile Include="zlib\gzclose.c" />
+    <ClCompile Include="zlib\gzlib.c" />
+    <ClCompile Include="zlib\gzread.c" />
+    <ClCompile Include="zlib\gzwrite.c" />
     <ClCompile Include="zlib\inffast.c" />
     <ClCompile Include="zlib\inflate.c" />
     <ClCompile Include="zlib\inftrees.c" />

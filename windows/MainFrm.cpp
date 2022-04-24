@@ -584,6 +584,18 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		secondsCounter = 60;
 		onMinute(tick);
 	}
+	if (tick >= timeUsersCleanup)
+	{
+		ClientManager::usersCleanup();
+		timeUsersCleanup = tick + Util::rand(3, 10)*60000;
+	}
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	if (tick >= timeFlushRatio)
+	{
+		ClientManager::flushRatio();
+		timeFlushRatio = tick + Util::rand(3, 10)*60000;
+	}
+#endif
 	if (ClientManager::isStartup())
 		return 0;
 
@@ -683,18 +695,8 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 void MainFrame::onMinute(uint64_t tick)
 {
 	httpClient.removeUnusedConnections();
-	if (tick >= timeUsersCleanup)
-	{
-		ClientManager::usersCleanup();
-		timeUsersCleanup = tick + Util::rand(3, 10)*60000;
-	}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (tick >= timeFlushRatio)
-	{
-		ClientManager::flushRatio();
-		timeFlushRatio = tick + Util::rand(3, 10)*60000;
-	}
-#endif
+	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
+		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false);
 	LogManager::closeOldFiles(tick);
 }
 

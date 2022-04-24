@@ -391,6 +391,9 @@
     <ClCompile Include="windows\SearchHistory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\GeoIPPage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -916,6 +919,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SearchHistory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\GeoIPPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

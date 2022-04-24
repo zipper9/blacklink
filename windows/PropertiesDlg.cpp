@@ -57,6 +57,7 @@
 #include "MessagesChatPage.h"
 #include "ShareMiscPage.h"
 #include "SearchPage.h"
+#include "GeoIPPage.h"
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 #include "FakeDetectPage.h"
@@ -65,7 +66,7 @@
 bool PropertiesDlg::g_needUpdate = false;
 bool PropertiesDlg::g_is_create = false;
 
-PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent), networkPage(nullptr)
+PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent)
 {
 	this->icon = icon;
 	::g_settings = SettingsManager::getInstance();
@@ -73,8 +74,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	memset(pages, 0, sizeof(pages));
 	size_t n = 0;
 	pages[n++] = new GeneralPage();
-	networkPage = new NetworkPage();
-	pages[n++] = networkPage;
+	pages[n++] = new NetworkPage();
 	pages[n++] = new ProxyPage();
 	pages[n++] = new DownloadPage();
 	pages[n++] = new FavoriteDirsPage();
@@ -95,6 +95,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new TabsPage();
 	pages[n++] = new AdvancedPage();
 	pages[n++] = new SDCPage();
+	pages[n++] = new GeoIPPage();
 	pages[n++] = new DefaultClickPage();
 	pages[n++] = new LogPage();
 	pages[n++] = new UCPage();
@@ -124,21 +125,23 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 PropertiesDlg::~PropertiesDlg()
 {
 	for (size_t i = 0; i < numPages; i++)
-	{
-		if (networkPage == pages[i])
-			networkPage = nullptr;
 		delete pages[i];
-	}
 	g_is_create = false;
 }
 
 void PropertiesDlg::onTimerSec()
 {
-	if (networkPage)
+	HWND active = GetActivePage();
+	if (!active) return;
+	for (size_t i = 0; i < numPages; i++)
 	{
-		const auto page = GetActivePage();
-		if (page == *networkPage)
-			networkPage->updatePortState();
+		if (!pages[i]) continue;
+		HWND page = PropSheet_IndexToHwnd((HWND) *this, i);
+		if (page == active)
+		{
+			pages[i]->onTimer();
+			break;
+		}
 	}
 }
 
@@ -147,7 +150,7 @@ void PropertiesDlg::write()
 	for (size_t i = 0; i < numPages; i++)
 	{
 		if (!pages[i]) continue;
-		HWND page = PropSheet_IndexToHwnd((HWND) * this, i);		
+		HWND page = PropSheet_IndexToHwnd((HWND) *this, i);
 		if (page) pages[i]->write();
 	}
 }

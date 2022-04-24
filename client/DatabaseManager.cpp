@@ -19,6 +19,8 @@
 #include "SocketAddr.h"
 #include "Random.h"
 #include "Tag16.h"
+#include "HttpClient.h"
+#include "ZUtils.h"
 #include "maxminddb/maxminddb.h"
 #include <boost/algorithm/string.hpp>
 
@@ -31,6 +33,10 @@ bool g_UseWALJournal = false;
 bool g_EnableSQLtrace = false; // http://www.sqlite.org/c3ref/profile.html
 bool g_UseSynchronousOff = false;
 int g_DisableSQLtrace = 0;
+
+static const unsigned GEOIP_DOWNLOAD_RETRY_TIME = 600000; // 10 minutes
+
+static const string fileNameGeoIP = "country_ip_db.mmdb";
 
 static const char* fileNames[] =
 {
@@ -228,6 +234,10 @@ DatabaseManager::DatabaseManager() noexcept
 	dbSize = 0;
 	mmdb = nullptr;
 	timeCheckMmdb = 0;
+	mmdbDownloadReq = 0;
+	timeDownloadMmdb = 0;
+	mmdbFileTimestamp = 1;
+	mmdbDownloading = false;
 }
 
 void DatabaseManager::init(ErrorCallback errorCallback)
@@ -1338,7 +1348,8 @@ void DatabaseManager::shutdown()
 
 DatabaseManager::~DatabaseManager()
 {
-	closeGeoIPDatabase();
+	closeGeoIPDatabaseL();
+	httpClient.removeListener(this);
 }
 
 bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize)
@@ -1448,13 +1459,12 @@ void DatabaseManager::attachDatabase(const string& file, const string& name)
 	connection.executenonquery(cmd.c_str());
 }
 
-bool DatabaseManager::openGeoIPDatabaseL()
+bool DatabaseManager::openGeoIPDatabaseL() noexcept
 {
 	if (mmdb) return true;
 	uint64_t now = GET_TICK();
 	if (now < timeCheckMmdb) return false;
-	string path = Util::getConfigPath();
-	path += "country_ip_db.mmdb";
+	string path = Util::getConfigPath() + fileNameGeoIP;
 	mmdb = new MMDB_s;
 	if (MMDB_open(path.c_str(), MMDB_MODE_MMAP, mmdb) == 0)
 	{
@@ -1467,9 +1477,8 @@ bool DatabaseManager::openGeoIPDatabaseL()
 	return false;
 }
 
-void DatabaseManager::closeGeoIPDatabase()
+void DatabaseManager::closeGeoIPDatabaseL() noexcept
 {
-	LOCK(csMmdb);
 	if (mmdb)
 	{
 		MMDB_close(mmdb);
@@ -1479,7 +1488,7 @@ void DatabaseManager::closeGeoIPDatabase()
 	}
 }
 
-static string getMMDBString(MMDB_lookup_result_s& lres, const char* *path)
+static string getMMDBString(MMDB_lookup_result_s& lres, const char* *path) noexcept
 {
 	MMDB_entry_data_s data;
 	int error = MMDB_aget_value(&lres.entry, &data, path);
@@ -1488,7 +1497,7 @@ static string getMMDBString(MMDB_lookup_result_s& lres, const char* *path)
 	return string(data.utf8_string, data.data_size);
 }
 
-bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result)
+bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result) noexcept
 {
 	LOCK(csMmdb);
 	if (!openGeoIPDatabaseL()) return false;
@@ -1512,6 +1521,136 @@ bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result)
 	result.country = std::move(countryName);
 	result.countryCode = TAG(countryCode[0], countryCode[1]);
 	return true;
+}
+
+void DatabaseManager::getGeoIPTimestamp() noexcept
+{
+	try
+	{
+		File f(Util::getConfigPath() + fileNameGeoIP, File::READ, File::OPEN);
+		mmdbFileTimestamp = File::timeStampToUnixTime(f.getTimeStamp());
+	}
+	catch (FileException&)
+	{
+		mmdbFileTimestamp = 0;
+	}
+}
+
+void DatabaseManager::downloadGeoIPDatabase(uint64_t timestamp, bool force) noexcept
+{
+	{
+		LOCK(csDownloadMmdb);
+		if (mmdbDownloading || (!force && timestamp < timeDownloadMmdb)) return;
+		mmdbDownloading = true;
+	}
+	string url = SETTING(URL_GEOIP);
+	if (url.empty()) return;
+	if (force || mmdbFileTimestamp == 1) getGeoIPTimestamp();
+	if (!force && mmdbFileTimestamp && mmdbFileTimestamp + SETTING(GEOIP_CHECK_HOURS) * 3600 > static_cast<uint64_t>(time(nullptr)))
+	{
+		// File was downloaded recently
+		LOCK(csDownloadMmdb);
+		mmdbDownloading = false;
+		return;
+	}
+
+	HttpClient::Request req;
+	req.outputPath = Util::getHttpDownloadsPath();
+	File::ensureDirectory(req.outputPath);
+	req.outputPath += fileNameGeoIP + ".gz";
+	req.url = std::move(url);
+	req.userAgent = "Airdcpp/4.11";
+	req.maxRedirects = 5;
+	req.maxRespBodySize = 10 * 1024 * 1024;
+	req.ifModified = mmdbFileTimestamp;
+	mmdbDownloadReq = httpClient.addRequest(req);
+	if (!mmdbDownloadReq)
+	{
+		LogManager::message(STRING_F(GEOIP_DOWNLOAD_FAIL, STRING(HTTP_INVALID_URL)));
+		LOCK(csDownloadMmdb);
+		mmdbDownloading = false;
+		return;
+	}
+	httpClient.addListener(this);
+	httpClient.startRequest(mmdbDownloadReq);
+}
+
+bool DatabaseManager::isDownloading() const noexcept
+{
+	LOCK(csDownloadMmdb);
+	return mmdbDownloading;
+}
+
+void DatabaseManager::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
+{
+	if (resp.getResponseCode() != 200)
+	{
+		processDownloadResult(id,
+			Util::toString(resp.getResponseCode()) + ' ' + resp.getResponsePhrase(),
+			resp.getResponseCode() != 304);
+		return;
+	}
+	{
+		LOCK(csDownloadMmdb);
+		if (!mmdbDownloading || id != mmdbDownloadReq) return;
+	}
+	httpClient.removeListener(this);
+	bool ok = true;
+	string path = Util::getConfigPath() + fileNameGeoIP;
+	string tempPath = path + ".dctmp";
+	try
+	{
+		GZip::decompress(data.outputPath, tempPath);
+	}
+	catch (FileException& ex)
+	{
+		LogManager::message(STRING_F(GEOIP_DECOMPRESS_FAIL, ex.getError()));
+		ok = false;
+	}
+	catch (Exception&)
+	{
+		LogManager::message(STRING_F(GEOIP_DECOMPRESS_FAIL, STRING(INVALID_FILE_FORMAT)));
+		ok = false;
+	}
+	if (ok)
+	{
+		LOCK(csMmdb);
+		closeGeoIPDatabaseL();
+		ok = File::renameFile(tempPath, path);
+		if (!ok)
+			LogManager::message(STRING_F(GEOIP_DECOMPRESS_FAIL, Util::translateError()));
+	}
+	if (ok)
+	{
+		getGeoIPTimestamp();
+		LogManager::message(STRING(GEOIP_DOWNLOAD_OK));
+	}
+	File::deleteFile(data.outputPath);
+	clearDownloadRequest(false);
+}
+
+void DatabaseManager::on(Failed, uint64_t id, const string& error) noexcept
+{
+	processDownloadResult(id, error, true);
+}
+
+void DatabaseManager::processDownloadResult(uint64_t reqId, const string& text, bool isError) noexcept
+{
+	{
+		LOCK(csDownloadMmdb);
+		if (!mmdbDownloading || reqId != mmdbDownloadReq) return;
+	}
+	httpClient.removeListener(this);
+	clearDownloadRequest(isError);
+	if (isError) LogManager::message(STRING_F(GEOIP_DOWNLOAD_FAIL, text));
+}
+
+void DatabaseManager::clearDownloadRequest(bool isError) noexcept
+{
+	LOCK(csDownloadMmdb);
+	mmdbDownloading = false;
+	mmdbDownloadReq = 0;
+	timeDownloadMmdb = GET_TICK() + (isError ? GEOIP_DOWNLOAD_RETRY_TIME : SETTING(GEOIP_CHECK_HOURS) * 3600);
 }
 
 void IpKey::setIP(Ip4Address ip)

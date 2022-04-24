@@ -1629,6 +1629,22 @@ BEGIN
     COMBOBOX        IDC_FAKE_STATUS,24,116,70,76,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 END
 
+IDD_GEOIP_PAGE DIALOGEX 0, 0, 308, 127
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_VISIBLE | WS_CAPTION
+EXSTYLE WS_EX_STATICEDGE
+CAPTION "GeoIP database"
+FONT 8, "MS Shell Dlg", 400, 0, 0xEE
+BEGIN
+    LTEXT           "@SettingsGeoipUrl",IDC_CAPTION_GEOIP_URL,4,4,289,8
+    EDITTEXT        IDC_GEOIP_URL,4,16,174,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "@SettingsGeoipDownload",IDC_GEOIP_DOWNLOAD,179,15,99,16
+    CONTROL         "@SettingsGeoipAutoUpdate",IDC_GEOIP_AUTO_DOWNLOAD,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,11,34,111,10
+    LTEXT           "@SettingsGeoipCheckForUpdates",IDC_CAPTION_GEOIP_CHECK,22,50,108,8
+    EDITTEXT        IDC_GEOIP_CHECK,135,48,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "@SettingsHours",IDC_CAPTION_HOURS,178,50,65,8
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -2427,6 +2443,14 @@ BEGIN
         VERTGUIDE, 24
         TOPMARGIN, 10
         BOTTOMMARGIN, 171
+    END
+
+    IDD_GEOIP_PAGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 302
+        TOPMARGIN, 3
+        BOTTOMMARGIN, 123
     END
 END
 #endif    // APSTUDIO_INVOKED

@@ -21,6 +21,7 @@
 #define DCPLUSPLUS_DCPP_Z_UTILS_H
 
 #include <zlib.h>
+#include <string>
 
 class ZFilter
 {
@@ -61,5 +62,10 @@ class UnZFilter
 	private:
 		z_stream zs;
 };
+
+namespace GZip
+{
+	void decompress(const std::string& gzipPath, const std::string &outputPath);
+}
 
 #endif // DCPLUSPLUS_DCPP_Z_UTILS_H

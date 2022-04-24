@@ -18,7 +18,7 @@
 
 #include "stdinc.h"
 #include "ZUtils.h"
-#include "Exception.h"
+#include "File.h"
 #include "SettingsManager.h"
 #include "ResourceManager.h"
 
@@ -152,8 +152,46 @@ bool UnZFilter::operator()(const void* in, size_t& insize, void* out, size_t& ou
 	// error
 	if (!(err == Z_OK || err == Z_STREAM_END || (err == Z_BUF_ERROR && in == NULL)))
 		throw Exception(STRING(DECOMPRESSION_ERROR));
-		
+
 	outsize = outsize - zs.avail_out;
 	insize = insize - zs.avail_in;
 	return err == Z_OK;
+}
+
+void GZip::decompress(const string& gzipFile, const string& outputFile)
+{
+	static const int BUF_SIZE = 64 * 1024;
+#ifdef _WIN32
+	gzFile gz = gzopen_w(Text::toT(gzipFile).c_str(), "rb");
+#else
+	gzFile gz = gzopen(gzipFile.c_str(), "rb");
+#endif
+	if (!gz)
+		throw Exception(STRING(DECOMPRESSION_ERROR));
+	if (gzdirect(gz)) // check if it's a gzip file
+	{
+		gzclose(gz);
+		throw Exception(STRING(DECOMPRESSION_ERROR));
+	}
+	try
+	{
+		File out(outputFile, File::WRITE, File::CREATE | File::TRUNCATE);
+		unique_ptr<uint8_t[]> buf(new uint8_t[BUF_SIZE]);
+		while (true)
+		{
+			int size = gzread(gz, buf.get(), BUF_SIZE);
+			if (size < 0)
+				throw Exception(STRING(DECOMPRESSION_ERROR));
+			if (!size)
+				break;
+			out.write(buf.get(), size);
+		}
+	}
+	catch (Exception&)
+	{
+		gzclose(gz);
+		File::deleteFile(outputFile);
+		throw;
+	}
+	gzclose(gz);
 }

@@ -97,6 +97,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			URL_GET_IP,
 			URL_GET_IP6,
 			URL_DHT_BOOTSTRAP,
+			URL_GEOIP,
 
 			// TLS settings
 			TLS_PRIVATE_KEY_FILE, TLS_CERTIFICATE_FILE, TLS_TRUSTED_CERTIFICATES_PATH,
@@ -431,6 +432,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			ENABLE_LAST_IP_AND_MESSAGE_COUNTER,
 			ENABLE_RATIO_USER_LIST,
 			SQLITE_USE_JOURNAL_MEMORY,
+			GEOIP_AUTO_UPDATE,
+			GEOIP_CHECK_HOURS,
 
 			// Web server (Ints)
 			WEBSERVER,

@@ -40,6 +40,7 @@ static const string DEFAULT_LANG_FILE = "en-US.xml";
 
 static const char URL_GET_IP_DEFAULT[]  = "http://checkip.dyndns.com";
 static const char URL_GET_IP6_DEFAULT[] = "http://checkipv6.dynu.com";
+static const char URL_GEOIP_DEFAULT[]   = "http://geoip.airdcpp.net";
 
 static const char HUBLIST_SERVERS_DEFAULT[] =
 	"https://www.te-home.net/?do=hublist&get=hublist.xml.bz2;"
@@ -125,6 +126,7 @@ static const char* g_settingTags[] =
 	"UrlGetIp",
 	"UrlGetIp6",
 	"UrlDHTBootstrap",
+	"UrlGeoIP",
 
 	// TLS settings
 	"TLSPrivateKeyFile", "TLSCertificateFile", "TLSTrustedCertificatesPath",
@@ -456,6 +458,8 @@ static const char* g_settingTags[] =
 	"EnableLastIP",
 	"EnableRatioUserList",
 	"SQLiteUseJournalMemory",
+	"GeoIPAutoUpdate",
+	"GeoIPCheckHours",
 
 	// Web server (Ints)
 	"WebServer",
@@ -825,6 +829,7 @@ void SettingsManager::setDefaults()
 	setDefault(URL_GET_IP, URL_GET_IP_DEFAULT);
 	setDefault(URL_GET_IP6, URL_GET_IP6_DEFAULT);
 	setDefault(URL_DHT_BOOTSTRAP, "http://strongdc.sourceforge.net/bootstrap/");
+	setDefault(URL_GEOIP, URL_GEOIP_DEFAULT);
 
 	// TLS settings
 	const string tlsPath = Util::getConfigPath() + "Certificates" PATH_SEPARATOR_STR;
@@ -1069,6 +1074,8 @@ void SettingsManager::setDefaults()
 	setDefault(DB_LOG_FINISHED_UPLOADS, 365);
 	setDefault(ENABLE_LAST_IP_AND_MESSAGE_COUNTER, TRUE);
 	setDefault(ENABLE_RATIO_USER_LIST, TRUE);
+	setDefault(GEOIP_AUTO_UPDATE, TRUE);
+	setDefault(GEOIP_CHECK_HOURS, 30);
 
 	// Web server (Ints)
 	setDefault(WEBSERVER_SEARCHSIZE, 1000);
@@ -1794,6 +1801,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MAX_HUB_USER_COMMANDS:
 		{
 			VER_MIN(0);
+			break;
+		}
+		case GEOIP_CHECK_HOURS:
+		{
+			VER_MIN(1);
 			break;
 		}
 		case MYINFO_DELAY:

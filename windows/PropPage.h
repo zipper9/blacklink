@@ -49,6 +49,7 @@ class PropPage
 		virtual void cancel() = 0;
 		virtual void onHide() {}
 		virtual void onShow() {}
+		virtual void onTimer() {}
 
 		enum Type { T_STR, T_INT, T_BOOL, T_END };
 		

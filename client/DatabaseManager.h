@@ -20,6 +20,7 @@
 #include "IPInfo.h"
 #include "CID.h"
 #include "IpAddress.h"
+#include "HttpClientListener.h"
 #include "sqlite/sqlite3x.hpp"
 
 #ifdef FLYLINKDC_USE_LMDB
@@ -161,7 +162,7 @@ struct DBRegistryValue
 
 typedef std::unordered_map<string, DBRegistryValue> DBRegistryMap;
 
-class DatabaseManager : public Singleton<DatabaseManager>
+class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientListener
 {
 	public:
 		typedef void (*ErrorCallback)(const string& message,  bool forceExit);
@@ -233,6 +234,8 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		void getIPInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached);
 		void clearCachedP2PGuardData(Ip4Address ip);
 		void clearIpCache();
+		void downloadGeoIPDatabase(uint64_t timestamp, bool force) noexcept;
+		bool isDownloading() const noexcept;
 
 	private:
 		void loadLocation(Ip4Address ip, IPInfo& result);
@@ -242,9 +245,12 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		void saveLocation(const vector<LocationInfo>& data);
 
 	private:
-		bool openGeoIPDatabaseL();
-		void closeGeoIPDatabase();
-		bool loadGeoIPInfo(const IpAddress& ip, IPInfo& result);
+		bool openGeoIPDatabaseL() noexcept;
+		void closeGeoIPDatabaseL() noexcept;
+		bool loadGeoIPInfo(const IpAddress& ip, IPInfo& result) noexcept;
+		void processDownloadResult(uint64_t reqId, const string& text, bool isError) noexcept;
+		void clearDownloadRequest(bool isError) noexcept;
+		void getGeoIPTimestamp() noexcept;
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	private:
@@ -273,6 +279,12 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		bool checkDbPrefix(const string& str);
 		void attachDatabase(const string& file, const string& name);
 
+	protected:
+		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
+		void on(Failed, uint64_t id, const string& error) noexcept override;
+		void on(Redirected, uint64_t id, const string& redirUrl) noexcept override {}
+
+	private:
 		string prefix;
 		int64_t dbSize;
 		ErrorCallback errorCallback;
@@ -285,6 +297,12 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		struct MMDB_s* mmdb;
 		CriticalSection csMmdb;
 		uint64_t timeCheckMmdb;
+
+		uint64_t mmdbDownloadReq;
+		uint64_t timeDownloadMmdb;
+		uint64_t mmdbFileTimestamp; // 0 - file doesn't exist, 1 - not initialized
+		bool mmdbDownloading;
+		mutable CriticalSection csDownloadMmdb;
 
 	private:
 		sqlite3_command selectIgnoredUsers;

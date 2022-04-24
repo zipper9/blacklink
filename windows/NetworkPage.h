@@ -152,11 +152,8 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION; }
 		void onShow() override;
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
-		void updatePortState();
+		void cancel() { cancel_check(); }
+		void onTimer() override { updatePortState(); }
 		void testPorts();
 		static void setPrevSettings(NetworkSettings* settings)
 		{
@@ -177,6 +174,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		bool runPortTest();
 		bool runIpTest();
 		void getFromUI(NetworkSettings& settings) const;
+		void updatePortState();
 };
 
 #endif // !defined(NETWORK_PAGE_H)
