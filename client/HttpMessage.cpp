@@ -401,3 +401,25 @@ void Http::Response::setResponse(int code) noexcept
 	else
 		this->phrase = phrase;
 }
+
+string Http::printDateTime(time_t t) noexcept
+{
+	static const char strWeekDay[][4] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+	static const char strMonth[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+#ifdef HAVE_TIME_R
+	struct tm bt;
+	struct tm* pt = gmtime_r(&bt, &t);
+#else
+	const tm* pt = gmtime(&t);
+#endif
+	if (!pt) return Util::emptyString;
+	int weekDay = pt->tm_wday;
+	if (weekDay < 0 || weekDay > 6) weekDay = 0;
+	int month = pt->tm_mon;
+	if (month < 0 || month > 11) month = 0;
+	char buf[256];
+	sprintf(buf, "%.3s, %02d %.3s %d %.2d:%.2d:%.2d GMT",
+		strWeekDay[weekDay], pt->tm_mday, strMonth[month], pt->tm_year + 1900,
+		pt->tm_hour, pt->tm_min, pt->tm_sec);
+	return buf;
+}

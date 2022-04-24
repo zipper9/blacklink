@@ -1128,7 +1128,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					return true;
 				}
 				HttpClient::Request req;
-				req.outputPath = Util::getConfigPath() + "HttpDownloads" PATH_SEPARATOR_STR;
+				req.outputPath = Util::getHttpDownloadsPath();
 				File::ensureDirectory(req.outputPath);
 				req.url = pc.args[2];
 				req.maxRedirects = 5;

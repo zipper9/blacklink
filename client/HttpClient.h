@@ -28,6 +28,7 @@ public:
 		bool noCache = false;
 		int ipVersion = 0;
 		int maxRedirects = 0;
+		time_t ifModified = 0;
 		int64_t maxRespBodySize = std::numeric_limits<int64_t>::max();
 		int64_t maxErrorBodySize = 128 * 1024;
 	};

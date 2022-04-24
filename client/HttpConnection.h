@@ -55,6 +55,7 @@ public:
 	void setMaxErrorBodySize(int64_t size) { maxErrorBodySize = size; }
 	void setRequestBody(const string& body, const string& type);
 	void setRequestBody(string& body, const string& type);
+	void setIfModified(time_t t) { ifModified = t; }
 
 	uint64_t getID() const { return id; }
 	void setIpVersion(int af) { ipVersion = af; }
@@ -92,6 +93,7 @@ private:
 	string userAgent;
 	int64_t maxRespBodySize = std::numeric_limits<int64_t>::max();
 	int64_t maxErrorBodySize = 128 * 1024;
+	time_t ifModified = 0;
 	int ipVersion = 0;
 	int reqFlags = 0;
 

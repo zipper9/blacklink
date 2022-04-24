@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include <time.h>
 
 using std::string;
 
@@ -98,6 +99,8 @@ class Response : public HeaderList
 		int code = 0;
 		string phrase;
 };
+
+string printDateTime(time_t t) noexcept;
 
 }
 

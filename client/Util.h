@@ -88,6 +88,8 @@ namespace Util
 		PATH_EXE,
 		/** Sounds path **/
 		PATH_SOUNDS,
+		/** Default download directory for HttpClient **/
+		PATH_HTTP_DOWNLOADS,
 		PATH_LAST
 	};
 
@@ -226,6 +228,7 @@ namespace Util
 	inline const string& getThemesPath() { return getPath(PATH_THEMES); }
 	inline const string& getExePath() { return getPath(PATH_EXE); }
 	inline const string& getSoundPath() { return getPath(PATH_SOUNDS); }
+	inline const string& getHttpDownloadsPath() { return getPath(PATH_HTTP_DOWNLOADS); }
 
 	string getIETFLang();
 

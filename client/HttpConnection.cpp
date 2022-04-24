@@ -194,6 +194,7 @@ void HttpConnection::sendRequest() noexcept
 	if (reqFlags & FLAG_NO_CACHE) req.addHeader(Http::HEADER_CACHE_CONTROL, "no-cache");
 	req.addHeader(Http::HEADER_CONTENT_LENGTH, Util::toString(requestBody.length()));
 	if (!requestBodyType.empty()) req.addHeader(Http::HEADER_CONTENT_TYPE, requestBodyType);
+	if (ifModified) req.addHeader(Http::HEADER_IF_MODIFIED_SINCE, Http::printDateTime(ifModified));
 
 	string s;
 	req.print(s);
@@ -258,6 +259,9 @@ void HttpConnection::onDataLine(const string &line) noexcept
 		}
 		if (resp.isComplete())
 		{
+			if (bodySize == BODY_SIZE_UNKNOWN &&
+			    (resp.getResponseCode() == 204 || resp.getResponseCode() == 304))
+				bodySize = 0;
 			if (bodySize > 0)
 			{
 				int64_t maxBodySize = resp.getResponseCode() == 200 ? maxRespBodySize : maxErrorBodySize;

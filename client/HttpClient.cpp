@@ -51,6 +51,7 @@ uint64_t HttpClient::addRequest(const HttpClient::Request& req)
 	rs->maxRespBodySize = req.maxRespBodySize;
 	rs->maxErrorBodySize = req.maxErrorBodySize;
 	rs->maxRedirects = req.maxRedirects;
+	rs->ifModified = req.ifModified;
 
 	uint64_t now = GET_TICK();
 	cs.lock();
@@ -106,6 +107,7 @@ void HttpClient::startRequest(HttpConnection* c, const RequestStatePtr& rs)
 	c->setIpVersion(rs->ipVersion);
 	c->setMaxRespBodySize(rs->maxRespBodySize);
 	c->setMaxErrorBodySize(rs->maxErrorBodySize);
+	c->setIfModified(rs->ifModified);
 	c->startRequest(rs->type, rs->url, flags);
 }
 
