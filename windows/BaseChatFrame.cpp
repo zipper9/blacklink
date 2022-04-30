@@ -660,14 +660,10 @@ void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/,
 	if (formattedLine.length() > 512)
 		formattedLine.resize(512);
 	setStatusText(0, formattedLine);
-	
+
 	if (history)
-	{
-		lastLinesList.push_back(formattedLine);
-		while (lastLinesList.size() > static_cast<size_t>(MAX_CLIENT_LINES))
-			lastLinesList.pop_front();
-	}
-	
+		statusHistory.addLine(formattedLine);
+
 	if (inChat && BOOLSETTING(STATUS_IN_CHAT))
 		addSystemMessage(line, cf);
 }
@@ -722,17 +718,7 @@ void BaseChatFrame::addLine(const Identity& from, bool myMessage, bool thirdPers
 
 LRESULT BaseChatFrame::onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
-	NMTTDISPINFO* nm = (NMTTDISPINFO*)pnmh;
-	lastLines.clear();
-	bool appendNL = false;
-	for (auto i = lastLinesList.cbegin(); i != lastLinesList.cend(); ++i)
-	{
-		if (appendNL) lastLines += _T("\r\n");
-		lastLines += *i;
-		appendNL = true;
-	}
-	lastLines.shrink_to_fit();
-	nm->lpszText = const_cast<TCHAR*>(lastLines.c_str());
+	statusHistory.getToolTip(pnmh);
 	return 0;
 }
 

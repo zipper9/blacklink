@@ -24,6 +24,7 @@
 #include "MessagePanel.h"
 #include "BaseHandlers.h"
 #include "Colors.h"
+#include "StatusMessageHistory.h"
 #include "../client/ClientManager.h"
 #include "../client/Commands.h"
 
@@ -157,9 +158,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void restoreStatusFromCache();
 		void destroyStatusbar();
 		
-		enum { MAX_CLIENT_LINES = 10 };
-		std::list<tstring> lastLinesList;
-		tstring lastLines;
+		StatusMessageHistory statusHistory;
 		StringMap ucLineParams;
 		
 		unsigned multiChatLines;

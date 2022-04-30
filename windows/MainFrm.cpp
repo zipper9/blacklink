@@ -152,7 +152,8 @@ MainFrame::MainFrame() :
 	shutdownTime(0),
 	shutdownStatusDisplayed(false),
 	passwordDlg(nullptr),
-	stopperThread(nullptr)
+	stopperThread(nullptr),
+	statusHistory(20)
 {
 	m_bUpdateProportionalPos = false;
 	memset(statusSizes, 0, sizeof(statusSizes));
@@ -1359,9 +1360,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			tstring::size_type rpos = line.find(_T('\r'));
 			if (rpos != tstring::npos) line.erase(rpos);
 			ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
-
-			while (lastLinesList.size() > MAX_CLIENT_LINES)
-				lastLinesList.erase(lastLinesList.begin());
+			statusHistory.addLine(line);
 		}
 		delete[] msg;
 	}
@@ -1729,14 +1728,7 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	}
 	else   // if we're really in the status bar, this should be detected intelligently
 	{
-		lastLines.clear();
-		for (size_t i = 0; i < lastLinesList.size(); ++i)
-		{
-			lastLines += lastLinesList[i];
-			if (i != lastLinesList.size()-1)
-				lastLines += _T("\r\n");
-		}
-		pDispInfo->lpszText = const_cast<TCHAR*>(lastLines.c_str());
+		statusHistory.getToolTip(pnmh);
 	}
 	return 0;
 }

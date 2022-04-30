@@ -27,6 +27,7 @@
 #include "../client/Commands.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
+#include "StatusMessageHistory.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
 
@@ -483,7 +484,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		};
 		
 		// Status bar
-		enum { MAX_CLIENT_LINES = 10 };
 		enum DefinedStatusParts
 		{
 			STATUS_PART_MESSAGE,
@@ -508,8 +508,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			HASH_PROGRESS_MARQUEE
 		};
 
-		TStringList lastLinesList;
-		tstring lastLines;
+		StatusMessageHistory statusHistory;
 		CStatusBarCtrl ctrlStatus;
 		CFlyToolTipCtrl ctrlLastLines;
 		int statusSizes[STATUS_PART_LAST];
