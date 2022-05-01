@@ -3,7 +3,7 @@ PLATFORM=VC-WIN32
 SRCDIR=.
 BLDDIR=.
 
-VERSION=1.1.1l
+VERSION=1.1.1n
 MAJOR=1
 MINOR=1.1
 
@@ -159,7 +159,7 @@ build_apps build_tests: build_programs
 # Convenience target to prebuild all generated files, not just the mandatory
 # ones
 build_all_generated: $(GENERATED_MANDATORY) $(GENERATED)
-	@
+	@@rem
 
 
 
