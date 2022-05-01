@@ -93,6 +93,14 @@
 # define _REENTRANT 1
 #endif
 
+#ifndef SIZEOF_WCHAR
+#ifdef _WIN32
+#define SIZEOF_WCHAR 2
+#else
+#define SIZEOF_WCHAR 4
+#endif
+#endif
+
 #include "compiler_flylinkdc.h" //[+]PPA
 
 #endif // DCPLUSPLUS_DCPP_COMPILER_H

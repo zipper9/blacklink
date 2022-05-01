@@ -53,44 +53,44 @@ string charsetToString(int charset);
 
 int getDefaultCharset();
 
-const string& acpToUtf8(const string& str, string& tmp, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+string& acpToUtf8(const string& str, string& tmp, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
 inline string acpToUtf8(const string& str, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return acpToUtf8(str, tmp, fromCharset);
 }
 
-const wstring& acpToWide(const string& str, wstring& tmp, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+wstring& acpToWide(const string& str, wstring& tmp, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
 inline wstring acpToWide(const string& str, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	wstring tmp;
 	return acpToWide(str, tmp, fromCharset);
 }
 
-const string& utf8ToAcp(const string& str, string& tmp, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+string& utf8ToAcp(const string& str, string& tmp, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
 inline string utf8ToAcp(const string& str, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return utf8ToAcp(str, tmp, toCharset);
 }
 
-const wstring& utf8ToWide(const string& str, wstring& tmp) noexcept;
+wstring& utf8ToWide(const string& str, wstring& tmp) noexcept;
 inline wstring utf8ToWide(const string& str) noexcept
 {
 	wstring tmp;
 	return utf8ToWide(str, tmp);
 }
 
-const string& wideToAcp(const wstring& str, string& tmp, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+string& wideToAcp(const wstring& str, string& tmp, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
 inline string wideToAcp(const wstring& str, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return wideToAcp(str, tmp, toCharset);
 }
 
-const string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept;
+string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept;
 
-inline const string& wideToUtf8(const wstring& str, string& tmp) noexcept
+inline string& wideToUtf8(const wstring& str, string& tmp) noexcept
 {
 	return wideToUtf8(str.c_str(), str.length(), tmp);
 }
@@ -100,6 +100,9 @@ inline string wideToUtf8(const wstring& str) noexcept
 	string tmp;
 	return wideToUtf8(str, tmp);
 }
+
+// Returns the number of bytes filled (1 to 4), out must be at least 4 bytes.
+int wcToUtf8(uint32_t value, char out[]) noexcept;
 
 // Returns the number of bytes used or a negative value in case of error.
 // The error value indicates how many bytes should be skipped.
@@ -155,7 +158,7 @@ template<typename string_type>
 static bool isAsciiSuffix(const string_type& str, const string_type& suffix)
 {
 	if (str.length() < suffix.length()) return false;
-	typename string_type::size_type offset = str.length() - suffix.length(); 
+	typename string_type::size_type offset = str.length() - suffix.length();
 	for (typename string_type::size_type i = 0; i < suffix.length(); i++)
 		if (Text::asciiToLower(str[offset + i]) != Text::asciiToLower(suffix[i])) return false;
 	return true;
@@ -166,7 +169,7 @@ template<typename string_type>
 static bool isAsciiSuffix2(const string_type& str, const string_type& suffix)
 {
 	if (str.length() < suffix.length()) return false;
-	typename string_type::size_type offset = str.length() - suffix.length(); 
+	typename string_type::size_type offset = str.length() - suffix.length();
 	for (typename string_type::size_type i = 0; i < suffix.length(); i++)
 		if (Text::asciiToLower(str[offset + i]) != suffix[i]) return false;
 	return true;

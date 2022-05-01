@@ -31,6 +31,7 @@ namespace Text
 
 const string g_utf8 = "utf-8";
 static const string g_utf8NoHyp = "utf8";
+uint16_t g_errorChar = 0xFFFD;
 
 const int supportedCharsets[NUM_SUPPORTED_CHARSETS] =
 {
@@ -109,7 +110,7 @@ bool isAscii(const string& str) noexcept
 	return true;
 }
 
-const string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcept
+string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcept
 {
 	wstring wtmp;
 	return wideToUtf8(acpToWide(str, wtmp, fromCharset), tmp);
@@ -159,7 +160,7 @@ void convert(char* inBuf, size_t inSize, string_type& tgt, const char* fromChars
 }
 #endif
 
-const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexcept
+wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexcept
 {
 	if (str.empty())
 	{
@@ -193,37 +194,129 @@ const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexc
 	return tgt;
 }
 
-const string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
+int wcToUtf8(uint32_t value, char out[]) noexcept
 {
-	if (len == 0)
+	if (value < 0x80)
+	{
+		out[0] = value;
+		return 1;
+	}
+	if (value < 0x800)
+	{
+		out[0] = 0xC0 | value>>6;
+		out[1] = 0x80 | (value & 0x3F);
+		return 2;
+	}
+	if (value < 0x10000)
+	{
+		out[0] = 0xE0 | value>>12;
+		out[1] = 0x80 | ((value>>6) & 0x3F);
+		out[2] = 0x80 | (value & 0x3F);
+		return 3;
+	}
+	dcassert(value < 0x110000);
+	out[0] = 0xF0 | value>>18;
+	out[1] = 0x80 | ((value>>12) & 0x3F);
+	out[2] = 0x80 | ((value>>6) & 0x3F);
+	out[3] = 0x80 | (value & 0x3F);
+	return 4;
+}
+
+string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
+{
+	char ubuf[4];
+	size_t outSize = 0;
+#if SIZEOF_WCHAR == 2
+	uint16_t highSurrogate = 0;
+	for (size_t i = 0; i < len; i++)
+	{
+		uint32_t value = str[i];
+		if (value >= 0xD800 && value < 0xDC00)
+		{
+			if (highSurrogate) outSize += wcToUtf8(g_errorChar, ubuf);
+			highSurrogate = value;
+			continue;
+		}
+		if (value >= 0xDC00 && value < 0xE000)
+		{
+			if (!highSurrogate)
+			{
+				outSize += wcToUtf8(g_errorChar, ubuf);
+				continue;
+			}
+			value = ((value - 0xDC00) | (highSurrogate - 0xD800) << 10) + 0x10000;
+			highSurrogate = 0;
+		}
+		else if (highSurrogate)
+		{
+			outSize += wcToUtf8(g_errorChar, ubuf);
+			highSurrogate = 0;
+		}
+		outSize += wcToUtf8(value, ubuf);
+	}
+	if (highSurrogate) outSize += wcToUtf8(g_errorChar, ubuf);
+
+	if (!outSize)
 	{
 		tgt.clear();
 		return tgt;
 	}
-#ifdef _WIN32
-	size_t size = 0;
-	tgt.resize(len * 2 + 1);
-	while ((size = WideCharToMultiByte(CP_UTF8, 0, str, len, &tgt[0], tgt.length(), nullptr, nullptr)) == 0)
+
+	tgt.resize(outSize);
+	char* out = &tgt[0];
+	highSurrogate = 0;
+	for (size_t i = 0; i < len; i++)
 	{
-		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+		uint32_t value = str[i];
+		if (value >= 0xD800 && value < 0xDC00)
 		{
-			tgt.resize(tgt.size() * 2);
+			if (highSurrogate) out += wcToUtf8(g_errorChar, out);
+			highSurrogate = value;
+			continue;
 		}
-		else
+		if (value >= 0xDC00 && value < 0xE000)
 		{
-			dcassert(0);
-			break;
+			if (!highSurrogate)
+			{
+				out += wcToUtf8(g_errorChar, out);
+				continue;
+			}
+			value = ((value - 0xDC00) | (highSurrogate - 0xD800) << 10) + 0x10000;
+			highSurrogate = 0;
 		}
+		else if (highSurrogate)
+		{
+			out += wcToUtf8(g_errorChar, out);
+			highSurrogate = 0;
+		}
+		out += wcToUtf8(value, out);
 	}
-	tgt.resize(size);
+	if (highSurrogate) wcToUtf8(g_errorChar, out);
 #else
-	tgt.resize(len * 2);
-	convert<string>((char *) str, len * sizeof(wchar_t), tgt, "wchar_t", g_utf8.c_str());
+	for (size_t i = 0; i < len; i++)
+	{
+		uint32_t value = str[i];
+		outSize += wcToUtf8(value < 0x110000 ? value : g_errorChar, ubuf);
+	}
+
+	if (!outSize)
+	{
+		tgt.clear();
+		return tgt;
+	}
+
+	tgt.resize(outSize);
+	char* out = &tgt[0];
+	for (size_t i = 0; i < len; i++)
+	{
+		uint32_t value = str[i];
+		out += wcToUtf8(value < 0x110000 ? value : g_errorChar, out);
+	}
 #endif
 	return tgt;
 }
 
-const string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
+string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 {
 	if (str.empty())
 	{
@@ -267,23 +360,30 @@ int utf8ToWc(const char* s, size_t pos, size_t len, uint32_t& wc) noexcept
 	if ((s[pos] & 0xC0) == 0x80) return -1;
 	if ((s[pos] & 0xE0) == 0xC0) // 2 bytes
 	{
-		if (len - pos < 2) return -2;
-		if ((s[pos + 1] & 0xC0) != 0x80) return -2;
+		if (len - pos < 2 || (s[pos + 1] & 0xC0) != 0x80) return -1;
 		wc = (s[pos] & 0x1F)<<6 | (s[pos + 1] & 0x3F);
+		if (wc < 0x80) return -1;
 		return 2;
 	}
 	if ((s[pos] & 0xF0) == 0xE0) // 3 bytes
 	{
-		if (len - pos < 3) return -3;
-		if ((s[pos + 1] & 0xC0) != 0x80 || (s[pos + 2] & 0xC0) != 0x80) return -3;
+		if (len - pos < 2 || (s[pos + 1] & 0xC0) != 0x80) return -1;
+		if (len - pos < 3 || (s[pos + 2] & 0xC0) != 0x80) return -2;
 		wc = (s[pos] & 0xF)<<12 | (s[pos + 1] & 0x3F)<<6 | (s[pos + 2] & 0x3F);
+		if (wc < 0x800) return -2;
+		if (wc >= 0xD800 && wc <= 0xDFFF) return -2;
 		return 3;
 	}
 	if ((s[pos] & 0xF8) == 0xF0) // 4 bytes
 	{
-		if (len - pos < 4) return -4;
-		if ((s[pos + 1] & 0xC0) != 0x80 || (s[pos + 2] & 0xC0) != 0x80 || (s[pos + 3] & 0xC0) != 0x80) return -4;
-		wc = (s[pos] & 0x7)<<18 | (s[pos + 1] & 0x3F)<<12 | (s[pos + 2] & 0x3F)<<6 | (s[pos + 3] & 0x3F);
+		if (len - pos < 2 || (s[pos + 1] & 0xC0) != 0x80) return -1;
+		wc = (s[pos] & 0x7)<<18;
+		if (wc > 0x10FFFF) return -1;
+		if (len - pos < 3 || (s[pos + 2] & 0xC0) != 0x80) return -2;
+		wc |= (s[pos + 1] & 0x3F)<<12;
+		if (wc > 0x10FFFF || wc < 0x10000) return -2;
+		if (len - pos < 4 || (s[pos + 3] & 0xC0) != 0x80) return -3;
+		wc |= (s[pos + 2] & 0x3F)<<6 | (s[pos + 3] & 0x3F);
 		return 4;
 	}
 	return -1;
@@ -302,7 +402,95 @@ bool validateUtf8(const string& str, size_t pos /* = 0 */) noexcept
 	return true;
 }
 
-const string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
+wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
+{
+	const char* data = str.data();
+	size_t len = str.length();
+	uint32_t wc;
+	size_t outSize = 0;
+	size_t i = 0;
+#if SIZEOF_WCHAR == 2
+	while (i < len)
+	{
+		int result = utf8ToWc(data, i, len, wc);
+		if (result < 0)
+		{
+			i -= result;
+			outSize++;
+		}
+		else
+		{
+			i += result;
+			outSize += wc >= 0x10000 ? 2 : 1;
+		}
+	}
+
+	if (!outSize)
+	{
+		tgt.clear();
+		return tgt;
+	}
+
+	tgt.resize(outSize);
+	wchar_t* out = &tgt[0];
+	i = 0;
+	while (i < len)
+	{
+		int result = utf8ToWc(data, i, len, wc);
+		if (result < 0)
+		{
+			i -= result;
+			*out++ = g_errorChar;
+		}
+		else
+		{
+			i += result;
+			if (wc >= 0x10000)
+			{
+			    wc -= 0x10000;
+				out[0] = (wchar_t) (0xD800 | (wc >> 10));
+				out[1] = (wchar_t) (0xDC00 | (wc & 0x3FF));
+				out += 2;
+			}
+			else
+				*out++ = (wchar_t) wc;
+		}
+	}
+#else
+	while (i < len)
+	{
+		i += abs(utf8ToWc(data, i, len, wc));
+		outSize++;
+	}
+
+	if (!outSize)
+	{
+		tgt.clear();
+		return tgt;
+	}
+
+	tgt.resize(outSize);
+	wchar_t* out = &tgt[0];
+	i = 0;
+	while (i < len)
+	{
+		int result = utf8ToWc(data, i, len, wc);
+		if (result < 0)
+		{
+			i -= result;
+			*out++ = (wchar_t) g_errorChar;
+		}
+		else
+		{
+			i += result;
+			*out++ = (wchar_t) wc;
+		}
+	}
+#endif
+	return tgt;
+}
+
+string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 {
 #ifdef _WIN32
 	wstring wtmp;
@@ -314,39 +502,6 @@ const string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 	convert<string>((char *) str.data(), str.length(), tmp, g_utf8.c_str(), charset);
 	return tmp;
 #endif
-}
-
-const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
-{
-	if (str.empty())
-	{
-		tgt.clear();
-		return tgt;
-	}
-#ifdef _WIN32
-	wstring::size_type size = 0;
-	tgt.resize(str.length() + 1);
-	while ((size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length())) == 0)
-	{
-		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-		{
-			dcassert(0);
-			tgt.resize(tgt.size() * 2);
-		}
-		else
-		{
-			dcassert(0);
-			break;
-		}
-		
-	}
-	tgt.resize(size);
-#else
-	tgt.resize(str.length());
-	convert<wstring>((char *) str.data(), str.length(), tgt, g_utf8.c_str(), "wchar_t");
-	return tgt;
-#endif
-	return tgt;
 }
 
 void asciiMakeLower(string& str) noexcept
@@ -422,7 +577,7 @@ string toDOS(string tmp)
 {
 	if (tmp.empty())
 		return Util::emptyString;
-		
+
 	if (tmp[0] == '\r' && (tmp.size() == 1 || tmp[1] != '\n'))
 	{
 		tmp.insert(1, "\n");
@@ -449,7 +604,7 @@ wstring toDOS(wstring tmp)
 {
 	if (tmp.empty())
 		return Util::emptyStringW;
-		
+
 	if (tmp[0] == L'\r' && (tmp.size() == 1 || tmp[1] != L'\n'))
 	{
 		tmp.insert(1, L"\n");
