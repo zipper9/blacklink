@@ -1103,22 +1103,32 @@ void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const t
 			tstring info = hubTitle + _T(" - ") + i->second->getText(COLUMN_NICK);
 			const UINT flags = ipMatches ? MF_CHECKED : 0;
 			FavoriteUser favUser;
+			string favInfo;
 			if (fm->getFavoriteUser(i->second->getUser(), favUser))
 			{
-				string favInfo;
+				favInfo = std::move(favUser.description);
 				if (favUser.isSet(FavoriteUser::FLAG_GRANT_SLOT))
-					favInfo += ' ' + STRING(AUTO_GRANT);
+				{
+					if (!favInfo.empty()) favInfo += ", ";
+					favInfo += STRING(AUTO_GRANT);
+				}
 				if (favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-					favInfo += ' ' + STRING(IGNORE_PRIVATE);
+				{
+					if (!favInfo.empty()) favInfo += ", ";
+					favInfo += STRING(IGNORE_PRIVATE);
+				}
 				if (favUser.uploadLimit != FavoriteUser::UL_NONE)
-					favInfo += ' ' + UserInfo::getSpeedLimitText(favUser.uploadLimit);
-				if (!favUser.description.empty())
-					favInfo += " \"" + favUser.description + '\"';
-				if (!favInfo.empty())
-					info += _T(", FavInfo: ") + Text::toT(favInfo);
+				{
+					if (!favInfo.empty()) favInfo += ", ";
+					favInfo += UserInfo::getSpeedLimitText(favUser.uploadLimit);
+				}
 			}
-			menuStrings.push_back(make_pair(info, flags));
-			menuStrings.push_back(make_pair(UserInfoSimple::getTagIP(id.getTag(), currentIp4, currentIp6), 0));
+			menuStrings.emplace_back(make_pair(info, flags | MF_SEPARATOR));
+			if (!favInfo.empty())
+				menuStrings.emplace_back(make_pair(Text::toT(STRING_F(FAVUSER_INFO_FMT, favInfo)), 0));
+			tstring tag = UserInfoSimple::getTagIP(id.getTag(), currentIp4, currentIp6);
+			if (!tag.empty())
+				menuStrings.emplace_back(make_pair(tag, 0));
 		}
 	}
 }

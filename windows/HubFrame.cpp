@@ -475,13 +475,20 @@ bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::
 			PostMessage(WM_CLOSE);
 			return true;
 		case Commands::COMMAND_JOIN:
+		{
 			res.what = Commands::RESULT_NO_TEXT;
-			redirect = Util::formatDchubUrl(pc.args[1]);
+			string url = Util::formatDchubUrl(pc.args[1]);
 			if (BOOLSETTING(JOIN_OPEN_NEW_WINDOW))
-				openHubWindow(redirect);
+			{
+				openHubWindow(url);
+			}
 			else
+			{
+				redirect = std::move(url);
 				followRedirect();
+			}
 			return true;
+		}
 		case Commands::COMMAND_PASSWORD:
 			res.what = Commands::RESULT_NO_TEXT;
 			if (waitingForPassword)
@@ -493,18 +500,12 @@ bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::
 		case Commands::COMMAND_SHOW_JOINS:
 			res.what = Commands::RESULT_NO_TEXT;
 			showJoins = !showJoins;
-			if (showJoins)
-				addStatus(TSTRING(JOIN_SHOWING_ON));
-			else
-				addStatus(TSTRING(JOIN_SHOWING_OFF));
+			addStatus(showJoins ? TSTRING(JOIN_SHOWING_ON) : TSTRING(JOIN_SHOWING_OFF));
 			return true;
 		case Commands::COMMAND_FAV_SHOW_JOINS:
 			res.what = Commands::RESULT_NO_TEXT;
 			showFavJoins = !showFavJoins;
-			if (showFavJoins)
-				addStatus(TSTRING(FAV_JOIN_SHOWING_ON));
-			else
-				addStatus(TSTRING(FAV_JOIN_SHOWING_OFF));
+			addStatus(showFavJoins ? TSTRING(FAV_JOIN_SHOWING_ON) : TSTRING(FAV_JOIN_SHOWING_OFF));
 			return true;
 		case Commands::COMMAND_TOGGLE_USER_LIST:
 			res.what = Commands::RESULT_NO_TEXT;
@@ -1781,8 +1782,11 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 
 		appendHubAndUsersItems(*userMenu, false);
 		appendUcMenu(*userMenu, ctx, baseClient->getHubUrl());
-		WinUtil::appendSeparator(*userMenu);
-		userMenu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
+		if (baseClient->getType() == ClientBase::TYPE_NMDC)
+		{
+			WinUtil::appendSeparator(*userMenu);
+			userMenu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
+		}
 
 		if (ui)
 		{
@@ -2754,11 +2758,13 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 	}
 	for (auto i = menuStrings.cbegin(); i != menuStrings.cend(); ++i)
 	{
-		userSummaryMenu.AppendMenu(MF_SEPARATOR);
-		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED | i->second, (UINT_PTR) 0, i->first.c_str());
-		++i;
-		if (i != menuStrings.cend() && !i->first.empty())
-			userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, i->first.c_str());
+		unsigned flags = i->second;
+		if (flags & MF_SEPARATOR)
+		{
+			userSummaryMenu.AppendMenu(MF_SEPARATOR);
+			flags &= ~MF_SEPARATOR;
+		}
+		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED | flags, (UINT_PTR) 0, i->first.c_str());
 	}
 }
 

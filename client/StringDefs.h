@@ -1758,6 +1758,7 @@ enum Strings   // @DontAdd
 	GEOIP_DOWNLOAD_FAIL, // "Failed to download GeoIP database: %1%"
 	GEOIP_DECOMPRESS_FAIL, // "Failed to decompress GeoIP database: %1%"
 	INVALID_FILE_FORMAT, // "File format is invalid"
+	FAVUSER_INFO_FMT, // "Favorite user info: %1%"
 	SETTINGS_USE_DHT, // "Use distributed hash table (DHT)"
 	SETTINGS_DHT_BOOTSTRAP, // "DHT bootstrap URL"
 	SETTINGS_MAX_HUB_UC, // "Maximum number of user commands from hub"

@@ -1567,8 +1567,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
-		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
-		fileMenu.AppendMenu(MF_SEPARATOR);
+		if (ownList)
+		{
+			fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
+			fileMenu.AppendMenu(MF_SEPARATOR);
+		}
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 		addFavMenu(fileMenu);
 		fileMenu.AppendMenu(MF_SEPARATOR);
@@ -1664,6 +1667,13 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		targetDirMenu.ClearMenu();
 
+		if (ctrlTree.GetSelectedItem() != treeRoot)
+		{
+			copyDirMenu.CreatePopupMenu();
+			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
+			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
+		}
+
 		if (!ownList)
 		{
 			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
@@ -1677,19 +1687,22 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			int n = IDC_DOWNLOAD_TARGET_TREE - IDC_DOWNLOAD_TARGET;
 			LastDir::appendItems(targetDirMenu, n);
 
-			directoryMenu.AppendMenu(MF_SEPARATOR);
-			if (ctrlTree.GetSelectedItem() != treeRoot)
+			if (copyDirMenu)
 			{
-				copyDirMenu.CreatePopupMenu();
-				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
-				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
+				directoryMenu.AppendMenu(MF_SEPARATOR);
 				directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY));
 			}
-			if (addFavMenu(directoryMenu))
-				directoryMenu.AppendMenu(MF_SEPARATOR);
+			addFavMenu(directoryMenu);
 		}
-
-		directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
+		else
+		{
+			directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
+			if (copyDirMenu)
+			{
+				directoryMenu.AppendMenu(MF_SEPARATOR);
+				directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY));
+			}
+		}
 		if (originalId && findFrameByID(originalId))
 			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL));
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);

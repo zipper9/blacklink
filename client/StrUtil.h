@@ -181,8 +181,9 @@ namespace Util
 	inline wstring toStringW(double val)
 	{
 		wchar_t buf[512];
-#ifdef _WIN32
+#if defined(_MSC_VER) && _MSC_VER < 1900
 		_snwprintf(buf, _countof(buf), L"%0.2f", val);
+		buf[_countof(buf)-1] = 0;
 #else
 		swprintf(buf, _countof(buf), L"%0.2f", val);
 #endif
