@@ -142,15 +142,16 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 		{
 //			dcassert(users.count(nick) == 0);
 			auto res = users.insert(make_pair(nick, getMyOnlineUser()));
-			if (!res.second)
+			if (res.second)
 			{
-				dcassert(res.first->second->getIdentity().getNick() == nick);
-				return res.first->second;
+				ou = res.first->second;
+				ou->getUser()->addNick(nick, getHubUrl());
+				dcassert(ou->getIdentity().getNick() == nick);
 			}
 			else
 			{
-				ou = res.first->second;
-				dcassert(ou->getIdentity().getNick() == nick);
+				dcassert(res.first->second->getIdentity().getNick() == nick);
+				return res.first->second;
 			}
 		}
 		else
