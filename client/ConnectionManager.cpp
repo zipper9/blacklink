@@ -1750,7 +1750,7 @@ bool ConnectionManager::sendCCPMMessage(const CID& cid, AdcCommand& cmd)
 	if (i == ccpmConn.end()) return false;
 	const auto& ci = i->second;
 	if (!ci.uc) return false;
-	if (cmd.getType() == AdcCommand::CMD_MSG)
+	if (cmd.getCommand() == AdcCommand::CMD_MSG)
 		ci.uc->setLastMessageActivity(GET_TICK());
 	ci.uc->send(message);
 	return true;
