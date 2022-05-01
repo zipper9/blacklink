@@ -37,7 +37,7 @@ public:
 		FLAG_NO_CACHE   = 2
 	};
 
-	HttpConnection(int id): id(id) {}
+	HttpConnection(int id): id(id), receivingData(false) {}
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
 
@@ -98,7 +98,7 @@ private:
 	int reqFlags = 0;
 
 	ConnectionStates connState = STATE_IDLE;
-	std::atomic_bool receivingData = false;
+	std::atomic_bool receivingData;
 	int requestType = -1;
 	Http::Response resp;
 

@@ -408,7 +408,7 @@ string Http::printDateTime(time_t t) noexcept
 	static const char strMonth[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 #ifdef HAVE_TIME_R
 	struct tm bt;
-	struct tm* pt = gmtime_r(&bt, &t);
+	struct tm* pt = gmtime_r(&t, &bt);
 #else
 	const tm* pt = gmtime(&t);
 #endif
