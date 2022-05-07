@@ -33,6 +33,14 @@ const string g_utf8 = "utf-8";
 static const string g_utf8NoHyp = "utf8";
 uint16_t g_errorChar = 0xFFFD;
 
+#ifndef _WIN32
+#if SIZEOF_WCHAR == 2
+static const string g_wideCharset = "UTF-16";
+#else
+static const string g_wideCharset = "UTF-32";
+#endif
+#endif
+
 const int supportedCharsets[NUM_SUPPORTED_CHARSETS] =
 {
 	1250, 1251, 1252, 1253, 1254, 1255, 1256, 1257, 1258, 936, 950
@@ -123,38 +131,62 @@ void getIconvCharset(char out[], int charset)
 		strcpy(out, g_utf8.c_str());
 	else
 		sprintf(out, "windows-%d", charset);
-	strcat(out, "//IGNORE");
+}
+
+template<typename C>
+void putErrorChar(char* &out, size_t& outSize)
+{
+	if (outSize >= sizeof(C))
+	{
+		*reinterpret_cast<C*>(out) = '?';
+		outSize -= sizeof(C);
+		out += sizeof(C);
+	}
 }
 
 template<typename string_type>
-void convert(char* inBuf, size_t inSize, string_type& tgt, const char* fromCharset, const char* toCharset)
+void convert(char* inBuf, size_t inCharSize, size_t inSize, string_type& tgt, const char* fromCharset, const char* toCharset)
 {
-	size_t size = 0;
 	iconv_t ic = iconv_open(toCharset, fromCharset);
 	if (ic == (iconv_t) -1)
 	{
-		dcassert(0);
+		assert(0);
 		tgt.clear();
 		return;
 	}
+#ifdef ICONV_SET_ILSEQ_INVALID
+	int flag = 1;
+	iconvctl(ic, ICONV_SET_ILSEQ_INVALID, &flag);
+#endif
 	char* outBuf = (char *) tgt.data();
+	size_t outBytesLeft = tgt.length() * sizeof(typename string_type::value_type);
 	while (inSize)
 	{
-		size_t outBytesLeft = (tgt.length() - size) * sizeof(typename string_type::value_type);
 		size_t result = iconv(ic, &inBuf, &inSize, &outBuf, &outBytesLeft);
 		if (result == (size_t) -1)
 		{
-			if (errno == E2BIG)
+			int error = errno;
+			if (error == E2BIG)
 			{
+				size_t size = outBuf - (char *) tgt.data();
 				tgt.resize(tgt.length() * 2);
-				outBuf = (char *) tgt.data();
+				outBuf = (char *) tgt.data() + size;
+				outBytesLeft = tgt.length() * sizeof(typename string_type::value_type) - size;
 				continue;
 			}
-			//dcassert(0);
+			if (error == EILSEQ || error == EINVAL)
+			{
+				putErrorChar<typename string_type::value_type>(outBuf, outBytesLeft);
+				if (error == EINVAL || inSize <= inCharSize) break;
+				inSize -= inCharSize;
+				inBuf += inCharSize;
+				continue;
+			}
+			dcassert(0);
 			break;
 		}
-		size = outBuf - (char *) tgt.data();
 	}
+	size_t size = outBuf - (char *) tgt.data();
 	iconv_close(ic);
 	tgt.resize(size / sizeof(typename string_type::value_type));
 }
@@ -167,6 +199,8 @@ wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexcept
 		tgt.clear();
 		return tgt;
 	}
+	if (fromCharset == CHARSET_UTF8)
+		return utf8ToWide(str, tgt);
 #ifdef _WIN32
 	string::size_type size = 0;
 	tgt.resize(str.length() + 1);
@@ -186,10 +220,12 @@ wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexcept
 	}
 	tgt.resize(size);
 #else
+	if (fromCharset == CHARSET_SYSTEM_DEFAULT)
+		return utf8ToWide(str, tgt);
 	char charset[64];
 	getIconvCharset(charset, fromCharset);
 	tgt.resize(str.length());
-	convert<wstring>((char *) str.data(), str.length(), tgt, charset, "wchar_t");
+	convert<wstring>((char *) str.data(), 1, str.length(), tgt, charset, g_wideCharset.c_str());
 #endif
 	return tgt;
 }
@@ -323,6 +359,8 @@ string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 		tgt.clear();
 		return tgt;
 	}
+	if (toCharset == CHARSET_UTF8)
+		return wideToUtf8(str, tgt);
 #ifdef _WIN32
 	const int cp = getWindowsCodePage(toCharset);
 	tgt.resize(str.length() * 2 + 1);
@@ -342,10 +380,12 @@ string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 	}
 	tgt.resize(size);
 #else
+	if (toCharset == CHARSET_SYSTEM_DEFAULT)
+		return wideToUtf8(str, tgt);
 	char charset[64];
 	getIconvCharset(charset, toCharset);
 	tgt.resize(str.length() * 2);
-	convert<string>((char *) str.data(), str.length() * sizeof(wchar_t), tgt, "wchar_t", charset);
+	convert<string>((char *) str.data(), sizeof(wchar_t), str.length() * sizeof(wchar_t), tgt, g_wideCharset.c_str(), charset);
 #endif
 	return tgt;
 }
@@ -492,16 +532,8 @@ wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 
 string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 {
-#ifdef _WIN32
 	wstring wtmp;
 	return wideToAcp(utf8ToWide(str, wtmp), tmp, toCharset);
-#else
-	char charset[64];
-	getIconvCharset(charset, toCharset);
-	tmp.resize(str.length());
-	convert<string>((char *) str.data(), str.length(), tmp, g_utf8.c_str(), charset);
-	return tmp;
-#endif
 }
 
 void asciiMakeLower(string& str) noexcept
