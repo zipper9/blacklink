@@ -35,6 +35,10 @@
 #include "shlobj.h"
 #endif
 
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
+
 #include <boost/algorithm/string.hpp>
 
 /** In local mode, all config and temp files are kept in the same dir as the executable */
@@ -201,11 +205,18 @@ tstring Util::getModuleFileName()
 string Util::getModuleFileName()
 {
 	string result;
+#ifdef __FreeBSD__
+	int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+	char buf[PATH_MAX];
+	size_t cb = sizeof(buf);
+	if (!sysctl(mib, 4, buf, &cb, NULL, 0)) result = buf;
+#else
 	char link[64];
 	sprintf(link, "/proc/%u/exe", (unsigned) getpid());
 	char buf[PATH_MAX];
 	ssize_t size = readlink(link, buf, sizeof(buf));
 	if (size > 0) result.assign(buf, size);
+#endif
 	return result;
 }
 #endif
@@ -1589,7 +1600,7 @@ void Util::readTextFile(File& file, std::function<bool(const string&)> func)
 }
 
 #ifdef _DEBUG
-static unsigned mainThreadId;
+static uintptr_t mainThreadId;
 
 void ASSERT_MAIN_THREAD()
 {

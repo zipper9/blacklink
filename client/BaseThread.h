@@ -47,7 +47,7 @@ class BaseThread
 			::Sleep(0);
 		}
 
-		static unsigned getCurrentThreadId()
+		static uintptr_t getCurrentThreadId()
 		{
 			return ::GetCurrentThreadId();
 		}
@@ -81,9 +81,9 @@ class BaseThread
 			sched_yield();
 		}
 
-		static unsigned getCurrentThreadId()
+		static uintptr_t getCurrentThreadId()
 		{
-			return pthread_self();
+			return (uintptr_t) pthread_self();
 		}
 };
 #endif

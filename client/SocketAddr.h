@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/ip6.h>
 #endif
 
