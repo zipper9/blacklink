@@ -1635,14 +1635,19 @@ EXSTYLE WS_EX_STATICEDGE
 CAPTION "GeoIP database"
 FONT 8, "MS Shell Dlg", 400, 0, 0xEE
 BEGIN
-    LTEXT           "@SettingsGeoipUrl",IDC_CAPTION_GEOIP_URL,4,4,289,8
-    EDITTEXT        IDC_GEOIP_URL,4,16,174,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "@SettingsGeoipDownload",IDC_GEOIP_DOWNLOAD,179,15,99,16
+    LTEXT           "@SettingsGeoipUrl",IDC_CAPTION_GEOIP_URL,10,28,289,8
+    GROUPBOX        "@SettingsGeoipDatabase",IDC_GROUP,4,2,298,93
+    ICON            "",IDC_STATUS_ICON,10,13,20,20
+    LTEXT           "IDC_STATUS",IDC_STATUS,10,14,273,8
+    EDITTEXT        IDC_GEOIP_URL,10,40,174,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "@SettingsGeoipDownload",IDC_GEOIP_DOWNLOAD,185,39,99,16
     CONTROL         "@SettingsGeoipAutoUpdate",IDC_GEOIP_AUTO_DOWNLOAD,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,11,34,111,10
-    LTEXT           "@SettingsGeoipCheckForUpdates",IDC_CAPTION_GEOIP_CHECK,22,50,108,8
-    EDITTEXT        IDC_GEOIP_CHECK,135,48,40,14,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "@SettingsHours",IDC_CAPTION_HOURS,178,50,65,8
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,17,60,111,10
+    LTEXT           "@SettingsGeoipCheckForUpdates",IDC_CAPTION_GEOIP_CHECK,28,76,108,8
+    EDITTEXT        IDC_GEOIP_CHECK,141,74,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "@SettingsHours",IDC_CAPTION_HOURS,184,76,65,8
+    CONTROL         "@SettingsUseCustomLocations",IDC_USE_CUSTOM_LOCATIONS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,10,100,111,10
 END
 
 
@@ -2449,8 +2454,10 @@ BEGIN
     BEGIN
         LEFTMARGIN, 4
         RIGHTMARGIN, 302
+        VERTGUIDE, 10
         TOPMARGIN, 3
         BOTTOMMARGIN, 123
+        HORZGUIDE, 8
     END
 END
 #endif    // APSTUDIO_INVOKED

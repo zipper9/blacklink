@@ -697,7 +697,7 @@ void MainFrame::onMinute(uint64_t tick)
 {
 	httpClient.removeUnusedConnections();
 	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
-		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false);
+		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
 	LogManager::closeOldFiles(tick);
 }
 

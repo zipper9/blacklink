@@ -992,6 +992,9 @@
 #define IDC_CAPTION_GEOIP_CHECK         1927
 #define IDC_GEOIP_CHECK                 1928
 #define IDC_CAPTION_HOURS               1929
+#define IDC_STATUS                      1930
+#define IDC_STATUS_ICON                 1931
+#define IDC_USE_CUSTOM_LOCATIONS        1932
 #define IDC_DCLS_ANOTHER_FOLDER         1936
 #define IDC_DCLS_GENERATORBORDER        1939
 #define IDC_DCLS_CREATE_IN_FOLDER       1940

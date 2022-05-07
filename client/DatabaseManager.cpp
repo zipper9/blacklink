@@ -237,7 +237,7 @@ DatabaseManager::DatabaseManager() noexcept
 	mmdbDownloadReq = 0;
 	timeDownloadMmdb = 0;
 	mmdbFileTimestamp = 1;
-	mmdbDownloading = false;
+	mmdbStatus = MMDB_STATUS_MISSING;
 }
 
 void DatabaseManager::init(ErrorCallback errorCallback)
@@ -463,7 +463,7 @@ void DatabaseManager::getIPInfo(const IpAddress& ip, IPInfo& result, int what, b
 	}
 	if (what & IPInfo::FLAG_LOCATION)
 	{
-		if (ip.type == AF_INET)
+		if (BOOLSETTING(USE_CUSTOM_LOCATIONS) && ip.type == AF_INET)
 			loadLocation(ip.data.v4, result);
 		else
 			result.known |= IPInfo::FLAG_LOCATION;
@@ -1484,8 +1484,8 @@ void DatabaseManager::closeGeoIPDatabaseL() noexcept
 		MMDB_close(mmdb);
 		delete mmdb;
 		mmdb = nullptr;
-		timeCheckMmdb = 0;
 	}
+	timeCheckMmdb = 0;
 }
 
 static string getMMDBString(MMDB_lookup_result_s& lres, const char* *path) noexcept
@@ -1523,34 +1523,39 @@ bool DatabaseManager::loadGeoIPInfo(const IpAddress& ip, IPInfo& result) noexcep
 	return true;
 }
 
-void DatabaseManager::getGeoIPTimestamp() noexcept
+uint64_t DatabaseManager::getGeoIPTimestamp() const noexcept
 {
+	uint64_t timestamp = 0;
 	try
 	{
 		File f(Util::getConfigPath() + fileNameGeoIP, File::READ, File::OPEN);
-		mmdbFileTimestamp = File::timeStampToUnixTime(f.getTimeStamp());
+		timestamp = File::timeStampToUnixTime(f.getTimeStamp());
 	}
-	catch (FileException&)
-	{
-		mmdbFileTimestamp = 0;
-	}
+	catch (FileException&) {}
+	return timestamp;
 }
 
-void DatabaseManager::downloadGeoIPDatabase(uint64_t timestamp, bool force) noexcept
+void DatabaseManager::downloadGeoIPDatabase(uint64_t timestamp, bool force, const string &url) noexcept
 {
+	if (url.empty()) return;
+	uint64_t fileTimestamp;
 	{
 		LOCK(csDownloadMmdb);
-		if (mmdbDownloading || (!force && timestamp < timeDownloadMmdb)) return;
-		mmdbDownloading = true;
+		if (mmdbStatus == MMDB_STATUS_DOWNLOADING || (!force && timestamp < timeDownloadMmdb)) return;
+		mmdbStatus = MMDB_STATUS_DOWNLOADING;
+		fileTimestamp = mmdbFileTimestamp;
 	}
-	string url = SETTING(URL_GEOIP);
-	if (url.empty()) return;
-	if (force || mmdbFileTimestamp == 1) getGeoIPTimestamp();
-	if (!force && mmdbFileTimestamp && mmdbFileTimestamp + SETTING(GEOIP_CHECK_HOURS) * 3600 > static_cast<uint64_t>(time(nullptr)))
+	if (force || fileTimestamp == 1)
+	{
+		fileTimestamp = getGeoIPTimestamp();
+		LOCK(csDownloadMmdb);
+		mmdbFileTimestamp = fileTimestamp;
+	}
+	if (!force && fileTimestamp && fileTimestamp + SETTING(GEOIP_CHECK_HOURS) * 3600 > static_cast<uint64_t>(time(nullptr)))
 	{
 		// File was downloaded recently
 		LOCK(csDownloadMmdb);
-		mmdbDownloading = false;
+		mmdbStatus = MMDB_STATUS_OK;
 		return;
 	}
 
@@ -1558,27 +1563,44 @@ void DatabaseManager::downloadGeoIPDatabase(uint64_t timestamp, bool force) noex
 	req.outputPath = Util::getHttpDownloadsPath();
 	File::ensureDirectory(req.outputPath);
 	req.outputPath += fileNameGeoIP + ".gz";
-	req.url = std::move(url);
+	req.url = url;
 	req.userAgent = "Airdcpp/4.11";
 	req.maxRedirects = 5;
 	req.maxRespBodySize = 10 * 1024 * 1024;
-	req.ifModified = mmdbFileTimestamp;
+	req.ifModified = fileTimestamp;
 	mmdbDownloadReq = httpClient.addRequest(req);
 	if (!mmdbDownloadReq)
 	{
 		LogManager::message(STRING_F(GEOIP_DOWNLOAD_FAIL, STRING(HTTP_INVALID_URL)));
 		LOCK(csDownloadMmdb);
-		mmdbDownloading = false;
+		mmdbStatus = MMDB_STATUS_DL_FAILED;
 		return;
 	}
 	httpClient.addListener(this);
 	httpClient.startRequest(mmdbDownloadReq);
 }
 
-bool DatabaseManager::isDownloading() const noexcept
+int DatabaseManager::getGeoIPDatabaseStatus(uint64_t& timestamp) noexcept
 {
-	LOCK(csDownloadMmdb);
-	return mmdbDownloading;
+	csDownloadMmdb.lock();
+	int status = mmdbStatus;
+	timestamp = mmdbFileTimestamp;
+	csDownloadMmdb.unlock();
+	if (status == MMDB_STATUS_DOWNLOADING || status == MMDB_STATUS_DL_FAILED) return status;
+	
+	csMmdb.lock();
+	openGeoIPDatabaseL();
+	bool isOpen = mmdb != nullptr;
+	csMmdb.unlock();
+
+	if (!isOpen) return MMDB_STATUS_MISSING;
+	if (timestamp == 1)
+	{
+		timestamp = getGeoIPTimestamp();
+		LOCK(csDownloadMmdb);
+		mmdbFileTimestamp = timestamp;
+	}
+	return MMDB_STATUS_OK;
 }
 
 void DatabaseManager::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
@@ -1592,7 +1614,7 @@ void DatabaseManager::on(Completed, uint64_t id, const Http::Response& resp, con
 	}
 	{
 		LOCK(csDownloadMmdb);
-		if (!mmdbDownloading || id != mmdbDownloadReq) return;
+		if (mmdbStatus != MMDB_STATUS_DOWNLOADING || id != mmdbDownloadReq) return;
 	}
 	httpClient.removeListener(this);
 	bool ok = true;
@@ -1622,11 +1644,13 @@ void DatabaseManager::on(Completed, uint64_t id, const Http::Response& resp, con
 	}
 	if (ok)
 	{
-		getGeoIPTimestamp();
 		LogManager::message(STRING(GEOIP_DOWNLOAD_OK));
+		uint64_t timestamp = getGeoIPTimestamp();
+		LOCK(csDownloadMmdb);
+		mmdbFileTimestamp = timestamp;
 	}
 	File::deleteFile(data.outputPath);
-	clearDownloadRequest(false);
+	clearDownloadRequest(false, ok ? MMDB_STATUS_OK : MMDB_STATUS_DL_FAILED);
 }
 
 void DatabaseManager::on(Failed, uint64_t id, const string& error) noexcept
@@ -1638,19 +1662,19 @@ void DatabaseManager::processDownloadResult(uint64_t reqId, const string& text, 
 {
 	{
 		LOCK(csDownloadMmdb);
-		if (!mmdbDownloading || reqId != mmdbDownloadReq) return;
+		if (mmdbStatus != MMDB_STATUS_DOWNLOADING || reqId != mmdbDownloadReq) return;
 	}
 	httpClient.removeListener(this);
-	clearDownloadRequest(isError);
+	clearDownloadRequest(isError, isError ? MMDB_STATUS_DL_FAILED : MMDB_STATUS_OK);
 	if (isError) LogManager::message(STRING_F(GEOIP_DOWNLOAD_FAIL, text));
 }
 
-void DatabaseManager::clearDownloadRequest(bool isError) noexcept
+void DatabaseManager::clearDownloadRequest(bool isRetry, int newStatus) noexcept
 {
 	LOCK(csDownloadMmdb);
-	mmdbDownloading = false;
+	mmdbStatus = newStatus;
 	mmdbDownloadReq = 0;
-	timeDownloadMmdb = GET_TICK() + (isError ? GEOIP_DOWNLOAD_RETRY_TIME : SETTING(GEOIP_CHECK_HOURS) * 3600);
+	timeDownloadMmdb = GET_TICK() + (isRetry ? GEOIP_DOWNLOAD_RETRY_TIME : SETTING(GEOIP_CHECK_HOURS) * 3600);
 }
 
 void IpKey::setIP(Ip4Address ip)

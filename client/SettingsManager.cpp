@@ -460,6 +460,7 @@ static const char* g_settingTags[] =
 	"SQLiteUseJournalMemory",
 	"GeoIPAutoUpdate",
 	"GeoIPCheckHours",
+	"UseCustomLocations",
 
 	// Web server (Ints)
 	"WebServer",
@@ -1076,6 +1077,7 @@ void SettingsManager::setDefaults()
 	setDefault(ENABLE_RATIO_USER_LIST, TRUE);
 	setDefault(GEOIP_AUTO_UPDATE, TRUE);
 	setDefault(GEOIP_CHECK_HOURS, 30);
+	setDefault(USE_CUSTOM_LOCATIONS, TRUE);
 
 	// Web server (Ints)
 	setDefault(WEBSERVER_SEARCHSIZE, 1000);

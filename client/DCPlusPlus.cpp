@@ -50,16 +50,18 @@
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam, DatabaseManager::ErrorCallback dbErrorCallback)
 {
 #define LOAD_STEP(name, function)\
+	do \
 	{\
 		pProgressCallbackProc(pProgressParam, _T(name));\
 		function;\
-	}
+	} while (0)
 	
 #define LOAD_STEP_L(nameKey, function)\
+	do \
 	{\
 		pProgressCallbackProc(pProgressParam, TSTRING(nameKey));\
 		function;\
-	}
+	} while (0)
 	
 	dcassert(pProgressCallbackProc != nullptr);
 	
@@ -69,18 +71,13 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP_L(STARTUP_P2P_GUARD, Util::loadP2PGuard());
 	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());
 	
-	LOAD_STEP_L(STARTUP_CUSTOM_LOCATIONS, Util::loadCustomLocations());
+	if (BOOLSETTING(USE_CUSTOM_LOCATIONS))
+		LOAD_STEP_L(STARTUP_CUSTOM_LOCATIONS, Util::loadCustomLocations());
 	
 	HashManager::newInstance();
 
-#ifdef FLYLINKDC_USE_VLD
-	VLDDisable();
-#endif
-// FLYLINKDC_CRYPTO_DISABLE
 	LOAD_STEP("SSL", CryptoManager::newInstance());
-#ifdef FLYLINKDC_USE_VLD
-	VLDEnable();
-#endif
+
 	HublistManager::newInstance();
 	SearchManager::newInstance();
 	ConnectionManager::newInstance();
@@ -249,14 +246,7 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		ADLSearchManager::deleteInstance();
 		FinishedManager::deleteInstance();
 		ShareManager::deleteInstance();
-#ifdef FLYLINKDC_USE_VLD
-		VLDDisable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
-#endif
-// FLYLINKDC_CRYPTO_DISABLE
 		CryptoManager::deleteInstance();
-#ifdef FLYLINKDC_USE_VLD
-		VLDEnable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
-#endif
 		dht::DHT::getInstance()->stop(true);
 		dht::DHT::deleteInstance();
 		ThrottleManager::deleteInstance();

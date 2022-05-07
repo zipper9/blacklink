@@ -30,11 +30,17 @@ class GeoIPPage : public CPropertyPage<IDD_GEOIP_PAGE>, public PropPage
 		int getPageIcon() const { return PROP_PAGE_ICON_GEOIP; }
 		void write();
 		void cancel() { cancel_check(); }
-		void onTimer() { updateButtonState(); }
+		void onTimer() { updateState(); }
 
 	private:
+		int iconX;
+		int textX;
+		int textY;
+		int textWidth;
+		int textHeight;
+
 		void fixControls();
-		void updateButtonState();
+		void updateState();
 };
 
 #endif // GEOIP_PAGE_H

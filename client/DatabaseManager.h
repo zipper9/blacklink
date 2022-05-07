@@ -234,8 +234,17 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		void getIPInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached);
 		void clearCachedP2PGuardData(Ip4Address ip);
 		void clearIpCache();
-		void downloadGeoIPDatabase(uint64_t timestamp, bool force) noexcept;
-		bool isDownloading() const noexcept;
+		void downloadGeoIPDatabase(uint64_t timestamp, bool force, const string &url) noexcept;
+
+		enum
+		{
+			MMDB_STATUS_OK,
+			MMDB_STATUS_MISSING,
+			MMDB_STATUS_DOWNLOADING,
+			MMDB_STATUS_DL_FAILED
+		};
+
+		int getGeoIPDatabaseStatus(uint64_t& timestamp) noexcept;
 
 	private:
 		void loadLocation(Ip4Address ip, IPInfo& result);
@@ -249,8 +258,8 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		void closeGeoIPDatabaseL() noexcept;
 		bool loadGeoIPInfo(const IpAddress& ip, IPInfo& result) noexcept;
 		void processDownloadResult(uint64_t reqId, const string& text, bool isError) noexcept;
-		void clearDownloadRequest(bool isError) noexcept;
-		void getGeoIPTimestamp() noexcept;
+		void clearDownloadRequest(bool isRetry, int newStatus) noexcept;
+		uint64_t getGeoIPTimestamp() const noexcept;
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	private:
@@ -301,8 +310,8 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		uint64_t mmdbDownloadReq;
 		uint64_t timeDownloadMmdb;
 		uint64_t mmdbFileTimestamp; // 0 - file doesn't exist, 1 - not initialized
-		bool mmdbDownloading;
-		mutable CriticalSection csDownloadMmdb;
+		int mmdbStatus;
+		CriticalSection csDownloadMmdb;
 
 	private:
 		sqlite3_command selectIgnoredUsers;

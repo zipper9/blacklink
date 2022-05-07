@@ -434,6 +434,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SQLITE_USE_JOURNAL_MEMORY,
 			GEOIP_AUTO_UPDATE,
 			GEOIP_CHECK_HOURS,
+			USE_CUSTOM_LOCATIONS,
 
 			// Web server (Ints)
 			WEBSERVER,
