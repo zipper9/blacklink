@@ -1776,6 +1776,8 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 					ctx |= UserCommand::CONTEXT_FLAG_ME;
 				reinitUserMenu(ou, baseClient->getHubUrl());
 			}
+			else
+				reinitUserMenu(nullptr, baseClient->getHubUrl());
 		}
 
 		appendHubAndUsersItems(*userMenu, false);
