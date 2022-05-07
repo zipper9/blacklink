@@ -2852,9 +2852,14 @@ void MainFrame::on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& t
 	PrivateFrame::openWindow(nullptr, HintedUser(to, hint), Util::emptyString, Text::fromT(message));
 }
 
-void MainFrame::on(UserManagerListener::OpenHub, const string& url) noexcept
+void MainFrame::on(UserManagerListener::OpenHub, const string& url, const UserPtr& user) noexcept
 {
-	HubFrame::openHubWindow(url);
+	HubFrame::Settings cs;
+	cs.server = url;
+	bool isNew;
+	HubFrame* hubFrame = HubFrame::openHubWindow(cs, &isNew);
+	if (!isNew && hubFrame && user)
+		hubFrame->selectCID(user->getCID());
 }
 
 void MainFrame::on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept

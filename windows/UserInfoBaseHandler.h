@@ -4,6 +4,7 @@
 #include "OMenu.h"
 #include "resource.h"
 #include "ImageLists.h"
+#include "../client/CID.h"
 #include "../client/LogManager.h"
 
 class UserInfo;
@@ -12,7 +13,26 @@ struct FavUserTraits;
 
 struct UserInfoGuiTraits // technical class, please do not use it directly!
 {
+		friend class UserInfoSimple;
+
 	public:
+		struct DetailsItem
+		{
+			enum
+			{
+				TYPE_USER,
+				TYPE_FAV_INFO,
+				TYPE_TAG
+			};
+
+			int type;
+			UINT id;
+			UINT flags;
+			tstring text;
+			CID cid;
+			string hubUrl;
+		};
+
 		static void init(); // only for WinUtil!
 		static void uninit(); // only for WinUtil!
 		static bool isUserInfoMenu(HMENU handle) // only for WinUtil!
@@ -44,6 +64,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static int getCtrlIdBySpeedLimit(int limit);
 		static bool getSpeedLimitByCtrlId(WORD wID, int& lim, const tstring& nick);
 		static void updateSpeedMenuText(int customSpeed);
+		static void processDetailsMenu(WORD id);
 
 		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
@@ -62,9 +83,11 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static OMenu favUserMenu;
 		static int speedMenuCustomVal;
 		static int displayedSpeed[2];
-		
+
 		static OMenu userSummaryMenu;
-		friend class UserInfoSimple;
+
+		static vector<DetailsItem> detailsItems;
+		static UINT detailsItemMaxId;
 
 		static const UINT IDC_SPEED_VALUE = 30000; // must be high enough so it won't clash with normal IDCs
 };
@@ -113,6 +136,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		COMMAND_RANGE_HANDLER(IDC_PM_NORMAL, IDC_PM_FREE, onPrivateAccess)
 		COMMAND_RANGE_HANDLER(IDC_SPEED_NORMAL, IDC_SPEED_MANUAL, onSetUserLimit)
 		COMMAND_RANGE_HANDLER(IDC_SPEED_VALUE, IDC_SPEED_VALUE + 256, onSetUserLimit)
+		COMMAND_RANGE_HANDLER(IDC_USER_INFO, UserInfoGuiTraits::detailsItemMaxId, onDetailsMenu)
 		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemoveAll)
 		COMMAND_ID_HANDLER(IDC_REPORT, onReport)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onConnectFav)
@@ -459,7 +483,13 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			doAction(&UserInfoBase::removeAll);
 			return 0;
 		}
-		
+
+		LRESULT onDetailsMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			processDetailsMenu(wID);
+			return 0;
+		}
+
 		const T2& getSelectedUser() const
 		{
 			return selectedUser;

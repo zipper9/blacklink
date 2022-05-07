@@ -1,9 +1,6 @@
 #include "stdafx.h"
-#include "UserInfoBaseHandler.h"
+#include "UsersFrame.h"
 #include "LimitEditDlg.h"
-#include "../client/Util.h"
-#include "../client/FavoriteUser.h"
-#include "../client/UserInfoBase.h"
 
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
@@ -15,6 +12,9 @@ OMenu UserInfoGuiTraits::speedMenu;
 OMenu UserInfoGuiTraits::userSummaryMenu;
 OMenu UserInfoGuiTraits::privateMenu;
 OMenu UserInfoGuiTraits::favUserMenu;
+
+vector<UserInfoGuiTraits::DetailsItem> UserInfoGuiTraits::detailsItems;
+UINT UserInfoGuiTraits::detailsItemMaxId = 0;
 
 static const uint16_t speeds[] = { 8, 16, 32, 64, 128, 256, 1024, 10*1024 };
 
@@ -183,6 +183,28 @@ void UserInfoGuiTraits::updateSpeedMenuText(int customSpeed)
 			text += _T(" (") + Util::toStringT(customSpeed) + _T(' ') + TSTRING(KBPS) + _T(")");
 		speedMenu.RenameItem(IDC_SPEED_MANUAL, text);
 	}
+}
+
+void UserInfoGuiTraits::processDetailsMenu(WORD id)
+{
+	for (const auto& item : detailsItems)
+		if (item.id == id)
+		{
+			if (item.type == DetailsItem::TYPE_USER)
+			{
+				UserPtr user = ClientManager::findUser(item.cid);
+				if (user)
+					UserManager::getInstance()->openUserUrl(item.hubUrl, user);	
+			}
+			else if (item.type == DetailsItem::TYPE_FAV_INFO)
+			{
+				UsersFrame::openWindow();
+				if (UsersFrame::g_frame)
+					UsersFrame::g_frame->showUser(item.cid);
+			}
+			break;
+		}
+	detailsItems.clear();
 }
 
 void FavUserTraits::init(const UserInfoBase& ui)

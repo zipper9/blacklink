@@ -2436,11 +2436,6 @@ void NmdcHub::myInfoParse(const string& param)
 	fireUserUpdated(ou);
 }
 
-void NmdcHub::onDDoSSearchDetect(const string& p_error) noexcept
-{
-	fire(ClientListener::DDoSSearchDetect(), p_error);
-}
-
 void NmdcHub::onDataLine(const string& aLine) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())

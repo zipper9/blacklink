@@ -43,7 +43,7 @@ class UserManagerListener
 		typedef X<5> ReservedSlotChanged;
 		
 		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
-		virtual void on(OpenHub, const string&) noexcept { }
+		virtual void on(OpenHub, const string&, const UserPtr&) noexcept { }
 		virtual void on(CollectSummaryInfo, const UserPtr&, const string& hubHint) noexcept { }
 		virtual void on(IgnoreListChanged, const string& userName) noexcept { }
 		virtual void on(IgnoreListCleared) noexcept { }
@@ -57,7 +57,7 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		{
 			fire(UserManagerListener::OutgoingPrivateMessage(), user, hubHint, message);
 		}
-		void openUserUrl(const UserPtr& user);
+		void openUserUrl(const string& hub, const UserPtr& user);
 		void collectSummaryInfo(const UserPtr& user, const string& hubHint)
 		{
 			fire(UserManagerListener::CollectSummaryInfo(), user, hubHint);
@@ -117,10 +117,10 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 
 		boost::unordered_map<UserPtr, PMInfo, User::Hash> pmInfo;
 		mutable FastCriticalSection csPM;
-		
+
 		friend class Singleton<UserManager>;
 		UserManager();
-		
+
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		bool hasProtectedUsers;
 		std::regex reProtectedUsers;

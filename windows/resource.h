@@ -1383,6 +1383,7 @@
 #define IDC_READD                       7400
 #define IDC_PREVIEW_APP                 7500
 #define IDC_PM_HUB                      7600
+#define IDC_USER_INFO                   7700
 #define ID_TOGGLE_TOOLBAR               32771
 #define ID_TOGGLE_QSEARCH               32772
 #define ID_VIEW_TRANSFER_VIEW           32773

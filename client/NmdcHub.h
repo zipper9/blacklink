@@ -198,7 +198,6 @@ class NmdcHub : public Client, private Flags
 
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;
-		void onDDoSSearchDetect(const string&) noexcept override;
 		void onFailed(const string&) noexcept override;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	public:

@@ -8,6 +8,7 @@
 #include "TypedListViewCtrl.h"
 #include "CustomDrawHelpers.h"
 #include "UserInfo.h"
+#include "UserInfoBaseHandler.h"
 #include "TaskQueue.h"
 #include "../client/ClientManager.h"
 
@@ -56,7 +57,8 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		bool showHeaderMenu(POINT pt);
 		UserInfo* getSelectedUserInfo(bool* isMultiple) const;
 		bool selectNick(const tstring& nick);
-		void getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, vector<std::pair<tstring, UINT>>& menuStrings) const;
+		bool selectCID(const CID& cid);
+		void getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const;
 		bool loadIPInfo(const OnlineUserPtr& ou);
 
 		void onIgnoreListChanged(const string& userName);
@@ -138,6 +140,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		void insertUserInternal(UserInfo* ui, int pos);
 		void updateUserList();
 		void removeListViewItems();
+		void selectItem(int pos);
 
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);

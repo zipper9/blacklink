@@ -449,6 +449,21 @@ void UsersFrame::removeUser(const FavoriteUser& user)
 	}
 }
 
+void UsersFrame::showUser(const CID& cid)
+{
+	const int count = ctrlUsers.GetItemCount();
+	for (int i = 0; i < count; ++i)
+	{
+		ItemInfo *ii = ctrlUsers.getItemData(i);
+		if (ii->getUser()->getCID() == cid)
+		{
+			ctrlUsers.SelectItem(i);
+			ctrlUsers.EnsureVisible(i, FALSE);
+			return;
+		}
+	}
+}
+
 LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (!closed)

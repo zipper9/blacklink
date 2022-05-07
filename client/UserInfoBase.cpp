@@ -176,7 +176,11 @@ void UserInfoBase::removeAll()
 void UserInfoBase::connectFav()
 {
 	if (getUser())
-		UserManager::getInstance()->openUserUrl(getUser());
+	{
+		string url = FavoriteManager::getInstance()->getUserUrl(getUser());
+		if (!url.empty())
+			UserManager::getInstance()->openUserUrl(url, getUser());
+	}
 }
 
 void UserInfoBase::grantSlotPeriod(const string& hubHint, const uint64_t period)

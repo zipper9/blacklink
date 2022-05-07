@@ -1067,26 +1067,52 @@ UserInfo* UserListWindow::getSelectedUserInfo(bool* isMultiple) const
 	return ui;
 }
 
+void UserListWindow::selectItem(int pos)
+{
+	CLockRedraw<> lockRedraw(ctrlUsers);
+	const auto perPage = ctrlUsers.GetCountPerPage();
+	const int items = ctrlUsers.GetItemCount();
+	for (int i = 0; i < items; ++i)
+		ctrlUsers.SetItemState(i, i == pos ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
+	ctrlUsers.EnsureVisible(pos, FALSE);
+	const auto lastPos = pos + perPage / 2;
+	if (!ctrlUsers.EnsureVisible(lastPos, FALSE))
+		ctrlUsers.EnsureVisible(pos, FALSE);
+}
+
 bool UserListWindow::selectNick(const tstring& nick)
 {
 	const int pos = ctrlUsers.findItem(nick);
 	if (pos != -1)
 	{
-		CLockRedraw<> lockRedraw(ctrlUsers);
-		const auto perPage = ctrlUsers.GetCountPerPage();
-		const int items = ctrlUsers.GetItemCount();
-		for (int i = 0; i < items; ++i)
-			ctrlUsers.SetItemState(i, i == pos ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
-		ctrlUsers.EnsureVisible(pos, FALSE);
-		const auto lastPos = pos + perPage / 2;
-		if (!ctrlUsers.EnsureVisible(lastPos, FALSE))
-			ctrlUsers.EnsureVisible(pos, FALSE);
+		selectItem(pos);
 		return true;
 	}
 	return false;
 }
 
-void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, vector<std::pair<tstring, UINT>>& menuStrings) const
+bool UserListWindow::selectCID(const CID& cid)
+{
+	int pos = -1;
+	int count = ctrlUsers.GetItemCount();
+	for (int i = 0; i < count; ++i)
+	{
+		const auto* data = ctrlUsers.getItemData(i);
+		if (data->getUser()->getCID() == cid)
+		{
+			pos = i;
+			break;
+		}
+	}
+	if (pos != -1)
+	{
+		selectItem(pos);
+		return true;
+	}
+	return false;
+}
+
+void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const
 {
 	auto fm = FavoriteManager::getInstance();
 	bool hasIP6 = !Util::isEmpty(param.ip6);
@@ -1100,11 +1126,12 @@ void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const t
 		bool ipMatches = (param.ip4 && param.ip4 == currentIp4) || (hasIP6 && param.ip6 == currentIp6);
 		if (nickMatches || ipMatches)
 		{
+			const UserPtr& user = i->second->getUser();
 			tstring info = hubTitle + _T(" - ") + i->second->getText(COLUMN_NICK);
 			const UINT flags = ipMatches ? MF_CHECKED : 0;
 			FavoriteUser favUser;
 			string favInfo;
-			if (fm->getFavoriteUser(i->second->getUser(), favUser))
+			if (fm->getFavoriteUser(user, favUser))
 			{
 				favInfo = std::move(favUser.description);
 				if (favUser.isSet(FavoriteUser::FLAG_GRANT_SLOT))
@@ -1123,12 +1150,15 @@ void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const t
 					favInfo += UserInfo::getSpeedLimitText(favUser.uploadLimit);
 				}
 			}
-			menuStrings.emplace_back(make_pair(info, flags | MF_SEPARATOR));
+			items.emplace_back(UserInfoGuiTraits::DetailsItem{UserInfoGuiTraits::DetailsItem::TYPE_USER,
+				idc++, flags | MF_SEPARATOR, info, user->getCID(), hubUrl});
 			if (!favInfo.empty())
-				menuStrings.emplace_back(make_pair(Text::toT(STRING_F(FAVUSER_INFO_FMT, favInfo)), 0));
+				items.emplace_back(UserInfoGuiTraits::DetailsItem{UserInfoGuiTraits::DetailsItem::TYPE_FAV_INFO,
+					idc++, 0, Text::toT(STRING_F(FAVUSER_INFO_FMT, favInfo)), user->getCID(), hubUrl});
 			tstring tag = UserInfoSimple::getTagIP(id.getTag(), currentIp4, currentIp6);
 			if (!tag.empty())
-				menuStrings.emplace_back(make_pair(tag, 0));
+				items.emplace_back(UserInfoGuiTraits::DetailsItem{UserInfoGuiTraits::DetailsItem::TYPE_TAG,
+					0, 0, tag, user->getCID(), hubUrl});
 		}
 	}
 }

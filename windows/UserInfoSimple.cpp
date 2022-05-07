@@ -111,7 +111,9 @@ void UserInfoSimple::addSummaryMenu()
 			if (!tagIp.empty())
 				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, tagIp.c_str());
 		}
-		HubFrame::addDupeUsersToSummaryMenu(params);
+		UINT idc = IDC_USER_INFO;
+		HubFrame::addDupUsersToSummaryMenu(params, UserInfoGuiTraits::detailsItems, idc);
+		UserInfoGuiTraits::detailsItemMaxId = idc - 1;
 	}
 	
 	//UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_SEPARATOR);

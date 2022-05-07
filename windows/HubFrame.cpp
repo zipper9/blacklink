@@ -80,7 +80,6 @@ HubFrame::HubFrame(const Settings& cs) :
 	bytesShared(0),
 	activateCounter(0),
 	hubParamUpdated(false),
-	m_is_ddos_detect(false),
 	asyncUpdate(0),
 	asyncUpdateSaved(0),
 	disableChat(false)
@@ -348,6 +347,7 @@ void HubFrame::onAfterActiveTab(HWND aWnd)
 		createMessagePanel();
 	}
 }
+
 void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 {
 	if (!ClientManager::isBeforeShutdown())
@@ -366,7 +366,7 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 	}
 }
 
-HubFrame* HubFrame::openHubWindow(const Settings& cs)
+HubFrame* HubFrame::openHubWindow(const Settings& cs, bool* isNew)
 {
 	LOCK(csFrames);
 	HubFrame* frm;
@@ -389,18 +389,16 @@ HubFrame* HubFrame::openHubWindow(const Settings& cs)
 		//if (cs.windowType)
 		//	frm->ShowWindow(cs.windowType);
 		frames.insert(make_pair(cs.server, frm));
+		if (isNew) *isNew = true;
 	}
 	else
 	{
 		frm = i->second;
 		if (::IsIconic(frm->m_hWnd))
-		{
 			::ShowWindow(frm->m_hWnd, SW_RESTORE);
-		}
 		if (frm->m_hWndMDIClient)
-		{
 			frm->MDIActivate(frm->m_hWnd);
-		}
+		if (isNew) *isNew = false;
 	}
 	return frm;
 }
@@ -2259,20 +2257,6 @@ void HubFrame::on(ClientListener::Connected, const Client* c) noexcept
 	addTask(CONNECTED, nullptr);
 }
 
-void HubFrame::on(ClientListener::DDoSSearchDetect, const string&) noexcept
-{
-#if 0 // FIXME
-	dcassert(!isClosedOrShutdown());
-	if (isClosedOrShutdown())
-		return;
-	if (!m_is_ddos_detect)
-	{
-		setCustomIcon(*WinUtil::g_HubDDoSIcon.get());
-		m_is_ddos_detect = true;
-	}
-#endif
-}
-
 void HubFrame::on(ClientListener::UserUpdated, const OnlineUserPtr& user) noexcept
 {
 	if (isClosedOrShutdown())
@@ -2622,11 +2606,7 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 LRESULT HubFrame::onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (getSelectedUser() && ctrlUsers)
-	{
-		tstring nick = Text::toT(getSelectedUser()->getIdentity().getNick());
-		if (ctrlUsers.selectNick(nick))
-			ctrlUsers.getUserList().SetFocus();
-	}
+		selectCID(getSelectedUser()->getUser()->getCID());
 	return 0;
 }
 
@@ -2744,27 +2724,28 @@ LRESULT HubFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL& bHandled)
 	return 0;
 }
 
-void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
+void HubFrame::addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc)
 {
-	vector<std::pair<tstring, UINT>> menuStrings;
+	detailsItems.clear();
 	{
 		LOCK(csFrames);
 		for (auto f = frames.cbegin(); f != frames.cend(); ++f)
 		{
 			const auto& frame = f->second;
 			if (!frame->isClosedOrShutdown())
-				frame->ctrlUsers.getDupUsers(param, frame->getHubTitle(), menuStrings);
+				frame->ctrlUsers.getDupUsers(param, frame->getHubTitle(), frame->baseClient->getHubUrl(), idc, detailsItems);
 		}
 	}
-	for (auto i = menuStrings.cbegin(); i != menuStrings.cend(); ++i)
+	for (const auto& item : detailsItems)
 	{
-		unsigned flags = i->second;
+		unsigned flags = item.flags;
 		if (flags & MF_SEPARATOR)
 		{
 			userSummaryMenu.AppendMenu(MF_SEPARATOR);
 			flags &= ~MF_SEPARATOR;
 		}
-		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED | flags, (UINT_PTR) 0, i->first.c_str());
+		if (!item.id) flags |= MF_DISABLED;
+		userSummaryMenu.AppendMenu(MF_STRING | flags, item.id, item.text.c_str());
 	}
 }
 
@@ -2925,6 +2906,12 @@ void HubFrame::setCurrentNick(const tstring& nick)
 void HubFrame::appendNickToChat(const tstring& nick)
 {
 	BaseChatFrame::appendNickToChat(nick);
+}
+
+void HubFrame::selectCID(const CID& cid)
+{
+	if (ctrlUsers.selectCID(cid))
+		ctrlUsers.getUserList().SetFocus();
 }
 
 BOOL HubFrame::PreTranslateMessage(MSG* pMsg)

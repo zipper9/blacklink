@@ -261,13 +261,9 @@ void UserManager::reloadProtectedUsers()
 }
 #endif
 
-void UserManager::openUserUrl(const UserPtr& aUser)
+void UserManager::openUserUrl(const string& url, const UserPtr& user)
 {
-	const string& url = FavoriteManager::getInstance()->getUserUrl(aUser);
-	if (!url.empty())
-	{
-		fire(UserManagerListener::OpenHub(), url);
-	}
+	fire(UserManagerListener::OpenHub(), url, user);
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN

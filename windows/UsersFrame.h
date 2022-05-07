@@ -105,9 +105,10 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		LRESULT onIgnorePrivate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		void updateLayout();
-		
+		void showUser(const CID& cid);
+
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
-		
+
 		LRESULT onSetFocus(UINT uMsg, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			ctrlUsers.SetFocus();
@@ -186,7 +187,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		void updateUser(const UserPtr& user);
 		void updateUser(const int i, ItemInfo* ui, const FavoriteUser& favUser);
 		void removeUser(const FavoriteUser& user);
-		
+
 	private:
 		typedef TypedListViewCtrl<ItemInfo, IDC_USERS> UserInfoList;
 		UserInfoList ctrlUsers;

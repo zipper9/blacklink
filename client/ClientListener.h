@@ -37,8 +37,7 @@ class ClientListener
 		typedef X<19> CheatMessage;
 		typedef X<20> HubInfoMessage;
 		typedef X<21> UserReport;
-		typedef X<22> DDoSSearchDetect;
-		
+
 		enum NickErrorCode
 		{
 			NoError,
@@ -78,7 +77,6 @@ class ClientListener
 		virtual void on(CheatMessage, const string&) noexcept { }
 		virtual void on(HubInfoMessage, HubInfoCode, const Client*, const string&) noexcept { }
 		virtual void on(UserReport, const ClientBase*, const string&) noexcept { }
-		virtual void on(DDoSSearchDetect, const string&) noexcept { }
 };
 
 #endif /*CLIENTLISTENER_H_*/

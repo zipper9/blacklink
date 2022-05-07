@@ -170,8 +170,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			processTasks();
 			return 0;
 		}
-		
-		void switchPanels();
+
 		LRESULT onSwitchPanels(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			switchPanels();
@@ -181,14 +180,16 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onBeforeActiveTab(HWND aWnd) override;
 		virtual void onAfterActiveTab(HWND aWnd) override;
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
-		
+
 		void UpdateLayout(BOOL resizeBars = TRUE);
 		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void runUserCommand(UserCommand& uc);
 		void followRedirect();
-		
-		static HubFrame* openHubWindow(const Settings& cs);
+		void switchPanels();
+		void selectCID(const CID& cid);
+
+		static HubFrame* openHubWindow(const Settings& cs, bool* isNew = nullptr);
 		static HubFrame* openHubWindow(const string& server, const string& keyPrint = Util::emptyString);
 		static HubFrame* findHubWindow(const string& server);
 		static void resortUsers();
@@ -351,7 +352,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept override;
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
 		void on(SettingsLoaded, const Client*) noexcept override;
-		void on(ClientListener::DDoSSearchDetect, const string&) noexcept override;
 		
 		// UserListWindow::HubFrameCallbacks
 		void showErrorMessage(const tstring& text) override;
@@ -375,8 +375,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void clearAutoComplete() override;
 
 	public:
-		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
-		
+		static void addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc);
+
 		StringMap getFrameLogParams() const;
 		void readFrameLog();
 		void openFrameLog() const
@@ -402,7 +402,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		tstring getHubTitle() const;
 		
 		bool userListInitialized;
-		bool m_is_ddos_detect;
 		unsigned activateCounter;
 		
 		void updateSplitterPosition(int chatUserSplit, bool swapPanels);
