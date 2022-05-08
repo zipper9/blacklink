@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <iconv.h>
 #include <langinfo.h>
+#include <boost/predef/other/endian.h>
 #endif
 
 namespace Text
@@ -34,10 +35,15 @@ static const string g_utf8NoHyp = "utf8";
 uint16_t g_errorChar = 0xFFFD;
 
 #ifndef _WIN32
-#if SIZEOF_WCHAR == 2
-static const string g_wideCharset = "UTF-16";
+#if BOOST_ENDIAN_BIG_BYTE
+#define WCHAR_BYTE_ORDER "BE"
 #else
-static const string g_wideCharset = "UTF-32";
+#define WCHAR_BYTE_ORDER "LE"
+#endif
+#if SIZEOF_WCHAR == 2
+static const string g_wideCharset = "UTF-16" WCHAR_BYTE_ORDER;
+#else
+static const string g_wideCharset = "UTF-32" WCHAR_BYTE_ORDER;
 #endif
 #endif
 
