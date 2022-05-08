@@ -385,7 +385,7 @@ User::DefinedAutoBanFlags User::hasAutoBan(const Client *client, bool isFavorite
 	if (!forceAllow)
 	{
 		const string nick = getLastNick();
-		forceAllow = !nick.empty() && !UserManager::getInstance()->isInProtectedUserList(nick);
+		forceAllow = !nick.empty() && UserManager::getInstance()->isInProtectedUserList(nick);
 	}
 	int ban = BAN_NONE;
 	if (!forceAllow)

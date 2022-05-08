@@ -114,9 +114,9 @@ bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noCh
 		source->disconnect();
 		return true;
 	}
-	bool l_is_ban = false;
-	const bool l_is_favorite = FavoriteManager::getInstance()->isFavoriteUser(user, l_is_ban);
-	const auto banType = user->hasAutoBan(nullptr, l_is_favorite);
+	bool isBanned = false;
+	const bool isFavorite = FavoriteManager::getInstance()->isFavoriteUser(user, isBanned);
+	const auto banType = user->hasAutoBan(nullptr, isFavorite);
 	bool banByRules = banType != User::BAN_NONE;
 	if (banByRules)
 	{
@@ -230,14 +230,9 @@ bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noCh
 				}
 			}
 			if (sendPm)
-			{
-				ClientManager::privateMessage(source->getHintedUser(), banstr, false);
-			}
+				ClientManager::privateMessage(source->getHintedUser(), banstr, false, true);
 		}
 	}
-	
-//	if (BOOLSETTING(BAN_STEALTH)) source->maxedOut();
-
 	return true;
 }
 

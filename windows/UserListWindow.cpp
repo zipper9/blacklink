@@ -880,7 +880,11 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
 		{
 			bool isFav = false;
-			if (user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
+			Client* client = nullptr;
+			auto cb = onlineUser->getClientBase();
+			if (cb->getType() != ClientBase::TYPE_DHT)
+				client = static_cast<Client*>(cb.get());
+			if (user->hasAutoBan(client, isFav) != User::BAN_NONE)
 				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
 			else
 				flags = (flags & ~IS_AUTOBAN);
