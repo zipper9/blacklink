@@ -1095,6 +1095,12 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16
 	uc->setEncoding(Text::CHARSET_UTF8);
 	uc->setState(UserConnection::STATE_CONNECT);
 	uc->setHubUrl(user.getClientBase()->getHubUrl());
+	if (!token.empty())
+	{
+		int type = tokenManager.getTokenType(token);
+		if (type == TokenManager::TYPE_CCPM)
+			uc->setFlag(UserConnection::FLAG_CCPM);
+	}
 	try
 	{
 		uc->connect(user.getIdentity().getConnectIP(), port, localPort, natRole);
