@@ -234,15 +234,15 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	dl->setHintedUser(user);
 
 	colorContrastText = RGB(0,0,0);
-	colorShared = RGB(114,219,139);
-	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
-	colorDownloaded = RGB(145,194,196);
-	colorDownloadedLighter = HLS_TRANSFORM(colorDownloaded, 35, -20);
-	colorCanceled = RGB(210,168,211);
-	colorCanceledLighter = HLS_TRANSFORM(colorCanceled, 35, -20);
-	colorFound = RGB(255,255,0);
-	colorFoundLighter = HLS_TRANSFORM(colorFound, 20, -20);
-	colorInQueue = RGB(186,0,42);
+	colorShared = SETTING(FILE_SHARED_COLOR);
+	colorSharedLighter = ColorUtil::lighter(colorShared);
+	colorDownloaded = SETTING(FILE_DOWNLOADED_COLOR);
+	colorDownloadedLighter = ColorUtil::lighter(colorDownloaded);
+	colorCanceled = SETTING(FILE_CANCELED_COLOR);
+	colorCanceledLighter = ColorUtil::lighter(colorCanceled);
+	colorFound = SETTING(FILE_FOUND_COLOR);
+	colorFoundLighter = ColorUtil::lighter(colorFound);
+	colorInQueue = SETTING(FILE_QUEUED_COLOR);
 
 	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlList.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);

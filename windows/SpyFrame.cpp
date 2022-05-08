@@ -70,8 +70,8 @@ SpyFrame::SpyFrame() :
 	itemId(0)
 {
 	memset(countPerSec, 0, sizeof(countPerSec));
-	colorShared = RGB(114,219,139);
-	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
+	colorShared = SETTING(FILE_SHARED_COLOR);
+	colorSharedLighter = ColorUtil::lighter(colorShared);
 	colorContrastText = RGB(0,0,0);
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);

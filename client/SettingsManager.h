@@ -510,6 +510,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			COLOR_RUNNING_COMPLETED,
 			COLOR_DOWNLOADED,
 			BAN_COLOR,
+			FILE_SHARED_COLOR,
+			FILE_DOWNLOADED_COLOR,
+			FILE_CANCELED_COLOR,
+			FILE_FOUND_COLOR,
+			FILE_QUEUED_COLOR,
 
 			// Assorted UI settings (Ints)
 			SHOW_GRIDLINES,

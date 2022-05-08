@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "BarShader.h"
 #include "WinUtil.h"
+#include "ColorUtil.h"
 
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -264,153 +265,6 @@ void CBarShader::FillRect(HDC hdc, LPCRECT rectSpan, COLORREF crColor)
 
 OperaColors::FCIMap OperaColors::cache;
 
-double OperaColors::RGB2HUE(double r, double g, double b)
-{
-	double H = 60;
-	double F = 0;
-	double m2 = MAX3(r, g, b);
-	double m1 = CENTER(r, g, b);
-	double m0 = MIN3(r, g, b);
-	
-	if (EqualD(m2, m1))
-	{
-		if (EqualD(r, g))
-		{
-			goto _RGB2HUE_END;
-		}
-		if (EqualD(g, b))
-		{
-			H = 180;
-			goto _RGB2HUE_END;
-		}
-		goto _RGB2HUE_END;
-	}
-	F = 60 * (m1 - m0) / (m2 - m0);
-	if (EqualD(r, m2))
-	{
-		H = 0 + F * (g - b);
-		goto _RGB2HUE_END;
-	}
-	if (EqualD(g, m2))
-	{
-		H = 120 + F * (b - r);
-		goto _RGB2HUE_END;
-	}
-	H = 240 + F * (r - g);
-	
-_RGB2HUE_END:
-	if (H < 0)
-		H = H + 360;
-	return H;
-}
-
-RGBTRIPLE OperaColors::HUE2RGB(double m0, double m2, double h)
-{
-	RGBTRIPLE rgbt = {0, 0, 0};
-	double m1, F = 0;
-	int n;
-	while (h < 0)
-		h += 360;
-	while (h >= 360)
-		h -= 360;
-	n = (int)(h / 60);
-	
-	if (h < 60)
-		F = h;
-	else if (h < 180)
-		F = h - 120;
-	else if (h < 300)
-		F = h - 240;
-	else
-		F = h - 360;
-	m1 = m0 + (m2 - m0) * sqrt(ABS(F / 60));
-	switch (n)
-	{
-		case 0:
-			rgbt.rgbtRed = (BYTE)(255 * m2);
-			rgbt.rgbtGreen = (BYTE)(255 * m1);
-			rgbt.rgbtBlue = (BYTE)(255 * m0);
-			break;
-		case 1:
-			rgbt.rgbtRed = (BYTE)(255 * m1);
-			rgbt.rgbtGreen = (BYTE)(255 * m2);
-			rgbt.rgbtBlue = (BYTE)(255 * m0);
-			break;
-		case 2:
-			rgbt.rgbtRed = (BYTE)(255 * m0);
-			rgbt.rgbtGreen = (BYTE)(255 * m2);
-			rgbt.rgbtBlue = (BYTE)(255 * m1);
-			break;
-		case 3:
-			rgbt.rgbtRed = (BYTE)(255 * m0);
-			rgbt.rgbtGreen = (BYTE)(255 * m1);
-			rgbt.rgbtBlue = (BYTE)(255 * m2);
-			break;
-		case 4:
-			rgbt.rgbtRed = (BYTE)(255 * m1);
-			rgbt.rgbtGreen = (BYTE)(255 * m0);
-			rgbt.rgbtBlue = (BYTE)(255 * m2);
-			break;
-		case 5:
-			rgbt.rgbtRed = (BYTE)(255 * m2);
-			rgbt.rgbtGreen = (BYTE)(255 * m0);
-			rgbt.rgbtBlue = (BYTE)(255 * m1);
-			break;
-	}
-	return rgbt;
-}
-
-HLSTRIPLE OperaColors::RGB2HLS(BYTE red, BYTE green, BYTE blue)
-{
-	double r = (double)red / 255;
-	double g = (double)green / 255;
-	double b = (double)blue / 255;
-	double m0 = MIN3(r, g, b), m2 = MAX3(r, g, b), d;
-	HLSTRIPLE hlst = {0, -1, -1};
-	
-	hlst.hlstLightness = (m2 + m0) / 2;
-	d = (m2 - m0) / 2;
-	if (hlst.hlstLightness <= 0.5)
-	{
-		if (EqualD(hlst.hlstLightness, 0))
-			hlst.hlstLightness = 0.1;
-		hlst.hlstSaturation = d / hlst.hlstLightness;
-	}
-	else
-	{
-		if (EqualD(hlst.hlstLightness, 1))
-			hlst.hlstLightness = 0.99;
-		hlst.hlstSaturation = d / (1 - hlst.hlstLightness);
-	}
-	if (hlst.hlstSaturation > 0 && hlst.hlstSaturation < 1)
-		hlst.hlstHue = RGB2HUE(r, g, b);
-	return hlst;
-}
-
-RGBTRIPLE OperaColors::HLS2RGB(double hue, double lightness, double saturation)
-{
-	RGBTRIPLE rgbt = {0, 0, 0};
-	double d;
-	
-	if (EqualD(lightness, 1))
-	{
-		rgbt.rgbtRed = rgbt.rgbtGreen = rgbt.rgbtBlue = 255;
-		return rgbt;
-	}
-	if (EqualD(lightness, 0))
-		return rgbt;
-	if (lightness <= 0.5)
-		d = saturation * lightness;
-	else
-		d = saturation * (1 - lightness);
-	if (EqualD(d, 0))
-	{
-		rgbt.rgbtRed = rgbt.rgbtGreen = rgbt.rgbtBlue = (BYTE)(lightness * 255);
-		return rgbt;
-	}
-	return HUE2RGB(lightness - d, lightness + d, hue);
-}
-
 void OperaColors::EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b)
 {
 	const HLSCOLOR hls_a = ::RGB2HLS(clr);
@@ -427,15 +281,6 @@ void OperaColors::EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b)
 	else
 		buf += 38;
 	b = ::HLS2RGB(HLS(HLS_H(hls_b), buf, HLS_S(hls_b)));
-}
-
-COLORREF OperaColors::TextFromBackground(COLORREF bg)
-{
-	const HLSTRIPLE hlst = RGB2HLS(bg);
-	if (hlst.hlstLightness > 0.63)
-		return RGB(0, 0, 0);
-	else
-		return RGB(255, 255, 255);
 }
 
 void OperaColors::ClearCache()

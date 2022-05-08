@@ -757,6 +757,7 @@
     <ClCompile Include="windows\ChatCtrl.cpp" />
     <ClCompile Include="windows\CheckTargetDlg.cpp" />
     <ClCompile Include="windows\Colors.cpp" />
+    <ClCompile Include="windows\ColorUtil.cpp" />
     <ClCompile Include="windows\CommandDlg.cpp" />
     <ClCompile Include="windows\CommandLine.cpp" />
     <ClCompile Include="windows\CountryList.cpp" />
@@ -920,6 +921,7 @@
     <ClInclude Include="windows\ChatCtrl.h" />
     <ClInclude Include="windows\CheckTargetDlg.h" />
     <ClInclude Include="windows\Colors.h" />
+    <ClInclude Include="windows\ColorUtil.h" />
     <ClInclude Include="windows\CommandDlg.h" />
     <ClInclude Include="windows\CommandLine.h" />
     <ClInclude Include="windows\CompiledDateTime.h" />

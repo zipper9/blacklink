@@ -397,6 +397,9 @@
     <ClCompile Include="windows\StatusMessageHistory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\ColorUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -928,6 +931,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\StatusMessageHistory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ColorUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -57,92 +57,52 @@ class CBarShader
 		void CalcPerPixelandPerByte();
 };
 
-typedef struct tagHLSTRIPLE
-{
-	DOUBLE hlstHue;
-	DOUBLE hlstLightness;
-	DOUBLE hlstSaturation;
-} HLSTRIPLE;
-
 class OperaColors
 {
 	public:
-		static inline bool EqualD(double a, double b)
+		static inline COLORREF blendColors(COLORREF cr1, COLORREF cr2, double balance = 0.5)
 		{
-			return fabs(a - b) <= 1e-6;
+			unsigned r1 = GetRValue(cr1);
+			unsigned g1 = GetGValue(cr1);
+			unsigned b1 = GetBValue(cr1);
+			unsigned r2 = GetRValue(cr2);
+			unsigned g2 = GetGValue(cr2);
+			unsigned b2 = GetBValue(cr2);
+			unsigned r = unsigned((r1 * (balance * 2) + (r2 * ((1 - balance) * 2))) / 2);
+			unsigned g = unsigned((g1 * (balance * 2) + (g2 * ((1 - balance) * 2))) / 2);
+			unsigned b = unsigned((b1 * (balance * 2) + (b2 * ((1 - balance) * 2))) / 2);
+			return RGB(r, g, b);
 		}
-		static inline BYTE getRValue(const COLORREF& cr)
+
+		static inline COLORREF brightenColor(COLORREF c, double brightness = 0)
 		{
-			return (BYTE)(cr & 0xFF);
-		}
-		static inline BYTE getGValue(const COLORREF& cr)
-		{
-			return (BYTE)(((cr & 0xFF00) >> 8) & 0xFF);
-		}
-		static inline BYTE getBValue(const COLORREF& cr)
-		{
-			return (BYTE)(((cr & 0xFF0000) >> 16) & 0xFF);
-		}
-		static double RGB2HUE(double red, double green, double blue);
-		static RGBTRIPLE HUE2RGB(double m0, double m2, double h);
-		static HLSTRIPLE RGB2HLS(BYTE red, BYTE green, BYTE blue);
-		static inline HLSTRIPLE RGB2HLS(COLORREF c)
-		{
-			return RGB2HLS(getRValue(c), getGValue(c), getBValue(c));
-		}
-		static RGBTRIPLE HLS2RGB(double hue, double lightness, double saturation);
-		static inline RGBTRIPLE HLS2RGB(const HLSTRIPLE& hls)
-		{
-			return HLS2RGB(hls.hlstHue, hls.hlstLightness, hls.hlstSaturation);
-		}
-		static inline COLORREF RGB2REF(const RGBTRIPLE& c)
-		{
-			return RGB(c.rgbtRed, c.rgbtGreen, c.rgbtBlue);
-		}
-		static inline COLORREF blendColors(const COLORREF& cr1, const COLORREF& cr2, double balance = 0.5)
-		{
-			BYTE r1 = getRValue(cr1);
-			BYTE g1 = getGValue(cr1);
-			BYTE b1 = getBValue(cr1);
-			BYTE r2 = getRValue(cr2);
-			BYTE g2 = getGValue(cr2);
-			BYTE b2 = getBValue(cr2);
-			return RGB(
-			           (r1 * (balance * 2) + (r2 * ((1 - balance) * 2))) / 2,
-			           (g1 * (balance * 2) + (g2 * ((1 - balance) * 2))) / 2,
-			           (b1 * (balance * 2) + (b2 * ((1 - balance) * 2))) / 2
-			       );
-		}
-		static inline COLORREF brightenColor(const COLORREF& c, double brightness = 0)
-		{
-			if (EqualD(brightness, 0))
-			{
+			if (abs(brightness) < 1e-6)
 				return c;
-			}
-			else if (brightness > 0)
+
+			unsigned r = GetRValue(c);
+			unsigned g = GetGValue(c);
+			unsigned b = GetBValue(c);
+			if (brightness > 0)
 			{
-				BYTE r = getRValue(c);
-				BYTE g = getGValue(c);
-				BYTE b = getBValue(c);
-				return RGB(
-				           (r + ((255 - r) * brightness)),
-				           (g + ((255 - g) * brightness)),
-				           (b + ((255 - b) * brightness))
-				       );
+				r += (255 - r) * brightness;
+				g += (255 - g) * brightness;
+				b += (255 - b) * brightness;
+				if (r > 255) r = 255;
+				if (g > 255) g = 255;
+				if (b > 255) b = 255;
 			}
 			else
 			{
-				return RGB(
-				           (getRValue(c) * (1 + brightness)),
-				           (getGValue(c) * (1 + brightness)),
-				           (getBValue(c) * (1 + brightness))
-				       );
+				r *= (1 + brightness);
+				g *= (1 + brightness);
+				b *= (1 + brightness);
 			}
+			return RGB(r, g, b);
 		}
-		static void FloodFill(HDC hDC, int x1, int y1, int x2, int y2, const COLORREF c1, const COLORREF c2, bool light = true);
+
+		static void FloodFill(HDC hDC, int x1, int y1, int x2, int y2, COLORREF c1, COLORREF c2, bool light = true);
 		static void EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b);
-		static COLORREF TextFromBackground(COLORREF bg);
-		
+
 		static void ClearCache();
 		
 	private:

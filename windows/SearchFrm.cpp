@@ -48,10 +48,6 @@ static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
 extern bool g_DisableTestPort;
 
 static const COLORREF colorContrastText = RGB(0,0,0);
-static const COLORREF colorShared = RGB(114,219,139);
-static const COLORREF colorDownloaded = RGB(145,194,196);
-static const COLORREF colorCanceled = RGB(210,168,211);
-static const COLORREF colorInQueue = RGB(186,0,42);
 
 const int SearchFrame::columnId[] =
 {
@@ -166,6 +162,11 @@ SearchFrame::SearchFrame() :
 	hTheme(nullptr),
 	useDHT(false)
 {
+	colorShared = SETTING(FILE_SHARED_COLOR);
+	colorDownloaded = SETTING(FILE_DOWNLOADED_COLOR);
+	colorCanceled = SETTING(FILE_CANCELED_COLOR);
+	colorInQueue = SETTING(FILE_QUEUED_COLOR);
+
 	ctrlResults.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlResults.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlResults.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
@@ -2527,7 +2528,7 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 	return 0;
 }
 
-static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
+void SearchFrame::getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const
 {
 	fg = Colors::g_textColor;
 	bg = Colors::g_bgColor;

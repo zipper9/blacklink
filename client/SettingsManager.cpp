@@ -536,6 +536,11 @@ static const char* g_settingTags[] =
 	"ColorRunning2",
 	"ColorDownloaded",
 	"BanColor",
+	"FileSharedColor",
+	"FileDownloadedColor",
+	"FileCanceledColor",
+	"FileFoundColor",
+	"FileQueuedColor",
 
 	// Assorted UI settings (Ints)
 	"ShowGrid",
@@ -1150,6 +1155,12 @@ void SettingsManager::setDefaults()
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
 	setDefault(BAN_COLOR, RGB(116, 154, 179));
+	setDefault(FILE_SHARED_COLOR, RGB(114,219,139));
+	setDefault(FILE_DOWNLOADED_COLOR, RGB(145,194,196));
+	setDefault(FILE_CANCELED_COLOR, RGB(210,168,211));
+	setDefault(FILE_DOWNLOADED_COLOR, RGB(210,168,211));
+	setDefault(FILE_FOUND_COLOR, RGB(255,255,0));
+	setDefault(FILE_QUEUED_COLOR, RGB(186,0,42));
 
 	// Assorted UI settings (Ints)
 	setDefault(SHOW_INFOTIPS, TRUE);

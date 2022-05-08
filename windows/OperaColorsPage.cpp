@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "OperaColorsPage.h"
 #include "WinUtil.h"
+#include "ColorUtil.h"
 #include "PropertiesDlg.h"
 #include "BarShader.h"
 
@@ -203,7 +204,7 @@ LRESULT OperaColorsPage::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 				OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, crMenubarLeft, crMenubarRight, getCheckbox(IDC_SETTINGS_ODC_MENUBAR_BUMPED));
 			else
 				dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, crMenubarLeft);
-			dc.SetTextColor(OperaColors::TextFromBackground(crMenubarLeft));
+			dc.SetTextColor(ColorUtil::textFromBackground(crMenubarLeft));
 		}
 		else if (dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW || dis->CtlID == IDC_PROGRESS_COLOR_UP_SHOW)
 		{
@@ -222,7 +223,7 @@ LRESULT OperaColorsPage::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 				statusBar.FillRange(0, 16, clr);
 				statusBar.Draw(dc, rc.top, rc.left, depth);
 			}
-			textcolor = getCheckbox(IDC_PROGRESS_OVERRIDE2) ? ((dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW) ? crProgressTextDown : crProgressTextUp) : OperaColors::TextFromBackground(clr);
+			textcolor = getCheckbox(IDC_PROGRESS_OVERRIDE2) ? ((dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW) ? crProgressTextDown : crProgressTextUp) : ColorUtil::textFromBackground(clr);
 			dc.SetTextColor(textcolor);
 		}
 		const tstring text = TSTRING(SETTINGS_MENUHEADER_EXAMPLE);

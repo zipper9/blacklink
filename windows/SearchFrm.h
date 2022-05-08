@@ -578,12 +578,18 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		};
 		std::map<int, DownloadTarget> dlTargets;
 
+		COLORREF colorShared;
+		COLORREF colorDownloaded;
+		COLORREF colorCanceled;
+		COLORREF colorInQueue;
+
+		void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const;
 		void showPortStatus();
-		
+
 		void onEnter();
 		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title);
 		static tstring getTargetDirectory(const SearchInfo* si, const tstring& downloadDir);
-		
+
 		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
 		
 		//void on(SearchManagerListener::Searching, SearchQueueItem* aSearch) noexcept override;

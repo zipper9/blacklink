@@ -26,6 +26,7 @@
 #include "ShellContextMenu.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
+#include "ColorUtil.h"
 #include "Fonts.h"
 #include "resource.h"
 

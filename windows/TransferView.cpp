@@ -655,7 +655,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					if (BOOLSETTING(PROGRESS_OVERRIDE_COLORS2))
 						clrText = ii->download ? SETTING(PROGRESS_TEXT_COLOR_DOWN) : SETTING(PROGRESS_TEXT_COLOR_UP);
 					else
-						clrText = OperaColors::TextFromBackground(clr);
+						clrText = ColorUtil::textFromBackground(clr);
 					COLORREF oldColor = SetTextColor(dc, clrText);
 					                                 
 					// Draw the background and border of the bar
@@ -680,13 +680,13 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					else
 					{
 						// New style progressbar tweaks the current colors
-						const HLSTRIPLE hlsBk = OperaColors::RGB2HLS(cd->clrTextBk);
+						int hlsL = HLS_L(RGB2HLS(cd->clrTextBk));
 
 						// Create pen (ie outline border of the cell)
-						HPEN penBorder = CreatePen(PS_SOLID, 1, OperaColors::blendColors(cd->clrTextBk, clr, (hlsBk.hlstLightness > 0.75) ? 0.6 : 0.4));
+						HPEN penBorder = CreatePen(PS_SOLID, 1, OperaColors::blendColors(cd->clrTextBk, clr, hlsL > 191 ? 0.6 : 0.4));
 						HGDIOBJ oldPen = SelectObject(dc, penBorder);
 
-						COLORREF clrFill = OperaColors::blendColors(cd->clrTextBk, clr, (hlsBk.hlstLightness > 0.75) ? 0.85 : 0.70);
+						COLORREF clrFill = OperaColors::blendColors(cd->clrTextBk, clr, hlsL > 191 ? 0.85 : 0.70);
 						HBRUSH hBrush = CreateSolidBrush(clrFill);
 						HGDIOBJ oldBrush = (HBRUSH)::SelectObject(dc, hBrush);
 
