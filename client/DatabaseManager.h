@@ -43,14 +43,6 @@ enum eTypeTransfer
 	e_TransferUpload = 1    // must match e_Upload
 };
 
-struct IPAddressRange
-{
-	uint32_t startIp;
-	uint32_t endIp;
-	IPAddressRange() {}
-	IPAddressRange(uint32_t startIp, uint32_t endIp): startIp(startIp), endIp(endIp) {}
-};
-
 struct P2PGuardData
 {
 	uint32_t startIp;
