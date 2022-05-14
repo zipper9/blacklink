@@ -17,4 +17,5 @@ set(SOURCES
   ../client/Text.cpp
 )
 
+include_directories(../boost)
 add_executable(MakeDefs ${SOURCES})
