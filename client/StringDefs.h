@@ -1627,6 +1627,7 @@ enum Strings   // @DontAdd
 	ERROR_CREATING_FILE, // "Error creating file %1%"
 	BAD_IP_ADDRESS, // "The IP address you've entered is invalid,\nreverting to the previous value."
 	PORT_TEST_GETTING_IP, // "Detecting public IPv%1% using URL %2%"
+	PORT_TEST_ERROR_GETTING_IP, // "Could not start request to detect public IPv%1%"
 	PORT_TEST_STARTED, // "Testing open ports using URL %1%"
 	FILE_TTH_TITLE, // "Tiger Tree Hash"
 	FILE_TTH_PATH, // "Path:"
@@ -1827,6 +1828,7 @@ enum Strings   // @DontAdd
 	COMMAND_INVALID_CID, // "Invalid CID"
 	COMMAND_INVALID_IP, // "Invalid IP address"
 	COMMAND_INVALID_ACTION, // "Unknown action to perform"
+	COMMAND_INVALID_ARGUMENT, // "Invalid argument"
 	COMMAND_EMPTY_LIST, // "Empty list"
 	COMMAND_UNKNOWN_LOG_FILE_TYPE, // "Unknown log file type"
 	NA, // "N/A"
@@ -1931,5 +1933,6 @@ enum Strings   // @DontAdd
 	CMD_HELP_HELP, // "Print help message"
 	CMD_HELP_ME, // "#message\tSpeak in third person"
 	CMD_HELP_LAST_NICK, // "#message\tAppend last inserted nick"
+	CMD_HELP_IP_UPDATE, // "[v4 | v6]\tGet public IP address"
 	LAST // @DontAdd
 };

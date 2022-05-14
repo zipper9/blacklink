@@ -15,7 +15,7 @@ IpTest::IpTest(): hasListener(false), shutDown(false),
 {
 }
 
-bool IpTest::runTest(int type) noexcept
+bool IpTest::runTest(int type, string* message) noexcept
 {
 	string url = type == REQ_IP4 ? SETTING(URL_GET_IP) : SETTING(URL_GET_IP6);
 	HttpClient::Request cr;
@@ -52,7 +52,9 @@ bool IpTest::runTest(int type) noexcept
 		hasListener = addListener = true;
 	cs.unlock();
 
-	LogManager::message(STRING_F(PORT_TEST_GETTING_IP, (type == REQ_IP4 ? 4 : 6) % url));
+	string str = STRING_F(PORT_TEST_GETTING_IP, (type == REQ_IP4 ? 4 : 6) % url);
+	LogManager::message(str);
+	if (message) *message = std::move(str);
 
 	if (addListener)
 		addListeners();

@@ -25,7 +25,7 @@ public:
 	};
 
 	IpTest();
-	bool runTest(int type) noexcept;
+	bool runTest(int type, string* message = nullptr) noexcept;
 	bool isRunning(int type) const noexcept;
 	bool isRunning() const noexcept;
 	int getState(int type, string* reflectedAddress) const noexcept;

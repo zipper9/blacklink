@@ -4,12 +4,14 @@
 #include "DatabaseManager.h"
 #include "ClientManager.h"
 #include "ConnectionManager.h"
+#include "ConnectivityManager.h"
 #include "QueueManager.h"
 #include "UserManager.h"
 #include "UploadManager.h"
 #include "HashUtil.h"
 #include "ParamExpander.h"
 #include "HttpClient.h"
+#include "IpTest.h"
 #include "dht/DHT.h"
 #include "dht/DHTSearchManager.h"
 #include "dht/IndexManager.h"
@@ -56,6 +58,7 @@ static const CommandDescription desc[] =
 	{ CTX_HUB | CTX_USER,                               0, 1,        ResourceManager::CMD_HELP_GET_LIST            }, // COMMAND_GET_LIST
 	{ CTX_USER,                                         0, 0,        ResourceManager::CMD_HELP_GRANT_EXTRA_SLOT    }, // COMMAND_GRANT_EXTRA_SLOT
 	{ CTX_USER,                                         0, 0,        0                                             }, // COMMAND_CCPM
+	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_IP_UPDATE           }, // COMMAND_IP_UPDATE
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_VERSION        }, // COMMAND_INFO_VERSION
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_UPTIME         }, // COMMAND_INFO_UPTIME
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_SPEED          }, // COMMAND_INFO_SPEED
@@ -141,6 +144,7 @@ static const CommandName names[] =
 	{ "http",           COMMAND_DEBUG_HTTP          },
 	{ "ignorelist",     COMMAND_SHOW_IGNORE_LIST    },
 	{ "il",             COMMAND_SHOW_IGNORE_LIST    },
+	{ "ipupdate",       COMMAND_IP_UPDATE           },
 	{ "itunes",         COMMAND_MEDIA_PLAYER        },
 	{ "ja",             COMMAND_MEDIA_PLAYER        },
 	{ "join",           COMMAND_JOIN                },
@@ -376,6 +380,13 @@ enum
 {
 	ACTION_HTTP_GET = 1,
 	ACTION_HTTP_POST
+};
+
+static const char* actionsIP[] = { "v4", "v6", nullptr };
+enum
+{
+	ACTION_IP_V4 = 1,
+	ACTION_IP_V6
 };
 
 bool Commands::isPublic(const StringList& args)
@@ -1059,6 +1070,39 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 		case COMMAND_INFO_DB:
 		{
 			res.text = DatabaseManager::getInstance()->getDBInfo();
+			res.what = RESULT_LOCAL_TEXT;
+			return true;
+		}
+		case COMMAND_IP_UPDATE:
+		{
+			bool v4 = true;
+			bool v6 = ConnectivityManager::hasIP6();
+			if (pc.args.size() > 1)
+			{
+				int action = getAction(pc, actionsIP);
+				if (!action)
+				{
+					res.text = STRING(COMMAND_INVALID_ARGUMENT);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				v4 = action == ACTION_IP_V4;
+				v6 = !v4;
+			}
+			string msg;
+			if (v4)
+			{
+				if (!g_ipTest.runTest(IpTest::REQ_IP4, &msg))
+					msg = STRING_F(PORT_TEST_ERROR_GETTING_IP, 4);
+				res.text = std::move(msg);
+			}
+			if (v6)
+			{
+				if (!g_ipTest.runTest(IpTest::REQ_IP6, &msg))
+					msg = STRING_F(PORT_TEST_ERROR_GETTING_IP, 6);
+				if (!res.text.empty()) res.text += '\n';
+				res.text += msg;
+			}
 			res.what = RESULT_LOCAL_TEXT;
 			return true;
 		}
