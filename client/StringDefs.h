@@ -1172,6 +1172,7 @@ enum Strings   // @DontAdd
 	SETTINGS_POPUP_PMS_HUB, // "Open private messages from the hub in their own window"
 	SETTINGS_POPUP_PMS_OTHER, // "Open private messages in their own window"
 	SETTINGS_PORT_TEST_SERVER_URL, // "Port test server URL"
+	SETTINGS_GET_IPV4_URL, // "Get public IPv4 URL"
 	SETTINGS_GET_IPV6_URL, // "Get public IPv6 URL"
 	SETTINGS_PORTS, // "Ports"
 	SETTINGS_ADD_PREVIEW_APP, // "Add preview application"

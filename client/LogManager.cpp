@@ -273,7 +273,7 @@ void LogManager::commandTrace(const string& msg, int flags, const string& ip, in
 void LogManager::speakStatusMessage(const string& message) noexcept
 {
 #ifdef _WIN32
-	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !ClientManager::isStartup() && !ClientManager::isBeforeShutdown())
+	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !ClientManager::isBeforeShutdown())
 	{
 		size_t len = std::min<size_t>(message.length(), 255);
 		char* data = new char[len + 1];

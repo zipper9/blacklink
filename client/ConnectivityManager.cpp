@@ -36,11 +36,12 @@ std::atomic_bool ConnectivityManager::ipv6Enabled(false);
 
 enum
 {
-	RUNNING_IPV4      = 1,
-	RUNNING_IPV6      = 2,
-	RUNNING_TEST_IPV4 = 4,
-	RUNNING_TEST_IPV6 = 8,
-	RUNNING_OTHER     = 16
+	RUNNING_IPV4            = 1,
+	RUNNING_IPV6            = 2,
+	RUNNING_TEST_IPV4_PORTS = 4,
+	RUNNING_TEST_IPV4       = 8,
+	RUNNING_TEST_IPV6       = 16,
+	RUNNING_OTHER           = 32
 };
 
 enum
@@ -110,18 +111,24 @@ unsigned ConnectivityManager::testPorts()
 	if (!force && !BOOLSETTING(AUTO_TEST_PORTS)) return 0;
 	if (status & STATUS_IPV4)
 	{
-		int portTCP = SETTING(TCP_PORT);
-		g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-		int portUDP = SETTING(UDP_PORT);
-		g_portTest.setPort(PortTest::PORT_UDP, portUDP);
-		int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
-		if (CryptoManager::TLSOk())
+		int ic = SETTING(INCOMING_CONNECTIONS);
+		if (force || ic != SettingsManager::INCOMING_FIREWALL_PASSIVE)
 		{
-			int portTLS = SETTING(TLS_PORT);
-			g_portTest.setPort(PortTest::PORT_TLS, portTLS);
-			mask |= 1<<PortTest::PORT_TLS;
+			int portTCP = SETTING(TCP_PORT);
+			g_portTest.setPort(PortTest::PORT_TCP, portTCP);
+			int portUDP = SETTING(UDP_PORT);
+			g_portTest.setPort(PortTest::PORT_UDP, portUDP);
+			int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
+			if (CryptoManager::TLSOk())
+			{
+				int portTLS = SETTING(TLS_PORT);
+				g_portTest.setPort(PortTest::PORT_TLS, portTLS);
+				mask |= 1<<PortTest::PORT_TLS;
+			}
+			if (g_portTest.runTest(mask))
+				testFlags |= RUNNING_TEST_IPV4_PORTS;
 		}
-		if (g_portTest.runTest(mask))
+		else if (g_ipTest.runTest(IpTest::REQ_IP4))
 			testFlags |= RUNNING_TEST_IPV4;
 	}
 	if (!force && (status & STATUS_IPV6))
@@ -365,12 +372,12 @@ void ConnectivityManager::processPortTestResult() noexcept
 {
 	if (g_portTest.isRunning()) return;
 	cs.lock();
-	if (!(running & RUNNING_TEST_IPV4))
+	if (!(running & RUNNING_TEST_IPV4_PORTS))
 	{
 		cs.unlock();
 		return;
 	}
-	running &= ~RUNNING_TEST_IPV4;
+	running &= ~RUNNING_TEST_IPV4_PORTS;
 	bool autoDetectFlag = autoDetect[0];
 	autoDetect[0] = false;
 	unsigned runningFlags = running;
@@ -395,15 +402,16 @@ void ConnectivityManager::processPortTestResult() noexcept
 
 void ConnectivityManager::processGetIpResult(int req) noexcept
 {
-	if (req != IpTest::REQ_IP6 || g_ipTest.isRunning(req)) return;
+	if (g_ipTest.isRunning(req)) return;
+	unsigned flag = req == IpTest::REQ_IP6 ? RUNNING_TEST_IPV6 : RUNNING_TEST_IPV4;
 	bool completed = false;
 	cs.lock();
-	if (!(running & RUNNING_TEST_IPV6))
+	if (!(running & flag))
 	{
 		cs.unlock();
 		return;
 	}
-	running &= ~RUNNING_TEST_IPV6;
+	running &= ~flag;
 	if (!(running & ~RUNNING_OTHER))
 	{
 		running = 0;

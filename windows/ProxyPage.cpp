@@ -40,6 +40,7 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_SETTINGS_SOCKS5_PASSWORD, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_SOCKS_RESOLVE, FLAG_TRANSLATE, AUTO, UNSPEC },
 	{ IDC_CAPTION_PORT_TEST_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_GET_IPV4_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_CAPTION_GET_IPV6_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_CAPTION_DHT_BOOTSTRAP_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
@@ -52,6 +53,7 @@ static const PropPage::Item items[] =
 	{ IDC_SOCKS_PASSWORD,    SettingsManager::SOCKS_PASSWORD,    PropPage::T_STR  },
 	{ IDC_SOCKS_RESOLVE,     SettingsManager::SOCKS_RESOLVE,     PropPage::T_BOOL },
 	{ IDC_PORT_TEST_URL,     SettingsManager::URL_PORT_TEST,     PropPage::T_STR  },
+	{ IDC_GET_IPV4_URL,      SettingsManager::URL_GET_IP,        PropPage::T_STR  },
 	{ IDC_GET_IPV6_URL,      SettingsManager::URL_GET_IP6,       PropPage::T_STR  },
 	{ IDC_DHT_BOOTSTRAP_URL, SettingsManager::URL_DHT_BOOTSTRAP, PropPage::T_STR  },
 	{ 0,                     0,                                  PropPage::T_END  }
