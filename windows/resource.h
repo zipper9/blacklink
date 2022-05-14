@@ -59,7 +59,6 @@
 #define IDD_CHANGE_PASS                 168
 #define IDD_FAVORITEDIR                 169
 #define IDD_CLIENTS_PAGE                170
-#define IDD_DETECTION_ENTRY             171
 #define IDD_DEFAULT_CLICK_PAGE          173
 #define IDD_PROXY_PAGE                  176
 #define IDD_TABS_PAGE                   177
@@ -104,7 +103,6 @@
 #define IDR_GENDER_USERS                234
 #define IDD_SPEEDLIMIT_DLG              240
 #define IDD_INTEGRATION_PAGE            241
-#define IDD_LOCATIONS_PAGE              248
 #define WEBSERVER_SOCKET_MESSAGE        254
 #define IDR_TRAY_AND_TASKBAR_PM         255
 #define IDD_LIMIT_PAGE                  257
@@ -511,7 +509,6 @@
 #define IDC_SETTINGS_TIME_STAMPS_FORMAT 1362
 #define IDC_TIME_STAMPS_FORMAT          1363
 #define IDC_SETTINGS_ONLY_HASHED        1364
-#define IDC_COMMENT                     1365
 #define IDC_FH_NAME                     1366
 #define IDC_CAPTION_MAX_COMPRESSION     1367
 #define IDC_FH_ADDRESS                  1368
@@ -563,7 +560,6 @@
 #define IDC_BAN_SLOTS                   1414
 #define IDC_LIST_EDIT                   1416
 #define IDC_BAN_SHARE                   1417
-#define IDC_CHEAT                       1418
 #define IDC_BAN_MSG                     1419
 #define IDC_CHANGE_COLOR                1420
 #define IDC_PORT_UDP                    1421
@@ -598,7 +594,6 @@
 #define IDC_STATIC0                     1453
 #define IDC_STATIC1                     1454
 #define IDC_SETTINGS_BIND_ADDRESS_HELP  1455
-#define IDC_GEOIP_COUNTRY_URL           1456
 #define IDC_EDIT5                       1458
 #define IDC_EDIT6                       1459
 #define IDC_S                           1460
@@ -654,7 +649,6 @@
 #define IDC_USER                        1510
 #define IDC_SOCKS5                      1511
 #define IDC_WRITE_SPIN                  1513
-#define IDC_CHECK_MISMATCH              1514
 #define IDC_PW                          1515
 #define IDC_CAPTION_KIB                 1516
 #define IDC_MAX_HASH_SPEED_SPIN         1517
@@ -697,7 +691,6 @@
 #define IDC_SETTINGS_SOCKET_IN_BUFFER   1555
 #define IDC_ICON_SIZE                   1558
 #define IDC_ICON_SIZE_HOVER             1559
-#define IDC_RAW                         1560
 #define IDC_TABSTEXT                    1566
 #define IDC_THOLD                       1567
 #define IDC_SETTINGS_NOMINALBW          1570
@@ -712,7 +705,6 @@
 #define IDC_USE_DHT                     1581
 #define IDC_CAPTION_DHT_BOOTSTRAP_URL   1582
 #define IDC_DHT_BOOTSTRAP_URL           1583
-#define IDC_BACK                        1584
 #define IDC_SEP                         1585
 #define IDC_GETIP                       1586
 #define IDC_COPY_WEB_LINK               1587
@@ -741,11 +733,9 @@
 #define IDC_SPEED_STR                   1614
 #define IDC_BAN_FORCE_PM                1615
 #define IDC_ALLOW_UPNP                  1616
-#define IDC_GEOIP_USE_FLY               1617
 #define IDC_TOP_SPEED                   1618
 #define IDC_BAN_SKIP_OPS                1620
 #define IDC_ENABLE_AUTO_BAN             1621
-#define IDC_GEOIP_COUNTRY_USE           1622
 #define IDC_MISC_GP                     1623
 #define IDC_PROTECT_OP                  1624
 #define IDC_ADV_MISC                    1625
@@ -789,7 +779,6 @@
 #define IDC_CAPTION_MANUAL_P2P_GUARD    1666
 #define IDC_MANUAL_P2P_GUARD            1667
 #define IDC_SLOT_CONTROL_GROUP          1670
-#define IDC_TE_URLTEST                  1671
 #define IDC_MINISLOTCONTROL             1672
 #define IDC_MINISLOT_CONTROL_GROUP      1673
 #define IDC_AUTOBAN_HINT                1674
@@ -835,10 +824,8 @@
 #define IDC_SETTINGS_MEBIBITS           1734
 #define IDC_CLIENT_ID_BOX               1735
 #define IDC_LISTLEN_MISMATCH_T          1736
-#define IDC_GEOIP_FLY_USE_URL           1737
 #define IDC_SETTINGS_PASSWORD           1738
 #define IDC_FILELIST_TOO_SMALL_T        1739
-#define IDC_GEOIP_COUNTRY_USE_URL       1740
 #define IDC_STYLES                      1741
 #define IDC_SETTINGS_PASSWORD_HINT      1742
 #define IDC_FILELIST_UNAVAILABLE_T      1743
@@ -880,8 +867,6 @@
 #define IDC_TABS_OPTIONS                1808
 #define IDC_SETTINGS_TABS_OPTIONS       1809
 #define IDC_FAVGROUP_BOX                1810
-#define IDC_PARAMS                      1811
-#define IDC_DETECT_ID                   1813
 #define IDC_SETTINGS_WEB_BIND_ADDRESS   1814
 #define IDC_PERCENT_FAKE_SHARE_TOLERATED 1815
 #define IDC_TIMEOUTS_NO                 1816
@@ -891,11 +876,7 @@
 #define IDC_BAN_MSG_STR                 1820
 #define IDC_BAN_LIMIT_NO                1821
 #define IDC_BANMSG_PERIOD_NO            1822
-#define IDC_ID_EDIT                     1823
 #define IDC_BAN_SLOTS_NO_H              1824
-#define IDC_REGEX_TESTER                1825
-#define IDC_LEVEL                       1826
-#define IDC_INFMAP_TYPE                 1827
 #define IDC_USERLIST_COLORS             1828
 #define IDC_SELECT_TAB_COLOR            1829
 #define IDC_SAMPLE_TAB_COLOR            1830
@@ -1056,22 +1037,12 @@
 #define IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS 2054
 #define IDC_SETTINGS_KEEP_LISTS         2055
 #define IDC_CAPTION_KEEP_LISTS          2056
-#define IDC_GEOIP_USE_CUSTOM            2074
-#define IDC_GEOIP_LOCATION_NAME_STATIC  2075
-#define IDC_GEOIP_LOCATION_NAME_STATIC1 2076
-#define IDC_GEOIP_LOCATION_NAME_STATIC2 2077
-#define IDC_GEOIP_FLY_NAME              2080
-#define IDC_GEOIP_FLY_URL               2081
-#define IDC_GEOIP_COUNTRY_NAME          2082
-#define IDC_FUNCTIONAL_IS_DISABLED      2088
 #define IDC_INTEGRATION_BOOLEANS        2089
-#define IDC_LANG_LINK                   2090
 #define IDC_CHECK_ADD_TO_DESCRIPTION    2091
 #define IDC_SAVE_PASSWORD               2094
 #define IDC_WRITE_LOGS                  2095
 #define IDC_TABCOLOR_LIST               2097
 #define IDC_MESSAGES_CHAT_BOOLEANS      2098
-#define IDC_FAKE_CHAT_BOOLEANS          2099
 #define IDC_SETTINGS_SECONDARY_AWAY_MSG 2100
 #define IDC_EXTRASLOTSSPIN              2101
 #define IDC_EXTRA_DOWN_SLOT             2102
