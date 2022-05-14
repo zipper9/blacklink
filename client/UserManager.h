@@ -45,7 +45,7 @@ class UserManagerListener
 		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
 		virtual void on(OpenHub, const string&, const UserPtr&) noexcept { }
 		virtual void on(CollectSummaryInfo, const UserPtr&, const string& hubHint) noexcept { }
-		virtual void on(IgnoreListChanged, const string& userName) noexcept { }
+		virtual void on(IgnoreListChanged) noexcept { }
 		virtual void on(IgnoreListCleared) noexcept { }
 		virtual void on(ReservedSlotChanged, const UserPtr&) noexcept { }
 };
@@ -53,12 +53,26 @@ class UserManagerListener
 class UserManager : public Singleton<UserManager>, public Speaker<UserManagerListener>
 {
 	public:
-		void outgoingPrivateMessage(const UserPtr& user, const string& hubHint, const tstring& message)
+		enum IgnoreType
+		{
+			IGNORE_NICK,
+			IGNORE_WILDCARD
+		};
+
+		struct IgnoreListItem
+		{
+			string data;
+			IgnoreType type;
+		};
+
+		typedef boost::unordered_set<string> IgnoreSet;
+
+		void outgoingPrivateMessage(const UserPtr& user, const string& hubHint, const tstring& message) noexcept
 		{
 			fire(UserManagerListener::OutgoingPrivateMessage(), user, hubHint, message);
 		}
-		void openUserUrl(const string& hub, const UserPtr& user);
-		void collectSummaryInfo(const UserPtr& user, const string& hubHint)
+		void openUserUrl(const string& hub, const UserPtr& user) noexcept;
+		void collectSummaryInfo(const UserPtr& user, const string& hubHint) noexcept
 		{
 			fire(UserManagerListener::CollectSummaryInfo(), user, hubHint);
 		}
@@ -80,24 +94,33 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		void checkUser(const OnlineUserPtr& user) const;
 #endif
 
-		void getIgnoreList(StringSet& ignoreList) const;
-		string getIgnoreListAsString() const;
-		bool addToIgnoreList(const string& userName);
-		void removeFromIgnoreList(const string& userName);
-		void removeFromIgnoreList(const vector<string>& userNames);
-		bool isInIgnoreList(const string& nick) const;
+		void getIgnoreList(vector<IgnoreListItem>& ignoreList) const noexcept;
+		string getIgnoreListAsString() const noexcept;
+		bool addToIgnoreList(const IgnoreListItem& item);
+		void removeFromIgnoreList(const IgnoreListItem& item);
+		void removeFromIgnoreList(const vector<string>& items);
+		void removeFromIgnoreList(const vector<IgnoreListItem>& items);
+		bool isInIgnoreList(const string& nick, int* type = nullptr) const noexcept;
 		void clearIgnoreList();
-		void fireReservedSlotChanged(const UserPtr& user);
-		
+		void fireReservedSlotChanged(const UserPtr& user) noexcept;
+
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		void reloadProtectedUsers();
-		bool isInProtectedUserList(const string& userName) const;
+		void reloadProtectedUsers() noexcept;
+		bool isInProtectedUserList(const string& userName) const noexcept;
 #endif
-		
+
 	private:
 		void loadIgnoreList();
 		void saveIgnoreList();
-		StringSet ignoreList;
+
+		struct ParsedIgnoreListItem
+		{
+			IgnoreType type;
+			std::regex re;
+		};
+
+		IgnoreSet ignoredNicks;
+		boost::unordered_map<string, ParsedIgnoreListItem> ignoredExt;
 		std::atomic_bool ignoreListEmpty;
 		std::unique_ptr<RWLock> csIgnoreList;
 

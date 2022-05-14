@@ -6,6 +6,7 @@
 #include "ResourceLoader.h"
 #include "WinUtil.h"
 #include "../client/UserManager.h"
+#include "../client/Wildcards.h"
 
 LRESULT IgnoredUsersWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -15,7 +16,8 @@ LRESULT IgnoredUsersWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	ctrlIgnored.SetImageList(g_favUserImage.getIconList(), LVSIL_SMALL);
 	setListViewColors(ctrlIgnored);
 
-	ctrlIgnored.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
+	ctrlIgnored.InsertColumn(0, CTSTRING(IGNORE_LIST_TEXT), LVCFMT_LEFT, 180, 0);
+	ctrlIgnored.InsertColumn(1, CTSTRING(IGNORE_LIST_TYPE), LVCFMT_LEFT, 80, 0);
 	WinUtil::setExplorerTheme(ctrlIgnored);
 
 	ctrlAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
@@ -41,22 +43,34 @@ LRESULT IgnoredUsersWindow::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	return 0;
 }
 
+struct SortedListItem
+{
+	tstring text;
+	UserManager::IgnoreType type;
+};
+
 void IgnoredUsersWindow::insertIgnoreList()
 {
-	StringSet ignoreSet;
-	UserManager::getInstance()->getIgnoreList(ignoreSet);
-	vector<tstring> sortedList;
-	sortedList.resize(ignoreSet.size());
+	vector<UserManager::IgnoreListItem> ignoreList;
+	UserManager::getInstance()->getIgnoreList(ignoreList);
+	vector<SortedListItem> sortedList;
+	sortedList.resize(ignoreList.size());
 	size_t index = 0;
-	for (auto i = ignoreSet.cbegin(); i != ignoreSet.cend(); ++i)
-		sortedList[index++] = Text::toT(*i);
+	for (const auto& item : ignoreList)
+	{
+		sortedList[index].text = Text::toT(item.data);
+		sortedList[index].type = item.type;
+		index++;
+	}
 	std::sort(sortedList.begin(), sortedList.end(),
-		[](tstring& s1, tstring& s2) { return Util::defaultSort(s1, s2, true) < 0; });
+		[](SortedListItem& a, SortedListItem& b) { return Util::defaultSort(a.text, b.text, true) < 0; });
 	int selectedItem = -1;
 	for (size_t i = 0; i < sortedList.size(); i++)
 	{
-		ctrlIgnored.insert(i, sortedList[i]);
-		if (sortedList[i] == selectedIgnore)
+		int type = sortedList[i].type;
+		ctrlIgnored.insert(i, sortedList[i].text, type == UserManager::IGNORE_NICK ? 0 : 6);
+		ctrlIgnored.SetItemText(i, 1, type == UserManager::IGNORE_NICK ? CTSTRING(IGNORE_TYPE_NICK) : CTSTRING(IGNORE_TYPE_WILDCARD));
+		if (sortedList[i].text == selectedIgnore)
 			selectedItem = i;
 	}
 	if (selectedItem != -1)
@@ -83,14 +97,30 @@ LRESULT IgnoredUsersWindow::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HW
 	dlg.allowEmpty = false;
 	dlg.description = TSTRING(ENTER_IGNORED_NICK);
 	dlg.title = TSTRING(IGNORE_USER_BY_NAME);
+	dlg.checkBox = true;
+	dlg.checkBoxText = ResourceManager::USE_WILDCARD;
 	if (dlg.DoModal(m_hWnd) != IDOK) return 0;
 	tstring name = std::move(dlg.line);
 	tstring prevIgnore = std::move(selectedIgnore);
 	selectedIgnore = name;
-	if (!UserManager::getInstance()->addToIgnoreList(Text::fromT(name)))
+	UserManager::IgnoreListItem item;
+	item.data =  Text::fromT(name);
+	if (dlg.checked)
+	{
+		std::regex tmp;
+		if (!Wildcards::regexFromPatternList(tmp, item.data, false))
+		{
+			MessageBox(CTSTRING(INVALID_WILDCARD), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+			return 0;
+		}
+		item.type = UserManager::IGNORE_WILDCARD;
+	}
+	else
+		item.type = UserManager::IGNORE_NICK;
+	if (!UserManager::getInstance()->addToIgnoreList(item))
 	{
 		selectedIgnore = std::move(prevIgnore);
-		MessageBox(CTSTRING(ALREADY_IGNORED), getAppNameVerT().c_str(), MB_OK);
+		MessageBox(CTSTRING(ALREADY_IGNORED), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
 	}
 	return 0;
 }

@@ -983,14 +983,13 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	}
 }
 
-void UserListWindow::onIgnoreListChanged(const string& userName)
+void UserListWindow::onIgnoreListChanged()
 {
 	WRITE_LOCK(*csUserMap);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
-		if (ui->getUser()->getLastNick() == userName)
-			ui->flags |= IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
+		ui->flags |= IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
 	}
 }
 

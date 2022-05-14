@@ -134,12 +134,18 @@ void UserInfoBase::ignoreOrUnignoreUserByName()
 {
 	if (getUser())
 	{
-		const string nick = getUser()->getLastNick();
+		UserManager::IgnoreListItem item;
+		item.data = getUser()->getLastNick();
+		item.type = UserManager::IGNORE_NICK;
 		UserManager* userManager = UserManager::getInstance();
-		if (userManager->isInIgnoreList(nick))
-			userManager->removeFromIgnoreList(nick);
+		int type;
+		if (userManager->isInIgnoreList(item.data, &type))
+		{
+			if (type == UserManager::IGNORE_NICK)
+				userManager->removeFromIgnoreList(item);
+		}
 		else
-			userManager->addToIgnoreList(nick);
+			userManager->addToIgnoreList(item);
 	}
 }
 

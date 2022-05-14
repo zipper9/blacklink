@@ -338,7 +338,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		int userVersion = connection.executeint("PRAGMA user_version");
 
 		connection.executenonquery(
-			"CREATE TABLE IF NOT EXISTS fly_ignore(nick text PRIMARY KEY NOT NULL);");
+			"CREATE TABLE IF NOT EXISTS fly_ignore(nick text PRIMARY KEY NOT NULL, type integer not null);");
 		connection.executenonquery(
 			"CREATE TABLE IF NOT EXISTS fly_registry(segment integer not null, key text not null,val_str text, val_number int64,tick_count int not null);");
 		try
@@ -374,9 +374,12 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		safeAlter("ALTER TABLE transfer_db.fly_transfer_file add column actual int64");
 
 		if (userVersion < 5)
-		{
 			deleteOldTransferHistoryL();
-			connection.executenonquery("PRAGMA user_version=5");
+
+		if (userVersion < 12)
+		{
+			safeAlter("ALTER TABLE fly_ignore add column type integer");
+			connection.executenonquery("PRAGMA user_version=12");
 		}
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -595,7 +598,7 @@ void DatabaseManager::removeManuallyBlockedIP(Ip4Address ip)
 }
 
 void DatabaseManager::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result)
-{	
+{
 	result.clear();
 	LOCK(cs);
 	try
@@ -927,7 +930,7 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 		insertTransfer.bind(8, (long long) item->getAvgSpeed());
 		insertTransfer.bind(9, item->getIP(), SQLITE_STATIC);
 		if (!item->getTTH().isZero())
-			insertTransfer.bind(10, item->getTTH().toBase32(), SQLITE_TRANSIENT); // SQLITE_TRANSIENT!
+			insertTransfer.bind(10, item->getTTH().toBase32(), SQLITE_TRANSIENT);
 		else
 			insertTransfer.bind(10);
 		insertTransfer.bind(11, (long long) item->getActual());
@@ -939,18 +942,18 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 	}
 }
 
-void DatabaseManager::loadIgnoredUsers(StringSet& users)
+void DatabaseManager::loadIgnoredUsers(vector<DBIgnoreListItem>& items)
 {
 	LOCK(cs);
 	try
 	{
-		initQuery(selectIgnoredUsers, "select trim(nick) from fly_ignore");
+		initQuery(selectIgnoredUsers, "select trim(nick), type from fly_ignore");
 		sqlite3_reader reader = selectIgnoredUsers.executereader();
 		while (reader.read())
 		{
 			string user = reader.getstring(0);
 			if (!user.empty())
-				users.insert(user);
+				items.emplace_back(DBIgnoreListItem{user, reader.getint(1)});
 		}
 	}
 	catch (const database_error& e)
@@ -959,7 +962,7 @@ void DatabaseManager::loadIgnoredUsers(StringSet& users)
 	}
 }
 
-void DatabaseManager::saveIgnoredUsers(const StringSet& users)
+void DatabaseManager::saveIgnoredUsers(const vector<DBIgnoreListItem>& items)
 {
 	LOCK(cs);
 	try
@@ -967,14 +970,15 @@ void DatabaseManager::saveIgnoredUsers(const StringSet& users)
 		sqlite3_transaction trans(connection);
 		initQuery(deleteIgnoredUsers, "delete from fly_ignore");
 		deleteIgnoredUsers.executenonquery();
-		initQuery(insertIgnoredUsers, "insert or replace into fly_ignore (nick) values(?)");
-		for (auto k = users.cbegin(); k != users.cend(); ++k)
+		initQuery(insertIgnoredUsers, "insert or replace into fly_ignore (nick, type) values(?, ?)");
+		for (const auto& item : items)
 		{
-			string user = (*k);
+			string user = item.data;
 			boost::algorithm::trim(user);
 			if (!user.empty())
 			{
 				insertIgnoredUsers.bind(1, user, SQLITE_TRANSIENT);
+				insertIgnoredUsers.bind(2, item.type);
 				insertIgnoredUsers.executenonquery();
 			}
 		}

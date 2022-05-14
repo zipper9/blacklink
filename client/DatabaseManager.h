@@ -154,6 +154,12 @@ struct DBRegistryValue
 
 typedef std::unordered_map<string, DBRegistryValue> DBRegistryMap;
 
+struct DBIgnoreListItem
+{
+	string data;
+	int type;
+};
+
 class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientListener
 {
 	public:
@@ -202,8 +208,8 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		int64_t getRandValForRegistry();
 
 	public:
-		void loadIgnoredUsers(StringSet& users);
-		void saveIgnoredUsers(const StringSet& users);
+		void loadIgnoredUsers(vector<DBIgnoreListItem>& items);
+		void saveIgnoredUsers(const vector<DBIgnoreListItem>& items);
 		void loadRegistry(DBRegistryMap& values, DBRegistryType type);
 		void saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues);
 		void clearRegistry(DBRegistryType type, int64_t tick);

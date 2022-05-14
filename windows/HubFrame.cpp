@@ -2225,9 +2225,9 @@ void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 		ctrlUsers.setSortFlag();
 }
 
-void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept
+void HubFrame::on(UserManagerListener::IgnoreListChanged) noexcept
 {
-	ctrlUsers.onIgnoreListChanged(userName);
+	ctrlUsers.onIgnoreListChanged();
 	++asyncUpdate;
 }
 

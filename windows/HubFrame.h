@@ -326,7 +326,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void resortForFavsFirst(bool justDoIt = false);
 		
 		// UserManagerListener
-		void on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept override;
+		void on(UserManagerListener::IgnoreListChanged) noexcept override;
 		void on(UserManagerListener::IgnoreListCleared) noexcept override;
 		void on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept override;
 

@@ -640,7 +640,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		static void appendIgnoreByNameItem(OMenu& menu, const FavUserTraits& traits)
 		{
-			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
+			bool isIgnored = traits.isIgnoredByName || traits.isIgnoredByWildcard;
+			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, isIgnored ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
+			if (traits.isIgnoredByWildcard)
+				menu.EnableMenuItem(IDC_IGNORE_BY_NAME, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 		}
 		
 		static void internal_appendContactListItems(OMenu& menu, const FavUserTraits& traits)
@@ -811,6 +814,7 @@ struct FavUserTraits
 		uploadLimit(0),
 		isIgnoredPm(false), isFreePm(false),
 		isIgnoredByName(false),
+		isIgnoredByWildcard(false),
 		isOnline(true)
 	{
 	}
@@ -824,6 +828,7 @@ struct FavUserTraits
 	bool isIgnoredPm;
 	bool isFreePm;
 	bool isIgnoredByName;
+	bool isIgnoredByWildcard;
 	bool isOnline;
 };
 

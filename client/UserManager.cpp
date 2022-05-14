@@ -149,109 +149,226 @@ void UserManager::checkUser(const OnlineUserPtr& user) const
 }
 #endif // IRAINMAN_INCLUDE_USER_CHECK
 
-void UserManager::getIgnoreList(StringSet& result) const
+void UserManager::getIgnoreList(vector<IgnoreListItem>& ignoreList) const noexcept
 {
 	dcassert(ignoreListLoaded);
+	ignoreList.clear();
 	READ_LOCK(*csIgnoreList);
-	result = ignoreList;
+	for (const string& nick : ignoredNicks)
+		ignoreList.emplace_back(IgnoreListItem{nick, IGNORE_NICK});
+	for (const auto& ext : ignoredExt)
+		ignoreList.emplace_back(IgnoreListItem{ext.first, ext.second.type});
 }
 
-string UserManager::getIgnoreListAsString() const
+string UserManager::getIgnoreListAsString() const noexcept
 {
 	string result;
 	READ_LOCK(*csIgnoreList);
-	for (auto i = ignoreList.cbegin(); i != ignoreList.cend(); ++i)
+	for (const string& nick : ignoredNicks)
 	{
 		result += ' ';
-		result += *i;
+		result += nick;
+	}
+	for (const auto& ext : ignoredExt)
+	{
+		result += ' ';
+		result += ext.first;
 	}
 	return result;
 }
 
-bool UserManager::addToIgnoreList(const string& userName)
+bool UserManager::addToIgnoreList(const IgnoreListItem& item)
 {
-	bool result;
+	std::regex re;
+	if (item.type == IGNORE_WILDCARD && !Wildcards::regexFromPatternList(re, item.data, false))
+		return false;
+	bool result = false;
 	{
 		dcassert(ignoreListLoaded);
 		WRITE_LOCK(*csIgnoreList);
-		result = ignoreList.insert(userName).second;
+		if (item.type == IGNORE_NICK)
+		{
+			if (ignoredExt.find(item.data) == ignoredExt.end())
+				result = ignoredNicks.insert(item.data).second;
+		}
+		else if (item.type == IGNORE_WILDCARD)
+		{
+			if (ignoredNicks.find(item.data) == ignoredNicks.end())
+			{
+				auto r = ignoredExt.insert(make_pair(item.data, ParsedIgnoreListItem{}));
+				if (r.second)
+				{
+					auto& parsed = r.first->second;
+					parsed.re = std::move(re);
+					parsed.type = IGNORE_WILDCARD;
+					result = true;
+				}
+			}
+		}
 	}
 	if (result)
 	{
 		saveIgnoreList();
-		fire(UserManagerListener::IgnoreListChanged(), userName);
+		fire(UserManagerListener::IgnoreListChanged());
 	}
 	return result;
 }
 
-void UserManager::removeFromIgnoreList(const string& userName)
+void UserManager::removeFromIgnoreList(const IgnoreListItem& item)
 {
 	{
 		dcassert(ignoreListLoaded);
 		WRITE_LOCK(*csIgnoreList);
-		ignoreList.erase(userName);
+		if (item.type == IGNORE_NICK)
+			ignoredNicks.erase(item.data);
+		else
+		{
+			auto i = ignoredExt.find(item.data);
+			if (i != ignoredExt.end()) ignoredExt.erase(i);
+		}
 	}
 	saveIgnoreList();
-	fire(UserManagerListener::IgnoreListChanged(), userName);
+	fire(UserManagerListener::IgnoreListChanged());
 }
 
-void UserManager::removeFromIgnoreList(const vector<string>& userNames)
+void UserManager::removeFromIgnoreList(const vector<string>& items)
+{
+	bool changed = false;
+	{
+		dcassert(ignoreListLoaded);
+		WRITE_LOCK(*csIgnoreList);
+		for (const string& item : items)
+		{
+			auto i = ignoredNicks.find(item);
+			if (i != ignoredNicks.end())
+			{
+				ignoredNicks.erase(i);
+				changed = true;
+			}
+			auto j = ignoredExt.find(item);
+			if (j != ignoredExt.end())
+			{
+				ignoredExt.erase(j);
+				changed = true;
+			}
+		}
+	}
+	if (changed)
+	{
+		saveIgnoreList();
+		fire(UserManagerListener::IgnoreListChanged());
+	}
+}
+
+void UserManager::removeFromIgnoreList(const vector<IgnoreListItem>& items)
 {
 	{
 		dcassert(ignoreListLoaded);
 		WRITE_LOCK(*csIgnoreList);
-		for (auto i = userNames.cbegin(); i != userNames.cend(); ++i)
-			ignoreList.erase(*i);
+		for (const auto& item : items)
+			if (item.type == IGNORE_NICK)
+				ignoredNicks.erase(item.data);
+			else
+			{
+				auto i = ignoredExt.find(item.data);
+				if (i != ignoredExt.end()) ignoredExt.erase(i);
+			}
 	}
 	saveIgnoreList();
-	for (auto i = userNames.cbegin(); i != userNames.cend(); ++i)
-		fire(UserManagerListener::IgnoreListChanged(), *i);
+	fire(UserManagerListener::IgnoreListChanged());
 }
 
-bool UserManager::isInIgnoreList(const string& nick) const
+bool UserManager::isInIgnoreList(const string& nick, int* type) const noexcept
 {
 	if (!nick.empty() && !ignoreListEmpty)
 	{
 		dcassert(ignoreListLoaded);
 		READ_LOCK(*csIgnoreList);
-		return ignoreList.find(nick) != ignoreList.cend();
+		if (ignoredNicks.find(nick) != ignoredNicks.end())
+		{
+			if (type) *type = IGNORE_NICK;
+			return true;
+		}
+		for (const auto& i : ignoredExt)
+			if (std::regex_match(nick, i.second.re))
+			{
+				if (type) *type = i.second.type;
+				return true;
+			}
 	}
 	return false;
 }
 
 void UserManager::clearIgnoreList()
 {
+	bool changed = false;
 	{
 		WRITE_LOCK(*csIgnoreList);
-		if (ignoreList.empty()) return;
-		ignoreList.clear();
+		if (!ignoredNicks.empty())
+		{
+			changed = true;
+			ignoredNicks.clear();
+		}
+		if (!ignoredExt.empty())
+		{
+			changed = true;
+			ignoredExt.clear();
+		}
 	}
-	saveIgnoreList();
-	fire(UserManagerListener::IgnoreListCleared());
+	if (changed)
+	{
+		saveIgnoreList();
+		fire(UserManagerListener::IgnoreListCleared());
+	}
 }
 
 void UserManager::loadIgnoreList()
-{	
+{
+	vector<DBIgnoreListItem> items;
+	DatabaseManager::getInstance()->loadIgnoredUsers(items);
+
+	vector<pair<string, std::regex>> parsedReg;
+	std::regex re;
+	for (const auto& item : items)
+		if (item.type == IGNORE_WILDCARD && Wildcards::regexFromPatternList(re, item.data, false))
+			parsedReg.emplace_back(make_pair(item.data, std::move(re)));
+
 	WRITE_LOCK(*csIgnoreList);
 	{
-		DatabaseManager::getInstance()->loadIgnoredUsers(ignoreList);
-		ignoreListEmpty = ignoreList.empty();
+		ignoredNicks.clear();
+		ignoredExt.clear();
+		for (const auto& item : items)
+			if (item.type == IGNORE_NICK)
+				ignoredNicks.insert(item.data);
+		for (auto& item : parsedReg)
+		{
+			if (ignoredNicks.find(item.first) != ignoredNicks.end()) continue;
+			auto& parsed = ignoredExt[item.first];
+			parsed.re = std::move(item.second);
+			parsed.type = IGNORE_WILDCARD;
+		}
+		ignoreListEmpty = ignoredNicks.empty() && ignoredExt.empty();
 	}
 	dcdrun(ignoreListLoaded = true);
 }
 
 void UserManager::saveIgnoreList()
 {
-	{	
+	vector<DBIgnoreListItem> items;
+	{
 		dcassert(ignoreListLoaded);
 		READ_LOCK(*csIgnoreList);
-		DatabaseManager::getInstance()->saveIgnoredUsers(ignoreList);
-		ignoreListEmpty = ignoreList.empty();
+		for (const string& nick : ignoredNicks)
+			items.emplace_back(DBIgnoreListItem{nick, IGNORE_NICK});
+		for (const auto& ext : ignoredExt)
+			items.emplace_back(DBIgnoreListItem{ext.first, ext.second.type});
+		ignoreListEmpty = items.empty();
 	}
+	DatabaseManager::getInstance()->saveIgnoredUsers(items);
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-void UserManager::reloadProtectedUsers()
+void UserManager::reloadProtectedUsers() noexcept
 {
 	std::regex re;
 	bool result = Wildcards::regexFromPatternList(re, SETTING(DONT_BAN_PATTERN), true);
@@ -261,20 +378,20 @@ void UserManager::reloadProtectedUsers()
 }
 #endif
 
-void UserManager::openUserUrl(const string& url, const UserPtr& user)
+void UserManager::openUserUrl(const string& url, const UserPtr& user) noexcept
 {
 	fire(UserManagerListener::OpenHub(), url, user);
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-bool UserManager::isInProtectedUserList(const string& userName) const
+bool UserManager::isInProtectedUserList(const string& userName) const noexcept
 {
 	READ_LOCK(*csProtectedUsers);
 	return hasProtectedUsers && std::regex_match(userName, reProtectedUsers);
 }
 #endif
 
-void UserManager::fireReservedSlotChanged(const UserPtr& user)
+void UserManager::fireReservedSlotChanged(const UserPtr& user) noexcept
 {
 	fire(UserManagerListener::ReservedSlotChanged(), user);
 }

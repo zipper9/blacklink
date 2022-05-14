@@ -649,7 +649,7 @@ LRESULT UsersFrame::onToggleIgnored(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl
 	return 0;
 }
 
-void UsersFrame::on(IgnoreListChanged, const string&) noexcept
+void UsersFrame::on(IgnoreListChanged) noexcept
 {
 	ctrlIgnored.updateUsers();
 }

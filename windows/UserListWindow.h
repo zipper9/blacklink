@@ -61,7 +61,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		void getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const;
 		bool loadIPInfo(const OnlineUserPtr& ou);
 
-		void onIgnoreListChanged(const string& userName);
+		void onIgnoreListChanged();
 		void onIgnoreListCleared();
 
 	private:

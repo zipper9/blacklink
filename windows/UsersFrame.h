@@ -178,7 +178,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		void on(UserStatusChanged, const UserPtr& user) noexcept override;
 
 		// UserManagerListener
-		void on(IgnoreListChanged, const string& userName) noexcept override;
+		void on(IgnoreListChanged) noexcept override;
 		void on(IgnoreListCleared) noexcept override;
 		
 		void on(SettingsManagerListener::Repaint) override;

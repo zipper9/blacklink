@@ -228,7 +228,15 @@ void FavUserTraits::init(const UserInfoBase& ui)
 			isFreePm = false;
 		}
 		
-		isIgnoredByName = UserManager::getInstance()->isInIgnoreList(ui.getUser()->getLastNick());
+		// FIXME: getLastNick is wrong
+		int type;
+		if (UserManager::getInstance()->isInIgnoreList(ui.getUser()->getLastNick(), &type))
+		{
+			isIgnoredByName = type == UserManager::IGNORE_NICK;
+			isIgnoredByWildcard = !isIgnoredByName;
+		}
+		else
+			isIgnoredByName = isIgnoredByWildcard = false;
 		isOnline = ui.getUser()->isOnline();
 
 		isEmpty = false;
