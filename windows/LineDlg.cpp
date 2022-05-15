@@ -101,6 +101,20 @@ LRESULT LineDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 	{
 		WinUtil::getWindowText(ctrlLine, line);
 		checked = IsDlgButtonChecked(IDC_SAVE_PASSWORD) == BST_CHECKED;
+		if (validator)
+		{
+			tstring errorMsg;
+			if (!validator(*this, errorMsg))
+			{
+				if (errorMsg.empty()) errorMsg = TSTRING(INVALID_INPUT);
+				EDITBALLOONTIP ebt;
+				memset(&ebt, 0, sizeof(ebt));
+				ebt.cbStruct = sizeof(ebt);
+				ebt.pszText = errorMsg.c_str();
+				ctrlLine.ShowBalloonTip(&ebt);
+				return 0;
+			}
+		}
 	}
 	EndDialog(wID);
 	return 0;

@@ -39,12 +39,13 @@ class LineDlg : public CDialogImpl<LineDlg>
 		int icon = -1;
 		int limitText = 0;
 		ResourceManager::Strings checkBoxText = ResourceManager::SAVE;
-		
+
 		bool checkBox = false;
 		bool password = false;
 		bool disabled = false;
 		bool notifyMainFrame = false;
 		bool allowEmpty = true;
+		std::function<bool(LineDlg&, tstring&)> validator = nullptr;
 		
 		enum { IDD = IDD_LINE };
 		

@@ -99,29 +99,31 @@ LRESULT IgnoredUsersWindow::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HW
 	dlg.title = TSTRING(IGNORE_USER_BY_NAME);
 	dlg.checkBox = true;
 	dlg.checkBoxText = ResourceManager::USE_WILDCARD;
-	if (dlg.DoModal(m_hWnd) != IDOK) return 0;
-	tstring name = std::move(dlg.line);
-	tstring prevIgnore = std::move(selectedIgnore);
-	selectedIgnore = name;
-	UserManager::IgnoreListItem item;
-	item.data =  Text::fromT(name);
-	if (dlg.checked)
+	dlg.validator = [](LineDlg& dlg, tstring& errorMsg) -> bool
 	{
-		std::regex tmp;
-		if (!Wildcards::regexFromPatternList(tmp, item.data, false))
+		UserManager::IgnoreListItem item;
+		item.data = Text::fromT(dlg.line);
+		if (dlg.checked)
 		{
-			MessageBox(CTSTRING(INVALID_WILDCARD), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
-			return 0;
+			std::regex tmp;
+			if (!Wildcards::regexFromPatternList(tmp, item.data, false))
+			{
+				errorMsg = TSTRING(INVALID_WILDCARD);
+				return false;
+			}
+			item.type = UserManager::IGNORE_WILDCARD;
 		}
-		item.type = UserManager::IGNORE_WILDCARD;
-	}
-	else
-		item.type = UserManager::IGNORE_NICK;
-	if (!UserManager::getInstance()->addToIgnoreList(item))
-	{
-		selectedIgnore = std::move(prevIgnore);
-		MessageBox(CTSTRING(ALREADY_IGNORED), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
-	}
+		else
+			item.type = UserManager::IGNORE_NICK;
+		if (!UserManager::getInstance()->addToIgnoreList(item))
+		{
+			errorMsg = TSTRING(ALREADY_IGNORED);
+			return false;
+		}
+		return true;
+	};
+	if (dlg.DoModal(m_hWnd) == IDOK)
+		selectedIgnore = std::move(dlg.line);
 	return 0;
 }
 

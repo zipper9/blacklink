@@ -212,9 +212,42 @@ tstring UserInfoSimple::getBroadcastPrivateMessage()
 	return Util::emptyStringT;
 }
 
+static bool parseSlotTime(const tstring& s, uint64_t& result)
+{
+	unsigned values[3];
+	int index = 0;
+	int digits = 0;
+	values[0] = 0;
+	for (size_t i = 0; i < s.length(); i++)
+	{
+		if (s[i] == _T(':'))
+		{
+			if (!digits || index == 2) return false;
+			values[++index] = 0;
+			digits = 0;
+			continue;
+		}
+		if (s[i] >= _T('0') && s[i] <= _T('9'))
+		{
+			values[index] *= 10;
+			values[index] += s[i] - _T('0');
+			++digits;
+			continue;
+		}
+		return false;
+	}
+	if (index < 1 || !digits) return false;
+	if (index == 2)
+		result = values[0] * 3600 * 24 + values[1] * 3600 + values[2] * 60;
+	else
+		result = values[0] * 3600 + values[1] * 60;
+	return true;
+}
+
 uint64_t UserInfoSimple::inputSlotTime()
 {
 	static tstring deftext = _T("00:30");
+	uint64_t result = 0;
 	
 	LineDlg dlg;
 	dlg.description = TSTRING(EXTRA_SLOT_TIME_FORMAT);
@@ -222,30 +255,16 @@ uint64_t UserInfoSimple::inputSlotTime()
 	dlg.line = deftext;
 	dlg.allowEmpty = false;
 	dlg.icon = IconBitmaps::UPLOAD_QUEUE;
-	
+	dlg.validator = [&result](LineDlg& dlg, tstring& errorMsg) -> bool
+	{
+		bool ret = parseSlotTime(dlg.line, result);
+		if (!ret) errorMsg = TSTRING(INVALID_TIME_FORMAT);
+		return ret;
+	};
 	if (dlg.DoModal() == IDOK)
 	{
-		deftext = dlg.line;
-		unsigned int n = 0;
-		for (size_t i = 0; i < deftext.length(); i++) // TODO: cleanup.
-		{
-			if (deftext[i] == L':') n++;
-		}
-		unsigned int d, h, m;
-		switch (n)
-		{
-			case 1:
-				if (swscanf(deftext.c_str(), L"%u:%u", &h, &m) == 2)
-					return (h * 3600 + m * 60);
-					
-				break;
-			case 2:
-				if (swscanf(deftext.c_str(), L"%u:%u:%u", &d, &h, &m) == 3)
-					return (d * 3600 * 24 + h * 3600 + m * 60);
-					
-				break;
-		}
-		::MessageBox(GetForegroundWindow(), CTSTRING(INVALID_TIME_FORMAT), CTSTRING(ERRORS), MB_OK | MB_ICONERROR);
+		deftext = std::move(dlg.line);
+		return result;
 	}
 	return 0;
 }
