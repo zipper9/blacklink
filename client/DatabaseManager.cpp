@@ -21,6 +21,7 @@
 #include "Tag16.h"
 #include "HttpClient.h"
 #include "ZUtils.h"
+#include "ResourceManager.h"
 #include "maxminddb/maxminddb.h"
 #include <boost/algorithm/string.hpp>
 

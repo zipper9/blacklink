@@ -4,6 +4,7 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "../client/IpGrant.h"
+#include "../client/File.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

@@ -3,6 +3,7 @@
 #include "../client/SimpleXML.h"
 #include "../client/StringTokenizer.h"
 #include "../client/ResourceManager.h"
+#include "../client/File.h"
 
 string ResourceManager::g_strings[];
 

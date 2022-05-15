@@ -4,6 +4,7 @@
 #include "../client/Util.h"
 #include "../client/HashUtil.h"
 #include "../client/ParamExpander.h"
+#include "../client/File.h"
 #include "WinUtil.h"
 
 static const size_t HASH_BUF_SIZE = 512 * 1024;

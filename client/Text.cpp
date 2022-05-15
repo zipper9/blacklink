@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
+#include "debug.h"
 
 #ifndef _WIN32
 #include <errno.h>

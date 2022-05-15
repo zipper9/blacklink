@@ -60,8 +60,6 @@ SocketException::SocketException(int error) noexcept :
 
 Socket::Stats Socket::g_stats;
 
-static const unsigned SOCKS_TIMEOUT = 30000;
-
 static bool isAnyAddr(const sockaddr_u& sa)
 {
 	switch (((const sockaddr*) &sa)->sa_family)

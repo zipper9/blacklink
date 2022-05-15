@@ -19,8 +19,16 @@
 #ifndef DCPLUSPLUS_DCPP_FILE_H
 #define DCPLUSPLUS_DCPP_FILE_H
 
-#include "Streams.h"
-#include "Text.h"
+#include "typedefs.h"
+#include "BaseStreams.h"
+
+#ifdef _WIN32
+#include "w.h"
+#else
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dirent.h>
+#endif
 
 class FileAttributes;
 

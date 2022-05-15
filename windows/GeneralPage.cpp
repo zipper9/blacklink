@@ -22,6 +22,7 @@
 #include "ResourceLoader.h"
 #include "KnownClients.h"
 #include "../client/SimpleXMLReader.h"
+#include "../client/File.h"
 
 static const string defLangFileName("en-US.xml");
 

@@ -23,6 +23,7 @@
 
 #include "ServerSocket.h"
 #include "SearchManager.h"
+#include "File.h"
 
 static const uint64_t WEB_SERVER_USER_SESSION_TIMEOUT = 300;
 

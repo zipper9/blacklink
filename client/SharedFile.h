@@ -3,6 +3,7 @@
 
 #include "Text.h"
 #include "HashValue.h"
+#include "debug.h"
 
 class SharedDir;
 class SharedFile;

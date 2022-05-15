@@ -23,6 +23,8 @@
 #include "BaseUtil.h"
 #include "Path.h"
 #include "HashValue.h"
+#include "forward.h"
+#include "debug.h"
 
 #define URI_SEPARATOR '/'
 #define URI_SEPARATOR_STR "/"

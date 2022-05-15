@@ -5,6 +5,7 @@
 #include "ConnectivityManager.h"
 #include "Resolver.h"
 #include "LogManager.h"
+#include "ResourceManager.h"
 
 static const unsigned IP_TEST_TIMEOUT = 10000;
 

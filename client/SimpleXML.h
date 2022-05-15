@@ -19,7 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_SIMPLE_XML_H
 #define DCPLUSPLUS_DCPP_SIMPLE_XML_H
 
-#include "File.h"
+#include "Streams.h"
 #include "SimpleXMLReader.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"

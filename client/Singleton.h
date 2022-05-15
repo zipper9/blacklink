@@ -19,7 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_SINGLETON_H
 #define DCPLUSPLUS_DCPP_SINGLETON_H
 
-#include "typedefs.h"
+#include "debug.h"
 
 template<typename T>
 class Singleton

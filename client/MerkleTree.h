@@ -22,6 +22,7 @@
 #include "typedefs.h"
 #include "TigerHash.h"
 #include "HashValue.h"
+#include "debug.h"
 
 /**
  * A class that represents a Merkle Tree hash. Storing

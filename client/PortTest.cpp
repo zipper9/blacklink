@@ -4,7 +4,7 @@
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
-#include "SockDefs.h"
+#include "ResourceManager.h"
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 

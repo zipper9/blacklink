@@ -21,6 +21,7 @@
 #include "CID.h"
 #include "IpAddress.h"
 #include "HttpClientListener.h"
+#include "forward.h"
 #include "sqlite/sqlite3x.hpp"
 
 #ifdef FLYLINKDC_USE_LMDB

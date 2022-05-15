@@ -2,6 +2,7 @@
 
 #include "RemoteControlPage.h"
 #include "../client/SettingsManager.h"
+#include "../client/File.h"
 #include "WinUtil.h"
 
 static const WinUtil::TextItem texts[] =

@@ -19,10 +19,10 @@
 #ifndef DCPLUSPLUS_DCPP_TYPEDEFS_H_
 #define DCPLUSPLUS_DCPP_TYPEDEFS_H_
 
+#include <string>
+#include <vector>
 #include <boost/unordered/unordered_map.hpp>
 #include <boost/unordered/unordered_set.hpp>
-#include "debug.h"
-#include "forward.h"
 #include "noexcept.h"
 
 using std::string;

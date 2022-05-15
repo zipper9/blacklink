@@ -4,6 +4,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "Fonts.h"
+#include "../client/File.h"
 
 static const WinUtil::TextItem texts[] =
 {

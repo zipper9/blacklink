@@ -1,5 +1,6 @@
 // GDIImage.cpp : Implementation of CGDIImageOle
 #include "stdafx.h"
+#include "../client/debug.h"
 
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
 #include "GDIImageOle.h"

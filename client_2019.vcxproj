@@ -704,6 +704,7 @@
   <ItemGroup>
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
+    <ClInclude Include="client\BaseStreams.h" />
     <ClInclude Include="client\BaseThread.h" />
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\BusyCounter.h" />

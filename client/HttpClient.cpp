@@ -5,6 +5,7 @@
 #include "StrUtil.h"
 #include "TimerManager.h"
 #include "CID.h"
+#include "ResourceManager.h"
 
 static const unsigned IDLE_CONNECTION_TIMEOUT = 2 * 60000;
 static const unsigned BUSY_CONNECTION_TIMEOUT = 5 * 60000;

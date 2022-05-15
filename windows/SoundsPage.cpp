@@ -21,6 +21,7 @@
 #include "SoundsPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "../client/File.h"
 #include <mmsystem.h>
 
 using DialogLayout::FLAG_TRANSLATE;
