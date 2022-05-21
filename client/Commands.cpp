@@ -607,7 +607,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			return true;
 #ifdef _WIN32
 		case COMMAND_INFO_UPTIME:
-			res.text = "+me Uptime: " + Util::formatTime(Util::getUpTime()) + ". System uptime: " + CompatibilityManager::getSysUptime();
+			res.text = "+me Uptime: " + Util::formatTime(Util::getUpTime()) + ". System uptime: " + Util::formatTime(CompatibilityManager::getSysUptime());
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
@@ -617,27 +617,27 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			return true;
 
 		case COMMAND_INFO_SPEED:
-			res.text = "My Speed: " + CompatibilityManager::Speedinfo();
+			res.text = "My Speed:\n" + CompatibilityManager::getSpeedInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_CPU:
-			res.text  = "My CPU: " + CompatibilityManager::CPUInfo();
+			res.text  = "My CPU: " + CompatibilityManager::getCPUInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_DISK_SPACE:
-			res.text ="My Disk Space: " + CompatibilityManager::DiskSpaceInfo();
+			res.text ="My Disk Space:\n" + CompatibilityManager::getDiskSpaceInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_STORAGE:
-			res.text = "My Disks: " + Text::fromT(CompatibilityManager::diskInfo());
+			res.text = "My Disks:\n" + CompatibilityManager::getDiskInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_STATS:
-			res.text = CompatibilityManager::generateProgramStats();
+			res.text = CompatibilityManager::getStats();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 #endif

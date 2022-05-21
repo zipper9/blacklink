@@ -104,10 +104,10 @@ class CompatibilityManager
 			return g_incopatibleSoftwareList;
 		}
 		static string getIncompatibleSoftwareMessage();
-		static string generateGlobalMemoryStatusMessage();
+		static string getGlobalMemoryStatusMessage();
 		static string generateFullSystemStatusMessage();
-		static string generateProgramStats();
-		static string generateNetworkStats();
+		static string getStats();
+		static string getNetworkStats();
 		static string getDefaultPath()
 		{
 			const char* homePath = isWine() ? getenv("HOME") : getenv("SystemDrive");
@@ -135,8 +135,8 @@ class CompatibilityManager
 		{
 			return g_FreePhysMemory;
 		}
-		static void caclPhysMemoryStat();
-		
+		static bool updatePhysMemoryStats();
+
 		static WORD getDllPlatform(const string& fullpath);
 		static void reduceProcessPriority();
 		static void restoreProcessPriority();
@@ -187,19 +187,18 @@ class CompatibilityManager
 		static void getSystemInfoFromOS();
 		static string getProcArchString();
 		static void generateSystemInfoForApp();
-		static bool getFromSystemIsAppRunningIsWow64();
-		static bool getGlobalMemoryStatusFromOS(MEMORYSTATUSEX* MsEx);
+		static bool isWow64Process();
+		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* MsEx);
 
 	public:
 		static void detectIncompatibleSoftware();
-		
-		// AirDC++ code
-		static string Speedinfo();
-		static string DiskSpaceInfo(bool onlyTotal = false);
-		static tstring diskInfo();
-		static TStringList FindVolumes();
-		static string CPUInfo();
-		static string getSysUptime();
+
+		static string getSpeedInfo();
+		static string getDiskSpaceInfo(bool onlyTotal = false);
+		static string getDiskInfo();
+		static TStringList findVolumes();
+		static string getCPUInfo();
+		static uint64_t getSysUptime();
 };
 
 #endif // _WIN32

@@ -22,8 +22,6 @@
 #    include <math.h> /* needed for _set_FMA3_enable */
 #  endif
 
-#define FLYLINKDC_USE_DISK_SPACE_INFO
-
 #include <WinError.h>
 #include <winnt.h>
 #include <ImageHlp.h>
@@ -84,7 +82,7 @@ void CompatibilityManager::init()
 
 	setWine(detectWine());
 	
-	if (!isWine() && getFromSystemIsAppRunningIsWow64())
+	if (!isWine() && isWow64Process())
 		set(RUNNING_IS_WOW64);
 		
 	detectOsSupports();
@@ -218,7 +216,7 @@ void CompatibilityManager::detectIncompatibleSoftware()
 		const HMODULE hIncompatibleDll = GetModuleHandle(currentDllInfo->dllName);
 		if (hIncompatibleDll)
 		{
-			g_incopatibleSoftwareList += "\r\n";
+			g_incopatibleSoftwareList += '\n';
 			const auto l_dll = Text::fromT(currentDllInfo->dllName);
 			g_incopatibleSoftwareList += l_dll;
 			if (currentDllInfo->info)
@@ -479,29 +477,28 @@ string CompatibilityManager::getWindowsVersionName()
 void CompatibilityManager::generateSystemInfoForApp()
 {
 	g_startupInfo = getAppNameVer();
-	
-	g_startupInfo += " is starting\r\n"
-	                 "\tNumber of processors: " + Util::toString(getProcessorsCount()) + ".\r\n" +
+	g_startupInfo += " is starting\n"
+	                 "\tNumber of processors: " + Util::toString(getProcessorsCount()) + ".\n" +
 	                 + "\tProcessor type: ";
 	g_startupInfo += getProcArchString();
-	g_startupInfo += ".\r\n";
-	
-	g_startupInfo += generateGlobalMemoryStatusMessage();
-	g_startupInfo += "\r\n";
-	
+	g_startupInfo += ".\n";
+
+	g_startupInfo += getGlobalMemoryStatusMessage();
+	g_startupInfo += "\n";
+
 	g_startupInfo += "\tRunning in ";
 #ifndef _WIN64
 	if (runningIsWow64())
-		g_startupInfo += "Windows WOW64\r\n\tPlease consider using the x64 version!";
+		g_startupInfo += "Windows WOW64\n\tPlease consider using the x64 version!";
 	else
 #endif
 		g_startupInfo += "Windows native ";
-		
-	g_startupInfo += "\r\n\t";
+	g_startupInfo += "\n\t";
+
 	g_startupInfo += getWindowsVersionName();
 	g_startupInfo += " (" + CompatibilityManager::getFormattedOsVersion() + ")";
-	
-	g_startupInfo += "\r\n\r\n";
+	g_startupInfo += "\n\n";
+	g_startupInfo = Text::toDOS(g_startupInfo);
 }
 
 LONG CompatibilityManager::getComCtlVersionFromOS()
@@ -527,7 +524,7 @@ LONG CompatibilityManager::getComCtlVersionFromOS()
 	return result;
 }
 
-bool CompatibilityManager::getFromSystemIsAppRunningIsWow64()
+bool CompatibilityManager::isWow64Process()
 {
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms684139(v=vs.85).aspx
 	
@@ -549,7 +546,7 @@ bool CompatibilityManager::getFromSystemIsAppRunningIsWow64()
 	return false;
 }
 
-bool CompatibilityManager::getGlobalMemoryStatusFromOS(MEMORYSTATUSEX* p_MsEx)
+bool CompatibilityManager::getGlobalMemoryStatus(MEMORYSTATUSEX* p_MsEx)
 {
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/aa366770(v=vs.85).aspx
 	
@@ -570,18 +567,18 @@ bool CompatibilityManager::getGlobalMemoryStatusFromOS(MEMORYSTATUSEX* p_MsEx)
 	return false;
 }
 
-string CompatibilityManager::generateGlobalMemoryStatusMessage()
+string CompatibilityManager::getGlobalMemoryStatusMessage()
 {
 	MEMORYSTATUSEX curMemoryInfo = {0};
 	curMemoryInfo.dwLength = sizeof(curMemoryInfo);
 	
-	if (getGlobalMemoryStatusFromOS(&curMemoryInfo))
+	if (getGlobalMemoryStatus(&curMemoryInfo))
 	{
 		g_TotalPhysMemory = curMemoryInfo.ullTotalPhys;
-		string memoryInfo = "\tMemory info:\r\n";
-		memoryInfo += "\t\tMemory usage:\t" + Util::toString(curMemoryInfo.dwMemoryLoad) + "%\r\n";
-		memoryInfo += "\t\tPhysical memory total:\t" + Util::formatBytes(curMemoryInfo.ullTotalPhys) + "\r\n";
-		memoryInfo += "\t\tPhysical memory free:\t" + Util::formatBytes(curMemoryInfo.ullAvailPhys) + " \r\n";
+		string memoryInfo = "\tMemory info:\n";
+		memoryInfo += "\t\tMemory usage:\t" + Util::toString(curMemoryInfo.dwMemoryLoad) + "%\n";
+		memoryInfo += "\t\tPhysical memory total:\t" + Util::formatBytes(curMemoryInfo.ullTotalPhys) + "\n";
+		memoryInfo += "\t\tPhysical memory free:\t" + Util::formatBytes(curMemoryInfo.ullAvailPhys) + " \n";
 		return memoryInfo;
 	}
 	return Util::emptyString;
@@ -591,106 +588,145 @@ string CompatibilityManager::generateFullSystemStatusMessage()
 {
 	return
 	    getStartupInfo() +
-	    STRING(CURRENT_SYSTEM_STATE) + ":\r\n" + generateGlobalMemoryStatusMessage() +
-	    getIncompatibleSoftwareMessage() + "\r\n" +
+	    STRING(CURRENT_SYSTEM_STATE) + ":\n" + getGlobalMemoryStatusMessage() +
+	    getIncompatibleSoftwareMessage() + "\n" +
 	    DatabaseManager::getInstance()->getDBInfo();
 }
 
-string CompatibilityManager::generateNetworkStats()
+string CompatibilityManager::getNetworkStats()
 {
 	char buf[1024];
-	sprintf_s(buf, sizeof(buf),
-	          "-=[ TCP: Received: %s. Sent: %s ]=-\r\n"
-	          "-=[ UDP: Received: %s. Sent: %s ]=-\r\n"
-	          "-=[ SSL: Received: %s. Sent: %s ]=-\r\n",
-	          Util::formatBytes(Socket::g_stats.tcp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.tcp.uploaded).c_str(),
-	          Util::formatBytes(Socket::g_stats.udp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.udp.uploaded).c_str(),
-	          Util::formatBytes(Socket::g_stats.ssl.downloaded).c_str(), Util::formatBytes(Socket::g_stats.ssl.uploaded).c_str()
-	         );
+	snprintf(buf, sizeof(buf),
+		"TCP received / sent\t%s / %s\n"
+		"UDP received / sent\t%s / %s\n"
+		"TLS received / sent\t%s / %s\n",
+		Util::formatBytes(Socket::g_stats.tcp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.tcp.uploaded).c_str(),
+		Util::formatBytes(Socket::g_stats.udp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.udp.uploaded).c_str(),
+		Util::formatBytes(Socket::g_stats.ssl.downloaded).c_str(), Util::formatBytes(Socket::g_stats.ssl.uploaded).c_str());
 	return buf;
 }
 
-void CompatibilityManager::caclPhysMemoryStat()
+bool CompatibilityManager::updatePhysMemoryStats()
 {
 	// Total RAM
 	MEMORYSTATUSEX curMem = {0};
 	curMem.dwLength = sizeof(curMem);
 	g_FreePhysMemory = 0;
 	g_TotalPhysMemory = 0;
-	if (getGlobalMemoryStatusFromOS(&curMem))
+	bool result = getGlobalMemoryStatus(&curMem);
+	if (result)
 	{
 		g_TotalPhysMemory = curMem.ullTotalPhys;
 		g_FreePhysMemory = curMem.ullAvailPhys;
 	}
+	return result;
 }
 
-string CompatibilityManager::generateProgramStats() // moved from WinUtil
+string CompatibilityManager::getStats() // moved from WinUtil
 {
-	char buf[1024 * 2];
-	buf[0] = 0;
-	const HINSTANCE hInstPsapi = LoadLibrary(_T("psapi"));
-	if (hInstPsapi)
+	char buf[2048];
+	string s;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	if (DatabaseManager::isValidInstance())
 	{
-		typedef bool (CALLBACK * LPFUNC)(HANDLE Process, PPROCESS_MEMORY_COUNTERS ppsmemCounters, DWORD cb);
-		LPFUNC _GetProcessMemoryInfo = (LPFUNC)GetProcAddress(hInstPsapi, "GetProcessMemoryInfo");
-		if (_GetProcessMemoryInfo)
+		auto dm = DatabaseManager::getInstance();
+		dm->loadGlobalRatio();
+		const auto& r = dm->getGlobalRatio();
+		snprintf(buf, sizeof(buf),
+			"Total downloaded\t%s\n"
+			"Total uploaded\t%s\n"
+			"Upload/download ratio\t%.2f\n",
+			Util::formatBytes(r.download).c_str(),
+			Util::formatBytes(r.upload).c_str(),
+			r.download > 0 ? (double) r.upload / (double) r.download : 0);
+		s = buf;
+	}
+#endif
+	if (ShareManager::isValidInstance())
+	{
+		auto sm = ShareManager::getInstance();
+		snprintf(buf, sizeof(buf),
+			"Shared size\t%s\n"
+			"Shared files\t%u\n",
+			Util::formatBytes(sm->getTotalSharedSize()).c_str(),
+			static_cast<unsigned>(sm->getTotalSharedFiles()));
+		s += buf;
+	}
+
+	snprintf(buf, sizeof(buf),
+		"Total users\t%u (on %u hubs)\n",
+		static_cast<unsigned>(ClientManager::getTotalUsers()),
+		Client::getTotalCounts());
+	s += buf;
+	s += "OS version\t";
+	s += getWindowsVersionName();
+	s += '\n';
+
+	HANDLE currentProcess = GetCurrentProcess();
+	if (updatePhysMemoryStats())
+	{
+		snprintf(buf, sizeof(buf),
+			"Memory (free / total)\t%s / %s\n",
+			Util::formatBytes(g_TotalPhysMemory).c_str(),
+			Util::formatBytes(g_FreePhysMemory).c_str());
+		s += buf;
+	}
+	snprintf(buf, sizeof(buf),
+		"System uptime\t%s\n"
+		"Program uptime\t%s\n",
+		Util::formatTime(getSysUptime()).c_str(),
+		Util::formatTime(Util::getUpTime()).c_str());
+	s += buf;
+
+
+	static bool psapiLoaded = false;
+	typedef BOOL (CALLBACK *LPFUNC)(HANDLE Process, PPROCESS_MEMORY_COUNTERS ppsmemCounters, DWORD cb);
+	static LPFUNC ptrGetProcessMemoryInfo = nullptr;
+	if (!psapiLoaded)
+	{
+		HINSTANCE hInstPsapi = LoadLibrary(_T("psapi"));
+		if (hInstPsapi)
+			ptrGetProcessMemoryInfo = (LPFUNC) GetProcAddress(hInstPsapi, "GetProcessMemoryInfo");
+		psapiLoaded = true;
+	}
+	if (ptrGetProcessMemoryInfo)
+	{
+		PROCESS_MEMORY_COUNTERS pmc = {0};
+		pmc.cb = sizeof(pmc);
+		ptrGetProcessMemoryInfo(currentProcess, &pmc, sizeof(pmc));
+		if (ptrGetProcessMemoryInfo(currentProcess, &pmc, sizeof(pmc)))
 		{
-			PROCESS_MEMORY_COUNTERS pmc = {0};
-			pmc.cb = sizeof(pmc);
-			_GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+#if 0
 			extern int g_RAM_PeakWorkingSetSize;
 			extern int g_RAM_WorkingSetSize;
 			g_RAM_WorkingSetSize = pmc.WorkingSetSize >> 20;
 			g_RAM_PeakWorkingSetSize = pmc.PeakWorkingSetSize >> 20;
-			caclPhysMemoryStat();
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			dcassert(DatabaseManager::isValidInstance());
-			if (DatabaseManager::isValidInstance())
-			{
-				DatabaseManager::getInstance()->loadGlobalRatio();
-			}
 #endif
-			sprintf_s(buf, sizeof(buf),
-			          "\r\n\t-=[ %s "
-			          "Compiled on: %s ]=-\r\n"
-			          "\t-=[ OS: %s ]=-\r\n"
-			          "\t-=[ Memory (free): %s (%s) ]=-\r\n"
-			          "\t-=[ Uptime: %s. Client Uptime: %s ]=-\r\n"
-			          "\t-=[ RAM (peak): %s (%s). Virtual (peak): %s (%s) ]=-\r\n"
-			          "\t-=[ GDI objects (peak): %d (%d). Handles (peak): %d (%d) ]=-\r\n"
-			          "\t-=[ Share: %s. Files in share: %u. Total users: %u on %u hubs ]=-\r\n"
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			          "\t-=[ Total downloaded: %s. Total uploaded: %s ]=-\r\n"
-#endif
-			          "%s",
-				getAppNameVer().c_str(),
-				__DATE__,
-				CompatibilityManager::getWindowsVersionName().c_str(),
-				Util::formatBytes(g_TotalPhysMemory).c_str(),
-				Util::formatBytes(g_FreePhysMemory).c_str(),
-				getSysUptime().c_str(),
-				Util::formatTime(Util::getUpTime()).c_str(),
+			snprintf(buf, sizeof(buf),
+				"Working set size (peak)\t%s (%s)\n"
+				"Virtual memory (peak)\t%s (%s)\n",
 				Util::formatBytes((uint64_t) pmc.WorkingSetSize).c_str(),
 				Util::formatBytes((uint64_t) pmc.PeakWorkingSetSize).c_str(),
 				Util::formatBytes((uint64_t) pmc.PagefileUsage).c_str(),
-				Util::formatBytes((uint64_t) pmc.PeakPagefileUsage).c_str(),
-				GetGuiResources(GetCurrentProcess(), GR_GDIOBJECTS),
-				GetGuiResources(GetCurrentProcess(), 2/* GR_GDIOBJECTS_PEAK */),
-				GetGuiResources(GetCurrentProcess(), GR_USEROBJECTS),
-				GetGuiResources(GetCurrentProcess(), 4 /*GR_USEROBJECTS_PEAK*/),
-				Util::formatBytes(ShareManager::getInstance()->getTotalSharedSize()).c_str(),
-				static_cast<unsigned>(ShareManager::getInstance()->getTotalSharedFiles()),
-				static_cast<unsigned>(ClientManager::getTotalUsers()),
-				Client::getTotalCounts(),
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				Util::formatBytes(DatabaseManager::getInstance()->getGlobalRatio().download).c_str(),
-				Util::formatBytes(DatabaseManager::getInstance()->getGlobalRatio().upload).c_str(),
-#endif
-				generateNetworkStats().c_str());
+				Util::formatBytes((uint64_t) pmc.PeakPagefileUsage).c_str());
+			s += buf;
 		}
-		FreeLibrary(hInstPsapi);
 	}
-	return buf;
+
+	snprintf(buf, sizeof(buf),
+		"GDI objects (peak)\t%d (%d)\n"
+		"Handles (peak)\t%d (%d)\n",
+		GetGuiResources(currentProcess, GR_GDIOBJECTS),
+		GetGuiResources(currentProcess, 2 /* GR_GDIOBJECTS_PEAK */),
+		GetGuiResources(currentProcess, GR_USEROBJECTS),
+		GetGuiResources(currentProcess, 4 /*GR_USEROBJECTS_PEAK*/));
+	s += buf;
+
+	s += getNetworkStats();
+#ifdef FLYLINKDC_USE_SOCKET_COUNTER
+	s += "Sockets\t" + Util::toString(BufferedSocket::getSocketCount()) + '\n';
+#endif
+	return s;
 }
 
 WORD CompatibilityManager::getDllPlatform(const string& fullpath)
@@ -726,82 +762,20 @@ void CompatibilityManager::restoreProcessPriority()
 		SetPriorityClass(GetCurrentProcess(), g_oldPriorityClass);
 }
 
-// AirDC++ code
-// ToDo:  Move all functions into Util
-string CompatibilityManager::Speedinfo()
+string CompatibilityManager::getSpeedInfo()
 {
-	string result = "\r\n\t";
-	result += "-=[ ";
-	result += "Dn. speed: ";
-	result += Util::formatBytes(DownloadManager::getRunningAverage()) + "/s  (";
-	result += Util::toString(DownloadManager::getInstance()->getDownloadCount()) + " fls.)";
-	//result += " =- ";
-	//result += " -= ";
-	result += ". ";
-	result += "Upl. speed: ";
-	result += Util::formatBytes(UploadManager::getRunningAverage()) + "/s  (";
-	result += Util::toString(UploadManager::getInstance()->getUploadCount()) + " fls.)";
-	result += " ]=-";
-	return result;
+	string s = "Download speed\t";
+	s += Util::formatBytes(DownloadManager::getRunningAverage()) + "/s  (";
+	s += Util::toString(DownloadManager::getInstance()->getDownloadCount()) + " fls.)\n";
+	s += "Upload speed\t";
+	s += Util::formatBytes(UploadManager::getRunningAverage()) + "/s  (";
+	s += Util::toString(UploadManager::getInstance()->getUploadCount()) + " fls.)\n";
+	return s;
 }
 
-string CompatibilityManager::DiskSpaceInfo(bool onlyTotal /* = false */)
+TStringList CompatibilityManager::findVolumes()
 {
-	string ret;
-#ifdef FLYLINKDC_USE_DISK_SPACE_INFO
-	int64_t free = 0, totalFree = 0, size = 0, totalSize = 0, netFree = 0, netSize = 0;
-	const TStringList volumes = FindVolumes();
-	for (auto i = volumes.cbegin(); i != volumes.cend(); ++i)
-	{
-		const auto l_drive_type = GetDriveType((*i).c_str());
-		if (l_drive_type == DRIVE_CDROM || l_drive_type == DRIVE_REMOVABLE) // Not score USB flash, SD, SDMC, DVD, CD
-			continue;
-		if (GetDiskFreeSpaceEx((*i).c_str(), NULL, (PULARGE_INTEGER)&size, (PULARGE_INTEGER)&free))
-		{
-			totalFree += free;
-			totalSize += size;
-		}
-	}
-	
-	//check for mounted Network drives
-	DWORD drives = GetLogicalDrives();
-	TCHAR drive[3] = { _T('C'), _T(':'), _T('\0') }; // TODO фиксануть copy-paste
-	while (drives != 0)
-	{
-		const auto l_drive_type = GetDriveType(drive);
-		if (drives & 1 && (l_drive_type != DRIVE_CDROM && l_drive_type != DRIVE_REMOVABLE && l_drive_type == DRIVE_REMOTE)) // only real drives, partitions
-		{
-			if (GetDiskFreeSpaceEx(drive, NULL, (PULARGE_INTEGER)&size, (PULARGE_INTEGER)&free))
-			{
-				netFree += free;
-				netSize += size;
-			}
-			
-		}
-		++drive[0];
-		drives = (drives >> 1);
-	}
-	if (totalSize != 0)
-		if (!onlyTotal)
-		{
-			ret += "\r\n\t-=[ All HDD space (free/total): " + Util::formatBytes(totalFree) + "/" + Util::formatBytes(totalSize) + " ]=-";
-			if (netSize != 0)
-			{
-				ret += "\r\n\t-=[ Network space (free/total): " + Util::formatBytes(netFree) + "/" + Util::formatBytes(netSize) + " ]=-";
-				ret += "\r\n\t-=[ Network + HDD space (free/total): " + Util::formatBytes((netFree + totalFree)) + "/" + Util::formatBytes(netSize + totalSize) + " ]=-";
-			}
-		}
-		else
-		{
-			ret += Util::formatBytes(totalFree) + "/" + Util::formatBytes(totalSize);
-		}
-#endif // FLYLINKDC_USE_DISK_SPACE_INFO
-	return ret;
-}
-
-TStringList CompatibilityManager::FindVolumes()
-{
-	TCHAR   buf[MAX_PATH];
+	TCHAR buf[MAX_PATH];
 	buf[0] = 0;
 	TStringList volumes;
 	HANDLE hVol = FindFirstVolume(buf, MAX_PATH);
@@ -809,7 +783,6 @@ TStringList CompatibilityManager::FindVolumes()
 	{
 		volumes.push_back(buf);
 		BOOL found = FindNextVolume(hVol, buf, MAX_PATH);
-		//while we find drive volumes.
 		while (found)
 		{
 			volumes.push_back(buf);
@@ -820,69 +793,127 @@ TStringList CompatibilityManager::FindVolumes()
 	return volumes;
 }
 
-tstring CompatibilityManager::diskInfo()
+struct DiskInfo
 {
-	tstring result;
-#ifdef FLYLINKDC_USE_DISK_SPACE_INFO
-	int64_t free = 0, size = 0, totalFree = 0, totalSize = 0;
-	int disk_count = 0;
-	std::vector<tstring> results; //add in vector for sorting, nicer to look at :)
-	// lookup drive volumes.
-	TStringList volumes = FindVolumes();
-	for (auto i = volumes.cbegin(); i != volumes.cend(); ++i)
+	tstring mountPath;
+	int64_t size;
+	int64_t free;
+	int type;
+};
+
+static void getDisks(std::vector<DiskInfo>& results)
+{
+	DiskInfo di;
+	TStringList volumes = CompatibilityManager::findVolumes();
+	for (const tstring& vol : volumes)
 	{
-		const auto l_drive_type = GetDriveType((*i).c_str());
-		if (l_drive_type == DRIVE_CDROM || l_drive_type == DRIVE_REMOVABLE) // Not score USB flash, SD, SDMC, DVD, CD
+		UINT type = GetDriveType(vol.c_str());
+		if (type == DRIVE_CDROM/* || type == DRIVE_REMOVABLE*/)
 			continue;
-		TCHAR   buf[MAX_PATH];
+		TCHAR buf[MAX_PATH];
 		buf[0] = 0;
-		if ((GetVolumePathNamesForVolumeName((*i).c_str(), buf, 256, NULL) != 0) &&
-		        (GetDiskFreeSpaceEx((*i).c_str(), NULL, (PULARGE_INTEGER)&size, (PULARGE_INTEGER)&free) != 0))
+		ULARGE_INTEGER size, free;
+		if (GetVolumePathNamesForVolumeName(vol.c_str(), buf, MAX_PATH, nullptr) &&
+		    GetDiskFreeSpaceEx(vol.c_str(), nullptr, &size, &free))
 		{
-			const tstring mountpath = buf;
-			if (!mountpath.empty())
+			di.mountPath = buf;
+			if (!di.mountPath.empty())
 			{
-				totalFree += free;
-				totalSize += size;
-				results.push_back((_T("\t-=[ Disk ") + mountpath + _T(" space (free/total): ") + Util::formatBytesW(free) + _T("/") + Util::formatBytesW(size) + _T(" ]=-")));
+				di.free = free.QuadPart;
+				di.size = size.QuadPart;
+				di.type = type;
+				results.push_back(di);
 			}
 		}
 	}
-	
+
 	// and a check for mounted Network drives, todo fix a better way for network space
 	DWORD drives = GetLogicalDrives();
 	TCHAR drive[3] = { _T('C'), _T(':'), _T('\0') };
-	
-	while (drives != 0)
+
+	while (drives)
 	{
-		const auto l_drive_type = GetDriveType(drive);
-		if (drives & 1 && (l_drive_type != DRIVE_CDROM && l_drive_type != DRIVE_REMOVABLE && l_drive_type == DRIVE_REMOTE)) // TODO фиксануть copy-paste
+		if (drives & 1)
 		{
-			if (GetDiskFreeSpaceEx(drive, NULL, (PULARGE_INTEGER)&size, (PULARGE_INTEGER)&free))
+			ULARGE_INTEGER size, free;
+			UINT type = GetDriveType(drive);
+			if (type == DRIVE_REMOTE && GetDiskFreeSpaceEx(drive, nullptr, &size, &free))
 			{
-				totalFree += free;
-				totalSize += size;
-				results.push_back((_T("\t-=[ Network ") + (tstring)drive + _T(" space (free/total): ") + Util::formatBytesW(free) + _T("/") + Util::formatBytesW(size) + _T(" ]=-")));
+				di.mountPath = drive;
+				di.free = free.QuadPart;
+				di.size = size.QuadPart;
+				di.type = type;
+				results.push_back(di);
 			}
 		}
 		++drive[0];
-		drives = (drives >> 1);
+		drives >>= 1;
 	}
-	
-	sort(results.begin(), results.end()); //sort it
-	for (auto i = results.cbegin(); i != results.end(); ++i)
-	{
-		disk_count++;
-		result += _T("\r\n ") + *i;
-	}
-	result += _T("\r\n\r\n\t-=[ All HDD space (free/total): ") + Util::formatBytesW((totalFree)) + _T("/") + Util::formatBytesW(totalSize) + _T(" ]=-");
-	result += _T("\r\n\t-=[ Total Drives count: ") + Text::toT(Util::toString(disk_count)) + _T(" ]=-");
-	results.clear();
-#endif // FLYLINKDC_USE_DISK_SPACE_INFO
-	return result;
 }
 
-string CompatibilityManager::CPUInfo()
+string CompatibilityManager::getDiskInfo()
+{
+	std::vector<DiskInfo> results;
+	getDisks(results);
+	sort(results.begin(), results.end(),
+		[](const DiskInfo& a, const DiskInfo& b) -> bool { return a.mountPath < b.mountPath; });
+
+	string s;
+	int64_t totalFree = 0, totalSize = 0;
+	for (const auto& di : results)
+	{
+		s += di.type == DRIVE_REMOTE ? "Network drive " : "Local drive ";
+		s += Text::fromT(di.mountPath);
+		s += '\t';
+		s += Util::formatBytes(di.free);
+		s += " of ";
+		s += Util::formatBytes(di.size);
+		s += '\n';
+		totalSize += di.size;
+		totalFree += di.free;
+	}
+	s += "All drives\t";
+	s += Util::formatBytes(totalFree);
+	s += " of ";
+	s += Util::formatBytes(totalSize);
+	s += '\n';
+	return s;
+}
+
+string CompatibilityManager::getDiskSpaceInfo(bool onlyTotal /* = false */)
+{
+	std::vector<DiskInfo> results;
+	getDisks(results);
+
+	string s;
+	int64_t localFree = 0, localSize = 0, netFree = 0, netSize = 0;
+	for (const auto& di : results)
+		if (di.type == DRIVE_REMOTE)
+		{
+			netSize += di.size;
+			netFree += di.free;
+		}
+		else
+		{
+			localSize += di.size;
+			localFree += di.free;
+		}
+	if (!onlyTotal)
+	{
+		s += "Local drives\t" + Util::formatBytes(localFree) + " of " + Util::formatBytes(localSize) + '\n';
+		if (netSize)
+		{
+			s += "Network drives\t" + Util::formatBytes(netFree) + " of " + Util::formatBytes(netSize) + '\n';
+			s += "Network + HDD space\t" + Util::formatBytes(netFree + localFree) + " of " + Util::formatBytes(netSize + localSize) + '\n';
+		}
+		s += '\n';
+	}
+	else
+		s += Util::formatBytes(localFree) + " of " + Util::formatBytes(localSize);
+	return s;
+}
+
+string CompatibilityManager::getCPUInfo()
 {
 	tstring result;
 	HKEY key = nullptr;
@@ -911,7 +942,7 @@ string CompatibilityManager::CPUInfo()
 	return result.empty() ? "Unknown" : Text::fromT(result);
 }
 
-string CompatibilityManager::getSysUptime()
+uint64_t CompatibilityManager::getSysUptime()
 {
 	static HINSTANCE kernel32lib = NULL;
 	if (!kernel32lib)
@@ -919,7 +950,5 @@ string CompatibilityManager::getSysUptime()
 		
 	typedef ULONGLONG(CALLBACK * LPFUNC2)(void);
 	LPFUNC2 _GetTickCount64 = (LPFUNC2)GetProcAddress(kernel32lib, "GetTickCount64");
-	uint64_t sysUptime = (_GetTickCount64 ? _GetTickCount64() : GetTickCount()) / 1000;
-	
-	return Util::formatTime(sysUptime, false);
+	return (_GetTickCount64 ? _GetTickCount64() : GetTickCount()) / 1000;
 }

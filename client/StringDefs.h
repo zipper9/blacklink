@@ -1874,6 +1874,7 @@ enum Strings   // @DontAdd
 	ABOUT_VERSION_TITLE, // "Version"
 	ABOUT_VERSION, // "version %1%"
 	ABOUT_SOURCE, // "Get the source code from project's <a href=\"https://github.com/zipper9/blacklink\">github page</a>."
+	ABOUT_AUTO_REFRESH, // "Refresh automatically"
 	STARTUP_IGNORE_LIST, // "Ignored users list"
 	STARTUP_BACKUP_SETTINGS, // "Backing up settings"
 	STARTUP_SHARE_MANAGER, // "Share manager"

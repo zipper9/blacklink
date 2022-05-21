@@ -743,6 +743,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="windows\AboutCmdsDlg.cpp" />
+    <ClCompile Include="windows\AboutStatDlg.cpp" />
     <ClCompile Include="windows\AddMagnet.cpp" />
     <ClCompile Include="windows\ADLSearchFrame.cpp" />
     <ClCompile Include="windows\ADLSProperties.cpp" />

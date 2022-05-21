@@ -284,7 +284,6 @@
 #define IDC_DOWNLOADS                   1121
 #define IDC_THIRD_PARTY_SOFTWARE        1122
 #define IDC_SLOTSSPIN                   1123
-#define IDC_UDP_DHT_SSL_STAT            1124
 #define IDC_MAXSPEED                    1125
 #define IDC_SPEEDSPIN                   1126
 #define IDC_FAKE_SHARE_SIZE             1127
@@ -306,10 +305,8 @@
 #define IDC_CHEVRON                     1143
 #define IDC_OPEN_FILE_LIST              1144
 #define IDC_TOTALS                      1145
-#define IDC_TOTAL_DOWNLOAD              1146
 #define IDC_SEARCH                      1147
-#define IDC_RATIO                       1148
-#define IDC_TOTAL_UPLOAD                1150
+#define IDC_AUTO_REFRESH                1150
 #define IDC_CLOSE_WINDOW                1151
 #define IDC_FIND                        1152
 #define IDC_NEXT                        1153

@@ -77,6 +77,7 @@
 #include "LimitEditDlg.h"
 #include "ExMessageBox.h"
 #include "CommandLine.h"
+#include "CompatibilityManager.h"
 
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
 #  ifdef FLYLINKDC_CALC_MEMORY_USAGE
@@ -620,24 +621,23 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			UpdateLayout(TRUE);
 			updateStatusBar = 0;
 		}
-		
+
 #ifdef FLYLINKDC_CALC_MEMORY_USAGE
 		if (!CompatibilityManager::isWine())
 		{
 			if ((tick / 1000) % 5 == 0)
 			{
 				TCHAR buf[128];
-				if (memoryInfoResult)
+				tstring title = getAppNameVerT();
+				if (memoryInfoResult && CompatibilityManager::updatePhysMemoryStats())
 				{
-					CompatibilityManager::caclPhysMemoryStat();
 					_sntprintf(buf, _countof(buf), _T(" [RAM: %dM / %dM][Free: %dM][GDI: %d]"),
 					           g_RAM_WorkingSetSize,
 					           g_RAM_PeakWorkingSetSize,
 					           int(CompatibilityManager::getFreePhysMemory() >> 20),
 					           int(g_GDI_count));
+					title += buf;
 				}
-				tstring title = getAppNameVerT();
-				title += buf;
 				SetWindowText(title.c_str());
 			}
 		}

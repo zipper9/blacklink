@@ -43,6 +43,7 @@ class BufferedSocket : private Thread
 
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		static void waitShutdown();
+		static int getSocketCount();
 #endif
 
 		void addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port);

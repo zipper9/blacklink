@@ -337,7 +337,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	}
 
 	CreateSplash();
-	CompatibilityManager::caclPhysMemoryStat();
+	CompatibilityManager::updatePhysMemoryStats();
 
 	// For SHBrowseForFolder
 	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);

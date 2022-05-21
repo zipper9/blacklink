@@ -560,6 +560,11 @@ void BufferedSocket::waitShutdown()
 		sleep(10);
 	}
 }
+
+int BufferedSocket::getSocketCount()
+{
+	return socketCounter.load();
+}
 #endif
 
 void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
