@@ -1158,7 +1158,6 @@ void SettingsManager::setDefaults()
 	setDefault(FILE_SHARED_COLOR, RGB(114,219,139));
 	setDefault(FILE_DOWNLOADED_COLOR, RGB(145,194,196));
 	setDefault(FILE_CANCELED_COLOR, RGB(210,168,211));
-	setDefault(FILE_DOWNLOADED_COLOR, RGB(210,168,211));
 	setDefault(FILE_FOUND_COLOR, RGB(255,255,0));
 	setDefault(FILE_QUEUED_COLOR, RGB(186,0,42));
 
