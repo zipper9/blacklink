@@ -139,7 +139,7 @@ void HttpConnection::prepareRequest(int type) noexcept
 
 	try
 	{
-		socket->connect(server, port, proto == "https", true, true, Socket::PROTO_DEFAULT);
+		socket->connect(server, port, proto == "https", true, true, Socket::PROTO_HTTP);
 		socket->start();
 	}
 	catch (const Exception &e)

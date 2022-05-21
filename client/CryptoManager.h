@@ -76,19 +76,18 @@ class CryptoManager : public Singleton<CryptoManager>
 			KEY_RSA_2048,
 			KEY_LAST
 		};
-		
+
 		enum SSLContext
 		{
 			SSL_CLIENT,
-			SSL_CLIENT_ALPN,
 			SSL_SERVER
 		};
 
 		SSLSocket* getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto);
 		SSLSocket* getServerSocket(bool allowUntrusted);
-		
+
 		SSL_CTX* getSSLContext(SSLContext wanted);
-		
+
 		void loadCertificates(bool createOnError = true) noexcept;
 		void generateCertificate();
 		static const ByteVector& getKeyprint() noexcept;
@@ -107,12 +106,10 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		CryptoManager();
 		virtual ~CryptoManager();
-		
+
 		ssl::SSL_CTX clientContext;
-		ssl::SSL_CTX clientALPNContext;
 		ssl::SSL_CTX serverContext;
-		ssl::SSL_CTX serverALPNContext;
-		
+
 		bool load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept;
 		void sslRandCheck();
 		

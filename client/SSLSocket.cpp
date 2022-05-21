@@ -30,6 +30,9 @@
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 static const unsigned char alpnNMDC[] = { 4, 'n', 'm', 'd', 'c' };
 static const unsigned char alpnADC[]  = { 3, 'a', 'd', 'c' };
+#ifdef USE_HTTP_ALPN
+static const unsigned char alpnHTTP[] = { 8, 'h', 't', 't', 'p', '/', '1', '.', '1' };
+#endif
 #endif
 
 SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto, bool allowUntrusted, const string& expKP) noexcept : ctx(context), ssl(nullptr), nextProto(proto), isTrustedCached(false)
@@ -91,6 +94,12 @@ bool SSLSocket::waitConnected(unsigned millis)
 		{
 			SSL_set_alpn_protos(ssl, alpnADC, sizeof(alpnADC));
 		}
+#ifdef USE_HTTP_ALPN
+		else if (nextProto == Socket::PROTO_HTTP)
+		{
+			SSL_set_alpn_protos(ssl, alpnHTTP, sizeof(alpnHTTP));
+		}
+#endif
 #endif
 	}
 	
