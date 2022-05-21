@@ -243,9 +243,6 @@ inline string fromUtf8(const string& str, int toCharset = CHARSET_SYSTEM_DEFAULT
 	return fromUtf8(str, toCharset, tmp);
 }
 
-string toDOS(string tmp);
-wstring toDOS(wstring tmp);
-
 } // namespace Text
 
 #endif // DCPLUSPLUS_DCPP_TEXT_H

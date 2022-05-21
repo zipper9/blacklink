@@ -50,10 +50,9 @@ string ChatMessage::format() const
 	}
 
 #ifdef _WIN32
-	return Text::toDOS(tmp);
-#else
-	return tmp;
+	Util::convertToDos(tmp);
 #endif
+	return tmp;
 }
 
 void ChatMessage::translateMe(string& text, bool& thirdPerson)

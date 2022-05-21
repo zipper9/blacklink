@@ -471,6 +471,26 @@ namespace Util
 			if (!((str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= '2' && str[i] <= '7'))) return false;
 		return true;
 	}
+
+	template<typename string_type> void convertToDos(string_type& s)
+	{
+		typename string_type::size_type i = 0;
+		while (i < s.length())
+		{
+			if (s[i] == '\n' && (i == 0 || s[i-1] != '\r'))
+			{
+				s.insert(i, 1, '\r');
+				i += 2;
+			}
+			else if (s[i] == '\r' && (i + 1 == s.length() || s[i+1] != '\n'))
+			{
+				s.insert(i + 1, 1, '\n');
+				i += 2;
+			}
+			else
+				++i;
+		}
+	}
 }
 
 // FIXME FIXME FIXME

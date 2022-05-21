@@ -498,7 +498,7 @@ void CompatibilityManager::generateSystemInfoForApp()
 	g_startupInfo += getWindowsVersionName();
 	g_startupInfo += " (" + CompatibilityManager::getFormattedOsVersion() + ")";
 	g_startupInfo += "\n\n";
-	g_startupInfo = Text::toDOS(g_startupInfo);
+	Util::convertToDos(g_startupInfo);
 }
 
 LONG CompatibilityManager::getComCtlVersionFromOS()
