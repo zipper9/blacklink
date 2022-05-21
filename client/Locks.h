@@ -14,7 +14,17 @@ class CriticalSection
 #ifdef _DEBUG
 			BOOL result =
 #endif
+#ifdef OSVER_WIN_XP
 			InitializeCriticalSectionAndSpinCount(&cs, CRITICAL_SECTION_SPIN_COUNT);
+#else
+#ifdef _DEBUG
+#define INIT_CRIT_SECTION_FLAG 0
+#else
+#define INIT_CRIT_SECTION_FLAG CRITICAL_SECTION_NO_DEBUG_INFO
+#endif
+			InitializeCriticalSectionEx(&cs, CRITICAL_SECTION_SPIN_COUNT, INIT_CRIT_SECTION_FLAG);
+#undef INIT_CRIT_SECTION_FLAG
+#endif
 #ifdef _DEBUG
 			dcassert(result);
 #endif

@@ -1,11 +1,17 @@
 #ifndef WIN_CONF_H_
 #define WIN_CONF_H_
 
+#if !defined(OSVER_WIN_XP) && !defined(OSVER_WIN_VISTA) && !defined(OSVER_WIN_7)
+
+// Default is Windows 7 for x64 and Windows XP for x32
 #ifdef _WIN64
-#undef OSVER_WIN_XP
-#undef OSVER_WIN_VISTA
+#undef  OSVER_WIN_XP
+#undef  OSVER_WIN_VISTA
+#define OSVER_WIN_7
 #else
 #define OSVER_WIN_XP
+#endif
+
 #endif
 
 // https://msdn.microsoft.com/ru-ru/library/windows/desktop/aa383745%28v=vs.85%29.aspx
