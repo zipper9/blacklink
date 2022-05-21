@@ -20,15 +20,23 @@
 #define HTTP_CONNECTION_H
 
 #include "BufferedSocketListener.h"
-#include "HttpConnectionListener.h"
 #include "HttpMessage.h"
-#include "Speaker.h"
 #include <limits>
 #include <atomic>
 
 class BufferedSocket;
+class HttpConnection;
 
-class HttpConnection : BufferedSocketListener, public Speaker<HttpConnectionListener>
+class HttpClientCallback
+{
+public:
+	virtual void onData(HttpConnection* conn, const uint8_t* data, size_t size) noexcept = 0;
+	virtual void onFailed(HttpConnection* conn, const string& error) noexcept = 0;
+	virtual void onCompleted(HttpConnection* conn, const string& requestUrl) noexcept = 0;
+	virtual void onDisconnected(HttpConnection* conn) noexcept {}
+};
+
+class HttpConnection : BufferedSocketListener
 {
 public:
 	enum Flags
@@ -37,7 +45,8 @@ public:
 		FLAG_NO_CACHE   = 2
 	};
 
-	HttpConnection(int id): id(id), receivingData(false) {}
+	HttpConnection(int id, HttpClientCallback* client): id(id), client(client), receivingData(false) {}
+
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
 
@@ -77,6 +86,7 @@ private:
 	};
 
 	uint64_t id = 0;
+	HttpClientCallback* const client;
 	string currentUrl;
 
 	// parsed URL components

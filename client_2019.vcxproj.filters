@@ -801,9 +801,6 @@
     <ClInclude Include="client\HttpConnection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\HttpConnectionListener.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\HublistManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -256,7 +256,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	extern bool g_UseWALJournal;
 	extern bool g_EnableSQLtrace;
 	extern bool g_UseSynchronousOff;
-	extern bool g_UseCSRecursionLog;
 	parseCommandLine(cmdLine, nullptr);
 	if (cmdLine.sqliteNoWAL || cmdLine.sqliteUseMemory) g_DisableSQLJournal = true;
 	if (cmdLine.sqliteUseWAL) g_UseWALJournal = true;

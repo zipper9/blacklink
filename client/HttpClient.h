@@ -8,7 +8,7 @@
 #include <atomic>
 #include <limits>
 
-class HttpClient : public Speaker<HttpClientListener>, private HttpConnectionListener
+class HttpClient : public Speaker<HttpClientListener>, private HttpClientCallback
 {
 public:
 	HttpClient();
@@ -74,11 +74,11 @@ private:
 	std::atomic<uint64_t> nextReqId;
 	std::atomic<uint64_t> nextConnId;
 
-	// HttpConnectionListener
-	void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept override;
-	void on(Failed, HttpConnection*, const string&) noexcept override;
-	void on(Completed, HttpConnection*, const string&) noexcept override;
-	void on(Disconnected, HttpConnection*) noexcept override;
+	// HttpClientCallback
+	void onData(HttpConnection*, const uint8_t*, size_t) noexcept override;
+	void onFailed(HttpConnection*, const string&) noexcept override;
+	void onCompleted(HttpConnection*, const string&) noexcept override;
+	void onDisconnected(HttpConnection*) noexcept override;
 
 	void startRequest(HttpConnection* c, const RequestStatePtr& rs);
 	HttpConnection* findConnectionL(uint64_t now, RequestStatePtr& rs, const string& server, uint64_t reqId, bool closeConn, int state);

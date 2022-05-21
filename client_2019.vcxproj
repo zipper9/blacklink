@@ -734,7 +734,6 @@
     <ClInclude Include="client\HintedUser.h" />
     <ClInclude Include="client\HttpClient.h" />
     <ClInclude Include="client\HttpConnection.h" />
-    <ClInclude Include="client\HttpConnectionListener.h" />
     <ClInclude Include="client\HttpHeaders.h" />
     <ClInclude Include="client\HttpMessage.h" />
     <ClInclude Include="client\HublistManager.h" />

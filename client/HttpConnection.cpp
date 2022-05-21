@@ -157,7 +157,7 @@ void HttpConnection::setFailedState(const string& error) noexcept
 {
 	connState = STATE_FAILED;
 	receivingData = false;
-	fire(HttpConnectionListener::Failed(), this, error);
+	client->onFailed(this, error);
 	disconnect();
 }
 
@@ -165,7 +165,7 @@ void HttpConnection::setIdleState() noexcept
 {
 	connState = STATE_IDLE;
 	receivingData = false;
-	fire(HttpConnectionListener::Completed(), this, currentUrl);
+	client->onCompleted(this, currentUrl);
 	if (reqFlags & FLAG_CLOSE_CONN) disconnect();
 }
 
@@ -302,9 +302,9 @@ void HttpConnection::onFailed(const string &errorText) noexcept
 	connState = STATE_FAILED;
 	receivingData = false;
 	if (prevState == STATE_IDLE)
-		fire(HttpConnectionListener::Disconnected(), this);
+		client->onDisconnected(this);
 	else if (prevState != STATE_FAILED)
-		fire(HttpConnectionListener::Failed(), this, errorText + " (" + currentUrl + ")");
+		client->onFailed(this, errorText + " (" + currentUrl + ")");
 	disconnect();
 }
 
@@ -332,7 +332,7 @@ void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 		return;
 	}
 
-	fire(HttpConnectionListener::Data(), this, data, dataSize);
+	client->onData(this, data, dataSize);
 	receivedBodySize = newBodySize;
 	if (receivedBodySize == bodySize) setIdleState();
 }

@@ -82,8 +82,7 @@ HttpConnection* HttpClient::findConnectionL(uint64_t now, RequestStatePtr& rs, c
 	if (!c)
 	{
 		uint64_t connId = ++nextConnId;
-		c = new HttpConnection(connId);
-		c->addListener(this);
+		c = new HttpConnection(connId, this);
 		ConnectionData cd;
 		cd.state = state;
 		cd.server = std::move(server);
@@ -164,14 +163,17 @@ bool HttpClient::startRequest(uint64_t id)
 
 void HttpClient::shutdown() noexcept
 {
+	vector<HttpConnection*> connections;
 	cs.lock();
 	for (auto i = conn.begin(); i != conn.end(); ++i)
 	{
-		i->second.conn->removeListeners();
-		delete i->second.conn;
+		HttpConnection* c = i->second.conn;
+		if (c) connections.push_back(c);
 	}
 	conn.clear();
 	cs.unlock();
+	for (HttpConnection* c : connections)
+		delete c;
 }
 
 bool HttpClient::isTimedOut(const ConnectionData& cd, uint64_t now) noexcept
@@ -186,6 +188,7 @@ bool HttpClient::isTimedOut(const ConnectionData& cd, uint64_t now) noexcept
 void HttpClient::removeUnusedConnections() noexcept
 {
 	uint64_t now = GET_TICK();
+	vector<HttpConnection*> connections;
 	cs.lock();
 	auto i = conn.begin();
 	while (i != conn.end())
@@ -193,17 +196,18 @@ void HttpClient::removeUnusedConnections() noexcept
 		auto& cd = i->second;
 		if (cd.state == STATE_FAILED || isTimedOut(cd, now))
 		{
-			cd.conn->removeListeners();
-			delete cd.conn;
+			if (cd.conn) connections.push_back(cd.conn);
 			conn.erase(i++);
 		}
 		else
 			++i;
 	}
 	cs.unlock();
+	for (HttpConnection* c : connections)
+		delete c;
 }
 
-void HttpClient::on(Data, HttpConnection* c, const uint8_t* data, size_t size) noexcept
+void HttpClient::onData(HttpConnection* c, const uint8_t* data, size_t size) noexcept
 {
 	uint64_t now = GET_TICK();
 	uint64_t reqId = 0;
@@ -292,12 +296,12 @@ void HttpClient::processError(uint64_t connId, const string& error) noexcept
 	if (reqId) fire(HttpClientListener::Failed(), reqId, error);
 }
 
-void HttpClient::on(Failed, HttpConnection* c, const string& error) noexcept
+void HttpClient::onFailed(HttpConnection* c, const string& error) noexcept
 {
 	processError(c->getID(), error);
 }
 
-void HttpClient::on(Completed, HttpConnection* c, const string& requestUrl) noexcept
+void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexcept
 {
 	int respCode = c->getResponseCode();
 	HttpClientListener::Result result;
@@ -374,13 +378,13 @@ void HttpClient::on(Completed, HttpConnection* c, const string& requestUrl) noex
 		fire(HttpClientListener::Completed(), reqId, resp, result);
 }
 
-void HttpClient::on(Disconnected, HttpConnection* c) noexcept
+void HttpClient::onDisconnected(HttpConnection* c) noexcept
 {
 	processError(c->getID(), STRING(CONNECTION_CLOSED));
 }
 
 string HttpClient::getFileName(const string& path)
-{	
+{
 	auto pos = path.rfind('/');
 	if (pos != string::npos)
 	{
