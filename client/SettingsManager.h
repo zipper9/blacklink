@@ -403,7 +403,12 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			ENABLE_P2P_GUARD,
 			ENABLE_IPTRUST,
 			IPGUARD_DEFAULT_DENY,
-			
+
+			// Anti-flood
+			ANTIFLOOD_MIN_REQ_COUNT,
+			ANTIFLOOD_MAX_REQ_PER_MIN,
+			ANTIFLOOD_BAN_TIME,
+
 			// Search
 			SEARCH_PASSIVE,
 			MIN_SEARCH_INTERVAL,

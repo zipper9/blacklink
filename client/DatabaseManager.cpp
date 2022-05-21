@@ -1681,16 +1681,3 @@ void DatabaseManager::clearDownloadRequest(bool isRetry, int newStatus) noexcept
 	mmdbDownloadReq = 0;
 	timeDownloadMmdb = GET_TICK() + (isRetry ? GEOIP_DOWNLOAD_RETRY_TIME : SETTING(GEOIP_CHECK_HOURS) * 3600);
 }
-
-void IpKey::setIP(Ip4Address ip)
-{
-	u.dw[0] = 0;
-	u.dw[1] = 0;
-	u.dw[2] = htonl(0xFFFF);
-	u.dw[3] = htonl(ip);
-}
-
-void IpKey::setIP(const Ip6Address& ip)
-{
-	memcpy(u.b, ip.data, 16);
-}

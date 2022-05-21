@@ -23,6 +23,7 @@
 #include "User.h"
 #include "Text.h"
 #include "Client.h"
+#include "AntiFlood.h"
 
 class ClientManager;
 typedef boost::unordered_map<string, std::pair<std::string, unsigned>>  CFlyUnknownCommand;
@@ -130,6 +131,9 @@ class NmdcHub : public Client, private Flags
 		bool hubSupportsSlots;
 #endif
 
+		HubRequestCounters reqSearch;
+		HubRequestCounters reqConnectToMe;
+
 	private:
 		void updateMyInfoState(bool isMyInfo);
 		
@@ -195,6 +199,8 @@ class NmdcHub : public Client, private Flags
 		void chatMessageParse(const string& line);
 		void updateFromTag(Identity& id, const string& tag);
 		static int getEncodingFromDomain(const string& domain);
+		bool checkConnectToMeFlood(const IpAddress& ip, uint16_t port);
+		bool checkSearchFlood(const IpAddress& ip, uint16_t port);
 
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;

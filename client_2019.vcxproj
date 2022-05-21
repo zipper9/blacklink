@@ -492,6 +492,7 @@
     <ClCompile Include="client\AdcHub.cpp" />
     <ClCompile Include="client\AdcSupports.cpp" />
     <ClCompile Include="client\ADLSearch.cpp" />
+    <ClCompile Include="client\AntiFlood.cpp" />
     <ClCompile Include="client\AutoDetectSocket.cpp" />
     <ClCompile Include="client\BaseUtil.cpp" />
     <ClCompile Include="client\BufferedSocket.cpp" />
@@ -703,6 +704,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcSupports.h" />
+    <ClInclude Include="client\AntiFlood.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\BaseStreams.h" />
     <ClInclude Include="client\BaseThread.h" />
@@ -745,6 +747,7 @@
     <ClInclude Include="client\IpAddress.h" />
     <ClInclude Include="client\IpGrant.h" />
     <ClInclude Include="client\IPInfo.h" />
+    <ClInclude Include="client\IpKey.h" />
     <ClInclude Include="client\IpList.h" />
     <ClInclude Include="client\IPStat.h" />
     <ClInclude Include="client\IpTest.h" />
@@ -766,6 +769,7 @@
     <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />
     <ClInclude Include="client\Random.h" />
+    <ClInclude Include="client\RequestCounter.h" />
     <ClInclude Include="client\Resolver.h" />
     <ClInclude Include="client\RWLock.h" />
     <ClInclude Include="client\RWLockWin.h" />

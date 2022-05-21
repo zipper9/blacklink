@@ -1818,6 +1818,7 @@ enum Strings   // @DontAdd
 	CHAT_DISABLED_NOTICE, // "Chat disabled"
 	PM_DISABLED_NOTICE, // "Private messages disabled"
 	INVALID_INPUT, // "Invalid input"
+	ANTIFLOOD_MESSAGE, // "%1% flood detected, banning %2%"
 	COMMAND_ARG_REQUIRED, // "This command requires an argument"
 	COMMAND_N_ARGS_REQUIRED, // "This command requires %1% arguments"
 	COMMAND_N_ARGS_EXTRA, // "This command does not accept more than %1% arguments"

@@ -1160,7 +1160,6 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 			dcassert(!token.empty());
 			uint64_t expires = revConnect ? GET_TICK() + 60000 : UINT64_MAX;
 			ConnectionManager::getInstance()->adcExpect(token, user.getUser()->getCID(), getHubUrl(), expires);
-			ConnectionManager::g_ConnToMeCount++;
 		}
 	}
 	else

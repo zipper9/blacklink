@@ -430,6 +430,11 @@ static const char* g_settingTags[] =
 	"EnableIpTrust",
 	"IpGuardDefaultDeny",
 
+	// Anti-flood
+	"AntiFloodMinReqCount",
+	"AntiFloodMaxReqPerMin",
+	"AntiFloodBanTime",
+
 	// Search
 	"SearchPassiveAlways", 
 	"MinimumSearchInterval",
@@ -1056,7 +1061,12 @@ void SettingsManager::setDefaults()
 
 	// Malicious IP detection
 	setDefault(ENABLE_IPTRUST, TRUE);
-	
+
+	// Anti-flood
+	setDefault(ANTIFLOOD_MIN_REQ_COUNT, 15);
+	setDefault(ANTIFLOOD_MAX_REQ_PER_MIN, 12);
+	setDefault(ANTIFLOOD_BAN_TIME, 3600);
+
 	// Search
 	setDefault(MIN_SEARCH_INTERVAL, 10);
 	setDefault(MIN_SEARCH_INTERVAL_PASSIVE, 10);

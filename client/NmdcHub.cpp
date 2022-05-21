@@ -45,6 +45,9 @@ static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
 bool suppressUserConn = false;
 #endif
 
+extern IpBans udpBans;
+extern IpBans tcpBans;
+
 enum
 {
 	ST_NONE,
@@ -656,23 +659,8 @@ void NmdcHub::searchParse(const string& param, int type)
 			}
 			return;
 		}
-#if 0
-		string::size_type m = searchParam.seeker.rfind(':');
-		if (m == string::npos)
+		if (!checkSearchFlood(ip, port))
 			return;
-		if (searchParam.fileType != FILE_TYPE_TTH)
-		{
-			// FIXME FIXME FIXME
-			if (m_cache_hub_url_flood.empty())
-				m_cache_hub_url_flood = getHubUrlAndIP();
-			if (ConnectionManager::checkIpFlood(searchParam.seeker.substr(0, m),
-			                                    Util::toInt(searchParam.seeker.substr(m + 1)),
-			                                    getIp(), param, m_cache_hub_url_flood))
-			{
-				return; // http://dchublist.ru/forum/viewtopic.php?f=6&t=1028&start=150
-			}
-		}
-#endif
 	}
 	else
 	{
@@ -752,6 +740,30 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		}
 	}
 	
+}
+
+bool NmdcHub::checkConnectToMeFlood(const IpAddress& ip, uint16_t port)
+{
+	bool showMessage;
+	if (reqConnectToMe.addRequest(tcpBans, ip, port, GET_TICK(), getHubUrl(), showMessage)) return true;
+	if (showMessage)
+	{
+		string addr = Util::printIpAddress(ip, true) + ':' + Util::toString(port);
+		fire(ClientListener::StatusMessage(), this, STRING_F(ANTIFLOOD_MESSAGE, "ConnectToMe" % addr));
+	}
+	return false;
+}
+
+bool NmdcHub::checkSearchFlood(const IpAddress& ip, uint16_t port)
+{
+	bool showMessage;
+	if (reqSearch.addRequest(udpBans, ip, port, GET_TICK(), getHubUrl(), showMessage)) return true;
+	if (showMessage)
+	{
+		string addr = Util::printIpAddress(ip, true) + ':' + Util::toString(port);
+		fire(ClientListener::StatusMessage(), this, STRING_F(ANTIFLOOD_MESSAGE, "Search" % addr));
+	}
+	return false;
 }
 
 static uint16_t parsePort(const string& s)
@@ -841,12 +853,15 @@ void NmdcHub::connectToMeParse(const string& param)
 			{
 				if (senderNick.empty())
 					break;
-					
+
 				portStr.erase(portStr.length() - 1);
 				uint16_t port = parsePort(portStr);
 				if (!port)
 					break;
-				
+
+				if (!checkConnectToMeFlood(ip, port))
+					break;
+
 				// Trigger connection attempt sequence locally ...
 				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_CLIENT, myNick, getHubUrl(),
@@ -870,6 +885,9 @@ void NmdcHub::connectToMeParse(const string& param)
 				if (!port)
 					break;
 
+				if (!checkConnectToMeFlood(ip, port))
+					break;
+
 				// Trigger connection attempt sequence locally
 				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_SERVER, myNick, getHubUrl(),
@@ -881,6 +899,9 @@ void NmdcHub::connectToMeParse(const string& param)
 
 		uint16_t port = parsePort(portStr);
 		if (!port)
+			break;
+
+		if (!checkConnectToMeFlood(ip, port))
 			break;
 
 		// For simplicity, we make the assumption that users on a hub have the same character encoding
@@ -1782,7 +1803,6 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 	if (!ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl(), token, getEncoding(), expires))
 		return;
 
-	ConnectionManager::g_ConnToMeCount++;
 	send("$ConnectToMe " + nick + ' ' + getMyExternalIP() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
 }
 

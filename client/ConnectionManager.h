@@ -234,8 +234,6 @@ class ConnectionManager :
 		string getExpectedInfo() const;
 		string getTokenInfo() const;
 
-		static uint16_t g_ConnToMeCount;
-
 		void putConnection(UserConnection* conn);
 		void processMyNick(UserConnection* source, const string& nick) noexcept;
 		void processKey(UserConnection* source) noexcept;
@@ -319,8 +317,6 @@ class ConnectionManager :
 
 		ExpectedNmdcMap expectedNmdc;
 		ExpectedAdcMap expectedAdc;
-
-		uint64_t m_floodCounter;
 
 		Server* servers[4];
 		uint16_t ports[2];

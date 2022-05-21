@@ -20,6 +20,7 @@
 #include "IPInfo.h"
 #include "CID.h"
 #include "IpAddress.h"
+#include "IpKey.h"
 #include "HttpClientListener.h"
 #include "forward.h"
 #include "sqlite/sqlite3x.hpp"
@@ -83,45 +84,6 @@ struct TransferHistorySummary
 	uint64_t fileSize;
 	TransferHistorySummary() : count(0), dateAsInt(0), actual(0), fileSize(0) {}
 };
-
-struct IpKey
-{	
-	union
-	{
-		uint8_t b[16];
-		uint32_t dw[4];
-	} u;
-	
-	bool operator< (const IpKey& x) const
-	{
-		for (int i = 0; i < 4; i++)
-			if (u.dw[i] != x.u.dw[i])
-				return u.dw[i] < x.u.dw[i];
-		return false;
-	}
-	bool operator== (const IpKey& x) const
-	{
-		return u.dw[0] == x.u.dw[0] && u.dw[1] == x.u.dw[1] &&
-		       u.dw[2] == x.u.dw[2] && u.dw[3] == x.u.dw[3];
-	}
-	void setIP(Ip4Address ip);
-	void setIP(const Ip6Address& ip);
-	uint32_t getHash() const
-	{
-		return u.dw[0] ^ u.dw[1] ^ u.dw[2] ^ u.dw[3];
-	}
-};
-
-namespace boost
-{
-	template<> struct hash<IpKey>
-	{
-		size_t operator()(const IpKey& x) const
-		{
-			return x.getHash();
-		}
-	};
-}
 
 enum DBRegistryType
 {

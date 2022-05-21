@@ -45,8 +45,6 @@ static const unsigned UC_RETRY_TIME = 10;
 static const unsigned CCPM_IDLE_TIME = 360; // 6 minutes
 static const unsigned CCPM_KEEP_ALIVE_TIME = 180; // 3 minutes
 
-uint16_t ConnectionManager::g_ConnToMeCount = 0;
-
 TokenManager ConnectionManager::tokenManager;
 
 string TokenManager::makeToken(int type, uint64_t expires) noexcept
@@ -360,7 +358,7 @@ static void modifyFeatures(StringList& features, const string& options)
 	}
 }
 
-ConnectionManager::ConnectionManager() : m_floodCounter(0), shuttingDown(false),
+ConnectionManager::ConnectionManager() : shuttingDown(false),
 	csConnections(RWLock::create()),
 	csDownloads(RWLock::create())
 {
@@ -878,9 +876,6 @@ void ConnectionManager::checkConnections(uint64_t tick)
 	}
 }
 
-static const uint64_t g_FLOOD_TRIGGER = 20000;
-static const uint64_t g_FLOOD_ADD = 2000;
-
 ConnectionManager::Server::Server(int type, const IpAddressEx& ip, uint16_t port): type(type), bindIp(ip), stopFlag(false)
 {
 	sock.create(ip.type, Socket::TYPE_TCP);
@@ -968,42 +963,6 @@ int ConnectionManager::Server::run() noexcept
  */
 void ConnectionManager::accept(const Socket& sock, int type, Server* server) noexcept
 {
-	uint32_t now = GET_TICK();
-	
-	if (g_ConnToMeCount > 0)
-		g_ConnToMeCount--;
-		
-	if (now > m_floodCounter)
-	{
-		m_floodCounter = now + g_FLOOD_ADD;
-	}
-	else
-	{
-		/*if (false  // TODO - узнать почему тут такой затыкон оставлен в оригинальном dc++
-		        && now + g_FLOOD_TRIGGER < m_floodCounter)
-		{
-		    Socket s;
-		    try
-		    {
-		        s.accept(sock);
-		    }
-		    catch (const SocketException&)
-		    {
-		        // ...
-		    }
-		    LogManager::flood_message("Connection flood detected, port = " + Util::toString(sock.getPort()) + " IP = " + sock.getIp());
-		    dcdebug("Connection flood detected!\n");
-		    return;
-		}
-		else
-		*/
-		{
-			if (g_ConnToMeCount <= 0)
-			{
-				m_floodCounter += g_FLOOD_ADD;
-			}
-		}
-	}
 	uint16_t port;
 	unique_ptr<Socket> newSock;
 	switch (type)

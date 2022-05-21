@@ -12,6 +12,7 @@
 #include "ParamExpander.h"
 #include "HttpClient.h"
 #include "IpTest.h"
+#include "AntiFlood.h"
 #include "dht/DHT.h"
 #include "dht/DHTSearchManager.h"
 #include "dht/IndexManager.h"
@@ -24,6 +25,9 @@
 extern bool suppressUserConn;
 extern bool disablePartialListUploads;
 #endif
+
+extern IpBans udpBans;
+extern IpBans tcpBans;
 
 using namespace Commands;
 
@@ -85,6 +89,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_QUEUE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DHT
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_TTH
+	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_IP_BANS
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_DEBUG_ADD_TREE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_DEBUG_DISABLE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DEBUG_BLOOM
@@ -144,6 +149,7 @@ static const CommandName names[] =
 	{ "http",           COMMAND_DEBUG_HTTP          },
 	{ "ignorelist",     COMMAND_SHOW_IGNORE_LIST    },
 	{ "il",             COMMAND_SHOW_IGNORE_LIST    },
+	{ "ipbans",         COMMAND_IP_BANS             },
 	{ "ipupdate",       COMMAND_IP_UPDATE           },
 	{ "itunes",         COMMAND_MEDIA_PLAYER        },
 	{ "ja",             COMMAND_MEDIA_PLAYER        },
@@ -387,6 +393,15 @@ enum
 {
 	ACTION_IP_V4 = 1,
 	ACTION_IP_V6
+};
+
+static const char* actionsIpBans[] = { "info", "remove", "protect", "unprotect", nullptr };
+enum
+{
+	ACTION_IPBANS_INFO = 1,
+	ACTION_IPBANS_REMOVE,
+	ACTION_IPBANS_PROTECT,
+	ACTION_IPBANS_UNPROTECT
 };
 
 bool Commands::isPublic(const StringList& args)
@@ -1104,6 +1119,60 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				res.text += msg;
 			}
 			res.what = RESULT_LOCAL_TEXT;
+			return true;
+		}
+		case COMMAND_IP_BANS:
+		{
+			int action = getAction(pc, actionsIpBans);
+			if (action == ACTION_IPBANS_INFO)
+			{
+				int64_t timestamp = GET_TICK();
+				res.text = tcpBans.getInfo("TCP", timestamp) + udpBans.getInfo("UDP", timestamp);
+				if (res.text.empty())
+					res.text = STRING(COMMAND_EMPTY_LIST);
+				else
+					res.text.insert(0, "Banned addresses:\n");
+				res.what = RESULT_LOCAL_TEXT;
+				return true;
+			}
+			if (action == ACTION_IPBANS_REMOVE || action == ACTION_IPBANS_PROTECT || action == ACTION_IPBANS_UNPROTECT)
+			{
+				if (pc.args.size() < 4)
+				{
+					res.text = STRING_F(COMMAND_N_ARGS_REQUIRED, 3);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				IpBans* bans;
+				if (!stricmp(pc.args[2], "tcp")) bans = &tcpBans;
+				else if (!stricmp(pc.args[2], "udp")) bans = &udpBans;
+				else
+				{
+					res.text = STRING(COMMAND_INVALID_ARGUMENT);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				uint16_t port = 0;
+				string ipString;
+				IpAddress ip;
+				if (!Util::parseIpPort(pc.args[3], ipString, port) || !port || !Util::parseIpAddress(ip, ipString))
+				{
+					res.text = STRING(COMMAND_INVALID_IP);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				IpPortKey key;
+				key.setIP(ip, port);
+				if (action == ACTION_IPBANS_REMOVE)
+					bans->removeBan(key);
+				else
+					bans->protect(key, action == ACTION_IPBANS_PROTECT);
+				res.text = STRING(COMMAND_DONE);
+				res.what = RESULT_LOCAL_TEXT;
+				return true;
+			}
+			res.text = STRING(COMMAND_INVALID_ACTION);
+			res.what = RESULT_ERROR_MESSAGE;
 			return true;
 		}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
