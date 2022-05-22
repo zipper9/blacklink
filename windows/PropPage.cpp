@@ -26,9 +26,6 @@ SettingsManager * g_settings;
 
 void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = 0 */)
 {
-#ifdef _DEBUG
-	m_check_read_write++;
-#endif
 	dcassert(page != NULL);
 	
 	if (items)
@@ -104,9 +101,6 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 
 void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = NULL */)
 {
-#ifdef _DEBUG
-	m_check_read_write--;
-#endif
 	dcassert(page != NULL);
 	
 	bool showWarning = false;
@@ -189,6 +183,4 @@ bool PropPage::getBoolSetting(const ListItem* listItems, HWND list, int setting)
 
 void PropPage::cancel(HWND page)
 {
-	dcassert(page != NULL);
-	cancel_check();
 }

@@ -32,10 +32,6 @@ class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_USER_WAITING; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		void fixControls();

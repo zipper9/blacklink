@@ -60,10 +60,6 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_POPUPS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		void fixControls();

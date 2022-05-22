@@ -59,11 +59,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_USER_INFO; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
-		
+
 	private:
 		struct LanguageInfo
 		{

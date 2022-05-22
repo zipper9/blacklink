@@ -44,10 +44,6 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_EXPERT; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		CComboBox ctrlShutdownAction;

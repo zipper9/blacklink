@@ -49,10 +49,6 @@ class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION_EX; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		void fixControls();

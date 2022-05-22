@@ -48,10 +48,6 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_LOGS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		CListViewCtrl logOptions;

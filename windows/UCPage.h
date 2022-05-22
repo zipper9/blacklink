@@ -61,18 +61,10 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) * this;
-		}
+
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) * this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_COMMANDS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		ExListViewCtrl ctrlCommands;

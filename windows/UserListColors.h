@@ -27,17 +27,9 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 		LRESULT onImageBrowse(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) * this;
-		}
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) * this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_USERS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		enum

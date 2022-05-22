@@ -30,10 +30,6 @@ class LimitPage : public CPropertyPage<IDD_LIMIT_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_SPEED; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		CComboBox timeCtrlBegin, timeCtrlEnd;

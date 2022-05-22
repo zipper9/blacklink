@@ -46,10 +46,6 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_PRIORITY; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		void onChangeUsePatterns();

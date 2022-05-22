@@ -58,18 +58,10 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 			return 0;
 		}
 		LRESULT onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) * this;
-		}
+
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) * this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_SOUNDS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:	
 		struct ThemeInfo

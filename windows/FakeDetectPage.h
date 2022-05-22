@@ -43,10 +43,6 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_USER_BLOCKED; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		CListViewCtrl ctrlList;

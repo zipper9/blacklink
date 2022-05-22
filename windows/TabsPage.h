@@ -35,18 +35,10 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) *this;
-		}
+
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_TABS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		CListViewCtrl ctrlOption;

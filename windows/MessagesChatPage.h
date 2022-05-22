@@ -35,10 +35,6 @@ class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public Pr
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_CHAT; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		CFlyToolTipCtrl ctrlTooltip;

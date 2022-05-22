@@ -31,10 +31,6 @@ class SearchPage : public CPropertyPage<IDD_SEARCH_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_SEARCH; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		void fixControls();

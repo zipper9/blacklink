@@ -54,10 +54,6 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_VIDEO1; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 #ifdef SSA_SHELL_INTEGRATION

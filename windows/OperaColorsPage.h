@@ -121,10 +121,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_WINDOW_DETAILS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
+
 	private:
 		friend UINT_PTR CALLBACK MenuBarCommDlgProc(HWND, UINT, WPARAM, LPARAM);
 		friend LRESULT PropPageTextStyles::onImport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

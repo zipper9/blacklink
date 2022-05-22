@@ -48,10 +48,6 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_FOLDERS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 		void fixControls();
 		
 	protected:

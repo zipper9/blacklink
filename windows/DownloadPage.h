@@ -49,10 +49,6 @@ class DownloadPage : public CPropertyPage<IDD_DOWNLOAD_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_DOWNLOAD; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 };
 
 #endif //  !defined(DOWNLOAD_PAGE_H)

@@ -29,10 +29,6 @@ class RemoteControlPage : public CPropertyPage<IDD_REMOTE_CONTROL_PAGE>, public 
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_SERVER; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 };
 
 #endif //RemoteControlPage_H

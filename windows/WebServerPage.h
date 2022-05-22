@@ -17,18 +17,10 @@ class WebServerPage : public CPropertyPage<IDD_WEBSERVER_PAGE>, public PropPage
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) *this;
-		}
+
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_SERVER_EX; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 };
 
 #endif //WebServerPage_H

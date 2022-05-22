@@ -100,17 +100,10 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
 
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) *this;
-		}
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD_ADVANCED; }
 		void onShow() override;
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		CTabCtrl ctrlTabs;

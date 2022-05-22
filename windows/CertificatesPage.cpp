@@ -81,7 +81,6 @@ void CertificatesPage::write()
 void CertificatesPage::cancel()
 {
 	g_tlsOption = 0;
-	cancel_check();
 }
 
 LRESULT CertificatesPage::onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

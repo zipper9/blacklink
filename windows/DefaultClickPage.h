@@ -43,10 +43,6 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_MOUSE; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		CComboBox userListAction, transferListAction, chatAction, favUserListAction, magnetAction;

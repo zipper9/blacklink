@@ -49,10 +49,6 @@ class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_DISPLAY; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		void fixControls();

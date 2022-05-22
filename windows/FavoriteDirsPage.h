@@ -64,10 +64,6 @@ class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public Pr
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_DOCUMENTS; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		ExListViewCtrl ctrlDirectories;

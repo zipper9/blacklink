@@ -29,7 +29,6 @@ class GeoIPPage : public CPropertyPage<IDD_GEOIP_PAGE>, public PropPage
 		PROPSHEETPAGE* getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_GEOIP; }
 		void write();
-		void cancel() { cancel_check(); }
 		void onTimer() { updateState(); }
 
 	private:

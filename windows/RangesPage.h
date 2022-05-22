@@ -102,10 +102,6 @@ class RangesPage : public CPropertyPage<IDD_IPFILTER_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_RESTRICTED; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	private:
 		CTabCtrl ctrlTabs;

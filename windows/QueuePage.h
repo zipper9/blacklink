@@ -49,11 +49,7 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_DOWNLOAD_EX; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
-		
+
 	private:
 		CListViewCtrl ctrlList;
 		CComboBox ctrlActionIfExists;

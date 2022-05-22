@@ -78,10 +78,6 @@ class AVIPreview : public CPropertyPage<IDD_AVIPREVIEW_PAGE>, public PropPage
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_MEDIA; }
 		void write() {}
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		ExListViewCtrl ctrlCommands;

@@ -45,17 +45,9 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		LRESULT onAdd(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onRemove(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) *this;
-		}
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_TOOLBAR; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 		CListViewCtrl ctrlCommands;

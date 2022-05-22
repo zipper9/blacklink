@@ -31,22 +31,16 @@ class PropPage
 {
 	public:
 		PropPage(const wstring& p_title) : m_title(p_title)
-#ifdef _DEBUG
-			, m_check_read_write(0)
-#endif
 		{
 		}
 		virtual ~PropPage()
 		{
-#if 0
-			dcassert(m_check_read_write == 0);
-#endif
 		}
 		
 		virtual PROPSHEETPAGE *getPSP() = 0;
 		virtual int getPageIcon() const { return PROP_PAGE_ICON_EMPTY; }
 		virtual void write() = 0;
-		virtual void cancel() = 0;
+		virtual void cancel() {}
 		virtual void onHide() {}
 		virtual void onShow() {}
 		virtual void onTimer() {}
@@ -68,24 +62,13 @@ class PropPage
 		PropPage(const PropPage &) = delete;
 		PropPage& operator= (const PropPage &) = delete;
 
+		static void read(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
+		static void write(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
+
 	protected:
 		wstring m_title;
-		void read(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
-		void write(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
 		void cancel(HWND page);
-		void cancel_check()
-		{
-#if 0
-			dcassert(m_check_read_write > 0);
-			m_check_read_write = 0;
-#endif
-		}
 		bool getBoolSetting(const ListItem* listItems, HWND list, int setting);
-
-#ifdef _DEBUG
-	protected:
-		int m_check_read_write;
-#endif
 };
 
 #endif // !defined(PROP_PAGE_H)

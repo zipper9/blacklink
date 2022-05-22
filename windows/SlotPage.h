@@ -31,17 +31,9 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 			return 0;
 		}
 #endif
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) * this;
-		}
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) * this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD_EX; }
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
 
 	protected:
 #ifdef SSA_IPGRANT_FEATURE
