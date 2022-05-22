@@ -52,7 +52,7 @@ public:
 
 	virtual ~HttpConnection();
 
-	bool startRequest(int type, const string& url, int flags = 0);
+	bool startRequest(uint64_t requestId, int type, const string& url, int flags = 0);
 	void disconnect() noexcept;
 
 	const string& getCurrentUrl() const { return currentUrl; }
@@ -65,6 +65,8 @@ public:
 	void setRequestBody(const string& body, const string& type);
 	void setRequestBody(string& body, const string& type);
 	void setIfModified(time_t t) { ifModified = t; }
+	void setProxyServer(const string& server) { proxyServer = server; }
+	const string& getProxyServer() const { return proxyServer; }
 
 	uint64_t getID() const { return id; }
 	void setIpVersion(int af) { ipVersion = af; }
@@ -88,6 +90,9 @@ private:
 	uint64_t id = 0;
 	HttpClientCallback* const client;
 	string currentUrl;
+	string proxyServer;
+	string proxyServerHost;
+	string requestUri;
 
 	// parsed URL components
 	string server;
@@ -110,6 +115,7 @@ private:
 	ConnectionStates connState = STATE_IDLE;
 	std::atomic_bool receivingData;
 	int requestType = -1;
+	uint64_t requestId = 0;
 	Http::Response resp;
 
 	BufferedSocket* socket = nullptr;

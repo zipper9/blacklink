@@ -117,6 +117,14 @@ static const DialogLayout::Item layoutItems2[] =
 	{ IDC_USE_DHT, FLAG_TRANSLATE, AUTO, UNSPEC }
 };
 
+static const DialogLayout::Item layoutItems3[] =
+{
+	{ IDC_CAPTION_PORT_TEST_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_GET_IPV4_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_GET_IPV6_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_DHT_BOOTSTRAP_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
+};
+
 static const struct
 {
 	int id;
@@ -744,6 +752,33 @@ bool NetworkFirewallTab::testWinFirewall()
 	return authorized;
 }
 
+static const PropPage::Item itemsUrls[] =
+{
+	{ IDC_PORT_TEST_URL,     SettingsManager::URL_PORT_TEST,     PropPage::T_STR },
+	{ IDC_GET_IPV4_URL,      SettingsManager::URL_GET_IP,        PropPage::T_STR },
+	{ IDC_GET_IPV6_URL,      SettingsManager::URL_GET_IP6,       PropPage::T_STR },
+	{ IDC_DHT_BOOTSTRAP_URL, SettingsManager::URL_DHT_BOOTSTRAP, PropPage::T_STR },
+	{ 0,                     0,                                  PropPage::T_END }
+};
+
+LRESULT NetworkUrlsTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	DialogLayout::layout(m_hWnd, layoutItems3, _countof(layoutItems3));
+
+	CEdit(GetDlgItem(IDC_PORT_TEST_URL)).LimitText(280);
+	CEdit(GetDlgItem(IDC_GET_IPV4_URL)).LimitText(280);
+	CEdit(GetDlgItem(IDC_GET_IPV6_URL)).LimitText(280);
+	CEdit(GetDlgItem(IDC_DHT_BOOTSTRAP_URL)).LimitText(280);
+
+	PropPage::read(*this, itemsUrls);
+	return 0;
+}
+
+void NetworkUrlsTab::writeSettings()
+{
+	PropPage::write(*this, itemsUrls);
+}
+
 static const PropPage::Item items[] =
 {
 	{ IDC_AUTO_TEST_PORTS, SettingsManager::AUTO_TEST_PORTS,     PropPage::T_BOOL },
@@ -772,6 +807,7 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ADD_TAB(tabIP[0], NetworkIPTab, IPV4);
 	ADD_TAB(tabIP[1], NetworkIPTab, IPV6);
 	ADD_TAB(tabFirewall, NetworkFirewallTab, WINDOWS_FIREWALL);
+	ADD_TAB(tabUrls, NetworkUrlsTab, SETTINGS_URLS);
 
 	ctrlTabs.SetCurSel(0);
 	changeTab();
@@ -790,6 +826,7 @@ void NetworkPage::write()
 	tabIP[currentTab].writePortSettings();
 	tabIP[0].writeOtherSettings();
 	tabIP[1].writeOtherSettings();
+	tabUrls.writeSettings();
 	SET_SETTING(USE_TLS, useTLS);
 }
 
@@ -812,6 +849,7 @@ void NetworkPage::changeTab()
 	tabIP[0].ShowWindow(SW_HIDE);
 	tabIP[1].ShowWindow(SW_HIDE);
 	tabFirewall.ShowWindow(SW_HIDE);
+	tabUrls.ShowWindow(SW_HIDE);
 
 	CRect rc;
 	ctrlTabs.GetClientRect(&rc);
@@ -829,6 +867,9 @@ void NetworkPage::changeTab()
 			break;
 		case 2:
 			hwnd = tabFirewall;
+			break;
+		case 3:
+			hwnd = tabUrls;
 			break;
 		default:
 			return;

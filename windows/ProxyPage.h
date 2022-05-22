@@ -24,29 +24,23 @@
 class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 {
 	public:
-		explicit ProxyPage() : PropPage(TSTRING(SETTINGS_NETWORK) + _T('\\') + TSTRING(SETTINGS_ADVANCED))
+		explicit ProxyPage() : PropPage(TSTRING(SETTINGS_NETWORK) + _T('\\') + TSTRING(SETTINGS_PROXY))
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~ProxyPage()
-		{
-		}
-		
+
 		BEGIN_MSG_MAP(ProxyPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_DIRECT_OUT, onClickedDirect)
-		COMMAND_ID_HANDLER(IDC_SOCKS5, onClickedDirect)
+		COMMAND_ID_HANDLER(IDC_DIRECT_OUT, onClick)
+		COMMAND_ID_HANDLER(IDC_SOCKS5, onClick)
+		COMMAND_ID_HANDLER(IDC_USE_HTTP_PROXY, onClick)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onClickedDirect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) *this;
-		}
+		LRESULT onClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION_EX; }
 		void write();
 

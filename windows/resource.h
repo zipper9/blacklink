@@ -162,6 +162,7 @@
 #define IDD_FAVUSER                     347
 #define IDD_IP_TAB                      348
 #define IDD_FIREWALL_TAB                349
+#define IDD_URLS_TAB                    350
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_GROUP_TEMPLATES             1002
@@ -875,7 +876,10 @@
 #define IDC_BAN_MSG_STR                 1820
 #define IDC_BAN_LIMIT_NO                1821
 #define IDC_BANMSG_PERIOD_NO            1822
-#define IDC_BAN_SLOTS_NO_H              1824
+#define IDC_BAN_SLOTS_NO_H              1823
+#define IDC_USE_HTTP_PROXY              1824
+#define IDC_HTTP_PROXY_URL              1825
+#define IDC_CAPTION_HTTP_PROXY_URL      1826
 #define IDC_USERLIST_COLORS             1828
 #define IDC_SELECT_TAB_COLOR            1829
 #define IDC_SAMPLE_TAB_COLOR            1830

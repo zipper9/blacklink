@@ -84,10 +84,11 @@ void HttpConnection::setRequestBody(string& body, const string& type)
 	requestBodyType = type;
 }
 
-bool HttpConnection::startRequest(int type, const string& url, int flags)
+bool HttpConnection::startRequest(uint64_t reqId, int type, const string& url, int flags)
 {
 	if (connState != STATE_IDLE) return false;
 	currentUrl = url;
+	requestId = reqId;
 	reqFlags = flags;
 	prepareRequest(type);
 	return true;
@@ -111,22 +112,35 @@ void HttpConnection::prepareRequest(int type) noexcept
 	resp.clear();
 
 	string proto, fragment;
-#if 0
-	if (SETTING(HTTP_PROXY).empty())
-#endif
+	port = 0;
+	Util::decodeUrl(currentUrl, proto, server, port, path, query, fragment);
+
+	string connectServer;
+	uint16_t connectPort = 0;
+	if (!proxyServer.empty())
 	{
-		Util::decodeUrl(currentUrl, proto, server, port, path, query, fragment);
-		if (path.empty()) path = "/";
+		string tpath, tquery;
+		Util::decodeUrl(proxyServer, proto, proxyServerHost, connectPort, tpath, tquery, fragment);
+		connectServer = proxyServerHost;
+		requestUri = currentUrl;
+		if (path.empty())
+		{
+			requestUri += '/';
+			path = "/";
+		}
 	}
-#if 0
 	else
 	{
-		Util::decodeUrl(SETTING(HTTP_PROXY), proto, server, port, path, query, fragment);
-		path = currentUrl;
+		connectServer = server;
+		connectPort = port;
+		if (path.empty()) path = "/";
+		requestUri = path;
+		if (!query.empty())
+		{
+			requestUri += '?';
+			requestUri += path;
+		}
 	}
-#endif
-
-	if (!port) port = 80;
 
 	if (socket)
 	{
@@ -139,7 +153,9 @@ void HttpConnection::prepareRequest(int type) noexcept
 
 	try
 	{
-		socket->connect(server, port, proto == "https", true, true, Socket::PROTO_HTTP);
+		bool secure = proto == "https";
+		if (!connectPort) connectPort = secure ? 443 : 80;
+		socket->connect(connectServer, connectPort, secure, true, true, Socket::PROTO_HTTP);
 		socket->start();
 	}
 	catch (const Exception &e)
@@ -174,27 +190,27 @@ void HttpConnection::sendRequest() noexcept
 	dcassert(socket);
 	Http::Request req;
 	req.setMethodId(requestType);
-	if (!query.empty())
-		req.setUri(path + '?' + query);
-	else
-		req.setUri(path);
+	req.setUri(requestUri);
 
-	string remoteServer = server;
-#if 0
-	if (!SETTING(HTTP_PROXY).empty())
-	{
-		string tfile, proto, queryTmp, fragment;
-		uint16_t tport;
-		Util::decodeUrl(file, proto, remoteServer, tport, tfile, queryTmp, fragment);
-	}
-#endif
-	req.addHeader(Http::HEADER_HOST, remoteServer);
 	if (!userAgent.empty()) req.addHeader(Http::HEADER_USER_AGENT, userAgent);
-	req.addHeader(Http::HEADER_CONNECTION, (reqFlags & FLAG_CLOSE_CONN) ? "close" : "keep-alive");
+	if (proxyServer.empty())
+	{
+		req.addHeader(Http::HEADER_HOST, server);
+		req.addHeader(Http::HEADER_CONNECTION, (reqFlags & FLAG_CLOSE_CONN) ? "close" : "keep-alive");
+	}
+	else
+	{
+		req.addHeader(Http::HEADER_HOST, proxyServerHost);
+		req.addHeader(Http::HEADER_PROXY_CONNECTION, (reqFlags & FLAG_CLOSE_CONN) ? "close" : "keep-alive");
+	}
 	if (reqFlags & FLAG_NO_CACHE) req.addHeader(Http::HEADER_CACHE_CONTROL, "no-cache");
 	req.addHeader(Http::HEADER_CONTENT_LENGTH, Util::toString(requestBody.length()));
 	if (!requestBodyType.empty()) req.addHeader(Http::HEADER_CONTENT_TYPE, requestBodyType);
 	if (ifModified) req.addHeader(Http::HEADER_IF_MODIFIED_SINCE, Http::printDateTime(ifModified));
+#ifdef DEBUG_HTTP_CONNECTION
+	req.addHeader("X-Connection-ID", Util::toString(id));
+	req.addHeader("X-Request-ID", Util::toString(requestId));
+#endif
 
 	string s;
 	req.print(s);

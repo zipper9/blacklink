@@ -5,6 +5,7 @@
 #include "StrUtil.h"
 #include "TimerManager.h"
 #include "CID.h"
+#include "SettingsManager.h"
 #include "ResourceManager.h"
 
 static const unsigned IDLE_CONNECTION_TIMEOUT = 2 * 60000;
@@ -38,6 +39,12 @@ uint64_t HttpClient::addRequest(const HttpClient::Request& req)
 {
 	string server;
 	if (!decodeUrl(req.url, server)) return 0;
+	string httpProxy;
+	if (BOOLSETTING(USE_HTTP_PROXY))
+	{
+		httpProxy = SETTING(HTTP_PROXY);
+		if (!httpProxy.empty() && !decodeUrl(httpProxy, server)) httpProxy.clear();
+	}
 	uint64_t reqId = ++nextReqId;
 
 	RequestStatePtr rs = std::make_shared<RequestState>();
@@ -56,7 +63,8 @@ uint64_t HttpClient::addRequest(const HttpClient::Request& req)
 
 	uint64_t now = GET_TICK();
 	cs.lock();
-	findConnectionL(now, rs, server, reqId, req.closeConn, STATE_STARTING);
+	HttpConnection* c = findConnectionL(now, rs, server, reqId, req.closeConn, STATE_STARTING);
+	if (!httpProxy.empty()) c->setProxyServer(httpProxy);
 	cs.unlock();
 
 	return reqId;
@@ -97,7 +105,7 @@ HttpConnection* HttpClient::findConnectionL(uint64_t now, RequestStatePtr& rs, c
 	return c;
 }
 
-void HttpClient::startRequest(HttpConnection* c, const RequestStatePtr& rs)
+void HttpClient::startRequest(HttpConnection* c, uint64_t id, const RequestStatePtr& rs)
 {
 	c->setRequestBody(rs->requestBody, rs->requestBodyType);
 	int flags = 0;
@@ -108,7 +116,7 @@ void HttpClient::startRequest(HttpConnection* c, const RequestStatePtr& rs)
 	c->setMaxRespBodySize(rs->maxRespBodySize);
 	c->setMaxErrorBodySize(rs->maxErrorBodySize);
 	c->setIfModified(rs->ifModified);
-	c->startRequest(rs->type, rs->url, flags);
+	c->startRequest(id, rs->type, rs->url, flags);
 }
 
 void HttpClient::cancelRequest(uint64_t id)
@@ -157,7 +165,7 @@ bool HttpClient::startRequest(uint64_t id)
 	cs.unlock();
 
 	if (!c) return false;
-	startRequest(c, rs);
+	startRequest(c, id, rs);
 	return true;
 }
 
@@ -349,7 +357,10 @@ void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexce
 						string server;
 						if (decodeUrl(redirLocation, server))
 						{
+							string httpProxy = c->getProxyServer();
+							if (!httpProxy.empty() && !decodeUrl(httpProxy, server)) httpProxy.clear();
 							redirConn = findConnectionL(cd.lastActivity, rs, server, reqId, cd.closeConn, STATE_BUSY);
+							redirConn->setProxyServer(httpProxy);
 							rs->url = redirUrl = redirLocation;
 							rs->responseBody.clear();
 							redirRequest = rs;
@@ -372,7 +383,7 @@ void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexce
 	if (!redirUrl.empty())
 	{
 		fire(HttpClientListener::Redirected(), reqId, redirUrl);
-		startRequest(redirConn, redirRequest);
+		startRequest(redirConn, reqId, redirRequest);
 	}
 	else if (!error.empty())
 		fire(HttpClientListener::Failed(), reqId, error);

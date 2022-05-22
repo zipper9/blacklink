@@ -67,7 +67,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			MAPPER,
 			MAPPER6,
 			SOCKS_SERVER, SOCKS_USER, SOCKS_PASSWORD,
-			HTTP_PROXY, // Unused
+			HTTP_PROXY,
 
 			// Directories
 			DOWNLOAD_DIRECTORY, 
@@ -253,6 +253,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			AUTO_TEST_PORTS,
 			SOCKS_PORT, SOCKS_RESOLVE,
 			USE_DHT,
+			USE_HTTP_PROXY,
 
 			// Slots & policy
 			SLOTS,

@@ -39,24 +39,20 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_SETTINGS_SOCKS5_USERNAME, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_SETTINGS_SOCKS5_PASSWORD, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_SOCKS_RESOLVE, FLAG_TRANSLATE, AUTO, UNSPEC },
-	{ IDC_CAPTION_PORT_TEST_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_CAPTION_GET_IPV4_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_CAPTION_GET_IPV6_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_CAPTION_DHT_BOOTSTRAP_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
+	{ IDC_USE_HTTP_PROXY, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_HTTP_PROXY_URL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SOCKS_SERVER,      SettingsManager::SOCKS_SERVER,      PropPage::T_STR  },
-	{ IDC_SOCKS_PORT,        SettingsManager::SOCKS_PORT,        PropPage::T_INT  },
-	{ IDC_SOCKS_USER,        SettingsManager::SOCKS_USER,        PropPage::T_STR  },
-	{ IDC_SOCKS_PASSWORD,    SettingsManager::SOCKS_PASSWORD,    PropPage::T_STR  },
-	{ IDC_SOCKS_RESOLVE,     SettingsManager::SOCKS_RESOLVE,     PropPage::T_BOOL },
-	{ IDC_PORT_TEST_URL,     SettingsManager::URL_PORT_TEST,     PropPage::T_STR  },
-	{ IDC_GET_IPV4_URL,      SettingsManager::URL_GET_IP,        PropPage::T_STR  },
-	{ IDC_GET_IPV6_URL,      SettingsManager::URL_GET_IP6,       PropPage::T_STR  },
-	{ IDC_DHT_BOOTSTRAP_URL, SettingsManager::URL_DHT_BOOTSTRAP, PropPage::T_STR  },
-	{ 0,                     0,                                  PropPage::T_END  }
+	{ IDC_SOCKS_SERVER,   SettingsManager::SOCKS_SERVER,   PropPage::T_STR  },
+	{ IDC_SOCKS_PORT,     SettingsManager::SOCKS_PORT,     PropPage::T_INT  },
+	{ IDC_SOCKS_USER,     SettingsManager::SOCKS_USER,     PropPage::T_STR  },
+	{ IDC_SOCKS_PASSWORD, SettingsManager::SOCKS_PASSWORD, PropPage::T_STR  },
+	{ IDC_SOCKS_RESOLVE,  SettingsManager::SOCKS_RESOLVE,  PropPage::T_BOOL },
+	{ IDC_USE_HTTP_PROXY, SettingsManager::USE_HTTP_PROXY, PropPage::T_BOOL },
+	{ IDC_HTTP_PROXY_URL, SettingsManager::HTTP_PROXY,     PropPage::T_STR  },
+	{ 0,                  0,                               PropPage::T_END  }
 };
 
 LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -81,8 +77,6 @@ LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	CEdit(GetDlgItem(IDC_SOCKS_PORT)).LimitText(5);
 	CEdit(GetDlgItem(IDC_SOCKS_USER)).LimitText(250);
 	CEdit(GetDlgItem(IDC_SOCKS_PASSWORD)).LimitText(250);
-	CEdit(GetDlgItem(IDC_PORT_TEST_URL)).LimitText(280);
-	CEdit(GetDlgItem(IDC_DHT_BOOTSTRAP_URL)).LimitText(280);
 
 	return TRUE;
 }
@@ -118,14 +112,16 @@ void ProxyPage::write()
 void ProxyPage::fixControls()
 {
 	BOOL socks = IsDlgButtonChecked(IDC_SOCKS5);
-	::EnableWindow(GetDlgItem(IDC_SOCKS_SERVER), socks);
-	::EnableWindow(GetDlgItem(IDC_SOCKS_PORT), socks);
-	::EnableWindow(GetDlgItem(IDC_SOCKS_USER), socks);
-	::EnableWindow(GetDlgItem(IDC_SOCKS_PASSWORD), socks);
-	::EnableWindow(GetDlgItem(IDC_SOCKS_RESOLVE), socks);
+	GetDlgItem(IDC_SOCKS_SERVER).EnableWindow(socks);
+	GetDlgItem(IDC_SOCKS_PORT).EnableWindow(socks);
+	GetDlgItem(IDC_SOCKS_USER).EnableWindow(socks);
+	GetDlgItem(IDC_SOCKS_PASSWORD).EnableWindow(socks);
+	GetDlgItem(IDC_SOCKS_RESOLVE).EnableWindow(socks);
+	BOOL httpProxy = IsDlgButtonChecked(IDC_USE_HTTP_PROXY);
+	GetDlgItem(IDC_HTTP_PROXY_URL).EnableWindow(httpProxy);
 }
 
-LRESULT ProxyPage::onClickedDirect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT ProxyPage::onClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	fixControls();
 	return 0;

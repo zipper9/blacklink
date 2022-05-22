@@ -106,7 +106,6 @@ class NetworkFirewallTab : public CDialogImpl<NetworkFirewallTab>
 	public:
 		enum { IDD = IDD_FIREWALL_TAB };
 
-		NetworkFirewallTab() {}
 		bool testWinFirewall();
 
 		BEGIN_MSG_MAP(NetworkFirewallTab)
@@ -122,6 +121,21 @@ class NetworkFirewallTab : public CDialogImpl<NetworkFirewallTab>
 		CStatic ctrlText;
 		CStatic ctrlIcon;
 		tstring appPath;
+};
+
+class NetworkUrlsTab: public CDialogImpl<NetworkUrlsTab>
+{
+	public:
+		enum { IDD = IDD_URLS_TAB };
+
+		BEGIN_MSG_MAP(NetworkUrlsTab)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		END_MSG_MAP()
+
+		void writeSettings();
+
+	private:
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 };
 
 class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
@@ -166,6 +180,8 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		CTabCtrl ctrlTabs;
 		NetworkIPTab tabIP[2];
 		NetworkFirewallTab tabFirewall;
+		NetworkUrlsTab tabUrls;
+
 		int prevTab;
 
 		void changeTab();

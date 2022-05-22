@@ -80,7 +80,7 @@ private:
 	void onCompleted(HttpConnection*, const string&) noexcept override;
 	void onDisconnected(HttpConnection*) noexcept override;
 
-	void startRequest(HttpConnection* c, const RequestStatePtr& rs);
+	void startRequest(HttpConnection* c, uint64_t id, const RequestStatePtr& rs);
 	HttpConnection* findConnectionL(uint64_t now, RequestStatePtr& rs, const string& server, uint64_t reqId, bool closeConn, int state);
 	void removeRequest(uint64_t id) noexcept;
 	void processError(uint64_t connId, const string& error) noexcept;

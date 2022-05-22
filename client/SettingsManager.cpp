@@ -279,6 +279,7 @@ static const char* g_settingTags[] =
 	"AutoTestPorts",
 	"SocksPort", "SocksResolve",
 	"UseDHT",
+	"UseHTTPProxy",
 
 	// Slots & policy
 	"Slots",
