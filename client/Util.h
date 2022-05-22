@@ -429,7 +429,7 @@ namespace Util
 	string getDownloadDir(const UserPtr& user);
 	string expandDownloadDir(const string& dir, const UserPtr& user);
 
-	string getFilenameForRenaming(const string& filename);
+	string getNewFileName(const string& filename);
 
 	string getRandomNick(size_t maxLength = 20);
 

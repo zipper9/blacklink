@@ -978,7 +978,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 							File::deleteFile(targetPath); // Delete old file.
 							break;
 						case SettingsManager::TE_ACTION_RENAME:
-							targetPath = Util::getFilenameForRenaming(targetPath); // Call Util::getFilenameForRenaming instead of using CheckTargetDlg's stored name
+							targetPath = Util::getNewFileName(targetPath); // Call Util::getNewFileName instead of using CheckTargetDlg's stored name
 							break;
 						case SettingsManager::TE_ACTION_SKIP:
 							return;

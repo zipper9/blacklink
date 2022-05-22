@@ -41,7 +41,7 @@ static const WinUtil::TextItem texts[] =
 
 LRESULT ClassicCheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	newName = Text::toT(Util::getFileName(Util::getFilenameForRenaming(Text::fromT(fileName))));
+	newName = Text::toT(Util::getFileName(Util::getNewFileName(Text::fromT(fileName))));
 	fileName = Util::getFileName(fileName);
 	
 	SetWindowText(CTSTRING(REPLACE_DLG_TITLE));
@@ -158,7 +158,7 @@ void CheckTargetDlg::showDialog(HWND hWndParent, const string& fullPath, int64_t
 	}
 #endif
 
-	tstring newName = Text::toT(Util::getFileName(Util::getFilenameForRenaming(fullPath)));
+	tstring newName = Text::toT(Util::getFileName(Util::getNewFileName(fullPath)));
 	tstring fileName = Text::toT(Util::getFileName(fullPath));
 	CTaskDialog taskDlg;
 

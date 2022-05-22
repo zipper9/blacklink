@@ -248,6 +248,8 @@ void HttpClient::onData(HttpConnection* c, const uint8_t* data, size_t size) noe
 				string& filename = rs->outputPath;
 				if (filename.back() == PATH_SEPARATOR)
 					filename += getFileName(c->getPath());
+				if (File::isExist(filename))
+					filename = Util::getNewFileName(filename);
 				f.init(Text::toT(filename), File::WRITE, File::CREATE | File::TRUNCATE);
 			}
 			f.write(data, size);

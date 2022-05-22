@@ -1149,18 +1149,18 @@ uint64_t Util::getDirSize(const string &sFullPath)
 }
 #endif
 
-string Util::getFilenameForRenaming(const string& filename)
+string Util::getNewFileName(const string& filename)
 {
 	string outFilename;
-	const string ext = getFileExt(filename);
 	const string fname = getFileName(filename);
+	const string ext = getFileExt(fname);
 	int i = 0;
 	do
 	{
-		i++;
+		if (i == INT_MAX) return Util::emptyString;
 		outFilename = filename.substr(0, filename.length() - fname.length());
 		outFilename += fname.substr(0, fname.length() - ext.length());
-		outFilename += '(' + Util::toString(i) + ')';
+		outFilename += '(' + Util::toString(++i) + ')';
 		outFilename += ext;
 	}
 	while (File::isExist(outFilename));
