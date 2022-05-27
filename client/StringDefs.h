@@ -1001,6 +1001,7 @@ enum Strings   // @DontAdd
 	SETCZDC_TIME_DOWN, // "More than"
 	SETCZDC_FROM, // "From"
 	SETCZDC_TO, // "to"
+	SETCZDC_TRANSFER_LIMITING, // "Limit transfer speeds"
 	SETCZDC_WINAMP, // "What is your player?"
 	SETTINGS, // "Settings"
 	SETTINGS_ADD_FAVORITE_DIR, // "Add favorite directory"
