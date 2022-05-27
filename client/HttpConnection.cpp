@@ -138,7 +138,7 @@ void HttpConnection::prepareRequest(int type) noexcept
 		if (!query.empty())
 		{
 			requestUri += '?';
-			requestUri += path;
+			requestUri += query;
 		}
 	}
 
