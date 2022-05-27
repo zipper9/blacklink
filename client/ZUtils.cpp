@@ -38,6 +38,14 @@ ZFilter::~ZFilter()
 	deflateEnd(&zs);
 }
 
+void ZFilter::updateSize(size_t& insize, size_t& outsize)
+{
+	outsize = outsize - zs.avail_out;
+	insize = insize - zs.avail_in;
+	totalOut += outsize;
+	totalIn += insize;
+}
+
 bool ZFilter::operator()(const void* in, size_t& insize, void* out, size_t& outsize)
 {
 	if (outsize == 0)
@@ -51,11 +59,11 @@ bool ZFilter::operator()(const void* in, size_t& insize, void* out, size_t& outs
 #endif
 	
 	// Check if there's any use compressing; if not, save some cpu...
-	if (compressing && insize > 0 && outsize > 16 && (totalIn > (64 * 1024)) && ((static_cast<double>(totalOut) / totalIn) > 0.95))
+	if (compressing && insize > 0 && outsize > 16 && totalIn > 64 * 1024 && static_cast<double>(totalOut) / totalIn > 0.95)
 	{
 		zs.avail_in = 0;
 		zs.avail_out = outsize;
-		
+
 		// Starting with zlib 1.2.9, the deflateParams API has changed.
 		auto err = ::deflateParams(&zs, 0, Z_DEFAULT_STRATEGY);
 #if ZLIB_VERNUM >= 0x1290
@@ -67,23 +75,14 @@ bool ZFilter::operator()(const void* in, size_t& insize, void* out, size_t& outs
 #endif
 			throw Exception(STRING(COMPRESSION_ERROR));
 		}
-		
+
 		zs.avail_in = insize;
 		compressing = false;
 		dcdebug("ZFilter: Dynamically disabled compression\n");
-		
-		// Check if we ate all space already...
-#if ZLIB_VERNUM >= 0x1290
-		if (err == Z_BUF_ERROR)
+
+		if (outsize - zs.avail_out)
 		{
-#else
-		if (zs.avail_out == 0)
-		{
-#endif
-			outsize = outsize - zs.avail_out;
-			insize = insize - zs.avail_in;
-			totalOut += outsize;
-			totalIn += insize;
+			updateSize(insize, outsize);
 			return true;
 		}
 	}
@@ -99,10 +98,7 @@ bool ZFilter::operator()(const void* in, size_t& insize, void* out, size_t& outs
 		if (err != Z_OK && err != Z_STREAM_END)
 			throw Exception(STRING(COMPRESSION_ERROR));
 			
-		outsize = outsize - zs.avail_out;
-		insize = insize - zs.avail_in;
-		totalOut += outsize;
-		totalIn += insize;
+		updateSize(insize, outsize);
 		return err == Z_OK;
 	}
 	else
@@ -111,10 +107,7 @@ bool ZFilter::operator()(const void* in, size_t& insize, void* out, size_t& outs
 		if (err != Z_OK)
 			throw Exception(STRING(COMPRESSION_ERROR));
 			
-		outsize = outsize - zs.avail_out;
-		insize = insize - zs.avail_in;
-		totalOut += outsize;
-		totalIn += insize;
+		updateSize(insize, outsize);
 		return true;
 	}
 }

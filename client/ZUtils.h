@@ -43,6 +43,8 @@ class ZFilter
 		int64_t totalIn;
 		int64_t totalOut;
 		bool compressing;
+
+		void updateSize(size_t& insize, size_t& outsize);
 };
 
 class UnZFilter
