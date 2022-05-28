@@ -379,6 +379,9 @@
     <ClCompile Include="client\AntiFlood.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\TagCollector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -685,9 +688,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\w.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\compiler_flylinkdc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\CompatibilityManager.h">
@@ -1015,6 +1015,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\IpKey.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\TagCollector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\features.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

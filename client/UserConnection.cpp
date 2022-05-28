@@ -33,6 +33,11 @@
 #include "PortTest.h"
 #include "NmdcHub.h"
 
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+#include "TagCollector.h"
+extern TagCollector collNmdcFeatures;
+#endif
+
 const string UserConnection::FEATURE_MINISLOTS = "MiniSlots";
 const string UserConnection::FEATURE_XML_BZLIST = "XmlBZList";
 const string UserConnection::FEATURE_ADCGET = "ADCGet";
@@ -392,7 +397,18 @@ void UserConnection::onDataLine(const string& line) noexcept
 			if (getUser())
 			{
 				uint8_t knownUcSupports = 0;
-				UcSupports::setSupports(this, feat, knownUcSupports, nullptr);
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+				string sourceName = getUser()->getLastNick();
+				const string& hubUrl = getHubUrl();
+				if (!hubUrl.empty())
+				{
+					sourceName += '\t';
+					sourceName += hubUrl;
+				}
+				UcSupports::setSupports(this, feat, knownUcSupports, sourceName);
+#else
+				UcSupports::setSupports(this, feat, knownUcSupports, Util::emptyString);
+#endif
 				ClientManager::setSupports(getUser(), knownUcSupports);
 			}
 			else
@@ -484,7 +500,7 @@ void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)
 		DownloadManager::getInstance()->processSTA(this, c);
 }
 
-void UserConnection::handle(AdcCommand::SUP t, const AdcCommand& cmd)
+void UserConnection::handle(AdcCommand::SUP, const AdcCommand& cmd)
 {
 	if (!checkState(STATE_SUPNICK, cmd)) return;
 
@@ -518,6 +534,13 @@ void UserConnection::handle(AdcCommand::SUP t, const AdcCommand& cmd)
 				tigrOk = true; // Variable 'tigrOk' is assigned a value that is never used.
 			else if (feat == FEATURE_ADC_CPMI)
 				setFlag(FLAG_SUPPORTS_CPMI);
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+			else if (!feat.empty())
+			{
+				if (!unknownFeatures.empty()) unknownFeatures += ' ';
+				unknownFeatures += feat;
+			}
+#endif
 		}
 	}
 
@@ -862,3 +885,45 @@ void UserConnection::dumpInfo() const
 	LogManager::message(getDescription(), false);
 }
 #endif
+
+void UcSupports::setSupports(UserConnection* conn, const StringList& feat, uint8_t& knownUcSupports, const string& source)
+{
+	for (auto i = feat.cbegin(); i != feat.cend(); ++i)
+	{
+#define CHECK_FEAT(feature) if (*i == UserConnection::FEATURE_##feature) { conn->setFlag(UserConnection::FLAG_SUPPORTS_##feature); knownUcSupports |= UserConnection::FLAG_SUPPORTS_##feature; }
+
+		CHECK_FEAT(MINISLOTS) else
+		CHECK_FEAT(XML_BZLIST) else
+		CHECK_FEAT(ADCGET) else
+		CHECK_FEAT(ZLIB_GET) else
+		CHECK_FEAT(TTHL) else
+		CHECK_FEAT(TTHF)
+#ifdef SMT_ENABLE_FEATURE_BAN_MSG
+		else CHECK_FEAT(BANMSG)
+#endif
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+		else collNmdcFeatures.addTag(*i, source);
+#endif
+#undef CHECK_FEAT
+	}
+}
+
+string UcSupports::getSupports(const Identity& id)
+{
+	string tmp;
+	const auto su = id.getKnownUcSupports();
+#define CHECK_FEAT(feature) if (su & UserConnection::FLAG_SUPPORTS_##feature) { tmp += UserConnection::FEATURE_##feature + ' '; }
+
+	CHECK_FEAT(MINISLOTS);
+	CHECK_FEAT(XML_BZLIST);
+	CHECK_FEAT(ADCGET);
+	CHECK_FEAT(ZLIB_GET);
+	CHECK_FEAT(TTHL);
+	CHECK_FEAT(TTHF);
+#ifdef SMT_ENABLE_FEATURE_BAN_MSG
+	CHECK_FEAT(BANMSG);
+#endif
+
+#undef CHECK_FEAT
+	return tmp;
+}

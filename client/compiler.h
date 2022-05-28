@@ -101,6 +101,6 @@
 #endif
 #endif
 
-#include "compiler_flylinkdc.h" //[+]PPA
+#include "features.h"
 
 #endif // DCPLUSPLUS_DCPP_COMPILER_H

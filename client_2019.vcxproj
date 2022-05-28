@@ -651,6 +651,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="client\StringDefs.cpp" />
+    <ClCompile Include="client\TagCollector.cpp" />
     <ClCompile Include="client\Text.cpp" />
     <ClCompile Include="client\Thread.cpp" />
     <ClCompile Include="client\ThrottleManager.cpp" />
@@ -713,7 +714,6 @@
     <ClInclude Include="client\CFlyProfiler.h" />
     <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
-    <ClInclude Include="client\compiler_flylinkdc.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
     <ClInclude Include="client\DatabaseManager.h" />
     <ClInclude Include="client\dcformat.h" />
@@ -727,6 +727,7 @@
     <ClInclude Include="client\dht\NodeAddress.h" />
     <ClInclude Include="client\dht\TaskManager.h" />
     <ClInclude Include="client\dht\Utils.h" />
+    <ClInclude Include="client\features.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\FinishedItem.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
@@ -841,6 +842,7 @@
     <ClInclude Include="client\ResourceManager.h" />
     <ClInclude Include="client\StrUtil.h" />
     <ClInclude Include="client\Tag16.h" />
+    <ClInclude Include="client\TagCollector.h" />
     <ClInclude Include="client\Thread.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />

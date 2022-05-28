@@ -303,6 +303,9 @@ class UserConnection :
 		void setLastDownloadSpeed(int64_t speed) { lastDownloadSpeed = speed; }
 		int64_t getLastDownloadSpeed() const { return lastDownloadSpeed; }
 		string getDescription() const;
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+		string& getUnknownFeatures() { return unknownFeatures; }
+#endif
 
 	private:
 		int id;
@@ -317,6 +320,10 @@ class UserConnection :
 
 		std::atomic<int64_t> lastDownloadSpeed;
 		std::atomic<int64_t> lastUploadSpeed;
+
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+		string unknownFeatures;
+#endif
 		
 		// We only want ConnectionManager to create this...
 		UserConnection() noexcept;
@@ -352,53 +359,8 @@ class UserConnection :
 class UcSupports
 {
 	public:
-		static void setSupports(UserConnection* conn, const StringList& feat, uint8_t& knownUcSupports, StringList* unknownUcSupports)
-		{
-			for (auto i = feat.cbegin(); i != feat.cend(); ++i)
-			{
-			
-#define CHECK_FEAT(feature) if (*i == UserConnection::FEATURE_##feature) { conn->setFlag(UserConnection::FLAG_SUPPORTS_##feature); knownUcSupports |= UserConnection::FLAG_SUPPORTS_##feature; }
-			
-				CHECK_FEAT(MINISLOTS) else
-				CHECK_FEAT(XML_BZLIST) else
-				CHECK_FEAT(ADCGET) else
-				CHECK_FEAT(ZLIB_GET) else
-				CHECK_FEAT(TTHL) else
-				CHECK_FEAT(TTHF) else
-#ifdef SMT_ENABLE_FEATURE_BAN_MSG
-				CHECK_FEAT(BANMSG) else
-#endif
-				{
-					if (unknownUcSupports)
-						unknownUcSupports->push_back(*i);
-				}
-										
-#undef CHECK_FEAT
-										
-			}
-		}
-		
-		static string getSupports(const Identity& id)
-		{
-			string tmp;
-			const auto su = id.getKnownUcSupports();
-			
-#define CHECK_FEAT(feature) if (su & UserConnection::FLAG_SUPPORTS_##feature) { tmp += UserConnection::FEATURE_##feature + ' '; }
-			
-			CHECK_FEAT(MINISLOTS);
-			CHECK_FEAT(XML_BZLIST);
-			CHECK_FEAT(ADCGET);
-			CHECK_FEAT(ZLIB_GET);
-			CHECK_FEAT(TTHL);
-			CHECK_FEAT(TTHF);
-#ifdef SMT_ENABLE_FEATURE_BAN_MSG
-			CHECK_FEAT(BANMSG);
-#endif
-			
-#undef CHECK_FEAT
-			
-			return tmp;
-		}
+		static void setSupports(UserConnection* conn, const StringList& feat, uint8_t& knownUcSupports, const string& source);
+		static string getSupports(const Identity& id);
 };
 
 

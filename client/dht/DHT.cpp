@@ -650,7 +650,11 @@ namespace dht
 				case TAG('S', 'U'):
 				{
 					uint32_t parsedFeatures;
-					AdcSupports::setSupports(id, i->substr(2), &parsedFeatures);
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+					AdcSupports::setSupports(id, i->substr(2), "DHT-" + id.getCID(), &parsedFeatures);
+#else
+					AdcSupports::setSupports(id, i->substr(2), Util::emptyString, &parsedFeatures);
+#endif
 					bool isPassive = true;
 					if (parsedFeatures & User::TCP4)
 						isPassive = false;

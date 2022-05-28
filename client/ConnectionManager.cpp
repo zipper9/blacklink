@@ -37,6 +37,11 @@
 #include "HttpClient.h"
 #include "AdcHub.h"
 
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+#include "TagCollector.h"
+extern TagCollector collAdcFeatures;
+#endif
+
 static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
 
@@ -1319,6 +1324,26 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		putConnection(source);
 		return;
 	}
+
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+	string& unknownFeatures = source->getUnknownFeatures();
+	if (!unknownFeatures.empty())
+	{
+		string sourceName = source->getUser()->getLastNick();
+		const string& hubUrl = source->getHubUrl();
+		if (!hubUrl.empty())
+		{
+			sourceName += '\t';
+			sourceName += hubUrl;
+		}
+		SimpleStringTokenizer<char> st(unknownFeatures, ' ');
+		string tok;
+		while (st.getNextToken(tok))
+			collAdcFeatures.addTag(tok, sourceName);
+		unknownFeatures.clear();
+		unknownFeatures.shrink_to_fit();
+	}
+#endif
 
 	if (!checkKeyprint(source))
 	{

@@ -112,7 +112,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 #endif
 
 	LOAD_STEP_L(HASH_DATABASE, HashManager::getInstance()->startup());
-	
+
 #undef LOAD_STEP
 #undef LOAD_STEP_L
 }
@@ -162,125 +162,74 @@ void preparingCoreToShutdown()
 
 void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 {
-	{
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
-		string l_debugTag;
-		{
-			LOCK(NmdcSupports::g_debugCsUnknownNmdcTagParam);
-			//dcassert(NmdcSupports::g_debugUnknownNmdcTagParam.empty());
-			const auto& l_debugUnknownNmdcTagParam = NmdcSupports::g_debugUnknownNmdcTagParam;
-			for (auto i = l_debugUnknownNmdcTagParam.begin(); i != l_debugUnknownNmdcTagParam.end(); ++i)
-			{
-				l_debugTag += i->first + "(" + Util::toString(i->second) + ")" + ',';
-			}
-			NmdcSupports::g_debugUnknownNmdcTagParam.clear();
-		}
-		if (!l_debugTag.empty())
-		{
-			LogManager::message("Founded unknown NMDC tag param: " + l_debugTag);
-		}
+#if defined(BL_FEATURE_COLLECT_UNKNOWN_FEATURES) || defined(BL_FEATURE_COLLECT_UNKNOWN_TAGS)
+	string tags = AdcSupports::getCollectedUnknownTags();
+	if (!tags.empty())
+		LogManager::message("Dumping collected tags\n" + tags, false);
 #endif
-		
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-		// [!] IRainman fix: supports cleanup.
-		string l_debugFeatures;
-		string l_debugConnections;
-		{
-			LOCK(AdcSupports::g_debugCsUnknownAdcFeatures);
-			// dcassert(AdcSupports::g_debugUnknownAdcFeatures.empty());
-			const auto& l_debugUnknownFeatures = AdcSupports::g_debugUnknownAdcFeatures;
-			for (auto i = l_debugUnknownFeatures.begin(); i != l_debugUnknownFeatures.end(); ++i)
-			{
-				l_debugFeatures += i->first + "[" + i->second + "]" + ',';
-			}
-			AdcSupports::g_debugUnknownAdcFeatures.clear();
-		}
-		{
-			LOCK(NmdcSupports::g_debugCsUnknownNmdcConnection);
-			dcassert(NmdcSupports::g_debugUnknownNmdcConnection.empty());
-			const auto& l_debugUnknownConnections = NmdcSupports::g_debugUnknownNmdcConnection;
-			for (auto i = l_debugUnknownConnections.begin(); i != l_debugUnknownConnections.end(); ++i)
-			{
-				l_debugConnections += *i + ',';
-			}
-			NmdcSupports::g_debugUnknownNmdcConnection.clear();
-		}
-		if (!l_debugFeatures.empty())
-		{
-			LogManager::message("Founded unknown ADC supports: " + l_debugFeatures);
-		}
-		if (!l_debugConnections.empty())
-		{
-			LogManager::message("Founded unknown NMDC connections: " + l_debugConnections);
-		}
-#endif // FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-		
+
 #ifdef _DEBUG
-		dcdebug("shutdown started: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
-			User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
+	dcdebug("shutdown started: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
+		User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
 #endif
-		QueueManager::getInstance()->saveQueue(true);
-		SettingsManager::getInstance()->save();
-		ConnectionManager::getInstance()->shutdown();
-		
-		preparingCoreToShutdown(); // Зовем тут второй раз т.к. вероятно при автообновлении оно не зовется.
-		
+	QueueManager::getInstance()->saveQueue(true);
+	SettingsManager::getInstance()->save();
+	ConnectionManager::getInstance()->shutdown();
+
+	preparingCoreToShutdown(); // Зовем тут второй раз т.к. вероятно при автообновлении оно не зовется.
+
 #ifdef FLYLINKDC_USE_DNS
-		Socket::dnsCache.waitShutdown(); // !SMT!-IP
+	Socket::dnsCache.waitShutdown(); // !SMT!-IP
 #endif
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
-		BufferedSocket::waitShutdown();
+	BufferedSocket::waitShutdown();
 #ifdef DEBUG_SHUTDOWN
-		LogManager::message("BufferedSockets deleted", false);
+	LogManager::message("BufferedSockets deleted", false);
 #endif
 #endif
 
-		ConnectivityManager::deleteInstance();
+	ConnectivityManager::deleteInstance();
 #ifdef ENABLE_WEB_SERVER
-		WebServerManager::deleteInstance();
+	WebServerManager::deleteInstance();
 #endif
-		if (pGuiInitProc)
-		{
-			pGuiInitProc(pGuiParam);
-		}
-		ADLSearchManager::deleteInstance();
-		FinishedManager::deleteInstance();
-		ShareManager::deleteInstance();
-		CryptoManager::deleteInstance();
-		dht::DHT::getInstance()->stop(true);
-		dht::DHT::deleteInstance();
-		ThrottleManager::deleteInstance();
-		DownloadManager::deleteInstance();
-		UploadManager::deleteInstance();
-		QueueManager::deleteInstance();
-		ConnectionManager::deleteInstance();
-		SearchManager::deleteInstance();
-		HublistManager::deleteInstance();
-		UserManager::deleteInstance();
-		FavoriteManager::deleteInstance();
-		ClientManager::deleteInstance();
-		HashManager::deleteInstance();
-		
-		DatabaseManager::deleteInstance();
-		DatabaseManager::shutdown();
-		TimerManager::deleteInstance();
+	if (pGuiInitProc) pGuiInitProc(pGuiParam);
+	ADLSearchManager::deleteInstance();
+	FinishedManager::deleteInstance();
+	ShareManager::deleteInstance();
+	CryptoManager::deleteInstance();
+	dht::DHT::getInstance()->stop(true);
+	dht::DHT::deleteInstance();
+	ThrottleManager::deleteInstance();
+	DownloadManager::deleteInstance();
+	UploadManager::deleteInstance();
+	QueueManager::deleteInstance();
+	ConnectionManager::deleteInstance();
+	SearchManager::deleteInstance();
+	HublistManager::deleteInstance();
+	UserManager::deleteInstance();
+	FavoriteManager::deleteInstance();
+	ClientManager::deleteInstance();
+	HashManager::deleteInstance();
 
-		SettingsManager::getInstance()->removeListeners();
-		SettingsManager::deleteInstance();
+	DatabaseManager::deleteInstance();
+	DatabaseManager::shutdown();
+	TimerManager::deleteInstance();
 
-		extern SettingsManager* g_settings;
-		g_settings = nullptr;
+	SettingsManager::getInstance()->removeListeners();
+	SettingsManager::deleteInstance();
+
+	extern SettingsManager* g_settings;
+	g_settings = nullptr;
 
 #ifdef _WIN32
-		WSACleanup();
+	WSACleanup();
 #endif
 #ifdef _DEBUG
-		dcdebug("shutdown completed: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
-			User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
-		dcassert(OnlineUser::onlineUserCount == 0);
-		dcassert(Client::clientCount == 0);
-		dcassert(UploadQueueFile::g_upload_queue_item_count == 0);
-		dcdebug("shutdown start - UploadQueueItem::g_upload_queue_item_count = %d \n", int(UploadQueueFile::g_upload_queue_item_count));
+	dcdebug("shutdown completed: userCount = %d, onlineUserCount = %d, clientCount = %d\n",
+		User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
+	dcassert(OnlineUser::onlineUserCount == 0);
+	dcassert(Client::clientCount == 0);
+	dcassert(UploadQueueFile::g_upload_queue_item_count == 0);
+	dcdebug("shutdown start - UploadQueueItem::g_upload_queue_item_count = %d \n", int(UploadQueueFile::g_upload_queue_item_count));
 #endif
-	}
 }

@@ -33,39 +33,9 @@
 #include "ThrottleManager.h"
 #include "Tag16.h"
 
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-FastCriticalSection AdcSupports::g_debugCsUnknownAdcFeatures;
-boost::unordered_map<string, string> AdcSupports::g_debugUnknownAdcFeatures;
-
-FastCriticalSection NmdcSupports::g_debugCsUnknownNmdcConnection;
-boost::unordered_set<string> NmdcSupports::g_debugUnknownNmdcConnection;
-
-#endif // FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
-FastCriticalSection NmdcSupports::g_debugCsUnknownNmdcTagParam;
-boost::unordered_map<string, unsigned> NmdcSupports::g_debugUnknownNmdcTagParam;
-#endif // FLYLINKDC_COLLECT_UNKNOWN_TAG
-
 #ifdef _DEBUG
 extern bool suppressUserConn;
 #endif
-
-const string AdcSupports::CLIENT_PROTOCOL("ADC/1.0");
-const string AdcSupports::SECURE_CLIENT_PROTOCOL_TEST("ADCS/0.10");
-const string AdcSupports::ADCS_FEATURE("ADC0");
-const string AdcSupports::TCP4_FEATURE("TCP4");
-const string AdcSupports::TCP6_FEATURE("TCP6");
-const string AdcSupports::UDP4_FEATURE("UDP4");
-const string AdcSupports::UDP6_FEATURE("UDP6");
-const string AdcSupports::NAT0_FEATURE("NAT0");
-const string AdcSupports::SEGA_FEATURE("SEGA");
-const string AdcSupports::CCPM_FEATURE("CCPM");
-const string AdcSupports::BASE_SUPPORT("ADBASE");
-const string AdcSupports::BAS0_SUPPORT("ADBAS0");
-const string AdcSupports::TIGR_SUPPORT("ADTIGR");
-const string AdcSupports::UCM0_SUPPORT("ADUCM0");
-const string AdcSupports::BLO0_SUPPORT("ADBLO0");
-const string AdcSupports::ZLIF_SUPPORT("ADZLIF");
 
 // these extensions *must* be sorted alphabetically!
 const vector<StringList> AdcHub::searchExts
@@ -315,7 +285,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			case TAG('S', 'U'):
 			{
 				uint32_t parsedFeatures;
-				AdcSupports::setSupports(id, i->substr(2), &parsedFeatures);
+				AdcSupports::setSupports(id, i->substr(2), getHubUrl(), &parsedFeatures);
 				bool isPassive = true;
 				if (parsedFeatures & User::TCP4)
 					isPassive = false;

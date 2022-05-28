@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
-#define DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
+#ifndef BLACKLINK_FEATURES_H_
+#define BLACKLINK_FEATURES_H_
 
 #ifndef BOOST_NO_RTTI
 #define BOOST_NO_RTTI
@@ -65,10 +65,13 @@
 
 #endif
 
-//#define FLYLINKDC_USE_TORRENT
-
 #ifdef _WIN32
 #define ENABLE_WEB_SERVER
+#endif
+
+#ifdef _DEBUG
+#define BL_FEATURE_COLLECT_UNKNOWN_TAGS
+#define BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #endif
 
 // #define FLYLINKDC_USE_DNS
@@ -77,7 +80,6 @@
 //#define FLYLINKDC_USE_ASK_SLOT // отключаем автопопрошайку
 //#define FLYLINKDC_USE_VACUUM
 
-#define FLYLINKDC_USE_DOS_GUARD // Включаем защиту от DoS атаки старых версий - http://www.flylinkdc.ru/2011/01/flylinkdc-dos.html
 #define FLYLINKDC_USE_IPFILTER
 #define FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -125,13 +127,6 @@
 # define IRAINMAN_INCLUDE_GDI_INIT
 #endif
 
-#ifdef FLYLINKDC_BETA
-#define FLYLINKDC_COLLECT_UNKNOWN_TAG
-#ifdef _DEBUG
-#define FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-#endif
-#endif
-
 #ifdef _DEBUG
 #define DEBUG_USER_CONNECTION
 #define LOCK_DEBUG
@@ -141,7 +136,6 @@
 #define DEBUG_GDI_IMAGE
 
 #define FLYLINKDC_SUPPORT_HUBTOPIC
-#define FLYLINKDC_USE_DDOS_DETECT
 
 #define FLYLINKDC_USE_EXT_JSON
 #define FLYLINKDC_USE_SOCKET_COUNTER
@@ -163,4 +157,4 @@
 # undef max
 #endif
 
-#endif // DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
+#endif // BLACKLINK_FEATURES_H_

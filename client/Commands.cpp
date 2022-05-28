@@ -95,6 +95,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DEBUG_BLOOM
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     0, UINT_MAX, 0                                             }, // COMMAND_DEBUG_GDI_INFO
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, UINT_MAX, 0                                             }, // COMMAND_DEBUG_HTTP
+	{ CTX_SYSTEM,                                       0, 0,        0                                             }, // COMMAND_DEBUG_UNKNOWN_TAGS
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, 2,        0                                             }, // COMMAND_DEBUG_DIVIDE
 	{ CTX_GENERAL_CHAT,                                 1, 1,        ResourceManager::CMD_HELP_ME                  }, // COMMAND_ME
 	{ CTX_HUB,                                          1, 1,        ResourceManager::CMD_HELP_LAST_NICK           }, // COMMAND_LAST_NICK
@@ -190,6 +191,7 @@ static const CommandName names[] =
 	{ "tth",            COMMAND_TTH                 },
 	{ "u",              COMMAND_OPEN_URL            },
 	{ "uconn",          COMMAND_USER_CONNECTIONS    },
+	{ "unknowntags",    COMMAND_DEBUG_UNKNOWN_TAGS  },
 	{ "uptime",         COMMAND_INFO_UPTIME         },
 	{ "user",           COMMAND_USER                },
 	{ "userlist",       COMMAND_TOGGLE_USER_LIST    },
@@ -1261,6 +1263,15 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			return true;
 		}
 #endif
+#if defined(BL_FEATURE_COLLECT_UNKNOWN_FEATURES) || defined(BL_FEATURE_COLLECT_UNKNOWN_TAGS)
+		case COMMAND_DEBUG_UNKNOWN_TAGS:
+		{
+			string s = AdcSupports::getCollectedUnknownTags();
+			res.text = s.empty() ? STRING(COMMAND_EMPTY_LIST) : "Dumping collected tags\n" + s;
+			res.what = RESULT_LOCAL_TEXT;
+			return true;
+		}
+#endif
 #ifdef TEST_CRASH_HANDLER
 		case COMMAND_DEBUG_DIVIDE:
 		{
@@ -1273,7 +1284,9 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 		}
 #endif
 	}
-	return false;
+	res.text = STRING(UNKNOWN_COMMAND) + " /" + pc.args[0];
+	res.what = RESULT_ERROR_MESSAGE;
+	return true;
 }
 
 static void getCommandNames(int cmd, StringList& res)

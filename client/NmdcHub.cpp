@@ -45,6 +45,16 @@ static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
 bool suppressUserConn = false;
 #endif
 
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+#include "TagCollector.h"
+extern TagCollector collNmdcFeatures;
+#endif
+
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_TAGS
+#include "TagCollector.h"
+extern TagCollector collNmdcTags;
+#endif
+
 extern IpBans udpBans;
 extern IpBans tcpBans;
 
@@ -325,18 +335,13 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 		{
 			// http://dchublist.ru/forum/viewtopic.php?p=24035#p24035
 		}
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_TAGS
 		else
 		{
-			LOCK(NmdcSupports::g_debugCsUnknownNmdcTagParam);
-			NmdcSupports::g_debugUnknownNmdcTagParam[tag]++;
-			// dcassert(0);
-			// TODO - сброс ошибочных тэгов в качестве статы?
+			collNmdcTags.addTag(tok, getHubUrl());
 		}
-#endif // FLYLINKDC_COLLECT_UNKNOWN_TAG
+#endif
 	}
-	/// @todo Think about this
-	// [-] id.setStringParam("TA", '<' + tag + '>'); [-] IRainman opt.
 }
 
 void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
@@ -1074,6 +1079,10 @@ void NmdcHub::supportsParse(const string& param)
 		{
 			flags |= SUPPORTS_SALT_PASS;
 		}
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+		else if (!(tok == "NoHello" || tok == "ZPipe0" || tok == "HubTopic" || tok == "HubURL" || tok == "BotList" || tok == "TTHSearch"))
+			collNmdcFeatures.addTag(tok, getHubUrl());
+#endif
 	}
 	csState.lock();
 	hubSupportFlags |= flags;

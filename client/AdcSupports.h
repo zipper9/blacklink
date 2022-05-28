@@ -48,12 +48,10 @@ class AdcSupports
 		};
 
 		static string getSupports(const Identity& id);
-		static void setSupports(Identity& id, const StringList& su, uint32_t* parsedFeatures);
-		static void setSupports(Identity& id, const string& su, uint32_t* parsedFeatures);
-
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-		static FastCriticalSection g_debugCsUnknownAdcFeatures;
-		static boost::unordered_map<string, string> g_debugUnknownAdcFeatures;
+		static void setSupports(Identity& id, const StringList& su, const string& source, uint32_t* parsedFeatures);
+		static void setSupports(Identity& id, const string& su, const string& source, uint32_t* parsedFeatures);
+#if defined(BL_FEATURE_COLLECT_UNKNOWN_FEATURES) || defined(BL_FEATURE_COLLECT_UNKNOWN_TAGS)
+		static string getCollectedUnknownTags();
 #endif
 };
 
@@ -70,14 +68,6 @@ class NmdcSupports
 			NAT0        = 0x20, // TODO
 		};
 		static void setStatus(Identity& id, const char statusChar, const char modeChar, const string& connection);
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-		static FastCriticalSection g_debugCsUnknownNmdcConnection;
-		static boost::unordered_set<string> g_debugUnknownNmdcConnection;
-#endif // FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
-		static FastCriticalSection g_debugCsUnknownNmdcTagParam;
-		static boost::unordered_map<string, unsigned> g_debugUnknownNmdcTagParam;
-#endif // FLYLINKDC_COLLECT_UNKNOWN_TAG
 };
 
 #endif // DCPLUSPLUS_DCPP_ADC_SUPPORTS_H

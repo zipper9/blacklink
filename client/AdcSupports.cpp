@@ -22,6 +22,36 @@
 #include "OnlineUser.h"
 #include "StringTokenizer.h"
 
+#if defined(BL_FEATURE_COLLECT_UNKNOWN_FEATURES) || defined(BL_FEATURE_COLLECT_UNKNOWN_TAGS)
+#include "TagCollector.h"
+#endif
+
+const string AdcSupports::CLIENT_PROTOCOL("ADC/1.0");
+const string AdcSupports::SECURE_CLIENT_PROTOCOL_TEST("ADCS/0.10");
+const string AdcSupports::ADCS_FEATURE("ADC0");
+const string AdcSupports::TCP4_FEATURE("TCP4");
+const string AdcSupports::TCP6_FEATURE("TCP6");
+const string AdcSupports::UDP4_FEATURE("UDP4");
+const string AdcSupports::UDP6_FEATURE("UDP6");
+const string AdcSupports::NAT0_FEATURE("NAT0");
+const string AdcSupports::SEGA_FEATURE("SEGA");
+const string AdcSupports::CCPM_FEATURE("CCPM");
+const string AdcSupports::BASE_SUPPORT("ADBASE");
+const string AdcSupports::BAS0_SUPPORT("ADBAS0");
+const string AdcSupports::TIGR_SUPPORT("ADTIGR");
+const string AdcSupports::UCM0_SUPPORT("ADUCM0");
+const string AdcSupports::BLO0_SUPPORT("ADBLO0");
+const string AdcSupports::ZLIF_SUPPORT("ADZLIF");
+
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+TagCollector collAdcFeatures;
+TagCollector collNmdcFeatures;
+#endif
+
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_TAGS
+TagCollector collNmdcTags;
+#endif
+
 string AdcSupports::getSupports(const Identity& id)
 {
 	string tmp;
@@ -55,7 +85,7 @@ string AdcSupports::getSupports(const Identity& id)
 	return tmp;
 }
 
-void AdcSupports::setSupports(Identity& id, const StringList& su, uint32_t* parsedFeatures)
+void AdcSupports::setSupports(Identity& id, const StringList& su, const string& source, uint32_t* parsedFeatures)
 {
 	uint8_t knownSupports = 0;
 	auto& u = id.getUser();
@@ -77,12 +107,9 @@ void AdcSupports::setSupports(Identity& id, const StringList& su, uint32_t* pars
 		CHECK_FEAT(CCPM) else
 		CHECK_SUP_BIT(SEGA)
 
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 		else
-		{
-			LOCK(g_debugCsUnknownAdcFeatures);
-			g_debugUnknownAdcFeatures[*i] = Util::toString(su);
-		}
+			collAdcFeatures.addTag(*i, source);
 #endif
 
 #undef CHECK_FEAT
@@ -94,10 +121,40 @@ void AdcSupports::setSupports(Identity& id, const StringList& su, uint32_t* pars
 	if (parsedFeatures) *parsedFeatures = flags;
 }
 
-void AdcSupports::setSupports(Identity& id, const string& su, uint32_t* parsedFeatures)
+void AdcSupports::setSupports(Identity& id, const string& su, const string& source, uint32_t* parsedFeatures)
 {
-	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens(), parsedFeatures);
+	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens(), source, parsedFeatures);
 }
+
+#if defined(BL_FEATURE_COLLECT_UNKNOWN_FEATURES) || defined(BL_FEATURE_COLLECT_UNKNOWN_TAGS)
+string AdcSupports::getCollectedUnknownTags()
+{
+	string result;
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
+	string s1 = collAdcFeatures.getInfo();
+	if (!s1.empty())
+	{
+		result += "ADC features:\n";
+		result += s1;
+	}
+	s1 = collNmdcFeatures.getInfo();
+	if (!s1.empty())
+	{
+		result += "NMDC features:\n";
+		result += s1;
+	}
+#endif
+#ifdef BL_FEATURE_COLLECT_UNKNOWN_TAGS
+	string s2 = collNmdcTags.getInfo();
+	if (!s2.empty())
+	{
+		result += "NMDC tags:\n";
+		result += s2;
+	}
+#endif
+	return result;
+}
+#endif
 
 void NmdcSupports::setStatus(Identity& id, const char statusChar, const char modeChar, const string& connection)
 {

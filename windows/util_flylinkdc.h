@@ -37,4 +37,4 @@ template <class T> inline void safe_release(T*& p)
 	}
 }
 
-#endif // DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
+#endif // DCPLUSPLUS_DCPP_UTIL_FLYLINKDC_H
