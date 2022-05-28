@@ -296,7 +296,6 @@ class UserConnection :
 		GETSET(int, lastEncoding, Encoding);
 		GETSET(States, state, State);
 		GETSET(SlotTypes, slotType, SlotType);
-		GETSET(string, m_server_port, ServerPort); // CTM2HUB
 		const BufferedSocket* getSocket() const { return socket; }
 		void setLastUploadSpeed(int64_t speed) { lastUploadSpeed = speed; }
 		int64_t getLastUploadSpeed() const { return lastUploadSpeed; }

@@ -1028,7 +1028,6 @@ void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, uin
 		return;
 
 	UserConnection* uc = getConnection(true, secure);
-	uc->setServerPort(Util::printIpAddress(address, true) + ':' + Util::toString(port));
 	uc->setUserConnectionToken(myNick);
 	uc->setHubUrl(hubUrl);
 	uc->setEncoding(encoding);

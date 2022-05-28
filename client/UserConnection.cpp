@@ -32,11 +32,14 @@
 #include "LocationUtil.h"
 #include "PortTest.h"
 #include "NmdcHub.h"
+#include "AntiFlood.h"
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #include "TagCollector.h"
 extern TagCollector collNmdcFeatures;
 #endif
+
+extern IpBans tcpBans;
 
 const string UserConnection::FEATURE_MINISLOTS = "MiniSlots";
 const string UserConnection::FEATURE_XML_BZLIST = "XmlBZList";
@@ -319,14 +322,14 @@ void UserConnection::onDataLine(const string& line) noexcept
 		}
 		else
 		{
-#if 0 // TODO: handle CTM2HUB error
 			if (param.compare(0, 7, "CTM2HUB", 7) == 0)
 			{
-				// https://github.com/Verlihub/verlihub-1.0.0/blob/4f5ad13b5aa6d5a3c2ec94262f7b7bf1b90fc567/src/cdcproto.cpp#L2358
-				ConnectionManager::addCTM2HUB(getServerPort(), getHintedUser());
+				IpPortKey key;
+				key.setIP(socket->getIp(), socket->getPort());
+				tcpBans.addBan(key, GET_TICK(), "CTM2HUB");
 			}
-#endif
-			dcdebug("Unknown $Error %s\n", param.c_str());
+			else
+				dcdebug("Unknown $Error %s\n", param.c_str());
 			protocolError(param);
 		}
 	}
