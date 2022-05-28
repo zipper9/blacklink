@@ -651,8 +651,8 @@ string CompatibilityManager::getStats() // moved from WinUtil
 	{
 		snprintf(buf, sizeof(buf),
 			"Memory (free / total)\t%s / %s\n",
-			Util::formatBytes(g_TotalPhysMemory).c_str(),
-			Util::formatBytes(g_FreePhysMemory).c_str());
+			Util::formatBytes(g_FreePhysMemory).c_str(),
+			Util::formatBytes(g_TotalPhysMemory).c_str());
 		s += buf;
 	}
 	snprintf(buf, sizeof(buf),
