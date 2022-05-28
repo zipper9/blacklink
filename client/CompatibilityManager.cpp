@@ -22,9 +22,7 @@
 #    include <math.h> /* needed for _set_FMA3_enable */
 #  endif
 
-#include <WinError.h>
 #include <winnt.h>
-#include <ImageHlp.h>
 #include <shlwapi.h>
 #ifdef OSVER_WIN_VISTA
 #define PSAPI_VERSION 1
@@ -37,10 +35,6 @@
 #include "CompatibilityManager.h"
 #include "DatabaseManager.h"
 #include "ShareManager.h"
-#include <iphlpapi.h>
-#include <direct.h>
-
-#pragma comment(lib, "Imagehlp.lib")
 
 string CompatibilityManager::g_incopatibleSoftwareList;
 string CompatibilityManager::g_startupInfo;
@@ -364,13 +358,13 @@ string CompatibilityManager::getWindowsVersionName()
 			}
 		}
 		// Product Info  https://msdn.microsoft.com/en-us/library/windows/desktop/ms724358(v=vs.85).aspx
-		typedef BOOL(WINAPI * PGPI)(DWORD, DWORD, DWORD, DWORD, PDWORD);
-		PGPI pGPI = (PGPI)GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetProductInfo");
-		if (pGPI)
+		typedef BOOL (WINAPI* GET_PRODUCT_INFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
+		GET_PRODUCT_INFO getProductInfo = (GET_PRODUCT_INFO) GetProcAddress(GetModuleHandle(_T("kernel32.dll")), "GetProductInfo");
+		if (getProductInfo)
 		{
-			pGPI(getOsMajor(), getOsMinor(), 0, 0, &dwType);
+			getProductInfo(getOsMajor(), getOsMinor(), 0, 0, &dwType);
 			const char* name = nullptr;
-			for (size_t i = 0; i < sizeof(productNames)/sizeof(productNames[0]); ++i)
+			for (size_t i = 0; i < _countof(productNames); ++i)
 				if (productNames[i].type == dwType)
 				{
 					name = productNames[i].name;
@@ -503,67 +497,57 @@ void CompatibilityManager::generateSystemInfoForApp()
 
 LONG CompatibilityManager::getComCtlVersionFromOS()
 {
-	typedef HRESULT (CALLBACK* DLLGETVERSIONPROC)(DLLVERSIONINFO *);
+	typedef HRESULT (CALLBACK* DLL_GET_VERSION)(DLLVERSIONINFO *);
 	LONG result = 0;
-	HINSTANCE hInstDLL = LoadLibrary(_T("comctl32.dll"));
-	if (hInstDLL)
+	HMODULE comctl32dll = LoadLibrary(_T("comctl32.dll"));
+	if (comctl32dll)
 	{
-		DLLGETVERSIONPROC proc = (DLLGETVERSIONPROC) GetProcAddress(hInstDLL, "DllGetVersion");
-		if (proc)
+		DLL_GET_VERSION dllGetVersion = (DLL_GET_VERSION) GetProcAddress(comctl32dll, "DllGetVersion");
+		if (dllGetVersion)
 		{
 			DLLVERSIONINFO dvi;
 			memset(&dvi, 0, sizeof(dvi));
 			dvi.cbSize = sizeof(dvi);
-			if (SUCCEEDED(proc(&dvi)))
+			if (SUCCEEDED(dllGetVersion(&dvi)))
 				result = MAKELONG(dvi.dwMinorVersion, dvi.dwMajorVersion);
 		}
 		else
 			result = MAKELONG(0, 4);
-		FreeLibrary(hInstDLL);
+		FreeLibrary(comctl32dll);
 	}
 	return result;
 }
 
 bool CompatibilityManager::isWow64Process()
 {
-	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms684139(v=vs.85).aspx
-	
-	auto kernel32 = GetModuleHandle(_T("kernel32"));
-	
-	if (kernel32)
+	typedef BOOL (WINAPI* IS_WOW64_PROCESS)(HANDLE, PBOOL);
+	static IS_WOW64_PROCESS isWow64Process;
+	static bool resolved;
+	if (!resolved)
 	{
-		typedef BOOL (WINAPI * LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
-		LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS) GetProcAddress(kernel32, "IsWow64Process");
-		BOOL bIsWow64;
-		if (fnIsWow64Process)
-		{
-			if (fnIsWow64Process(GetCurrentProcess(), &bIsWow64))
-			{
-				return bIsWow64 != FALSE;
-			}
-		}
+		HMODULE kernel32lib = GetModuleHandle(_T("kernel32"));
+		if (kernel32lib) isWow64Process = (IS_WOW64_PROCESS) GetProcAddress(kernel32lib, "IsWow64Process");
+		resolved = true;
 	}
+	BOOL isWow64;
+	if (isWow64Process && isWow64Process(GetCurrentProcess(), &isWow64))
+		return isWow64 != FALSE;
 	return false;
 }
 
-bool CompatibilityManager::getGlobalMemoryStatus(MEMORYSTATUSEX* p_MsEx)
+bool CompatibilityManager::getGlobalMemoryStatus(MEMORYSTATUSEX* status)
 {
-	// http://msdn.microsoft.com/en-us/library/windows/desktop/aa366770(v=vs.85).aspx
-	
-	auto kernel32 = GetModuleHandle(_T("kernel32"));
-	if (kernel32)
+	typedef BOOL (WINAPI* GLOBAL_MEMORY_STATUS_EX)(MEMORYSTATUSEX*);
+	static GLOBAL_MEMORY_STATUS_EX globalMemoryStatusEx;
+	static bool resolved;
+	if (!resolved)
 	{
-		typedef BOOL (WINAPI * LPFN_GLOBALMEMORYSTATUSEX)(LPMEMORYSTATUSEX);
-		
-		LPFN_GLOBALMEMORYSTATUSEX fnGlobalMemoryStatusEx;
-		
-		fnGlobalMemoryStatusEx = (LPFN_GLOBALMEMORYSTATUSEX) GetProcAddress(kernel32, "GlobalMemoryStatusEx");
-		
-		if (fnGlobalMemoryStatusEx != nullptr)
-		{
-			return fnGlobalMemoryStatusEx(p_MsEx) != FALSE;
-		}
+		HMODULE kernel32lib = GetModuleHandle(_T("kernel32"));
+		if (kernel32lib) globalMemoryStatusEx = (GLOBAL_MEMORY_STATUS_EX) GetProcAddress(kernel32lib, "GlobalMemoryStatusEx");
+		resolved = true;
 	}
+	if (globalMemoryStatusEx)
+		return globalMemoryStatusEx(status) != FALSE;
 	return false;
 }
 
@@ -571,7 +555,7 @@ string CompatibilityManager::getGlobalMemoryStatusMessage()
 {
 	MEMORYSTATUSEX curMemoryInfo = {0};
 	curMemoryInfo.dwLength = sizeof(curMemoryInfo);
-	
+
 	if (getGlobalMemoryStatus(&curMemoryInfo))
 	{
 		g_TotalPhysMemory = curMemoryInfo.ullTotalPhys;
@@ -731,18 +715,33 @@ string CompatibilityManager::getStats() // moved from WinUtil
 
 WORD CompatibilityManager::getDllPlatform(const string& fullpath)
 {
-	WORD bRet = IMAGE_FILE_MACHINE_UNKNOWN;
-	PLOADED_IMAGE imgLoad = ::ImageLoad(Text::fromUtf8(fullpath).c_str(), Util::emptyString.c_str()); // TODO: IRainman: I don't know to use unicode here, Windows sucks.
-	if (imgLoad && imgLoad->FileHeader)
+	#pragma pack(1)
+	struct PE_START
 	{
-		bRet = imgLoad->FileHeader->FileHeader.Machine;
-	}
-	if (imgLoad)
+		uint32_t signature;
+		uint16_t machine;
+	};
+	#pragma pack()
+
+	WORD result = IMAGE_FILE_MACHINE_UNKNOWN;
+	try
 	{
-		::ImageUnload(imgLoad);
+		File f(fullpath, File::READ, File::OPEN);
+		IMAGE_DOS_HEADER mz;
+		size_t len = sizeof(mz);
+		f.read(&mz, len);
+		if (len == sizeof(mz) && mz.e_magic == IMAGE_DOS_SIGNATURE)
+		{
+			f.setPos(mz.e_lfanew);
+			PE_START pe;
+			len = sizeof(pe);
+			f.read(&pe, len);
+			if (len == sizeof(pe) && pe.signature == IMAGE_NT_SIGNATURE)
+				result = pe.machine;
+		}
 	}
-	
-	return bRet;
+	catch (Exception&) {}
+	return result;
 }
 
 void CompatibilityManager::reduceProcessPriority()
@@ -942,13 +941,20 @@ string CompatibilityManager::getCPUInfo()
 	return result.empty() ? "Unknown" : Text::fromT(result);
 }
 
-uint64_t CompatibilityManager::getSysUptime()
+uint64_t CompatibilityManager::getTickCount()
 {
-	static HINSTANCE kernel32lib = NULL;
-	if (!kernel32lib)
-		kernel32lib = LoadLibrary(_T("kernel32"));
-		
-	typedef ULONGLONG(CALLBACK * LPFUNC2)(void);
-	LPFUNC2 _GetTickCount64 = (LPFUNC2)GetProcAddress(kernel32lib, "GetTickCount64");
-	return (_GetTickCount64 ? _GetTickCount64() : GetTickCount()) / 1000;
+#ifdef OSVER_WIN_XP
+	typedef ULONGLONG(CALLBACK *GET_TICK_COUNT64)(void);
+	static bool resolved;
+	static GET_TICK_COUNT64 getTickCount64;
+	if (!resolved)
+	{
+		HMODULE kernel32lib = GetModuleHandle(_T("kernel32"));
+		if (kernel32lib) getTickCount64 = (GET_TICK_COUNT64) GetProcAddress(kernel32lib, "GetTickCount64");
+		resolved = true;
+	}
+	return getTickCount64 ? getTickCount64() : GetTickCount();
+#else
+	return GetTickCount64();
+#endif
 }

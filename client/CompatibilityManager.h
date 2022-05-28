@@ -188,7 +188,7 @@ class CompatibilityManager
 		static string getProcArchString();
 		static void generateSystemInfoForApp();
 		static bool isWow64Process();
-		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* MsEx);
+		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* status);
 
 	public:
 		static void detectIncompatibleSoftware();
@@ -198,7 +198,8 @@ class CompatibilityManager
 		static string getDiskInfo();
 		static TStringList findVolumes();
 		static string getCPUInfo();
-		static uint64_t getSysUptime();
+		static uint64_t getTickCount();
+		static uint64_t getSysUptime() { return getTickCount() / 1000; }
 };
 
 #endif // _WIN32
