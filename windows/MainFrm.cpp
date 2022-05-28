@@ -1394,7 +1394,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	}
 	else if (wParam == SHOW_POPUP_MESSAGE)
 	{
-		Popup* msg = (Popup*)lParam;
+		Popup* msg = reinterpret_cast<Popup*>(lParam);
 		if (!ClientManager::isBeforeShutdown())
 		{
 			dcassert(PopupManager::isValidInstance());
@@ -1426,6 +1426,35 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	else if (wParam == SAVE_RECENTS)
 	{
 		FavoriteManager::getInstance()->saveRecents();
+	}
+	else if (wParam == FILE_EXISTS_ACTION)
+	{
+		while (true)
+		{
+			csFileExistsActions.lock();
+			if (fileExistsActions.empty())
+			{
+				csFileExistsActions.unlock();
+				break;
+			}
+			auto data = std::move(fileExistsActions.front());
+			fileExistsActions.pop_front();
+			csFileExistsActions.unlock();
+
+			int option = SETTING(TARGET_EXISTS_ACTION);
+			if (option == SettingsManager::TE_ACTION_ASK)
+			{
+				bool applyForAll;
+				option = SettingsManager::TE_ACTION_REPLACE;
+				CheckTargetDlg::showDialog(*this, data.path, data.newSize, data.existingSize, data.existingTime, option, applyForAll);
+				if (applyForAll)
+					SET_SETTING(TARGET_EXISTS_ACTION, option);
+			}
+			string newPath;
+			if (option == SettingsManager::TE_ACTION_RENAME)
+				newPath = Util::getNewFileName(data.path);
+			QueueManager::getInstance()->processFileExistsQuery(data.path, option, newPath, data.priority);
+		}
 	}
 	else if (wParam == WM_CLOSE)
 	{
@@ -2756,12 +2785,19 @@ LRESULT MainFrame::onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept
+void MainFrame::on(QueueManagerListener::FileExistsAction, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, QueueItem::Priority priority) noexcept
 {
-	bool applyForAll;
-	CheckTargetDlg::showDialog(*this, fileName, newSize, existingSize, existingTime, option, applyForAll);
-	if (applyForAll)
-		SET_SETTING(TARGET_EXISTS_ACTION, option);
+	FileExistsAction data;
+	data.path = fileName;
+	data.newSize = newSize;
+	data.existingSize = existingSize;
+	data.existingTime = existingTime;
+	data.priority = priority;
+	csFileExistsActions.lock();
+	bool sendMsg = fileExistsActions.empty();
+	fileExistsActions.emplace_back(std::move(data));
+	csFileExistsActions.unlock();
+	if (sendMsg) PostMessage(WM_SPEAKER, FILE_EXISTS_ACTION);
 }
 
 LRESULT MainFrame::onToolbarDropDown(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)

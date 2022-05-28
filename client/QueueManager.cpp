@@ -67,20 +67,12 @@ QueueManager::FileQueue::FileQueue() :
 {
 }
 
-QueueItemPtr QueueManager::FileQueue::add(const string& target,
-                                          int64_t targetSize,
-                                          QueueItem::MaskType flags,
-                                          QueueItem::Priority p,
-                                          const string& tempTarget,
-                                          time_t added,
-                                          const TTHValue& root,
-                                          uint8_t maxSegments)
+void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags)
 {
 	if (p < QueueItem::DEFAULT || p >= QueueItem::LAST)
 		p = QueueItem::DEFAULT;
 
-	bool autoPriority = false;
-	
+	autoPriority = false;
 	if (BOOLSETTING(AUTO_PRIORITY_USE_PATTERNS))
 	{
 		const string& pattern = SETTING(AUTO_PRIORITY_PATTERNS);
@@ -94,8 +86,6 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 	else
 		autoPriorityPattern.clear();
 
-	string fileName = Util::getFileName(target);
-	
 	if (p == QueueItem::DEFAULT && !autoPriorityPattern.empty() && std::regex_match(fileName, reAutoPriority))
 	{
 		autoPriority = true;
@@ -109,7 +99,7 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 	
 	if (p == QueueItem::DEFAULT && BOOLSETTING(AUTO_PRIORITY_USE_SIZE))
 	{
-		if (targetSize > 0 && targetSize <= SETTING(AUTO_PRIORITY_SMALL_SIZE) << 10)
+		if (size > 0 && size <= SETTING(AUTO_PRIORITY_SMALL_SIZE) << 10)
 		{
 			autoPriority = true;
 			p = (QueueItem::Priority) SETTING(AUTO_PRIORITY_SMALL_SIZE_PRIO);
@@ -126,7 +116,21 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 	else
 	if (p == QueueItem::DEFAULT)
 		p = QueueItem::NORMAL;
-	
+}
+
+QueueItemPtr QueueManager::FileQueue::add(const string& target,
+                                          int64_t targetSize,
+                                          QueueItem::MaskType flags,
+                                          QueueItem::Priority p,
+                                          const string& tempTarget,
+                                          time_t added,
+                                          const TTHValue& root,
+                                          uint8_t maxSegments)
+{
+	bool autoPriority;
+	string fileName = Util::getFileName(target);
+	updatePriority(p, autoPriority, fileName, targetSize, flags);
+
 	if (!maxSegments) maxSegments = getMaxSegments(targetSize);
 	
 	// TODO: make it configurable?
@@ -947,10 +951,12 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 		string sharedFilePath;
 		if (!q)
 		{
+			int64_t existingFileSize = 0;
+			int64_t existingFileTime = 0;
+			bool waitForUserInput = false;
+			QueueItem::Priority savedPriority = priority;
 			if (newItem)
 			{
-				int64_t existingFileSize;
-				int64_t existingFileTime;
 				FileAttributes attr;
 #ifdef DEBUG_TRANSFERS
 				bool targetExists = usePath ? false : File::getAttributes(targetPath, attr);
@@ -966,14 +972,12 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, targetPath));
 						return;
 					}
-					int targetExistsAction = SETTING(TARGET_EXISTS_ACTION);
-					if (targetExistsAction == SettingsManager::TE_ACTION_ASK)
+					switch (SETTING(TARGET_EXISTS_ACTION))
 					{
-						fire(QueueManagerListener::TryAdding(), targetPath, size, existingFileSize, existingFileTime, targetExistsAction);
-					}
-					
-					switch (targetExistsAction)
-					{
+						case SettingsManager::TE_ACTION_ASK:
+							waitForUserInput = true;
+							priority = QueueItem::PAUSED;
+							break;
 						case SettingsManager::TE_ACTION_REPLACE:
 							File::deleteFile(targetPath); // Delete old file.
 							break;
@@ -984,9 +988,9 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 							return;
 					}
 				}
-	
+
 				int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
-				if (maxSizeForCopy &&
+				if (!waitForUserInput && maxSizeForCopy &&
 				    ShareManager::getInstance()->getFileInfo(root, sharedFilePath) &&
 				    File::getAttributes(sharedFilePath, attr))
 				{
@@ -1014,6 +1018,14 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 					FileMoverJob* job = new FileMoverJob(*this, FileMoverJob::COPY_QI_FILE, sharedFilePath, targetPath, false, q);
 					if (!fileMover.addJob(job))
 						delete job;
+				}
+				else if (waitForUserInput)
+				{
+					string fileName = Util::getFileName(targetPath);
+					bool autoPriority;
+					fileQueue.updatePriority(savedPriority, autoPriority, fileName, size, flags);
+					q->setAutoPriority(autoPriority);
+					fire(QueueManagerListener::FileExistsAction(), targetPath, size, existingFileSize, existingFileTime, savedPriority);
 				}
 			}
 		}
@@ -1126,6 +1138,23 @@ string QueueManager::checkTarget(const string& target, const int64_t size, bool 
 			throw FileException(STRING(LARGER_TARGET_FILE_EXISTS));
 	}
 	return validatedTarget;
+}
+
+void QueueManager::processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority)
+{
+	switch (action)
+	{
+		case SettingsManager::TE_ACTION_REPLACE:
+			File::deleteFile(path);
+			setPriority(path, priority, false);
+			break;
+		case SettingsManager::TE_ACTION_RENAME:
+			move(path, newPath);
+			setPriority(newPath, priority, false);
+			break;
+		case SettingsManager::TE_ACTION_SKIP:
+			removeTarget(path, false);
+	}
 }
 
 /** Add a source to an existing queue item */

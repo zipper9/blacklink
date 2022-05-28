@@ -62,7 +62,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			SHOW_POPUP_MESSAGE,
 			REMOVE_POPUP,
 			SET_PM_TRAY_ICON,
-			SAVE_RECENTS
+			SAVE_RECENTS,
+			FILE_EXISTS_ACTION
 		};
 
 		struct ListenerError
@@ -460,7 +461,16 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			tstring message;
 			int icon;
 		};
-		
+
+		struct FileExistsAction
+		{
+			string path;
+			int64_t newSize;
+			int64_t existingSize;
+			time_t existingTime;
+			QueueItem::Priority priority;
+		};
+
 		// Controls
 		CMDICommandBarCtrl ctrlCmdBar;
 		CReBarCtrl ctrlRebar;
@@ -569,7 +579,11 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool shutdownEnabled;
 		uint64_t shutdownTime;
 		bool shutdownStatusDisplayed;
-		
+
+		// Target exists dialogs
+		std::deque<FileExistsAction> fileExistsActions;
+		CriticalSection csFileExistsActions;
+
 		// Misc
 		unique_ptr<JAControl> jaControl;
 		HWND passwordDlg;
@@ -617,7 +631,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		// QueueManagerListener
 		void on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& download) noexcept override;
 		void on(QueueManagerListener::PartialList, const HintedUser& user, const string& text) noexcept override;
-		void on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept override;
+		void on(QueueManagerListener::FileExistsAction, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, QueueItem::Priority priority) noexcept override;
 		void on(QueueManagerListener::SourceAdded) noexcept override;
 
 		// UserManagerListener

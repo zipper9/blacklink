@@ -66,6 +66,7 @@ class QueueManager : public Singleton<QueueManager>,
 		}
 
 		bool addDclstFile(const string& path);
+		void processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority);
 
 	public:
 		class LockFileQueueShared
@@ -292,6 +293,7 @@ class QueueManager : public Singleton<QueueManager>,
 				std::unique_ptr<CriticalSection> csFQ;
 #endif
 				bool isQueued(const TTHValue& tth) const;
+				void updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags);
 
 			private:
 				QueueItem::QIStringMap queue;

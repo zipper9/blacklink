@@ -22,6 +22,7 @@
 #include "forward.h"
 #include "noexcept.h"
 #include "Download.h"
+#include "QueueItem.h"
 
 class QueueManagerListener
 {
@@ -31,7 +32,7 @@ class QueueManagerListener
 		{
 			enum { TYPE = I };
 		};
-		
+
 		typedef X<0> Added;
 		typedef X<1> Finished;
 		typedef X<2> Removed;
@@ -47,12 +48,12 @@ class QueueManagerListener
 		typedef X<13> RecheckAlreadyFinished;
 		typedef X<14> RecheckDone;
 		typedef X<15> AddedArray;
-		typedef X<17> TryAdding;
+		typedef X<17> FileExistsAction;
 		typedef X<19> Tick;
 		typedef X<20> StatusUpdatedList;
 		typedef X<21> RemovedArray;
 		typedef X<23> SourceAdded;
-		
+
 		virtual void on(Added, const QueueItemPtr&) noexcept { }
 #if 0 // FIXME: not used
 		virtual void on(AddedArray, const std::vector<QueueItemPtr>& qiArray) noexcept { }
@@ -69,7 +70,7 @@ class QueueManagerListener
 		virtual void on(StatusUpdatedList, const QueueItemList&) noexcept { }
 		virtual void on(PartialList, const HintedUser&, const string&) noexcept { }
 		virtual void on(SourceAdded) noexcept { }
-		
+
 		virtual void on(RecheckStarted, const string&) noexcept { }
 		virtual void on(RecheckNoFile, const string&) noexcept { }
 		virtual void on(RecheckFileTooSmall, const string&) noexcept { }
@@ -78,7 +79,7 @@ class QueueManagerListener
 		virtual void on(RecheckAlreadyFinished, const string&) noexcept { }
 		virtual void on(RecheckDone, const string&) noexcept { }
 		
-		virtual void on(TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept  { }
+		virtual void on(FileExistsAction, const string& path, int64_t newSize, int64_t existingSize, time_t existingTime, QueueItem::Priority savedPriority) noexcept  { }
 };
 
 #endif // !defined(QUEUE_MANAGER_LISTENER_H)
