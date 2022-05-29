@@ -101,6 +101,6 @@
 #endif
 #endif
 
-#include "features.h"
+#include "FeatureDef.h"
 
 #endif // DCPLUSPLUS_DCPP_COMPILER_H

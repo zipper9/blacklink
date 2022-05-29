@@ -32,18 +32,16 @@ struct HashValue
 	{
 		memset(&data, 0, sizeof(data));
 	}
-	explicit HashValue(const uint8_t* aData)
+	explicit HashValue(const uint8_t* src)
 	{
-		memcpy(data, aData, BYTES);
+		memcpy(data, src, BYTES);
 	}
 	explicit HashValue(const char* base32, unsigned len)
 	{
-		dcassert(len == 39);
 		Encoder::fromBase32(base32, data, BYTES);
 	}
 	explicit HashValue(const std::string& base32)
 	{
-		//dcassert(base32.length() == 39);
 		Encoder::fromBase32(base32.c_str(), data, BYTES);
 	}
 	bool operator!=(const HashValue& rhs) const

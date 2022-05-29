@@ -1020,7 +1020,7 @@
     <ClInclude Include="client\TagCollector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\features.h">
+    <ClInclude Include="client\FeatureDef.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

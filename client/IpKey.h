@@ -2,6 +2,9 @@
 #define IP_KEY_H_
 
 #include "IpAddress.h"
+#ifndef _WIN32
+#include <arpa/inet.h>
+#endif
 
 struct IpKey
 {

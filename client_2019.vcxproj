@@ -727,7 +727,7 @@
     <ClInclude Include="client\dht\NodeAddress.h" />
     <ClInclude Include="client\dht\TaskManager.h" />
     <ClInclude Include="client\dht\Utils.h" />
-    <ClInclude Include="client\features.h" />
+    <ClInclude Include="client\FeatureDef.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\FinishedItem.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />

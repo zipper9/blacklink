@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef BLACKLINK_FEATURES_H_
-#define BLACKLINK_FEATURES_H_
+#ifndef FEATURE_DEF_H_
+#define FEATURE_DEF_H_
 
 #ifndef BOOST_NO_RTTI
 #define BOOST_NO_RTTI
@@ -157,4 +157,4 @@
 # undef max
 #endif
 
-#endif // BLACKLINK_FEATURES_H_
+#endif // FEATURE_DEF_H_
