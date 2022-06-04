@@ -848,7 +848,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 void ConnectionManager::checkConnections(uint64_t tick)
 {
 	unsigned ccpmIdleTimeout = SETTING(CCPM_IDLE_TIMEOUT) * 60000;
-	READ_LOCK(*csConnections);
+	WRITE_LOCK(*csConnections);
 	for (auto j = userConnections.cbegin(); j != userConnections.cend();)
 	{
 		UserConnection* uc = *j;
