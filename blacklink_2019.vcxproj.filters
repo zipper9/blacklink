@@ -958,9 +958,6 @@
     <Image Include="res\Arrows.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\bold.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\CloseIcon.png">
       <Filter>Resource Files</Filter>
     </Image>
@@ -971,9 +968,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Folders.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\italic.png">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Magnet.png">
@@ -997,13 +991,7 @@
     <Image Include="res\Settings-icons.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\Smile.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\State.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\strike.png">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Toolbar-highlight.png">
@@ -1015,28 +1003,13 @@
     <Image Include="res\Toolbar.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\TranferSpeeds.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\transcode.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\TransferSpeeds-BW.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\underline.png">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Users.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\addMessage.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\ADLSearch.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Bold.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\CDM.ico">
@@ -1066,13 +1039,7 @@
     <Image Include="res\HubOff.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\italic.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\Magnet.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\MultiChat.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Network-Statistics.ico">
@@ -1090,25 +1057,10 @@
     <Image Include="res\Search.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\Smile.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\Sounds.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\strike.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\SwitchPanels.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\TranferUser.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\transcode.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\underline.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\User.ico">
@@ -1121,9 +1073,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\UserOff.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\color.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\f_grey_16.ico">
@@ -1187,6 +1136,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\padlock_closed.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Editor.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

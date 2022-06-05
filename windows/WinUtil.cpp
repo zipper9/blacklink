@@ -273,17 +273,17 @@ void WinUtil::init(HWND hWnd)
 	help.AppendMenu(MF_STRING, ID_APP_ABOUT, CTSTRING(MENU_ABOUT));
 	
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)help, CTSTRING(MENU_HLP));
-	
+
 	g_fileImage.init();
 	g_videoImage.init();
 	g_flagImage.init();
 	g_userImage.init();
 	g_userStateImage.init();
-	g_trackerImage.init();
 	g_genderImage.init();
 	g_favImage.init();
 	g_favUserImage.init();
-	
+	g_editorImage.init();
+
 	Colors::init();
 	Fonts::init();
 	
@@ -310,16 +310,19 @@ void WinUtil::uninit()
 {
 	UnhookWindowsHookEx(g_hook);
 	g_hook = nullptr;
-	
+
 	g_tabCtrl = nullptr;
 	g_mainWnd = nullptr;
+
 	g_fileImage.uninit();
+	g_videoImage.uninit();
 	g_userImage.uninit();
-	g_trackerImage.uninit();
 	g_userStateImage.uninit();
 	g_genderImage.uninit();
+	g_favImage.uninit();
+	g_favUserImage.uninit();
+	g_editorImage.uninit();
 	g_TransferTreeImage.uninit();
-	g_videoImage.uninit();
 
 	Fonts::uninit();
 	Colors::uninit();

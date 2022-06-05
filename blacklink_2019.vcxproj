@@ -1086,6 +1086,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico" />
+    <Image Include="res\Editor.png" />
     <Image Include="res\favorite.png" />
     <Image Include="res\Gender.png" />
     <Image Include="res\mode_active.ico" />
@@ -1103,14 +1104,10 @@
     <Image Include="res\torrent.png" />
     <Image Include="res\Trackers.png" />
     <Image Include="res\TransferTree.png" />
-    <Image Include="res\addMessage.ico" />
     <Image Include="res\ADLSearch.ico" />
     <Image Include="res\Arrows.png" />
-    <Image Include="res\Bold.ico" />
-    <Image Include="res\bold.png" />
     <Image Include="res\CDM.ico" />
     <Image Include="res\CloseIcon.png" />
-    <Image Include="res\color.ico" />
     <Image Include="res\dclst.png" />
     <Image Include="res\Error.ico" />
     <Image Include="res\Fav-Users-States.png" />
@@ -1124,12 +1121,9 @@
     <Image Include="res\f_yellow_16.ico" />
     <Image Include="res\Hub.ico" />
     <Image Include="res\HubOff.ico" />
-    <Image Include="res\italic.ico" />
-    <Image Include="res\italic.png" />
     <Image Include="res\Magnet.ico" />
     <Image Include="res\Magnet.png" />
     <Image Include="res\Mediafiles.png" />
-    <Image Include="res\MultiChat.ico" />
     <Image Include="res\Network-Statistics.ico" />
     <Image Include="res\Pause.ico" />
     <Image Include="res\Purge.ico" />
@@ -1140,23 +1134,13 @@
     <Image Include="res\Search-Types.png" />
     <Image Include="res\Search.ico" />
     <Image Include="res\Settings-icons.png" />
-    <Image Include="res\Smile.ico" />
-    <Image Include="res\Smile.png" />
     <Image Include="res\Sounds.ico" />
     <Image Include="res\State.png" />
-    <Image Include="res\strike.ico" />
-    <Image Include="res\strike.png" />
     <Image Include="res\SwitchPanels.ico" />
     <Image Include="res\Toolbar-highlight.png" />
     <Image Include="res\Toolbar-mini.png" />
     <Image Include="res\Toolbar.png" />
-    <Image Include="res\TranferSpeeds.png" />
-    <Image Include="res\TranferUser.ico" />
-    <Image Include="res\transcode.ico" />
-    <Image Include="res\transcode.png" />
     <Image Include="res\TransferSpeeds-BW.png" />
-    <Image Include="res\underline.ico" />
-    <Image Include="res\underline.png" />
     <Image Include="res\User.ico" />
     <Image Include="res\UserBan.ico" />
     <Image Include="res\UserBanOff.ico" />

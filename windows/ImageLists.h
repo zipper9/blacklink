@@ -120,12 +120,6 @@ class UserStateImage : public BaseImageList
 		void init();
 };
 
-class TrackerImage : public BaseImageList
-{
-	public:
-		void init();
-};
-
 class GenderImage : public BaseImageList
 {
 	public:
@@ -144,12 +138,18 @@ class FavUserImage : public BaseImageList
 		void init();
 };
 
+class EditorImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
-extern TrackerImage g_trackerImage;
 extern GenderImage g_genderImage;
 extern FavImage g_favImage;
 extern FavUserImage g_favUserImage;
+extern EditorImage g_editorImage;
 
 class TransferTreeImage : public BaseImageList
 {
@@ -233,6 +233,15 @@ class IconBitmaps
 			DCLST,
 			MESSAGES,
 			FAVORITE,
+			EDITOR_SEND,
+			EDITOR_MULTILINE,
+			EDITOR_EMOTICON,
+			EDITOR_TRANSCODE,
+			EDITOR_BOLD,
+			EDITOR_ITALIC,
+			EDITOR_UNDERLINE,
+			EDITOR_STRIKE,
+			EDITOR_COLOR,
 			PM,
 			USER,
 			HUB_ONLINE,
@@ -261,15 +270,16 @@ class IconBitmaps
 			SOURCE_ICON,
 			SOURCE_MAIN,
 			SOURCE_SETTINGS,
-			SOURCE_FAVORITE
+			SOURCE_FAVORITE,
+			SOURCE_EDITOR
 		};
 
 		Image data[MAX_BITMAPS];
 		void init(int index, int source, int id);
 		bool loadIcon(int index, int source);
+		static HIMAGELIST getImageList(class MainFrame* mainFrame, int type, int size);
 
 	public:
-		//void init(HDC hdc, HIMAGELIST toolbarImages, HIMAGELIST settingsImages);
 		IconBitmaps();
 #ifdef _DEBUG
 		~IconBitmaps();

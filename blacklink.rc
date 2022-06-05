@@ -2458,7 +2458,7 @@ IDR_FILE_LIST_OFFLINE   ICON                    "res\\File-List-Off.ico"
 
 IDR_MAGNET              ICON                    "res\\Magnet.ico"
 
-IDR_TUSER               ICON                    "res\\TranferUser.ico"
+IDR_TUSER               ICON                    "res\\TransferUser.ico"
 
 IDR_TRAY_AND_TASKBAR_PM ICON                    "res\\PM.ico"
 
@@ -2466,25 +2466,7 @@ IDR_PURGE               ICON                    "res\\Purge.ico"
 
 IDR_PAUSE               ICON                    "res\\Pause.ico"
 
-IDR_SENDMESSAGES_ICON   ICON                    "res\\addMessage.ico"
-
-IDR_MULTI_CHAT_ICON     ICON                    "res\\MultiChat.ico"
-
 IDR_SWITCH_PANELS_ICON  ICON                    "res\\SwitchPanels.ico"
-
-IDR_SMILE_ICON          ICON                    "res\\Smile.ico"
-
-IDR_BOLD_ICON           ICON                    "res\\Bold.ico"
-
-IDR_ITALIC_ICON         ICON                    "res\\italic.ico"
-
-IDR_STRIKE_ICON         ICON                    "res\\strike.ico"
-
-IDR_TRANSCODE_ICON      ICON                    "res\\transcode.ico"
-
-IDR_UNDERLINE_ICON      ICON                    "res\\underline.ico"
-
-IDR_COLOR_ICON          ICON                    "res\\color.ico"
 
 IDR_ICON_SUCCESS_ICON   ICON                    "res\\f_green_16.ico"
 
@@ -2540,6 +2522,8 @@ IDR_PLAYERS_CONTROL_MINI PNG                     "res\\PlayersControl-mini.png"
 
 IDR_SETTINGS_ICONS      PNG                     "res\\Settings-icons.png"
 
+IDR_EDITOR_ICONS        PNG                     "res\\Editor.png"
+
 IDR_USERS               PNG                     "res\\Users.png"
 
 IDR_TRANSFER_TREE       PNG                     "res\\TransferTree.png"
@@ -2554,7 +2538,7 @@ IDR_BAD_FLAG            PNG                     "res\\zz.png"
 
 IDR_ARROWS              PNG                     "res\\Arrows.png"
 
-IDR_TSPEEDS             PNG                     "res\\TranferSpeeds.png"
+IDR_TSPEEDS             PNG                     "res\\TransferSpeeds.png"
 
 IDR_TSPEEDS_BW          PNG                     "res\\TransferSpeeds-BW.png"
 
@@ -2569,18 +2553,6 @@ IDR_SEARCH_TYPES        PNG                     "res\\Search-Types.png"
 IDR_STATE               PNG                     "res\\State.png"
 
 IDR_FAV_USERS_STATES    PNG                     "res\\Fav-Users-States.png"
-
-IDR_SMILE               PNG                     "res\\Smile.png"
-
-IDR_BOLD                PNG                     "res\\bold.png"
-
-IDR_STRIKE              PNG                     "res\\strike.png"
-
-IDR_UNDERLINE           PNG                     "res\\underline.png"
-
-IDR_ITALIC              PNG                     "res\\italic.png"
-
-IDR_TRANSCODE           PNG                     "res\\transcode.png"
 
 IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
 

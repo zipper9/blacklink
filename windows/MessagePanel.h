@@ -20,7 +20,6 @@
 #define MESSAGE_PANEL_H
 
 #include "wtl_flylinkdc.h"
-#include "HIconWrapper.h"
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "OMenu.h"
@@ -109,23 +108,11 @@ class MessagePanel
 		HWND m_hWnd;
 		int ccpmState;
 
-		static HIconWrapper g_hSendMessageIco;
-		static HIconWrapper g_hMultiChatIco;
-#ifdef IRAINMAN_INCLUDE_SMILE
-		static HIconWrapper g_hEmoticonIco;
-#endif
-		static HIconWrapper g_hBoldIco;
-		static HIconWrapper g_hUndelineIco;
-		static HIconWrapper g_hStrikeIco;
-		static HIconWrapper g_hItalicIco;
-		static HIconWrapper g_hTransCodeIco;
-		static HIconWrapper g_hColorIco;
-
 #ifdef IRAINMAN_INCLUDE_SMILE
 		static void showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count);
 		LRESULT onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 #endif
-		void createButton(int index, HICON icon, int idc, ResourceManager::Strings caption);
+		void createButton(int index, int image, int idc, ResourceManager::Strings caption);
 		void updateButton(HDWP dwp, bool show, int index, CRect& rc);
 };
 

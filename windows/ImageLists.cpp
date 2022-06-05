@@ -5,18 +5,18 @@
 #include "resource.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/Tag16.h"
-#include <Shellapi.h>
+#include <shellapi.h>
 
 FileImage g_fileImage;
 UserImage g_userImage;
 UserStateImage g_userStateImage;
-TrackerImage g_trackerImage;
 GenderImage g_genderImage;
 FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
 VideoImage g_videoImage;
 FavImage g_favImage;
 FavUserImage g_favUserImage;
+EditorImage g_editorImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -135,11 +135,6 @@ void FileImage::init()
 void UserStateImage::init()
 {
 	ResourceLoader::LoadImageList(IDR_STATE_USERS, images, 16, 16);
-}
-
-void TrackerImage::init()
-{
-	ResourceLoader::LoadImageList(IDR_TRACKER_IMAGES, images, 16, 16);
 }
 
 void GenderImage::init()
@@ -291,6 +286,11 @@ void FavUserImage::init()
 	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
 }
 
+void EditorImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_EDITOR_ICONS, images, 16, 16);
+}
+
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)
 {
 	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
@@ -384,6 +384,15 @@ IconBitmaps::IconBitmaps()
 	init(DCLST,              SOURCE_SETTINGS, 36);
 	init(MESSAGES,           SOURCE_SETTINGS, 39);
 	init(FAVORITE,           SOURCE_FAVORITE, 0);
+	init(EDITOR_SEND,        SOURCE_EDITOR,   0);
+	init(EDITOR_MULTILINE,   SOURCE_EDITOR,   1);
+	init(EDITOR_EMOTICON,    SOURCE_EDITOR,   2);
+	init(EDITOR_TRANSCODE,   SOURCE_EDITOR,   3);
+	init(EDITOR_BOLD,        SOURCE_EDITOR,   4);
+	init(EDITOR_ITALIC,      SOURCE_EDITOR,   5);
+	init(EDITOR_UNDERLINE,   SOURCE_EDITOR,   6);
+	init(EDITOR_STRIKE,      SOURCE_EDITOR,   7);
+	init(EDITOR_COLOR,       SOURCE_EDITOR,   8);
 	init(PM,                 SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
 	init(USER,               SOURCE_ICON,     IDR_PRIVATE);
 	init(HUB_ONLINE,         SOURCE_ICON,     IDR_HUB);
@@ -407,6 +416,22 @@ bool IconBitmaps::loadIcon(int index, int size)
 	return hIcon != nullptr;
 }
 
+HIMAGELIST IconBitmaps::getImageList(MainFrame* mainFrame, int type, int size)
+{
+	switch (type)
+	{
+		case SOURCE_MAIN:
+			return size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
+		case SOURCE_SETTINGS:
+			return mainFrame->getSettingsImages();
+		case SOURCE_FAVORITE:
+			return g_favImage.getIconList();
+		case SOURCE_EDITOR:
+			return g_editorImage.getIconList();
+	}
+	return nullptr;
+}
+
 HBITMAP IconBitmaps::getBitmap(int index, int size)
 {
 	dcassert(index >= 0 && index < MAX_BITMAPS);
@@ -428,14 +453,7 @@ HBITMAP IconBitmaps::getBitmap(int index, int size)
 	}
 	else
 	{
-		HIMAGELIST imageList;
-		if (data[index].source == SOURCE_MAIN)
-			imageList = size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
-		else
-		if (data[index].source == SOURCE_FAVORITE)
-			imageList = g_favImage.getIconList();
-		else
-			imageList = mainFrame->getSettingsImages();
+		HIMAGELIST imageList = getImageList(mainFrame, data[index].source, size);
 		HDC hdc = GetDC(mainFrame->m_hWnd);
 		if (!hdc) return nullptr;
 		HDC hdcTemp = CreateCompatibleDC(hdc);
@@ -461,11 +479,7 @@ HICON IconBitmaps::getIcon(int index, int size)
 	}
 	else
 	{
-		HIMAGELIST imageList;
-		if (data[index].source == SOURCE_MAIN)
-			imageList = size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
-		else
-			imageList = mainFrame->getSettingsImages();
+		HIMAGELIST imageList = getImageList(mainFrame, data[index].source, size);
 		data[index].icon[size] = ImageList_GetIcon(imageList, data[index].id, ILD_NORMAL);
 	}
 	return data[index].icon[size];

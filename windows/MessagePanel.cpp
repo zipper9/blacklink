@@ -32,18 +32,6 @@ static const int BUTTON_WIDTH = 26;
 static const int BUTTON_HEIGHT = 26;
 static const int EDIT_HEIGHT = 22;
 
-HIconWrapper MessagePanel::g_hSendMessageIco(IDR_SENDMESSAGES_ICON);
-HIconWrapper MessagePanel::g_hMultiChatIco(IDR_MULTI_CHAT_ICON);
-#ifdef IRAINMAN_INCLUDE_SMILE
-HIconWrapper MessagePanel::g_hEmoticonIco(IDR_SMILE_ICON);
-#endif
-HIconWrapper MessagePanel::g_hBoldIco(IDR_BOLD_ICON);
-HIconWrapper MessagePanel::g_hUndelineIco(IDR_UNDERLINE_ICON);
-HIconWrapper MessagePanel::g_hStrikeIco(IDR_STRIKE_ICON);
-HIconWrapper MessagePanel::g_hItalicIco(IDR_ITALIC_ICON);
-HIconWrapper MessagePanel::g_hTransCodeIco(IDR_TRANSCODE_ICON);
-HIconWrapper MessagePanel::g_hColorIco(IDR_COLOR_ICON);
-
 #ifdef IRAINMAN_INCLUDE_SMILE
 OMenu MessagePanel::g_emoMenu;
 int MessagePanel::emoMenuItemCount = 0;
@@ -76,19 +64,19 @@ void MessagePanel::initPanel(HWND hWnd)
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
 
-	createButton(BUTTON_SEND, g_hSendMessageIco, IDC_SEND_MESSAGE, ResourceManager::BBCODE_PANEL_SENDMESSAGE);
-	createButton(BUTTON_MULTILINE, g_hMultiChatIco, IDC_MESSAGEPANEL, ResourceManager::BBCODE_PANEL_MESSAGEPANELSIZE);
+	createButton(BUTTON_SEND, IconBitmaps::EDITOR_SEND, IDC_SEND_MESSAGE, ResourceManager::BBCODE_PANEL_SENDMESSAGE);
+	createButton(BUTTON_MULTILINE, IconBitmaps::EDITOR_MULTILINE, IDC_MESSAGEPANEL, ResourceManager::BBCODE_PANEL_MESSAGEPANELSIZE);
 #ifdef IRAINMAN_INCLUDE_SMILE
-	createButton(BUTTON_EMOTICONS, g_hEmoticonIco, IDC_EMOT, ResourceManager::BBCODE_PANEL_EMOTICONS);
+	createButton(BUTTON_EMOTICONS, IconBitmaps::EDITOR_EMOTICON, IDC_EMOT, ResourceManager::BBCODE_PANEL_EMOTICONS);
 #endif
-	createButton(BUTTON_TRANSCODE, g_hTransCodeIco, ID_TEXT_TRANSCODE, ResourceManager::BBCODE_PANEL_TRANSLATE);
-	createButton(BUTTON_BOLD, g_hBoldIco, IDC_BOLD, ResourceManager::BBCODE_PANEL_BOLD);
-	createButton(BUTTON_ITALIC, g_hItalicIco, IDC_ITALIC, ResourceManager::BBCODE_PANEL_ITALIC);
-	createButton(BUTTON_UNDERLINE, g_hUndelineIco, IDC_UNDERLINE, ResourceManager::BBCODE_PANEL_UNDERLINE);
-	createButton(BUTTON_STRIKETHROUGH, g_hStrikeIco, IDC_STRIKE, ResourceManager::BBCODE_PANEL_STRIKE);
-	createButton(BUTTON_COLOR, g_hColorIco, IDC_COLOR, ResourceManager::BBCODE_PANEL_COLOR);
-	createButton(BUTTON_SELECT_HUB, g_iconBitmaps.getIcon(IconBitmaps::HUB_ONLINE, 0), IDC_SELECT_HUB, ResourceManager::SELECT_HUB);
-	createButton(BUTTON_CCPM, g_iconBitmaps.getIcon(IconBitmaps::PADLOCK_OPEN, 0), IDC_CCPM, ResourceManager::CONNECT_CCPM);
+	createButton(BUTTON_TRANSCODE, IconBitmaps::EDITOR_TRANSCODE, ID_TEXT_TRANSCODE, ResourceManager::BBCODE_PANEL_TRANSLATE);
+	createButton(BUTTON_BOLD, IconBitmaps::EDITOR_BOLD, IDC_BOLD, ResourceManager::BBCODE_PANEL_BOLD);
+	createButton(BUTTON_ITALIC, IconBitmaps::EDITOR_ITALIC, IDC_ITALIC, ResourceManager::BBCODE_PANEL_ITALIC);
+	createButton(BUTTON_UNDERLINE, IconBitmaps::EDITOR_UNDERLINE, IDC_UNDERLINE, ResourceManager::BBCODE_PANEL_UNDERLINE);
+	createButton(BUTTON_STRIKETHROUGH, IconBitmaps::EDITOR_STRIKE, IDC_STRIKE, ResourceManager::BBCODE_PANEL_STRIKE);
+	createButton(BUTTON_COLOR, IconBitmaps::EDITOR_COLOR, IDC_COLOR, ResourceManager::BBCODE_PANEL_COLOR);
+	createButton(BUTTON_SELECT_HUB, IconBitmaps::HUB_ONLINE, IDC_SELECT_HUB, ResourceManager::SELECT_HUB);
+	createButton(BUTTON_CCPM, IconBitmaps::PADLOCK_OPEN, IDC_CCPM, ResourceManager::CONNECT_CCPM);
 
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 	ctrlSizeSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS |
@@ -107,7 +95,7 @@ void MessagePanel::initPanel(HWND hWnd)
 		tooltip.Activate(TRUE);
 }
 
-void MessagePanel::createButton(int index, HICON icon, int idc, ResourceManager::Strings caption)
+void MessagePanel::createButton(int index, int image, int idc, ResourceManager::Strings caption)
 {
 	RECT rc = {};
 	ctrlButtons[index].Create(m_hWnd, rc, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | BS_ICON | BS_CENTER, 0, idc);
@@ -115,7 +103,7 @@ void MessagePanel::createButton(int index, HICON icon, int idc, ResourceManager:
 	if (!CompatibilityManager::isOsVistaPlus())
 		imageButtons[index].SubclassWindow(ctrlButtons[index]);
 #endif
-	ctrlButtons[index].SetIcon(icon);
+	ctrlButtons[index].SetIcon(g_iconBitmaps.getIcon(image, 0));
 	tooltip.AddTool(ctrlButtons[index], caption);
 }
 
