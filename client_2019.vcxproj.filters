@@ -382,6 +382,9 @@
     <ClCompile Include="client\TagCollector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\SocketPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1021,6 +1024,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\FeatureDef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\SocketPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

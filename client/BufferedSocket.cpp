@@ -27,6 +27,7 @@
 #include "SSLSocket.h"
 #include "AutoDetectSocket.h"
 #include "LogManager.h"
+#include "SocketPool.h"
 
 static const size_t INITIAL_CAPACITY = 8 * 1024;
 static const size_t STREAM_BUF_SIZE = 256 * 1024;
@@ -607,6 +608,15 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 {
 	if (state != STARTING)
 		throw SocketException("Bad state for connect");
+
+	if (natRole != NAT_NONE)
+	{
+		Socket* s = socketPool.takeSocket(localPort);
+		if (!s)
+			throw SocketException("No socket for port " + Util::toString(localPort));
+		sock.reset(s);
+		useProxy = false;
+	}
 
 	Socket::ProxyConfig proxy;
 	if (useProxy && !Socket::getProxyConfig(proxy))

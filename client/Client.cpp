@@ -661,6 +661,7 @@ void Client::on(Second, uint64_t tick) noexcept
 			send(&separator, 1);
 		if (pendingUpdate && tick >= pendingUpdate)
 			info(false);
+		onTimer(tick);
 	}
 
 	if (searchQueue.interval == 0)

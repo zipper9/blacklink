@@ -455,12 +455,13 @@ class Client : public ClientBase,
 
 		/** Reload details from favmanager or settings */
 		void reloadSettings(bool updateNick);
-		
+
 		virtual void searchToken(const SearchParamToken& sp) = 0;
-		
+		virtual void onTimer(uint64_t tick) noexcept {}
+
 		// TimerManagerListener
-		virtual void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
-		
+		virtual void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
+
 		// BufferedSocketListener
 		virtual void onConnecting() noexcept override
 		{

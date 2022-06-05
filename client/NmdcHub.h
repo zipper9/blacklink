@@ -44,6 +44,7 @@ class NmdcHub : public Client, private Flags
 		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
+		void onTimer(uint64_t tick) noexcept override;
 		void password(const string& pwd, bool setPassword);
 		void info(bool forceUpdate)
 		{
@@ -121,10 +122,13 @@ class NmdcHub : public Client, private Flags
 		NickMap users;
 		std::unique_ptr<RWLock> csUsers;
 
-		string   lastMyInfo;
-		string   lastExtJSONInfo;
-		string   salt;
+		int myInfoState;
+		string lastNatUser;
+		string lastMyInfo;
+		string lastExtJSONInfo;
+		string salt;
 		uint64_t lastUpdate;
+		uint64_t lastNatUserExpires;
 		unsigned hubSupportFlags;
 		char lastModeChar; // last Mode MyINFO
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -136,9 +140,6 @@ class NmdcHub : public Client, private Flags
 
 	private:
 		void updateMyInfoState(bool isMyInfo);
-		
-		int myInfoState;
-		string m_cache_hub_url_flood;
 
 		struct NickRule
 		{

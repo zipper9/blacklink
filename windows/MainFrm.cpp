@@ -71,6 +71,7 @@
 #include "../client/dht/DHT.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/HttpClient.h"
+#include "../client/SocketPool.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -696,6 +697,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 void MainFrame::onMinute(uint64_t tick)
 {
 	httpClient.removeUnusedConnections();
+	socketPool.removeExpired(tick);
 	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
 		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
 	LogManager::closeOldFiles(tick);

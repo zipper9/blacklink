@@ -37,6 +37,7 @@
 #include "LogManager.h"
 #include "../jsoncpp/include/json/json.h"
 #include "Tag16.h"
+#include "SocketPool.h"
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
@@ -79,6 +80,7 @@ NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, boo
 	hubSupportsSlots(false),
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 	lastUpdate(0),
+	lastNatUserExpires(0),
 	myInfoState(WAITING_FOR_MYINFO),
 	csUsers(std::unique_ptr<RWLock>(RWLock::create()))
 {
@@ -93,7 +95,6 @@ void NmdcHub::disconnect(bool graceless)
 {
 	Client::disconnect(graceless);
 	clearUsers();
-	m_cache_hub_url_flood.clear();
 }
 
 void NmdcHub::connect(const OnlineUserPtr& user, const string& token, bool forcePassive)
@@ -692,13 +693,13 @@ void NmdcHub::searchParse(const string& param, int type)
 void NmdcHub::revConnectToMeParse(const string& param)
 {
 	string myNick;
-	uint16_t localPort;
+	string natUser;
 	{
 		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 		myNick = this->myNick;
-		localPort = clientSock->getLocalPort();
+		natUser = lastNatUser;
 	}
 	
 	string::size_type j = param.find(' ');
@@ -717,18 +718,25 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	}
 	else if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && (flags & User::NAT0))
 	{
+		string userKey = u->getUser()->getCID().toBase32();
+		if (!natUser.empty() && natUser != userKey)
+			return;
 		bool secure = CryptoManager::TLSOk() && (flags & User::TLS);
 		// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
 		// sender_nick at the end should work at least in most used hubsofts
-		if (localPort == 0)
-		{
-			LogManager::message("Error [3] $ConnectToMe port = 0 : ");
-		}
-		else
+		uint16_t port = socketPool.addSocket(userKey, AF_INET, true, secure, true, Util::emptyString);
+		if (port)
 		{
 			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getMyExternalIP() + ':' +
-				Util::toString(localPort) +
+				Util::toString(port) +
 				(secure ? "NS " : "N ") + fromUtf8(myNick) + '|');
+			if (natUser.empty())
+			{
+				uint64_t expires = GET_TICK() + 60000;
+				LOCK(csState);
+				lastNatUser = std::move(userKey);
+				lastNatUserExpires = expires;
+			}
 		}
 	}
 	else
@@ -784,13 +792,11 @@ void NmdcHub::connectToMeParse(const string& param)
 	string portStr;
 	string server;
 	string myNick;
-	uint16_t localPort;
 	{
 		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 		myNick = this->myNick;
-		localPort = clientSock->getLocalPort();
 	}
 
 #ifdef _DEBUG
@@ -859,7 +865,11 @@ void NmdcHub::connectToMeParse(const string& param)
 				if (senderNick.empty())
 					break;
 
-				portStr.erase(portStr.length() - 1);
+				OnlineUserPtr u = findUser(senderNick);
+				if (!u)
+					break;
+
+				portStr.pop_back();
 				uint16_t port = parsePort(portStr);
 				if (!port)
 					break;
@@ -867,33 +877,41 @@ void NmdcHub::connectToMeParse(const string& param)
 				if (!checkConnectToMeFlood(ip, port))
 					break;
 
-				// Trigger connection attempt sequence locally ...
+				const string userKey = u->getUser()->getCID().toBase32();
+				uint16_t localPort = socketPool.addSocket(userKey, AF_INET, false, secure, true, Util::emptyString);
+				if (!localPort)
+					break;
 				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_CLIENT, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
-				// ... and signal other client to do likewise.
-				if (localPort == 0)
-				{
-					LogManager::message("Error [2] $ConnectToMe port = 0 : ");
-				}
-				else
-				{
-					send("$ConnectToMe " + fromUtf8(senderNick) + ' ' + getMyExternalIP() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
-				}
+				send("$ConnectToMe " + fromUtf8(senderNick) + ' ' + getMyExternalIP() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
 				break;
 			}
 			else if (portStr.back() == 'R')
 			{
-				portStr.erase(portStr.length() - 1);
+				portStr.pop_back();
 				uint16_t port = parsePort(portStr);
 				if (!port)
+					break;
+				
+				string natUser;
+				{
+					LOCK(csState);
+					natUser = std::move(lastNatUser);
+					lastNatUser.clear();
+					lastNatUserExpires = 0;
+				}
+				if (natUser.empty())
 					break;
 
 				if (!checkConnectToMeFlood(ip, port))
 					break;
 
-				// Trigger connection attempt sequence locally
+				uint16_t localPort = socketPool.getPortForUser(natUser);
+				if (!localPort)
+					break;
+
 				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_SERVER, myNick, getHubUrl(),
 				                                              getEncoding(),
@@ -2308,7 +2326,7 @@ void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 void NmdcHub::onConnected() noexcept
 {
 	Client::onConnected();
-	
+	string natUser;
 	{
 		LOCK(csState);
 		salt.clear();
@@ -2317,9 +2335,28 @@ void NmdcHub::onConnected() noexcept
 		lastModeChar = 0;
 		hubSupportFlags = 0;
 		lastMyInfo.clear();
-		lastUpdate = pendingUpdate = 0;
+		natUser = std::move(lastNatUser);
+		lastNatUser.clear();
+		lastUpdate = pendingUpdate = lastNatUserExpires = 0;
 		lastExtJSONInfo.clear();
 	}
+	if (!natUser.empty())
+		socketPool.removeSocket(natUser);
+}
+
+void NmdcHub::onTimer(uint64_t tick) noexcept
+{
+	csState.lock();
+	if (lastNatUser.empty() || tick < lastNatUserExpires)
+	{
+		csState.unlock();
+		return;
+	}
+	string user = std::move(lastNatUser);
+	lastNatUser.clear();
+	lastNatUserExpires = 0;
+	csState.unlock();
+	socketPool.removeSocket(user);
 }
 
 #ifdef FLYLINKDC_USE_EXT_JSON
@@ -2465,20 +2502,27 @@ void NmdcHub::myInfoParse(const string& param)
 	fireUserUpdated(ou);
 }
 
-void NmdcHub::onDataLine(const string& aLine) noexcept
+void NmdcHub::onDataLine(const string& line) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		Client::onDataLine(aLine); // TODO skip Start
-		onLine(aLine);
+		Client::onDataLine(line); // TODO skip Start
+		onLine(line);
 	}
 }
 
-void NmdcHub::onFailed(const string& aLine) noexcept
+void NmdcHub::onFailed(const string& line) noexcept
 {
 	clearUsers();
-	Client::onFailed(aLine);
+	Client::onFailed(line);
 	updateCounts(true);
+	csState.lock();
+	string natUser = std::move(lastNatUser);
+	lastNatUser.clear();
+	lastNatUserExpires = 0;
+	csState.unlock();
+	if (!natUser.empty())
+		socketPool.removeSocket(natUser);
 }
 
 const string& NmdcHub::getLock()

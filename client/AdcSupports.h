@@ -65,7 +65,7 @@ class NmdcSupports
 			SERVER      = 0x04,
 			FIREBALL    = 0x08,
 			TLS         = 0x10,
-			NAT0        = 0x20, // TODO
+			NAT0        = 0x20, // non-standard and incompatible with some hubs
 		};
 		static void setStatus(Identity& id, const char statusChar, const char modeChar, const string& connection);
 };

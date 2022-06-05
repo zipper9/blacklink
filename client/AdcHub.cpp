@@ -32,6 +32,7 @@
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "Tag16.h"
+#include "SocketPool.h"
 
 #ifdef _DEBUG
 extern bool suppressUserConn;
@@ -700,19 +701,17 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().size() < 2)
 		return;
-	
-	uint16_t localPort;
+
 	{
 		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
-		localPort = clientSock->getLocalPort();
 	}
 
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (!ou || ou->getUser()->isMe())
 		return;
-		
+
 	const string& token = c.getParam(1);
 	if (token.empty())
 		return;
@@ -732,7 +731,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 		unknownProtocol(c.getFrom(), protocol, token);
 		return;
 	}
-	
+
 	if (isActive())
 	{
 		if (!ConnectionManager::tokenManager.addToken(token, TokenManager::TYPE_UPLOAD, GET_TICK() + 80000))
@@ -746,10 +745,14 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	
 	if (!isFeatureSupported(FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !(ou->getUser()->getFlags() & User::NAT0))
 		return;
-		
+
 	// Attempt to traverse NATs and/or firewalls with TCP.
 	// If they respond with their own, symmetric, RNT command, both
 	// clients call ConnectionManager::adcConnect.
+	const string userKey = ou->getIdentity().getCID() + ou->getIdentity().getSIDString() + '*';
+	uint16_t localPort = socketPool.addSocket(userKey, AF_INET, true, secure, true, Util::emptyString);
+	if (!localPort)
+		return;
 	send(AdcCommand(AdcCommand::CMD_NAT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).
 	     addParam(protocol).addParam(Util::toString(localPort)).addParam(token));
 }
@@ -998,28 +1001,25 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().size() < 3)
 		return;
-	
-	uint16_t localPort;
+
 	{
 		LOCK(csState);
 		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
 			return;
-		localPort = clientSock->getLocalPort();
 	}
-		
+
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (!ou || ou->getUser()->isMe())
 		return;
-		
+
 	const string& protocol = c.getParam(0);
 	const string& port = c.getParam(1);
 	const string& token = c.getParam(2);
-	
-	// bool secure = secureAvail(c.getFrom(), protocol, token);
-	bool secure = false;
+
+	bool secure;
 	if (protocol == AdcSupports::CLIENT_PROTOCOL)
 	{
-		// Nothing special
+		secure = false;
 	}
 	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::TLSOk())
 	{
@@ -1030,43 +1030,42 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 		unknownProtocol(c.getFrom(), protocol, token);
 		return;
 	}
-	
-	// Trigger connection attempt sequence locally ...
+
+	const string userKey = ou->getIdentity().getCID() + ou->getIdentity().getSIDString();
+	uint16_t localPort = socketPool.addSocket(userKey, AF_INET, false, secure, true, Util::emptyString);
+	if (!localPort)
+		return;
+
 	dcdebug("triggering connecting attempt in NAT: remote port = %s, local port = %d\n", port.c_str(), localPort);
 	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_CLIENT, token, secure);
-	
-	// ... and signal other client to do likewise.
+
 	send(AdcCommand(AdcCommand::CMD_RNT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(protocol).
 	     addParam(Util::toString(localPort)).addParam(token));
 }
 
 void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 {
-	// Sent request for NAT traversal cooperation, which
-	// was acknowledged (with requisite local port information).
 	if (c.getParameters().size() < 3)
 		return;
-	
-	uint16_t localPort;
+
 	{
 		LOCK(csState);
 		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
 			return;
-		localPort = clientSock->getLocalPort();
 	}
 
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (!ou || ou->getUser()->isMe())
 		return;
-		
+
 	const string& protocol = c.getParam(0);
 	const string& port = c.getParam(1);
 	const string& token = c.getParam(2);
-	
-	bool secure = false;
+
+	bool secure;
 	if (protocol == AdcSupports::CLIENT_PROTOCOL)
 	{
-		// Nothing special
+		secure = false;
 	}
 	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::TLSOk())
 	{
@@ -1077,8 +1076,12 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 		unknownProtocol(c.getFrom(), protocol, token);
 		return;
 	}
-	
-	// Trigger connection attempt sequence locally
+
+	const string userKey = ou->getIdentity().getCID() + ou->getIdentity().getSIDString() + '*';
+	uint16_t localPort = socketPool.getPortForUser(userKey);
+	if (!localPort)
+		return;
+
 	dcdebug("triggering connecting attempt in RNT: remote port = %s, local port = %d\n", port.c_str(), localPort);
 	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
 }
