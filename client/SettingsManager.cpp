@@ -1561,6 +1561,7 @@ void SettingsManager::loadOtherSettings()
 	catch (const SimpleXMLException&)
 	{
 	}
+	ShareManager::getInstance()->init();
 }
 
 #define REDUCE_LENGTH(maxLength)\

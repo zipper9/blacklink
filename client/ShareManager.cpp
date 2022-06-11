@@ -2074,7 +2074,6 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 
 void ShareManager::load(SimpleXML& xml)
 {
-	string xmlFile = Util::getConfigPath() + fileBZXml;
 	try
 	{
 		loadShareList(xml);
@@ -2086,6 +2085,7 @@ void ShareManager::load(SimpleXML& xml)
 		}
 		else
 		{
+			string xmlFile = Util::getConfigPath() + fileBZXml;
 			ShareLoader loader(*this);
 			SimpleXMLReader reader(&loader);
 			File file(xmlFile, File::READ, File::OPEN);
@@ -2105,6 +2105,12 @@ void ShareManager::load(SimpleXML& xml)
 	{
 		LogManager::message("Error loading share data: " + e.getError(), false);
 	}
+}
+
+void ShareManager::init()
+{
+	dcassert(ClientManager::isStartup());
+	string xmlFile = Util::getConfigPath() + fileBZXml;
 	updateSharedSizeL();
 	initDefaultShareGroupL();
 	if (!File::isExist(xmlFile))
