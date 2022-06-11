@@ -22,6 +22,7 @@ class SplashWindow : public CWindowImpl<SplashWindow>
 
 		void setProgressText(const tstring& text);
 		void setHasBorder(bool flag) { hasBorder = flag; }
+		void setUseDialogBackground(bool flag) { useDialogBackground = flag; }
 
 	private:
 		BEGIN_MSG_MAP(SplashWindow)
@@ -54,6 +55,7 @@ class SplashWindow : public CWindowImpl<SplashWindow>
 		tstring progressText;
 		CriticalSection csProgressText;
 		bool hasBorder;
+		bool useDialogBackground;
 
 		void drawNextFrame();
 		static void drawBorder(uint32_t* buf);

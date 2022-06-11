@@ -8,6 +8,7 @@
 #include "AboutDlg.h"
 #include "AboutCmdsDlg.h"
 #include "AboutStatDlg.h"
+#include "ImageLists.h"
 #include "wtl_flylinkdc.h"
 
 class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
@@ -33,6 +34,10 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
+			HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::ABOUT, 0);
+			SetIcon(dialogIcon, FALSE);
+			SetIcon(dialogIcon, TRUE);
+
 			SetWindowText(CTSTRING(ABOUT));
 			ctrlTab.Attach(GetDlgItem(IDC_ABOUTTAB));
 			TCITEM tcItem;

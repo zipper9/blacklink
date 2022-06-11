@@ -217,6 +217,7 @@ SplashWindow::SplashWindow()
 	font = nullptr;
 	useEffect = ::useEffect();
 	hasBorder = false;
+	useDialogBackground = false;
 }
 
 SplashWindow::~SplashWindow()
@@ -258,23 +259,16 @@ LRESULT SplashWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	HGLOBAL hGlobal = LoadResource(nullptr, res);
 	dcassert(hGlobal);
 	const void* resData = LockResource(hGlobal);
-	
-	uint8_t* in = maskBuf[useEffect ? 2 : 0];
+
 	zs.avail_in = resSize;
 	zs.next_in = (Bytef*) resData;
 	zs.avail_out = maskSize;
-	zs.next_out = (Bytef*) in;
+	zs.next_out = (Bytef*) maskBuf[useEffect ? 2 : 0];
 	inflate(&zs, 0);
 
-	uint32_t* out = static_cast<uint32_t*>(dibBuf[0]);
-	for (unsigned i = 0; i < maskSize; ++i)
-	{
-		uint32_t val = 255 - in[i];
-		val |= val << 8 | val << 16;
-		out[i] = val;
-	}
+	if (!IsAppThemed())
+		useDialogBackground = false;
 
-	if (hasBorder) drawBorder(out);
 	frameIndex = filterIndex = maskIndex = 0;
 	if (useEffect) SetTimer(2, 5000);
 	return 0;
@@ -308,7 +302,16 @@ LRESULT SplashWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 {
 	PAINTSTRUCT ps;
 	HDC hdc = BeginPaint(&ps);
-	if (!memDC) memDC = CreateCompatibleDC(hdc);
+	if (!memDC)
+	{
+		memDC = CreateCompatibleDC(hdc);
+		SelectObject(memDC, dibSect[0]);
+		uint32_t* destBuf = static_cast<uint32_t*>(dibBuf[0]);
+		if (!(useDialogBackground && SUCCEEDED(DrawThemeParentBackground(m_hWnd, memDC, nullptr))))
+			memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
+		blend(destBuf, maskBuf[useEffect ? 2 : 0], 0, WIDTH * HEIGHT);
+		if (hasBorder) drawBorder(destBuf);
+	}
 	SelectObject(memDC, dibSect[frameIndex == 0 ? 0 : 1]);
 	if (frameIndex) drawText(memDC);
 	BitBlt(hdc, 0, 0, WIDTH, HEIGHT, memDC, 0, 0, SRCCOPY);
@@ -344,7 +347,7 @@ LRESULT SplashWindow::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 			drawNextFrame();
 		Invalidate();
 	}
-	else 
+	else
 	{
 		KillTimer(2);
 		SetTimer(1, FRAME_TIME);
@@ -358,6 +361,12 @@ static const uint32_t SHADE_COLOR = 0xFFB4FF;
 
 void SplashWindow::drawNextFrame()
 {
+	bool whiteBackground = true;
+	if (useDialogBackground)
+	{
+		SelectObject(memDC, dibSect[1]);
+		if (SUCCEEDED(DrawThemeParentBackground(m_hWnd, memDC, nullptr))) whiteBackground = false;
+	}
 	uint32_t* destBuf = static_cast<uint32_t*>(dibBuf[1]);
 	uint8_t* destMask = maskBuf[maskIndex ^ 1];
 	const uint8_t* srcMask = frameIndex == 1 ? maskBuf[2] : maskBuf[maskIndex];
@@ -377,7 +386,7 @@ void SplashWindow::drawNextFrame()
 	}
 	else
 		shadeColor = SHADE_COLOR;
-	memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
+	if (whiteBackground) memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
 	blend(destBuf, destMask, shadeColor, WIDTH * HEIGHT);
 	blend(destBuf, maskBuf[2], 0, WIDTH * HEIGHT);
 	if (hasBorder) drawBorder(destBuf);
@@ -417,6 +426,11 @@ void SplashWindow::cleanup()
 	{
 		DeleteObject(font);
 		font = nullptr;
+	}
+	if (memDC)
+	{
+		DeleteDC(memDC);
+		memDC = nullptr;
 	}
 }
 

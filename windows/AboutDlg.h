@@ -61,6 +61,7 @@ class AboutDlg : public CDialogImpl<AboutDlg>
 			rc.right = rc.left + SplashWindow::WIDTH;
 			rc.top = 20;
 			rc.bottom = rc.top + SplashWindow::HEIGHT;
+			splash.setUseDialogBackground(true);
 			splash.Create(m_hWnd, rc, nullptr, WS_CHILD | WS_VISIBLE);
 
 			TCHAR compilerVersion[64];
