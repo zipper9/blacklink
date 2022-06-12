@@ -319,10 +319,10 @@ string CompatibilityManager::getWindowsVersionName()
 		{
 			if (getOsMinor() == 0)
 			{
-				if (getOsType() == VER_NT_WORKSTATION)
-					text += "10";
+				if (g_osvi.dwBuildNumber >= 22000)
+					text += getOsType() == VER_NT_WORKSTATION ? "11" : "Server 2022";
 				else
-					text += "Windows Server 2016 Technical Preview";
+					text += getOsType() == VER_NT_WORKSTATION ? "10" : "Server 2016";
 			}
 			// check type for Win10: Desktop, Mobile, etc...
 		}
