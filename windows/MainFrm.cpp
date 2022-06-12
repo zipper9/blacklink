@@ -72,6 +72,7 @@
 #include "../client/DCPlusPlus.h"
 #include "../client/HttpClient.h"
 #include "../client/SocketPool.h"
+#include "../client/AntiFlood.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -90,6 +91,7 @@
 #endif // FLYLINKDC_CALC_MEMORY_USAGE
 
 extern ParsedCommandLine cmdLine;
+extern IpBans tcpBans, udpBans;
 
 bool g_TabsCloseButtonEnabled;
 DWORD g_GDI_count = 0;
@@ -698,6 +700,8 @@ void MainFrame::onMinute(uint64_t tick)
 {
 	httpClient.removeUnusedConnections();
 	socketPool.removeExpired(tick);
+	tcpBans.removeExpired(tick);
+	udpBans.removeExpired(tick);
 	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
 		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
 	LogManager::closeOldFiles(tick);
