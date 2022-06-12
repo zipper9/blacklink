@@ -859,24 +859,27 @@ void ConnectionManager::checkConnections(uint64_t tick)
 			continue;
 		}
 		uint64_t lastActivity = uc->getLastActivity();
-		if (uc->isAnySet(UserConnection::FLAG_CCPM))
+		if (lastActivity)
 		{
-			if (lastActivity + CCPM_IDLE_TIME * 1000 < tick ||
-			    (ccpmIdleTimeout && uc->getLastMessageActivity() && uc->getLastMessageActivity() + ccpmIdleTimeout < tick))
+			if (uc->isAnySet(UserConnection::FLAG_CCPM))
 			{
-				uc->disconnect();
+				if (lastActivity + CCPM_IDLE_TIME * 1000 < tick ||
+					(ccpmIdleTimeout && uc->getLastMessageActivity() && uc->getLastMessageActivity() + ccpmIdleTimeout < tick))
+				{
+					uc->disconnect();
+				}
+				else if (lastActivity + CCPM_KEEP_ALIVE_TIME * 1000 < tick)
+				{
+					AdcCommand c(AdcCommand::CMD_PMI);
+					c.addParam("\n");
+					uc->send(c);
+				}
 			}
-			else if (lastActivity + CCPM_KEEP_ALIVE_TIME * 1000 < tick)
-			{
-				AdcCommand c(AdcCommand::CMD_PMI);
-				c.addParam("\n");
-				uc->send(c);
-			}
+			else if (uc->getState() == UserConnection::STATE_TRY_AGAIN && lastActivity + UC_RETRY_TIME * 1000 < tick)
+				uc->updated();
+			else if (lastActivity + UC_IDLE_TIME * 1000 < tick)
+				uc->disconnect(true);
 		}
-		else if (uc->getState() == UserConnection::STATE_TRY_AGAIN && lastActivity + UC_RETRY_TIME * 1000 < tick)
-			uc->updated();
-		else if (lastActivity + UC_IDLE_TIME * 1000 < tick)
-			uc->disconnect(true);
 		++j;
 	}
 }
