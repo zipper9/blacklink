@@ -220,13 +220,15 @@ void NmdcSupports::setStatus(Identity& id, const char statusChar, const char mod
 	if (modeChar == 'A')
 	{
 		unsetUserFlags |= User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE;
-		statusMask |= Identity::SF_PASSIVE;
+		statusMask |= Identity::SF_PASSIVE | Identity::SF_SOCKS;
 	}
 	else if (modeChar == 'P' || modeChar == '5')
 	{
 		statusFlags |= Identity::SF_PASSIVE;
 		setUserFlags |= User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE;
-		statusMask |= Identity::SF_PASSIVE;
+		statusMask |= Identity::SF_PASSIVE | Identity::SF_SOCKS;
+		if (modeChar == '5')
+			statusFlags |= Identity::SF_SOCKS;
 	}
 	id.setStatusBits(statusFlags, statusMask);
 	u->changeFlags(setUserFlags, unsetUserFlags);

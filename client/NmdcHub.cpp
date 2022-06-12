@@ -479,16 +479,24 @@ void NmdcHub::sendUDP(const string& ip, uint16_t port, string& sr)
 		COMMAND_DEBUG("[Active-Search]" + sr, DebugTask::CLIENT_OUT, ip + ':' + Util::toString(port));
 }
 
-string NmdcHub::getMyExternalIP() const
+bool NmdcHub::getMyExternalIP(IpAddress& ip) const
 {
 	Ip4Address ip4;
 	Ip6Address ip6;
 	getLocalIp(ip4, ip6);
 	if (Util::isValidIp4(ip4))
-		return Util::printIpAddress(ip4);
+	{
+		ip.type = AF_INET;
+		ip.data.v4 = ip4;
+		return true;
+	}
 	if (Util::isValidIp6(ip6))
-		return Util::printIpAddress(ip6);
-	return "0.0.0.0";
+	{
+		ip.type = AF_INET6;
+		ip.data.v6 = ip6;
+		return true;
+	}
+	return false;
 }
 
 void NmdcHub::getMyUDPAddr(string& ip, uint16_t& port) const
@@ -678,7 +686,7 @@ void NmdcHub::searchParse(const string& param, int type)
 		u->getUser()->setFlag(User::NMDC_SEARCH_PASSIVE);
 
 		// ignore if we or remote client don't support NAT traversal in passive mode although many NMDC hubs won't send us passive if we're in passive too, so just in case...
-		if (!isActive() && (!(u->getUser()->getFlags() & User::NAT0) || !BOOLSETTING(ALLOW_NAT_TRAVERSAL)))
+		if (!isActive() && (!(u->getUser()->getFlags() & User::NAT0) || !allowNatTraversal()))
 		{
 			return;
 		}
@@ -701,11 +709,11 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		myNick = this->myNick;
 		natUser = lastNatUser;
 	}
-	
+
 	string::size_type j = param.find(' ');
 	if (j == string::npos)
 		return;
-	
+
 	OnlineUserPtr u = findUser(param.substr(0, j));
 	if (!u)
 		return;
@@ -716,10 +724,15 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	{
 		connectToMe(*u, Util::emptyString);
 	}
-	else if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && (flags & User::NAT0))
+	else if (allowNatTraversal() && (flags & User::NAT0) && !u->getIdentity().getStatusBit(Identity::SF_SOCKS))
 	{
 		string userKey = u->getUser()->getCID().toBase32();
 		if (!natUser.empty() && natUser != userKey)
+			return;
+		if (u->getIdentity().getConnectIP().type == AF_INET6)
+			return;
+		IpAddress localIp;
+		if (!getMyExternalIP(localIp) || localIp.type == AF_INET6)
 			return;
 		bool secure = CryptoManager::TLSOk() && (flags & User::TLS);
 		// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
@@ -727,7 +740,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		uint16_t port = socketPool.addSocket(userKey, AF_INET, true, secure, true, Util::emptyString);
 		if (port)
 		{
-			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getMyExternalIP() + ':' +
+			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + Util::printIpAddress(localIp) + ':' +
 				Util::toString(port) +
 				(secure ? "NS " : "N ") + fromUtf8(myNick) + '|');
 			if (natUser.empty())
@@ -739,20 +752,14 @@ void NmdcHub::revConnectToMeParse(const string& param)
 			}
 		}
 	}
-	else
+	else if (!(flags & User::NMDC_FILES_PASSIVE))
 	{
-		if (!(flags & User::NMDC_FILES_PASSIVE))
-		{
-			// [!] IRainman fix: You can not reset the user to flag as if we are passive, not him!
-			// [-] u->getUser()->setFlag(User::NMDC_FILES_PASSIVE);
-			// [-] Notify the user that we're passive too...
-			// [-] updated(u); [-]
-			revConnectToMe(*u);
-			
-			return;
-		}
+#if 0 // set NMDC_FILES_PASSIVE because we got $RevConnectToMe from this user
+		u->getUser()->setFlag(User::NMDC_FILES_PASSIVE);
+#else
+		revConnectToMe(*u); // reply with our $RevConnectToMe
+#endif
 	}
-	
 }
 
 bool NmdcHub::checkConnectToMeFlood(const IpAddress& ip, uint16_t port)
@@ -812,23 +819,14 @@ void NmdcHub::connectToMeParse(const string& param)
 		string::size_type i = param.find(' ');
 		string::size_type j;
 		if (i == string::npos || (i + 1) >= param.size())
-		{
-			dcassert(0);
 			break;
-		}
 		i++;
 		j = param.find(':', i);
 		if (j == string::npos)
-		{
-			dcassert(0);
 			break;
-		}
 		server = param.substr(i, j - i);
 		if (j + 1 >= param.size())
-		{
-			dcassert(0);
 			break;
-		}
 		
 		i = param.find(' ', j + 1);
 		if (i == string::npos)
@@ -855,10 +853,10 @@ void NmdcHub::connectToMeParse(const string& param)
 		}
 
 		IpAddress ip;
-		if (!(Util::parseIpAddress(ip, server) && Util::isValidIp(ip)))
+		if (!(Util::parseIpAddress(ip, server) && Util::isValidIp(ip) && checkIpType(ip.type)))
 			break;
 
-		if (BOOLSETTING(ALLOW_NAT_TRAVERSAL))
+		if (allowNatTraversal())
 		{
 			if (portStr.back() == 'N')
 			{
@@ -878,14 +876,28 @@ void NmdcHub::connectToMeParse(const string& param)
 					break;
 
 				const string userKey = u->getUser()->getCID().toBase32();
-				uint16_t localPort = socketPool.addSocket(userKey, AF_INET, false, secure, true, Util::emptyString);
+				uint16_t localPort = socketPool.addSocket(userKey, ip.type, false, secure, true, Util::emptyString);
 				if (!localPort)
 					break;
 				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
 				                                              BufferedSocket::NAT_CLIENT, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
-				send("$ConnectToMe " + fromUtf8(senderNick) + ' ' + getMyExternalIP() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
+				Ip4Address ip4;
+				Ip6Address ip6;
+				getLocalIp(ip4, ip6);
+				IpAddress localIp;
+				if (ip.type == AF_INET)
+				{
+					localIp.data.v4 = ip4;
+					localIp.type = AF_INET;
+				}
+				else
+				{
+					localIp.data.v6 = ip6;
+					localIp.type = AF_INET6;
+				}
+				send("$ConnectToMe " + fromUtf8(senderNick) + ' ' + Util::printIpAddress(localIp) + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
 				break;
 			}
 			else if (portStr.back() == 'R')
@@ -908,8 +920,9 @@ void NmdcHub::connectToMeParse(const string& param)
 				if (!checkConnectToMeFlood(ip, port))
 					break;
 
-				uint16_t localPort = socketPool.getPortForUser(natUser);
-				if (!localPort)
+				uint16_t localPort;
+				int localType;
+				if (!socketPool.getPortForUser(natUser, localPort, localType) || localType != ip.type)
 					break;
 
 				ConnectionManager::getInstance()->nmdcConnect(ip, port, localPort,
@@ -1824,16 +1837,20 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 		return;
 	}
 
+	IpAddress ip;
+	if (!getMyExternalIP(ip))
+		return;
+
 	dcdebug("NmdcHub::connectToMe %s\n", user.getIdentity().getNick().c_str());
 	const string nick = fromUtf8(user.getIdentity().getNick());
 	uint64_t expires = token.empty() ? GET_TICK() + 45000 : UINT64_MAX;
 	if (!ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl(), token, getEncoding(), expires))
 		return;
 
-	send("$ConnectToMe " + nick + ' ' + getMyExternalIP() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
+	send("$ConnectToMe " + nick + ' ' + Util::printIpAddress(ip) + ':' + Util::toString(port) + (secure ? "S|" : "|"));
 }
 
-void NmdcHub::revConnectToMe(const OnlineUser& aUser)
+void NmdcHub::revConnectToMe(const OnlineUser& user)
 {
 	string myNick;
 	{
@@ -1841,8 +1858,8 @@ void NmdcHub::revConnectToMe(const OnlineUser& aUser)
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
-	dcdebug("NmdcHub::revConnectToMe %s\n", aUser.getIdentity().getNick().c_str());
-	send("$RevConnectToMe " + fromUtf8(myNick) + ' ' + fromUtf8(aUser.getIdentity().getNick()) + '|');
+	dcdebug("NmdcHub::revConnectToMe %s\n", user.getIdentity().getNick().c_str());
+	send("$RevConnectToMe " + fromUtf8(myNick) + ' ' + fromUtf8(user.getIdentity().getNick()) + '|');
 }
 
 void NmdcHub::hubMessage(const string& message, bool thirdPerson)
@@ -1956,11 +1973,11 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		if (um->getIsFireballStatus())
 			status |= NmdcSupports::FIREBALL;
 	}
-	if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && !isActive())
+	if (allowNatTraversal() && !isActive())
 	{
 		status |= NmdcSupports::NAT0;
 	}
-	
+
 	if (CryptoManager::TLSOk())
 	{
 		status |= NmdcSupports::TLS;

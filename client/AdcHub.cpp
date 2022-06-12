@@ -746,6 +746,9 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	if (!isFeatureSupported(FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !(ou->getUser()->getFlags() & User::NAT0))
 		return;
 
+	if (ou->getIdentity().getConnectIP().type == AF_INET6)
+		return;
+
 	// Attempt to traverse NATs and/or firewalls with TCP.
 	// If they respond with their own, symmetric, RNT command, both
 	// clients call ConnectionManager::adcConnect.
@@ -1008,6 +1011,9 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 			return;
 	}
 
+	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
+		return;
+
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (!ou || ou->getUser()->isMe())
 		return;
@@ -1031,13 +1037,17 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 		return;
 	}
 
+	IpAddress ip = ou->getIdentity().getConnectIP();
+	if (!ip.type)
+		return;
+
 	const string userKey = ou->getIdentity().getCID() + ou->getIdentity().getSIDString();
-	uint16_t localPort = socketPool.addSocket(userKey, AF_INET, false, secure, true, Util::emptyString);
+	uint16_t localPort = socketPool.addSocket(userKey, ip.type, false, secure, true, Util::emptyString);
 	if (!localPort)
 		return;
 
 	dcdebug("triggering connecting attempt in NAT: remote port = %s, local port = %d\n", port.c_str(), localPort);
-	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_CLIENT, token, secure);
+	ConnectionManager::getInstance()->adcConnect(*ou, ip.type, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_CLIENT, token, secure);
 
 	send(AdcCommand(AdcCommand::CMD_RNT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(protocol).
 	     addParam(Util::toString(localPort)).addParam(token));
@@ -1053,6 +1063,9 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
 			return;
 	}
+
+	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
+		return;
 
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (!ou || ou->getUser()->isMe())
@@ -1078,12 +1091,13 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	}
 
 	const string userKey = ou->getIdentity().getCID() + ou->getIdentity().getSIDString() + '*';
-	uint16_t localPort = socketPool.getPortForUser(userKey);
-	if (!localPort)
+	uint16_t localPort;
+	int localType;
+	if (!socketPool.getPortForUser(userKey, localPort, localType))
 		return;
 
 	dcdebug("triggering connecting attempt in RNT: remote port = %s, local port = %d\n", port.c_str(), localPort);
-	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
+	ConnectionManager::getInstance()->adcConnect(*ou, localType, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
 }
 
 void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)

@@ -1103,6 +1103,7 @@
     <Image Include="res\StateUsers.png" />
     <Image Include="res\torrent.png" />
     <Image Include="res\Trackers.png" />
+    <Image Include="res\TransferSpeeds.png" />
     <Image Include="res\TransferTree.png" />
     <Image Include="res\ADLSearch.ico" />
     <Image Include="res\Arrows.png" />
@@ -1141,6 +1142,7 @@
     <Image Include="res\Toolbar-mini.png" />
     <Image Include="res\Toolbar.png" />
     <Image Include="res\TransferSpeeds-BW.png" />
+    <Image Include="res\TransferUser.ico" />
     <Image Include="res\User.ico" />
     <Image Include="res\UserBan.ico" />
     <Image Include="res\UserBanOff.ico" />

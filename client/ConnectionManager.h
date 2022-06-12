@@ -195,7 +195,7 @@ class ConnectionManager :
 		void nmdcConnect(const IpAddress& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);
 		void nmdcConnect(const IpAddress& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure);
 		void adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure);
-		void adcConnect(const OnlineUser& user, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
+		void adcConnect(const OnlineUser& user, int af, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
 
 		void getDownloadConnection(const UserPtr& user);
 		void force(const UserPtr& user);

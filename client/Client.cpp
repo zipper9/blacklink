@@ -369,7 +369,7 @@ void Client::connectIfNetworkOk()
 
 bool Client::isActive() const
 {
-	extern bool g_DisableTestPort;
+	extern bool g_DisableTestPort; // TODO: remove this
 	if (!g_DisableTestPort)
 		return ClientManager::isActive(ip.type, favMode);
 	return true; // Manual active
@@ -591,6 +591,21 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 		else
 			Util::parseIpAddress(ip6, externalIP);
 	}
+}
+
+bool Client::checkIpType(int type) const
+{
+	if (type != AF_INET && type != AF_INET6)
+		return false;
+	Ip4Address ip4;
+	Ip6Address ip6;
+	getLocalIp(ip4, ip6);
+	return type == AF_INET ? Util::isValidIp4(ip4) : Util::isValidIp6(ip6);
+}
+
+bool Client::allowNatTraversal()
+{
+	return BOOLSETTING(ALLOW_NAT_TRAVERSAL) && SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_DIRECT;
 }
 
 unsigned Client::searchInternal(const SearchParamToken& sp)

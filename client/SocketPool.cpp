@@ -91,7 +91,7 @@ uint16_t SocketPool::addSocket(const string& userKey, int af, bool serverRole, b
 		return 0;
 	}
 
-	SocketInfoPtr si = std::make_shared<SocketInfo>(SocketInfo{ sock, userKey, port, expires });
+	SocketInfoPtr si = std::make_shared<SocketInfo>(SocketInfo{ sock, userKey, port, expires, af });
 	auto p1 = socketsByPort.insert(std::make_pair(port, si));
 	bool result = p1.second;
 	if (result)
@@ -129,14 +129,19 @@ Socket* SocketPool::takeSocket(uint16_t port) noexcept
 	return sock;
 }
 
-uint16_t SocketPool::getPortForUser(const string& userKey) const noexcept
+bool SocketPool::getPortForUser(const string& userKey, uint16_t& port, int& af) const noexcept
 {
-	uint16_t port = 0;
+	bool result = false;
 	csData.lock();
 	auto i = socketsByUser.find(userKey);
-	if (i != socketsByUser.end()) port = i->second->port;
+	if (i != socketsByUser.end())
+	{
+		port = i->second->port;
+		af = i->second->af;
+		result = true;
+	}
 	csData.unlock();
-	return port;
+	return result;
 }
 
 void SocketPool::removeSocket(const string& userKey) noexcept

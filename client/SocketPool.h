@@ -13,7 +13,7 @@ class SocketPool
 		uint16_t addSocket(const string& userKey, int af, bool serverRole, bool useTLS, bool allowUntrusted, const string& expKP) noexcept;
 		Socket* takeSocket(uint16_t port) noexcept;
 		void removeSocket(const string& userKey) noexcept;
-		uint16_t getPortForUser(const string& userKey) const noexcept;
+		bool getPortForUser(const string& userKey, uint16_t& port, int& af) const noexcept;
 		void removeExpired(uint64_t tick) noexcept;
 
 	private:
@@ -23,6 +23,7 @@ class SocketPool
 			string userKey;
 			uint16_t port;
 			uint64_t expires;
+			int af;
 		};
 		typedef std::shared_ptr<SocketInfo> SocketInfoPtr;
 

@@ -1045,14 +1045,36 @@ void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, uin
 
 void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure)
 {
-	adcConnect(user, port, 0, BufferedSocket::NAT_NONE, token, secure);
+	adcConnect(user, 0, port, 0, BufferedSocket::NAT_NONE, token, secure);
 }
 
-void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure)
+void ConnectionManager::adcConnect(const OnlineUser& user, int af, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure)
 {
 	if (shuttingDown)
 		return;
-		
+
+	IpAddress ip;
+	if (af == AF_INET)
+	{
+		Ip4Address ip4 = user.getIdentity().getIP4();
+		if (!Util::isValidIp4(ip4)) return;
+		ip.type = AF_INET;
+		ip.data.v4 = ip4;
+	}
+	else if (af == AF_INET6)
+	{
+		if (!ConnectivityManager::hasIP6()) return;
+		Ip6Address ip6 = user.getIdentity().getIP6();
+		if (!Util::isValidIp6(ip6)) return;
+		ip.type = AF_INET6;
+		ip.data.v6 = ip6;
+	}
+	else
+	{
+		ip = user.getIdentity().getConnectIP();
+		if (!ip.type) return;
+	}
+
 	UserConnection* uc = getConnection(false, secure);
 	uc->setUserConnectionToken(token);
 	uc->setEncoding(Text::CHARSET_UTF8);
@@ -1066,7 +1088,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16
 	}
 	try
 	{
-		uc->connect(user.getIdentity().getConnectIP(), port, localPort, natRole);
+		uc->connect(ip, port, localPort, natRole);
 	}
 	catch (const Exception&)
 	{

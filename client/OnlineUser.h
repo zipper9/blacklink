@@ -52,7 +52,8 @@ class Identity
 			SF_AWAY     = 0x01,
 			SF_SERVER   = 0x02,
 			SF_FIREBALL = 0x04,
-			SF_PASSIVE  = 0x08
+			SF_PASSIVE  = 0x08,
+			SF_SOCKS    = 0x10
 		};
 
 		Identity()

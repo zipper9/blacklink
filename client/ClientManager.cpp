@@ -1165,6 +1165,8 @@ int ClientManager::getConnectivityMode(int af, int favHubMode)
 		case 1: return SettingsManager::INCOMING_DIRECT;
 		case 2: return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 	}
+	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
+		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 	int portTestState = PortTest::STATE_UNKNOWN;
 	int type;
 	if (af == AF_INET6)

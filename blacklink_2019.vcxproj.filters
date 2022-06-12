@@ -1141,6 +1141,8 @@
     <Image Include="res\Editor.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="res\TransferUser.ico" />
+    <Image Include="res\TransferSpeeds.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />

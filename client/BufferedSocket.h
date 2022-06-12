@@ -5,7 +5,6 @@
 #include "BufferedSocketListener.h"
 #include "Thread.h"
 #include "Locks.h"
-#include "Ip4Address.h"
 
 class UnZFilter;
 class InputStream;

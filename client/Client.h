@@ -164,7 +164,9 @@ class Client : public ClientBase,
 			return "[Hub: " + getHubUrl() + ", " + getIpPort() + "]";
 		}
 		void getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const;
-		
+		bool checkIpType(int type) const;
+		static bool allowNatTraversal();
+
 		static int getTotalCounts()
 		{
 			return g_counts[COUNT_NORMAL] + g_counts[COUNT_REGISTERED] + g_counts[COUNT_OP];
