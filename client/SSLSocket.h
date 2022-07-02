@@ -31,14 +31,14 @@ class SSLSocketException : public SocketException
 {
 	public:
 #ifdef _DEBUG
-		explicit SSLSocketException(const string& aError) noexcept :
-			SocketException("SSLSocketException: " + aError) { }
+		explicit SSLSocketException(const string& error) noexcept :
+			SocketException("SSLSocketException: " + error) { }
 #else //_DEBUG
-		explicit SSLSocketException(const string& aError) noexcept :
-			SocketException(aError) { }
+		explicit SSLSocketException(const string& error) noexcept :
+			SocketException(error) { }
 #endif // _DEBUG
-		explicit SSLSocketException(int aError) noexcept :
-			SocketException(aError) { }
+		explicit SSLSocketException(int error) noexcept :
+			SocketException(error) { }
 		virtual ~SSLSocketException() noexcept { }
 };
 
@@ -74,8 +74,8 @@ class SSLSocket : public Socket
 		virtual ByteVector getKeyprint() const noexcept override;
 		virtual bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept override;
 		
-		virtual bool waitConnected(unsigned millis)  override;
-		virtual bool waitAccepted(unsigned millis)  override;
+		virtual bool waitConnected(unsigned millis) override;
+		virtual bool waitAccepted(unsigned millis) override;
 		
 	private:
 		SSL_CTX* ctx;

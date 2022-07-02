@@ -68,21 +68,15 @@ bool SSLSocket::waitConnected(unsigned millis)
 	if (!ssl)
 	{
 		if (!Socket::waitConnected(millis))
-		{
 			return false;
-		}
 		ssl.reset(SSL_new(ctx));
 		if (!ssl)
 			checkSSL(-1);
 			
 		if (!verifyData)
-		{
 			SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
-		}
 		else
-		{
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
-		}
 		
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
@@ -102,12 +96,10 @@ bool SSLSocket::waitConnected(unsigned millis)
 #endif
 #endif
 	}
-	
+
 	if (SSL_is_init_finished(ssl))
-	{
 		return true;
-	}
-	
+
 	while (true)
 	{
 		int isServer = SSL_is_server(ssl);
@@ -152,34 +144,29 @@ bool SSLSocket::waitAccepted(unsigned millis)
 	if (!ssl)
 	{
 		if (!Socket::waitAccepted(millis))
-		{
 			return false;
-		}
 		ssl.reset(SSL_new(ctx));
 		if (!ssl)
 			checkSSL(-1);
-			
+
 		if (!verifyData)
-		{
 			SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
-		}
-		else SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
-		
+		else
+			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
+
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
 	}
-	
+
 	if (SSL_is_init_finished(ssl))
-	{
 		return true;
-	}
-	
+
 	while (true)
 	{
 		int ret = SSL_accept(ssl);
 		if (ret == 1)
 		{
 			logInfo(true);
-			dcdebug("Connected to SSL client using %s\n", SSL_get_cipher(ssl));
+			dcdebug("SSLSocket accepted using %s\n", SSL_get_cipher(ssl));
 			return true;
 		}
 		if (!waitWant(ret, millis))
@@ -198,45 +185,34 @@ bool SSLSocket::waitWant(int ret, unsigned millis)
 			return wait(millis, Socket::WAIT_READ) == WAIT_READ;
 		case SSL_ERROR_WANT_WRITE:
 			return wait(millis, Socket::WAIT_WRITE) == WAIT_WRITE;
-		// Check if this is a fatal error...
-		default:
-			checkSSL(ret);
 	}
-	dcdebug("SSL: Unexpected fallthrough");
-	dcassert(0);
-	// There was no error?
-	return true;
+	// Check if this is a fatal error...
+	checkSSL(ret);
+	return false;
 }
 
-int SSLSocket::read(void* aBuffer, int aBufLen)
+int SSLSocket::read(void* buffer, int size)
 {
 	if (!ssl)
-	{
 		return -1;
-	}
 #ifdef _WIN32
 	lastWaitResult &= ~WAIT_READ;
 #endif
-	int len = checkSSL(SSL_read(ssl, aBuffer, aBufLen));
+	int len = checkSSL(SSL_read(ssl, buffer, size));
 	
 	if (len > 0)
-	{
 		g_stats.ssl.downloaded += len;
-		//dcdebug("In(s): %.*s\n", len, (char*)aBuffer);
-	}
 	return len;
 }
 
-int SSLSocket::write(const void* aBuffer, int aLen)
+int SSLSocket::write(const void* buffer, int size)
 {
 	if (!ssl)
-	{
 		return -1;
-	}
 	int ret = 0;
-	if (aLen)
+	if (size)
 	{
-		ret = checkSSL(SSL_write(ssl, aBuffer, aLen));
+		ret = checkSSL(SSL_write(ssl, buffer, size));
 		if (ret < 0)
 		{
 #ifdef _WIN32
@@ -246,17 +222,7 @@ int SSLSocket::write(const void* aBuffer, int aLen)
 		else
 			g_stats.ssl.uploaded += ret;
 		if (ret > 0)
-		{
 			g_stats.ssl.uploaded += ret;
-			//dcdebug("Out(s): %.*s\n", ret, (char*)aBuffer);
-		}
-	}
-	else
-	{
-		dcdebug("SSLSocket::write skip write aLen = 0\r\n");
-#ifdef _DEBUG
-		LogManager::message("SSLSocket::write skip write aLen = 0");
-#endif
 	}
 	return ret;
 }
@@ -264,9 +230,7 @@ int SSLSocket::write(const void* aBuffer, int aLen)
 int SSLSocket::checkSSL(int ret)
 {
 	if (!ssl)
-	{
 		return -1;
-	}
 	if (ret <= 0)
 	{
 		/* inspired by boost.asio (asio/ssl/detail/impl/engine.ipp, function engine::perform) and
@@ -335,34 +299,19 @@ int SSLSocket::wait(int millis, int waitFor)
 bool SSLSocket::isTrusted() const
 {
 	if (!ssl)
-	{
 		return false;
-	}
 	if (isTrustedCached)
 		return true;
 	if (SSL_get_verify_result(ssl) != X509_V_OK)
-	{
 		return false;
-	}
-	
+
 	X509* cert = SSL_get_peer_certificate(ssl);
 	if (!cert)
-	{
 		return false;
-	}
 	X509_free(cert);
 	isTrustedCached = true;
 	return true;
 }
-/*
-bool SSLSocket::isKeyprintMatch() const noexcept
-{
-    if (ssl)
-    return SSL_get_verify_result(ssl) != X509_V_ERR_APPLICATION_VERIFICATION;
-
-    return true;
-}
-*/
 
 std::string SSLSocket::getCipherName() const noexcept
 {

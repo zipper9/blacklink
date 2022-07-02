@@ -880,6 +880,8 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 				sock->connect(ip, port, isNumeric ? Util::emptyString : *host);
 				setOptions();
 			}
+			else
+				state = STARTING;
 			while (true)
 			{
 				if (sock->waitConnected(POLL_TIMEOUT))
@@ -930,7 +932,7 @@ void BufferedSocket::doAccept()
 	{
 		if (stopFlag)
 			return;
-			
+
 		if (startTime + LONG_TIMEOUT < GET_TICK())
 			throw SocketException(STRING(CONNECTION_TIMEOUT));
 	}
