@@ -11,7 +11,7 @@ class UserInfo;
 class UserInfoBase;
 struct FavUserTraits;
 
-struct UserInfoGuiTraits // technical class, please do not use it directly!
+struct UserInfoGuiTraits // internal class, please do not use it directly!
 {
 		friend class UserInfoSimple;
 
@@ -48,15 +48,12 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		enum Options
 		{
 			DEFAULT = 0,
-			
 			NO_SEND_PM = 1,
 			NO_CONNECT_FAV_HUB = 2,
 			NO_COPY = 4, // Please disable if your want custom copy menu, for user items please use copyUserMenu.
 			NO_FILE_LIST = 8,
-			
 			NICK_TO_CHAT = 16,
 			USER_LOG = 32,
-			
 			INLINE_CONTACT_LIST = 64,
 		};
 
@@ -65,6 +62,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static bool getSpeedLimitByCtrlId(WORD wID, int& lim, const tstring& nick);
 		static void updateSpeedMenuText(int customSpeed);
 		static void processDetailsMenu(WORD id);
+		static void copyUserInfo(WORD idc, const Identity& id);
 
 		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
@@ -166,179 +164,30 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			LogManager::message("Not implemented [virtual LRESULT onAddNickToChat]");
 			return 0;
 		}
-		
+
+		virtual OnlineUserPtr getSelectedOnlineUser() const
+		{
+			return OnlineUserPtr();
+		}
+
 		virtual LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			dcassert(0);
-			LogManager::message("Not implemented [virtual LRESULT onCopyUserInfo]");
-			/*
-			// !SMT!-S
-			const auto su = getSelectedUser();
-			if (su)
+			OnlineUserPtr ou = getSelectedOnlineUser();
+			if (ou)
 			{
-			    __if_exists(T2::getIdentity)
-			    {
-			        const auto id = su->getIdentity();
-			        const auto su = su->getUser();
-			    }
-			    __if_exists(T2::getLastNick)
-			    {
-			        const auto& u = su;
-			    }
-			
-			    string sCopy;
-			    switch (wID)
-			    {
-			        case IDC_COPY_NICK:
-			            __if_exists(T2::getIdentity)
-			            {
-			                iiii
-			                sCopy += id.getNick();
-			            }
-			            __if_exists(T2::getLastNick)
-			            {
-			                iiii
-			                sCopy += su->getLastNick();
-			            }
-			            break;
-			        case IDC_COPY_IP:
-			            __if_exists(T2::getIp)
-			            {
-			                iiii
-			                sCopy += su->getIp();
-			            }
-			            __if_exists(T2::getIP)
-			            {
-			                iiii
-			                sCopy += su->getIP();
-			            }
-			            break;
-			        case IDC_COPY_NICK_IP:
-			        {
-			            // TODO translate
-			            sCopy += "User Info:\r\n";
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n";
-			            }
-			            __if_exists(T2::getLastNick)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + su->getLastNick() + "\r\n";
-			            }
-			            sCopy += "\tIP: ";
-			            __if_exists(T2::getIp)
-			            {
-			                sCopy += Identity::formatIpString(su->getIp());
-			            }
-			            __if_exists(T2::getIP)
-			            {
-			                sCopy += Identity::formatIpString(su->getIP());
-			            }
-			            break;
-			        }
-			        case IDC_COPY_ALL:
-			        {
-			            // TODO translate
-			            sCopy += "User info:\r\n";
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n";
-			            }
-			            __if_exists(T2::getLastNick)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + su->getLastNick() + "\r\n";
-			            }
-			            sCopy += "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
-			                     "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
-			                     "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(u->getBytesShared());
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += (u->isNMDC() ? Util::emptyString : "(" + STRING(SHARED_FILES) + ": " + Util::toString(id.getSharedFiles()) + ")");
-			            }
-			            sCopy += "\r\n";
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\t" + STRING(DESCRIPTION) + ": " + id.getDescription() + "\r\n" +
-			                         "\t" + STRING(APPLICATION) + ": " + id.getApplication() + "\r\n";
-			                const auto con = Identity::formatSpeedLimit(id.getDownloadSpeed());
-			                if (!con.empty())
-			                {
-			                    sCopy += "\t";
-			                    sCopy += (u->isNMDC() ? STRING(CONNECTION) : "Download speed");
-			                    sCopy += ": " + con + "\r\n";
-			                }
-			            }
-			            const auto lim = Identity::formatSpeedLimit(u->getLimit());
-			            if (!lim.empty())
-			            {
-			                sCopy += "\tUpload limit: " + lim + "\r\n";
-			            }
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\tE-Mail: " + id.getEmail() + "\r\n" +
-			                         "\tClient Type: " + Util::toString(id.getClientType()) + "\r\n" +
-			                         "\tMode: " + (id.isTcpActive(&id.getClient()) ? 'A' : 'P') + "\r\n";
-			            }
-			            sCopy += "\t" + STRING(SLOTS) + ": " + Util::toString(su->getSlots()) + "\r\n";
-			            __if_exists(T2::getIp)
-			            {
-			                sCopy += "\tIP: " + Identity::formatIpString(id.getIp()) + "\r\n";
-			            }
-			            __if_exists(T2::getIP)
-			            {
-			                sCopy += "\tIP: " + Identity::formatIpString(id.getIP()) + "\r\n";
-			            }
-			            __if_exists(T2::getIdentity)
-			            {
-			                const auto su = id.getSupports();
-			                if (!su.empty())
-			                {
-			                    sCopy += "\tKnown supports: " + su;
-			                }
-			            }
-			            break;
-			        }
-			        default:
-			            __if_exists(T2::getIdentity)
-			            {
-			                switch (wID)
-			                {
-			                    case IDC_COPY_EXACT_SHARE:
-			                        sCopy += Identity::formatShareBytes(id.getBytesShared());
-			                        break;
-			                    case IDC_COPY_DESCRIPTION:
-			                        sCopy += id.getDescription();
-			                        break;
-			                    case IDC_COPY_APPLICATION:
-			                        sCopy += id.getApplication();
-			                        break;
-			                    case IDC_COPY_TAG:
-			                        sCopy += id.getTag();
-			                        break;
-			                    case IDC_COPY_CID:
-			                        sCopy += id.getCID();
-			                        break;
-			                    case IDC_COPY_EMAIL_ADDRESS:
-			                        sCopy += id.getEmail();
-			                        break;
-			                    default:
-			                        dcdebug("THISFRAME DON'T GO HERE\n");
-			                        return 0;
-			                }
-			                break;
-			            }
-			            dcdebug("THISFRAME DON'T GO HERE\n");
-			            return 0;
-			    }
-			    if (!sCopy.empty())
-			    {
-			        WinUtil::setClipboard(sCopy);
-			    }
+				const Identity& id = ou->getIdentity();
+				copyUserInfo(wID, id);
+				return 0;
 			}
-			*/
+			if (wID == IDC_COPY_NICK)
+			{
+				const auto& su = getSelectedUser();
+				if (su)
+					WinUtil::setClipboard(Text::toT(UserInfoBaseHandlerTraitsUser<T2>::getNick(su)));
+			}
 			return 0;
 		}
-		
+
 		LRESULT onMatchQueue(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			doAction(&UserInfoBase::matchQueue);
@@ -669,12 +518,17 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favUserMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.getBitmap(IconBitmaps::CONTACT_LIST, 0));
 			}
 		}
+
 	public:
 		void appendCopyMenuForSingleUser(OMenu& menu)
 		{
 			dcassert(selectedUser);
 			if (DISABLE(options, NO_COPY))
 			{
+				int flags = getSelectedOnlineUser() ? MF_ENABLED : MF_GRAYED;
+				int count = copyUserMenu.GetMenuItemCount();
+				for (int i = 1; i < count; i++)
+					copyUserMenu.EnableMenuItem(i, MF_BYPOSITION | flags);
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY));
 				appendSeparator(menu);
 			}

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "UsersFrame.h"
 #include "LimitEditDlg.h"
+#include "../client/LocationUtil.h"
 
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
@@ -205,6 +206,125 @@ void UserInfoGuiTraits::processDetailsMenu(WORD id)
 			break;
 		}
 	detailsItems.clear();
+}
+
+void UserInfoGuiTraits::copyUserInfo(WORD idc, const Identity& id)
+{
+	string sCopy;
+	switch (idc)
+	{
+		case IDC_COPY_NICK:
+			sCopy += id.getNick();
+			break;
+		case IDC_COPY_EXACT_SHARE:
+			sCopy += Identity::formatShareBytes(id.getBytesShared());
+			break;
+		case IDC_COPY_DESCRIPTION:
+			sCopy += id.getDescription();
+			break;
+		case IDC_COPY_APPLICATION:
+			sCopy += id.getApplication();
+			break;
+		case IDC_COPY_TAG:
+			sCopy += id.getTag();
+			break;
+		case IDC_COPY_CID:
+			sCopy += id.getCID();
+			break;
+		case IDC_COPY_EMAIL_ADDRESS:
+			sCopy += id.getEmail();
+			break;
+		case IDC_COPY_GEO_LOCATION:
+		{
+			IPInfo ipInfo;
+			Util::getIpInfo(id.getConnectIP(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			sCopy += Util::getDescription(ipInfo);
+			break;
+		}
+		case IDC_COPY_IP:
+			sCopy += Util::printIpAddress(id.getConnectIP());
+			break;
+		case IDC_COPY_NICK_IP:
+		{
+			// TODO translate
+			sCopy += "User Info:\r\n"
+			         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n";
+			Ip4Address ip4 = id.getIP4();
+			if (Util::isValidIp4(ip4))
+			{
+				IpAddress ip;
+				ip.type = AF_INET;
+				ip.data.v4 = ip4;
+				sCopy += "\tIPv4: " + Identity::formatIpString(ip) + "\r\n";
+			}
+			Ip6Address ip6 = id.getIP6();
+			if (Util::isValidIp6(ip6))
+			{
+				IpAddress ip;
+				ip.type = AF_INET6;
+				ip.data.v6 = ip6;
+				sCopy += "\tIPv6: " + Identity::formatIpString(ip) + "\r\n";
+			}
+			break;
+		}
+		case IDC_COPY_ALL:
+		{
+			// TODO: Use Identity::getReport ?
+			const auto& u = id.getUser();
+			bool isNMDC = (u->getFlags() & User::NMDC) != 0;
+			sCopy += "User info:\r\n"
+			         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n" +
+			         "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
+			         "\tTag: " + id.getTag() + "\r\n" +
+			         "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
+			         "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(id.getBytesShared()) + (isNMDC ? Util::emptyString : "(" + STRING(SHARED_FILES) +
+			                 ": " + Util::toString(id.getSharedFiles()) + ")") + "\r\n" +
+			         "\t" + STRING(DESCRIPTION) + ": " + id.getDescription() + "\r\n" +
+			         "\t" + STRING(APPLICATION) + ": " + id.getApplication() + "\r\n";
+			const auto con = Identity::formatSpeedLimit(id.getDownloadSpeed());
+			if (!con.empty())
+			{
+				sCopy += "\t";
+				sCopy += isNMDC ? STRING(CONNECTION) : "Download speed";
+				sCopy += ": " + con + "\r\n";
+			}
+			const auto lim = Identity::formatSpeedLimit(u->getLimit());
+			if (!lim.empty())
+			{
+				sCopy += "\tUpload limit: " + lim + "\r\n";
+			}
+			sCopy += "\tE-Mail: " + id.getEmail() + "\r\n" +
+			         "\tClient Type: " + Util::toString(id.getClientType()) + "\r\n" +
+			         "\tMode: " + (id.isTcpActive() ? 'A' : 'P') + "\r\n" +
+			         "\t" + STRING(SLOTS) + ": " + Util::toString(id.getSlots()) + "\r\n";
+			Ip4Address ip4 = id.getIP4();
+			if (Util::isValidIp4(ip4))
+			{
+				IpAddress ip;
+				ip.type = AF_INET;
+				ip.data.v4 = ip4;
+				sCopy += "\tIPv4: " + Identity::formatIpString(ip) + "\r\n";
+			}
+			Ip6Address ip6 = id.getIP6();
+			if (Util::isValidIp6(ip6))
+			{
+				IpAddress ip;
+				ip.type = AF_INET6;
+				ip.data.v6 = ip6;
+				sCopy += "\tIPv6: " + Identity::formatIpString(ip) + "\r\n";
+			}
+			const auto su = id.getSupports();
+			if (!su.empty())
+			{
+				sCopy += "\tKnown supports: " + su;
+			}
+			break;
+		}
+		default:
+			dcassert(0);
+			return;
+	}
+	WinUtil::setClipboard(sCopy);
 }
 
 void FavUserTraits::init(const UserInfoBase& ui)

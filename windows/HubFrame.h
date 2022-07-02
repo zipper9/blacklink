@@ -129,7 +129,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onHubFrmCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -352,7 +351,10 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept override;
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
 		void on(SettingsLoaded, const Client*) noexcept override;
-		
+
+		// UserInfoBaseHandler
+		OnlineUserPtr getSelectedOnlineUser() const override { return getSelectedUser(); }
+
 		// UserListWindow::HubFrameCallbacks
 		void showErrorMessage(const tstring& text) override;
 		void setCurrentNick(const tstring& nick) override;

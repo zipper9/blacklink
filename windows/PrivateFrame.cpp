@@ -68,6 +68,12 @@ void PrivateFrame::doDestroyFrame()
 	destroyMessagePanel(true);
 }
 
+OnlineUserPtr PrivateFrame::getSelectedOnlineUser() const
+{
+	if (isOffline) return OnlineUserPtr();
+	return ClientManager::findOnlineUser(replyTo.user->getCID(), replyTo.hint, true);
+}
+
 StringMap PrivateFrame::getFrameLogParams() const
 {
 	StringMap params;

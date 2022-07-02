@@ -275,6 +275,9 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
 		StringMap getFrameLogParams() const;
 
+		// UserInfoBaseHandler
+		OnlineUserPtr getSelectedOnlineUser() const override;
+
 	public:
 		void createMessagePanel();
 		void destroyMessagePanel(bool p_is_destroy);
