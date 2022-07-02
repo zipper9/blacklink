@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "UsersFrame.h"
 #include "LimitEditDlg.h"
+#include "HubFrame.h"
+#include "QueueFrame.h"
 #include "../client/LocationUtil.h"
+#include "../client/UploadManager.h"
+#include "../client/QueueManager.h"
 
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
@@ -203,9 +207,168 @@ void UserInfoGuiTraits::processDetailsMenu(WORD id)
 				if (UsersFrame::g_frame)
 					UsersFrame::g_frame->showUser(item.cid);
 			}
+			else if (item.type == DetailsItem::TYPE_QUEUED)
+			{
+				QueueFrame::openWindow();
+				if (QueueFrame::g_frame)
+				{
+					string target = Text::fromT(item.text);
+					QueueFrame::g_frame->showQueueItem(target, false);
+				}
+			}
 			break;
 		}
 	detailsItems.clear();
+}
+
+void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
+{
+	UINT idc = IDC_USER_INFO;
+	const UserPtr& user = ou->getUser();
+	userSummaryMenu.InsertSeparatorLast(Text::toT(ou->getIdentity().getNick()));
+
+	ClientManager::UserParams params;
+	if (ClientManager::getUserParams(user, params))
+	{
+		tstring userInfo = TSTRING(SLOTS) + _T(": ") + Util::toStringT(params.slots) + _T(", ") + TSTRING(SHARED) + _T(": ") + Util::formatBytesT(params.bytesShared);
+		
+		if (params.limit)
+			userInfo += _T(", ") + TSTRING(UPLOAD_SPEED_LIMIT) + _T(": ") + Util::formatBytesT(params.limit) + _T('/') + TSTRING(DATETIME_SECONDS);
+
+		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, userInfo.c_str());
+
+		uint64_t slotTick = UploadManager::getInstance()->getReservedSlotTick(user);
+		if (slotTick)
+		{
+			uint64_t currentTick = GET_TICK();
+			if (slotTick >= currentTick + 1000)
+			{
+				const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsT((slotTick-currentTick)/1000);
+				userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
+			}
+		}
+
+		bool hasIp4 = Util::isValidIp4(params.ip4);
+		bool hasIp6 = Util::isValidIp6(params.ip6);
+		if (hasIp4 || hasIp6)
+		{
+			userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, UserInfoSimple::getTagIP(params).c_str());
+			IPInfo ipInfo;
+			IpAddress ip;
+			if (hasIp4)
+			{
+				ip.data.v4 = params.ip4;
+				ip.type = AF_INET;
+			}
+			else
+			{
+				memcpy(ip.data.v6.data, params.ip6.data, 16);
+				ip.type = AF_INET6;
+			}
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
+			if (!ipInfo.country.empty() || !ipInfo.location.empty())
+			{
+				tstring text = TSTRING(LOCATION_BARE) + _T(": ");
+				if (!ipInfo.country.empty() && !ipInfo.location.empty())
+				{
+					text += Text::toT(ipInfo.country);
+					text += _T(", ");
+				}
+				text += Text::toT(Util::getDescription(ipInfo));
+				userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, text.c_str());
+			}
+		}
+		else
+		{
+			tstring tagIp = UserInfoSimple::getTagIP(params);
+			if (!tagIp.empty())
+				userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, tagIp.c_str());
+		}
+		HubFrame::addDupUsersToSummaryMenu(params, detailsItems, idc);
+	}
+
+	bool hasCaption = false;
+	{
+		UploadManager::LockInstanceQueue lockedInstance;
+		const auto& users = lockedInstance->getUploadQueueL();
+		for (auto uit = users.cbegin(); uit != users.cend(); ++uit)
+		{
+			if (uit->getUser() == user)
+			{
+				int countAdded = 0;
+				for (auto i = uit->waitingFiles.cbegin(); i != uit->waitingFiles.cend(); ++i)
+				{
+					if (!hasCaption)
+					{
+						userSummaryMenu.InsertSeparatorLast(TSTRING(USER_WAIT_MENU));
+						hasCaption = true;
+					}
+					const tstring note =
+					    Text::toT(Util::ellipsizePath((*i)->getFile())) +
+					    _T("\t[") +
+					    Util::toStringT((double)(*i)->getPos() * 100.0 / (double)(*i)->getSize()) +
+					    _T("% ") +
+					    Util::formatSecondsT(GET_TIME() - (*i)->getTime()) +
+					    _T(']');
+					userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
+					if (countAdded++ == 10)
+					{
+						userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, _T("..."));
+						break;
+					}
+				}
+			}
+		}
+	}
+	hasCaption = false;
+	{
+		int countAdded = 0;
+		DetailsItem item;
+		item.type = DetailsItem::TYPE_QUEUED;
+		item.flags = 0;
+		QueueRLock(*QueueItem::g_cs);
+		QueueManager::LockFileQueueShared fileQueue;
+		const auto& downloads = fileQueue.getQueueL();
+		for (auto j = downloads.cbegin(); j != downloads.cend(); ++j)
+		{
+			const QueueItemPtr& qi = j->second;
+			const bool src = qi->isSourceL(user);
+			bool badsrc = false;
+			if (!src)
+			{
+				badsrc = qi->isBadSourceL(user);
+			}
+			if (src || badsrc)
+			{
+				if (!hasCaption)
+				{
+					userSummaryMenu.InsertSeparatorLast(TSTRING(NEED_USER_FILES_MENU));
+					hasCaption = true;
+				}
+				item.text = Text::toT(qi->getTarget());
+				tstring note = item.text;
+				if (qi->getSize() > 0)
+				{
+					note += _T("\t(");
+					note += Util::toStringT((double)qi->getDownloadedBytes() * 100.0 / (double)qi->getSize());
+					note += _T("%)");
+				}
+				if (!badsrc)
+					item.id = idc++;
+				else
+					item.id = 0;
+				const UINT flags = MF_STRING | (badsrc ? MF_GRAYED : 0);
+				userSummaryMenu.AppendMenu(flags, (UINT_PTR) item.id, note.c_str());
+				if (!badsrc) detailsItems.push_back(item);
+				if (countAdded++ == 10)
+				{
+					userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, _T("..."));
+					break;
+				}
+			}
+		}
+	}
+	detailsItemMaxId = idc - 1;
 }
 
 void UserInfoGuiTraits::copyUserInfo(WORD idc, const Identity& id)

@@ -167,12 +167,6 @@ void UserInfoBase::pmText(const string& hubHint, const tstring& message)
 		UserManager::getInstance()->outgoingPrivateMessage(getUser(), hubHint, message);
 }
 
-void UserInfoBase::createSummaryInfo(const string& hubHint)
-{
-	if (getUser())
-		UserManager::getInstance()->collectSummaryInfo(getUser(), hubHint);
-}
-
 void UserInfoBase::removeAll()
 {
 	if (getUser())

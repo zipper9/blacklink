@@ -37,14 +37,12 @@ class UserManagerListener
 		
 		typedef X<0> OutgoingPrivateMessage;
 		typedef X<1> OpenHub;
-		typedef X<2> CollectSummaryInfo;
-		typedef X<3> IgnoreListChanged;
-		typedef X<4> IgnoreListCleared;
-		typedef X<5> ReservedSlotChanged;
+		typedef X<2> IgnoreListChanged;
+		typedef X<3> IgnoreListCleared;
+		typedef X<4> ReservedSlotChanged;
 		
 		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
 		virtual void on(OpenHub, const string&, const UserPtr&) noexcept { }
-		virtual void on(CollectSummaryInfo, const UserPtr&, const string& hubHint) noexcept { }
 		virtual void on(IgnoreListChanged) noexcept { }
 		virtual void on(IgnoreListCleared) noexcept { }
 		virtual void on(ReservedSlotChanged, const UserPtr&) noexcept { }
@@ -72,10 +70,6 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 			fire(UserManagerListener::OutgoingPrivateMessage(), user, hubHint, message);
 		}
 		void openUserUrl(const string& hub, const UserPtr& user) noexcept;
-		void collectSummaryInfo(const UserPtr& user, const string& hubHint) noexcept
-		{
-			fire(UserManagerListener::CollectSummaryInfo(), user, hubHint);
-		}
 
 		enum PasswordStatus
 		{

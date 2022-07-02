@@ -22,7 +22,8 @@ struct UserInfoGuiTraits // internal class, please do not use it directly!
 			{
 				TYPE_USER,
 				TYPE_FAV_INFO,
-				TYPE_TAG
+				TYPE_TAG,
+				TYPE_QUEUED
 			};
 
 			int type;
@@ -63,6 +64,7 @@ struct UserInfoGuiTraits // internal class, please do not use it directly!
 		static void updateSpeedMenuText(int customSpeed);
 		static void processDetailsMenu(WORD id);
 		static void copyUserInfo(WORD idc, const Identity& id);
+		static void addSummaryMenu(const OnlineUserPtr& ou);
 
 		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
@@ -386,9 +388,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			{
 				__if_exists(T::getUserList) // ??
 				{
-					doAction(&UserInfoBase::createSummaryInfo, selectedHint, useOnlyFirstItem);
 					FavUserTraits traits; // empty
-					
 					if (ENABLE(options, NICK_TO_CHAT))
 					{
 						menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
@@ -416,7 +416,8 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			UserInfoSimple ui(selectedUser, hint);
 			FavUserTraits traits;
 			traits.init(ui);
-			ui.createSummaryInfo(hint);
+			OnlineUserPtr ou = getSelectedOnlineUser();
+			if (ou) addSummaryMenu(ou);
 			if (ENABLE(options, NICK_TO_CHAT))
 			{
 				menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));

@@ -637,8 +637,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		// UserManagerListener
 		void on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hubHint, const tstring& message) noexcept override;
 		void on(UserManagerListener::OpenHub, const string& url, const UserPtr& user) noexcept override;
-		void on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept override;
-		
+
 		// FinishedManagerListener
 		void on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept override;
 		void on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept override;

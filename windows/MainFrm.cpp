@@ -2904,11 +2904,6 @@ void MainFrame::on(UserManagerListener::OpenHub, const string& url, const UserPt
 		hubFrame->selectCID(user->getCID());
 }
 
-void MainFrame::on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept
-{
-	UserInfoSimple(user, hubHint).addSummaryMenu();
-}
-
 void MainFrame::on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept
 {
 	if (isFile)

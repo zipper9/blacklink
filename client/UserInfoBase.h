@@ -39,14 +39,12 @@ class UserInfoBase
 		void checkList();
 #endif
 		void matchQueue();
-		
+
 		void doReport(const string& hubHint);
-		
+
 		void pm(const string& hubHint);
 		void pmText(const string& hubHint, const tstring& message);
-		
-		void createSummaryInfo(const string& hubHint);
-		
+
 		void grantSlotPeriod(const string& hubHint, const uint64_t period);
 		void ungrantSlot(const string& hubHint);
 		void addFav();
