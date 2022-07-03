@@ -38,6 +38,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 	private BaseChatFrame
 {
 	public:
+		using BaseChatFrame::addSystemMessage;
+
 		static bool gotMessage(const Identity& from, const Identity& to, const Identity& replyTo, const tstring& message, unsigned maxEmoticons, const string& hubHint, bool myMessage, bool thirdPerson, bool notOpenNewWindow = false);
 		static void openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick = Util::emptyString, const string& message = Util::emptyString);
 		static bool isOpen(const UserPtr& u)
@@ -113,7 +115,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
-		void readFrameLog();
 		void openFrameLog() const
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
@@ -155,22 +156,11 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 
-		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem)
-		{
-			if (!created)
-			{
-				Create(WinUtil::g_mdiClient);
-			}
-			BaseChatFrame::addStatus(line, inChat, history, cf);
-		}
 		void setLocation(const Identity& id);
 		void setStatusText(int index, const tstring& text);
 		int getStatusTextWidth(int indx, const tstring& text) const;
 		void updateStatusTextWidth();
 		void updateStatusParts();
-
-		bool sendMessage(const string& msg, bool thirdPerson = false) override;
-		void onTextEdited() override;
 
 		const UserPtr& getUser() const
 		{
@@ -182,6 +172,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		}
 		bool selectHub(const string& url);
 
+		static PrivateFrame* findFrameByID(uint64_t id);
+
 	private:
 		enum
 		{
@@ -192,7 +184,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		};
 
 		PrivateFrame(const HintedUser& replyTo, const string& myNick);
-		virtual void doDestroyFrame();
 
 		bool created; // TODO: fix me please.
 		typedef boost::unordered_map<UserPtr, PrivateFrame*, User::Hash> FrameMap;
@@ -271,8 +262,15 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 				WinUtil::postSpeakerMsg(m_hWnd, PM_CPMI_RECEIVED, new CPMINotification(info));
 		}
 
+		// BaseCharFrame
+		void doDestroyFrame() override;
 		bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res) override;
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
+		void onTextEdited() override;
+		bool sendMessage(const string& msg, bool thirdPerson = false) override;
+		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem) override;
+		void readFrameLog() override;
+
 		StringMap getFrameLogParams() const;
 
 		// UserInfoBaseHandler

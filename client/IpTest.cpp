@@ -12,11 +12,12 @@ static const unsigned IP_TEST_TIMEOUT = 10000;
 IpTest g_ipTest;
 
 IpTest::IpTest(): hasListener(false), shutDown(false),
-	reflectedAddrRe("Current IP Address:\\s*([a-fA-F0-9.:]+)", std::regex_constants::ECMAScript)
+	reflectedAddrRe("Current IP Address:\\s*([a-fA-F0-9.:]+)", std::regex_constants::ECMAScript),
+	commandCallback(nullptr)
 {
 }
 
-bool IpTest::runTest(int type, string* message) noexcept
+bool IpTest::runTest(int type, uint64_t frameId, string* message) noexcept
 {
 	string url = type == REQ_IP4 ? SETTING(URL_GET_IP) : SETTING(URL_GET_IP6);
 	HttpClient::Request cr;
@@ -49,6 +50,7 @@ bool IpTest::runTest(int type, string* message) noexcept
 	req[type].state = STATE_RUNNING;
 	req[type].timeout = tick + IP_TEST_TIMEOUT;
 	req[type].reqId = id;
+	req[type].frameId = frameId;
 	if (!hasListener)
 		hasListener = addListener = true;
 	cs.unlock();
@@ -99,12 +101,14 @@ void IpTest::on(Failed, uint64_t id, const string& error) noexcept
 {
 	bool addListener = false;
 	int failedReqType = -1;
+	uint64_t frameId = 0;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING && req[type].reqId == id)
 		{
 			failedReqType = type;
 			req[type].state = STATE_FAILURE;
+			frameId = req[type].frameId;
 		}
 	if (!hasListener)
 		hasListener = addListener = true;
@@ -113,6 +117,8 @@ void IpTest::on(Failed, uint64_t id, const string& error) noexcept
 		addListeners();
 	if (failedReqType != -1)
 		ConnectivityManager::getInstance()->processGetIpResult(failedReqType);
+	if (frameId && commandCallback)
+		commandCallback->onCommandCompleted(SEV_ERROR, frameId, STRING(PORT_TEST_GETIP_FAILED));
 }
 
 void IpTest::on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept
@@ -121,6 +127,7 @@ void IpTest::on(Completed, uint64_t id, const Http::Response& resp, const Result
 	memset(newReflectedAddress, 0, sizeof(newReflectedAddress));
 	bool addListener = false;
 	int completedReqType = -1;
+	uint64_t frameId = 0;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING && req[type].reqId == id)
@@ -129,6 +136,7 @@ void IpTest::on(Completed, uint64_t id, const Http::Response& resp, const Result
 			req[type].state = STATE_FAILURE;
 			req[type].reqId = 0;
 			req[type].reflectedAddress.clear();
+			frameId = req[type].frameId;
 			std::smatch sm;
 			bool result = false;
 			if (resp.getResponseCode() == 200 && std::regex_search(data.responseBody, sm, reflectedAddrRe))
@@ -171,21 +179,36 @@ void IpTest::on(Completed, uint64_t id, const Http::Response& resp, const Result
 	if (completedReqType != -1)
 	{
 		auto cm = ConnectivityManager::getInstance();
+		string publicIp;
 		if (newReflectedAddress[completedReqType].type)
+		{
+			publicIp = Util::printIpAddress(newReflectedAddress[completedReqType]);
 			cm->setReflectedIP(newReflectedAddress[completedReqType]);
+		}
 		cm->processGetIpResult(completedReqType);
+		if (frameId && commandCallback)
+		{
+			if (publicIp.empty())
+				commandCallback->onCommandCompleted(SEV_ERROR, frameId, STRING(PORT_TEST_GETIP_FAILED));
+			else
+				commandCallback->onCommandCompleted(SEV_INFO, frameId, STRING_F(PORT_TEST_IP_RESULT, publicIp));
+		}
 	}
 }
 
 void IpTest::on(Second, uint64_t tick) noexcept
 {
 	bool hasRunning = false;
+	uint64_t frameId = 0;
 	cs.lock();
 	for (int type = 0; type < MAX_REQ; type++)
 		if (req[type].state == STATE_RUNNING)
 		{
 			if (tick > req[type].timeout)
+			{
 				req[type].state = STATE_FAILURE;
+				frameId = req[type].frameId;
+			}
 			else
 				hasRunning = true;
 		}
@@ -193,6 +216,8 @@ void IpTest::on(Second, uint64_t tick) noexcept
 	cs.unlock();
 	if (!hasRunning)
 		removeListeners();
+	if (frameId && commandCallback)
+		commandCallback->onCommandCompleted(SEV_ERROR, frameId, STRING(PORT_TEST_GETIP_FAILED));
 }
 
 void IpTest::shutdown() noexcept

@@ -39,7 +39,6 @@ DirectoryListingFrame::UserList DirectoryListingFrame::userList;
 CriticalSection DirectoryListingFrame::lockUserList;
 
 DirectoryListingFrame::FrameMap DirectoryListingFrame::activeFrames;
-uint64_t DirectoryListingFrame::nextID = 0;
 
 const int DirectoryListingFrame::columnId[] =
 {
@@ -227,7 +226,8 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
 	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false), showingDupFiles(false),
 	abortFlag(false),
-	id(++nextID), originalId(0)
+	id(WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_DIRECTORY_LISTING)),
+	originalId(0)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
 	this->dl.reset(dl);

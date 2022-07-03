@@ -50,6 +50,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	public UserListWindow::HubFrameCallbacks
 {
 	public:
+		using BaseChatFrame::addSystemMessage;
+
 		struct Settings
 		{
 			string server;
@@ -180,9 +182,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onAfterActiveTab(HWND aWnd) override;
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 
-		void UpdateLayout(BOOL resizeBars = TRUE);
+		void UpdateLayout(BOOL resizeBars = TRUE) override;
 		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void runUserCommand(UserCommand& uc);
 		void followRedirect();
 		void switchPanels();
@@ -196,7 +197,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void reconnectDisconnected();
 		static void closeAll(size_t threshold = 0);
 		static void updateAllTitles();
-		
+
+		static HubFrame* findFrameByID(uint64_t id);
+
 		LRESULT onSetFocus(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			if (ctrlMessage)
@@ -232,7 +235,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			}
 			return 0;
 		}
-		
+
 	private:
 		enum AutoConnectType
 		{
@@ -254,13 +257,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 
 		HubFrame(const Settings& cs);
 		~HubFrame();
-		
-		virtual void doDestroyFrame();
+
 		typedef boost::unordered_map<string, HubFrame*> FrameMap;
-		static CriticalSection csFrames; // FIXME: frames map does not need locking (?)
 		static FrameMap frames;
 		void removeFrame(const string& redirectUrl);
-		
+
 		UserListWindow ctrlUsers;
 		int hubUpdateCount;
 		string prevHubName;
@@ -380,7 +381,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc);
 
 		StringMap getFrameLogParams() const;
-		void readFrameLog();
 		void openFrameLog() const
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
@@ -388,9 +388,13 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		UserListWindow::CtrlUsers& getUserList() { return ctrlUsers.getUserList(); }
 
 	protected:
-		bool sendMessage(const string& msg, bool thirdPerson = false) override;
+		// BaseChatFrame
+		void doDestroyFrame() override;
 		bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res) override;
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
+		bool sendMessage(const string& msg, bool thirdPerson = false) override;
+		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem) override;
+		void readFrameLog() override;
 
 	private:
 		bool hubParamUpdated;

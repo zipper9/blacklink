@@ -99,6 +99,7 @@ struct ParsedCommand
 {
 	int command;
 	StringList args;
+	uint64_t frameId;
 };
 
 bool parseCommand(const string& str, ParsedCommand& cmd);

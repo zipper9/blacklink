@@ -57,6 +57,7 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
 	statusSizes{0, 220, 60}
 {
+	frameId = WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_PM);
 	ctrlStatusCache.resize(STATUS_LAST);
 	ctrlStatusOwnerDraw = 1<<STATUS_LOCATION;
 	ctrlClient.setHubParam(replyTo.hint, myNick);
@@ -424,6 +425,12 @@ void PrivateFrame::readFrameLog()
 		const string path = Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), true));
 		appendLogToChat(path, linesCount);
 	}
+}
+
+void PrivateFrame::addStatus(const tstring& line, bool inChat, bool history, const CHARFORMAT2& cf)
+{
+	if (!created) Create(WinUtil::g_mdiClient);
+	BaseChatFrame::addStatus(line, inChat, history, cf);
 }
 
 void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
@@ -1085,6 +1092,16 @@ LRESULT PrivateFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 	else
 		bHandled = FALSE;
 	return 0;
+}
+
+PrivateFrame* PrivateFrame::findFrameByID(uint64_t id)
+{
+	for (const auto& i : frames)
+	{
+		PrivateFrame* frame = i.second;
+		if (frame->frameId == id) return frame;
+	}
+	return nullptr;
 }
 
 void PrivateFrame::closeAll()

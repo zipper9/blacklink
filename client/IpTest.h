@@ -4,6 +4,7 @@
 #include "HttpClientListener.h"
 #include "Locks.h"
 #include "TimerManager.h"
+#include "CommandCallback.h"
 #include <regex>
 
 class IpTest: private HttpClientListener, private TimerManagerListener
@@ -25,11 +26,12 @@ public:
 	};
 
 	IpTest();
-	bool runTest(int type, string* message = nullptr) noexcept;
+	bool runTest(int type, uint64_t frameId, string* message = nullptr) noexcept;
 	bool isRunning(int type) const noexcept;
 	bool isRunning() const noexcept;
 	int getState(int type, string* reflectedAddress) const noexcept;
 	void shutdown() noexcept;
+	void setCommandCallback(CommandCallback* p) noexcept { commandCallback = p; }
 
 private:
 	struct Request
@@ -37,8 +39,9 @@ private:
 		int state;
 		uint64_t timeout;
 		uint64_t reqId;
+		uint64_t frameId;
 		string reflectedAddress;
-		Request(): state(STATE_UNKNOWN), timeout(0), reqId(0) {}
+		Request(): state(STATE_UNKNOWN), timeout(0), reqId(0), frameId(0) {}
 	};
 
 	Request req[MAX_REQ];
@@ -46,6 +49,7 @@ private:
 	bool hasListener;
 	bool shutDown;
 	const std::regex reflectedAddrRe;
+	CommandCallback* commandCallback;
 
 	void addListeners();
 	void removeListeners();

@@ -910,7 +910,7 @@ bool NetworkPage::runPortTest()
 
 bool NetworkPage::runIpTest()
 {
-	if (!g_ipTest.runTest(IpTest::REQ_IP6)) return false;
+	if (!g_ipTest.runTest(IpTest::REQ_IP6, 0)) return false;
 	tabIP[1].updateState();
 	return true;
 }

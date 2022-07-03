@@ -73,6 +73,7 @@
 #include "../client/HttpClient.h"
 #include "../client/SocketPool.h"
 #include "../client/AntiFlood.h"
+#include "../client/IpTest.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -166,6 +167,7 @@ MainFrame::MainFrame() :
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	timeFlushRatio = tick + Util::rand(3, 10)*60000;
 #endif
+	g_ipTest.setCommandCallback(this);
 	instance = this;
 }
 
@@ -1461,6 +1463,24 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				newPath = Util::getNewFileName(data.path);
 			QueueManager::getInstance()->processFileExistsQuery(data.path, option, newPath, data.priority);
 		}
+	}
+	else if (wParam == FRAME_INFO_TEXT)
+	{
+		FrameInfoText* data = reinterpret_cast<FrameInfoText*>(lParam);
+		int type = data->frameId & WinUtil::MASK_FRAME_TYPE;
+		if (type == WinUtil::FRAME_TYPE_HUB)
+		{
+			HubFrame* frame = HubFrame::findFrameByID(data->frameId);
+			if (frame)
+				frame->addSystemMessage(data->text, Colors::g_ChatTextSystem);
+		}
+		else if (type == WinUtil::FRAME_TYPE_PM)
+		{
+			PrivateFrame* frame = PrivateFrame::findFrameByID(data->frameId);
+			if (frame)
+				frame->addSystemMessage(data->text, Colors::g_ChatTextSystem);
+		}
+		delete data;
 	}
 	else if (wParam == WM_CLOSE)
 	{
@@ -2928,6 +2948,14 @@ void MainFrame::on(QueueManagerListener::SourceAdded) noexcept
 void MainFrame::on(FavoriteManagerListener::SaveRecents) noexcept
 {
 	PostMessage(WM_SPEAKER, SAVE_RECENTS);
+}
+
+void MainFrame::onCommandCompleted(int type, uint64_t frameId, const string& text) noexcept
+{
+	FrameInfoText* data = new FrameInfoText;
+	data->frameId = frameId;
+	data->text = Text::toT(text);
+	WinUtil::postSpeakerMsg(m_hWnd, FRAME_INFO_TEXT, data);
 }
 
 BOOL MainFrame::PreTranslateMessage(MSG* pMsg)

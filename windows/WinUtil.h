@@ -73,12 +73,24 @@ class UserCommand;
 class WinUtil
 {
 	public:
+		enum
+		{
+			MASK_FRAME_TYPE = 0xFF,
+			FRAME_TYPE_MAIN = 1,
+			FRAME_TYPE_HUB,
+			FRAME_TYPE_PM,
+			FRAME_TYPE_SEARCH,
+			FRAME_TYPE_DIRECTORY_LISTING
+		};
+
 		struct TextItem
 		{
 			WORD itemID;
 			ResourceManager::Strings translatedString;
 		};
-		
+
+		static uint64_t getNewFrameID(int type);
+
 		static CMenu g_mainMenu;
 		static OMenu g_copyHubMenu;
 		
@@ -350,6 +362,8 @@ class WinUtil
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
 		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
+
+		static uint64_t nextFrameId;
 
 	public:
 		static const GUID guidGetTTH;

@@ -509,6 +509,7 @@ void BaseChatFrame::onEnter()
 					addStatus(msg);
 				}
 			}
+			pc.frameId = frameId;
 		}
 		else
 			processFrameMessage(fullMessageText, resetInputMessageText);

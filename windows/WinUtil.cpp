@@ -66,6 +66,8 @@ const WinUtil::FileMaskItem WinUtil::allFilesMask[] =
 	{ ResourceManager::Strings(),    nullptr   }
 };
 
+uint64_t WinUtil::nextFrameId = 0;
+
 CMenu WinUtil::g_mainMenu;
 
 OMenu WinUtil::g_copyHubMenu;
@@ -84,6 +86,12 @@ bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
 
 const GUID WinUtil::guidGetTTH = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x96 } };
+
+uint64_t WinUtil::getNewFrameID(int type)
+{
+	uint64_t id = ++nextFrameId;
+	return id << 8 | type;
+}
 
 dcdrun(bool WinUtil::g_staticMenuUnlinked = true;)
 void WinUtil::unlinkStaticMenus(OMenu& menu)

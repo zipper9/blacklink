@@ -60,6 +60,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 	public:
 		void createMessagePanel(bool showSelectHubButton, bool showCCPMButton);
 		void destroyMessagePanel();
+		void addSystemMessage(const tstring& line, const CHARFORMAT2& cf);
 
 	private:
 		void createChatCtrl();
@@ -90,7 +91,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		BaseChatFrame& operator= (const BaseChatFrame&) = delete;
 
 		virtual ~BaseChatFrame() {}
-		virtual void doDestroyFrame() = 0;
+
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			bHandled = FALSE; // ќб€зательно чтобы продолжить обработку дальше. http://www.rsdn.ru/forum/atl/633568.1
@@ -120,17 +121,17 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		tstring findTextPopup();
 		void findText(const tstring & needle) noexcept;
 
+		virtual void doDestroyFrame() = 0;
 		virtual bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res);
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 		virtual void onTextEdited() {}
-
 		virtual bool sendMessage(const string& msg, bool thirdPerson = false) = 0;
 		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
+		virtual void readFrameLog() = 0;
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 
 		void addLine(const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addLine(const Identity& ou, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra);
-		void addSystemMessage(const tstring& line, const CHARFORMAT2& cf);
 
 		static TCHAR getChatRefferingToNick();
 
@@ -138,7 +139,6 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 
 		void appendNickToChat(const tstring& nick);
 		void appendLogToChat(const string& path, const size_t linesCount);
-		virtual void readFrameLog() = 0;
 		ChatCtrl ctrlClient;
 		
 		MessageEdit ctrlMessage;
@@ -148,6 +148,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		CFlyToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl ctrlStatus;
 		bool disableChat;
+		uint64_t frameId;
 
 		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
 		unsigned ctrlStatusOwnerDraw;

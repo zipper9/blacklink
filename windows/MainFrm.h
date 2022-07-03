@@ -25,6 +25,7 @@
 #include "../client/UserManager.h"
 #include "../client/FinishedManagerListener.h"
 #include "../client/Commands.h"
+#include "../client/CommandCallback.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
 #include "StatusMessageHistory.h"
@@ -44,7 +45,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 	private UserManagerListener,
 	private FinishedManagerListener,
 	private FavoriteManagerListener,
-	private TimerHelper
+	private TimerHelper,
+	private CommandCallback
 {
 	public:
 		MainFrame();
@@ -63,7 +65,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			REMOVE_POPUP,
 			SET_PM_TRAY_ICON,
 			SAVE_RECENTS,
-			FILE_EXISTS_ACTION
+			FILE_EXISTS_ACTION,
+			FRAME_INFO_TEXT
 		};
 
 		struct ListenerError
@@ -451,6 +454,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		CImageList& getSettingsImages() { return settingsImages; }
 
 		bool processCommand(const Commands::ParsedCommand& cmd, Commands::Result& res);
+		void sendFrameInfoText(uint64_t frameId, const tstring& text);
 
 	private:
 		static MainFrame* instance;
@@ -469,6 +473,12 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			int64_t existingSize;
 			time_t existingTime;
 			QueueItem::Priority priority;
+		};
+
+		struct FrameInfoText
+		{
+			uint64_t frameId;
+			tstring text;
 		};
 
 		// Controls
@@ -615,7 +625,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void setTrayIcon(int newIcon);
 		void clearPMStatus();
 		void storeWindowsPos();
-		
+
 		void createTrayMenu();
 		void createMainMenu();
 
@@ -644,6 +654,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		// FavoriteManagerListener
 		void on(FavoriteManagerListener::SaveRecents) noexcept override;
+
+		// CommandCallback
+		void onCommandCompleted(int type, uint64_t frameId, const string& text) noexcept override;
 };
 
 #endif // !defined(MAIN_FRM_H)

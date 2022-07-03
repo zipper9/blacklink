@@ -1626,6 +1626,8 @@ enum Strings   // @DontAdd
 	PORT_TEST_GETTING_IP, // "Detecting public IPv%1% using URL %2%"
 	PORT_TEST_ERROR_GETTING_IP, // "Could not start request to detect public IPv%1%"
 	PORT_TEST_STARTED, // "Testing open ports using URL %1%"
+	PORT_TEST_IP_RESULT, // "Detected public IP: %1%"
+	PORT_TEST_GETIP_FAILED, // "Getting public IP failed"
 	FILE_TTH_TITLE, // "Tiger Tree Hash"
 	FILE_TTH_PATH, // "Path:"
 	FILE_TTH_FILE_NAME, // "Filename:"

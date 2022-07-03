@@ -494,7 +494,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		typedef std::map< HWND, DirectoryListingFrame* > FrameMap;
 		static FrameMap activeFrames;
-		static uint64_t nextID;
 
 		void on(SettingsManagerListener::Repaint) override;
 		void redraw()

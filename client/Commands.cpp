@@ -231,6 +231,7 @@ static inline void trim(string& s)
 
 bool Commands::parseCommand(const string& str, ParsedCommand& pc)
 {
+	pc.frameId = 0;
 	if (str.empty() || str[0] != '/') return false;
 	string::size_type i = str.find(' ');
 	string cmd, param;
@@ -1109,13 +1110,13 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			string msg;
 			if (v4)
 			{
-				if (!g_ipTest.runTest(IpTest::REQ_IP4, &msg))
+				if (!g_ipTest.runTest(IpTest::REQ_IP4, pc.frameId, &msg))
 					msg = STRING_F(PORT_TEST_ERROR_GETTING_IP, 4);
 				res.text = std::move(msg);
 			}
 			if (v6)
 			{
-				if (!g_ipTest.runTest(IpTest::REQ_IP6, &msg))
+				if (!g_ipTest.runTest(IpTest::REQ_IP6, pc.frameId, &msg))
 					msg = STRING_F(PORT_TEST_ERROR_GETTING_IP, 6);
 				if (!res.text.empty()) res.text += '\n';
 				res.text += msg;

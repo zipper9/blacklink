@@ -713,6 +713,7 @@
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\BusyCounter.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
+    <ClInclude Include="client\CommandCallback.h" />
     <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\ConnectivityManager.h" />

@@ -33,7 +33,6 @@ static const int INFO_UPDATE_INTERVAL = 60;
 static const int STATUS_PART_PADDING = 12;
 
 HubFrame::FrameMap HubFrame::frames;
-CriticalSection HubFrame::csFrames;
 
 HIconWrapper HubFrame::iconSwitchPanels(IDR_SWITCH_PANELS_ICON);
 HIconWrapper HubFrame::iconModeActive(IDR_MODE_ACTIVE_ICO);
@@ -83,6 +82,7 @@ HubFrame::HubFrame(const Settings& cs) :
 	asyncUpdateSaved(0),
 	disableChat(false)
 {
+	frameId = WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_HUB);
 	ctrlStatusCache.resize(5);
 	showUsersStore = !cs.hideUserList;
 	showUsers = false;
@@ -328,7 +328,6 @@ void HubFrame::onBeforeActiveTab(HWND aWnd)
 	dcassert(m_hWnd);
 	if (!ClientManager::isStartup())
 	{
-		LOCK(csFrames);
 		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		{
 			HubFrame* frame = i->second;
@@ -367,7 +366,7 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 
 HubFrame* HubFrame::openHubWindow(const Settings& cs, bool* isNew)
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	HubFrame* frm;
 	const auto i = frames.find(cs.server);
 	if (i == frames.end())
@@ -412,7 +411,7 @@ HubFrame* HubFrame::openHubWindow(const string& server, const string& keyPrint)
 
 HubFrame* HubFrame::findHubWindow(const string& server)
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	auto i = frames.find(server);
 	return i == frames.cend() ? nullptr : i->second;
 }
@@ -1953,13 +1952,23 @@ void HubFrame::switchPanels()
 
 void HubFrame::removeFrame(const string& redirectUrl)
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	frames.erase(serverUrl);
 	if (!redirectUrl.empty())
 	{
 		frames.insert(make_pair(redirectUrl, this));
 		serverUrl = redirectUrl;
 	}
+}
+
+HubFrame* HubFrame::findFrameByID(uint64_t id)
+{
+	for (const auto& i : frames)
+	{
+		HubFrame* frame = i.second;
+		if (frame->frameId == id) return frame;
+	}
+	return nullptr;
 }
 
 void HubFrame::followRedirect()
@@ -2000,7 +2009,7 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 
 void HubFrame::resortUsers()
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
@@ -2012,7 +2021,7 @@ void HubFrame::resortUsers()
 
 void HubFrame::closeDisconnected()
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
@@ -2026,7 +2035,7 @@ void HubFrame::closeDisconnected()
 
 void HubFrame::reconnectDisconnected()
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
@@ -2042,13 +2051,10 @@ void HubFrame::closeAll(size_t threshold)
 {
 	if (threshold == 0)
 	{
-		// Ускорим закрытие всех хабов
 		ClientManager::getInstance()->prepareClose();
-		// ClientManager::getInstance()->prepareClose(); // Отпишемся от подписок клиента
-		// SearchManager::getInstance()->prepareClose(); // Отпишемся от подписок поиска
 	}
 	{
-		LOCK(csFrames);
+		ASSERT_MAIN_THREAD();
 		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		{
 			if (!i->second->isClosedOrShutdown())
@@ -2063,7 +2069,7 @@ void HubFrame::closeAll(size_t threshold)
 
 void HubFrame::updateAllTitles()
 {
-	LOCK(csFrames);
+	ASSERT_MAIN_THREAD();
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		i->second->hubUpdateCount++;
 }
@@ -2601,7 +2607,7 @@ void HubFrame::addDupUsersToSummaryMenu(const ClientManager::UserParams& param, 
 {
 	detailsItems.clear();
 	{
-		LOCK(csFrames);
+		ASSERT_MAIN_THREAD();
 		for (auto f = frames.cbegin(); f != frames.cend(); ++f)
 		{
 			const auto& frame = f->second;

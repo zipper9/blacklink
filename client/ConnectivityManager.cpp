@@ -128,12 +128,12 @@ unsigned ConnectivityManager::testPorts()
 			if (g_portTest.runTest(mask))
 				testFlags |= RUNNING_TEST_IPV4_PORTS;
 		}
-		else if (g_ipTest.runTest(IpTest::REQ_IP4))
+		else if (g_ipTest.runTest(IpTest::REQ_IP4, 0))
 			testFlags |= RUNNING_TEST_IPV4;
 	}
 	if (!force && (status & STATUS_IPV6))
 	{
-		if (g_ipTest.runTest(IpTest::REQ_IP6))
+		if (g_ipTest.runTest(IpTest::REQ_IP6, 0))
 			testFlags |= RUNNING_TEST_IPV6;
 	}
 	if (testFlags)
