@@ -1105,49 +1105,41 @@ string Util::encodeURI(const string& str, bool reverse)
 	return tmp;
 }
 
-#if 0
-uint64_t Util::getDirSize(const string &sFullPath)
+static uint64_t getDirSizeInternal(string& path, std::atomic_bool& stopFlag)
 {
-	uint64_t total = 0;
-	
-	WIN32_FIND_DATA fData;
-	HANDLE hFind = FindFirstFileEx(Text::toT(sFullPath + "\\*").c_str(),
-	                               CompatibilityManager::findFileLevel,
-	                               &fData,
-	                               FindExSearchNameMatch,
-	                               nullptr,
-	                               CompatibilityManager::findFileFlags);
-	
-	if (hFind != INVALID_HANDLE_VALUE)
+	uint64_t size = 0;	
+	size_t pathLen = path.length();
+	path += "*";
+	for (FileFindIter i(path); i != FileFindIter::end; ++i)
 	{
-		const string l_tmp_path = SETTING(TEMP_DOWNLOAD_DIRECTORY);
-		do
+		if (stopFlag) break;
+		const string& fileName = i->getFileName();
+		if (Util::isReservedDirName(fileName) || fileName.empty())
+			continue;
+		if (i->isTemporary())
+			continue;
+		if (i->isDirectory())
 		{
-			if ((fData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) && !BOOLSETTING(SHARE_HIDDEN))
-				continue;
-			const string name = Text::fromT(fData.cFileName);
-			if (isReservedDirName(name))
-				continue;
-			if (fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			{
-				const string newName = sFullPath + PATH_SEPARATOR + name;
-				// TODO TEMP_DOWNLOAD_DIRECTORY может содержать шаблон "[targetdrive]" сравнивать с ним не всегда верно
-				if (stricmp(newName + PATH_SEPARATOR, l_tmp_path) != 0)
-				{
-					total += getDirSize(newName);
-				}
-			}
-			else
-			{
-				total += (uint64_t)fData.nFileSizeLow | ((uint64_t)fData.nFileSizeHigh) << 32;
-			}
+			path.erase(pathLen);
+			path += fileName;
+			path += PATH_SEPARATOR;
+			size += getDirSizeInternal(path, stopFlag);
 		}
-		while (FindNextFile(hFind, &fData));
-		FindClose(hFind);
+		else
+			size += i->getSize();
 	}
-	return total;
+	return size;
 }
-#endif
+
+uint64_t Util::getDirSize(const string& path, std::atomic_bool& stopFlag)
+{
+	if (path.empty())
+		return (uint64_t) -1;
+	string tmp = path;
+	if (tmp.back() != PATH_SEPARATOR)
+		tmp += PATH_SEPARATOR;
+	return getDirSizeInternal(tmp, stopFlag);
+}
 
 string Util::getNewFileName(const string& filename)
 {
@@ -1339,9 +1331,9 @@ int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*
 }
 #endif
 
-void Util::setLimiter(bool aLimiter)
+void Util::setLimiter(bool enable)
 {
-	SET_SETTING(THROTTLE_ENABLE, aLimiter);
+	SET_SETTING(THROTTLE_ENABLE, enable);
 	ClientManager::infoUpdated();
 }
 

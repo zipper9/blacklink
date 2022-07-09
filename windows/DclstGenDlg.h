@@ -34,9 +34,17 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		DclstGenDlg(const DirectoryListing::Directory* dir, const UserPtr& user) :
 			TimerHelper(m_hWnd),
 			dir(dir), user(user), filesProcessed(0), foldersProcessed(0),
-			sizeProcessed(0), abortFlag(false)
+			sizeProcessed(0), sizeTotal(0), abortFlag(false)
 		{
-		}		
+		}
+
+		DclstGenDlg(const string& path) :
+			TimerHelper(m_hWnd),
+			dirToHash(path),
+			dir(nullptr), user(nullptr), filesProcessed(0), foldersProcessed(0),
+			sizeProcessed(0), sizeTotal(0), abortFlag(false)
+		{
+		}
 
 		BEGIN_MSG_MAP(DclstGenDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
@@ -55,9 +63,8 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		LRESULT onFinished(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
 		int run();
-		string getDclstName(const string& folderName);
 
 	private:
 		void updateDialogItems();
@@ -65,10 +72,12 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		void writeXMLEnd();
 		void writeFolder(const DirectoryListing::Directory* dir);
 		void writeFile(const DirectoryListing::File* file);
+		void hashFolder(const string& path, const string& dirName);
+		void hashFile(const string& path);
 		size_t packAndSave();
 		bool calculateTTH();
 		void makeMagnet();
-		
+
 	private:
 		const DirectoryListing::Directory* const dir;
 		const UserPtr user;
@@ -77,9 +86,11 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		size_t filesProcessed;
 		size_t foldersProcessed;
 		int64_t sizeProcessed;
+		int64_t sizeTotal;
 		string xml;
 		string listName;
 		string magnet;
+		string dirToHash;
 		TigerTree listTree;
 };
 

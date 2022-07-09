@@ -85,7 +85,8 @@ bool WinUtil::magnetHandlerRegistered = false;
 bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
 
-const GUID WinUtil::guidGetTTH = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x96 } };
+const GUID WinUtil::guidGetTTH          = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x96 } };
+const GUID WinUtil::guidDcLstFromFolder = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x97 } };
 
 uint64_t WinUtil::getNewFrameID(int type)
 {
@@ -255,6 +256,7 @@ void WinUtil::init(HWND hWnd)
 	tools.AppendMenu(MF_SEPARATOR);
 	tools.AppendMenu(MF_STRING, IDC_MATCH_ALL, CTSTRING(MENU_OPEN_MATCH_ALL));
 	tools.AppendMenu(MF_STRING, ID_GET_TTH, CTSTRING(MENU_TTH));
+	tools.AppendMenu(MF_STRING, IDC_DCLST_FROM_FOLDER, CTSTRING(MENU_DCLST_FROM_FOLDER));
 
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)tools, CTSTRING(MENU_TOOLS));
 

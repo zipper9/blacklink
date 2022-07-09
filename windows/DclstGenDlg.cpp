@@ -44,9 +44,6 @@ static const WinUtil::TextItem texts[] =
 
 LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	if (dir == nullptr || user == nullptr)
-		return TRUE;		
-		
 	SetWindowText(CTSTRING(DCLSTGEN_TITLE));
 	CenterWindow(GetParent());
 	
@@ -61,16 +58,36 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	GetDlgItem(IDC_DCLSTGEN_COPYMAGNET).EnableWindow(FALSE);
 	
 	CProgressBarCtrl(GetDlgItem(IDC_DCLSTGEN_PROGRESS)).SetRange32(0, 100);
-	
-	std::string fileName = dir->getName();
-	if (fileName.empty())
-		fileName = user->getLastNick();
-	listName = getDclstName(fileName);
+
+	if (dir)
+	{
+		string fileName = dir->getName();
+		if (fileName.empty() && user)
+			fileName = user->getLastNick();
+		if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
+			listName = SETTING(DCLST_DIRECTORY);
+		else
+			listName = Util::getDownloadDir(UserPtr());
+		listName += Util::validateFileName(fileName);
+	}
+	else
+	{
+		Util::appendPathSeparator(dirToHash);
+		string fileName = Util::getLastDir(dirToHash);
+		if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
+			listName = SETTING(DCLST_DIRECTORY);
+		else
+			listName = dirToHash;
+		listName += Util::validateFileName(fileName);
+	}
+	listName += ".dcls";
+	if (File::isExist(listName))
+		listName = Util::getNewFileName(listName);
+
 	SetDlgItemText(IDC_DCLSTGEN_NAME, Text::toT(listName).c_str());
-	
 	updateDialogItems();
-	
-	createTimer(1000);
+
+	createTimer(500);
 	start(0, "DclstGenDlg");
 	return 0;
 }
@@ -99,12 +116,15 @@ LRESULT DclstGenDlg::onFinished(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOO
 {
 	destroyTimer();
 	updateDialogItems();
-	
+
 	SetDlgItemText(IDC_DCLSTGEN_MAGNET, Text::toT(magnet).c_str());
 	SetDlgItemText(IDCANCEL, CTSTRING(OK));
-	
-	GetDlgItem(IDC_DCLSTGEN_SAVEAS).EnableWindow(TRUE);
-	GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(TRUE);
+
+	if (dir)
+	{
+		GetDlgItem(IDC_DCLSTGEN_SAVEAS).EnableWindow(TRUE);
+		GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(TRUE);
+	}
 	GetDlgItem(IDC_DCLSTGEN_COPYMAGNET).EnableWindow(TRUE);
 	return 0;
 }
@@ -127,29 +147,42 @@ void DclstGenDlg::updateDialogItems()
 	SetDlgItemText(IDC_DCLST_GEN_INFOEDIT, Util::formatBytesT(currentSize).c_str());
 	SetDlgItemText(IDC_DCLSTGEN_INFO_FOLDERSEDIT, Util::toStringT(currentFolders).c_str());
 	SetDlgItemText(IDC_DCLSTGEN_INFO_FILESEDIT, Util::toStringT(currentFiles).c_str());
-	
-	size_t totalFileCount = dir->getTotalFileCount();
-	CProgressBarCtrl(GetDlgItem(IDC_DCLSTGEN_PROGRESS)).SetPos(int((double) currentFiles * 100.0 / totalFileCount));
-}
 
-string DclstGenDlg::getDclstName(const string& folderName)
-{
-	string folderDirName;
-	if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
-		folderDirName = SETTING(DCLST_DIRECTORY);
+	int progress;
+	if (dir)
+	{
+		size_t totalFileCount = dir->getTotalFileCount();
+		if (!totalFileCount)
+			progress = 100;
+		else
+			progress = int((double) currentFiles * 100.0 / totalFileCount);
+	}
 	else
-		folderDirName = Util::getDownloadDir(UserPtr());
-	folderDirName += Util::validateFileName(folderName);
-	folderDirName += ".dcls";
-	if (File::isExist(folderDirName)) folderDirName = Util::getNewFileName(folderDirName);
-	return folderDirName;
+	{
+		if (!sizeTotal)
+			progress = 0;
+		else
+			progress = int((double) sizeProcessed * 100.0 / sizeTotal);
+	}
+	CProgressBarCtrl(GetDlgItem(IDC_DCLSTGEN_PROGRESS)).SetPos(progress);
 }
 
 int DclstGenDlg::run()
 {
-	writeXMLStart();
-	writeFolder(dir);
+	if (!dir)
+	{
+		sizeTotal = Util::getDirSize(dirToHash, abortFlag);
+		if (abortFlag.load())
+			return 0;
+	}
 	
+	writeXMLStart();
+
+	if (dir)
+		writeFolder(dir);
+	else
+		hashFolder(dirToHash, Util::getLastDir(dirToHash));
+
 	if (abortFlag.load())
 		return 0;
 
@@ -163,7 +196,8 @@ int DclstGenDlg::run()
 void DclstGenDlg::writeXMLStart()
 {
 	xml = SimpleXML::utf8Header;
-	xml += "<FileListing Version=\"2\" CID=\"" + user->getCID().toBase32() + "\" Generator=\"DC++ " DCVERSIONSTRING "\"";
+	CID cid = user ? user->getCID() : CID::generate();
+	xml += "<FileListing Version=\"2\" CID=\"" + cid.toBase32() + "\" Generator=\"DC++ " DCVERSIONSTRING "\"";
 	if (BOOLSETTING(DCLST_INCLUDESELF))
 		xml += " IncludeSelf=\"1\"";
 	xml += ">\r\n";
@@ -211,7 +245,7 @@ void DclstGenDlg::writeFile(const DirectoryListing::File* file)
 	cs.unlock();
 	string fileName = file->getName();
 	xml += "<File Name=\"" + SimpleXML::escape(fileName, true) + "\" Size=\"" + Util::toString(file->getSize()) + "\" TTH=\"" + file->getTTH().toBase32() + '\"';
-	
+
 	if (file->getTS())
 	{
 		xml += " TS=\"" + Util::toString(file->getTS()) + '\"';
@@ -243,6 +277,54 @@ void DclstGenDlg::writeFile(const DirectoryListing::File* file)
 	xml += "/>\r\n";
 }
 
+void DclstGenDlg::hashFolder(const string& path, const string& dirName)
+{
+	dcassert(!path.empty() && path.back() == PATH_SEPARATOR);
+
+	cs.lock();
+	foldersProcessed++;
+	cs.unlock();
+
+	string tmp;
+	xml += "<Directory Name=\"" + SimpleXML::escape(dirName, tmp, true) + "\">\r\n";
+	string filePath = path;
+	filePath += '*';	
+	for (FileFindIter i(filePath); i != FileFindIter::end; ++i)
+	{
+		if (abortFlag) break;
+		const string& fileName = i->getFileName();
+		if (i->isDirectory())
+		{
+			if (Util::isReservedDirName(fileName)) continue;
+			filePath.erase(path.length());
+			filePath += fileName;
+			filePath += PATH_SEPARATOR;
+			hashFolder(filePath, fileName);
+		}
+		else
+		{
+			if (i->isTemporary()) continue;
+			filePath.erase(path.length());
+			filePath += fileName;
+			hashFile(filePath);
+		}
+	}
+
+	xml += "</Directory>\r\n";
+}
+
+void DclstGenDlg::hashFile(const string& path)
+{
+	TigerTree tree;
+	if (!Util::getTTH(path, true, 1024*1024, abortFlag, tree)) return;
+	cs.lock();
+	filesProcessed++;
+	sizeProcessed += tree.getFileSize();
+	cs.unlock();
+	string fileName = Util::getFileName(path);
+	xml += "<File Name=\"" + SimpleXML::escape(fileName, true) + "\" Size=\"" + Util::toString(tree.getFileSize()) + "\" TTH=\"" + tree.getRoot().toBase32() + "\"/>\r\n";
+}
+
 size_t DclstGenDlg::packAndSave()
 {
 	size_t outSize = 0;
@@ -255,8 +337,8 @@ size_t DclstGenDlg::packAndSave()
 	}
 	catch (const FileException& ex)
 	{
-		LogManager::message("DCLSTGenerator::File error = " + ex.getError() + " File = " + listName, false);
-		MessageBox(CTSTRING(DCLSTGEN_METAFILECANNOTBECREATED), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
+		tstring error = Text::toT(ex.getError());
+		MessageBox(CTSTRING_F(DCLSTGEN_ERROR, error), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
 	}
 	return outSize;
 }

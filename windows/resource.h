@@ -198,7 +198,6 @@
 #define IDC_TRAY_RESTORE_POS            1045
 #define IDC_TOPMOST                     1046
 #define IDC_LOCK_TOOLBARS               1047
-#define IDC_KICK_USERS                  1048
 #define IDC_OVERRIDE_STATUS             1049
 #define IDC_FAKE_STATUS                 1050
 #define IDC_BTN_ABORT                   1051
@@ -238,6 +237,7 @@
 #define IDC_PRIVATE_MESSAGE             1088
 #define IDC_INFO_TEXT                   1089
 #define IDC_GETLIST                     1090
+#define IDC_DCLST_FROM_FOLDER           1091
 #define IDC_EDIT                        1092
 #define IDC_NOTEPAD                     1093
 #define IDC_AWAY                        1094
@@ -302,7 +302,6 @@
 #define IDC_BROWSETEMPDIR               1156
 #define IDC_SOCKS_RESOLVE               1157
 #define IDC_PROGRESS_BUMPED             1158
-#define IDC_BT_MAGNET_HANDLER           1159
 #define IDC_REMOVEALL                   1160
 #define IDC_NATT                        1161
 #define IDC_AUTO_TEST_PORTS             1162

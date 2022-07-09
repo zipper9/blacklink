@@ -367,6 +367,7 @@ class WinUtil
 
 	public:
 		static const GUID guidGetTTH;
+		static const GUID guidDcLstFromFolder;
 };
 
 class LastDir

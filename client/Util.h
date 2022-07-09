@@ -25,6 +25,7 @@
 #include "HashValue.h"
 #include "forward.h"
 #include "debug.h"
+#include <atomic>
 
 #define URI_SEPARATOR '/'
 #define URI_SEPARATOR_STR "/"
@@ -429,11 +430,12 @@ namespace Util
 	string getDownloadDir(const UserPtr& user);
 	string expandDownloadDir(const string& dir, const UserPtr& user);
 
+	uint64_t getDirSize(const string& path, std::atomic_bool& stopFlag);
 	string getNewFileName(const string& filename);
 
 	string getRandomNick(size_t maxLength = 20);
 
-	void setLimiter(bool aLimiter);
+	void setLimiter(bool enable);
 
 	void backupSettings();
 	string formatDchubUrl(const string& url);

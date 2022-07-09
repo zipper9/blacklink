@@ -114,6 +114,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, onViewStatusBar)
 		COMMAND_ID_HANDLER(ID_VIEW_TRANSFER_VIEW, onViewTransferView)
 		COMMAND_ID_HANDLER(ID_GET_TTH, onGetTTH)
+		COMMAND_ID_HANDLER(IDC_DCLST_FROM_FOLDER, onDcLstFromFolder)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, onAppAbout)
 		COMMAND_ID_HANDLER(ID_WINDOW_CASCADE, onWindowCascade)
 		COMMAND_ID_HANDLER(ID_WINDOW_TILE_HORZ, onWindowTile)
@@ -213,6 +214,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDcLstFromFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMatchAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

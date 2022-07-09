@@ -54,6 +54,7 @@
 #include "AboutDlgIndex.h"
 #include "AddMagnet.h"
 #include "CheckTargetDlg.h"
+#include "DclstGenDlg.h"
 #ifdef IRAINMAN_INCLUDE_SMILE
 # include "../GdiOle/GDIImage.h"
 #endif
@@ -2105,6 +2106,17 @@ LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 		dlg.lastDir = lastTTHdir;
 		dlg.DoModal();
 		lastTTHdir = std::move(dlg.lastDir);
+	}
+	return 0;
+}
+
+LRESULT MainFrame::onDcLstFromFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	tstring directory;
+	if (WinUtil::browseDirectory(directory, m_hWnd, &WinUtil::guidDcLstFromFolder))
+	{
+		DclstGenDlg dlg(Text::fromT(directory));
+		dlg.DoModal();
 	}
 	return 0;
 }
