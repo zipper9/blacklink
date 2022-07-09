@@ -147,11 +147,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
 		bool addTree(const TigerTree &tree);
 		bool getTree(const TTHValue &tth, TigerTree &tree);
-
-#if 0
-	private:
-		void inc_hitL(const string& p_Path, const string& p_FileName);
-#endif
+		static void quoteString(string& s) noexcept;
 
 	public:
 		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
@@ -164,7 +160,6 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 
 	public:
 		void errorDB(const string& text, int errorCode = SQLITE_ERROR);
-		void vacuum();
 
 	private:
 		void clearRegistryL(DBRegistryType type, int64_t tick);
@@ -227,7 +222,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
 		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
 		void saveUserStatL(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
-		
+
 	public:
 		struct GlobalRatio
 		{
@@ -246,8 +241,9 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 
 	private:
 		void initQuery(sqlite3_command &command, const char *sql);
-		bool checkDbPrefix(const string& str);
-		void attachDatabase(const string& file, const string& name);
+		bool checkDbPrefix(const string& path, const string& str);
+		void attachDatabase(const string& path, const string& file, const string& name);
+		void upgradeDatabase();
 
 	protected:
 		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
