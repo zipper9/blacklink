@@ -31,8 +31,8 @@ class HeaderList
 		void print(string& s) const noexcept;
 		void addHeader(int id, const string& value) noexcept;
 		void addHeader(const string& name, const string& value) noexcept;
-		int findHeader(int id) const noexcept;
-		int findHeader(const string& name) const noexcept;
+		int findHeader(int id, size_t startFrom = 0) const noexcept;
+		int findHeader(const string& name, size_t startFrom = 0) const noexcept;
 		bool findSingleHeader(int id, int& index) const noexcept;
 		const string& at(int index) const noexcept { return items[index].value; }
 		const string& getHeaderValue(int id) const noexcept;
@@ -67,6 +67,7 @@ class Request : public HeaderList
 		void setMethod(const string& s) noexcept;
 		int getMethodId() const noexcept { return methodId; }
 		void setMethodId(int id) noexcept;
+		const string& getUri() const noexcept { return uri; }
 		void setUri(const string& s) noexcept { uri = s; }
 
 	private:

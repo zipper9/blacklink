@@ -67,6 +67,7 @@ public:
 	void setIfModified(time_t t) { ifModified = t; }
 	void setProxyServer(const string& server) { proxyServer = server; }
 	const string& getProxyServer() const { return proxyServer; }
+	uint64_t getRequestId() const { return requestId; }
 
 	uint64_t getID() const { return id; }
 	void setIpVersion(int af) { ipVersion = af; }

@@ -13,7 +13,7 @@ static const unsigned BUSY_CONNECTION_TIMEOUT = 5 * 60000;
 
 HttpClient httpClient;
 
-HttpClient::HttpClient() : nextReqId(0), nextConnId(0)
+HttpClient::HttpClient() : nextReqId(0), nextConnId(0), commandCallback(nullptr)
 {
 }
 
@@ -60,6 +60,7 @@ uint64_t HttpClient::addRequest(const HttpClient::Request& req)
 	rs->maxErrorBodySize = req.maxErrorBodySize;
 	rs->maxRedirects = req.maxRedirects;
 	rs->ifModified = req.ifModified;
+	rs->frameId = req.frameId;
 
 	uint64_t now = GET_TICK();
 	cs.lock();
@@ -270,45 +271,50 @@ void HttpClient::onData(HttpConnection* c, const uint8_t* data, size_t size) noe
 		if (error)
 		{
 			removeRequest(reqId);
-			fire(HttpClientListener::Failed(), reqId, errorText);
+			notifyFailure(reqId, rs->frameId, errorText);
 		}
 	}
 	else
 		rs->responseBody.append((const char *) data, size);
 }
 
-void HttpClient::processError(uint64_t connId, const string& error) noexcept
+void HttpClient::processError(HttpConnection* c, const string& error) noexcept
 {
 	uint64_t reqId = 0;
+	uint64_t frameId = 0;
 	cs.lock();
-	auto i = conn.find(connId);
-	if (i == conn.end())
+	auto i = conn.find(c->getID());
+	if (i != conn.end())
 	{
-		cs.unlock();
-		return;
-	}
-	ConnectionData& cd = i->second;
-	if (cd.state != STATE_FAILED)
-	{
-		reqId = cd.requestId;
-		cd.requestId = 0;
-		cd.state = STATE_FAILED;
-		if (reqId)
+		ConnectionData& cd = i->second;
+		if (cd.state != STATE_FAILED)
 		{
-			auto j = requests.find(reqId);
-			if (j != requests.end())
-				requests.erase(j);
-			else
-				reqId = 0;
+			reqId = cd.requestId;
+			cd.requestId = 0;
+			cd.state = STATE_FAILED;
 		}
 	}
+	else
+		reqId = c->getRequestId();
+	if (reqId)
+	{
+		auto j = requests.find(reqId);
+		if (j != requests.end())
+		{
+			frameId = j->second->frameId;
+			requests.erase(j);
+		}
+		else
+			reqId = 0;
+	}
 	cs.unlock();
-	if (reqId) fire(HttpClientListener::Failed(), reqId, error);
+	if (reqId)
+		notifyFailure(reqId, frameId, error);
 }
 
 void HttpClient::onFailed(HttpConnection* c, const string& error) noexcept
 {
-	processError(c->getID(), error);
+	processError(c, error);
 }
 
 void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexcept
@@ -320,6 +326,7 @@ void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexce
 	RequestStatePtr redirRequest;
 	HttpConnection* redirConn = nullptr;
 	uint64_t reqId = 0;
+	uint64_t frameId = 0;
 	cs.lock();
 	auto i = conn.find(c->getID());
 	if (i == conn.end())
@@ -373,7 +380,9 @@ void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexce
 					result.outputPath = std::move(rs->outputPath);
 					result.responseBody = std::move(rs->responseBody);
 				}
-				if (redirUrl.empty()) requests.erase(j);
+				frameId = rs->frameId;
+				if (redirUrl.empty())
+					requests.erase(j);
 			}
 			else
 				reqId = 0;
@@ -384,16 +393,37 @@ void HttpClient::onCompleted(HttpConnection* c, const string& requestUrl) noexce
 	{
 		fire(HttpClientListener::Redirected(), reqId, redirUrl);
 		startRequest(redirConn, reqId, redirRequest);
+		if (commandCallback && frameId)
+			commandCallback->onCommandCompleted(SEV_INFO, frameId, STRING_F(HTTP_REQ_REDIRECTED, reqId % redirUrl));
 	}
 	else if (!error.empty())
-		fire(HttpClientListener::Failed(), reqId, error);
+		notifyFailure(reqId, frameId, error);
 	else if (reqId)
+	{
 		fire(HttpClientListener::Completed(), reqId, resp, result);
+		if (commandCallback && frameId)
+		{
+			int code = resp.getResponseCode();
+			if (code >= 200 && code < 300)
+			{
+				string filename = Util::getFileName(result.outputPath);
+				if (filename.empty())
+					commandCallback->onCommandCompleted(SEV_INFO, frameId, STRING_F(HTTP_REQ_COMPLETED, reqId));
+				else
+					commandCallback->onCommandCompleted(SEV_INFO, frameId, STRING_F(HTTP_REQ_COMPLETED_FILE, reqId % filename));
+			}
+			else
+			{
+				string error = Util::toString(code) + ' ' + resp.getResponsePhrase();
+				commandCallback->onCommandCompleted(SEV_ERROR, frameId, STRING_F(HTTP_REQ_FAILED, reqId % error));
+			}
+		}
+	}
 }
 
 void HttpClient::onDisconnected(HttpConnection* c) noexcept
 {
-	processError(c->getID(), STRING(CONNECTION_CLOSED));
+	processError(c, STRING(CONNECTION_CLOSED));
 }
 
 string HttpClient::getFileName(const string& path)
@@ -408,4 +438,11 @@ string HttpClient::getFileName(const string& path)
 	CID cid;
 	cid.regenerate();
 	return cid.toBase32() + ".dat";
+}
+
+void HttpClient::notifyFailure(uint64_t id, uint64_t frameId, const string& error) noexcept
+{
+	fire(HttpClientListener::Failed(), id, error);
+	if (commandCallback && frameId)
+		commandCallback->onCommandCompleted(SEV_ERROR, frameId, STRING_F(HTTP_REQ_FAILED, id % error));
 }

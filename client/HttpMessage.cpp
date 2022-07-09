@@ -176,9 +176,9 @@ void Http::HeaderList::clear() noexcept
 	items.clear();
 }
 
-int Http::HeaderList::findHeader(int id) const noexcept
+int Http::HeaderList::findHeader(int id, size_t startFrom) const noexcept
 {
-	for (size_t i = 0; i < items.size(); ++i)
+	for (size_t i = startFrom; i < items.size(); ++i)
 		if (items[i].id == id)
 			return i;
 	return -1;
@@ -196,12 +196,12 @@ bool Http::HeaderList::findSingleHeader(int id, int& index) const noexcept
 	return index != -1;
 }
 
-int Http::HeaderList::findHeader(const string& name) const noexcept
+int Http::HeaderList::findHeader(const string& name, size_t startFrom) const noexcept
 {
 	int id = Http::getHeaderId(name);
 	if (id != -1)
-		return findHeader(id);
-	for (size_t i = 0; i < items.size(); ++i)
+		return findHeader(id, startFrom);
+	for (size_t i = startFrom; i < items.size(); ++i)
 		if (Text::asciiEqual(name, items[i].name))
 			return i;
 	return -1;

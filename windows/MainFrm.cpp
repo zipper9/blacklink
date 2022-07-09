@@ -169,6 +169,7 @@ MainFrame::MainFrame() :
 	timeFlushRatio = tick + Util::rand(3, 10)*60000;
 #endif
 	g_ipTest.setCommandCallback(this);
+	httpClient.setCommandCallback(this);
 	instance = this;
 }
 

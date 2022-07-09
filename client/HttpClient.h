@@ -3,6 +3,7 @@
 
 #include "HttpClientListener.h"
 #include "HttpConnection.h"
+#include "CommandCallback.h"
 #include "Speaker.h"
 #include "File.h"
 #include <atomic>
@@ -31,6 +32,7 @@ public:
 		time_t ifModified = 0;
 		int64_t maxRespBodySize = std::numeric_limits<int64_t>::max();
 		int64_t maxErrorBodySize = 128 * 1024;
+		uint64_t frameId = 0;
 	};
 
 	uint64_t addRequest(const Request& req);
@@ -38,6 +40,7 @@ public:
 	void cancelRequest(uint64_t id);
 	void removeUnusedConnections() noexcept;
 	void shutdown() noexcept;
+	void setCommandCallback(CommandCallback* p) noexcept { commandCallback = p; }
 
 private:
 	enum
@@ -73,6 +76,7 @@ private:
 	boost::unordered_map<uint64_t, RequestStatePtr> requests;
 	std::atomic<uint64_t> nextReqId;
 	std::atomic<uint64_t> nextConnId;
+	CommandCallback* commandCallback;
 
 	// HttpClientCallback
 	void onData(HttpConnection*, const uint8_t*, size_t) noexcept override;
@@ -83,7 +87,8 @@ private:
 	void startRequest(HttpConnection* c, uint64_t id, const RequestStatePtr& rs);
 	HttpConnection* findConnectionL(uint64_t now, RequestStatePtr& rs, const string& server, uint64_t reqId, bool closeConn, int state);
 	void removeRequest(uint64_t id) noexcept;
-	void processError(uint64_t connId, const string& error) noexcept;
+	void processError(HttpConnection* c, const string& error) noexcept;
+	void notifyFailure(uint64_t id, uint64_t frameId, const string& error) noexcept;
 	static bool decodeUrl(const string& url, string& server);
 	static string getFileName(const string& path);
 	static bool isTimedOut(const ConnectionData& cd, uint64_t now) noexcept;

@@ -249,9 +249,7 @@ void HttpConnection::onDataLine(const string &line) noexcept
 		string::size_type i;
 		string chunkSizeStr;
 		if ((i = line.find(';')) == string::npos)
-		{
 			chunkSizeStr = line.substr(0, line.length() - 1);
-		}
 		else
 			chunkSizeStr = line.substr(0, i);
 

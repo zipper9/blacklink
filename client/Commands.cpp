@@ -1248,14 +1248,15 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				File::ensureDirectory(req.outputPath);
 				req.url = pc.args[2];
 				req.maxRedirects = 5;
+				req.frameId = pc.frameId;
 				uint64_t id = httpClient.addRequest(req);
 				if (id)
 				{
-					res.text = "Starting request " + Util::toString(id);
+					res.text = STRING_F(HTTP_REQ_STARTED, id);
 					httpClient.startRequest(id);
 				}
 				else
-					res.text = "Unable to add request";
+					res.text = STRING(HTTP_REQ_INIT_FAILED);
 				res.what = RESULT_LOCAL_TEXT;
 				return true;
 			}
