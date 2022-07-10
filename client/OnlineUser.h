@@ -138,9 +138,6 @@ class Identity
 		void setLimit(uint32_t lim) // "US"
 		{
 			getUser()->setLimit(lim);
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-			change(1<<COLUMN_UPLOAD_SPEED);
-#endif
 		}
 		uint32_t getLimit() const // "US"
 		{
@@ -403,14 +400,10 @@ class Identity
 		GSUINT(32, SID); // "SI"
 		static string getSIDString(uint32_t sid);
 		string getSIDString() const { return getSIDString(getSID()); }
-		
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-		GSUINTC(32, DownloadSpeed, 1<<COLUMN_CONNECTION); // "DS", "CO" (unofficial)
-#else
-		GSUINT(32, DownloadSpeed);
-#endif
+
+		GSUINT(32, DownloadSpeed); // "DS", "CO" (unofficial)
 		GSUINT(32, SharedFiles); // "SF"
-		
+
 		GSUINT(32, ExtJSONRAMWorkingSet);
 		GSUINT(32, ExtJSONRAMPeakWorkingSet);
 		GSUINT(32, ExtJSONRAMFree);
@@ -422,7 +415,7 @@ class Identity
 		GSUINT(32, ExtJSONQueueSrc);
 		GSUINT(32, ExtJSONTimesStartCore);
 		GSUINT(32, ExtJSONTimesStartGUI);
-		
+
 		GSUINTC(32, HubNormalRegOper, 1<<COLUMN_HUBS); // "HN"/"HR"/"HO" - packed into a single 32-bit value (10 bits each)
 		uint16_t getHubsNormal() const // "HN"
 		{

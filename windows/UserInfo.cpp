@@ -174,12 +174,6 @@ tstring UserInfo::getText(int col) const
 		{
 			return Text::toT(getIdentity().getApplication());
 		}
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-		case COLUMN_CONNECTION:
-		{
-			return getDownloadSpeed();
-		}
-#endif
 #ifdef BL_FEATURE_IP_DATABASE
 		case COLUMN_UPLOAD:
 		{
@@ -219,12 +213,6 @@ tstring UserInfo::getText(int col) const
 		{
 			return Text::toT(getIdentity().getEmail());
 		}
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-		case COLUMN_MODE:
-		{
-			return (getIdentity().isTcpActive(getClient())) ? _T("A") : _T("P");
-		}
-#endif
 		case COLUMN_HUBS:
 		{
 			return getHubs();

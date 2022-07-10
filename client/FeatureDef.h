@@ -86,7 +86,6 @@
 #endif
 
 #define IRAINMAN_ENABLE_WHOIS
-//#define IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 #define IRAINMAN_USE_BB_CODES // BB codes support http://ru.wikipedia.org/wiki/BbCode
