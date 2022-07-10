@@ -398,14 +398,14 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 		break;
 
 		case SPEAK_FINISHED:
-		{
 			loading = false;
 			loader.join();
-			ctrlStatus.SetText(0, _T(""));
-			insertData();
-			ctrlTree.EnableWindow(TRUE);
-		}
-		break;
+			if (!abortFlag)
+			{
+				ctrlStatus.SetText(0, _T(""));
+				insertData();
+				ctrlTree.EnableWindow(TRUE);
+			}
 	}
 	return updated;
 }
@@ -715,7 +715,9 @@ int FinishedFrameLoader::run()
 	auto conn = dm->getConnection();
 	if (conn)
 	{
+		conn->setAbortFlag(&parent->abortFlag);
 		conn->loadTransferHistorySummary(parent->transferType, parent->summary);
+		conn->setAbortFlag(nullptr);
 		dm->putConnection(conn);
 	}
 	PostMessage(hwnd, WM_SPEAKER, FinishedFrameBase::SPEAK_FINISHED, 0);

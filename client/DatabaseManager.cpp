@@ -94,9 +94,28 @@ static void traceCallback(void*, const char* sql)
 	}
 }
 
+int DatabaseConnection::progressHandler(void* ctx)
+{
+	auto conn = static_cast<DatabaseConnection*>(ctx);
+	int result = conn->abortFlag && conn->abortFlag->load();
+#ifdef _DEBUG
+	if (result) LogManager::message("DatabaseManager: statement aborted on conn " + Util::toHexString(conn));
+#endif
+	return result;
+}
+
 void DatabaseConnection::initQuery(sqlite3_command &command, const char *sql)
 {
 	if (command.empty()) command.open(&connection, sql);
+}
+
+void DatabaseConnection::setAbortFlag(std::atomic_bool* af)
+{
+	abortFlag = af;
+	if (af)
+		sqlite3_progress_handler(connection.getdb(), 100, progressHandler, this);
+	else
+		sqlite3_progress_handler(connection.getdb(), 0, nullptr, nullptr);
 }
 
 void DatabaseConnection::attachDatabase(const string& path, const string& file, const string& prefix, const string& name)
@@ -1147,10 +1166,10 @@ string DatabaseManager::getDBInfo()
 
 void DatabaseManager::reportError(const string& text, int errorCode)
 {
-	LogManager::message(text);
-	if (errorCode == SQLITE_OK)
+	if (errorCode == SQLITE_OK || errorCode == SQLITE_INTERRUPT)
 		return;
 
+	LogManager::message(text);
 	if (!errorCallback)
 		return;
 

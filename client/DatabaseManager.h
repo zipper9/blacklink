@@ -129,6 +129,7 @@ class DatabaseConnection
 		friend class DatabaseManager;
 
 	public:
+		void setAbortFlag(std::atomic_bool* af);
 		void setRegistryVarInt(DBRegistryType type, int64_t value);
 		int64_t getRegistryVarInt(DBRegistryType type);
 		void setRegistryVarString(DBRegistryType type, const string& value);
@@ -172,10 +173,12 @@ class DatabaseConnection
 		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
 		void saveUserStat(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
 #endif
+		static int progressHandler(void* ctx);
 
 	private:
 		bool busy = true;
 		uint64_t removeTime = 0;
+		std::atomic_bool* abortFlag = nullptr;
 
 		sqlite3_connection connection;
 		sqlite3_command selectIgnoredUsers;

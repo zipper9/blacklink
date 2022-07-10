@@ -55,6 +55,7 @@ class FinishedFrameBase
 			transferType(transferType),
 			currentTreeItemSelected(false),
 			loading(false),
+			abortFlag(false),
 			totalBytes(0),
 			totalActual(0),
 			totalSpeed(0),
@@ -84,8 +85,7 @@ class FinishedFrameBase
 			SPEAK_REMOVE_ITEM,
 			SPEAK_UPDATE_STATUS,
 			SPEAK_REMOVE_DROPPED_ITEMS,
-			SPEAK_FINISHED,
-			SPEAK_ABORTED
+			SPEAK_FINISHED
 		};
 
 		class FinishedItemInfo
@@ -131,6 +131,7 @@ class FinishedFrameBase
 		vector<TransferHistorySummary> summary;
 		FinishedFrameLoader loader;
 		bool loading;
+		std::atomic_bool abortFlag;
 
 		CStatusBarCtrl ctrlStatus;
 		CMenu copyMenu;
@@ -290,7 +291,11 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				closed = true;
 				FinishedManager::getInstance()->removeListener(this);
 				SettingsManager::getInstance()->removeListener(this);
-				if (loading) loader.join(); // TODO: add cancel signal
+				if (loading)
+				{
+					abortFlag.store(true);
+					loader.join();
+				}
 
 				setButtonPressed(id, false);
 				PostMessage(WM_CLOSE);
