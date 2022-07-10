@@ -94,24 +94,27 @@ static void traceCallback(void*, const char* sql)
 	}
 }
 
-void DatabaseManager::quoteString(string& s) noexcept
-{
-	string::size_type i = 0;
-	while (i < s.length())
-	{
-		string::size_type j = s.find('\'', i);
-		if (j == string::npos) break;
-		s.insert(j, 1, '\'');
-		i = j + 2;
-	}
-}
-
-void DatabaseManager::initQuery(sqlite3_command &command, const char *sql)
+void DatabaseConnection::initQuery(sqlite3_command &command, const char *sql)
 {
 	if (command.empty()) command.open(&connection, sql);
 }
 
-void DatabaseManager::setPragma(const char* pragma)
+void DatabaseConnection::attachDatabase(const string& path, const string& file, const string& prefix, const string& name)
+{
+	string cmd = "attach database '";
+	string filePath = path;
+	filePath += prefix;
+	filePath += '_';
+	filePath += file;
+	filePath += ".sqlite";
+	DatabaseManager::quoteString(filePath);
+	cmd += filePath;
+	cmd += "' as ";
+	cmd += name;
+	connection.executenonquery(cmd.c_str());
+}
+
+void DatabaseConnection::setPragma(const char* pragma)
 {
 	for (int i = 0; i < _countof(dbNames); ++i)
 	{
@@ -124,7 +127,15 @@ void DatabaseManager::setPragma(const char* pragma)
 	}
 }
 
-bool DatabaseManager::safeAlter(const char* sql, bool verbose)
+bool DatabaseConnection::hasTable(const string& tableName, const string& db)
+{
+	dcassert(tableName == Text::toLower(tableName));
+	string prefix = db;
+	if (!prefix.empty()) prefix += '.';
+	return connection.executeint("select count(*) from " + prefix + "sqlite_master where type = 'table' and lower(tbl_name) = '" + tableName + "'") != 0;
+}
+
+bool DatabaseConnection::safeAlter(const char* sql, bool verbose)
 {
 	try
 	{
@@ -139,187 +150,52 @@ bool DatabaseManager::safeAlter(const char* sql, bool verbose)
 	return false;
 }
 
-string DatabaseManager::getDBInfo()
+void DatabaseManager::quoteString(string& s) noexcept
 {
-	string message;
-	string path = Util::getConfigPath();
-	dcassert(!path.empty());
-	if (path.size() > 2)
+	string::size_type i = 0;
+	while (i < s.length())
 	{
-		dbSize = 0;
-		message = STRING(DATABASE_LOCATIONS);
-		message += '\n';
-		for (int i = 0; i < _countof(fileNames); ++i)
-		{
-			string filePath = path + prefix;
-			if (*fileNames[i])
-			{
-				filePath += '_';
-				filePath += fileNames[i];
-			}
-			filePath += ".sqlite";
-			FileAttributes attr;
-			if (File::getAttributes(filePath, attr))
-			{
-				auto size = attr.getSize();
-				message += "  * ";
-				message += filePath;
-				dbSize += size;
-				message += " (" + Util::formatBytes(size) + ")\n";
-			}
-		}
-#ifdef FLYLINKDC_USE_LMDB
-		size_t hashDbItems;
-		uint64_t hashDbSize;
-		if (lmdb.getDBInfo(hashDbItems, hashDbSize))
-		{
-			string size = Util::formatBytes(hashDbSize);
-			message += "  * ";
-			message += HashDatabaseLMDB::getDBPath();
-			message += " (";
-			message += STRING_F(HASH_DB_INFO, hashDbItems % size);
-			message += ")\n";
-		}
-#endif
-
-		File::VolumeInfo vi;
-		if (File::getVolumeInfo(path, vi))
-		{
-			message += '\n';
-#ifdef _WIN32
-			message += STRING_F(DATABASE_DISK_INFO, path.substr(0, 2) % Util::formatBytes(vi.freeBytes));
-#else
-			message += STRING_F(DATABASE_DISK_INFO, path % Util::formatBytes(vi.freeBytes));
-#endif
-			message += '\n';
-		}
-		else
-		{
-			dcassert(0);
-		}
+		string::size_type j = s.find('\'', i);
+		if (j == string::npos) break;
+		s.insert(j, 1, '\'');
+		i = j + 2;
 	}
-	return dbSize ? message : string();
 }
 
-void DatabaseManager::errorDB(const string& text, int errorCode)
+void DatabaseConnection::open(const string& prefix)
 {
-	LogManager::message(text);
-	if (errorCode == SQLITE_OK)
-		return;
+	const string& dbPath = Util::getConfigPath();
+	connection.open((dbPath + prefix + ".sqlite").c_str());
+	if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
+		sqlite3_trace(connection.getdb(), traceCallback, nullptr);
 
-	if (!errorCallback)
-		return;
+	for (int i = 1; i < _countof(dbNames); i++)
+		attachDatabase(dbPath, fileNames[i], prefix, dbNames[i]);
 
-	string message;
-	string dbInfo = getDBInfo();
-	bool forceExit = false;	
-	
-	if (errorCode == SQLITE_READONLY)
+	setPragma("page_size=4096");
+	if (g_DisableSQLJournal || BOOLSETTING(SQLITE_USE_JOURNAL_MEMORY))
 	{
-		message = STRING_F(DATABASE_READ_ONLY, APPNAME);
-		message += "\n\n";
-		forceExit = true;
+		setPragma("journal_mode=MEMORY");
 	}
 	else
-	if (errorCode == SQLITE_CORRUPT || errorCode == SQLITE_CANTOPEN || errorCode == SQLITE_IOERR)
 	{
-		message = STRING(DATABASE_CORRUPTED);
-		message += "\n\n";
-		forceExit = true;
-	}
-	else
-	if (errorCode == SQLITE_FULL)
-	{
-		string root = Util::getConfigPath();
-#ifdef _WIN32
-		root.erase(2);
-#endif
-		message = STRING_F(DATABASE_DISK_FULL, root);
-		message += "\n\n";
-		forceExit = true;
-	}
-	message += STRING_F(DATABASE_ERROR_STRING, text);
-	message += "\n\n";
-	message += dbInfo;
-	errorCallback(message, forceExit);
-}
-
-DatabaseManager::DatabaseManager() noexcept
-{
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	globalRatio.download = globalRatio.upload = 0;
-#endif
-	deleteOldTransfers = true;
-	errorCallback = nullptr;
-	dbSize = 0;
-	mmdb = nullptr;
-	timeCheckMmdb = 0;
-	mmdbDownloadReq = 0;
-	timeDownloadMmdb = 0;
-	mmdbFileTimestamp = 1;
-	mmdbStatus = MMDB_STATUS_MISSING;
-}
-
-void DatabaseManager::init(ErrorCallback errorCallback)
-{
-	this->errorCallback = errorCallback;
-	LOCK(cs);
-	try
-	{
-		const string& dbPath = Util::getConfigPath();
-		if (!checkDbPrefix(dbPath, "bl") && !checkDbPrefix(dbPath, "FlylinkDC"))
-			prefix = "bl";
-
-		int status = sqlite3_initialize();
-		if (status != SQLITE_OK)
-			LogManager::message("[Error] sqlite3_initialize = " + Util::toString(status));
-		dcassert(status == SQLITE_OK);
-		dcassert(sqlite3_threadsafe() >= 1);
-
-		connection.open((dbPath + prefix + ".sqlite").c_str());
-		if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
-			sqlite3_trace(connection.getdb(), traceCallback, nullptr);
-
-		for (int i = 1; i < _countof(dbNames); i++)
-			attachDatabase(dbPath, fileNames[i], dbNames[i]);
-
-		setPragma("page_size=4096");
-		if (g_DisableSQLJournal || BOOLSETTING(SQLITE_USE_JOURNAL_MEMORY))
-		{
-			setPragma("journal_mode=MEMORY");
-		}
+		if (g_UseWALJournal)
+			setPragma("journal_mode=WAL");
 		else
-		{
-			if (g_UseWALJournal)
-				setPragma("journal_mode=WAL");
-			else
-				setPragma("journal_mode=PERSIST");
-			setPragma("journal_size_limit=16384"); // http://src.chromium.org/viewvc/chrome/trunk/src/sql/connection.cc
-			setPragma("secure_delete=OFF"); // http://www.sqlite.org/pragma.html#pragma_secure_delete
-			if (g_UseSynchronousOff)
-				setPragma("synchronous=OFF");
-			else
-				setPragma("synchronous=FULL");
-		}
-		setPragma("temp_store=MEMORY");
-
-		upgradeDatabase();
+			setPragma("journal_mode=PERSIST");
+		setPragma("journal_size_limit=16384"); // http://src.chromium.org/viewvc/chrome/trunk/src/sql/connection.cc
+		setPragma("secure_delete=OFF"); // http://www.sqlite.org/pragma.html#pragma_secure_delete
+		if (g_UseSynchronousOff)
+			setPragma("synchronous=OFF");
+		else
+			setPragma("synchronous=FULL");
 	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - DatabaseManager: " + e.getError(), e.getErrorCode());
-	}
-#ifdef FLYLINKDC_USE_LMDB
-	lmdb.open();
-#endif
-	string dbInfo = getDBInfo();
-	if (!dbInfo.empty())
-		LogManager::message(dbInfo, false);
+	setPragma("temp_store=MEMORY");
 }
 
-void DatabaseManager::upgradeDatabase()
+void DatabaseConnection::upgradeDatabase()
 {
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	bool hasRatioTable = hasTable("fly_ratio");
 	bool hasUserTable = hasTable("user_info", "user_db");
 	bool hasNewStatTables = hasTable("ip_stat") || hasTable("user_stat", "user_db");
@@ -357,7 +233,7 @@ void DatabaseManager::upgradeDatabase()
 
 	connection.executenonquery(
 	    "CREATE TABLE IF NOT EXISTS location_db.fly_location_ip(start_ip integer not null,stop_ip integer not null,location text,flag_index integer);");
-	    
+
 	safeAlter("ALTER TABLE location_db.fly_location_ip add column location text");
 
 	connection.executenonquery(
@@ -370,7 +246,7 @@ void DatabaseManager::upgradeDatabase()
 	safeAlter("ALTER TABLE transfer_db.fly_transfer_file add column actual int64");
 
 	if (userVersion < 5)
-		deleteOldTransferHistoryL();
+		deleteOldTransferHistory();
 
 	if (userVersion < 12)
 	{
@@ -378,295 +254,20 @@ void DatabaseManager::upgradeDatabase()
 		connection.executenonquery("PRAGMA user_version=12");
 	}
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	if (!hasNewStatTables && (hasRatioTable || hasUserTable))
 		convertStatTables(hasRatioTable, hasUserTable);
-	timeLoadGlobalRatio = 0;
 #endif
 }
 
-void DatabaseManager::saveLocation(const vector<LocationInfo>& data)
-{
-	LOCK(cs);
-	try
-	{
-		BusyCounter<int> busy(g_DisableSQLtrace);
-		sqlite3_transaction trans(connection);
-		initQuery(deleteLocation, "delete from location_db.fly_location_ip");
-		deleteLocation.executenonquery();
-		initQuery(insertLocation, "insert into location_db.fly_location_ip (start_ip,stop_ip,location,flag_index) values(?,?,?,?)");
-		for (const auto& val : data)
-		{
-			dcassert(val.startIp && !val.location.empty());
-			insertLocation.bind(1, val.startIp);
-			insertLocation.bind(2, val.endIp);
-			insertLocation.bind(3, val.location, SQLITE_STATIC);
-			insertLocation.bind(4, val.imageIndex);
-			insertLocation.executenonquery();
-		}
-		trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - saveLocation: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::getIPInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached)
-{
-	dcassert(what);
-	dcassert(Util::isValidIp(ip));
-	IpKey ipKey;
-	if (ip.type == AF_INET6)
-		ipKey.setIP(ip.data.v6);
-	else
-		ipKey.setIP(ip.data.v4);
-
-	{
-		LOCK(csIpCache);
-		IpCacheItem* item = ipCache.get(ipKey);
-		if (item)
-		{
-			ipCache.makeNewest(item);
-			int found = what & item->info.known;
-			if (found & IPInfo::FLAG_COUNTRY)
-			{
-				result.country = item->info.country;
-				result.countryCode = item->info.countryCode;
-			}
-			if (found & IPInfo::FLAG_LOCATION)
-			{
-				result.location = item->info.location;
-				result.locationImage = item->info.locationImage;
-			}
-			if (found & IPInfo::FLAG_P2P_GUARD)
-				result.p2pGuard = item->info.p2pGuard;
-			result.known |= found;
-			what &= ~found;
-			if (!what) return;
-		}
-	}
-	if (onlyCached) return;
-	if (what & IPInfo::FLAG_COUNTRY)
-	{
-		result.clearCountry();
-		if (Util::isPublicIp(ip))
-			loadGeoIPInfo(ip, result);
-		else
-			result.known |= IPInfo::FLAG_COUNTRY;
-	}
-	if (what & IPInfo::FLAG_LOCATION)
-	{
-		if (BOOLSETTING(USE_CUSTOM_LOCATIONS) && ip.type == AF_INET)
-			loadLocation(ip.data.v4, result);
-		else
-			result.known |= IPInfo::FLAG_LOCATION;
-	}
-	if (what & IPInfo::FLAG_P2P_GUARD)
-	{
-		if (ip.type == AF_INET)
-			loadP2PGuard(ip.data.v4, result);
-		else
-			result.known |= IPInfo::FLAG_P2P_GUARD;
-	}
-	LOCK(csIpCache);
-	IpCacheItem* storedItem;
-	IpCacheItem newItem;
-	newItem.info = result;
-	newItem.key = ipKey;
-	if (!ipCache.add(newItem, &storedItem))
-	{
-		if (result.known & IPInfo::FLAG_COUNTRY)
-		{
-			storedItem->info.known |= IPInfo::FLAG_COUNTRY;
-			storedItem->info.country = result.country;
-			storedItem->info.countryCode = result.countryCode;
-		}
-		if (result.known & IPInfo::FLAG_LOCATION)
-		{
-			storedItem->info.known |= IPInfo::FLAG_LOCATION;
-			storedItem->info.location = result.location;
-			storedItem->info.locationImage = result.locationImage;
-		}
-		if (result.known & IPInfo::FLAG_P2P_GUARD)
-		{
-			storedItem->info.known |= IPInfo::FLAG_P2P_GUARD;
-			storedItem->info.p2pGuard = result.p2pGuard;
-		}
-	}
-	ipCache.removeOldest(IP_CACHE_SIZE + 1);
-}
-
-void DatabaseManager::loadLocation(Ip4Address ip, IPInfo& result)
-{
-	result.clearLocation();
-	dcassert(ip);
-
-	LOCK(cs);
-	try
-	{		
-		initQuery(selectLocation,
-			"select location,flag_index,start_ip,stop_ip from "
-			"(select location,flag_index,start_ip,stop_ip from location_db.fly_location_ip where start_ip <=? order by start_ip desc limit 1) "
-			"where stop_ip >=?");
-		selectLocation.bind(1, ip);
-		selectLocation.bind(2, ip);		
-		sqlite3_reader reader = selectLocation.executereader();
-		while (reader.read())
-		{
-			result.location = reader.getstring(0);
-			result.locationImage = reader.getint(1);
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - loadLocation: " + e.getError(), e.getErrorCode());
-	}
-	result.known |= IPInfo::FLAG_LOCATION;
-}
-
-void DatabaseManager::loadP2PGuard(Ip4Address ip, IPInfo& result)
-{
-	result.p2pGuard.clear();
-	dcassert(ip);
-
-	LOCK(cs);
-	try
-	{		
-		initQuery(selectP2PGuard,
-			"select note,start_ip,stop_ip,2 from "
-		    "(select note,start_ip,stop_ip from location_db.fly_p2pguard_ip where start_ip <=? order by start_ip desc limit 1) "
-			"where stop_ip >=?");
-		selectP2PGuard.bind(1, ip);
-		selectP2PGuard.bind(2, ip);		
-		sqlite3_reader reader = selectP2PGuard.executereader();
-		while (reader.read())
-		{
-			if (!result.p2pGuard.empty())
-			{
-				result.p2pGuard += " + ";
-				result.p2pGuard += reader.getstring(0);
-			}
-			else
-				result.p2pGuard = reader.getstring(0);
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - loadP2PGuard: " + e.getError(), e.getErrorCode());
-	}
-	result.known |= IPInfo::FLAG_P2P_GUARD;
-}
-
-void DatabaseManager::removeManuallyBlockedIP(Ip4Address ip)
-{
-	{
-		IpKey ipKey;
-		ipKey.setIP(ip);
-		LOCK(csIpCache);
-		IpCacheItem* item = ipCache.get(ipKey);
-		if (item)
-		{
-			item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
-			item->info.p2pGuard.clear();
-		}
-	}
-	LOCK(cs);
-	try
-	{
-		if (deleteManuallyBlockedIP.empty())
-		{
-			string stmt = "delete from location_db.fly_p2pguard_ip where start_ip=? and type=" + Util::toString(PG_DATA_MANUAL);
-			deleteManuallyBlockedIP.open(&connection, stmt.c_str());
-		}
-		deleteManuallyBlockedIP.bind(1, ip);
-		deleteManuallyBlockedIP.executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - removeManuallyBlockedIP: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result)
-{
-	result.clear();
-	LOCK(cs);
-	try
-	{
-		if (selectManuallyBlockedIP.empty())
-		{
-			string stmt = "select distinct start_ip,note from location_db.fly_p2pguard_ip where type=" + Util::toString(PG_DATA_MANUAL);
-			selectManuallyBlockedIP.open(&connection, stmt.c_str());
-		}
-		sqlite3_reader reader = selectManuallyBlockedIP.executereader();
-		while (reader.read())
-			result.emplace_back(reader.getint(0), reader.getstring(1));
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - loadManuallyBlockedIPs: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld)
-{
-	LOCK(cs);
-	try
-	{
-		BusyCounter<int> busy(g_DisableSQLtrace);
-		sqlite3_transaction trans(connection);
-		if (removeOld)
-		{
-			initQuery(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where (type=? or type is null)");
-			deleteP2PGuard.bind(1, type);
-			deleteP2PGuard.executenonquery();
-		}
-		initQuery(insertP2PGuard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
-		for (const auto& val : data)
-		{
-			dcassert(!val.note.empty());
-			insertP2PGuard.bind(1, val.startIp);
-			insertP2PGuard.bind(2, val.endIp);
-			insertP2PGuard.bind(3, val.note, SQLITE_STATIC);
-			insertP2PGuard.bind(4, type);
-			insertP2PGuard.executenonquery();
-		}
-		trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - saveP2PGuardData: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void DatabaseManager::clearCachedP2PGuardData(Ip4Address ip)
-{
-	IpKey ipKey;
-	ipKey.setIP(ip);
-	LOCK(csIpCache);
-	IpCacheItem* item = ipCache.get(ipKey);
-	if (item)
-	{
-		item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
-		item->info.p2pGuard.clear();
-	}
-}
-
-void DatabaseManager::clearIpCache()
-{
-	LOCK(csIpCache);
-	ipCache.clear();
-}
-
-void DatabaseManager::setRegistryVarString(DBRegistryType type, const string& value)
+void DatabaseConnection::setRegistryVarString(DBRegistryType type, const string& value)
 {
 	DBRegistryMap m;
 	m[Util::toString(type)] = value;
 	saveRegistry(m, type, false);
 }
 
-string DatabaseManager::getRegistryVarString(DBRegistryType type)
+string DatabaseConnection::getRegistryVarString(DBRegistryType type)
 {
 	DBRegistryMap m;
 	loadRegistry(m, type);
@@ -676,14 +277,14 @@ string DatabaseManager::getRegistryVarString(DBRegistryType type)
 		return Util::emptyString;
 }
 
-void DatabaseManager::setRegistryVarInt(DBRegistryType type, int64_t value)
+void DatabaseConnection::setRegistryVarInt(DBRegistryType type, int64_t value)
 {
 	DBRegistryMap m;
 	m[Util::toString(type)] = DBRegistryValue(value);
 	saveRegistry(m, type, false);
 }
 
-int64_t DatabaseManager::getRegistryVarInt(DBRegistryType type)
+int64_t DatabaseConnection::getRegistryVarInt(DBRegistryType type)
 {
 	DBRegistryMap m;
 	loadRegistry(m, type);
@@ -693,9 +294,8 @@ int64_t DatabaseManager::getRegistryVarInt(DBRegistryType type)
 		return 0;
 }
 
-void DatabaseManager::loadRegistry(DBRegistryMap& values, DBRegistryType type)
+void DatabaseConnection::loadRegistry(DBRegistryMap& values, DBRegistryType type)
 {
-	LOCK(cs);
 	try
 	{
 		initQuery(selectRegistry, "select key,val_str,val_number from fly_registry where segment=? order by rowid");
@@ -710,24 +310,23 @@ void DatabaseManager::loadRegistry(DBRegistryMap& values, DBRegistryType type)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadRegistry: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - loadRegistry: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::clearRegistry(DBRegistryType type, int64_t tick)
+void DatabaseConnection::clearRegistry(DBRegistryType type, int64_t tick)
 {
-	LOCK(cs);
 	try
 	{
 		clearRegistryL(type, tick);
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - clearRegistry: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - clearRegistry: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::clearRegistryL(DBRegistryType type, int64_t tick)
+void DatabaseConnection::clearRegistryL(DBRegistryType type, int64_t tick)
 {
 	initQuery(deleteRegistry, "delete from fly_registry where segment=? and tick_count<>?");
 	deleteRegistry.bind(1, type);
@@ -735,9 +334,8 @@ void DatabaseManager::clearRegistryL(DBRegistryType type, int64_t tick)
 	deleteRegistry.executenonquery();
 }
 
-void DatabaseManager::saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues)
+void DatabaseConnection::saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues)
 {
-	LOCK(cs);
 	try
 	{
 		const int64_t tick = getRandValForRegistry();
@@ -769,11 +367,11 @@ void DatabaseManager::saveRegistry(const DBRegistryMap& values, DBRegistryType t
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - saveRegistry: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - saveRegistry: " + e.getError(), e.getErrorCode());
 	}
 }
 
-int64_t DatabaseManager::getRandValForRegistry()
+int64_t DatabaseConnection::getRandValForRegistry()
 {
 	int64_t val;
 	while (true)
@@ -796,7 +394,7 @@ static string makeDeleteOldTransferHistory(const string& tableName, int currentD
 	return sql;
 }
 
-void DatabaseManager::deleteOldTransferHistoryL()
+void DatabaseConnection::deleteOldTransferHistory()
 {
 	if ((SETTING(DB_LOG_FINISHED_DOWNLOADS) || SETTING(DB_LOG_FINISHED_UPLOADS)))
 	{
@@ -809,15 +407,15 @@ void DatabaseManager::deleteOldTransferHistoryL()
 	}
 }
 
-void DatabaseManager::loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
+void DatabaseConnection::loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
 {
-	LOCK(cs);
+	DatabaseManager* dm = DatabaseManager::getInstance();
 	try
 	{
-		if (deleteOldTransfers)
+		if (dm->deleteOldTransfers)
 		{
-			deleteOldTransfers = false;
-			deleteOldTransferHistoryL();
+			dm->deleteOldTransfers = false;
+			deleteOldTransferHistory();
 		}
 
 		initQuery(selectTransfersSummary,
@@ -837,13 +435,12 @@ void DatabaseManager::loadTransferHistorySummary(eTypeTransfer type, vector<Tran
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadTransferHistorySummary: " + e.getError(), e.getErrorCode());
+		dm->reportError("SQLite - loadTransferHistorySummary: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
+void DatabaseConnection::loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
 {
-	LOCK(cs);
 	try
 	{
 		initQuery(selectTransfersDay,
@@ -852,7 +449,7 @@ void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<Fi
 		selectTransfersDay.bind(1, type);
 		selectTransfersDay.bind(2, day);
 		sqlite3_reader reader = selectTransfersDay.executereader();
-		
+
 		while (reader.read())
 		{
 			auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
@@ -870,14 +467,13 @@ void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<Fi
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadTransferHistory: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - loadTransferHistory: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
+void DatabaseConnection::deleteTransferHistory(const vector<int64_t>& id)
 {
 	if (id.empty()) return;
-	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection, id.size() > 1);
@@ -892,14 +488,13 @@ void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - deleteTransferHistory: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - deleteTransferHistory: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item)
+void DatabaseConnection::addTransfer(eTypeTransfer type, const FinishedItemPtr& item)
 {
 	int64_t timestamp = posixTimeToLocal(item->getTime());
-	LOCK(cs);
 	try
 	{
 #if 0
@@ -907,7 +502,7 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 		string path = Text::toLower(Util::getFilePath(item->getTarget()));
 		inc_hitL(path, name);
 #endif
-			
+
 		initQuery(insertTransfer,
 			"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
 			"values(?,?,?,?,?,?,?,?,?,?,?)");
@@ -929,13 +524,12 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - addTransfer: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - addTransfer: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::loadIgnoredUsers(vector<DBIgnoreListItem>& items)
+void DatabaseConnection::loadIgnoredUsers(vector<DBIgnoreListItem>& items)
 {
-	LOCK(cs);
 	try
 	{
 		initQuery(selectIgnoredUsers, "select trim(nick), type from fly_ignore");
@@ -949,13 +543,12 @@ void DatabaseManager::loadIgnoredUsers(vector<DBIgnoreListItem>& items)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadIgnoredUsers: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - loadIgnoredUsers: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::saveIgnoredUsers(const vector<DBIgnoreListItem>& items)
+void DatabaseConnection::saveIgnoredUsers(const vector<DBIgnoreListItem>& items)
 {
-	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection);
@@ -977,15 +570,169 @@ void DatabaseManager::saveIgnoredUsers(const vector<DBIgnoreListItem>& items)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - saveIgnoredUsers: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - saveIgnoredUsers: " + e.getError(), e.getErrorCode());
 	}
 }
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-void DatabaseManager::saveIPStat(const CID& cid, const vector<IPStatVecItem>& items)
+void DatabaseConnection::saveLocation(const vector<LocationInfo>& data)
+{
+	try
+	{
+		BusyCounter<int> busy(g_DisableSQLtrace);
+		sqlite3_transaction trans(connection);
+		initQuery(deleteLocation, "delete from location_db.fly_location_ip");
+		deleteLocation.executenonquery();
+		initQuery(insertLocation, "insert into location_db.fly_location_ip (start_ip,stop_ip,location,flag_index) values(?,?,?,?)");
+		for (const auto& val : data)
+		{
+			dcassert(val.startIp && !val.location.empty());
+			insertLocation.bind(1, val.startIp);
+			insertLocation.bind(2, val.endIp);
+			insertLocation.bind(3, val.location, SQLITE_STATIC);
+			insertLocation.bind(4, val.imageIndex);
+			insertLocation.executenonquery();
+		}
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - saveLocation: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void DatabaseConnection::loadLocation(Ip4Address ip, IPInfo& result)
+{
+	result.clearLocation();
+	dcassert(ip);
+
+	try
+	{
+		initQuery(selectLocation,
+			"select location,flag_index,start_ip,stop_ip from "
+			"(select location,flag_index,start_ip,stop_ip from location_db.fly_location_ip where start_ip <=? order by start_ip desc limit 1) "
+			"where stop_ip >=?");
+		selectLocation.bind(1, ip);
+		selectLocation.bind(2, ip);
+		sqlite3_reader reader = selectLocation.executereader();
+		while (reader.read())
+		{
+			result.location = reader.getstring(0);
+			result.locationImage = reader.getint(1);
+		}
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - loadLocation: " + e.getError(), e.getErrorCode());
+	}
+	result.known |= IPInfo::FLAG_LOCATION;
+}
+
+void DatabaseConnection::loadP2PGuard(Ip4Address ip, IPInfo& result)
+{
+	result.p2pGuard.clear();
+	dcassert(ip);
+
+	try
+	{
+		initQuery(selectP2PGuard,
+			"select note,start_ip,stop_ip,2 from "
+		    "(select note,start_ip,stop_ip from location_db.fly_p2pguard_ip where start_ip <=? order by start_ip desc limit 1) "
+			"where stop_ip >=?");
+		selectP2PGuard.bind(1, ip);
+		selectP2PGuard.bind(2, ip);
+		sqlite3_reader reader = selectP2PGuard.executereader();
+		while (reader.read())
+		{
+			if (!result.p2pGuard.empty())
+			{
+				result.p2pGuard += " + ";
+				result.p2pGuard += reader.getstring(0);
+			}
+			else
+				result.p2pGuard = reader.getstring(0);
+		}
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - loadP2PGuard: " + e.getError(), e.getErrorCode());
+	}
+	result.known |= IPInfo::FLAG_P2P_GUARD;
+}
+
+void DatabaseConnection::removeManuallyBlockedIP(Ip4Address ip)
+{
+	DatabaseManager* dm = DatabaseManager::getInstance();
+	dm->clearCachedP2PGuardData(ip);
+	try
+	{
+		if (deleteManuallyBlockedIP.empty())
+		{
+			string stmt = "delete from location_db.fly_p2pguard_ip where start_ip=? and type=" + Util::toString(DatabaseManager::PG_DATA_MANUAL);
+			deleteManuallyBlockedIP.open(&connection, stmt.c_str());
+		}
+		deleteManuallyBlockedIP.bind(1, ip);
+		deleteManuallyBlockedIP.executenonquery();
+	}
+	catch (const database_error& e)
+	{
+		dm->reportError("SQLite - removeManuallyBlockedIP: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void DatabaseConnection::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result)
+{
+	result.clear();
+	try
+	{
+		if (selectManuallyBlockedIP.empty())
+		{
+			string stmt = "select distinct start_ip,note from location_db.fly_p2pguard_ip where type=" + Util::toString(DatabaseManager::PG_DATA_MANUAL);
+			selectManuallyBlockedIP.open(&connection, stmt.c_str());
+		}
+		sqlite3_reader reader = selectManuallyBlockedIP.executereader();
+		while (reader.read())
+			result.emplace_back(reader.getint(0), reader.getstring(1));
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - loadManuallyBlockedIPs: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void DatabaseConnection::saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld)
+{
+	try
+	{
+		BusyCounter<int> busy(g_DisableSQLtrace);
+		sqlite3_transaction trans(connection);
+		if (removeOld)
+		{
+			initQuery(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where (type=? or type is null)");
+			deleteP2PGuard.bind(1, type);
+			deleteP2PGuard.executenonquery();
+		}
+		initQuery(insertP2PGuard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
+		for (const auto& val : data)
+		{
+			dcassert(!val.note.empty());
+			insertP2PGuard.bind(1, val.startIp);
+			insertP2PGuard.bind(2, val.endIp);
+			insertP2PGuard.bind(3, val.note, SQLITE_STATIC);
+			insertP2PGuard.bind(4, type);
+			insertP2PGuard.executenonquery();
+		}
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - saveP2PGuardData: " + e.getError(), e.getErrorCode());
+	}
+}
+
+#ifdef BL_FEATURE_IP_DATABASE
+void DatabaseConnection::saveIPStat(const CID& cid, const vector<IPStatVecItem>& items)
 {
 	const int batchSize = 256;
-	LOCK(cs);
 	try
 	{
 		int count = 0;
@@ -996,11 +743,11 @@ void DatabaseManager::saveIPStat(const CID& cid, const vector<IPStatVecItem>& it
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - saveIPStat: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - saveIPStat: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans)
+void DatabaseConnection::saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans)
 {
 	if (!count) trans.begin();
 	if (item.flags & IPStatItem::FLAG_LOADED)
@@ -1028,10 +775,9 @@ void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStat
 	}
 }
 
-IPStatMap* DatabaseManager::loadIPStat(const CID& cid)
+IPStatMap* DatabaseConnection::loadIPStat(const CID& cid)
 {
 	IPStatMap* ipStat = nullptr;
-	LOCK(cs);
 	try
 	{
 		initQuery(selectIPStat, "select ip, upload, download from ip_stat where cid=?");
@@ -1059,12 +805,12 @@ IPStatMap* DatabaseManager::loadIPStat(const CID& cid)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadIPStat: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - loadIPStat: " + e.getError(), e.getErrorCode());
 	}
 	return ipStat;
 }
 
-void DatabaseManager::saveUserStatL(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans)
+void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans)
 {
 	string nickList;
 	for (const string& nick : stat.nickList)
@@ -1099,25 +845,23 @@ void DatabaseManager::saveUserStatL(const CID& cid, UserStatItem& stat, int batc
 	stat.flags &= ~UserStatItem::FLAG_CHANGED;
 }
 
-void DatabaseManager::saveUserStat(const CID& cid, UserStatItem& stat)
+void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat)
 {
-	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection, false);
 		int count = 0;
-		saveUserStatL(cid, stat, 1, count, trans);
+		saveUserStat(cid, stat, 1, count, trans);
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - saveUserStat: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - saveUserStat: " + e.getError(), e.getErrorCode());
 	}
 }
 
-bool DatabaseManager::loadUserStat(const CID& cid, UserStatItem& stat)
+bool DatabaseConnection::loadUserStat(const CID& cid, UserStatItem& stat)
 {
 	bool result = false;
-	LOCK(cs);
 	try
 	{
 		initQuery(selectUserStat, "select nick, last_ip, message_count from user_db.user_stat where cid=?");
@@ -1140,12 +884,12 @@ bool DatabaseManager::loadUserStat(const CID& cid, UserStatItem& stat)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadUserStat: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - loadUserStat: " + e.getError(), e.getErrorCode());
 	}
 	return result;
 }
 
-bool DatabaseManager::convertStatTables(bool hasRatioTable, bool hasUserTable)
+bool DatabaseConnection::convertStatTables(bool hasRatioTable, bool hasUserTable)
 {
 	enum eTypeDIC
 	{
@@ -1200,7 +944,7 @@ bool DatabaseManager::convertStatTables(bool hasRatioTable, bool hasUserTable)
 				it = values[e_DIC_IP-1].find(reader.getint(1));
 				if (it == values[e_DIC_IP-1].end()) continue;
 				string ip = it->second;
-			
+
 				it = values[e_DIC_NICK-1].find(reader.getint(2));
 				if (it == values[e_DIC_NICK-1].end()) continue;
 				string nick = it->second;
@@ -1269,7 +1013,7 @@ bool DatabaseManager::convertStatTables(bool hasRatioTable, bool hasUserTable)
 				statItem.stat.lastIp = std::move(statItem.currentIp);
 			if (!statItem.stat.lastIp.empty() || statItem.stat.messageCount)
 			{
-				saveUserStatL(item.first, statItem.stat, batchSize, insertedCount, trans);
+				saveUserStat(item.first, statItem.stat, batchSize, insertedCount, trans);
 				insertedUsers++;
 			}
 			if (statItem.ipStat)
@@ -1293,43 +1037,44 @@ bool DatabaseManager::convertStatTables(bool hasRatioTable, bool hasUserTable)
 	return result;
 }
 
-void DatabaseManager::loadGlobalRatio(bool force)
+bool DatabaseConnection::loadGlobalRatio(uint64_t values[])
 {
-	uint64_t tick = GET_TICK();
-	LOCK(cs);
-	if (!force && tick < timeLoadGlobalRatio) return;
+	bool result = false;
 	try
 	{
 		initQuery(selectGlobalRatio, "select total(upload), total(download) from ip_stat");
 		sqlite3_reader reader = selectGlobalRatio.executereader();
 		if (reader.read())
 		{
-			globalRatio.upload = reader.getint64(0);
-			globalRatio.download = reader.getint64(1);
+			values[0] = reader.getint64(0);
+			values[1] = reader.getint64(1);
+			result = true;
 		}
-		timeLoadGlobalRatio = tick + 10 * 60000;
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadGlobalRatio: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - loadGlobalRatio: " + e.getError(), e.getErrorCode());
 	}
+	return result;
 }
 #endif
 
-bool DatabaseManager::hasTable(const string& tableName, const string& db)
+DatabaseManager::DatabaseManager() noexcept
 {
-	dcassert(tableName == Text::toLower(tableName));
-	string prefix = db;
-	if (!prefix.empty()) prefix += '.';
-	return connection.executeint("select count(*) from " + prefix + "sqlite_master where type = 'table' and lower(tbl_name) = '" + tableName + "'") != 0;
-}
-
-void DatabaseManager::shutdown()
-{
-	int status = sqlite3_shutdown();
-	dcassert(status == SQLITE_OK);
-	if (status != SQLITE_OK)
-		LogManager::message("[Error] sqlite3_shutdown = " + Util::toString(status));
+#ifdef BL_FEATURE_IP_DATABASE
+	globalRatio.download = globalRatio.upload = 0;
+#endif
+	defThreadId = 0;
+	timeLoadGlobalRatio = 0;
+	deleteOldTransfers = true;
+	errorCallback = nullptr;
+	dbSize = 0;
+	mmdb = nullptr;
+	timeCheckMmdb = 0;
+	mmdbDownloadReq = 0;
+	timeDownloadMmdb = 0;
+	mmdbFileTimestamp = 1;
+	mmdbStatus = MMDB_STATUS_MISSING;
 }
 
 DatabaseManager::~DatabaseManager()
@@ -1338,9 +1083,366 @@ DatabaseManager::~DatabaseManager()
 	httpClient.removeListener(this);
 }
 
+string DatabaseManager::getDBInfo()
+{
+	string message;
+	string path = Util::getConfigPath();
+	dcassert(!path.empty());
+	if (path.size() > 2)
+	{
+		dbSize = 0;
+		message = STRING(DATABASE_LOCATIONS);
+		message += '\n';
+		for (int i = 0; i < _countof(fileNames); ++i)
+		{
+			string filePath = path + prefix;
+			if (*fileNames[i])
+			{
+				filePath += '_';
+				filePath += fileNames[i];
+			}
+			filePath += ".sqlite";
+			FileAttributes attr;
+			if (File::getAttributes(filePath, attr))
+			{
+				auto size = attr.getSize();
+				message += "  * ";
+				message += filePath;
+				dbSize += size;
+				message += " (" + Util::formatBytes(size) + ")\n";
+			}
+		}
+#ifdef BL_FEATURE_LMDB
+		size_t hashDbItems;
+		uint64_t hashDbSize;
+		if (lmdb.getDBInfo(hashDbItems, hashDbSize))
+		{
+			string size = Util::formatBytes(hashDbSize);
+			message += "  * ";
+			message += HashDatabaseLMDB::getDBPath();
+			message += " (";
+			message += STRING_F(HASH_DB_INFO, hashDbItems % size);
+			message += ")\n";
+		}
+#endif
+
+		File::VolumeInfo vi;
+		if (File::getVolumeInfo(path, vi))
+		{
+			message += '\n';
+#ifdef _WIN32
+			message += STRING_F(DATABASE_DISK_INFO, path.substr(0, 2) % Util::formatBytes(vi.freeBytes));
+#else
+			message += STRING_F(DATABASE_DISK_INFO, path % Util::formatBytes(vi.freeBytes));
+#endif
+			message += '\n';
+		}
+		else
+		{
+			dcassert(0);
+		}
+	}
+	return dbSize ? message : string();
+}
+
+void DatabaseManager::reportError(const string& text, int errorCode)
+{
+	LogManager::message(text);
+	if (errorCode == SQLITE_OK)
+		return;
+
+	if (!errorCallback)
+		return;
+
+	string message;
+	string dbInfo = getDBInfo();
+	bool forceExit = false;
+
+	if (errorCode == SQLITE_READONLY)
+	{
+		message = STRING_F(DATABASE_READ_ONLY, APPNAME);
+		message += "\n\n";
+		forceExit = true;
+	}
+	else
+	if (errorCode == SQLITE_CORRUPT || errorCode == SQLITE_CANTOPEN || errorCode == SQLITE_IOERR)
+	{
+		message = STRING(DATABASE_CORRUPTED);
+		message += "\n\n";
+		forceExit = true;
+	}
+	else
+	if (errorCode == SQLITE_FULL)
+	{
+		string root = Util::getConfigPath();
+#ifdef _WIN32
+		root.erase(2);
+#endif
+		message = STRING_F(DATABASE_DISK_FULL, root);
+		message += "\n\n";
+		forceExit = true;
+	}
+	message += STRING_F(DATABASE_ERROR_STRING, text);
+	message += "\n\n";
+	message += dbInfo;
+	errorCallback(message, forceExit);
+}
+
+DatabaseConnection* DatabaseManager::getDefaultConnection()
+{
+	ASSERT_MAIN_THREAD();
+	LOCK(cs);
+	return defConn.get();
+}
+
+DatabaseConnection* DatabaseManager::getConnection()
+{
+	if (BaseThread::getCurrentThreadId() == defThreadId)
+		return getDefaultConnection();
+	{
+		LOCK(cs);
+		for (auto& c : conn)
+			if (!c->busy)
+			{
+				c->busy = true;
+				return c.get();
+			}
+	}
+	DatabaseConnection* newConn = new DatabaseConnection;
+	std::unique_ptr<DatabaseConnection> c(newConn);
+	try
+	{
+		c->open(prefix);
+	}
+	catch (const database_error& e)
+	{
+		reportError("SQLite - getConnection: " + e.getError(), e.getErrorCode());
+		return nullptr;
+	}
+	LOCK(cs);
+	conn.emplace_back(std::move(c));
+	return newConn;
+}
+
+void DatabaseManager::putConnection(DatabaseConnection* conn)
+{
+	uint64_t removeTime = GET_TICK() + 120 * 1000;
+	LOCK(cs);
+	dcassert(conn->busy || conn == defConn.get());
+	conn->busy = false;
+	conn->removeTime = removeTime;
+}
+
+void DatabaseManager::closeIdleConnections(uint64_t tick)
+{
+	vector<unique_ptr<DatabaseConnection>> v;
+	{
+		LOCK(cs);
+		for (auto i = conn.begin(); i != conn.end();)
+		{
+			unique_ptr<DatabaseConnection>& c = *i;
+			if (!c->busy && tick > c->removeTime)
+			{
+				v.emplace_back(std::move(c));
+				i = conn.erase(i);
+			}
+			else
+				++i;
+		}
+	}
+	v.clear();
+}
+
+void DatabaseManager::init(ErrorCallback errorCallback)
+{
+	{
+		LOCK(cs);
+		this->errorCallback = errorCallback;
+		try
+		{
+			const string& dbPath = Util::getConfigPath();
+			if (!checkDbPrefix(dbPath, "bl") && !checkDbPrefix(dbPath, "FlylinkDC"))
+				prefix = "bl";
+
+			int status = sqlite3_initialize();
+			if (status != SQLITE_OK)
+				LogManager::message("[Error] sqlite3_initialize = " + Util::toString(status));
+			dcassert(status == SQLITE_OK);
+			dcassert(sqlite3_threadsafe() >= 1);
+
+			status = sqlite3_enable_shared_cache(1);
+			dcassert(status == SQLITE_OK);
+
+			std::unique_ptr<DatabaseConnection> c(new DatabaseConnection);
+			c->open(prefix);
+			c->upgradeDatabase();
+			defConn = std::move(c);
+		}
+		catch (const database_error& e)
+		{
+			reportError("SQLite - DatabaseManager: " + e.getError(), e.getErrorCode());
+		}
+	}
+	defThreadId = BaseThread::getCurrentThreadId();
+#ifdef BL_FEATURE_LMDB
+	lmdb.open();
+#endif
+	string dbInfo = getDBInfo();
+	if (!dbInfo.empty())
+		LogManager::message(dbInfo, false);
+}
+
+void DatabaseManager::getIPInfo(DatabaseConnection* conn, const IpAddress& ip, IPInfo& result, int what, bool onlyCached)
+{
+	dcassert(what);
+	dcassert(Util::isValidIp(ip));
+	IpKey ipKey;
+	if (ip.type == AF_INET6)
+		ipKey.setIP(ip.data.v6);
+	else
+		ipKey.setIP(ip.data.v4);
+
+	{
+		LOCK(csIpCache);
+		IpCacheItem* item = ipCache.get(ipKey);
+		if (item)
+		{
+			ipCache.makeNewest(item);
+			int found = what & item->info.known;
+			if (found & IPInfo::FLAG_COUNTRY)
+			{
+				result.country = item->info.country;
+				result.countryCode = item->info.countryCode;
+			}
+			if (found & IPInfo::FLAG_LOCATION)
+			{
+				result.location = item->info.location;
+				result.locationImage = item->info.locationImage;
+			}
+			if (found & IPInfo::FLAG_P2P_GUARD)
+				result.p2pGuard = item->info.p2pGuard;
+			result.known |= found;
+			what &= ~found;
+			if (!what) return;
+		}
+	}
+	if (onlyCached) return;
+	if (what & IPInfo::FLAG_COUNTRY)
+	{
+		result.clearCountry();
+		if (Util::isPublicIp(ip))
+			loadGeoIPInfo(ip, result);
+		else
+			result.known |= IPInfo::FLAG_COUNTRY;
+	}
+	if (what & IPInfo::FLAG_LOCATION)
+	{
+		if (BOOLSETTING(USE_CUSTOM_LOCATIONS) && ip.type == AF_INET)
+		{
+			if (conn) conn->loadLocation(ip.data.v4, result);
+		}
+		else
+			result.known |= IPInfo::FLAG_LOCATION;
+	}
+	if (what & IPInfo::FLAG_P2P_GUARD)
+	{
+		if (ip.type == AF_INET)
+		{
+			if (conn) conn->loadP2PGuard(ip.data.v4, result);
+		}
+		else
+			result.known |= IPInfo::FLAG_P2P_GUARD;
+	}
+	LOCK(csIpCache);
+	IpCacheItem* storedItem;
+	IpCacheItem newItem;
+	newItem.info = result;
+	newItem.key = ipKey;
+	if (!ipCache.add(newItem, &storedItem))
+	{
+		if (result.known & IPInfo::FLAG_COUNTRY)
+		{
+			storedItem->info.known |= IPInfo::FLAG_COUNTRY;
+			storedItem->info.country = result.country;
+			storedItem->info.countryCode = result.countryCode;
+		}
+		if (result.known & IPInfo::FLAG_LOCATION)
+		{
+			storedItem->info.known |= IPInfo::FLAG_LOCATION;
+			storedItem->info.location = result.location;
+			storedItem->info.locationImage = result.locationImage;
+		}
+		if (result.known & IPInfo::FLAG_P2P_GUARD)
+		{
+			storedItem->info.known |= IPInfo::FLAG_P2P_GUARD;
+			storedItem->info.p2pGuard = result.p2pGuard;
+		}
+	}
+	ipCache.removeOldest(IP_CACHE_SIZE + 1);
+}
+
+void DatabaseManager::clearCachedP2PGuardData(Ip4Address ip)
+{
+	IpKey ipKey;
+	ipKey.setIP(ip);
+	LOCK(csIpCache);
+	IpCacheItem* item = ipCache.get(ipKey);
+	if (item)
+	{
+		item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
+		item->info.p2pGuard.clear();
+	}
+}
+
+void DatabaseManager::clearIpCache()
+{
+	LOCK(csIpCache);
+	ipCache.clear();
+}
+
+#ifdef BL_FEATURE_IP_DATABASE
+void DatabaseManager::loadGlobalRatio(bool force)
+{
+	uint64_t tick = GET_TICK();
+	LOCK(csGlobalRatio);
+	if (!force && tick < timeLoadGlobalRatio) return;
+	auto conn = getConnection();
+	if (conn)
+	{
+		uint64_t values[2];
+		if (conn->loadGlobalRatio(values))
+		{
+			globalRatio.upload = values[0];
+			globalRatio.download = values[1];
+		}
+		putConnection(conn);
+		timeLoadGlobalRatio = tick + 10 * 60000;
+	}
+}
+
+DatabaseManager::GlobalRatio DatabaseManager::getGlobalRatio() const
+{
+	LOCK(csGlobalRatio);
+	return globalRatio;
+}
+#endif
+
+void DatabaseManager::shutdown()
+{
+	{
+		LOCK(cs);
+		defConn.reset();
+		conn.clear();
+	}
+	int status = sqlite3_shutdown();
+	dcassert(status == SQLITE_OK);
+	if (status != SQLITE_OK)
+		LogManager::message("[Error] sqlite3_shutdown = " + Util::toString(status));
+}
+
 bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize)
 {
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 	return lmdb.getFileInfo(tth.data, flags, path, treeSize);
 #else
 	flags = 0;
@@ -1352,7 +1454,7 @@ bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string *
 
 bool DatabaseManager::setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path)
 {
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 	if (tth.isZero()) return false;
 	return lmdb.putFileInfo(tth.data, FLAG_DOWNLOADED, fileSize, path.empty() ? nullptr : &path);
 #else
@@ -1362,7 +1464,7 @@ bool DatabaseManager::setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSi
 
 bool DatabaseManager::setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize)
 {
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 	if (tth.isZero()) return false;
 	return lmdb.putFileInfo(tth.data, FLAG_DOWNLOAD_CANCELED, fileSize, nullptr);
 #else
@@ -1392,7 +1494,7 @@ bool DatabaseManager::addTree(const TigerTree &tree)
 				return false;
 		}
 	}
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 	if (tree.getLeaves().size() < 2)
 		return true;
 	bool result = lmdb.putTigerTree(tree);
@@ -1417,7 +1519,7 @@ bool DatabaseManager::getTree(const TTHValue &tth, TigerTree &tree)
 			return true;
 		}
 	}
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 	return lmdb.getTigerTree(tth.data, tree);
 #else
 	return false;
@@ -1432,21 +1534,6 @@ bool DatabaseManager::checkDbPrefix(const string& path, const string& str)
 		return true;
 	}
 	return false;
-}
-
-void DatabaseManager::attachDatabase(const string& path, const string& file, const string& name)
-{
-	string cmd = "attach database '";
-	string filePath = path;
-	filePath += prefix;
-	filePath += '_';
-	filePath += file;
-	filePath += ".sqlite";
-	quoteString(filePath);
-	cmd += filePath;
-	cmd += "' as ";
-	cmd += name;
-	connection.executenonquery(cmd.c_str());
 }
 
 bool DatabaseManager::openGeoIPDatabaseL() noexcept
@@ -1577,7 +1664,7 @@ int DatabaseManager::getGeoIPDatabaseStatus(uint64_t& timestamp) noexcept
 	timestamp = mmdbFileTimestamp;
 	csDownloadMmdb.unlock();
 	if (status == MMDB_STATUS_DOWNLOADING || status == MMDB_STATUS_DL_FAILED) return status;
-	
+
 	csMmdb.lock();
 	openGeoIPDatabaseL();
 	bool isOpen = mmdb != nullptr;

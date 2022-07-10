@@ -610,7 +610,7 @@ string CompatibilityManager::getStats() // moved from WinUtil
 {
 	char buf[2048];
 	string s;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	if (DatabaseManager::isValidInstance())
 	{
 		auto dm = DatabaseManager::getInstance();

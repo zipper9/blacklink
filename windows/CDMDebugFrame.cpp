@@ -36,7 +36,8 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlDirection.SetCurSel(0);
 	
 	DBRegistryMap values;
-	DatabaseManager::getInstance()->loadRegistry(values, e_CMDDebugFilterState);
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn) conn->loadRegistry(values, e_CMDDebugFilterState);
 	showHubCommands = values["showHubCommands"];
 	
 	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
@@ -128,7 +129,8 @@ LRESULT CDMDebugFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 			values["showDetection"] = DBRegistryValue(showDetection);
 		if (enableFilterIp)
 			values["enableFilterIp"] = DBRegistryValue(enableFilterIp);
-		DatabaseManager::getInstance()->saveRegistry(values, e_CMDDebugFilterState, true);
+		auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+		if (conn) conn->saveRegistry(values, e_CMDDebugFilterState, true);
 		
 		DebugManager::getInstance()->removeListener(this);
 		DebugManager::deleteInstance();

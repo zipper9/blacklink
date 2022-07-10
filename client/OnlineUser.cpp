@@ -675,7 +675,7 @@ void Identity::getReport(string& report)
 		appendIfValueNotEmpty("SQLite DB size", getExtJSONSQLiteDBSizeAsText());
 		appendIfValueNotEmpty("Queue info", getExtJSONQueueFilesText());
 		appendIfValueNotEmpty("Start/stop core", getExtJSONTimesStartCoreText());
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		uint64_t bytes[2];
 		user->getBytesTransfered(bytes);
 		if (bytes[0] + bytes[1])

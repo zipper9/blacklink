@@ -959,7 +959,7 @@ void HubFrame::processTasks()
 							const Identity& from = msg->from->getIdentity();
 							const bool myMessage = msg->from->getUser()->isMe();
 							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), UINT_MAX, Colors::g_ChatTextGeneral);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 							auto& user = msg->from->getUser();
 							user->incMessageCount();
 							//client->incMessagesCount();

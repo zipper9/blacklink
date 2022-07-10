@@ -1092,8 +1092,12 @@ void FavoriteManager::saveRecents()
 			recentHubsStr += '\n';
 			values[recent->getName()] = recentHubsStr;
 		}
-		DatabaseManager::getInstance()->saveRegistry(values, e_RecentHub, true);
-		recentsDirty = false;
+		auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+		if (conn)
+		{
+			conn->saveRegistry(values, e_RecentHub, true);
+			recentsDirty = false;
+		}
 	}
 }
 
@@ -1142,7 +1146,8 @@ void FavoriteManager::load()
 	const bool oldConfigExist = !recentHubs.empty();
 	
 	DBRegistryMap values;
-	DatabaseManager::getInstance()->loadRegistry(values, e_RecentHub);
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn) conn->loadRegistry(values, e_RecentHub);
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
 		const StringTokenizer<string> tok(k->second.sval, '\n');

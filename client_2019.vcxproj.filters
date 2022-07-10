@@ -654,9 +654,6 @@
     <ClInclude Include="client\sqlite\sqlite3x.hpp">
       <Filter>Header Files\sqlite</Filter>
     </ClInclude>
-    <ClInclude Include="client\sqlite\sqlite_fly.h">
-      <Filter>Header Files\sqlite</Filter>
-    </ClInclude>
     <ClInclude Include="client\ConnectivityManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1031,6 +1028,9 @@
     </ClInclude>
     <ClInclude Include="client\CommandCallback.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\sqlite\sqlite_conf.h">
+      <Filter>Header Files\sqlite</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

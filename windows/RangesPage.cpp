@@ -252,7 +252,8 @@ void RangesPageP2PGuard::fixControls()
 void RangesPageP2PGuard::loadBlocked()
 {
 	vector<P2PGuardBlockedIP> result;
-	DatabaseManager::getInstance()->loadManuallyBlockedIPs(result);
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn) conn->loadManuallyBlockedIPs(result);
 	for (const auto& v : result)
 		listBox.AddString(Text::toT(Util::printIpAddress(v.ip) + '\t' + v.note).c_str());
 	BOOL unused;
@@ -300,7 +301,10 @@ LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
 					str.erase(pos);
 					Ip4Address ip;
 					if (Util::parseIpAddress(ip, str))
-						DatabaseManager::getInstance()->removeManuallyBlockedIP(ip);
+					{
+						auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+						if (conn) conn->removeManuallyBlockedIP(ip);
+					}
 				}
 			}
 		}

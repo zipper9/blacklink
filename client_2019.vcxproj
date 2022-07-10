@@ -789,7 +789,6 @@
     <ClInclude Include="client\sqlite\sqlite3.h" />
     <ClInclude Include="client\sqlite\sqlite3ext.h" />
     <ClInclude Include="client\sqlite\sqlite3x.hpp" />
-    <ClInclude Include="client\sqlite\sqlite_fly.h" />
     <ClInclude Include="client\AdcCommand.h" />
     <ClInclude Include="client\AdcHub.h" />
     <ClInclude Include="client\ADLSearch.h" />
@@ -843,6 +842,7 @@
     <ClInclude Include="client\QueueManager.h" />
     <ClInclude Include="client\QueueManagerListener.h" />
     <ClInclude Include="client\ResourceManager.h" />
+    <ClInclude Include="client\sqlite\sqlite_conf.h" />
     <ClInclude Include="client\StrUtil.h" />
     <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\TagCollector.h" />

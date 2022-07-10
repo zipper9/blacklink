@@ -325,7 +325,13 @@ void UserManager::clearIgnoreList()
 void UserManager::loadIgnoreList()
 {
 	vector<DBIgnoreListItem> items;
-	DatabaseManager::getInstance()->loadIgnoredUsers(items);
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->loadIgnoredUsers(items);
+		dm->putConnection(conn);
+	}
 
 	vector<pair<string, std::regex>> parsedReg;
 	std::regex re;
@@ -364,7 +370,13 @@ void UserManager::saveIgnoreList()
 			items.emplace_back(DBIgnoreListItem{ext.first, ext.second.type});
 		ignoreListEmpty = items.empty();
 	}
-	DatabaseManager::getInstance()->saveIgnoredUsers(items);
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->saveIgnoredUsers(items);
+		dm->putConnection(conn);
+	}
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN

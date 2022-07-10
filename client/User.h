@@ -34,7 +34,7 @@
 class ClientBase;
 class Client;
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 #include "IPStat.h"
 #endif
 
@@ -281,7 +281,7 @@ class User final
 			return uploadCount;
 		}
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		uint64_t getBytesUploaded() const;
 		uint64_t getBytesDownloaded() const;
 		void getBytesTransfered(uint64_t out[]) const;
@@ -296,7 +296,7 @@ class User final
 		void saveStats(bool ipStat, bool userStat);
 		bool statsChanged() const;
 		bool getLastNickAndHub(string& nick, string& hub) const;
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#endif // BL_FEATURE_IP_DATABASE
 
 	private:
 		mutable FastCriticalSection cs;
@@ -309,7 +309,7 @@ class User final
 		int uploadCount;
 		Ip4Address lastIp4;
 		Ip6Address lastIp6;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		UserStatItem userStat;
 		IPStatMap* ipStat;
 

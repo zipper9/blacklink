@@ -844,6 +844,7 @@ enum Strings   // @DontAdd
 	LOADING_FILE_LIST_PROGRESS, // "Loading file list: "
 	PREPARING_FILE_LIST, // "Preparing file list..."
 	ERROR_PARSING_FILE_LIST, // "Error parsing file list: "
+	LOADING_DATA, // "Loading data..."
 	PROGRESSBAR_ODC_STYLE, // "oDC Style"
 	PROGRESSBAR_STEALTHY_STYLE, // "Stealthy style"
 	SETTINGS_SHOW_SPEED_ICON, // "Show transfer speed icon"

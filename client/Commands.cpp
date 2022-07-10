@@ -659,7 +659,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 #endif
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		case COMMAND_INFO_RATIO:
 		{
 			StringMap params;
@@ -674,7 +674,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 		}
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#endif // BL_FEATURE_IP_DATABASE
 		case COMMAND_GEOIP:
 		{
 			IpAddress addr;
@@ -1178,7 +1178,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			res.what = RESULT_ERROR_MESSAGE;
 			return true;
 		}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		case COMMAND_FLUSH_STATS:
 		{
 			ClientManager::flushRatio();

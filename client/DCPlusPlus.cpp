@@ -211,8 +211,8 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 	ClientManager::deleteInstance();
 	HashManager::deleteInstance();
 
+	DatabaseManager::getInstance()->shutdown();
 	DatabaseManager::deleteInstance();
-	DatabaseManager::shutdown();
 	TimerManager::deleteInstance();
 
 	SettingsManager::getInstance()->removeListeners();

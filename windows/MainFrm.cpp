@@ -164,8 +164,9 @@ MainFrame::MainFrame() :
 	m_bUpdateProportionalPos = false;
 	memset(statusSizes, 0, sizeof(statusSizes));
 	auto tick = GET_TICK();
+	timeDbCleanup = tick + 60000;
 	timeUsersCleanup = tick + Util::rand(3, 10)*60000;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	timeFlushRatio = tick + Util::rand(3, 10)*60000;
 #endif
 	g_ipTest.setCommandCallback(this);
@@ -305,9 +306,10 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	LogManager::message("Main window created (Thread: " + Util::toString(BaseThread::getCurrentThreadId()) + ')', false);
 	if (CompatibilityManager::isIncompatibleSoftwareFound())
 	{
-		if (DatabaseManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
+		auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+		if (conn && conn->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
 		{
-			DatabaseManager::getInstance()->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
+			conn->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
 			LogManager::message("CompatibilityManager: " + CompatibilityManager::getIncompatibleSoftwareList());
 			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 			{
@@ -598,13 +600,18 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		ClientManager::usersCleanup();
 		timeUsersCleanup = tick + Util::rand(3, 10)*60000;
 	}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	if (tick >= timeFlushRatio)
 	{
 		ClientManager::flushRatio();
 		timeFlushRatio = tick + Util::rand(3, 10)*60000;
 	}
 #endif
+	if (tick >= timeDbCleanup)
+	{
+		DatabaseManager::getInstance()->closeIdleConnections(tick);
+		timeDbCleanup = tick + 60000;
+	}
 	if (ClientManager::isStartup())
 		return 0;
 

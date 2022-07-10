@@ -309,7 +309,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
 					colMask(0), hits(0), iconIndex(-1)
 				{
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 					ipUpdated = false;
 #endif
 				}
@@ -371,7 +371,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				SearchResult sr;
 				mutable tstring columns[COLUMN_LAST];
 				mutable uint32_t colMask;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 				bool ipUpdated;
 #endif
 				const TTHValue& getGroupCond() const
@@ -431,7 +431,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CContainedWindow modeContainer;
 		CContainedWindow sizeModeContainer;
 		CContainedWindow fileTypeContainer;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		CButton ctrlStoreIP;
 		bool storeIP;
 #endif

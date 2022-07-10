@@ -129,7 +129,7 @@ QueueFrame::~QueueFrame()
 static tstring getSourceName(const UserPtr& user, bool partial)
 {
 	tstring res;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	string nick, hubUrl;
 	if (user->getLastNickAndHub(nick, hubUrl))
 	{

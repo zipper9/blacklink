@@ -16,7 +16,8 @@ void SearchHistory::addItem(const tstring& s, int maxCount)
 void SearchHistory::load(DBRegistryType type)
 {
 	DBRegistryMap values;
-	DatabaseManager::getInstance()->loadRegistry(values, type);
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn) conn->loadRegistry(values, type);
 	data.clear();
 	unsigned key = 0;
 	while (true)
@@ -37,16 +38,20 @@ void SearchHistory::firstLoad(DBRegistryType type)
 void SearchHistory::save(DBRegistryType type)
 {
 	DBRegistryMap values;
-	auto dm = DatabaseManager::getInstance();
 	unsigned key = 0;
 	for (auto i = data.cbegin(); i != data.cend(); ++i)
 		values.insert(DBRegistryMap::value_type(Util::toString(++key), DBRegistryValue(Text::fromT(*i))));
-	dm->clearRegistry(type, 0);
-	dm->saveRegistry(values, type, true);
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn)
+	{
+		conn->clearRegistry(type, 0);
+		conn->saveRegistry(values, type, true);
+	}
 }
 
 void SearchHistory::clear(DBRegistryType type)
 {
 	data.clear();
-	DatabaseManager::getInstance()->clearRegistry(type, 0);
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn) conn->clearRegistry(type, 0);
 }

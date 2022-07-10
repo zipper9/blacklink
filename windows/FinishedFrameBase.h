@@ -31,14 +31,30 @@
 #define FINISHED_TREE_MESSAGE_MAP 11
 #define FINISHED_LIST_MESSAGE_MAP 12
 
+class FinishedFrameBase;
+
+class FinishedFrameLoader : public Thread
+{
+		friend class FinishedFrameBase;
+
+	protected:
+		virtual int run();
+
+	private:
+		FinishedFrameBase* parent = nullptr;
+		HWND hwnd = nullptr;
+};
+
 class FinishedFrameBase
 {
+		friend class FinishedFrameLoader;
 		const eTypeTransfer transferType;
 
 	public:
 		FinishedFrameBase(eTypeTransfer transferType) :
 			transferType(transferType),
 			currentTreeItemSelected(false),
+			loading(false),
 			totalBytes(0),
 			totalActual(0),
 			totalSpeed(0),
@@ -47,10 +63,10 @@ class FinishedFrameBase
 			type(transferType == e_TransferUpload ? FinishedManager::e_Upload : FinishedManager::e_Download)
 		{
 		}
-		
+
 		FinishedFrameBase(const FinishedFrameBase&) = delete;
 		FinishedFrameBase& operator= (const FinishedFrameBase&) = delete;
-		
+
 		virtual ~FinishedFrameBase() {}
 
 	protected:
@@ -59,20 +75,18 @@ class FinishedFrameBase
 			Current,
 			History,
 			HistoryRootDC,
-			HistoryDateDC,
-#ifdef FLYLINKDC_USE_TORRENT
-			HistoryRootTorrent,
-			HistoryDateTorrent,
-#endif
+			HistoryDateDC
 		};
-		
+
 		enum
 		{
 			SPEAK_ADD_ITEM,
 			SPEAK_REMOVE_ITEM,
 			SPEAK_UPDATE_STATUS,
-			SPEAK_REMOVE_DROPPED_ITEMS
-		};		
+			SPEAK_REMOVE_DROPPED_ITEMS,
+			SPEAK_FINISHED,
+			SPEAK_ABORTED
+		};
 
 		class FinishedItemInfo
 		{
@@ -113,7 +127,11 @@ class FinishedFrameBase
 		};
 
 		bool currentTreeItemSelected;
-		
+
+		vector<TransferHistorySummary> summary;
+		FinishedFrameLoader loader;
+		bool loading;
+
 		CStatusBarCtrl ctrlStatus;
 		CMenu copyMenu;
 		OMenu directoryMenu;
@@ -128,15 +146,9 @@ class FinishedFrameBase
 			public:
 				HTREEITEM root;
 				HTREEITEM dc;
-#ifdef FLYLINKDC_USE_TORRENT
-				HTREEITEM torrent;
-#endif
 				SubtreeInfo()
 				{
 					root = dc = nullptr;
-#ifdef FLYLINKDC_USE_TORRENT
-					torrent = nullptr;
-#endif
 				}
 				void createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType);
 		};
@@ -156,6 +168,7 @@ class FinishedFrameBase
 		SettingsManager::StrSetting columnVisible;
 		SettingsManager::IntSetting columnSort;
 		
+		void insertData();
 		void addStatusLine(const tstring& aLine);
 		void updateStatus();
 		void updateList(const FinishedItemList& fl);		
@@ -269,7 +282,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			bHandled = FALSE;
 			return TRUE;
 		}
-		
+
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			if (!closed)
@@ -277,7 +290,8 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				closed = true;
 				FinishedManager::getInstance()->removeListener(this);
 				SettingsManager::getInstance()->removeListener(this);
-				
+				if (loading) loader.join(); // TODO: add cancel signal
+
 				setButtonPressed(id, false);
 				PostMessage(WM_CLOSE);
 				return 0;
@@ -292,13 +306,13 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				return 0;
 			}
 		}
-		
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		
+
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 		{
 			bool updated = FinishedFrameBase::onSpeaker(wParam, lParam);
@@ -314,11 +328,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			DWORD_PTR itemData = ctrlTree.GetItemData(treeItem);
 			if (!itemData) return 0;
 			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(itemData);
-			if (data->type == HistoryDateDC
-#ifdef FLYLINKDC_USE_TORRENT
-			    || data->type == HistoryDateTorrent
-#endif
-			)
+			if (data->type == HistoryDateDC)
 			{
 				SendMessage(WM_COMMAND, IDC_REMOVE_ALL);
 				ctrlTree.DeleteItem(treeItem);
@@ -385,14 +395,8 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		void on(SettingsManagerListener::Repaint) override
 		{
-			dcassert(!ClientManager::isBeforeShutdown());
-			if (!ClientManager::isBeforeShutdown())
-			{
-				if (ctrlList.isRedraw())
-				{
-					RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-				}
-			}
+			if (ctrlList.isRedraw())
+				RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 
 		void on(FinishedManagerListener::DroppedItems, int64_t maxTempId) noexcept override

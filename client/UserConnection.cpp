@@ -670,7 +670,7 @@ void UserConnection::onConnected() noexcept
 void UserConnection::onData(const uint8_t* data, size_t len)
 {
 	updateLastActivity();
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	if (len)
 	{
 		getUser()->loadIPStat();
@@ -683,7 +683,7 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 void UserConnection::onBytesSent(size_t bytes, size_t actual)
 {
 	updateLastActivity();
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	if (actual)
 	{
 		getUser()->loadIPStat();

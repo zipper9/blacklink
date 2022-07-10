@@ -33,7 +33,7 @@ User::User(const CID& cid, const string& nick) : cid(cid),
 	uploadCount(0),
 	lastIp4(0),
 	lastIp6{}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	, ipStat(nullptr)
 #endif
 {
@@ -49,7 +49,7 @@ User::~User()
 #ifdef _DEBUG
 	--g_user_counts;
 #endif
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	delete ipStat;
 #endif
 }
@@ -90,7 +90,7 @@ void User::setIP4(Ip4Address ip)
 		return;
 	lastIp4 = ip;
 	flags |= LAST_IP_CHANGED;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	userStat.setIP(Util::printIpAddress(ip));
 	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
 	{
@@ -109,7 +109,7 @@ void User::setIP6(const Ip6Address& ip)
 		return;
 	lastIp6 = ip;
 	flags |= LAST_IP_CHANGED;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	userStat.setIP(Util::printIpAddress(ip));
 	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
 	{
@@ -149,7 +149,7 @@ void User::getInfo(string& nick, Ip4Address& ip4, Ip6Address& ip6, int64_t& byte
 	slots = this->slots;
 }
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 unsigned User::getMessageCount() const
 {
 	LOCK(cs);
@@ -213,7 +213,14 @@ void User::loadIPStatFromDB()
 	if (!BOOLSETTING(ENABLE_RATIO_USER_LIST))
 		return;
 
-	IPStatMap* dbStat = DatabaseManager::getInstance()->loadIPStat(getCID());
+	IPStatMap* dbStat = nullptr;
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		dbStat = conn->loadIPStat(getCID());
+		dm->putConnection(conn);
+	}
 	LOCK(cs);
 	flags |= IP_STAT_LOADED;
 	delete ipStat;
@@ -232,7 +239,14 @@ void User::loadUserStatFromDB()
 		return;
 	
 	UserStatItem dbStat;
-	DatabaseManager::getInstance()->loadUserStat(getCID(), dbStat);
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->loadUserStat(getCID(), dbStat);
+		dm->putConnection(conn);
+	}
+
 	LOCK(cs);
 	flags |= USER_STAT_LOADED;
 	for (const auto& nick : userStat.nickList)
@@ -288,7 +302,14 @@ void User::saveUserStat()
 	UserStatItem dbStat = userStat;
 	userStat.flags |= UserStatItem::FLAG_LOADED;
 	cs.unlock();
-	DatabaseManager::getInstance()->saveUserStat(getCID(), dbStat);
+
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->saveUserStat(getCID(), dbStat);
+		dm->putConnection(conn);
+	}
 }
 
 void User::saveIPStat()
@@ -318,7 +339,14 @@ void User::saveIPStat()
 		if (!(flags & USER_STAT_LOADED)) loadUserStat = true;
 	}
 	cs.unlock();
-	DatabaseManager::getInstance()->saveIPStat(getCID(), items);
+
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->saveIPStat(getCID(), items);
+		dm->putConnection(conn);
+	}
 	if (loadUserStat) loadUserStatFromDB();
 }
 
@@ -366,7 +394,7 @@ bool User::getLastNickAndHub(string& nick, string& hub) const
 
 void User::addNick(const string& nick, const string& hub)
 {
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	if (nick.empty() || hub.empty()) return;
 	LOCK(cs);
 	userStat.addNick(nick, hub);

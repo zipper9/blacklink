@@ -505,7 +505,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 		uploads.erase(cqi);
 		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
 	}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	// Вешаемся при активной закачке cqi->getUser()->flushRatio();
 #endif
 	QueueManager::userQueue.removeRunning(cqi->getUser());
@@ -1843,7 +1843,7 @@ void ConnectionManager::shutdown()
 		}
 #endif
 	}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	// Сбрасываем рейтинг в базу пока не нашли причину почему тут остаются записи.
 	{
 		bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);

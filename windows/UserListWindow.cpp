@@ -31,7 +31,7 @@ static const int columnSizes[] =
 #endif
 	100,    // COLUMN_IP
 	100,    // COLUMN_GEO_LOCATION
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	50,     // COLUMN_UPLOAD
 	50,     // COLUMN_DOWNLOAD
 	10,     // COLUMN_MESSAGES
@@ -78,7 +78,7 @@ const int UserListWindow::columnId[] =
 #endif
 	COLUMN_IP,
 	COLUMN_GEO_LOCATION,
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	COLUMN_UPLOAD,
 	COLUMN_DOWNLOAD,
 	COLUMN_MESSAGES,
@@ -123,7 +123,7 @@ static const ResourceManager::Strings columnNames[] =
 #endif
 	ResourceManager::IP,              // COLUMN_IP
 	ResourceManager::LOCATION_BARE,   // COLUMN_GEO_LOCATION
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	ResourceManager::UPLOADED,        // COLUMN_UPLOAD
 	ResourceManager::DOWNLOADED,      // COLUMN_DOWNLOAD
 	ResourceManager::MESSAGES_COUNT,  // COLUMN_MESSAGES
@@ -177,7 +177,7 @@ UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) :
 	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
 	ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
 	ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
 	ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);

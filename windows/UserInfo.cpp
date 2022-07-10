@@ -70,7 +70,7 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_HUBS")
 			return compare(a->getIdentity().getHubNormalRegOper(), b->getIdentity().getHubNormalRegOper());
 		}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		case COLUMN_UPLOAD:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_UPLOAD")
@@ -180,7 +180,7 @@ tstring UserInfo::getText(int col) const
 			return getDownloadSpeed();
 		}
 #endif
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		case COLUMN_UPLOAD:
 		{
 			const UserPtr& user = getUser();
@@ -206,7 +206,7 @@ tstring UserInfo::getText(int col) const
 			auto value = user->getMessageCount();
 			return value ? Util::toStringT(value) : Util::emptyStringT;
 		}
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#endif // BL_FEATURE_IP_DATABASE
 		case COLUMN_IP:
 		{
 			return Util::printIpAddressT(getIdentity().getConnectIP());

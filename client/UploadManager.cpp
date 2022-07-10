@@ -1519,13 +1519,25 @@ void UploadManager::save()
 				values[i->first->getCID().toBase32()] = DBRegistryValue((timeout-currentTick)/1000 + currentTime);
 		}
 	}
-	DatabaseManager::getInstance()->saveRegistry(values, e_ExtraSlot, true);
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->saveRegistry(values, e_ExtraSlot, true);
+		dm->putConnection(conn);
+	}
 }
 
 void UploadManager::load()
 {
 	DBRegistryMap values;
-	DatabaseManager::getInstance()->loadRegistry(values, e_ExtraSlot);
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->loadRegistry(values, e_ExtraSlot);
+		dm->putConnection(conn);
+	}
 	uint64_t currentTick = GET_TICK();
 	int64_t currentTime = (int64_t) GET_TIME();
 	for (auto k = values.cbegin(); k != values.cend(); ++k)

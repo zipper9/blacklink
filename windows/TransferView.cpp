@@ -1890,10 +1890,14 @@ void TransferView::ItemInfo::disconnectAndBlock()
 {
 	if (transferIp.type == AF_INET)
 	{
-		auto databaseManager = DatabaseManager::getInstance();
-		databaseManager->clearCachedP2PGuardData(transferIp.data.v4);
-		vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), transferIp.data.v4, transferIp.data.v4) };
-		databaseManager->saveP2PGuardData(data, DatabaseManager::PG_DATA_MANUAL, false);
+		auto dm = DatabaseManager::getInstance();
+		dm->clearCachedP2PGuardData(transferIp.data.v4);
+		auto conn = dm->getDefaultConnection();
+		if (conn)
+		{
+			vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), transferIp.data.v4, transferIp.data.v4) };
+			conn->saveP2PGuardData(data, DatabaseManager::PG_DATA_MANUAL, false);
+		}
 	}
 	disconnect();
 }

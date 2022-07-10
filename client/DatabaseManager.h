@@ -7,10 +7,10 @@
 //(c) 2007-2017 pavel.pimenov@gmail.com
 //-----------------------------------------------------------------------------
 
-#ifndef DatabaseManager_H
-#define DatabaseManager_H
+#ifndef DATABASE_MANAGER_H_
+#define DATABASE_MANAGER_H_
 
-#define FLYLINKDC_USE_LMDB
+#define BL_FEATURE_LMDB
 
 #include "Singleton.h"
 #include "Locks.h"
@@ -24,12 +24,13 @@
 #include "HttpClientListener.h"
 #include "forward.h"
 #include "sqlite/sqlite3x.hpp"
+#include <atomic>
 
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 #include "HashDatabaseLMDB.h"
 #endif
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 #include "IPStat.h"
 #endif
 
@@ -123,14 +124,106 @@ struct DBIgnoreListItem
 	int type;
 };
 
+class DatabaseConnection
+{
+		friend class DatabaseManager;
+
+	public:
+		void setRegistryVarInt(DBRegistryType type, int64_t value);
+		int64_t getRegistryVarInt(DBRegistryType type);
+		void setRegistryVarString(DBRegistryType type, const string& value);
+		string getRegistryVarString(DBRegistryType type);
+		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
+		void loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
+		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item);
+		void deleteTransferHistory(const vector<int64_t>& id);
+		void loadIgnoredUsers(vector<DBIgnoreListItem>& items);
+		void saveIgnoredUsers(const vector<DBIgnoreListItem>& items);
+		void loadRegistry(DBRegistryMap& values, DBRegistryType type);
+		void saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues);
+		void clearRegistry(DBRegistryType type, int64_t tick);
+		void loadLocation(Ip4Address ip, IPInfo& result);
+		void loadP2PGuard(Ip4Address ip, IPInfo& result);
+		void saveLocation(const vector<LocationInfo>& data);
+		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
+		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
+		void removeManuallyBlockedIP(Ip4Address ip);
+#ifdef BL_FEATURE_IP_DATABASE
+		bool loadUserStat(const CID& cid, UserStatItem& stat);
+		void saveUserStat(const CID& cid, UserStatItem& stat);
+		IPStatMap* loadIPStat(const CID& cid);
+		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items);
+		bool loadGlobalRatio(uint64_t values[]);
+#endif
+
+	private:
+		void open(const string& prefix);
+		void initQuery(sqlite3_command &command, const char *sql);
+		void attachDatabase(const string& path, const string& file, const string& prefix, const string& name);
+		void upgradeDatabase();
+		bool safeAlter(const char* sql, bool verbose = false);
+		void setPragma(const char* pragma);
+		bool hasTable(const string& tableName, const string& db = string());
+		void clearRegistryL(DBRegistryType type, int64_t tick);
+		int64_t getRandValForRegistry();
+		void deleteOldTransferHistory();
+#ifdef BL_FEATURE_IP_DATABASE
+		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
+		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
+		void saveUserStat(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
+#endif
+
+	private:
+		bool busy = true;
+		uint64_t removeTime = 0;
+
+		sqlite3_connection connection;
+		sqlite3_command selectIgnoredUsers;
+		sqlite3_command insertIgnoredUsers;
+		sqlite3_command deleteIgnoredUsers;
+
+		sqlite3_command selectRegistry;
+		sqlite3_command insertRegistry;
+		sqlite3_command updateRegistry;
+		sqlite3_command deleteRegistry;
+		sqlite3_command selectTick;
+
+		sqlite3_command insertLocation;
+		sqlite3_command deleteLocation;
+
+		sqlite3_command selectLocation;
+		sqlite3_command selectP2PGuard;
+		sqlite3_command selectManuallyBlockedIP;
+		sqlite3_command deleteManuallyBlockedIP;
+		sqlite3_command deleteP2PGuard;
+		sqlite3_command insertP2PGuard;
+
+		sqlite3_command selectTransfersSummary;
+		sqlite3_command selectTransfersDay;
+		sqlite3_command insertTransfer;
+		sqlite3_command deleteTransfer;
+
+#ifdef BL_FEATURE_IP_DATABASE
+		sqlite3_command insertIPStat;
+		sqlite3_command updateIPStat;
+		sqlite3_command selectIPStat;
+		sqlite3_command insertUserStat;
+		sqlite3_command updateUserStat;
+		sqlite3_command selectUserStat;
+		sqlite3_command selectGlobalRatio;
+#endif
+};
+
 class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientListener
 {
+		friend class DatabaseConnection;
+
 	public:
 		typedef void (*ErrorCallback)(const string& message,  bool forceExit);
 
 		DatabaseManager() noexcept;
 		~DatabaseManager();
-		static void shutdown();
+		void shutdown();
 
 		string getDBInfo();
 		int64_t getDBSize() const { return dbSize; }
@@ -139,9 +232,13 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 			FLAG_SHARED            = 1,
 			FLAG_DOWNLOADED        = 2,
 			FLAG_DOWNLOAD_CANCELED = 4
-		};		
+		};
 
 		void init(ErrorCallback errorCallback);
+		DatabaseConnection* getDefaultConnection();
+		DatabaseConnection* getConnection();
+		void putConnection(DatabaseConnection* conn);
+		void closeIdleConnections(uint64_t tick);
 		bool getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize);
 		bool setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path);
 		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
@@ -150,32 +247,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		static void quoteString(string& s) noexcept;
 
 	public:
-		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
-		void loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
-		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item);
-		void deleteTransferHistory(const vector<int64_t>& id);
-
-	private:
-		void deleteOldTransferHistoryL();
-
-	public:
-		void errorDB(const string& text, int errorCode = SQLITE_ERROR);
-
-	private:
-		void clearRegistryL(DBRegistryType type, int64_t tick);
-		int64_t getRandValForRegistry();
-
-	public:
-		void loadIgnoredUsers(vector<DBIgnoreListItem>& items);
-		void saveIgnoredUsers(const vector<DBIgnoreListItem>& items);
-		void loadRegistry(DBRegistryMap& values, DBRegistryType type);
-		void saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues);
-		void clearRegistry(DBRegistryType type, int64_t tick);
-
-		void setRegistryVarInt(DBRegistryType type, int64_t value);
-		int64_t getRegistryVarInt(DBRegistryType type);
-		void setRegistryVarString(DBRegistryType type, const string& value);
-		string getRegistryVarString(DBRegistryType type);
+		void reportError(const string& text, int errorCode = SQLITE_ERROR);
 
 		enum
 		{
@@ -184,10 +256,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 			PG_DATA_MANUAL         = 64
 		};
 
-		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
-		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
-		void removeManuallyBlockedIP(Ip4Address ip);
-		void getIPInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached);
+		void getIPInfo(DatabaseConnection* conn, const IpAddress& ip, IPInfo& result, int what, bool onlyCached);
 		void clearCachedP2PGuardData(Ip4Address ip);
 		void clearIpCache();
 		void downloadGeoIPDatabase(uint64_t timestamp, bool force, const string &url) noexcept;
@@ -203,13 +272,6 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		int getGeoIPDatabaseStatus(uint64_t& timestamp) noexcept;
 
 	private:
-		void loadLocation(Ip4Address ip, IPInfo& result);
-		void loadP2PGuard(Ip4Address ip, IPInfo& result);
-
-	public:	
-		void saveLocation(const vector<LocationInfo>& data);
-
-	private:
 		bool openGeoIPDatabaseL() noexcept;
 		void closeGeoIPDatabaseL() noexcept;
 		bool loadGeoIPInfo(const IpAddress& ip, IPInfo& result) noexcept;
@@ -217,12 +279,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		void clearDownloadRequest(bool isRetry, int newStatus) noexcept;
 		uint64_t getGeoIPTimestamp() const noexcept;
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	private:
-		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
-		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
-		void saveUserStatL(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
-
+#ifdef BL_FEATURE_IP_DATABASE
 	public:
 		struct GlobalRatio
 		{
@@ -230,20 +287,12 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 			uint64_t upload;
 		};
 
-		bool loadUserStat(const CID& cid, UserStatItem& stat);
-		void saveUserStat(const CID& cid, UserStatItem& stat);
-		IPStatMap* loadIPStat(const CID& cid);
-		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items);
-
 		void loadGlobalRatio(bool force = false);
-		const GlobalRatio& getGlobalRatio() const { return globalRatio; }
+		GlobalRatio getGlobalRatio() const;
 #endif
 
 	private:
-		void initQuery(sqlite3_command &command, const char *sql);
 		bool checkDbPrefix(const string& path, const string& str);
-		void attachDatabase(const string& path, const string& file, const string& name);
-		void upgradeDatabase();
 
 	protected:
 		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
@@ -255,9 +304,11 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		int64_t dbSize;
 		ErrorCallback errorCallback;
 		mutable CriticalSection cs;
-		sqlite3_connection connection;
+		std::unique_ptr<DatabaseConnection> defConn;
+		std::list<std::unique_ptr<DatabaseConnection>> conn;
+		uintptr_t defThreadId;
 
-#ifdef FLYLINKDC_USE_LMDB
+#ifdef BL_FEATURE_LMDB
 		HashDatabaseLMDB lmdb;
 #endif
 		struct MMDB_s* mmdb;
@@ -271,16 +322,6 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		CriticalSection csDownloadMmdb;
 
 	private:
-		sqlite3_command selectIgnoredUsers;
-		sqlite3_command insertIgnoredUsers;
-		sqlite3_command deleteIgnoredUsers;
-		
-		sqlite3_command selectRegistry;
-		sqlite3_command insertRegistry;
-		sqlite3_command updateRegistry;
-		sqlite3_command deleteRegistry;
-		sqlite3_command selectTick;
-		
 		static const size_t IP_CACHE_SIZE = 3000;
 
 		struct IpCacheItem
@@ -293,43 +334,15 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 
 		LruCacheEx<IpCacheItem, IpKey> ipCache;
 		mutable FastCriticalSection csIpCache;
-		
-		sqlite3_command insertLocation;
-		sqlite3_command deleteLocation;
 
-		sqlite3_command selectLocation;
-		sqlite3_command selectP2PGuard;
-		sqlite3_command deleteCountry;
-		sqlite3_command insertCountry;
-		sqlite3_command selectManuallyBlockedIP;
-		sqlite3_command deleteManuallyBlockedIP;
-		sqlite3_command deleteP2PGuard;
-		sqlite3_command insertP2PGuard;
-		
-		sqlite3_command selectTransfersSummary;
-		sqlite3_command selectTransfersDay;
-		sqlite3_command insertTransfer;		
-		sqlite3_command deleteTransfer;				
+		std::atomic_bool deleteOldTransfers;
 
-		bool deleteOldTransfers;
-
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		sqlite3_command insertIPStat;
-		sqlite3_command updateIPStat;
-		sqlite3_command selectIPStat;
-		sqlite3_command insertUserStat;
-		sqlite3_command updateUserStat;
-		sqlite3_command selectUserStat;
-		sqlite3_command selectGlobalRatio;
-		
+#ifdef BL_FEATURE_IP_DATABASE
+		mutable CriticalSection csGlobalRatio;
 		GlobalRatio globalRatio;
 		uint64_t timeLoadGlobalRatio;
 #endif
 
-		bool safeAlter(const char* sql, bool verbose = false);
-		void setPragma(const char* pragma);
-		bool hasTable(const string& tableName, const string& db = string());
-		
 		static const size_t TREE_CACHE_SIZE = 300;
 
 		struct TreeCacheItem
@@ -343,4 +356,4 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		LruCache<TreeCacheItem, TTHValue> treeCache;
 };
 
-#endif
+#endif // DATABASE_MANAGER_H_

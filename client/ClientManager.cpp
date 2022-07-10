@@ -120,7 +120,7 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 void ClientManager::shutdown()
 {
 	dcassert(!isShutdown());
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	flushRatio();
 #endif
 	::g_isShutdown = true;
@@ -661,7 +661,7 @@ void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 
 void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noexcept
 {
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
 	bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 	ou->getUser()->saveStats(ipStat, userStat);
@@ -1083,7 +1083,7 @@ void ClientManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 }
 #endif
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 void ClientManager::flushRatio()
 {
 	static bool isBusy = false;

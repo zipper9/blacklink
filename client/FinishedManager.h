@@ -63,6 +63,7 @@ class FinishedManager : public Singleton<FinishedManager>,
 		void on(UploadManagerListener::Complete, const UploadPtr& u) noexcept override;
 
 		void addItem(FinishedItemPtr& item, eType type);
+		static void addToDatabase(int type, FinishedItemPtr& item);
 
 		std::unique_ptr<RWLock> cs[2]; // index = eType
 		FinishedItemList finished[2]; // index = eType

@@ -189,7 +189,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			extern bool g_isStartupProcess;
 			g_isStartupProcess = false;
 		}
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		static void flushRatio();
 #endif
 		static void usersCleanup();

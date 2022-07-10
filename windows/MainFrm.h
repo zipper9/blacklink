@@ -582,8 +582,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		// Timers
 		int secondsCounter;
+		uint64_t timeDbCleanup;
 		uint64_t timeUsersCleanup;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		uint64_t timeFlushRatio;
 #endif
 

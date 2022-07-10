@@ -79,25 +79,6 @@ void FinishedFrameBase::SubtreeInfo::createChild(HTREEITEM rootItem, CTreeViewCt
 		root, // aParent,
 		TVI_LAST  // hInsertAfter
 		);
-
-#ifdef FLYLINKDC_USE_TORRENT
-	if (nodeType != Current)
-	{
-		data = new TreeItemData;
-		data->type = HistoryRootTorrent;
-		data->dateAsInt = 0;
-		torrent = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-			CTSTRING(HISTORY_TORRENTS),
-			0, // g_ISPImage.m_flagImageCount + 14, // nImage
-			0, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-			0, // nState
-			0, // nStateMask
-			reinterpret_cast<LPARAM>(data),
-			root, // aParent,
-			TVI_LAST  // hInsertAfter
-			);
-	}
-#endif
 }
 
 void FinishedFrameBase::onCreate(HWND hwnd, int id)
@@ -154,11 +135,20 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 		0, // aParent,
 		TVI_ROOT  // hInsertAfter
 		);
+
+	loading = true;
+	ctrlTree.EnableWindow(FALSE);
+	ctrlStatus.SetText(0, CTSTRING(LOADING_DATA));
+
+	loader.parent = this;
+	loader.hwnd = hwnd;
+	loader.start(0, "FinishedFrameLoader");
+}
+
+void FinishedFrameBase::insertData()
+{
 	currentItem.createChild(rootItem, ctrlTree, Current);
 	historyItem.createChild(rootItem, ctrlTree, History);
-
-	vector<TransferHistorySummary> summary;
-	DatabaseManager::getInstance()->loadTransferHistorySummary(transferType, summary);
 
 	for (size_t index = 0; index < summary.size(); ++index)
 	{
@@ -178,48 +168,19 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 			0, // nState
 			0, // nStateMask
 			reinterpret_cast<LPARAM>(data), // lParam
-			historyItem.dc, // aParent,
+			historyItem.dc, // aParent
 			TVI_LAST  // hInsertAfter
 			);
 	}
-#ifdef FLYLINKDC_USE_TORRENT
-	summary.clear();
-	DatabaseManager::getInstance()->loadTorrentTransferHistorySummary(transferType, summary);
-	for (size_t index = 0; index < summary.size(); ++index)
-	{
-		const TransferHistorySummary& s = summary[index];
-		string caption = Util::formatDateTime("%x", s.date, true) + " (" + Util::toString(s.count) + ")";
-		if (s.fileSize)
-			caption += " (" + Util::formatBytes(s.fileSize) + ")";
-
-		TreeItemData* data = new TreeItemData;
-		data->type = HistoryDateTorrent;
-		data->dateAsInt = s.dateAsInt;
-
-		ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-			Text::toT(caption).c_str(),
-			0, // g_ISPImage.m_flagImageCount + 14, // nImage
-			0, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-			0, // nState
-			0, // nStateMask
-			reinterpret_cast<LPARAM>(data), // lParam
-			historyItem.torrent, // aParent,
-			TVI_LAST  // hInsertAfter
-			);
-	}
-#endif
 	ctrlTree.Expand(rootItem);
 	ctrlTree.Expand(historyItem.root);
 	ctrlTree.Expand(historyItem.dc);
-#ifdef FLYLINKDC_USE_TORRENT
-	ctrlTree.Expand(historyItem.torrent);
-#endif
 	ctrlTree.SelectItem(currentItem.dc);
 }
 
-void FinishedFrameBase::addStatusLine(const tstring& aLine)
+void FinishedFrameBase::addStatusLine(const tstring& text)
 {
-	ctrlStatus.SetText(0, (Text::toT(Util::getShortTimeString()) + _T(' ') + aLine).c_str());
+	ctrlStatus.SetText(0, (Text::toT(Util::getShortTimeString()) + _T(' ') + text).c_str());
 }
 
 void FinishedFrameBase::updateStatus()
@@ -348,14 +309,9 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 				vector<FinishedItemPtr> items;
 				if (data->type == HistoryDateDC)
 				{
-					DatabaseManager::getInstance()->loadTransferHistory(transferType, data->dateAsInt, items);
+					auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+					if (conn) conn->loadTransferHistory(transferType, data->dateAsInt, items);
 				}
-#ifdef FLYLINKDC_USE_TORRENT
-				else if (data->type == HistoryDateTorrent)
-				{
-					DatabaseManager::getInstance()->loadTorrentTransferHistory(transferType, data->dateAsInt, items);
-				}
-#endif
 				{
 					CLockRedraw<true> lockRedraw(ctrlList);
 					for (auto i = items.cbegin(); i != items.cend(); ++i)
@@ -438,6 +394,16 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 			int64_t* pval = reinterpret_cast<int64_t*>(lParam);
 			removeDroppedItems(*pval);
 			delete pval;
+		}
+		break;
+
+		case SPEAK_FINISHED:
+		{
+			loading = false;
+			loader.join();
+			ctrlStatus.SetText(0, _T(""));
+			insertData();
+			ctrlTree.EnableWindow(TRUE);
 		}
 		break;
 	}
@@ -544,9 +510,6 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 		case IDC_REMOVE:
 		{
 			vector<int64_t> idDC;
-#ifdef FLYLINKDC_USE_TORRENT
-			vector<int64_t> idTorrent;
-#endif
 			int i = -1, p = -1;
 			auto fm = FinishedManager::getInstance();
 			while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
@@ -554,12 +517,7 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 				const auto ii = ctrlList.getItemData(i);
 				if (!currentTreeItemSelected)
 				{
-#ifdef FLYLINKDC_USE_TORRENT
-					if (ii->entry->isTorrent)
-						idTorrent.push_back(ii->entry->getID());
-					else
-#endif
-						idDC.push_back(ii->entry->getID());
+					idDC.push_back(ii->entry->getID());
 				}
 				else
 				{
@@ -574,10 +532,8 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 				p = i;
 			}
 			ctrlList.SelectItem((p < ctrlList.GetItemCount() - 1) ? p : ctrlList.GetItemCount() - 1);
-#ifdef FLYLINKDC_USE_TORRENT
-			DatabaseManager::getInstance()->deleteTorrentTransferHistory(idTorrent);
-#endif
-			DatabaseManager::getInstance()->deleteTransferHistory(idDC);
+			auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+			if (conn) conn->deleteTransferHistory(idDC);
 			updateStatus();
 			break;
 		}
@@ -588,24 +544,14 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 			{
 				const int count = ctrlList.GetItemCount();
 				vector<int64_t> idDC;
-#ifdef FLYLINKDC_USE_TORRENT
-				vector<int64_t> idTorrent;
-#endif
 				idDC.reserve(count);
 				for (int i = 0; i < count; ++i)
 				{
 					const auto ii = ctrlList.getItemData(i);
-#ifdef FLYLINKDC_USE_TORRENT
-					if (ii->entry->isTorrent)
-						idTorrent.push_back(ii->entry->getID());
-					else
-#endif
-						idDC.push_back(ii->entry->getID());
+					idDC.push_back(ii->entry->getID());
 				}
-#ifdef FLYLINKDC_USE_TORRENT
-				DatabaseManager::getInstance()->deleteTorrentTransferHistory(idTorrent);
-#endif
-				DatabaseManager::getInstance()->deleteTransferHistory(idDC);
+				auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+				if (conn) conn->deleteTransferHistory(idDC);
 			}
 			else
 			{
@@ -761,4 +707,17 @@ void FinishedFrameBase::removeDroppedItems(int64_t maxTempId)
 		totalCount = count;
 		updateStatus();
 	}
+}
+
+int FinishedFrameLoader::run()
+{
+	auto dm = DatabaseManager::getInstance();
+	auto conn = dm->getConnection();
+	if (conn)
+	{
+		conn->loadTransferHistorySummary(parent->transferType, parent->summary);
+		dm->putConnection(conn);
+	}
+	PostMessage(hwnd, WM_SPEAKER, FinishedFrameBase::SPEAK_FINISHED, 0);
+	return 0;
 }

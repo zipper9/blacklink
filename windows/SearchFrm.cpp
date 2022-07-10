@@ -130,7 +130,7 @@ SearchFrame::SearchFrame() :
 	sizeModeContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
 	fileTypeContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
 	showUIContainer(WC_COMBOBOX, this, SHOWUI_MESSAGE_MAP),
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	storeIP(false),
 #endif
 	resultsContainer(WC_LISTVIEW, this, SEARCH_MESSAGE_MAP),
@@ -282,7 +282,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlCollapsed.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlCollapsed.SetWindowText(CTSTRING(EXPANDED_RESULTS));
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
 	ctrlStoreIP.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
@@ -967,7 +967,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	expandSR = ctrlCollapsed.GetCheck() == BST_CHECKED;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	storeIP = ctrlStoreIP.GetCheck() == BST_CHECKED;
 #endif
 	storeSettings = ctrlStoreSettings.GetCheck() == BST_CHECKED;
@@ -1650,7 +1650,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		rc.top += checkboxHeight;
 		rc.bottom += checkboxHeight;
 		ctrlCollapsed.MoveWindow(rc);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		rc.top += checkboxHeight;
 		rc.bottom += checkboxHeight;
 		ctrlStoreIP.MoveWindow(rc);
@@ -1695,7 +1695,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		
 		ctrlCollapsed.MoveWindow(rc);
 		ctrlSlots.MoveWindow(rc);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 		ctrlStoreIP.MoveWindow(rc);
 #endif
 		ctrlStoreSettings.MoveWindow(rc);
@@ -1812,7 +1812,7 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	const HDC hDC = (HDC)wParam;
 	if (hWnd == searchLabel.m_hWnd || hWnd == sizeLabel.m_hWnd || hWnd == optionLabel.m_hWnd || hWnd == typeLabel.m_hWnd
 	        || hWnd == hubsLabel.m_hWnd || hWnd == ctrlSlots.m_hWnd ||
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 	        hWnd == ctrlStoreIP.m_hWnd ||
 #endif
 	        hWnd == ctrlStoreSettings.m_hWnd ||
@@ -2570,7 +2570,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 				si->calcImageIndex();
 				si->sr.checkTTH();
 				getFileItemColor(si->sr.flags, cd->clrText, cd->clrTextBk);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef BL_FEATURE_IP_DATABASE
 				if (!si->ipUpdated && storeIP && si->getUser())
 				{
 					const IpAddress& ip = si->sr.getIP();
