@@ -425,7 +425,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
 	m_nProportionalPos = SETTING(DIRLIST_FRAME_SPLIT);
-	int icon = dclstFlag ? FileImage::DIR_DSLCT : FileImage::DIR_ICON;
+	int icon = dclstFlag ? FileImage::DIR_DCLST : FileImage::DIR_ICON;
 	nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
 	tstring rootText = getRootItemText();
 	treeRoot = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
@@ -530,7 +530,7 @@ void DirectoryListingFrame::updateTree(DirectoryListing::Directory* tree, HTREEI
 
 			DirectoryListing::Directory *dir = *i;
 			const tstring name = Text::toT(dir->getName());
-			const auto typeDirectory = GetTypeDirectory(dir);
+			const auto typeDirectory = getDirectoryIcon(dir);
 
 			HTREEITEM ht = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM, name.c_str(), typeDirectory, typeDirectory, 0, 0, (LPARAM) dir, treeItem, TVI_LAST);
 			dir->setUserData(static_cast<void*>(ht));
@@ -556,13 +556,13 @@ void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEI
 	if (insertParent)
 	{
 		const tstring name = Text::toT(dir->getName());
-		const auto typeDirectory = GetTypeDirectory(dir);
+		const auto typeDirectory = getDirectoryIcon(dir);
 		HTREEITEM ht = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM, name.c_str(), typeDirectory, typeDirectory, 0, 0, (LPARAM) dir, treeItem, TVI_LAST);
 		dir->setUserData(static_cast<void*>(ht));
 		treeItem = ht;
 	}
 	updateTree(dir, treeItem);
-	const auto typeDirectory = GetTypeDirectory(dir);
+	const auto typeDirectory = getDirectoryIcon(dir);
 	dir->setUserData(static_cast<void*>(treeItem));
 	ctrlTree.SetItemData(treeItem, DWORD_PTR(dir));
 	ctrlTree.SetItemImage(treeItem, typeDirectory, typeDirectory);
@@ -696,8 +696,11 @@ void DirectoryListingFrame::addHistory(const string& name)
 }
 
 // Choose folder icon (normal, DVD, BluRay)
-FileImage::TypeDirectoryImages DirectoryListingFrame::GetTypeDirectory(const DirectoryListing::Directory* dir) const
+FileImage::TypeDirectoryImages DirectoryListingFrame::getDirectoryIcon(const DirectoryListing::Directory* dir) const
 {
+	if (dclstFlag && !dir->getParent())
+		return FileImage::DIR_DCLST;
+
 	if (!dir->getComplete())
 		return FileImage::DIR_MASKED;
 

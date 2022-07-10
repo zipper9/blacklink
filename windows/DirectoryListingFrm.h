@@ -100,7 +100,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			STATUS_DUMMY,
 			STATUS_LAST
 		};
-		FileImage::TypeDirectoryImages GetTypeDirectory(const DirectoryListing::Directory* dir) const;
+		FileImage::TypeDirectoryImages getDirectoryIcon(const DirectoryListing::Directory* dir) const;
 
 		DirectoryListingFrame(const HintedUser& user, DirectoryListing *dl);
 		~DirectoryListingFrame();

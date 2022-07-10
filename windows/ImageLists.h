@@ -33,39 +33,37 @@ struct FileImage : public BaseImageList
 			DIR_ICON,
 			DIR_MASKED,
 			DIR_FILE,
-			DIR_DSLCT,
+			DIR_DCLST,
 			DIR_DVD,
 			DIR_BD,
 			DIR_TORRENT,
 			DIR_IMAGE_LAST
 		};
-		
+
 		int getIconIndex(const string& aFileName);
 		string getVirusIconIndex(const string& aFileName, int& p_icon_index);
-		
+
 		static bool isBdFolder(const string& nameDir)
 		{
-			// Папка содержащая подпапки VIDEO_TS или AUDIO_TS, является DVD папкой
-			static const string g_bdmvDir = "BDMV";
-			return nameDir == g_bdmvDir;
+			// Check for BDMV folder
+			static const string bdmvDir = "BDMV";
+			return nameDir == bdmvDir;
 		}
-		
+
 		static bool isDvdFolder(const string& nameDir)
 		{
-			// Папка содержащая подпапки VIDEO_TS или AUDIO_TS, является DVD папкой
-			static const string g_audioTsDir = "AUDIO_TS";
-			static const string g_videoTsDir = "VIDEO_TS";
-			return nameDir == g_audioTsDir  || nameDir == g_videoTsDir;
+			// Check for VIDEO_TS or AUDIO_TS
+			static const string audioTsDir = "AUDIO_TS";
+			static const string videoTsDir = "VIDEO_TS";
+			return nameDir == audioTsDir  || nameDir == videoTsDir;
 		}
-		
-		// Метод по названию файла определяет, является ли файл частью dvd
+
 		static bool isDvdFile(const string& nameFile)
 		{
-			// Имена файлов dvd удовлетворяют правилу (8 символов – название файла, 3 – его расширение)
 			if (nameFile.length() == 12)
 			{
 				static const string video_ts = "VIDEO_TS";
-				if (nameFile.compare(0, video_ts.size(), video_ts) == 0) // имя файла
+				if (nameFile.compare(0, video_ts.size(), video_ts) == 0)
 				{
 					static const string bup = "BUP";
 					static const string ifo = "IFO";
@@ -76,7 +74,7 @@ struct FileImage : public BaseImageList
 						return true;
 					}
 					
-					// Разбираем имя вида "VTS_03_1"
+					// Check for names like "VTS_03_1"
 					static const string vts = "VTS";
 					if (nameFile.compare(0, 3, vts) == 0 && isdigit(nameFile[4]) && isdigit(nameFile[5]) && isdigit(nameFile[7]))
 					{
