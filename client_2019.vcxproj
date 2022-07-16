@@ -667,7 +667,6 @@
     <ClCompile Include="client\UserInfoBase.cpp" />
     <ClCompile Include="client\UserManager.cpp" />
     <ClCompile Include="client\Util.cpp" />
-    <ClCompile Include="client\webrtc\talk\base\winfirewall.cc" />
     <ClCompile Include="client\WebServerManager.cpp" />
     <ClCompile Include="client\zip\zip.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -851,8 +850,6 @@
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\UserManagerListener.h" />
-    <ClInclude Include="client\webrtc\talk\base\win32.h" />
-    <ClInclude Include="client\webrtc\talk\base\winfirewall.h" />
     <ClInclude Include="client\WinEvent.h" />
     <ClInclude Include="client\zip\miniz.h" />
     <ClInclude Include="client\zip\zip.h" />

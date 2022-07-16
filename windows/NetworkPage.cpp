@@ -24,12 +24,12 @@
 #include "NetworkPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "WinFirewall.h"
 #include "../client/CryptoManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 #include "../client/IpTest.h"
-#include "../client/webrtc/talk/base/winfirewall.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
@@ -692,10 +692,10 @@ LRESULT NetworkFirewallTab::onAddWinFirewallException(WORD /* wNotifyCode */, WO
 	const tstring appPath = Util::getModuleFileName();
 	if (IsUserAnAdmin())
 	{
-		talk_base::WinFirewall fw;
+		WinFirewall fw;
 		HRESULT hr;
-		fw.Initialize(&hr);
-		const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
+		fw.initialize(&hr);
+		const auto res = fw.addApplicationW(appPath, getAppNameT(), true, &hr);
 		if (res)
 		{
 			MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
@@ -717,10 +717,10 @@ LRESULT NetworkFirewallTab::onAddWinFirewallException(WORD /* wNotifyCode */, WO
 
 bool NetworkFirewallTab::testWinFirewall()
 {
-	talk_base::WinFirewall fw;
+	WinFirewall fw;
 	HRESULT hr;
-	fw.Initialize(&hr);
-	if (!fw.Enabled())
+	fw.initialize(&hr);
+	if (!fw.enabled())
 	{
 		ctrlText.SetWindowText(CTSTRING(WINDOWS_FIREWALL_DISABLED));
 		ctrlButton.EnableWindow(FALSE);
@@ -729,7 +729,7 @@ bool NetworkFirewallTab::testWinFirewall()
 	}
 
 	bool authorized = false;
-	bool res = fw.QueryAuthorizedW(appPath.c_str(), &authorized);
+	bool res = fw.queryAuthorizedW(appPath, authorized);
 	if (res)
 	{
 		if (authorized)

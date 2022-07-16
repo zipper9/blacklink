@@ -25,49 +25,39 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TALK_BASE_WINFIREWALL_H_
-#define TALK_BASE_WINFIREWALL_H_
+#ifndef WINFIREWALL_H_
+#define WINFIREWALL_H_
 
-#ifndef _HRESULT_DEFINED
-#define _HRESULT_DEFINED
-typedef long HRESULT;  // Can't forward declare typedef, but don't need all win
-#endif // !_HRESULT_DEFINED
+#include "../client/w.h"
+#include "../client/typedefs.h"
 
 struct INetFwMgr;
 struct INetFwPolicy;
 struct INetFwProfile;
 
-namespace talk_base {
+class WinFirewall
+{
+public:
+	WinFirewall();
+	~WinFirewall();
 
-//////////////////////////////////////////////////////////////////////
-// WinFirewall
-//////////////////////////////////////////////////////////////////////
+	WinFirewall(const WinFirewall&) = delete;
+	WinFirewall& operator= (const WinFirewall&) = delete;
 
-class WinFirewall {
- public:
-  WinFirewall();
-  ~WinFirewall();
+	bool initialize(HRESULT *result);
+	void shutdown();
 
-  bool Initialize(HRESULT* result);
-  void Shutdown();
+	bool enabled() const;
+	bool queryAuthorized(const string& filename, bool& authorized) const;
+	bool queryAuthorizedW(const wstring& filename, bool& authorized) const;
 
-  bool Enabled() const;
-  bool QueryAuthorized(const char* filename, bool* authorized) const;
-  bool QueryAuthorizedW(const wchar_t* filename, bool* authorized) const;
+	bool addApplication(const string& filename, const string& friendlyName, bool authorized, HRESULT* result);
+	bool addApplicationW(const wstring& filename, const wstring& friendlyName, bool authorized, HRESULT* result);
 
-  bool AddApplication(const char* filename, const char* friendly_name,
-                      bool authorized, HRESULT* result);
-  bool AddApplicationW(const wchar_t* filename, const wchar_t* friendly_name,
-                       bool authorized, HRESULT* result);
-
- private:
-  INetFwMgr* mgr_;
-  INetFwPolicy* policy_;
-  INetFwProfile* profile_;
+private:
+	INetFwMgr* mgr;
+	INetFwPolicy* policy;
+	INetFwProfile* profile;
 };
 
-//////////////////////////////////////////////////////////////////////
-
-}  // namespace talk_base
-
-#endif  // TALK_BASE_WINFIREWALL_H_
+#endif // WINFIREWALL_H_

@@ -223,9 +223,6 @@
     <ClCompile Include="client\zip\zip.c">
       <Filter>Source Files\mzip</Filter>
     </ClCompile>
-    <ClCompile Include="client\webrtc\talk\base\winfirewall.cc">
-      <Filter>Source Files\webrtc\winfirewall</Filter>
-    </ClCompile>
     <ClCompile Include="client\debug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -792,12 +789,6 @@
     <ClInclude Include="client\zip\zip.h">
       <Filter>Header Files\zip</Filter>
     </ClInclude>
-    <ClInclude Include="client\webrtc\talk\base\win32.h">
-      <Filter>Source Files\webrtc\winfirewall</Filter>
-    </ClInclude>
-    <ClInclude Include="client\webrtc\talk\base\winfirewall.h">
-      <Filter>Source Files\webrtc\winfirewall</Filter>
-    </ClInclude>
     <ClInclude Include="client\HttpConnection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1058,9 +1049,6 @@
     <Filter Include="Source Files\jsoncpp">
       <UniqueIdentifier>{a2bc7e46-ac54-4dd9-bdbf-0729d9408fad}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\webrtc">
-      <UniqueIdentifier>{634734c1-c671-4cbd-877a-3a51a43bf950}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\selene">
       <UniqueIdentifier>{b769fbea-470d-4491-9a00-40028bb8cc41}</UniqueIdentifier>
     </Filter>
@@ -1072,9 +1060,6 @@
     </Filter>
     <Filter Include="Header Files\idna">
       <UniqueIdentifier>{21e47374-4f41-47f1-b223-45719142797d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\webrtc\winfirewall">
-      <UniqueIdentifier>{0a9b9c7d-d2b4-46c9-bb4a-e950fda8eeaa}</UniqueIdentifier>
     </Filter>
     <Filter Include="lmdb">
       <UniqueIdentifier>{8bcc7187-2266-48c3-9402-2d45e7ae9953}</UniqueIdentifier>

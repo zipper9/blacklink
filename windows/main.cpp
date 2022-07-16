@@ -26,12 +26,12 @@
 #include "PopupManager.h"
 #include "ToolbarManager.h"
 #include "ThemeManager.h"
+#include "WinFirewall.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/HashManager.h"
-#include "../client/webrtc/talk/base/winfirewall.h"
 #include "SplashWindow.h"
 #include "CommandLine.h"
 
@@ -281,10 +281,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	{
 		::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 		const tstring appPath = Util::getModuleFileName();
-		talk_base::WinFirewall fw;
+		WinFirewall fw;
 		HRESULT hr;
-		fw.Initialize(&hr);
-		fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
+		fw.initialize(&hr);
+		fw.addApplicationW(appPath, getAppNameT(), true, &hr);
 		return 0;
 	}
 
