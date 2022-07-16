@@ -1105,14 +1105,21 @@ string Util::encodeURI(const string& str, bool reverse)
 	return tmp;
 }
 
-static uint64_t getDirSizeInternal(string& path, std::atomic_bool& stopFlag)
+struct GetDirSizeControl
+{
+	std::atomic_bool* abortFlag;
+	void* ctx;
+	void (*progressFunc)(void*, int64_t);
+};
+
+static uint64_t getDirSizeInternal(string& path, GetDirSizeControl& info)
 {
 	uint64_t size = 0;	
 	size_t pathLen = path.length();
 	path += "*";
 	for (FileFindIter i(path); i != FileFindIter::end; ++i)
 	{
-		if (stopFlag) break;
+		if (*info.abortFlag) break;
 		const string& fileName = i->getFileName();
 		if (Util::isReservedDirName(fileName) || fileName.empty())
 			continue;
@@ -1123,22 +1130,30 @@ static uint64_t getDirSizeInternal(string& path, std::atomic_bool& stopFlag)
 			path.erase(pathLen);
 			path += fileName;
 			path += PATH_SEPARATOR;
-			size += getDirSizeInternal(path, stopFlag);
+			size += getDirSizeInternal(path, info);
 		}
 		else
-			size += i->getSize();
+		{
+			int64_t fileSize = i->getSize();
+			if (info.progressFunc) info.progressFunc(info.ctx, fileSize);
+			size += fileSize;
+		}
 	}
 	return size;
 }
 
-uint64_t Util::getDirSize(const string& path, std::atomic_bool& stopFlag)
+uint64_t Util::getDirSize(const string& path, std::atomic_bool& abortFlag, void (*progressFunc)(void* ctx, int64_t size), void* ctx)
 {
 	if (path.empty())
 		return (uint64_t) -1;
 	string tmp = path;
 	if (tmp.back() != PATH_SEPARATOR)
 		tmp += PATH_SEPARATOR;
-	return getDirSizeInternal(tmp, stopFlag);
+	GetDirSizeControl gds;
+	gds.abortFlag = &abortFlag;
+	gds.ctx = ctx;
+	gds.progressFunc = progressFunc;
+	return getDirSizeInternal(tmp, gds);
 }
 
 string Util::getNewFileName(const string& filename)

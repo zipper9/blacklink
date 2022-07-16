@@ -18,6 +18,10 @@
 
 #include "stdafx.h"
 
+#include "DclstGenDlg.h"
+#include "DialogLayout.h"
+#include "ImageLists.h"
+#include "WinUtil.h"
 #include "../client/BZUtils.h"
 #include "../client/FilteredFile.h"
 #include "../client/HashUtil.h"
@@ -25,29 +29,31 @@
 #include "../client/ShareManager.h"
 #include "../client/DatabaseManager.h"
 #include "../client/LogManager.h"
-#include "DclstGenDlg.h"
-#include "WinUtil.h"
 
-static const WinUtil::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_DCLSTGEN_INFO_SIZESTATIC,    ResourceManager::DCLSTGEN_INFO_SIZESTATIC    },
-	{ IDC_DCLSTGEN_INFO_FOLDERSSTATIC, ResourceManager::DCLSTGEN_INFO_FOLDERSSTATIC },
-	{ IDC_DCLSTGEN_INFO_FILESSTATIC,   ResourceManager::DCLSTGEN_INFO_FILESSTATIC   },
-	{ IDC_DCLSTGEN_NAMEBORDER,         ResourceManager::DCLSTGEN_NAMEBORDER         },
-	{ IDC_DCLSTGEN_NAMESTATIC,         ResourceManager::MAGNET_DLG_FILE             },
-	{ IDC_DCLSTGEN_SAVEAS,             ResourceManager::DCLSTGEN_RENAMEAS           },
-	{ IDC_DCLSTGEN_SHARE,              ResourceManager::DCLSTGEN_SHARE              },
-	{ IDC_DCLSTGEN_COPYMAGNET,         ResourceManager::COPY_MAGNET                 },
-	{ IDCANCEL,                        ResourceManager::CANCEL                      },
-	{ 0,                               ResourceManager::Strings()                   }
+	{ IDC_DCLSTGEN_INFO_SIZESTATIC, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_DCLSTGEN_INFO_SIZEEDIT, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_DCLSTGEN_INFO_FILES, 0, UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_DCLSTGEN_NAMEBORDER, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_DCLSTGEN_NAMESTATIC, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_DCLSTGEN_SAVEAS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_DCLSTGEN_COPYMAGNET, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDCANCEL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
 
 LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(DCLSTGEN_TITLE));
 	CenterWindow(GetParent());
-	
-	WinUtil::translate(*this, texts);
+
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 
 	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
 	SetIcon(dialogIcon, FALSE);
@@ -69,9 +75,11 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		else
 			listName = Util::getDownloadDir(UserPtr());
 		listName += Util::validateFileName(fileName);
+		SetDlgItemText(IDC_DCLSTGEN_SHARE, CTSTRING(DCLSTGEN_SHARE));
 	}
 	else
 	{
+		calculatingSize = true;
 		Util::appendPathSeparator(dirToHash);
 		string fileName = Util::getLastDir(dirToHash);
 		if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
@@ -79,6 +87,7 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		else
 			listName = dirToHash;
 		listName += Util::validateFileName(fileName);
+		SetDlgItemText(IDC_DCLSTGEN_SHARE, CTSTRING(DCLSTGEN_OPEN));
 	}
 	listName += ".dcls";
 	if (File::isExist(listName))
@@ -120,11 +129,8 @@ LRESULT DclstGenDlg::onFinished(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOO
 	SetDlgItemText(IDC_DCLSTGEN_MAGNET, Text::toT(magnet).c_str());
 	SetDlgItemText(IDCANCEL, CTSTRING(OK));
 
-	if (dir)
-	{
-		GetDlgItem(IDC_DCLSTGEN_SAVEAS).EnableWindow(TRUE);
-		GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(TRUE);
-	}
+	if (dir) GetDlgItem(IDC_DCLSTGEN_SAVEAS).EnableWindow(TRUE);
+	GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(TRUE);
 	GetDlgItem(IDC_DCLSTGEN_COPYMAGNET).EnableWindow(TRUE);
 	return 0;
 }
@@ -139,14 +145,23 @@ LRESULT DclstGenDlg::onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 void DclstGenDlg::updateDialogItems()
 {
 	cs.lock();
+	bool calculatingSize = this->calculatingSize;
+	auto currentTotalSize = sizeTotal;
 	auto currentSize = sizeProcessed;
 	auto currentFiles = filesProcessed;
 	auto currentFolders = foldersProcessed;
 	cs.unlock();
 
-	SetDlgItemText(IDC_DCLST_GEN_INFOEDIT, Util::formatBytesT(currentSize).c_str());
-	SetDlgItemText(IDC_DCLSTGEN_INFO_FOLDERSEDIT, Util::toStringT(currentFolders).c_str());
-	SetDlgItemText(IDC_DCLSTGEN_INFO_FILESEDIT, Util::toStringT(currentFiles).c_str());
+	tstring text;
+	if (dir)
+		text = Util::formatBytesT(currentSize);
+	else if (calculatingSize)
+		text = Util::formatBytesT(currentTotalSize);
+	else
+		text = Util::formatBytesT(currentSize) + _T(" / ") + Util::formatBytesT(currentTotalSize);
+	SetDlgItemText(IDC_DCLSTGEN_INFO_SIZEEDIT, text.c_str());
+	text = TSTRING_F(DCLSTGEN_INFO_FILES, currentFolders % currentFiles);
+	SetDlgItemText(IDC_DCLSTGEN_INFO_FILES, text.c_str());
 
 	int progress;
 	if (dir)
@@ -159,10 +174,10 @@ void DclstGenDlg::updateDialogItems()
 	}
 	else
 	{
-		if (!sizeTotal)
+		if (calculatingSize || !currentTotalSize)
 			progress = 0;
 		else
-			progress = int((double) sizeProcessed * 100.0 / sizeTotal);
+			progress = int((double) currentSize * 100.0 / currentTotalSize);
 	}
 	CProgressBarCtrl(GetDlgItem(IDC_DCLSTGEN_PROGRESS)).SetPos(progress);
 }
@@ -171,11 +186,15 @@ int DclstGenDlg::run()
 {
 	if (!dir)
 	{
-		sizeTotal = Util::getDirSize(dirToHash, abortFlag);
+		uint64_t result = Util::getDirSize(dirToHash, abortFlag, progressFunc, this);
 		if (abortFlag.load())
 			return 0;
+		cs.lock();
+		sizeTotal = result;
+		calculatingSize = false;
+		cs.unlock();
 	}
-	
+
 	writeXMLStart();
 
 	if (dir)
@@ -238,7 +257,6 @@ void DclstGenDlg::writeFolder(const DirectoryListing::Directory* dir)
 
 void DclstGenDlg::writeFile(const DirectoryListing::File* file)
 {
-	if (abortFlag.load()) return;
 	cs.lock();
 	filesProcessed++;
 	sizeProcessed += file->getSize();
@@ -360,9 +378,14 @@ void DclstGenDlg::makeMagnet()
 	         "&xl=" + Util::toString(listTree.getFileSize()) + "&dn=" + Util::encodeURI(Util::getFileName(listName)) + "&dl=" + Util::toString(sizeProcessed);
 }
 
-LRESULT DclstGenDlg::onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+LRESULT DclstGenDlg::onShareOrOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	if (!magnet.empty())
+	if (!dir)
+	{
+		WinUtil::openFileList(Text::toT(listName));
+		EndDialog(IDOK);
+	}
+	else if (!magnet.empty())
 	{
 		string listDir = Util::getFilePath(listName);
 		auto sm = ShareManager::getInstance();
@@ -413,4 +436,11 @@ LRESULT DclstGenDlg::onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			MessageBox(CTSTRING(DCLSTGEN_METAFILECANNOTMOVED), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
 	}
 	return 0;
+}
+
+void DclstGenDlg::progressFunc(void *ctx, int64_t fileSize)
+{
+	DclstGenDlg* dlg = static_cast<DclstGenDlg*>(ctx);
+	LOCK(dlg->cs);
+	dlg->sizeTotal += fileSize;
 }

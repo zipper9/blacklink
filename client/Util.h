@@ -430,7 +430,7 @@ namespace Util
 	string getDownloadDir(const UserPtr& user);
 	string expandDownloadDir(const string& dir, const UserPtr& user);
 
-	uint64_t getDirSize(const string& path, std::atomic_bool& stopFlag);
+	uint64_t getDirSize(const string& path, std::atomic_bool& abortFlag, void (*progressFunc)(void* ctx, int64_t size), void* ctx);
 	string getNewFileName(const string& filename);
 
 	string getRandomNick(size_t maxLength = 20);

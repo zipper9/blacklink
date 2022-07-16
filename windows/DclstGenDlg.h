@@ -34,7 +34,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		DclstGenDlg(const DirectoryListing::Directory* dir, const UserPtr& user) :
 			TimerHelper(m_hWnd),
 			dir(dir), user(user), filesProcessed(0), foldersProcessed(0),
-			sizeProcessed(0), sizeTotal(0), abortFlag(false)
+			sizeProcessed(0), sizeTotal(0), abortFlag(false), calculatingSize(false)
 		{
 		}
 
@@ -50,7 +50,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		COMMAND_ID_HANDLER(IDC_DCLSTGEN_COPYMAGNET, onCopyMagnet)
-		COMMAND_ID_HANDLER(IDC_DCLSTGEN_SHARE, onShareThis)
+		COMMAND_ID_HANDLER(IDC_DCLSTGEN_SHARE, onShareOrOpen)
 		COMMAND_ID_HANDLER(IDC_DCLSTGEN_SAVEAS, onSaveAs)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_FINISHED, onFinished)
@@ -61,7 +61,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		LRESULT onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onFinished(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onShareOrOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		int run();
@@ -77,6 +77,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		size_t packAndSave();
 		bool calculateTTH();
 		void makeMagnet();
+		static void progressFunc(void *ctx, int64_t fileSize);
 
 	private:
 		const DirectoryListing::Directory* const dir;
@@ -87,6 +88,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		size_t foldersProcessed;
 		int64_t sizeProcessed;
 		int64_t sizeTotal;
+		bool calculatingSize;
 		string xml;
 		string listName;
 		string magnet;
