@@ -277,6 +277,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEND_BLOOM,
 			SEND_EXT_JSON,
 			SEND_DB_PARAM,
+			SEND_QP_PARAM,
 			USE_SALT_PASS,
 			USE_BOT_LIST,
 			USE_CCPM,

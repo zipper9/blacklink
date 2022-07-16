@@ -303,6 +303,7 @@ static const char* g_settingTags[] =
 	"SendBloom",
 	"SendExtJSON",
 	"SendDBParam",
+	"SendQPParam",
 	"UseSaltPass",
 	"UseBotList",
 	"UseCCPM",
@@ -987,6 +988,7 @@ void SettingsManager::setDefaults()
 	setDefault(SEND_BLOOM, TRUE);
 	setDefault(SEND_EXT_JSON, TRUE);
 	setDefault(SEND_DB_PARAM, TRUE);
+	setDefault(SEND_QP_PARAM, TRUE);
 	setDefault(USE_SALT_PASS, TRUE);
 	setDefault(USE_BOT_LIST, TRUE);
 	setDefault(USE_CCPM, TRUE);

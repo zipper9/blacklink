@@ -822,12 +822,17 @@ void UserConnection::maxedOut(size_t queuePosition)
 {
 	if (isSet(FLAG_NMDC))
 	{
-		send("$MaxedOut " + Util::toString(queuePosition) + '|');
+		string cmd = "$MaxedOut";
+		if (BOOLSETTING(SEND_QP_PARAM))
+			cmd += ' ' + Util::toString(queuePosition);
+		cmd += '|';
+		send(cmd);
 	}
 	else
 	{
 		AdcCommand cmd(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_SLOTS_FULL, "Slots full");
-		cmd.addParam("QP", Util::toString(queuePosition));
+		if (BOOLSETTING(SEND_QP_PARAM))
+			cmd.addParam("QP", Util::toString(queuePosition));
 		send(cmd);
 	}
 }
