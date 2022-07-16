@@ -141,8 +141,9 @@
 #define HAVE_NATPMP_H
 #define HAVE_OPENSSL
 
-#if defined _POSIX_SOURCE || defined _GNU_SOURCE
+#if defined _POSIX_SOURCE || defined _GNU_SOURCE || defined _POSIX_C_SOURCE || defined _XOPEN_SOURCE || defined _BSD_SOURCE
 #define HAVE_TIME_R
+#define HAVE_STRERROR_R
 #endif
 
 #define USE_QUEUE_RWLOCK

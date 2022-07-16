@@ -62,8 +62,8 @@ namespace Util
 	extern const wstring emptyStringW;		
 	extern const std::vector<uint8_t> emptyByteVector;
 
-	string translateError(unsigned error);
-	inline string translateError()
+	string translateError(unsigned error) noexcept;
+	inline string translateError() noexcept
 	{
 #ifdef _WIN32
 		return translateError(GetLastError());
