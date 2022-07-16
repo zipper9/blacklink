@@ -1032,6 +1032,9 @@
     <ClInclude Include="client\sqlite\sqlite_conf.h">
       <Filter>Header Files\sqlite</Filter>
     </ClInclude>
+    <ClInclude Include="client\UserManagerListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

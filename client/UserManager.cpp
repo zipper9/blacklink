@@ -23,6 +23,7 @@
 #include "Client.h"
 #include "FavoriteManager.h"
 #include "Wildcards.h"
+#include "SettingsManager.h"
 
 #ifdef _DEBUG
 static bool ignoreListLoaded;

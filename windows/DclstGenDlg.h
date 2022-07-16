@@ -22,6 +22,7 @@
 #include "../client/DirectoryListing.h"
 #include "Resource.h"
 #include "TimerHelper.h"
+#include "Thread.h"
 #include <atomic>
 
 #define WM_FINISHED  WM_USER+102

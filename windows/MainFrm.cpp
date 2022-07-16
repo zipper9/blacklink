@@ -63,6 +63,7 @@
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/HashManager.h"
+#include "../client/UserManager.h"
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"

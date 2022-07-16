@@ -26,6 +26,7 @@
 #include "BZUtils.h"
 #include "Upload.h"
 #include "QueueManager.h"
+#include "UserManager.h"
 #include "FinishedManager.h"
 #include "SharedFileStream.h"
 #include "IpGrant.h"

@@ -21,6 +21,7 @@
 #include "PrivateFrame.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
+#include "../client/UserManager.h"
 #include "../client/ClientManager.h"
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"

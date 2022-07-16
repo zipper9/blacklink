@@ -26,7 +26,7 @@
 #include "IgnoredUsersWindow.h"
 #include "../client/UserInfoBase.h"
 #include "../client/FavoriteManagerListener.h"
-#include "../client/UserManager.h"
+#include "../client/UserManagerListener.h"
 #include "../client/File.h"
 #include "../client/OnlineUser.h"
 

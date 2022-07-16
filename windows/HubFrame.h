@@ -22,6 +22,7 @@
 #include "../client/User.h"
 #include "../client/Client.h"
 #include "../client/ClientManager.h"
+#include "../client/UserManagerListener.h"
 #include "../client/TaskQueue.h"
 
 #include "BaseChatFrame.h"

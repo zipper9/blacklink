@@ -22,7 +22,7 @@
 #include "../client/HubEntry.h"
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
-#include "../client/UserManager.h"
+#include "../client/UserManagerListener.h"
 #include "../client/FinishedManagerListener.h"
 #include "../client/Commands.h"
 #include "../client/CommandCallback.h"

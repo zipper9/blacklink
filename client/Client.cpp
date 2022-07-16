@@ -25,6 +25,7 @@
 #include "ConnectivityManager.h"
 #include "QueueManager.h"
 #include "SearchManager.h"
+#include "UserManager.h"
 #include "Wildcards.h"
 #include "ParamExpander.h"
 #include "Resolver.h"

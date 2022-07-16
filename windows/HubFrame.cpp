@@ -24,6 +24,7 @@
 #include "MainFrm.h"
 #include "../client/QueueManager.h"
 #include "../client/ConnectivityManager.h"
+#include "../client/UserManager.h"
 #include "../client/dht/DHT.h"
 #include "FavHubProperties.h"
 #include "LineDlg.h"

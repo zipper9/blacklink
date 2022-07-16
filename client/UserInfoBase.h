@@ -19,8 +19,8 @@
 #ifndef USERINFOBASE_H
 #define USERINFOBASE_H
 
-#include "UserManager.h"
-#include "FavoriteManager.h"
+#include "typedefs.h"
+#include "forward.h"
 
 class UserInfoBase
 {

@@ -19,34 +19,14 @@
 #ifndef DCPLUSPLUS_DCPP_USER_MANAGER_H
 #define DCPLUSPLUS_DCPP_USER_MANAGER_H
 
-#include "SettingsManager.h"
+#include "UserManagerListener.h"
 #include "User.h"
+#include "Singleton.h"
+#include "Speaker.h"
 #include <atomic>
 #include <regex>
 
 class ChatMessage;
-
-class UserManagerListener
-{
-	public:
-		virtual ~UserManagerListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> OutgoingPrivateMessage;
-		typedef X<1> OpenHub;
-		typedef X<2> IgnoreListChanged;
-		typedef X<3> IgnoreListCleared;
-		typedef X<4> ReservedSlotChanged;
-		
-		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
-		virtual void on(OpenHub, const string&, const UserPtr&) noexcept { }
-		virtual void on(IgnoreListChanged) noexcept { }
-		virtual void on(IgnoreListCleared) noexcept { }
-		virtual void on(ReservedSlotChanged, const UserPtr&) noexcept { }
-};
 
 class UserManager : public Singleton<UserManager>, public Speaker<UserManagerListener>
 {

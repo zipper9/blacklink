@@ -850,6 +850,7 @@
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
+    <ClInclude Include="client\UserManagerListener.h" />
     <ClInclude Include="client\webrtc\talk\base\win32.h" />
     <ClInclude Include="client\webrtc\talk\base\winfirewall.h" />
     <ClInclude Include="client\WinEvent.h" />

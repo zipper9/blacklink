@@ -3,6 +3,7 @@
 #include "HubFrameTasks.h"
 #include "WinUtil.h"
 #include "Fonts.h"
+#include "../client/UserManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
 #include "../client/dht/DHT.h"

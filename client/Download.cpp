@@ -21,6 +21,8 @@
 #include "UserConnection.h"
 #include "QueueItem.h"
 #include "DatabaseManager.h"
+#include "Util.h"
+#include "SettingsManager.h"
 
 Download::Download(UserConnection* conn, const QueueItemPtr& item, const string& remoteIp, const string& cipherName) noexcept :
 	Transfer(conn, item->getTarget(), item->getTTH(), remoteIp, cipherName),

@@ -24,6 +24,7 @@
 #include "QueueItem.h"
 #include "UserInfoBase.h"
 #include <atomic>
+#include <regex>
 
 class ListLoader;
 class DirectoryListingFrame;

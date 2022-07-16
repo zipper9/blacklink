@@ -6,6 +6,7 @@
 #include "../client/LocationUtil.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
+#include "../client/UserManager.h"
 
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;

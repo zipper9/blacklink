@@ -4,11 +4,12 @@
  */
 
 #include "stdinc.h"
+#include "UserInfoBase.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
 #include "UploadManager.h"
+#include "UserManager.h"
 #include "LogManager.h"
-#include "UserInfoBase.h"
 
 void UserInfoBase::matchQueue()
 {

@@ -21,7 +21,10 @@
 
 #include "UserConnection.h"
 #include "Singleton.h"
+#include "Speaker.h"
 #include "ConnectionManagerListener.h"
+#include "ClientManagerListener.h"
+#include "TimerManager.h"
 #include "HintedUser.h"
 #include <atomic>
 

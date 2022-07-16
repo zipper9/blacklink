@@ -23,6 +23,7 @@
 #include "User.h"
 #include "UserInfoBase.h"
 #include "UserInfoColumns.h"
+#include "StrUtil.h"
 
 #ifdef _DEBUG
 #include <atomic>
@@ -491,21 +492,7 @@ class Identity
 		{
 			return getGenderTypeAsString(getGenderType());
 		}
-		tstring getGenderTypeAsString(int index) const
-		{
-			switch (index)
-			{
-				case 1:
-					return TSTRING(FLY_GENDER_NONE);
-				case 2:
-					return TSTRING(FLY_GENDER_MALE);
-				case 3:
-					return TSTRING(FLY_GENDER_FEMALE);
-				case 4:
-					return TSTRING(FLY_GENDER_ASEXUAL);
-			}
-			return Util::emptyStringT;
-		}
+		tstring getGenderTypeAsString(int index) const;
 		string getExtJSONSupportInfo() const
 		{
 			return getStringParamExtJSON("F5");
@@ -514,96 +501,13 @@ class Identity
 		{
 			setStringParam("F5", value);
 		}
-		string getExtJSONHubRamAsText() const
-		{
-			string result;
-			if (hasExtJson)
-			{
-				if (getExtJSONRAMWorkingSet())
-				{
-					result = Util::formatBytes(int64_t(getExtJSONRAMWorkingSet()) << 20);
-				}
-				if (getExtJSONRAMPeakWorkingSet() != getExtJSONRAMWorkingSet())
-				{
-					result += " [Max: " + Util::formatBytes(int64_t(getExtJSONRAMPeakWorkingSet()) << 20) + "]";
-				}
-				if (getExtJSONRAMFree())
-				{
-					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONRAMFree()) >> 20) + "]";
-				}
-			}
-			return result;
-		}
-		
-		string getExtJSONCountFilesAsText() const
-		{
-			if (hasExtJson && getExtJSONCountFiles())
-				return Util::toString(getExtJSONCountFiles());
-			else
-				return Util::emptyString;
-		}
-		string getExtJSONLastSharedDateAsText() const
-		{
-			if (hasExtJson && getExtJSONLastSharedDate())
-				return Util::formatTime(getExtJSONLastSharedDate());
-			else
-				return Util::emptyString;
-		}
-		
-		string getExtJSONSQLiteDBSizeAsText() const
-		{
-			string result;
-			if (hasExtJson)
-			{
-				if (getExtJSONSQLiteDBSize())
-				{
-					result = Util::formatBytes(int64_t(getExtJSONSQLiteDBSize()) << 20);
-				}
-				if (getExtJSONSQLiteDBSizeFree())
-				{
-					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONSQLiteDBSizeFree()) << 20) + "]";
-				}
-				if (getExtJSONlevelDBHistSize())
-				{
-					result += " [LevelDB: " + Util::formatBytes(int64_t(getExtJSONlevelDBHistSize()) << 20) + "]";
-				}
-			}
-			return result;
-		}
-		string getExtJSONQueueFilesText() const
-		{
-			string result;
-			if (hasExtJson)
-			{
-				if (getExtJSONQueueFiles())
-				{
-					result = "[Files: " + Util::toString(getExtJSONQueueFiles()) + "]";
-				}
-				if (getExtJSONQueueSrc())
-				{
-					result += " [Sources: " + Util::toString(getExtJSONQueueSrc()) + "]";
-				}
-			}
-			return result;
-		}
-		string getExtJSONTimesStartCoreText() const
-		{
-			string result;
-			if (hasExtJson)
-			{
-				if (getExtJSONTimesStartCore())
-				{
-					result = "[Start core: " + Util::toString(getExtJSONTimesStartCore()) + "]";
-				}
-				if (getExtJSONTimesStartGUI())
-				{
-					result += " [Start GUI: " + Util::toString(getExtJSONTimesStartGUI()) + "]";
-				}
-			}
-			return result;
-		}
-		
-		
+		string getExtJSONHubRamAsText() const;
+		string getExtJSONCountFilesAsText() const;
+		string getExtJSONLastSharedDateAsText() const;
+		string getExtJSONSQLiteDBSizeAsText() const;
+		string getExtJSONQueueFilesText() const;
+		string getExtJSONTimesStartCoreText() const;
+
 #endif // EXT_JSON
 		
 		static string formatShareBytes(uint64_t bytes);

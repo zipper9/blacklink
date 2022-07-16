@@ -27,6 +27,7 @@
 #include "WinUtil.h"
 #include "ExMessageBox.h"
 #include "../client/Util.h"
+#include "../client/UserManager.h"
 #include <algorithm>
 
 const int UsersFrame::columnId[] =
