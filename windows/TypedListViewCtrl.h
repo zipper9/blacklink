@@ -229,27 +229,6 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			return GetSelectedCount();
 		}
 
-		void forEachSelectedParam(void (T::*func)(void*), void *param)
-		{
-			int i = -1;
-			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
-				(getItemData(i)->*func)(param);
-		}
-		
-		void forEachSelectedParam(void (T::*func)(const string&, const tstring&), const string& hubHint, const tstring& message)
-		{
-			int i = -1;
-			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
-				(getItemData(i)->*func)(hubHint, message);
-		}
-
-		void forEachSelectedParam(void (T::*func)(const string&, uint64_t), const string& hubHint, uint64_t data)
-		{
-			int i = -1;
-			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
-				(getItemData(i)->*func)(hubHint, data);
-		}
-		
 		int findItem(const T* item) const
 		{
 			LVFINDINFO fi = { 0 };

@@ -54,7 +54,10 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		typedef UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY> uibBase;
 		typedef UCHandler<TransferView> ucBase;
-		
+
+		class ItemInfo;
+		typedef TypedTreeListViewCtrl<ItemInfo, IDC_TRANSFERS, tstring> ItemInfoList;
+
 		BEGIN_MSG_MAP(TransferView)
 		NOTIFY_HANDLER(IDC_TRANSFERS, LVN_GETDISPINFO, ctrlTransfers.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_TRANSFERS, LVN_COLUMNCLICK, ctrlTransfers.onColumnClick)
@@ -195,15 +198,12 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		}
 		
 	public:
-		class ItemInfo;
-		typedef TypedTreeListViewCtrl<ItemInfo, IDC_TRANSFERS, tstring> ItemInfoList;
-		ItemInfoList& getUserList()
-		{
-			return ctrlTransfers;
-		}
+		void getSelectedUsers(vector<UserPtr>& v) const;
+
 #ifdef IRAINMAN_ENABLE_WHOIS
 		tstring selectedIP;
 #endif
+
 	private:
 		enum Tasks
 		{

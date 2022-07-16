@@ -39,6 +39,9 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 {
 		typedef UserInfoBaseHandler<WaitingUsersFrame, UserInfoGuiTraits::NO_COPY> uiBase;
 
+		class UploadQueueItem;
+		typedef TypedListViewCtrl<UploadQueueItem, IDC_UPLOAD_QUEUE> CtrlList;
+
 	public:
 		static CFrameWndClassInfo& GetWndClassInfo();
 		
@@ -116,7 +119,9 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		// Update control layouts
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		
+
+		void getSelectedUsers(vector<UserPtr>& v) const;
+
 	private:
 		static const int columnId[];
 		
@@ -178,7 +183,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			HintedUser hintedUser;
 			UserItem(const HintedUser& hintedUser) : hintedUser(hintedUser) {}
 		};
-		
+
 		UserPtr getCurrentUser()
 		{
 			HTREEITEM selectedItem = ctrlQueued.GetSelectedItem();
@@ -187,7 +192,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			if (!userData) return UserPtr();
 			return reinterpret_cast<UserItem*>(userData)->hintedUser.user;
 		}
-		
+
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMLVKEYDOWN* kd = (NMLVKEYDOWN*) pnmh;
@@ -236,15 +241,11 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			UserListItem(const UserPtr& user, HTREEITEM treeItem) :
 				user(user), treeItem(treeItem) {}
 		};
-		
+
 		std::list<UserListItem> userList;
-		
-		typedef TypedListViewCtrl<UploadQueueItem, IDC_UPLOAD_QUEUE> CtrlList;
+
 		CtrlList ctrlList;
 		CustomDrawHelpers::CustomDrawState customDrawState;
-
-	public:
-		CtrlList& getUserList() { return ctrlList; }
 
 	private:
 		CTreeViewCtrl ctrlQueued;

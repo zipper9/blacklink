@@ -104,7 +104,7 @@ template<class T, const int options = UserInfoGuiTraits::DEFAULT, class T2 = Use
 class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGuiTraits
 {
 		/*
-		1) If you want to get the features USER_LOG and (or) NICK_TO_CHAT you need to create methods, respectively onOpenUserLog and (or) onAddNickToChat in its class.
+		1) If USER_LOG is set, openUserLog must be implemented; if NICK_TO_CHAT is set, addNickToChat must be implemented
 		2) clearUserMenu()
 		3) reinitUserMenu(user, hint)
 		4) appendAndActivateUserItems(yourMenu)
@@ -152,27 +152,20 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		COMMAND_ID_HANDLER(IDC_COPY_IP, onCopyUserInfo)
 		COMMAND_ID_HANDLER(IDC_COPY_ALL, onCopyUserInfo)
 		END_MSG_MAP()
-		
-		virtual LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+
+		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			dcassert(0);
-			LogManager::message("Not implemented [virtual LRESULT onOpenUserLog]");
-			return 0;
-		}
-		
-		virtual LRESULT onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			dcassert(0);
-			LogManager::message("Not implemented [virtual LRESULT onAddNickToChat]");
+			static_cast<T*>(this)->openUserLog();
 			return 0;
 		}
 
-		virtual OnlineUserPtr getSelectedOnlineUser() const
+		LRESULT onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			return OnlineUserPtr();
+			static_cast<T*>(this)->addNickToChat();
+			return 0;
 		}
 
-		virtual LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			OnlineUserPtr ou = getSelectedOnlineUser();
 			if (ou)
@@ -276,19 +269,18 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList)
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				if (selected.size() > 1)
 				{
-					if (((T*)this)->getUserList().getSelectedCount() > 1)
-					{
-						const tstring message = UserInfoSimple::getBroadcastPrivateMessage();
-						if (!message.empty())
-							((T*)this)->getUserList().forEachSelectedParam(&UserInfoBase::pmText, selectedHint, message);
-					}
-					else
-					{
-						using std::placeholders::_1;
-						((T*)this)->getUserList().forEachSelectedT(std::bind(&UserInfoBase::pm, _1, selectedHint));
-					}
+					const tstring message = UserInfoSimple::getBroadcastPrivateMessage();
+					if (!message.empty())
+						for (const auto& u : selected)
+							UserInfoSimple(u, selectedHint).pmText(selectedHint, message);
+				}
+				else if (!selected.empty())
+				{
+					UserInfoSimple(selected[0], selectedHint).pm(selectedHint);
 				}
 			}
 			return 0;
@@ -341,6 +333,23 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			return 0;
 		}
 
+		OnlineUserPtr getSelectedOnlineUser() const
+		{
+			return OnlineUserPtr();
+		}
+
+		void openUserLog()
+		{
+			dcassert(0);
+			LogManager::message("openUserLog is not implemented");
+		}
+
+		void addNickToChat()
+		{
+			dcassert(0);
+			LogManager::message("addNickToChat is not implemented");
+		}
+
 		const T2& getSelectedUser() const
 		{
 			return selectedUser;
@@ -386,15 +395,14 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList) // ??
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				if (!selected.empty())
 				{
 					FavUserTraits traits; // empty
 					if (ENABLE(options, NICK_TO_CHAT))
-					{
 						menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
-					}
-					int count = ((T*)this)->getUserList().getSelectedCount();
-					appendSendAutoMessageItems(menu, count);
+					appendSendAutoMessageItems(menu, selected.size());
 					appendFileListItems(menu, traits);
 					appendContactListMenu(menu, traits);
 					appendFavPrivateMenu(menu);
@@ -581,11 +589,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList)
-				{
-					using std::placeholders::_1;
-					((T*)this)->getUserList().forEachSelectedT(std::bind(func, _1, data));
-				}
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				for (auto& u : selected)
+					(UserInfoSimple(u, selectedHint).*func)(data);
 			}
 		}
 		
@@ -597,10 +604,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelectedParam(func, hubHint, data);
-				}
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				for (auto& u : selected)
+					(UserInfoSimple(u, selectedHint).*func)(hubHint, data);
 			}
 		}
 		
@@ -612,10 +619,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelectedParam(func, hubHint, data);
-				}
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				for (auto& u : selected)
+					(UserInfoSimple(u, selectedHint).*func)(hubHint, data);
 			}
 		}
 		
@@ -627,21 +634,19 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList)
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				if (!selected.empty())
 				{
-					using std::placeholders::_1;
 					if (useOnlyFirstItem)
-					{
-						((T*)this)->getUserList().forFirstSelectedT(std::bind(func, _1, hubHint));
-					}
+						(UserInfoSimple(selected[0], selectedHint).*func)(hubHint);
 					else
-					{
-						((T*)this)->getUserList().forEachSelectedT(std::bind(func, _1, hubHint));
-					}
+						for (auto& u : selected)
+							(UserInfoSimple(u, selectedHint).*func)(hubHint);
 				}
 			}
 		}
-		
+
 		void doAction(void (UserInfoBase::*func)())
 		{
 			if (selectedUser)
@@ -650,10 +655,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelected(func);
-				}
+				vector<T2> selected;
+				static_cast<T*>(this)->getSelectedUsers(selected);
+				for (auto& u : selected)
+					(UserInfoSimple(u, selectedHint).*func)();
 			}
 		}
 	private:

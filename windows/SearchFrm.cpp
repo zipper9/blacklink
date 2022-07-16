@@ -1242,8 +1242,8 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask, prio, true, getConnFlag);
 			si->sr.flags |= SearchResult::FLAG_QUEUED;
 			sf->updateList = true;
-			
-			const auto children = sf->getUserList().findChildren(si->getGroupCond());
+
+			const auto children = sf->ctrlResults.findChildren(si->getGroupCond());
 			for (auto i = children.cbegin(); i != children.cend(); ++i)
 			{
 				SearchInfo* j = *i;
@@ -2950,6 +2950,17 @@ void SearchFrame::on(SettingsManagerListener::Repaint)
 		ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
 #endif
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+	}
+}
+
+void SearchFrame::getSelectedUsers(vector<UserPtr>& v) const
+{
+	int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
+	while (i >= 0)
+	{
+		SearchInfo* si = ctrlResults.getItemData(i);
+		v.push_back(si->getUser());
+		i = ctrlResults.GetNextItem(i, LVNI_SELECTED);
 	}
 }
 

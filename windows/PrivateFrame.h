@@ -82,7 +82,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_OFFLINE_PM, onCloseAllOffline)
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_PM, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
-		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
 		COMMAND_ID_HANDLER(IDC_SELECT_HUB, onShowHubMenu);
 		COMMAND_ID_HANDLER(IDC_CCPM, onCCPM);
 		CHAIN_COMMANDS(ucBase)
@@ -100,11 +99,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
-		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			openFrameLog();
-			return 0;
-		}
 		LRESULT onShowHubMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCCPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled); // !Decker!
@@ -173,6 +167,11 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool selectHub(const string& url);
 
 		static PrivateFrame* findFrameByID(uint64_t id);
+
+		// UserInfoBaseHandler
+		OnlineUserPtr getSelectedOnlineUser() const;
+		void getSelectedUsers(vector<UserPtr>& v) const {}
+		void openUserLog() { openFrameLog(); }
 
 	private:
 		enum
@@ -272,9 +271,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void readFrameLog() override;
 
 		StringMap getFrameLogParams() const;
-
-		// UserInfoBaseHandler
-		OnlineUserPtr getSelectedOnlineUser() const override;
 
 	public:
 		void createMessagePanel();

@@ -769,6 +769,17 @@ void WaitingUsersFrame::UploadQueueItem::update()
 	}
 }
 
+void WaitingUsersFrame::getSelectedUsers(vector<UserPtr>& v) const
+{
+	int i = ctrlList.GetNextItem(-1, LVNI_SELECTED);
+	while (i >= 0)
+	{
+		UploadQueueItem* ui = ctrlList.getItemData(i);
+		v.push_back(ui->getUser());
+		i = ctrlList.GetNextItem(i, LVNI_SELECTED);
+	}
+}
+
 CFrameWndClassInfo& WaitingUsersFrame::GetWndClassInfo()
 {
 	static CFrameWndClassInfo wc =

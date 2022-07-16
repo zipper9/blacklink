@@ -1036,6 +1036,17 @@ UserInfo* UserListWindow::getSelectedUserInfo(bool* isMultiple) const
 	return ui;
 }
 
+void UserListWindow::getSelectedUsers(vector<OnlineUserPtr>& v) const
+{
+	int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
+	while (i >= 0)
+	{
+		UserInfo* ui = ctrlUsers.getItemData(i);
+		v.push_back(ui->getOnlineUser());
+		i = ctrlUsers.GetNextItem(i, LVNI_SELECTED);
+	}
+}
+
 void UserListWindow::selectItem(int pos)
 {
 	CLockRedraw<> lockRedraw(ctrlUsers);

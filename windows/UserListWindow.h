@@ -56,6 +56,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		void updateLayout();
 		bool showHeaderMenu(POINT pt);
 		UserInfo* getSelectedUserInfo(bool* isMultiple) const;
+		void getSelectedUsers(vector<OnlineUserPtr>& v) const;
 		bool selectNick(const tstring& nick);
 		bool selectCID(const CID& cid);
 		void getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const;

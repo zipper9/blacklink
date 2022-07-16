@@ -556,7 +556,18 @@ LRESULT UsersFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL&
 	return 0;
 }
 
-LRESULT UsersFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void UsersFrame::getSelectedUsers(vector<UserPtr>& v) const
+{
+	int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
+	while (i >= 0)
+	{
+		ItemInfo* ii = ctrlUsers.getItemData(i);
+		v.push_back(ii->getUser());
+		i = ctrlUsers.GetNextItem(i, LVNI_SELECTED);
+	}
+}
+
+void UsersFrame::openUserLog()
 {
 	if (ctrlUsers.GetSelectedCount() == 1)
 	{
@@ -574,7 +585,6 @@ LRESULT UsersFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		
 		WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
 	}
-	return 0;
 }
 
 void UsersFrame::on(UserAdded, const FavoriteUser& user) noexcept

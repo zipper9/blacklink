@@ -43,7 +43,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	public CSplitterImpl<HubFrame>,
 	public CMessageFilter,
 	public UCHandler<HubFrame>,
-	public UserInfoBaseHandler < HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr >,
+	public UserInfoBaseHandler<HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr>,
 	private SettingsManagerListener,
 	private FavoriteManagerListener,
 	private UserManagerListener,
@@ -112,7 +112,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		COMMAND_ID_HANDLER(IDC_BAN_IP, onBanIP)
 		COMMAND_ID_HANDLER(IDC_UNBAN_IP, onUnBanIP)
 		COMMAND_ID_HANDLER(IDC_OPEN_HUB_LOG, onOpenHubLog)
-		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
 		COMMAND_ID_HANDLER(IDC_COPY_HUBNAME, onCopyHubInfo)
 		COMMAND_ID_HANDLER(IDC_COPY_HUBADDRESS, onCopyHubInfo)
 		COMMAND_ID_HANDLER(IDC_COPY_HUB_IP, onCopyHubInfo)
@@ -146,12 +145,10 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAutoScrollChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onUnBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 
@@ -236,6 +233,12 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			}
 			return 0;
 		}
+
+		// UserInfoBaseHandler
+		OnlineUserPtr getSelectedOnlineUser() const { return getSelectedUser(); }
+		void getSelectedUsers(vector<OnlineUserPtr>& v) const { ctrlUsers.getSelectedUsers(v); }
+		void addNickToChat();
+		void openUserLog();
 
 	private:
 		enum AutoConnectType
@@ -354,9 +357,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
 		void on(SettingsLoaded, const Client*) noexcept override;
 
-		// UserInfoBaseHandler
-		OnlineUserPtr getSelectedOnlineUser() const override { return getSelectedUser(); }
-
 		// UserListWindow::HubFrameCallbacks
 		void showErrorMessage(const tstring& text) override;
 		void setCurrentNick(const tstring& nick) override;
@@ -386,7 +386,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
 		}
-		UserListWindow::CtrlUsers& getUserList() { return ctrlUsers.getUserList(); }
 
 	protected:
 		// BaseChatFrame

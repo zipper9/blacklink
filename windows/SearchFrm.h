@@ -50,7 +50,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private TimerHelper,
 	public CMessageFilter
 {
-		friend class DirectoryListingFrame;
+		class SearchInfo;
+		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue> SearchInfoList;
 
 	public:
 		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, SizeModes mode = SIZE_ATLEAST, int type = FILE_TYPE_ANY);
@@ -257,17 +258,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			closeAll();
 			return 0;
 		}
-		
+
+		void getSelectedUsers(vector<UserPtr>& v) const;
+
 	private:
 		bool getDownloadDirectory(WORD wID, tstring& dir) const;
-		class SearchInfo;
-		
-	public:
-		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue> SearchInfoList;
-		SearchInfoList& getUserList()
-		{
-			return ctrlResults;
-		}
 
 	private:
 		enum
@@ -313,22 +308,15 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 					ipUpdated = false;
 #endif
 				}
-				~SearchInfo()
-				{
-				}
-				
-				const UserPtr& getUser() const override
-				{
-					return sr.getUser();
-				}
+				const UserPtr& getUser() const override { return sr.getUser(); }
 				bool collapsed;
 				SearchInfo* parent;
 				size_t hits;
 				int iconIndex;
-				
+
 				void getList();
 				void browseList();
-				
+
 				struct Download
 				{
 					Download(const tstring& target, SearchFrame* sf, QueueItem::Priority prio, QueueItem::MaskType mask = 0) : tgt(target), sf(sf), prio(prio), mask(mask) { }

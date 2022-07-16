@@ -27,7 +27,6 @@
 #include "../client/UserInfoBase.h"
 #include "../client/FavoriteManagerListener.h"
 #include "../client/UserManagerListener.h"
-#include "../client/File.h"
 #include "../client/OnlineUser.h"
 
 class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
@@ -81,7 +80,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		LRESULT onRemove(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEdit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
@@ -117,6 +115,10 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 
 		void GetSystemSettings(bool bUpdate);
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
+
+		// UserInfoBaseHandler
+		void getSelectedUsers(vector<UserPtr>& v) const;
+		void openUserLog();
 
 	private:
 		enum

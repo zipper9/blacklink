@@ -2245,6 +2245,17 @@ void TransferView::onTimerInternal()
 	processTasks();
 }
 
+void TransferView::getSelectedUsers(vector<UserPtr>& v) const
+{
+	int i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED);
+	while (i >= 0)
+	{
+		ItemInfo* ii = ctrlTransfers.getItemData(i);
+		v.push_back(ii->getUser());
+		i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED);
+	}
+}
+
 TransferView::ItemInfo::ItemInfo() : hintedUser(HintedUser(nullptr, Util::emptyString)), download(true)
 {
 	init();

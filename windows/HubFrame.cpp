@@ -2490,32 +2490,6 @@ LRESULT HubFrame::onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-LRESULT HubFrame::onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (isConnected())
-	{
-		if (getSelectedUser())
-		{
-			lastUserName = Text::toT(getSelectedUser()->getIdentity().getNick());
-		}
-		else
-		{
-			lastUserName.clear();
-			const auto& listView = ctrlUsers.getUserList();
-			int i = -1;
-			while ((i = listView.GetNextItem(i, LVNI_SELECTED)) != -1)
-			{
-				if (!lastUserName.empty())
-					lastUserName += _T(", ");
-
-				lastUserName += Text::toT(listView.getItemData(i)->getNick());
-			}
-		}
-		appendNickToChat(lastUserName);
-	}
-	return 0;
-}
-
 LRESULT HubFrame::onAutoScrollChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ctrlClient.invertAutoScroll();
@@ -2539,25 +2513,6 @@ LRESULT HubFrame::onUnBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 		const string s = "!unban " + Text::fromT(ChatCtrl::g_sSelectedIP);
 		sendMessage(s);
 	}
-	return 0;
-}
-
-LRESULT HubFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	UserInfo* ui = nullptr;
-	if (getSelectedUser())
-	{
-		ui = ctrlUsers.findUser(getSelectedUser());
-		if (!ui) return 0;
-	}
-
-	StringMap params = getFrameLogParams();
-	
-	params["userNI"] = ui->getNick();
-	params["userCID"] = ui->getUser()->getCID().toBase32();
-	
-	WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
-	
 	return 0;
 }
 
@@ -2602,6 +2557,48 @@ LRESULT HubFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL& bHandled)
 	else
 		bHandled = FALSE;
 	return 0;
+}
+
+void HubFrame::addNickToChat()
+{
+	if (isConnected())
+	{
+		if (getSelectedUser())
+		{
+			lastUserName = Text::toT(getSelectedUser()->getIdentity().getNick());
+		}
+		else
+		{
+			lastUserName.clear();
+			const auto& listView = ctrlUsers.getUserList();
+			int i = -1;
+			while ((i = listView.GetNextItem(i, LVNI_SELECTED)) != -1)
+			{
+				if (!lastUserName.empty())
+					lastUserName += _T(", ");
+
+				lastUserName += Text::toT(listView.getItemData(i)->getNick());
+			}
+		}
+		appendNickToChat(lastUserName);
+	}
+}
+
+void HubFrame::openUserLog()
+{
+	UserInfo* ui = nullptr;
+	if (getSelectedUser())
+	{
+		ui = ctrlUsers.findUser(getSelectedUser());
+		if (!ui) return;
+	}
+
+	StringMap params = getFrameLogParams();
+	
+	params["userNI"] = ui->getNick();
+	params["userCID"] = ui->getUser()->getCID().toBase32();
+	
+	WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
 }
 
 void HubFrame::addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc)
