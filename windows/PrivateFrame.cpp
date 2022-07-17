@@ -1227,6 +1227,7 @@ BOOL PrivateFrame::PreTranslateMessage(MSG* pMsg)
 	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
 	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (isFindDialogMessage(pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
 }

@@ -137,7 +137,8 @@ tstring ChatCtrl::g_sSelectedUserName;
 tstring ChatCtrl::g_sSelectedURL;
 
 ChatCtrl::ChatCtrl() : autoScroll(true), disableChatCacheFlag(false), chatCacheSize(0),
-	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr)
+	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr),
+	findInit(true), findRangeStart(0), findRangeEnd(0), currentFindFlags(FR_DOWN)
 #ifdef IRAINMAN_INCLUDE_SMILE
 	,outOfMemory(false), totalEmoticons(0), pStorage(nullptr), refs(0)
 #endif
@@ -1051,6 +1052,108 @@ IRichEditOle* ChatCtrl::getRichEditOle()
 	return pRichEditOle;
 }
 
+bool ChatCtrl::findText(const TCHAR* text, DWORD flags)
+{
+	tstring needle = text;
+	if (needle != currentNeedle)
+	{
+		currentNeedle = std::move(needle);
+		findInit = true;
+	}
+	currentFindFlags = flags;
+
+	CHARRANGE savedSel = { -1, 0 };
+
+	FINDTEXTEX ft = {};
+	GetSel(ft.chrg);
+	dcdebug("findText: selection=(%d, %d)\n", ft.chrg.cpMin, ft.chrg.cpMax);
+	if (findInit || ft.chrg.cpMin == ft.chrg.cpMax)
+	{
+		if (flags & FR_DOWN)
+		{
+			findRangeStart = ft.chrg.cpMin;
+			findRangeEnd = -1;
+		}
+		else
+		{
+			findRangeStart = 0;
+			findRangeEnd = ft.chrg.cpMax;
+		}
+	}
+	else if (ft.chrg.cpMin != ft.chrg.cpMax) 
+		savedSel = ft.chrg;
+
+	ft.lpstrText = const_cast<TCHAR*>(text);
+	if (ft.chrg.cpMin != ft.chrg.cpMax && !findInit && (flags & FR_DOWN))
+		ft.chrg.cpMin++;
+
+	findInit = false;
+	ft.chrg.cpMax = (flags & FR_DOWN) ? findRangeEnd : findRangeStart;
+	bool foundHiddenText = false;
+	while (true)
+	{
+		dcdebug("findText: Search in range %d - %d\n", ft.chrg.cpMin, ft.chrg.cpMax);
+		long result = findAndSelect(flags, ft);
+		if (result == -2)
+		{
+			ft.chrg.cpMin = ft.chrgText.cpMin;
+			if (flags & FR_DOWN) ft.chrg.cpMin++;
+			foundHiddenText = true;
+			continue;
+		}
+		if (result != -1) return true;
+		if ((flags & FR_DOWN) && findRangeStart > 0)
+		{
+			dcdebug("findText: wrap around\n");
+			findRangeEnd = findRangeStart;
+			findRangeStart = 0;
+			ft.chrg.cpMin = findRangeStart;
+			ft.chrg.cpMax = findRangeEnd;
+			result = findAndSelect(flags, ft);
+		}
+		else
+		if (!(flags & FR_DOWN) && findRangeStart == 0)
+		{
+			dcdebug("findText: wrap around\n");
+			findRangeStart = findRangeEnd;
+			findRangeEnd = GetTextLength();
+			ft.chrg.cpMin = findRangeEnd;
+			ft.chrg.cpMax = findRangeStart;
+			result = findAndSelect(flags, ft);
+		}
+		if (result == -2)
+		{
+			ft.chrg.cpMin = ft.chrgText.cpMin;
+			if (flags & FR_DOWN) ft.chrg.cpMin++;
+			foundHiddenText = true;
+			continue;
+		}
+		if (result != -1) return true;
+		break;
+	}
+	if (foundHiddenText && savedSel.cpMin != -1)
+		SetSel(savedSel);
+	return false;
+}
+
+long ChatCtrl::findAndSelect(DWORD flags, FINDTEXTEX& ft)
+{
+	long index = FindText(flags, ft);
+	dcdebug("findAndSelect: %d, %d, %d\n", index, ft.chrgText.cpMin, ft.chrgText.cpMax);
+	if (index != -1)
+	{
+		SetSel(ft.chrgText);
+		CHARRANGE cr;
+		GetSel(cr);
+		if (ft.chrgText.cpMin != cr.cpMin)
+		{
+			dcdebug("findAndSelect: hidden text found\n");
+			return -2;
+		}
+	}
+	return index;
+}
+
 #ifdef IRAINMAN_INCLUDE_SMILE
 void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 {
@@ -1156,16 +1259,19 @@ LRESULT ChatCtrl::onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 
 LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	IpAddress ip;
-	if (!g_sSelectedIP.empty() && Util::parseIpAddress(ip, Text::fromT(g_sSelectedIP)))
+	if (!g_sSelectedIP.empty())
 	{
-		string report = ip.type == AF_INET6 ? "IPv6 Info: " : "IPv4 Info: ";
-		report += Identity::formatIpString(ip);
-		ClientManager::LockInstanceClients l;
-		const auto& clients = l.getData();
-		auto i = clients.find(hubHint);
-		if (i != clients.end())
-			i->second->dumpUserInfo(report);
+		IpAddress ip;
+		if (Util::parseIpAddress(ip, Text::fromT(g_sSelectedIP)))
+		{
+			string report = ip.type == AF_INET6 ? "IPv6 Info: " : "IPv4 Info: ";
+			report += Identity::formatIpString(ip);
+			ClientManager::LockInstanceClients l;
+			const auto& clients = l.getData();
+			auto i = clients.find(hubHint);
+			if (i != clients.end())
+				i->second->dumpUserInfo(report);
+		}
 	}
 	return 0;
 }

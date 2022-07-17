@@ -34,6 +34,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_FORWARDMSG, onForwardMsg)
 		MESSAGE_HANDLER(WMU_CHAT_LINK_CLICKED, onChatLinkClicked)
+		MESSAGE_HANDLER(CFindReplaceDialog::GetFindReplaceMsg(), onFindDialogMessage)
 		COMMAND_ID_HANDLER(IDC_WINAMP_SPAM, onWinampSpam)
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
@@ -61,6 +62,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void createMessagePanel(bool showSelectHubButton, bool showCCPMButton);
 		void destroyMessagePanel();
 		void addSystemMessage(const tstring& line, const CHARFORMAT2& cf);
+		void showFindDialog();
 
 	private:
 		void createChatCtrl();
@@ -76,25 +78,29 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		BaseChatFrame() :
 			multiChatLines(0),
 			showTimestamps(BOOLSETTING(CHAT_TIME_STAMPS)),
-			currentNeedlePos(-1),
 			msgPanel(nullptr),
 			messagePanelHwnd(nullptr),
 			messagePanelRect{},
 			lastMessageSelPos(0),
 			userMenu(nullptr),
 			disableChat(false),
-			ctrlStatusOwnerDraw(0)
+			ctrlStatusOwnerDraw(0),
+			findDlg(nullptr)
 		{
 		}
 
 		BaseChatFrame(const BaseChatFrame&) = delete;
 		BaseChatFrame& operator= (const BaseChatFrame&) = delete;
 
-		virtual ~BaseChatFrame() {}
+		virtual ~BaseChatFrame()
+		{
+			dcassert(!findDlg);
+		}
 
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			bHandled = FALSE; // ќб€зательно чтобы продолжить обработку дальше. http://www.rsdn.ru/forum/atl/633568.1
+			bHandled = FALSE;
+			if (findDlg) findDlg->SendMessage(WM_CLOSE);
 			doDestroyFrame();
 			return 0;
 		}
@@ -118,8 +124,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
-		tstring findTextPopup();
-		void findText(const tstring & needle) noexcept;
+		LRESULT onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);;
 
 		virtual void doDestroyFrame() = 0;
 		virtual bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res);
@@ -140,7 +145,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void appendNickToChat(const tstring& nick);
 		void appendLogToChat(const string& path, const size_t linesCount);
 		ChatCtrl ctrlClient;
-		
+
 		MessageEdit ctrlMessage;
 		tstring lastMessage;
 		DWORD lastMessageSelPos;
@@ -149,6 +154,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		CStatusBarCtrl ctrlStatus;
 		bool disableChat;
 		uint64_t frameId;
+		CFindReplaceDialog* findDlg;
 
 		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
 		unsigned ctrlStatusOwnerDraw;
@@ -166,16 +172,17 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 
 		int getInputBoxHeight() const;
 		void clearInputBox();
+		BOOL isFindDialogMessage(MSG* msg) const;
 
 	private:
 		bool showTimestamps;
-		tstring currentNeedle;
-		LONG currentNeedlePos;
 		RECT messagePanelRect;
 		HWND messagePanelHwnd;
 
 		void checkMultiLine();
 		void insertBBCode(WORD wID, HWND hwndCtl);
+		void adjustFindDlgPosition(HWND hWnd);
+		void searchStringNotFound();
 
 	private:
 		bool processEnter() override;

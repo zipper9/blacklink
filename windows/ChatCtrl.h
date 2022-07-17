@@ -99,23 +99,36 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 
 		void appendText(const Message& message, unsigned maxSmiles, bool highlightNick);
 		void adjustTextSize();
+		bool findText(const TCHAR* text, DWORD flags);
+		const tstring& getCurrentNeedle() const { return currentNeedle; }
+		DWORD getCurrentFindFlags() const { return currentFindFlags; }
+		void resetFindPos() { findInit = true; }
 
 	protected:
 		bool hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos);
 		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);
 		bool hitText(tstring& text, int selBegin, int selEnd) const;
+		long findAndSelect(DWORD flags, FINDTEXTEX& ft);
 
 	private:
+		// Chat cache
 		list<Message> chatCache;
 		size_t chatCacheSize;
 		bool disableChatCacheFlag;
 		FastCriticalSection csChatCache;
+
 		bool autoScroll;
 		string hubHint;
 		tstring myNick;
 		int ignoreLinkStart, ignoreLinkEnd;
 		int selectedLine;
 		IRichEditOle* pRichEditOle;
+
+		// Find text
+		bool findInit;
+		long findRangeStart, findRangeEnd;
+		tstring currentNeedle;
+		DWORD currentFindFlags;
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 		IStorage* pStorage;

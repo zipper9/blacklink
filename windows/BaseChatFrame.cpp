@@ -20,7 +20,6 @@
 #include "BaseChatFrame.h"
 #include "WinUtil.h"
 #include "Fonts.h"
-#include "LineDlg.h"
 #include "MainFrm.h"
 #include "../client/StringTokenizer.h"
 #include <tom.h>
@@ -204,7 +203,7 @@ void BaseChatFrame::createChatCtrl()
 	if (!ctrlClient.IsWindow())
 	{
 		HWND hwnd = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP, WS_EX_STATICEDGE, IDC_CLIENT);
+		                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP, WS_EX_STATICEDGE, IDC_CLIENT);
 		if (!hwnd)
 		{
 			dcdebug("Error create BaseChatFrame::createChatCtrl %s", Util::translateError().c_str());
@@ -465,10 +464,14 @@ bool BaseChatFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comma
 			res.what = Commands::RESULT_NO_TEXT;
 			tstring param;
 			if (pc.args.size() >= 2)
+			{
 				param = Text::toT(pc.args[1]);
+				ctrlClient.SetSelNone();
+				ctrlClient.resetFindPos();
+				ctrlClient.findText(param.c_str(), FR_DOWN);
+			}
 			else
-				param = findTextPopup();
-			findText(param);
+				showFindDialog();
 			return true;
 		}
 		case Commands::COMMAND_ME:
@@ -593,63 +596,6 @@ LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	if (MainFrame::getMainFrame()->processCommand(pc, res))
 		sendCommandResult(res);
 	return 0;
-}
-
-tstring BaseChatFrame::findTextPopup()
-{
-	LineDlg dlg;
-	dlg.title = TSTRING(SEARCH);
-	dlg.description = TSTRING(SPECIFY_SEARCH_STRING);
-	dlg.icon = IconBitmaps::SEARCH;
-	dlg.allowEmpty = false;
-	if (dlg.DoModal() == IDOK)
-		return dlg.line;
-	return Util::emptyStringT;
-}
-
-void BaseChatFrame::findText(const tstring& needle) noexcept
-{
-	dcassert(ctrlClient.IsWindow());
-	if (ctrlClient.IsWindow())
-	{
-		int max = ctrlClient.GetWindowTextLength();
-		// a new search? reset cursor to bottom
-		if (needle != currentNeedle || currentNeedlePos == -1)
-		{
-			currentNeedle = needle;
-			currentNeedlePos = max;
-		}
-		// set current selection
-		FINDTEXT ft = {0};
-		ft.chrg.cpMin = currentNeedlePos;
-		ft.lpstrText = needle.c_str();
-		// empty search? stop
-		if (!needle.empty())
-		{
-			// find upwards
-			currentNeedlePos = (int)ctrlClient.SendMessage(EM_FINDTEXT, 0, (LPARAM) & ft);
-			// not found? try again on full range
-			if (currentNeedlePos == -1 && ft.chrg.cpMin != max)  // no need to search full range twice
-			{
-				currentNeedlePos = max;
-				ft.chrg.cpMin = currentNeedlePos;
-				currentNeedlePos = (LONG) ctrlClient.SendMessage(EM_FINDTEXT, 0, (LPARAM) & ft);
-			}
-			// found? set selection
-			if (currentNeedlePos != -1)
-			{
-				ft.chrg.cpMin = currentNeedlePos;
-				ft.chrg.cpMax = currentNeedlePos + static_cast<LONG>(needle.length());
-				ctrlClient.SetFocus();
-				ctrlClient.SendMessage(EM_EXSETSEL, 0, (LPARAM)&ft);
-			}
-			else
-			{
-				addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + needle);
-				currentNeedle.clear();
-			}
-		}
-	}
 }
 
 void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
@@ -920,17 +866,17 @@ bool BaseChatFrame::processHotKey(int key)
 			ctrlClient.SendMessage(EM_SCROLL, SB_BOTTOM, 0);
 			ctrlClient.InvalidateRect(NULL);
 		}
-		currentNeedle.clear();
 		return true;
 	}
 	if (((key == VK_F3 && WinUtil::isShift()) || (key == 'F' && WinUtil::isCtrl())) && !WinUtil::isAlt())
 	{
-		findText(findTextPopup());
+		// TODO: Find Next with Shift+F3
+		showFindDialog();
 		return true;
 	}
 	if (key == VK_F3)
 	{
-		findText(currentNeedle.empty() ? findTextPopup() : currentNeedle);
+		showFindDialog();
 		return true;
 	}
 	return false;
@@ -973,4 +919,86 @@ void BaseChatFrame::setChatDisabled(bool disabled)
 	}
 	if (msgPanel)
 		msgPanel->disableChat = disabled;
+}
+
+void BaseChatFrame::showFindDialog()
+{
+	if (findDlg)
+	{
+		findDlg->SetActiveWindow();
+		findDlg->ShowWindow(SW_SHOW);
+		return;
+	}
+	findDlg = new CFindReplaceDialog;
+	HWND hWndDlg = findDlg->Create(TRUE,
+		ctrlClient.getCurrentNeedle().c_str(), nullptr,
+		ctrlClient.getCurrentFindFlags(), messagePanelHwnd);
+	if (!hWndDlg)
+	{
+		delete findDlg;
+		findDlg = nullptr;
+	}
+	else
+	{
+		findDlg->SetActiveWindow();
+		findDlg->ShowWindow(SW_SHOW);
+	}
+}
+
+LRESULT BaseChatFrame::onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+{
+	if (!findDlg)
+	{
+		dcassert(0);
+		::MessageBeep(MB_ICONERROR);
+		return 1;
+	}
+
+	FINDREPLACE* findReplace = reinterpret_cast<FINDREPLACE*>(lParam);
+	if (findReplace)
+	{
+		if (findDlg->FindNext())
+		{
+			if (ctrlClient.findText(findDlg->GetFindString(), findDlg->m_fr.Flags))
+				adjustFindDlgPosition(findDlg->m_hWnd);
+			else
+				searchStringNotFound();
+		}
+		else if (findDlg->IsTerminating())
+			findDlg = nullptr;
+	}
+	return 0;
+}
+
+void BaseChatFrame::searchStringNotFound()
+{
+	addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + ctrlClient.getCurrentNeedle(), false, false, Colors::g_ChatTextSystem);
+}
+
+// Copied from atlfind.h
+void BaseChatFrame::adjustFindDlgPosition(HWND hWnd)
+{
+	FINDTEXTEX ft = {};
+	ctrlClient.GetSel(ft.chrg);
+	POINT pt = ctrlClient.PosFromChar(ft.chrg.cpMin);
+	::ClientToScreen(ctrlClient.GetParent(), &pt);
+	RECT rc;
+	::GetWindowRect(hWnd, &rc);
+	if (PtInRect(&rc, pt))
+	{
+		if (pt.y > rc.bottom - rc.top)
+			OffsetRect(&rc, 0, pt.y - rc.bottom - 20);
+		else
+		{
+			int vertExt = GetSystemMetrics(SM_CYSCREEN);
+			if (pt.y + rc.bottom - rc.top < vertExt)
+				OffsetRect(&rc, 0, 40 + pt.y - rc.top);
+		}
+		::MoveWindow(hWnd, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+	}
+}
+
+BOOL BaseChatFrame::isFindDialogMessage(MSG* msg) const
+{
+	return findDlg && findDlg->IsDialogMessage(msg);
 }
