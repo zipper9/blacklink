@@ -181,7 +181,7 @@ class LimitedOutputStream : public OutputStream
 			return s->flushBuffers(force);
 		}
 		
-		virtual bool eof() const
+		bool eof() const override
 		{
 			return maxBytes == 0;
 		}

@@ -31,27 +31,27 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		using Client::connect;
 
 		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
-		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
+		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) override;
 
-		int getType() const { return TYPE_ADC; }
-		void hubMessage(const string& message, bool thirdPerson = false);
-		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
-		void sendUserCmd(const UserCommand& command, const StringMap& params);
-		void searchToken(const SearchParamToken& sp);
-		void password(const string& pwd, bool setPassword);
-		void info(bool forceUpdate);
-		void refreshUserList(bool);
-		size_t getUserCount() const
+		int getType() const override { return TYPE_ADC; }
+		void hubMessage(const string& message, bool thirdPerson = false) override;
+		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) override;
+		void sendUserCmd(const UserCommand& command, const StringMap& params) override;
+		void searchToken(const SearchParamToken& sp) override;
+		void password(const string& pwd, bool setPassword) override;
+		void info(bool forceUpdate) override;
+		void refreshUserList(bool) override;
+		size_t getUserCount() const override
 		{
 			READ_LOCK(*csUsers);
 			return users.size();
 		}
-		void checkNick(string& nick) const noexcept;
-		string escape(const string& str) const noexcept
+		void checkNick(string& nick) const noexcept override;
+		string escape(const string& str) const noexcept override
 		{
 			return AdcCommand::escape(str, false);
 		}
-		bool send(const AdcCommand& cmd);
+		bool send(const AdcCommand& cmd) override;
 		void processCCPMMessage(const AdcCommand& cmd, const OnlineUserPtr& ou) noexcept;
 		
 		string getMySID() const
@@ -89,8 +89,8 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		typedef boost::unordered_map<uint32_t, OnlineUserPtr> SIDMap;
 		
 		void connectUser(const OnlineUser& user, const string& token, bool secure, bool revConnect);
-		void getUserList(OnlineUserList& list) const;
-		bool resendMyINFO(bool alwaysSend, bool forcePassive);
+		void getUserList(OnlineUserList& list) const override;
+		bool resendMyINFO(bool alwaysSend, bool forcePassive) override;
 		
 		unsigned featureFlags;
 		int lastErrorCode;
@@ -119,7 +119,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		OnlineUserPtr findUser(const CID& cid) const;
 
 		// just a workaround
-		OnlineUserPtr findUser(const string& nick) const;
+		OnlineUserPtr findUser(const string& nick) const override;
 
 		void putUser(uint32_t sid, bool disconnect);
 

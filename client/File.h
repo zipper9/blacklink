@@ -115,8 +115,8 @@ class File : public IOStream
 		int64_t getInputSize() const override { return getSize(); }
 		int64_t getTotalRead() const override { return getPos(); }
 
-		size_t read(void* buf, size_t& len);
-		size_t write(const void* buf, size_t len);
+		size_t read(void* buf, size_t& len) override;
+		size_t write(const void* buf, size_t len) override;
 		size_t flushBuffers(bool force = true) override;
 		void closeStream() override;
 

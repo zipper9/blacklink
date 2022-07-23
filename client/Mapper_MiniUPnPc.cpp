@@ -84,7 +84,7 @@ bool Mapper_MiniUPnPc::init()
 
 				// Find a local IP that is within the same subnet
 				auto p = std::find_if(adapters.cbegin(), adapters.cend(),
-					[&addr, this](const Util::AdapterInfo &ai)
+					[&addr](const Util::AdapterInfo &ai)
 					{
 						return Util::isSameNetwork(ai.ip, addr, ai.prefix);
 					});

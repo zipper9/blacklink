@@ -569,7 +569,7 @@ ok:
 		if (hasFreeSlot)
 		{
 			LOCK(csQueue);
-			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty() || (notifiedUsers.find(source->getUser()) != notifiedUsers.end()));
+			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty()) || notifiedUsers.find(source->getUser()) != notifiedUsers.end();
 		}
 		
 		bool isAutoSlot = getAutoSlot();

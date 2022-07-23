@@ -170,7 +170,7 @@ class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Fil
 			return written + f->flushBuffers(force);
 		}
 		
-		size_t write(const void* wbuf, size_t len)
+		size_t write(const void* wbuf, size_t len) override
 		{
 			dcassert(len > 0);
 			if (flushed)
@@ -200,8 +200,8 @@ class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Fil
 			}
 			return written;
 		}
-		
-		virtual bool eof() const
+
+		bool eof() const override
 		{
 			return !more;
 		}
@@ -232,7 +232,7 @@ class FilteredInputStream : public InputStream, protected FilteredInOutStream<Fi
 		* @param len Buffer size on entry, bytes actually read on exit
 		* @return Length of data in buffer
 		*/
-		size_t read(void* rbuf, size_t& len)
+		size_t read(void* rbuf, size_t& len) override
 		{
 			uint8_t* rb = static_cast<uint8_t*>(rbuf);
 			

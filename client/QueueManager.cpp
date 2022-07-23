@@ -1538,8 +1538,8 @@ class TreeOutputStream : public OutputStream
 		explicit TreeOutputStream(TigerTree& aTree) : tree(aTree), bufPos(0)
 		{
 		}
-		
-		size_t write(const void* xbuf, size_t len)
+
+		size_t write(const void* xbuf, size_t len) override
 		{
 			size_t pos = 0;
 			uint8_t* b = (uint8_t*)xbuf;

@@ -83,7 +83,6 @@ class Client : public ClientBase,
 		virtual void connect();
 		virtual void disconnect(bool graceless);
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
-		virtual bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
 		unsigned searchInternal(const SearchParamToken& sp);
@@ -125,7 +124,7 @@ class Client : public ClientBase,
 		string getCipherName() const;
 		vector<uint8_t> getCertificateHash() const;
 		
-		bool isOp() const
+		bool isOp() const override
 		{
 			return getMyIdentity().isOp();
 		}
@@ -197,7 +196,7 @@ class Client : public ClientBase,
 			fire(ClientListener::CheatMessage(), msg);
 		}
 		
-		void dumpUserInfo(const string& userReport)
+		void dumpUserInfo(const string& userReport) override
 		{
 			fire(ClientListener::UserReport(), this, userReport);
 		}
@@ -212,7 +211,7 @@ class Client : public ClientBase,
 			send(message.c_str(), message.length());
 		}
 		void send(const char* message, size_t len);
-		string getHubName() const
+		string getHubName() const override
 		{
 			string ni = getHubIdentity().getNick();
 			return ni.empty() ? getHubUrl() : ni;
@@ -221,7 +220,7 @@ class Client : public ClientBase,
 		{
 			return getHubIdentity().getDescription();
 		}
-		const string& getHubUrl() const
+		const string& getHubUrl() const override
 		{
 			return hubURL;
 		}

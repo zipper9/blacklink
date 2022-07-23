@@ -36,26 +36,26 @@ class NmdcHub : public Client, private Flags
 		using Client::connect;
 
 		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
-		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
+		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) override;
 		void disconnect(bool graceless) override;
 
-		int getType() const { return TYPE_NMDC; }
-		void hubMessage(const string& message, bool thirdPerson = false);
-		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
-		void sendUserCmd(const UserCommand& command, const StringMap& params);
-		void searchToken(const SearchParamToken& sp);
+		int getType() const override { return TYPE_NMDC; }
+		void hubMessage(const string& message, bool thirdPerson = false) override;
+		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) override;
+		void sendUserCmd(const UserCommand& command, const StringMap& params) override;
+		void searchToken(const SearchParamToken& sp) override;
 		void onTimer(uint64_t tick) noexcept override;
-		void password(const string& pwd, bool setPassword);
-		void info(bool forceUpdate)
+		void password(const string& pwd, bool setPassword) override;
+		void info(bool forceUpdate) override
 		{
 			myInfo(forceUpdate);
 		}
-		size_t getUserCount() const
+		size_t getUserCount() const override
 		{
 			READ_LOCK(*csUsers);
 			return users.size();
 		}
-		string escape(const string& str) const noexcept
+		string escape(const string& str) const noexcept override
 		{
 			return validateMessage(str, false);
 		}
@@ -68,20 +68,20 @@ class NmdcHub : public Client, private Flags
 			}
 			return nickRule->convertNick(nick, suffixAppended);
 		}
-		void checkNick(string& nick) const noexcept;
+		void checkNick(string& nick) const noexcept override;
 		static string unescape(const string& str)
 		{
 			return validateMessage(str, true);
 		}
-		bool send(const AdcCommand&)
+		bool send(const AdcCommand&) override
 		{
 			dcassert(0);
 			return false;
 		}
 		static string validateMessage(string tmp, bool reverse) noexcept;
-		void refreshUserList(bool);
+		void refreshUserList(bool) override;
 		
-		void getUserList(OnlineUserList& result) const;
+		void getUserList(OnlineUserList& result) const override;
 
 		static string makeKeyFromLock(const string& lock);
 		static const string& getLock();
@@ -157,7 +157,7 @@ class NmdcHub : public Client, private Flags
 		void onLine(const string& aLine);
 
 		OnlineUserPtr getUser(const string& nick);
-		OnlineUserPtr findUser(const string& nick) const;
+		OnlineUserPtr findUser(const string& nick) const override;
 		void putUser(const string& nick);
 		bool getShareGroup(const string& seeker, CID& shareGroup, bool& hideShare) const;
 		
@@ -171,14 +171,14 @@ class NmdcHub : public Client, private Flags
 			send("$GetNickList|");
 		}
 		void connectToMe(const OnlineUser& user, const string& token);
-		                
+
 		static void sendUDP(const string& address, uint16_t port, string& sr);
 		void handleSearch(const NmdcSearchParam& searchParam);
 		bool handlePartialSearch(const NmdcSearchParam& searchParam);
 		bool getMyExternalIP(IpAddress& ip) const;
 		void getMyUDPAddr(string& ip, uint16_t& port) const;
-		void revConnectToMe(const OnlineUser& aUser);
-		bool resendMyINFO(bool alwaysSend, bool forcePassive);
+		void revConnectToMe(const OnlineUser& user);
+		bool resendMyINFO(bool alwaysSend, bool forcePassive) override;
 		void myInfo(bool alwaysSend, bool forcePassive = false);
 		void myInfoParse(const string& param);
 #ifdef FLYLINKDC_USE_EXT_JSON

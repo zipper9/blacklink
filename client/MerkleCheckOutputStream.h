@@ -106,7 +106,7 @@ class MerkleCheckOutputStream : public OutputStream
 			}
 		}
 		
-		size_t write(const void* b, size_t len)
+		size_t write(const void* b, size_t len) override
 		{
 			commitBytes(b, len);
 			checkTrees();
