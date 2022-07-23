@@ -886,25 +886,40 @@ bool File::getVolumeInfo(const string& path, VolumeInfo &vi) noexcept
 StringList File::findFiles(const string& path, const string& pattern, bool appendPath /*= true */)
 {
 	StringList ret;
-	DIR* d = opendir((path + pattern).c_str());
+	DIR* d = opendir(path.c_str());
+	bool appendSlash = !path.empty() && path.back() != PATH_SEPARATOR;
 	if (d)
 	{
-		struct dirent* ent = readdir(d);
-		while (ent)
+		for (struct dirent* ent = readdir(d); ent; ent = readdir(d))
 		{
-			ret.emplace_back(ent->d_name);
-			string& filename = ret.back();
-			if (appendPath)
-				filename.insert(0, path);
-			if (ent->d_type == DT_DIR)
-				filename += PATH_SEPARATOR;
-			else if (ent->d_type == DT_UNKNOWN)
+			if (!pattern.empty() && fnmatch(pattern.c_str(), ent->d_name, FNM_PATHNAME | FNM_NOESCAPE)) continue;
+#if defined DT_DIR && defined DT_REG && defined DT_LNK && defined DT_UNKNOWN
+			if (ent->d_type == DT_DIR || ent->d_type == DT_REG)
 			{
-				struct stat st;
-				if (stat(appendPath ? filename.c_str() : (path + filename).c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-					filename += PATH_SEPARATOR;
+				ret.emplace_back(ent->d_name);
+				string& filename = ret.back();
+				if (appendPath)
+				{
+					if (appendSlash) filename.insert(0, 1, PATH_SEPARATOR);
+					filename.insert(0, path);
+				}
+				if (ent->d_type == DT_DIR) filename += PATH_SEPARATOR;
+				continue;
 			}
-			ent = readdir(d);
+			if (ent->d_type != DT_LNK && ent->d_type != DT_UNKNOWN) continue;
+#endif
+			struct stat st;
+			if (fstatat(dirfd(d), ent->d_name, &st, 0) == 0 && (S_ISDIR(st.st_mode) || S_ISREG(st.st_mode)))
+			{
+				ret.emplace_back(ent->d_name);
+				string& filename = ret.back();
+				if (appendPath)
+				{
+					if (appendSlash) filename.insert(0, 1, PATH_SEPARATOR);
+					filename.insert(0, path);
+				}
+				if (S_ISDIR(st.st_mode)) filename += PATH_SEPARATOR;
+			}
 		}
 		closedir(d);
 	}
