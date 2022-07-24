@@ -99,9 +99,11 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 
 		void appendText(const Message& message, unsigned maxSmiles, bool highlightNick);
 		void adjustTextSize();
-		bool findText(const TCHAR* text, DWORD flags);
-		const tstring& getCurrentNeedle() const { return currentNeedle; }
-		DWORD getCurrentFindFlags() const { return currentFindFlags; }
+		bool findText();
+		const tstring& getNeedle() const { return currentNeedle; }
+		void setNeedle(const tstring& needle);
+		DWORD getFindFlags() const { return currentFindFlags; }
+		void setFindFlags(DWORD flags) { currentFindFlags = flags; }
 		void resetFindPos() { findInit = true; }
 
 	protected:

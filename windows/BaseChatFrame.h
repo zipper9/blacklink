@@ -63,6 +63,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void destroyMessagePanel();
 		void addSystemMessage(const tstring& line, const CHARFORMAT2& cf);
 		void showFindDialog();
+		void findNext();
 
 	private:
 		void createChatCtrl();

@@ -1052,16 +1052,17 @@ IRichEditOle* ChatCtrl::getRichEditOle()
 	return pRichEditOle;
 }
 
-bool ChatCtrl::findText(const TCHAR* text, DWORD flags)
+void ChatCtrl::setNeedle(const tstring& needle)
 {
-	tstring needle = text;
 	if (needle != currentNeedle)
 	{
-		currentNeedle = std::move(needle);
+		currentNeedle = needle;
 		findInit = true;
 	}
-	currentFindFlags = flags;
+}
 
+bool ChatCtrl::findText()
+{
 	CHARRANGE savedSel = { -1, 0 };
 
 	FINDTEXTEX ft = {};
@@ -1069,7 +1070,7 @@ bool ChatCtrl::findText(const TCHAR* text, DWORD flags)
 	dcdebug("findText: selection=(%d, %d)\n", ft.chrg.cpMin, ft.chrg.cpMax);
 	if (findInit || ft.chrg.cpMin == ft.chrg.cpMax)
 	{
-		if (flags & FR_DOWN)
+		if (currentFindFlags & FR_DOWN)
 		{
 			findRangeStart = ft.chrg.cpMin;
 			findRangeEnd = -1;
@@ -1083,48 +1084,48 @@ bool ChatCtrl::findText(const TCHAR* text, DWORD flags)
 	else if (ft.chrg.cpMin != ft.chrg.cpMax) 
 		savedSel = ft.chrg;
 
-	ft.lpstrText = const_cast<TCHAR*>(text);
-	if (ft.chrg.cpMin != ft.chrg.cpMax && !findInit && (flags & FR_DOWN))
+	ft.lpstrText = const_cast<TCHAR*>(currentNeedle.c_str());
+	if (ft.chrg.cpMin != ft.chrg.cpMax && !findInit && (currentFindFlags & FR_DOWN))
 		ft.chrg.cpMin++;
 
 	findInit = false;
-	ft.chrg.cpMax = (flags & FR_DOWN) ? findRangeEnd : findRangeStart;
+	ft.chrg.cpMax = (currentFindFlags & FR_DOWN) ? findRangeEnd : findRangeStart;
 	bool foundHiddenText = false;
 	while (true)
 	{
 		dcdebug("findText: Search in range %d - %d\n", ft.chrg.cpMin, ft.chrg.cpMax);
-		long result = findAndSelect(flags, ft);
+		long result = findAndSelect(currentFindFlags, ft);
 		if (result == -2)
 		{
 			ft.chrg.cpMin = ft.chrgText.cpMin;
-			if (flags & FR_DOWN) ft.chrg.cpMin++;
+			if (currentFindFlags & FR_DOWN) ft.chrg.cpMin++;
 			foundHiddenText = true;
 			continue;
 		}
 		if (result != -1) return true;
-		if ((flags & FR_DOWN) && findRangeStart > 0)
+		if ((currentFindFlags & FR_DOWN) && findRangeStart > 0)
 		{
 			dcdebug("findText: wrap around\n");
 			findRangeEnd = findRangeStart;
 			findRangeStart = 0;
 			ft.chrg.cpMin = findRangeStart;
 			ft.chrg.cpMax = findRangeEnd;
-			result = findAndSelect(flags, ft);
+			result = findAndSelect(currentFindFlags, ft);
 		}
 		else
-		if (!(flags & FR_DOWN) && findRangeStart == 0)
+		if (!(currentFindFlags & FR_DOWN) && findRangeStart == 0)
 		{
 			dcdebug("findText: wrap around\n");
 			findRangeStart = findRangeEnd;
 			findRangeEnd = GetTextLength();
 			ft.chrg.cpMin = findRangeEnd;
 			ft.chrg.cpMax = findRangeStart;
-			result = findAndSelect(flags, ft);
+			result = findAndSelect(currentFindFlags, ft);
 		}
 		if (result == -2)
 		{
 			ft.chrg.cpMin = ft.chrgText.cpMin;
-			if (flags & FR_DOWN) ft.chrg.cpMin++;
+			if (currentFindFlags & FR_DOWN) ft.chrg.cpMin++;
 			foundHiddenText = true;
 			continue;
 		}

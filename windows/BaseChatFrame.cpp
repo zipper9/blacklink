@@ -468,7 +468,9 @@ bool BaseChatFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comma
 				param = Text::toT(pc.args[1]);
 				ctrlClient.SetSelNone();
 				ctrlClient.resetFindPos();
-				ctrlClient.findText(param.c_str(), FR_DOWN);
+				ctrlClient.setNeedle(param);
+				ctrlClient.setFindFlags(FR_DOWN);
+				ctrlClient.findText();
 			}
 			else
 				showFindDialog();
@@ -870,8 +872,10 @@ bool BaseChatFrame::processHotKey(int key)
 	}
 	if (((key == VK_F3 && WinUtil::isShift()) || (key == 'F' && WinUtil::isCtrl())) && !WinUtil::isAlt())
 	{
-		// TODO: Find Next with Shift+F3
-		showFindDialog();
+		if (!ctrlClient.getNeedle().empty())
+			findNext();
+		else
+			showFindDialog();
 		return true;
 	}
 	if (key == VK_F3)
@@ -931,8 +935,8 @@ void BaseChatFrame::showFindDialog()
 	}
 	findDlg = new CFindReplaceDialog;
 	HWND hWndDlg = findDlg->Create(TRUE,
-		ctrlClient.getCurrentNeedle().c_str(), nullptr,
-		ctrlClient.getCurrentFindFlags(), messagePanelHwnd);
+		ctrlClient.getNeedle().c_str(), nullptr,
+		ctrlClient.getFindFlags(), messagePanelHwnd);
 	if (!hWndDlg)
 	{
 		delete findDlg;
@@ -959,10 +963,9 @@ LRESULT BaseChatFrame::onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPA
 	{
 		if (findDlg->FindNext())
 		{
-			if (ctrlClient.findText(findDlg->GetFindString(), findDlg->m_fr.Flags))
-				adjustFindDlgPosition(findDlg->m_hWnd);
-			else
-				searchStringNotFound();
+			ctrlClient.setNeedle(findDlg->GetFindString());
+			ctrlClient.setFindFlags(findDlg->m_fr.Flags);
+			findNext();
 		}
 		else if (findDlg->IsTerminating())
 			findDlg = nullptr;
@@ -970,9 +973,19 @@ LRESULT BaseChatFrame::onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPA
 	return 0;
 }
 
+void BaseChatFrame::findNext()
+{
+	if (ctrlClient.findText())
+	{
+		if (findDlg) adjustFindDlgPosition(findDlg->m_hWnd);
+	}
+	else
+		searchStringNotFound();
+}
+
 void BaseChatFrame::searchStringNotFound()
 {
-	addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + ctrlClient.getCurrentNeedle(), false, false, Colors::g_ChatTextSystem);
+	addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + ctrlClient.getNeedle(), false, false, Colors::g_ChatTextSystem);
 }
 
 // Copied from atlfind.h
