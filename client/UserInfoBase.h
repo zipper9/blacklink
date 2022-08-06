@@ -58,6 +58,7 @@ class UserInfoBase
 		void connectFav();
 		
 		virtual const UserPtr& getUser() const = 0;
+		bool isMe() const;
 };
 
 #endif // USERINFOBASE_H

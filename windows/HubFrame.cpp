@@ -1497,7 +1497,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 		
 		if (end == string::npos) // get EOL as well
 			end = x.length();
-		else if (end == start + 1)
+		if (end == start + 1 || end <= start)
 			return 0;
 			
 		// Nickname click, let's see if we can find one like it in the name list...
@@ -1537,16 +1537,16 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 						break;
 					}
 					case 2:
-						if (client) ui->pm(client->getHubUrl());
+						if (client && !ui->isMe()) ui->pm(client->getHubUrl());
 						break;
 					case 3:
-						ui->getList();
+						if (!ui->isMe()) ui->getList();
 						break;
 					case 4:
-						ui->matchQueue();
+						if (!ui->isMe()) ui->matchQueue();
 						break;
 					case 5:
-						ui->grantSlotPeriod(baseClient->getHubUrl(), 600);
+						if (!ui->isMe()) ui->grantSlotPeriod(baseClient->getHubUrl(), 600);
 						break;
 					case 6:
 						ui->addFav();

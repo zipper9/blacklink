@@ -195,3 +195,10 @@ void UserInfoBase::ungrantSlot(const string& hubHint)
 	if (getUser())
 		UploadManager::getInstance()->unreserveSlot(HintedUser(getUser(), hubHint));
 }
+
+bool UserInfoBase::isMe() const
+{
+	const UserPtr& user = getUser();
+	if (!user) return false;
+	return user->isMe();
+}
