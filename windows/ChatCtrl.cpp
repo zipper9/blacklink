@@ -80,6 +80,7 @@ struct SubstringInfo
 
 static SubstringInfo substringInfo[_countof(linkPrefixes)];
 
+#ifdef BL_UI_FEATURE_BB_CODES
 enum
 {
 	BBCODE_CODE,
@@ -88,7 +89,8 @@ enum
 	BBCODE_UNDERLINE,
 	BBCODE_STRIKEOUT,
 	BBCODE_IMAGE,
-	BBCODE_COLOR
+	BBCODE_COLOR,
+	BBCODE_URL
 };
 
 static const tstring bbCodes[] =
@@ -98,8 +100,9 @@ static const tstring bbCodes[] =
 	_T("i"),
 	_T("u"),
 	_T("s"),
-	_T("img"), 
+	_T("img"),
 	_T("color"),
+	_T("url")
 };
 
 static int findBBCode(const tstring& tag)
@@ -108,6 +111,15 @@ static int findBBCode(const tstring& tag)
 		if (bbCodes[i] == tag) return i;
 	return -1;
 }
+
+static int getLinkType(const tstring& link)
+{
+	for (int i = 0; i < _countof(linkPrefixes); ++i)
+		if (Text::isAsciiPrefix2(link, linkPrefixes[i]))
+			return i;
+	return -1;
+}
+#endif
 
 static void makeSubstringInfo()
 {
@@ -230,8 +242,6 @@ void ChatCtrl::restoreChatCache()
 				return;
 			if (count-- > 40) // Disable styles for old messages
 			{
-				//i->m_bUseEmo = false;
-				//i->m_is_disable_style = true;
 				oldText += _T("* ") + i->extra + _T(' ') + i->nick + _T(' ') + i->msg + _T("\r\n");
 				continue;
 			}
@@ -362,6 +372,7 @@ static inline void shiftPos(tstring::size_type& pos, tstring::size_type movePos,
 
 void ChatCtrl::applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift)
 {
+#ifdef BL_UI_FEATURE_BB_CODES
 	for (size_t j = tagsStartIndex; j < tags.size(); ++j)
 	{
 		shiftPos(tags[j].openTagStart, start, shift);
@@ -372,6 +383,7 @@ void ChatCtrl::applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring
 		shiftPos(tags[j].closeTagStart, start, shift);
 		shiftPos(tags[j].closeTagEnd, start, shift);
 	}
+#endif
 	for (size_t j = linksStartIndex; j < links.size(); ++j)
 	{
 		shiftPos(links[j].start, start, shift);
@@ -383,7 +395,9 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 {
 	SetRedraw(FALSE);
 	const auto& cf = message.myMessage ? Colors::g_ChatTextMyOwn : message.cf;
+#ifdef BL_UI_FEATURE_BB_CODES
 	const bool formatBBCodes = BOOLSETTING(FORMAT_BB_CODES) && (message.isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE));
+#endif
 	static std::atomic_bool substringInfoInitialized = false;
 	if (!substringInfoInitialized)
 	{
@@ -391,12 +405,15 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		substringInfoInitialized = true;
 	}
 
-	tags.clear();
 	links.clear();
 	uint64_t hash = 0;
+	bool inUrl = false;
+#ifdef BL_UI_FEATURE_BB_CODES
+	tags.clear();
 	tstring tagData;
 	tstring::size_type tagStart = tstring::npos;
 	TagItem ti;
+#endif
 	LinkItem li;
 	li.start = tstring::npos;
 	TCHAR linkPrevChar = 0;
@@ -435,6 +452,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 			li.start = tstring::npos;
 			ipv6Link = 0;
 		}
+#ifdef BL_UI_FEATURE_BB_CODES
 		if (c == _T('[') && formatBBCodes)
 		{
 			tagStart = i;
@@ -449,47 +467,83 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 				{
 					tagData.erase(0, 1);
 					int type = findBBCode(tagData);
+					if (type == BBCODE_URL) inUrl = false;
 					if (type != -1)
 					{
 						int index = tags.size()-1;
+						bool urlProcessed = false;
 						while (index >= 0)
 						{
 							if (tags[index].type == type && tags[index].closeTagStart == tstring::npos)
 							{
 								tags[index].closeTagStart = tagStart;
 								tags[index].closeTagEnd = i + 1;
+								if (type == BBCODE_URL)
+								{
+									urlProcessed = true;
+									break;
+								}
 							}
 							index--;
+						}
+						if (urlProcessed)
+						{
+							LinkItem li;
+							li.start = tags[index].openTagEnd;
+							li.end = tags[index].closeTagStart;
+							li.updatedText = text.substr(tags[index].openTagEnd, tags[index].closeTagStart - tags[index].openTagEnd);
+							tstring url;
+							if (tags[index].openTagEnd - tags[index].openTagStart > 6)
+								url = text.substr(tags[index].openTagStart + 5, tags[index].openTagEnd - 1 - (tags[index].openTagStart + 5));
+							else
+								url = li.updatedText;
+							li.type = getLinkType(url);
+							if (li.type == -1 || li.type == LINK_TYPE_WWW)
+							{
+								li.type = LINK_TYPE_HTTP;
+								url.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
+							}
+							li.updatedText += HIDDEN_TEXT_SEP;
+							li.updatedText += url;
+							li.updatedText += HIDDEN_TEXT_SEP;
+							li.hiddenTextLen = url.length() + 2;
+							links.emplace_back(std::move(li));
 						}
 					}
 					tagStart = tstring::npos;
 					tagData.clear();
 					continue;
 				}
-				const CHARFORMAT2& prevFmt = tags.empty() ? cf : tags.back().fmt;
-				if (processTag(ti, tagData, tagStart, i + 1, prevFmt))
+				const CHARFORMAT2* prevFmt = getPrevFormat();
+				if (!prevFmt) prevFmt = &cf;
+				if (processTag(ti, tagData, tagStart, i + 1, *prevFmt))
 					tags.push_back(ti);
 			}
 			continue;
 		}
-		if (tagStart != tstring::npos && tagData.length() < 32)
+		if (tagStart != tstring::npos && (tagData.length() < 32 || inUrl))
+		{
 			tagData += c;
-		for (int j = 0; j < _countof(linkPrefixes); ++j)
-			if ((hash & substringInfo[j].mask) == substringInfo[j].value)
-			{
-				const tstring& link = linkPrefixes[j];
-				tstring::size_type start = i+1-link.length();
-				if (i >= link.length()-1 && text.compare(start, link.length(), link) == 0 &&
-				    (start == 0 || !_istalpha(text[start-1])))
+			if (tagData.length() == 4 && tagData == _T("url=")) inUrl = true;
+		}
+#endif
+		if (!inUrl)
+			for (int j = 0; j < _countof(linkPrefixes); ++j)
+				if ((hash & substringInfo[j].mask) == substringInfo[j].value)
 				{
-					li.type = j;
-					li.start = start;
-					li.end = tstring::npos;
-					li.hiddenTextLen = 0;
-					linkPrevChar = start == 0 ? 0 : text[start-1];
+					const tstring& link = linkPrefixes[j];
+					tstring::size_type start = i+1-link.length();
+					if (i >= link.length()-1 && text.compare(start, link.length(), link) == 0 &&
+					    (start == 0 || !_istalpha(text[start-1])))
+					{
+						li.type = j;
+						li.start = start;
+						li.end = tstring::npos;
+						li.hiddenTextLen = 0;
+						linkPrevChar = start == 0 ? 0 : text[start-1];
+					}
+					break;
 				}
-				break;
-			}
 	}
 
 	if (li.start != tstring::npos)
@@ -498,6 +552,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		links.push_back(li);
 	}
 
+#ifdef BL_UI_FEATURE_BB_CODES
 	for (size_t i = 0; i < tags.size(); ++i)
 	{
 		const TagItem& ti = tags[i];
@@ -515,6 +570,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 			text.erase(start, len);
 		}
 	}
+#endif
 
 	for (size_t i = 0; i < links.size(); ++i)
 	{
@@ -531,13 +587,19 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 
 	LONG startPos, endPos;
 	insertAndFormat(text, cf, startPos, endPos);
+
+#ifdef BL_UI_FEATURE_BB_CODES
+	bool acceptColors = BOOLSETTING(FORMAT_BB_CODES_COLORS);
 	for (TagItem& ti : tags)
 	{
 		if (ti.openTagStart == tstring::npos || ti.closeTagEnd == tstring::npos) continue;
+		if (ti.type == BBCODE_COLOR && !acceptColors) continue;
+		if (ti.type == BBCODE_URL) continue;
 		SetSel(startPos + ti.openTagStart, startPos + ti.closeTagEnd);
 		SetSelectionCharFormat(ti.fmt);
 	}
 	tags.clear();
+#endif
 
 	for (const LinkItem& li : links)
 	{
@@ -639,6 +701,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 	links.clear();
 }
 
+#ifdef BL_UI_FEATURE_BB_CODES
 bool ChatCtrl::processTag(ChatCtrl::TagItem& ti, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt)
 {
 	if (tag.compare(0, 6, _T("color=")) == 0)
@@ -652,6 +715,18 @@ bool ChatCtrl::processTag(ChatCtrl::TagItem& ti, tstring& tag, tstring::size_typ
 		ti.openTagEnd = end;
 		ti.closeTagStart = ti.closeTagEnd = tstring::npos;
 		return true;
+	}
+	if (tag.compare(0, 3, _T("url")) == 0)
+	{
+		if (tag.length() == 3 || (tag.length() >= 4 && tag[3] == _T('=')))
+		{
+			ti.type = BBCODE_URL;
+			ti.openTagStart = start;
+			ti.openTagEnd = end;
+			ti.closeTagStart = ti.closeTagEnd = tstring::npos;
+			return true;
+		}
+		return false;
 	}
 	ti.type = findBBCode(tag);
 	switch (ti.type)
@@ -684,6 +759,17 @@ bool ChatCtrl::processTag(ChatCtrl::TagItem& ti, tstring& tag, tstring::size_typ
 	ti.closeTagStart = ti.closeTagEnd = tstring::npos;
 	return true;
 }
+
+const CHARFORMAT2* ChatCtrl::getPrevFormat() const
+{
+	for (auto i = tags.rbegin(); i != tags.rend(); i++)
+	{
+		const TagItem& ti = *i;
+		if (ti.closeTagStart == tstring::npos) return &ti.fmt;
+	}
+	return nullptr;
+}
+#endif
 
 void ChatCtrl::processLink(const tstring& text, ChatCtrl::LinkItem& li)
 {

@@ -85,20 +85,17 @@
 # define FLYLINKDC_USE_COLUMN_RATIO
 #endif
 
+#define BL_UI_FEATURE_BB_CODES
+
 #define IRAINMAN_ENABLE_WHOIS
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-#define IRAINMAN_USE_BB_CODES // BB codes support http://ru.wikipedia.org/wiki/BbCode
 //#define IRAINMAN_ENABLE_AUTO_BAN
 #define IRAINMAN_INCLUDE_SMILE // Disable this to cut all smile support from code.
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 #define IRAINMAN_ENABLE_OP_VIP_MODE
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-# define IRAINMAN_ENABLE_OP_VIP_MODE_ON_NMDC
-#endif
 //#define IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
-//#endif
 
 #define IRAINMAN_USE_SPIN_LOCK
 

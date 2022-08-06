@@ -25,7 +25,7 @@
 #include <tom.h>
 #include <comdef.h>
 
-#ifdef IRAINMAN_USE_BB_CODES
+#ifdef BL_UI_FEATURE_BB_CODES
 static tstring printColor(COLORREF color)
 {
 	TCHAR buf[16];
@@ -49,7 +49,7 @@ static UINT_PTR CALLBACK chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 {
-#ifdef IRAINMAN_USE_BB_CODES
+#ifdef BL_UI_FEATURE_BB_CODES
 	tstring startTag;
 	tstring  endTag;
 	switch (wID)

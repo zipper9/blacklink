@@ -136,6 +136,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		IStorage* pStorage;
 #endif
 
+#ifdef BL_UI_FEATURE_BB_CODES
 		struct TagItem
 		{
 			int type;
@@ -147,6 +148,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		};		
 
 		vector<TagItem> tags;
+#endif
 		
 		struct LinkItem
 		{
@@ -164,8 +166,11 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		void parseText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
-		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);		
+		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);
+#ifdef BL_UI_FEATURE_BB_CODES
+		const CHARFORMAT2* ChatCtrl::getPrevFormat() const;
 		static bool processTag(TagItem& item, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
+#endif
 		static void processLink(const tstring& text, LinkItem& li);
 		void findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
 		tstring getUrl(LONG start, LONG end, bool keepSelected);

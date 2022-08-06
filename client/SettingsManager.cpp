@@ -711,11 +711,11 @@ static const char* g_settingTags[] =
 	"ChatAnimSmiles",
 	"SmileSelectWndAnimSmiles",
 	"ShowSendMessageButton",
-#ifdef IRAINMAN_USE_BB_CODES
+#ifdef BL_UI_FEATURE_BB_CODES
 	"FormatBBCode",
 	"FormatBBCodeColors",
-#endif
 	"ShowBBCodePanel",
+#endif
 	"ShowMultiChatButton",
 	"ShowTranscodeButton",
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK	
@@ -729,7 +729,9 @@ static const char* g_settingTags[] =
 	"UseCTRLForLineHistory",
 	"MultilineChatInput",
 	"MultilineChatInputCtrlEnter",
+#ifdef BL_UI_FEATURE_BB_CODES
 	"FormatBotMessage",
+#endif
 	"SendUnknownCommands",
 	"SuppressMainChat",
 
@@ -1314,11 +1316,12 @@ void SettingsManager::setDefaults()
 	setDefault(CHAT_ANIM_SMILES, TRUE);
 	setDefault(SMILE_SELECT_WND_ANIM_SMILES, TRUE);
 	setDefault(SHOW_SEND_MESSAGE_BUTTON, TRUE);
-#ifdef IRAINMAN_USE_BB_CODES
+#ifdef BL_UI_FEATURE_BB_CODES
 	setDefault(FORMAT_BB_CODES, TRUE);
 	setDefault(FORMAT_BB_CODES_COLORS, TRUE);
-#endif
 	setDefault(SHOW_BBCODE_PANEL, TRUE);
+	setDefault(FORMAT_BOT_MESSAGE, TRUE);
+#endif
 	setDefault(SHOW_MULTI_CHAT_BTN, TRUE);
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 	setDefault(CHAT_REFFERING_TO_NICK, TRUE);
@@ -1327,7 +1330,6 @@ void SettingsManager::setDefaults()
 	setDefault(DISPLAY_CHEATS_IN_MAIN_CHAT, TRUE);
 	setDefault(USE_CTRL_FOR_LINE_HISTORY, TRUE);
 	setDefault(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, TRUE);
-	setDefault(FORMAT_BOT_MESSAGE, TRUE);
 
 	// Search frame
 	setDefault(SEARCH_HISTORY, 30);

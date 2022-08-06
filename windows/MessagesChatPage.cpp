@@ -45,11 +45,13 @@ static const PropPage::ListItem listItems[] =
 #ifdef IRAINMAN_INCLUDE_SMILE
 	{ SettingsManager::SHOW_EMOTICONS_BTN, ResourceManager::SHOW_EMOTICONS_BTN },
 #endif
+#ifdef BL_UI_FEATURE_BB_CODES
 	{ SettingsManager::SHOW_BBCODE_PANEL, ResourceManager::SHOW_BBCODE_PANEL },
+#endif
 	{ SettingsManager::SHOW_TRANSCODE_BTN, ResourceManager::SHOW_TRANSCODE_BTN },
 	{ SettingsManager::MULTILINE_CHAT_INPUT, ResourceManager::MULTILINE_CHAT_INPUT },
 	{ SettingsManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, ResourceManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER },
-#ifdef IRAINMAN_USE_BB_CODES
+#ifdef BL_UI_FEATURE_BB_CODES
 	{ SettingsManager::FORMAT_BB_CODES, ResourceManager::FORMAT_BB_CODES },
 	{ SettingsManager::FORMAT_BB_CODES_COLORS, ResourceManager::FORMAT_BB_CODES_COLORS },
 	{ SettingsManager::FORMAT_BOT_MESSAGE, ResourceManager::FORMAT_BOT_MESSAGE },

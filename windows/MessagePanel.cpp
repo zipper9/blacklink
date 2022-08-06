@@ -149,6 +149,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 #ifdef IRAINMAN_INCLUDE_SMILE
 		updateButton(dwp, BOOLSETTING(SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
 #endif
+#ifdef BL_UI_FEATURE_BB_CODES
 		if (BOOLSETTING(SHOW_BBCODE_PANEL))
 		{
 			updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
@@ -157,6 +158,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 			updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
 		}
 		else
+#endif
 		{
 			for (int i = BUTTON_TRANSCODE; i <= BUTTON_COLOR; ++i)
 				updateButton(dwp, false, i, rc);
@@ -181,8 +183,15 @@ int MessagePanel::getPanelWidth() const
 	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? BUTTON_WIDTH : 0;
 #endif
 	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? BUTTON_WIDTH : 0;
+#ifdef BL_UI_FEATURE_BB_CODES
 	if (BOOLSETTING(SHOW_BBCODE_PANEL))
-		width += BUTTON_WIDTH * (BOOLSETTING(SHOW_TRANSCODE_BTN) ? 6 : 5);
+	{
+		int count = 4;
+		if (BOOLSETTING(SHOW_TRANSCODE_BTN)) ++count;
+		if (BOOLSETTING(FORMAT_BB_CODES_COLORS)) ++count;
+		width += BUTTON_WIDTH * count;
+	}
+#endif
 	if (showSelectHubButton)
 		width += BUTTON_WIDTH;
 	if (showCCPMButton)
@@ -214,20 +223,6 @@ void MessagePanel::setCCPMState(int state)
 		ctrlButtons[BUTTON_CCPM].EnableWindow(state != CCPM_STATE_CONNECTING);
 	}
 }
-
-#if 0
-bool MessagePanel::setFocusToControl()
-{
-	if (!initialized) return false;
-	for (int i = 0; i < MAX_BUTTONS; ++i)
-		if (ctrlButtons[i] && ctrlButtons[i].IsWindowVisible())
-		{
-			ctrlButtons[i].SetFocus();
-			return true;
-		}
-	return false;
-}
-#endif
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 void MessagePanel::pasteText(const tstring& text)

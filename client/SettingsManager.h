@@ -684,11 +684,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			CHAT_ANIM_SMILES,
 			SMILE_SELECT_WND_ANIM_SMILES,
 			SHOW_SEND_MESSAGE_BUTTON,
-#ifdef IRAINMAN_USE_BB_CODES
+#ifdef BL_UI_FEATURE_BB_CODES
 			FORMAT_BB_CODES,
 			FORMAT_BB_CODES_COLORS,
-#endif
 			SHOW_BBCODE_PANEL,
+#endif
 			SHOW_MULTI_CHAT_BTN,
 			SHOW_TRANSCODE_BTN,
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
@@ -702,7 +702,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			USE_CTRL_FOR_LINE_HISTORY,
 			MULTILINE_CHAT_INPUT,
 			MULTILINE_CHAT_INPUT_BY_CTRL_ENTER,
+#ifdef BL_UI_FEATURE_BB_CODES
 			FORMAT_BOT_MESSAGE,
+#endif
 			SEND_UNKNOWN_COMMANDS,
 			SUPPRESS_MAIN_CHAT,
 			
