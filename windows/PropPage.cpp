@@ -77,17 +77,23 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 	if (listItems)
 	{
 		CListViewCtrl ctrl(list);
-		CRect rc;
-		ctrl.GetClientRect(rc);
-		ctrl.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
-		SET_LIST_COLOR_IN_SETTING(ctrl);
-		WinUtil::setExplorerTheme(ctrl);
-		ctrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
-		
+		if (!ctrl.GetHeader().GetItemCount())
+		{
+			CRect rc;
+			ctrl.GetClientRect(rc);
+			ctrl.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
+			SET_LIST_COLOR_IN_SETTING(ctrl);
+			WinUtil::setExplorerTheme(ctrl);
+			ctrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
+		}
+
 		LVITEM lvi = {0};
 		lvi.mask = LVIF_TEXT;
 		lvi.iSubItem = 0;
 		
+		if (ctrl.GetItemCount())
+			ctrl.DeleteAllItems();
+
 		for (int i = 0; listItems[i].setting != 0; i++)
 		{
 			lvi.iItem = i;
