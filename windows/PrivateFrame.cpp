@@ -327,6 +327,11 @@ bool PrivateFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comman
 			res.what = Commands::RESULT_LOCAL_TEXT;
 			res.text = STRING(SLOT_GRANTED);
 			return true;
+		case Commands::COMMAND_UNGRANT_EXTRA_SLOT:
+			UploadManager::getInstance()->unreserveSlot(replyTo);
+			res.what = Commands::RESULT_LOCAL_TEXT;
+			res.text = STRING(SLOT_REMOVED);
+			return true;
 		case Commands::COMMAND_GET_LIST:
 			UserInfoSimple(replyTo.user, replyTo.hint).getList();
 			res.what = Commands::RESULT_NO_TEXT;

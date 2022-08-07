@@ -476,9 +476,10 @@ bool BaseChatFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comma
 				showFindDialog();
 			return true;
 		}
+		case Commands::COMMAND_SAY:
 		case Commands::COMMAND_ME:
 			if (pc.args.size() >= 2)
-				sendMessage(pc.args[1], true);
+				sendMessage(pc.args[1], pc.command == Commands::COMMAND_ME);
 			return true;
 	}
 	if (MainFrame::getMainFrame()->processCommand(pc, res)) return true;

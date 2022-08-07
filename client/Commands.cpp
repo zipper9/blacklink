@@ -61,6 +61,7 @@ static const CommandDescription desc[] =
 	{ CTX_HUB | FLAG_GET_FIRST_ARG,                     2, 2,        ResourceManager::CMD_HELP_PRIVATE_MESSAGE     }, // COMMAND_PRIVATE_MESSAGE
 	{ CTX_HUB | CTX_USER,                               0, 1,        ResourceManager::CMD_HELP_GET_LIST            }, // COMMAND_GET_LIST
 	{ CTX_USER,                                         0, 0,        ResourceManager::CMD_HELP_GRANT_EXTRA_SLOT    }, // COMMAND_GRANT_EXTRA_SLOT
+	{ CTX_USER,                                         0, 0,        ResourceManager::CMD_HELP_UNGRANT_EXTRA_SLOT  }, // COMMAND_UNGRANT_EXTRA_SLOT
 	{ CTX_USER,                                         0, 0,        0                                             }, // COMMAND_CCPM
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_IP_UPDATE           }, // COMMAND_IP_UPDATE
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_VERSION        }, // COMMAND_INFO_VERSION
@@ -97,6 +98,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, UINT_MAX, 0                                             }, // COMMAND_DEBUG_HTTP
 	{ CTX_SYSTEM,                                       0, 0,        0                                             }, // COMMAND_DEBUG_UNKNOWN_TAGS
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, 2,        0                                             }, // COMMAND_DEBUG_DIVIDE
+	{ CTX_GENERAL_CHAT,                                 1, 1,        ResourceManager::CMD_HELP_SAY                 }, // COMMAND_SAY
 	{ CTX_GENERAL_CHAT,                                 1, 1,        ResourceManager::CMD_HELP_ME                  }, // COMMAND_ME
 	{ CTX_HUB,                                          1, 1,        ResourceManager::CMD_HELP_LAST_NICK           }, // COMMAND_LAST_NICK
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT,                   0, UINT_MAX, ResourceManager::CMD_HELP_HELP                }  // COMMAND_HELP
@@ -174,6 +176,7 @@ static const CommandName names[] =
 	{ "removefavorite", COMMAND_REMOVE_FAVORITE     },
 	{ "s",              COMMAND_SEARCH              },
 	{ "savequeue",      COMMAND_SAVE_QUEUE          },
+	{ "say",            COMMAND_SAY                 },
 	{ "search",         COMMAND_SEARCH              },
 	{ "sharefile",      COMMAND_SHARE_FILE          },
 	{ "showjoins",      COMMAND_SHOW_JOINS          },
@@ -191,6 +194,7 @@ static const CommandName names[] =
 	{ "tth",            COMMAND_TTH                 },
 	{ "u",              COMMAND_OPEN_URL            },
 	{ "uconn",          COMMAND_USER_CONNECTIONS    },
+	{ "ungrant",        COMMAND_UNGRANT_EXTRA_SLOT  },
 	{ "unknowntags",    COMMAND_DEBUG_UNKNOWN_TAGS  },
 	{ "uptime",         COMMAND_INFO_UPTIME         },
 	{ "user",           COMMAND_USER                },
