@@ -167,7 +167,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 
 		LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			OnlineUserPtr ou = getSelectedOnlineUser();
+			OnlineUserPtr ou = static_cast<T*>(this)->getSelectedOnlineUser();
 			if (ou)
 			{
 				const Identity& id = ou->getIdentity();
@@ -424,7 +424,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			UserInfoSimple ui(selectedUser, hint);
 			FavUserTraits traits;
 			traits.init(ui);
-			OnlineUserPtr ou = getSelectedOnlineUser();
+			OnlineUserPtr ou = static_cast<T*>(this)->getSelectedOnlineUser();
 			if (ou) addSummaryMenu(ou);
 			if (ENABLE(options, NICK_TO_CHAT))
 			{
@@ -534,7 +534,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			dcassert(selectedUser);
 			if (DISABLE(options, NO_COPY))
 			{
-				int flags = getSelectedOnlineUser() ? MF_ENABLED : MF_GRAYED;
+				int flags = static_cast<T*>(this)->getSelectedOnlineUser() ? MF_ENABLED : MF_GRAYED;
 				int count = copyUserMenu.GetMenuItemCount();
 				for (int i = 1; i < count; i++)
 					copyUserMenu.EnableMenuItem(i, MF_BYPOSITION | flags);
