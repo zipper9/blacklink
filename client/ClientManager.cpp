@@ -69,33 +69,35 @@ ClientManager::~ClientManager()
 
 ClientBasePtr ClientManager::getClient(const string& hubURL)
 {
-	string scheme, address, file, query, fragment;
-	uint16_t port;
-	Util::decodeUrl(hubURL, scheme, address, port, file, query, fragment);
-	string formattedUrl = Util::formatDchubUrl(scheme, address, port);
-	int protocol = Util::getHubProtocol(scheme);
+	Util::ParsedUrl url;
+	Util::decodeUrl(hubURL, url);
+	// save parameters before they are cleared in Util::formatDchubUrl
+	string query = std::move(url.query);
+	uint16_t port = url.port;
+	int protocol = Util::getHubProtocol(url.protocol);
+	string formattedUrl = Util::formatDchubUrl(url);
 	ClientBasePtr cb;
 	if (protocol == Util::HUB_PROTOCOL_ADC)
 	{
-		cb = AdcHub::create(formattedUrl, address, port, false);
+		cb = AdcHub::create(formattedUrl, url.host, port, false);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_ADCS)
 	{
-		cb = AdcHub::create(formattedUrl, address, port, true);
+		cb = AdcHub::create(formattedUrl, url.host, port, true);
 	}
 	else if (protocol == Util::HUB_PROTOCOL_NMDCS)
 	{
-		cb = NmdcHub::create(formattedUrl, address, port, true);
+		cb = NmdcHub::create(formattedUrl, url.host, port, true);
 	}
 	else
 	{
-		cb = NmdcHub::create(formattedUrl, address, port, false);
+		cb = NmdcHub::create(formattedUrl, url.host, port, false);
 	}
 
 	Client* c = static_cast<Client*>(cb.get());
 	if (c->getType() == Client::TYPE_NMDC && BOOLSETTING(NMDC_ENCODING_FROM_DOMAIN))
 	{
-		int encoding = NmdcHub::getEncodingFromDomain(address);
+		int encoding = NmdcHub::getEncodingFromDomain(url.host);
 		if (encoding) c->setEncoding(encoding);
 	}
 	if (!query.empty())

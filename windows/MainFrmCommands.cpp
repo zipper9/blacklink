@@ -156,10 +156,9 @@ bool MainFrame::processCommand(const ParsedCommand& pc, Result& res)
 			string link = pc.args[1];
 			if (strnicmp("dchub://", link.c_str(), 8))
 			{
-				string proto, host, file, query, fragment;
-				uint16_t port = 0;
-				Util::decodeUrl(link, proto, host, port, file, query, fragment);
-				if (proto == "dchub") link.insert(0, "http://");
+				Util::ParsedUrl url;
+				Util::decodeUrl(link, url, Util::emptyString);
+				if (url.protocol.empty()) link.insert(0, "http://");
 			}
 			WinUtil::openLink(Text::toT(link));
 			return true;

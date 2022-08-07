@@ -981,13 +981,13 @@ bool WinUtil::openLink(const tstring& uri)
 
 bool WinUtil::parseDchubUrl(const tstring& url)
 {
-	uint16_t port;
-	string proto, host, file, query, fragment;
-	Util::decodeUrl(Text::fromT(url), proto, host, port, file, query, fragment);
-	if (!Util::getHubProtocol(proto) || host.empty() || port == 0) return false;
+	Util::ParsedUrl p;
+	Util::decodeUrl(Text::fromT(url), p);
+	if (!Util::getHubProtocol(p.protocol) || p.host.empty() || p.port == 0) return false;
 
-	const string formattedUrl = Util::formatDchubUrl(proto, host, port);
-	
+	string file = std::move(p.path);
+	const string formattedUrl = Util::formatDchubUrl(p);
+
 	RecentHubEntry r;
 	r.setOpenTab("+");
 	r.setServer(formattedUrl);

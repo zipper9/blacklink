@@ -2556,20 +2556,20 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			
 		if (!tmp.empty())
 		{
-			uint16_t port = 0;
-			string proto, host, file, query, fragment;	
-			Util::decodeUrl(Text::fromT(tmp), proto, host, port, file, query, fragment);
-			if (!Util::getHubProtocol(proto))
+			Util::ParsedUrl url;
+			Util::decodeUrl(Text::fromT(tmp), url);
+			if (!Util::getHubProtocol(url.protocol))
 			{
-				MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(proto)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+				MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(url.protocol)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 				return 0;
 			}
-			if (host.empty())
+			if (url.host.empty())
 			{
 				MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 				return 0;
 			}
-			const string formattedUrl = Util::formatDchubUrl(proto, host, port);
+			const string query = std::move(url.query);
+			const string formattedUrl = Util::formatDchubUrl(url);
 			RecentHubEntry r;
 			r.setServer(formattedUrl);
 			r.setOpenTab("+");

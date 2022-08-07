@@ -312,9 +312,13 @@ void HublistManager::setServerList(const string &str) noexcept
 	for (HubList& hl : hubLists) hl.flags = FLAG_UNUSED;
 	SimpleStringTokenizer<char> tokenizer(str, ';');
 	string server;
+	Util::ParsedUrl url;
 	while (tokenizer.getNextNonEmptyToken(server))
 	{
-		if (!HttpConnection::checkUrl(server)) continue;
+		Util::decodeUrl(server, url, Util::emptyString);
+		if (url.protocol.empty()) server.insert(0, "http://");
+		else
+			if (!HttpConnection::checkProtocol(url.protocol)) continue;
 		bool found = false;
 		for (auto j = hubLists.begin(); j != hubLists.end(); ++j)
 		{

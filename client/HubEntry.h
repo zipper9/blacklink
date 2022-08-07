@@ -72,26 +72,25 @@ class HubEntry
 			encoding(encoding), website(website), email(email),
 			software(software), network(network)
 		{
-			string proto, host, path, query, fragment, kp;
-			uint16_t port;
+			Util::ParsedUrl p;
 			if (!server.empty())
 			{
-				Util::decodeUrl(server, proto, host, port, path, query, fragment);
-				this->server = Util::formatDchubUrl(proto, host, port);
-				kp = Util::getQueryParam(query, "kp");
+				Util::decodeUrl(server, p);
+				string kp = Util::getQueryParam(p.query, "kp");
 				if (!kp.empty() && checkKeyPrintFormat(kp))
 					keyPrint = std::move(kp);
+				this->server = Util::formatDchubUrl(p);
 			}
 			if (!secureUrl.empty())
 			{
-				Util::decodeUrl(secureUrl, proto, host, port, path, query, fragment);
-				this->secureUrl = Util::formatDchubUrl(proto, host, port);
+				Util::decodeUrl(secureUrl, p);
 				if (keyPrint.empty())
 				{
-					kp = Util::getQueryParam(query, "kp");
+					string kp = Util::getQueryParam(p.query, "kp");
 					if (!kp.empty() && checkKeyPrintFormat(kp))
 						keyPrint = std::move(kp);
 				}
+				this->secureUrl = Util::formatDchubUrl(p);
 			}
 		}
 
@@ -179,7 +178,7 @@ class FavoriteHubEntry
 		GETSET(bool, exclChecks, ExclChecks); // Excl. from client checking
 		GETSET(bool, exclusiveHub, ExclusiveHub); // Fake hub count
 		GETSET(string, fakeShare, FakeShare);
-		GETSET(int, fakeFileCount, FakeFileCount);
+		GETSET(int64_t, fakeFileCount, FakeFileCount);
 		GETSET(int, fakeSlots, FakeSlots);
 		GETSET(int, fakeClientStatus, FakeClientStatus);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);

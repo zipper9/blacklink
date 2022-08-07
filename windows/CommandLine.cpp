@@ -120,10 +120,9 @@ bool parseCommandLine(ParsedCommandLine& out, const WCHAR* cmdLine)
 			out.openMagnet = result[i];
 			continue;
 		}
-		uint16_t port;
-		string proto, host, file, query, fragment;
-		Util::decodeUrl(Text::fromT(result[i]), proto, host, port, file, query, fragment);
-		if (Util::getHubProtocol(proto) && !host.empty() && port != 0)
+		Util::ParsedUrl url;
+		Util::decodeUrl(Text::fromT(result[i]), url);
+		if (Util::getHubProtocol(url.protocol) && !url.host.empty() && url.port != 0)
 			out.openHub = result[i];
 	}
 	LocalFree(result);

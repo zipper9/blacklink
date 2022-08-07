@@ -959,7 +959,7 @@ void FavoriteManager::saveFavorites()
 				if (e->getOverrideId())
 					xml.addChildAttrib("OverrideId", true);
 				xml.addChildAttribIfNotEmpty("FakeShare", e->getFakeShare());
-				int fakeFileCount = e->getFakeFileCount();
+				int64_t fakeFileCount = e->getFakeFileCount();
 				if (fakeFileCount > 0)
 					xml.addChildAttrib("FakeFiles", fakeFileCount);
 				int fakeSlots = e->getFakeSlots();
@@ -1209,17 +1209,18 @@ void FavoriteManager::load(SimpleXML& xml)
 			}
 		}
 		xml.resetCurrentChild();
+		string query;
+		Util::ParsedUrl url;
 		while (xml.findChild("Hub"))
 		{
 			string currentServerUrl = xml.getChildAttrib("Server");
 #ifdef _DEBUG
 			LogManager::message("Load favorites item: " + currentServerUrl);
 #endif
-			uint16_t port = 0;
-			string proto, host, file, query, fragment;
-			Util::decodeUrl(currentServerUrl, proto, host, port, file, query, fragment);
-			if (host.empty()) continue;
-			currentServerUrl = Text::toLower(Util::formatDchubUrl(proto, host, port));
+			Util::decodeUrl(currentServerUrl, url);
+			if (url.host.empty()) continue;
+			query = std::move(url.query);
+			currentServerUrl = Text::toLower(Util::formatDchubUrl(url));
 
 			FavoriteHubEntry* e = new FavoriteHubEntry();
 			e->id = ++favHubId;
@@ -1302,7 +1303,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setClientVersion(clientVersion);
 			e->setOverrideId(isOverrideId);
 			e->setFakeShare(xml.getChildAttrib("FakeShare"));
-			e->setFakeFileCount(xml.getIntChildAttrib("FakeFiles"));
+			e->setFakeFileCount(xml.getInt64ChildAttrib("FakeFiles"));
 			e->setFakeSlots(xml.getIntChildAttrib("FakeSlots", "-1"));
 			e->setFakeClientStatus(xml.getIntChildAttrib("FakeClientStatus"));
 

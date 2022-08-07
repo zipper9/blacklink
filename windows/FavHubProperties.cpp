@@ -231,16 +231,15 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		}
 
 		string url = Text::fromT(buf);
-		uint16_t port = 0;
-		string proto, host, file, query, fragment;	
-		Util::decodeUrl(url, proto, host, port, file, query, fragment);
-		if (!Util::getHubProtocol(proto))
+		Util::ParsedUrl p;
+		Util::decodeUrl(url, p);
+		if (!Util::getHubProtocol(p.protocol))
 		{
-			MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(proto)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+			MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(p.protocol)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
 		}
 
-		if (host.empty())
+		if (p.host.empty())
 		{
 			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
@@ -251,7 +250,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		boost::trim(keyPrint);
 		if (keyPrint.empty())
 		{
-			keyPrint = Util::getQueryParam(query, "kp");
+			keyPrint = Util::getQueryParam(p.query, "kp");
 			boost::trim(keyPrint);
 		}
 		if (!keyPrint.empty() && !HubEntry::checkKeyPrintFormat(keyPrint))
@@ -260,7 +259,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			return 0;
 		}
 
-		url = Util::formatDchubUrl(proto, host, port);
+		url = Util::formatDchubUrl(p);
 
 		if (tabName.addressChanged && FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
 		{
@@ -289,7 +288,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		WinUtil::getWindowText(tabName.ctrlName, buf);
 		string name = Text::fromT(buf);
-		if (name.empty()) name = host;
+		if (name.empty()) name = p.host;
 		entry->setName(name);
 
 		WinUtil::getWindowText(tabName.ctrlDesc, buf);
@@ -366,11 +365,11 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		entry->setFakeShare(Text::fromT(fakeShare));
 
-		int fakeCount = -1;
+		int64_t fakeCount = -1;
 		if (!fakeShare.empty())
 		{
 			WinUtil::getWindowText(tabCheats.ctrlFakeCount, buf);
-			fakeCount = Util::toInt(buf);
+			fakeCount = Util::toInt64(buf);
 			if (fakeCount <= 0) fakeCount = -1;
 		}
 		entry->setFakeFileCount(fakeCount);

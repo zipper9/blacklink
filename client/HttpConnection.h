@@ -76,6 +76,7 @@ public:
 	int getRequestType() const { return requestType; }
 	bool isReceivingData() const { return receivingData; }
 	static bool checkUrl(const string& url);
+	static bool checkProtocol(const string& proto);
 
 private:
 	enum ConnectionStates

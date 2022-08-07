@@ -551,145 +551,6 @@ string Util::getShortTimeString(time_t t)
 	return formatParams(SETTING(TIME_STAMPS_FORMAT), &ex, false);
 }
 	
-/**
- * Decodes a URL the best it can...
- * Default ports:
- * http:// -> port 80
- * https:// -> port 443
- * dchub:// -> port 411
- */
-void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment)
-{
-	auto fragmentEnd = url.size();
-	auto fragmentStart = url.rfind('#');
-	
-	size_t queryEnd;
-	if (fragmentStart == string::npos)
-	{
-		queryEnd = fragmentStart = fragmentEnd;
-	}
-	else
-	{
-		queryEnd = fragmentStart;
-		fragmentStart++;
-	}
-	
-	auto queryStart = url.rfind('?', queryEnd);
-	size_t fileEnd;
-	
-	if (queryStart == string::npos)
-	{
-		fileEnd = queryStart = queryEnd;
-	}
-	else
-	{
-		fileEnd = queryStart;
-		queryStart++;
-	}
-	
-	size_t protoStart = 0;
-	auto protoEnd = url.find("://", protoStart);
-	
-	auto authorityStart = protoEnd == string::npos ? protoStart : protoEnd + 3;
-	auto authorityEnd = url.find_first_of("/#?", authorityStart);
-	
-	size_t fileStart;
-	if (authorityEnd == string::npos)
-		authorityEnd = fileStart = fileEnd;
-	else
-		fileStart = authorityEnd;
-	
-	protocol = (protoEnd == string::npos ? Util::emptyString : Text::toLower(url.substr(protoStart, protoEnd - protoStart))); // [!] IRainman rfc fix lower string to proto and servername
-	if (protocol.empty())
-		protocol = "dchub";
-	
-	if (authorityEnd > authorityStart)
-	{
-		size_t portStart = string::npos;
-		if (url[authorityStart] == '[')
-		{
-			// IPv6?
-			auto hostEnd = url.find(']');
-			if (hostEnd == string::npos)
-			{
-				return;
-			}
-	
-			host = url.substr(authorityStart + 1, hostEnd - authorityStart - 1);
-			if (hostEnd + 1 < url.size() && url[hostEnd + 1] == ':')
-			{
-				portStart = hostEnd + 2;
-			}
-		}
-		else
-		{
-			size_t hostEnd;
-			portStart = url.find(':', authorityStart);
-			if (portStart != string::npos && portStart > authorityEnd)
-			{
-				portStart = string::npos;
-			}
-	
-			if (portStart == string::npos)
-			{
-				hostEnd = authorityEnd;
-			}
-			else
-			{
-				hostEnd = portStart;
-				portStart++;
-			}
-			host = Text::toLower(url.substr(authorityStart, hostEnd - authorityStart));
-		}
-	
-		if (portStart == string::npos)
-		{
-			if (protocol == "dchub" || protocol == "nmdc" || protocol == "adc")
-			{
-				port = 411;
-			}
-			else if (protocol == "nmdcs")
-			{
-				isSecure = true;
-				port = 411;
-			}
-			else if (protocol == "adcs")
-			{
-				isSecure = true;
-				port = 412;
-			}
-			else if (protocol == "http")
-			{
-				port = 80;
-			}
-			else if (protocol == "https")
-			{
-				port = 443;
-				isSecure = true;
-			}
-			else port = 0;
-		}
-		else
-		{
-			port = static_cast<uint16_t>(Util::toInt(url.substr(portStart, authorityEnd - portStart)));
-		}
-	}
-	
-	path = url.substr(fileStart, fileEnd - fileStart);
-	query = url.substr(queryStart, queryEnd - queryStart);
-	fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);
-	if (!Text::isAscii(host))
-	{
-		wstring wstr;
-		Text::utf8ToWide(host, wstr);
-		Text::toLower(wstr);
-		int error;
-		string converted;
-		if (IDNA_convert_to_ACE(wstr, converted, error))
-			host = converted;
-	}
-}
-	
 bool Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
 {
 	bool result = true;
@@ -1048,7 +909,7 @@ static inline int getHex(char c)
 	if (c >= 'A' && c <= 'F') return c-'A'+10;
 	return -1;
 }
-	
+
 string Util::encodeURI(const string& str, bool reverse)
 {
 	// reference: rfc2396
@@ -1352,15 +1213,188 @@ void Util::setLimiter(bool enable)
 	ClientManager::infoUpdated();
 }
 
+static bool getDefaultPort(const string& protocol, uint16_t& port, bool& secure)
+{
+	if (protocol == "dchub" || protocol == "nmdc" || protocol == "adc")
+	{
+		port = 411;
+		secure = false;
+		return true;
+	}
+	if (protocol == "nmdcs")
+	{
+		port = 411;
+		secure = true;
+		return true;
+	}
+	if (protocol == "adcs")
+	{
+		port = 412;
+		secure = true;
+		return true;
+	}
+	if (protocol == "http")
+	{
+		port = 80;
+		secure = false;
+		return true;
+	}
+	if (protocol == "https")
+	{
+		port = 443;
+		secure = true;
+		return true;
+	}
+	if (protocol == "ftp")
+	{
+		port = 21;
+		secure = false;
+		return true;
+	}
+	port = 0;
+	secure = false;
+	return false;
+}
+
+void Util::decodeUrl(const string& url, ParsedUrl& res, const string& defProto)
+{
+	auto fragmentEnd = url.size();
+	auto fragmentStart = url.rfind('#');
+	auto userStart = string::npos;
+
+	res.isSecure = false;
+	res.port = 0;
+	res.user.clear();
+	res.password.clear();
+
+	size_t queryEnd;
+	if (fragmentStart == string::npos)
+	{
+		queryEnd = fragmentStart = fragmentEnd;
+	}
+	else
+	{
+		queryEnd = fragmentStart;
+		fragmentStart++;
+	}
+
+	auto queryStart = url.rfind('?', queryEnd);
+	size_t fileEnd;
+
+	if (queryStart == string::npos)
+	{
+		fileEnd = queryStart = queryEnd;
+	}
+	else
+	{
+		fileEnd = queryStart;
+		queryStart++;
+	}
+
+	auto protoEnd = url.find("://");
+	if (protoEnd != string::npos)
+	{
+		res.protocol = Text::toLower(url.substr(0, protoEnd));
+		if (res.protocol.empty())
+			res.protocol = defProto;
+	}
+	else
+		res.protocol = defProto;
+
+	auto authorityStart = protoEnd == string::npos ? 0 : protoEnd + 3;
+	auto userEnd = url.find('@', authorityStart);
+	if (userEnd != string::npos)
+	{
+		auto pos = url.find_first_of("/#?", authorityStart);
+		if (pos == string::npos || pos > userEnd)
+		{
+			userStart = authorityStart;
+			authorityStart = userEnd + 1;
+		}
+	}
+
+	auto authorityEnd = url.find_first_of("/#?", authorityStart);
+
+	size_t fileStart;
+	if (authorityEnd == string::npos)
+		authorityEnd = fileStart = fileEnd;
+	else
+		fileStart = authorityEnd;
+
+	if (authorityEnd > authorityStart)
+	{
+		size_t portStart = string::npos;
+		if (url[authorityStart] == '[')
+		{
+			// IPv6?
+			auto hostEnd = url.find(']');
+			if (hostEnd == string::npos)
+			{
+				return;
+			}
+
+			res.host = url.substr(authorityStart + 1, hostEnd - authorityStart - 1);
+			if (hostEnd + 1 < url.size() && url[hostEnd + 1] == ':')
+				portStart = hostEnd + 2;
+		}
+		else
+		{
+			size_t hostEnd;
+			portStart = url.find(':', authorityStart);
+			if (portStart != string::npos && portStart > authorityEnd)
+				portStart = string::npos;
+
+			if (portStart == string::npos)
+				hostEnd = authorityEnd;
+			else
+			{
+				hostEnd = portStart;
+				portStart++;
+			}
+			res.host = Text::toLower(url.substr(authorityStart, hostEnd - authorityStart));
+		}
+
+		uint16_t defPort;
+		getDefaultPort(res.protocol, defPort, res.isSecure);
+		if (portStart != string::npos)
+			res.port = static_cast<uint16_t>(Util::toInt(url.substr(portStart, authorityEnd - portStart)));
+		else
+			res.port = defPort;
+	}
+
+	if (userStart != string::npos)
+	{
+		auto pos = url.find(':', userStart);
+		if (pos != string::npos && pos < userEnd)
+		{
+			res.user = url.substr(userStart, pos - userStart);
+			res.password = url.substr(pos + 1, userEnd - (pos + 1));
+		}
+		else
+			res.user = url.substr(userStart, userEnd - userStart);
+	}
+
+	res.path = url.substr(fileStart, fileEnd - fileStart);
+	res.query = url.substr(queryStart, queryEnd - queryStart);
+	res.fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);
+	if (!Text::isAscii(res.host))
+	{
+		wstring wstr;
+		Text::utf8ToWide(res.host, wstr);
+		Text::toLower(wstr);
+		int error;
+		string converted;
+		if (IDNA_convert_to_ACE(wstr, converted, error))
+			res.host = converted;
+	}
+}
+
 string Util::formatDchubUrl(const string& url)
 {
 	if (url.empty() || url == "DHT") return url;
-
-	uint16_t port = 0;
-	string proto, host, file, query, fragment;
-	
-	decodeUrl(url, proto, host, port, file, query, fragment);
-	return formatDchubUrl(proto, host, port);
+	ParsedUrl p;
+	decodeUrl(url, p);
+	return formatDchubUrl(p);
 }
 
 int Util::getHubProtocol(const string& scheme)
@@ -1376,31 +1410,68 @@ int Util::getHubProtocol(const string& scheme)
 	return 0;
 }
 
-string Util::formatDchubUrl(const string& proto, const string& host, uint16_t port)
+string Util::formatDchubUrl(Util::ParsedUrl& p)
 {
-	string result;
-	if (host.empty()) return result;
-
+	p.clearUser();
+	p.clearPath();
 	bool isNmdc = false;
-	if (proto == "nmdc")
+	if (p.protocol == "nmdc" || p.protocol.empty())
 	{
-		result += "dchub";
+		p.protocol = "dchub";
 		isNmdc = true;
 	}
-	else
-	{
-		result += proto;
-		if (proto == "dchub") isNmdc = true;
-	}
+	else if (p.protocol == "dchub")
+		isNmdc = true;
+	if (p.port == 411 && isNmdc)
+		p.port = 0;
+	return formatUrl(p, false);
+}
+
+string Util::formatUrl(const Util::ParsedUrl& p, bool omitDefaultPort)
+{
+	string result;
+	if (p.protocol.empty() || p.host.empty()) return result;
+	result = p.protocol;
 	result += "://";
-	if (host.find(':') != string::npos)
-		result += "[" + host + "]";
-	else
-		result += host;
-	if (port && !(port == 411 && isNmdc))
+	if (!p.user.empty())
 	{
-		result += ':';
-		result += Util::toString(port);
+		result += p.user;
+		if (!p.password.empty())
+		{
+			result += ':';
+			result += p.password;
+		}
+		result += '@';
+	}
+	if (p.host.find(':') != string::npos)
+		result += "[" + p.host + "]";
+	else
+		result += p.host;
+	if (p.port)
+	{
+		if (omitDefaultPort)
+		{
+			uint16_t defPort;
+			bool secure;
+			getDefaultPort(p.protocol, defPort, secure);
+			if (p.port != defPort) omitDefaultPort = false;
+		}
+		if (!omitDefaultPort)
+		{
+			result += ':';
+			result += Util::toString(p.port);
+		}
+	}
+	result += p.path;
+	if (!p.query.empty())
+	{
+		result += '?';
+		result += p.query;
+	}
+	if (!p.fragment.empty())
+	{
+		result += '#';
+		result += p.fragment;
 	}
 	return result;
 }

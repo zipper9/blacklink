@@ -27,11 +27,10 @@ void HttpClient::removeRequest(uint64_t id) noexcept
 
 bool HttpClient::decodeUrl(const string& url, string& server)
 {
-	string proto, host, path, query, fragment;
-	uint16_t port = 0;
-	Util::decodeUrl(url, proto, host, port, path, query, fragment);
-	if (host.empty() || !port || (proto != "http" && proto != "https")) return false;
-	server = host + ':' + Util::toString(port);
+	Util::ParsedUrl p;
+	Util::decodeUrl(url, p, "http");
+	if (p.host.empty() || !p.port || !HttpConnection::checkProtocol(p.protocol)) return false;
+	server = p.host + ':' + Util::toString(p.port);
 	return true;
 }
 

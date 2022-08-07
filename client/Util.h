@@ -300,12 +300,24 @@ namespace Util
 
 	bool parseIpPort(const string& ipPort, string& ip, uint16_t& port);
 
-	void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
-	inline void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, string& query, string& fragment)
+	struct ParsedUrl
 	{
+		string protocol;
+		string host;
+		string user;
+		string password;
+		uint16_t port;
+		string path;
+		string query;
+		string fragment;
 		bool isSecure;
-		decodeUrl(url, protocol, host, port, path, isSecure, query, fragment);
-	}
+
+		void clearUser() { user.clear(); password.clear(); }
+		void clearPath() { path.clear(); query.clear(); fragment.clear(); }
+	};
+
+	void decodeUrl(const string& url, ParsedUrl& res, const string& defProto = "dchub");
+	string formatUrl(const ParsedUrl& p, bool omitDefaultPort);
 
 	enum
 	{
@@ -439,7 +451,7 @@ namespace Util
 
 	void backupSettings();
 	string formatDchubUrl(const string& url);
-	string formatDchubUrl(const string& proto, const string& host, uint16_t port); // proto must be in lowercase
+	string formatDchubUrl(ParsedUrl& p);
 
 	string getMagnet(const TTHValue& hash, const string& file, int64_t size);
 	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);

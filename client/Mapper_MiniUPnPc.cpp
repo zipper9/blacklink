@@ -72,12 +72,11 @@ bool Mapper_MiniUPnPc::init()
 			string controlUrl = data.urlbase;
 			if (controlUrl.empty()) controlUrl = urls.controlURL;
 
-			string routerIp, protoTmp, pathTmp, queryTmp, fragmentTmp;
-			uint16_t portTmp = 0;
-			Util::decodeUrl(controlUrl, protoTmp, routerIp, portTmp, pathTmp, queryTmp, fragmentTmp);
+			Util::ParsedUrl url;
+			Util::decodeUrl(controlUrl, url, "http");
 
 			IpAddressEx addr;
-			if (Resolver::resolveHost(addr, af, routerIp))
+			if (Resolver::resolveHost(addr, af, url.host))
 			{
 				vector<Util::AdapterInfo> adapters;
 				Util::getNetworkAdapters(af, adapters);

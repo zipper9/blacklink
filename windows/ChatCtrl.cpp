@@ -1335,11 +1335,10 @@ LRESULT ChatCtrl::onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 {
 	if (!g_sSelectedURL.empty())
 	{
-		uint16_t port;
-		string proto, host, file, query, fragment;
-		Util::decodeUrl(Text::fromT(g_sSelectedURL), proto, host, port, file, query, fragment);
-		if (!host.empty())
-			WinUtil::openLink(_T("http://bgp.he.net/dns/") + Text::toT(host) + _T("#_website"));
+		Util::ParsedUrl url;
+		Util::decodeUrl(Text::fromT(g_sSelectedURL), url);
+		if (!url.host.empty())
+			WinUtil::openLink(_T("http://bgp.he.net/dns/") + Text::toT(url.host) + _T("#_website"));
 	}
 	return 0;
 }

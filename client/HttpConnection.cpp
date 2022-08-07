@@ -32,8 +32,8 @@ static const int64_t BODY_SIZE_CHUNKED = -2;
 static const unsigned long MAX_CHUNK_SIZE = 512*1024;
 static const size_t MAX_HEADERS_SIZE = 32*1024;
 
-static const string prefixHttp  = "http://";
-static const string prefixHttps = "https://";
+static const string protoHttp  = "http";
+static const string protoHttps = "https";
 
 #if 0
 static void logMessage(const char *msg, ...)
@@ -96,7 +96,14 @@ bool HttpConnection::startRequest(uint64_t reqId, int type, const string& url, i
 
 bool HttpConnection::checkUrl(const string& url)
 {
-	return Text::isAsciiPrefix2(url, prefixHttp) || Text::isAsciiPrefix2(url, prefixHttps);
+	Util::ParsedUrl p;
+	Util::decodeUrl(url, p, protoHttp);	
+	return !p.host.empty() && p.port && checkProtocol(p.protocol);
+}
+
+bool HttpConnection::checkProtocol(const string& proto)
+{
+	return proto == protoHttp || proto == protoHttps;
 }
 
 void HttpConnection::prepareRequest(int type) noexcept
@@ -111,16 +118,20 @@ void HttpConnection::prepareRequest(int type) noexcept
 	receivedHeadersSize = 0;
 	resp.clear();
 
-	string proto, fragment;
-	port = 0;
-	Util::decodeUrl(currentUrl, proto, server, port, path, query, fragment);
+	Util::ParsedUrl p;
+	Util::decodeUrl(currentUrl, p, protoHttp);
+	server = std::move(p.host);
+	port = p.port;
+	path = std::move(p.path);
+	query = std::move(p.query);
 
 	string connectServer;
 	uint16_t connectPort = 0;
 	if (!proxyServer.empty())
 	{
-		string tpath, tquery;
-		Util::decodeUrl(proxyServer, proto, proxyServerHost, connectPort, tpath, tquery, fragment);
+		Util::decodeUrl(proxyServer, p, protoHttp);
+		proxyServerHost = std::move(p.host);
+		connectPort = p.port;
 		connectServer = proxyServerHost;
 		requestUri = currentUrl;
 		if (path.empty())
@@ -153,7 +164,7 @@ void HttpConnection::prepareRequest(int type) noexcept
 
 	try
 	{
-		bool secure = proto == "https";
+		bool secure = p.protocol == protoHttps;
 		if (!connectPort) connectPort = secure ? 443 : 80;
 		socket->connect(connectServer, connectPort, secure, true, true, Socket::PROTO_HTTP);
 		socket->start();
