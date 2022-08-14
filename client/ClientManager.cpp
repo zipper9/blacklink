@@ -1151,7 +1151,7 @@ const CID& ClientManager::getMyPID()
 	return pid;
 }
 
-const string ClientManager::findMyNick(const string& hubUrl)
+string ClientManager::findMyNick(const string& hubUrl)
 {
 	READ_LOCK(*g_csClients);
 	const auto& i = g_clients.find(hubUrl);

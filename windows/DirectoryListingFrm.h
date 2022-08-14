@@ -170,6 +170,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TO_FAV, IDC_DOWNLOAD_TO_FAV + MAX_FAV_DIRS - 1, onDownloadToFavDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + MAX_FAV_DIRS - 1, onDownloadToFavDirTree)
 		COMMAND_RANGE_HANDLER(IDC_LOCATE_FILE_IN_QUEUE, IDC_LOCATE_FILE_IN_QUEUE + 9, onLocateInQueue)
+		COMMAND_RANGE_HANDLER(IDC_COPY_URL, IDC_COPY_URL + 99, onCopyUrl)
+		COMMAND_RANGE_HANDLER(IDC_COPY_URL_TREE, IDC_COPY_URL_TREE + 99, onCopyUrlTree)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_MSG_MAP(baseClass)
@@ -217,6 +219,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		}
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCopyUrl(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCopyUrlTree(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -365,6 +369,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		tstring getRootItemText() const;
 		void updateRootItemText();
 		bool addFavMenu(OMenu& menu);
+		string getFileUrl(const string& hubUrl, const string& path) const;
+		void appendCopyUrlItems(CMenu& menu, int idc, ResourceManager::Strings text);
 
 		class ItemInfo
 		{
@@ -419,7 +425,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		OMenu targetDirMenu;
 		OMenu priorityMenu;
 		OMenu priorityDirMenu;
-		OMenu copyMenu;
 
 		CContainedWindow statusContainer;
 		CContainedWindow treeContainer;
@@ -428,6 +433,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		StringList targets;
 		string downloadDirNick;
 		string downloadDirIP;
+		vector<string> contextMenuHubUrl;
 
 		deque<string> history;
 		size_t historyIndex;

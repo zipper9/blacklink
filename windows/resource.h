@@ -1079,7 +1079,6 @@
 #define IDC_BAN_IP                      2157
 #define IDC_UNBAN_IP                    2158
 #define IDC_CLIENT                      2159
-#define IDC_COPY_URL                    2160
 #define IDC_BOLD_MSG_AUTHORS            2161
 #define IDC_IGNORE_BY_NAME              2163
 #define IDC_WINAMP_HELP                 2165
@@ -1094,11 +1093,8 @@
 #define IDC_UPLOADSPEEDSPIN_TIME        2174
 #define IDC_DOWNLOADSPEEDSPIN_TIME      2175
 #define IDC_GRANTSLOT                   2176
-#define IDC_PER_USER_LIMIT_ENABLE       2176
 #define IDC_GRANTSLOT_HOUR              2177
-#define IDC_UPLOADSPEED_USER            2177
 #define IDC_GRANTSLOT_DAY               2178
-#define IDC_UPLOADSPEEDSPIN_USER        2178
 #define IDC_GRANTSLOT_WEEK              2179
 #define IDC_GRANTSLOT_PERIOD            2180
 #define IDC_UNGRANTSLOT                 2181
@@ -1163,6 +1159,9 @@
 #define IDC_SPEED_SUPER                 2241
 #define IDC_SPEED_BAN                   2242
 #define IDC_SPEED_MANUAL                2249
+#define IDC_UPLOADSPEED_USER            2250
+#define IDC_UPLOADSPEEDSPIN_USER        2251
+#define IDC_PER_USER_LIMIT_ENABLE       2252
 #define IDC_PM_NORMAL                   2257
 #define IDC_PM_IGNORED                  2258
 #define IDC_PM_FREE                     2259
@@ -1326,6 +1325,8 @@
 #define IDC_PREVIEW_APP                 7500
 #define IDC_PM_HUB                      7600
 #define IDC_USER_INFO                   7700
+#define IDC_COPY_URL                    7800
+#define IDC_COPY_URL_TREE               7900
 #define ID_TOGGLE_TOOLBAR               32771
 #define ID_TOGGLE_QSEARCH               32772
 #define ID_VIEW_TRANSFER_VIEW           32773

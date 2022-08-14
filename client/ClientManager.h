@@ -79,9 +79,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static OnlineUserPtr findOnlineUser(const CID& cid, const string& hintUrl, bool priv);
 		static void findOnlineUsers(const CID& cid, OnlineUserList& res, int clientType);
 		static OnlineUserPtr findDHTNode(const CID& cid);
-		
-		static const string findMyNick(const string& hubUrl);
-		
+
+		static string findMyNick(const string& hubUrl);
+
 		struct UserParams
 		{
 			int64_t bytesShared;

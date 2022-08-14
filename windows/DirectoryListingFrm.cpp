@@ -23,6 +23,7 @@
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/Client.h"
 #include "DirectoryListingFrm.h"
 #include "PrivateFrame.h"
 #include "QueueFrame.h"
@@ -277,35 +278,32 @@ void DirectoryListingFrame::setWindowTitle()
 		return;
 	}
 	const HintedUser &hintedUser = dl->getHintedUser();
-	if (hintedUser.user)
+	bool userOffline = false;
+	tstring text = Text::toT(hintedUser.user->getLastNick());
+	if (!hintedUser.user->isMe())
 	{
-		bool userOffline = false;
-		tstring text = Text::toT(hintedUser.user->getLastNick());
-		if (!hintedUser.user->isMe())
+		text += _T(" - ");
+		StringList hubNames;
+		if (!hintedUser.hint.empty())
+			hubNames = ClientManager::getHubNames(hintedUser.user->getCID(), hintedUser.hint, true);
+		if (hubNames.empty())
+			hubNames = ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString, false);
+		if (hubNames.empty())
 		{
-			text += _T(" - ");
-			StringList hubNames;
-			if (!hintedUser.hint.empty())
-				hubNames = ClientManager::getHubNames(hintedUser.user->getCID(), hintedUser.hint, true);
-			if (hubNames.empty())
-				hubNames = ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString, false);
-			if (hubNames.empty())
-			{
-				userOffline = true;
-				text += lastHubName.empty() ? TSTRING(OFFLINE) : lastHubName;
-			}
-			else
-			{
-				lastHubName = Text::toT(hubNames[0]);
-				text += lastHubName;
-			}
+			userOffline = true;
+			text += lastHubName.empty() ? TSTRING(OFFLINE) : lastHubName;
 		}
-		SetWindowText(text.c_str());
-		if (offline != userOffline)
+		else
 		{
-			offline = userOffline;
-			setDisconnected(offline);
+			lastHubName = Text::toT(hubNames[0]);
+			text += lastHubName;
 		}
+	}
+	SetWindowText(text.c_str());
+	if (offline != userOffline)
+	{
+		offline = userOffline;
+		setDisconnected(offline);
 	}
 }
 
@@ -446,16 +444,6 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	targetDirMenu.CreatePopupMenu();
 	priorityMenu.CreatePopupMenu();
 	priorityDirMenu.CreatePopupMenu();
-	copyMenu.CreatePopupMenu();
-	if (dl->getUser() && !dl->getUser()->getCID().isZero())
-		copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_EXACT_SIZE, CTSTRING(EXACT_SIZE));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_PATH, CTSTRING(LOCAL_PATH));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
 
 	WinUtil::appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
 	WinUtil::appendPrioItems(priorityDirMenu, IDC_DOWNLOAD_WITH_PRIO_TREE);
@@ -1500,6 +1488,13 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 {
 	bool ownList = dl->isOwnList();
 	int selCount;
+
+	contextMenuHubUrl.clear();
+	string hubUrl;
+	const HintedUser& hintedUser = dl->getHintedUser();
+	if (hintedUser.user && !(hintedUser.user->getFlags() & User::FAKE))
+		hubUrl = hintedUser.hint;
+
 	if (reinterpret_cast<HWND>(wParam) == ctrlList && (selCount = ctrlList.GetSelectedCount()) > 0)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
@@ -1575,6 +1570,12 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
 			fileMenu.AppendMenu(MF_SEPARATOR);
 		}
+
+		CMenu copyMenu;
+		copyMenu.CreatePopupMenu();
+		if (dl->getUser() && !dl->getUser()->getCID().isZero())
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
+
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 		addFavMenu(fileMenu);
 		fileMenu.AppendMenu(MF_SEPARATOR);
@@ -1600,12 +1601,23 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 			if (ii->file->getAdls())
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
-			copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FILENAME));
-			copyMenu.EnableMenuItem(IDC_COPY_TTH, MF_BYCOMMAND | MFS_ENABLED);
-			copyMenu.EnableMenuItem(IDC_COPY_LINK, MF_BYCOMMAND | MFS_ENABLED);
-			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, MF_BYCOMMAND | MFS_ENABLED);
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_EXACT_SIZE, CTSTRING(EXACT_SIZE));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_PATH, CTSTRING(LOCAL_PATH));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
+			if (ownList)
+				appendCopyUrlItems(copyMenu, IDC_COPY_URL, ResourceManager::FILE_URL);			
+			else if (!hubUrl.empty())
+			{
+				copyMenu.AppendMenu(MF_STRING, IDC_COPY_URL, CTSTRING(FILE_URL));
+				contextMenuHubUrl.push_back(hubUrl);
+			}
 
-			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
+			if (hintedUser.user)
+				appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(hintedUser.user->getCID(), hintedUser.hint));
 			fileMenu.SetMenuDefaultItem(existingFile ? IDC_OPEN_FILE : IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO);
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
@@ -1632,12 +1644,31 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			LastDir::appendItems(targetMenu, n);
 			if (isDirectory && ii->dir->getAdls() && ii->dir->getParent() != dl->getRoot())
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
-			copyMenu.RenameItem(IDC_COPY_FILENAME, isDirectory ? TSTRING(FOLDERNAME) : TSTRING(FILENAME));
-			copyMenu.EnableMenuItem(IDC_COPY_TTH, MF_BYCOMMAND | (isDirectory ? MFS_DISABLED : MFS_ENABLED));
+
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, isDirectory ? CTSTRING(FOLDERNAME) : CTSTRING(FILENAME));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_EXACT_SIZE, CTSTRING(EXACT_SIZE));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_PATH, CTSTRING(LOCAL_PATH));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
+			if (isDirectory)
+			{
+				if (ownList)
+					appendCopyUrlItems(copyMenu, IDC_COPY_URL, ResourceManager::FOLDER_URL);
+				else if (!hubUrl.empty())
+				{
+					copyMenu.AppendMenu(MF_STRING, IDC_COPY_URL, CTSTRING(FOLDER_URL));
+					contextMenuHubUrl.push_back(hubUrl);
+				}
+			}
+			if (isDirectory)
+				copyMenu.EnableMenuItem(IDC_COPY_TTH, MF_BYCOMMAND | MFS_DISABLED);
 			copyMenu.EnableMenuItem(IDC_COPY_LINK, MF_BYCOMMAND | MFS_DISABLED);
 			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, MF_BYCOMMAND | MFS_DISABLED);
 
-			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
+			if (hintedUser.user)
+				appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(hintedUser.user->getCID(), hintedUser.hint));
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
 		}
@@ -1675,6 +1706,13 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			copyDirMenu.CreatePopupMenu();
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
+			if (ownList)
+				appendCopyUrlItems(copyDirMenu, IDC_COPY_URL_TREE, ResourceManager::FOLDER_URL);
+			else if (!hubUrl.empty())
+			{
+				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_URL_TREE, CTSTRING(FOLDER_URL));
+				contextMenuHubUrl.push_back(hubUrl);
+			}
 		}
 
 		if (!ownList)
@@ -2048,6 +2086,72 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 	{
 		WinUtil::setClipboard(data);
 	}
+	return 0;
+}
+
+string DirectoryListingFrame::getFileUrl(const string& hubUrl, const string& path) const
+{
+	Util::ParsedUrl url;
+	Util::decodeUrl(hubUrl, url);
+	url.path = Util::encodeUriPath(Util::toAdcFile(path));
+	if (dl->isOwnList())
+	{
+		string myNick = ClientManager::findMyNick(hubUrl);
+		url.user = myNick.empty() ? nick : myNick;
+	}
+	else
+		url.user = nick;
+	return Util::formatUrl(url, true);
+}
+
+void DirectoryListingFrame::appendCopyUrlItems(CMenu& menu, int idc, ResourceManager::Strings text)
+{
+	vector<ClientBasePtr> hubs;
+	ClientManager::getConnectedHubs(hubs);
+	tstring ts = TSTRING_I(text);
+	int n = 0;
+	for (ClientBasePtr& clientBase : hubs)
+	{
+		const Client* client = static_cast<Client*>(clientBase.get());
+		tstring menuText = ts;
+		menuText += _T(" (");
+		menuText += Text::toT(client->getHubName());
+		menuText += _T(')');
+		menu.AppendMenu(MF_STRING, idc + n, menuText.c_str());
+		contextMenuHubUrl.push_back(client->getHubUrl());
+		if (++n == 15) break;
+	}
+}
+
+LRESULT DirectoryListingFrame::onCopyUrl(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int i = ctrlList.GetNextItem(-1, LVNI_SELECTED);
+	if (i != -1)
+	{
+		const ItemInfo* ii = ctrlList.getItemData(i);
+		string path;
+		if (ii->type == ItemInfo::FILE)
+			path = dl->getPath(ii->file) + ii->file->getName();
+		else if (ii->type == ItemInfo::DIRECTORY)
+			path = dl->getPath(ii->dir);
+		int index = wID - IDC_COPY_URL;
+		if (!path.empty() && index < contextMenuHubUrl.size())
+			WinUtil::setClipboard(getFileUrl(contextMenuHubUrl[index], path));
+	}
+	return 0;
+}
+
+LRESULT DirectoryListingFrame::onCopyUrlTree(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	HTREEITEM ht = ctrlTree.GetSelectedItem();
+	if (!ht) return 0;
+	DirectoryListing::Directory* d = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(ht));
+	if (!d) return 0;
+
+	string path = dl->getPath(d);
+	int index = wID - IDC_COPY_URL_TREE;
+	if (!path.empty() && index < contextMenuHubUrl.size())
+		WinUtil::setClipboard(getFileUrl(contextMenuHubUrl[index], path));
 	return 0;
 }
 
