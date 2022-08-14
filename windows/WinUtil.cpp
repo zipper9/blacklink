@@ -985,7 +985,8 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	Util::decodeUrl(Text::fromT(url), p);
 	if (!Util::getHubProtocol(p.protocol) || p.host.empty() || p.port == 0) return false;
 
-	string file = std::move(p.path);
+	string nick = std::move(p.user);
+	string file = Util::decodeUri(p.path);
 	const string formattedUrl = Util::formatDchubUrl(p);
 
 	RecentHubEntry r;
@@ -996,25 +997,30 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 
 	if (!file.empty())
 	{
-		if (file[0] == '/') // Remove any '/' in from of the file
-			file.erase(0, 1);
-				
-		string nick;
-		const string::size_type i = file.find('/');
-		if (i != string::npos)
+		if (nick.empty())
 		{
-			nick = file.substr(0, i);
-			file.erase(0, i);
+			if (file[0] == '/') file.erase(0, 1);
+			const string::size_type i = file.find('/');
+			if (i != string::npos)
+			{
+				nick = file.substr(0, i);
+				file.erase(0, i);
+			}
+			else
+			{
+				nick = std::move(file);
+				file = "/";
+			}
 		}
-		else
+		if (!file.empty() && file.back() != '/')
 		{
-			nick = std::move(file);
-			file = "/";
+			const string::size_type i = file.rfind('/');
+			if (i != string::npos) file.erase(i + 1);
 		}
 		if (!nick.empty())
 		{
 			const UserPtr user = ClientManager::findLegacyUser(nick, formattedUrl);
-			if (user)
+			if (user && !user->isMe())
 			{
 				try
 				{

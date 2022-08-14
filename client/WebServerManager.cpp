@@ -869,7 +869,7 @@ int WebServerSocket::run()
 				{
 					if (!m["search"].empty())
 					{
-						WebServerManager::getInstance()->search(Util::encodeURI(m["search"], true), Util::toInt(m["type"]));
+						WebServerManager::getInstance()->search(Util::decodeUri(m["search"]), Util::toInt(m["type"]));
 					} /*else {
                         WebServerManager::getInstance()->searchstarted(m["search_started"].empty()); // TODO
                     }*/
@@ -887,7 +887,7 @@ int WebServerSocket::run()
 					{
 						if (!m["dir"].empty())
 						{
-							dir = Util::encodeURI(m["dir"], true);
+							dir = Util::decodeUri(m["dir"]);
 						}
 					}
 					
@@ -897,10 +897,10 @@ int WebServerSocket::run()
 						switch (Util::toInt(m["type"]))
 						{
 							case SearchResult::TYPE_DIRECTORY:
-								QueueManager::getInstance()->addDirectory(Util::encodeURI(m["file"], true), HintedUser(toAdd.User, toAdd.HubURL), dir, QueueItem::DEFAULT, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+								QueueManager::getInstance()->addDirectory(Util::decodeUri(m["file"]), HintedUser(toAdd.User, toAdd.HubURL), dir, QueueItem::DEFAULT, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 								break;
 							case SearchResult::TYPE_FILE:
-								const string name = Util::encodeURI(m["name"], true);
+								const string name = Util::decodeUri(m["name"]);
 								const string DownloadName = !dir.empty() ? SETTING(DOWNLOAD_DIRECTORY) + name : name;
 								bool getConnFlag = true;
 								try
@@ -917,7 +917,7 @@ int WebServerSocket::run()
 					}
 					if (!m["link"].empty())
 					{
-						string tmpL = Util::encodeURI(m["link"], true);
+						string tmpL = Util::decodeUri(m["link"]);
 						if ((start = tmpL.find('?')) != string::npos)
 						{
 							// IRainman TODO: please refactoring me after rewrite magnet parsing mechanism.
@@ -931,7 +931,7 @@ int WebServerSocket::run()
 								string DownloadName = Link["dn"];
 								if (!DownloadName.empty())
 								{
-									DownloadName = Util::encodeURI(DownloadName, true);
+									DownloadName = Util::decodeUri(DownloadName);
 									if (!dir.empty())
 									{
 										Util::appendPathSeparator(dir);
@@ -945,15 +945,15 @@ int WebServerSocket::run()
 					}
 					if (!m["dqueue"].empty())
 					{
-						const string dqueue = Util::encodeURI(m["dqueue"], true);
-						const string qfile = Util::encodeURI(m["qfile"], true);
+						const string dqueue = Util::decodeUri(m["dqueue"]);
+						const string qfile = Util::decodeUri(m["qfile"]);
 						if (dqueue == STRING(REMOVE2))
 						{
 							QueueManager::getInstance()->removeTarget(qfile, false);
 						}
 						if (dqueue == STRING(SET_PRIORITY))
 						{
-							const string dp = Util::encodeURI(m["dp"], true);
+							const string dp = Util::decodeUri(m["dp"]);
 							if (dp == STRING(AUTO))
 								QueueManager::getInstance()->setAutoPriority(qfile, true);
 							else

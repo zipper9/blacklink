@@ -96,9 +96,7 @@ LRESULT FileHashDlg::OnThreadResult(UINT, WPARAM, LPARAM lParam, BOOL&)
 			edit.SetWindowText(Text::toT(tthStr).c_str());
 			if (fileSize > 0)
 			{
-				magnet = "magnet:?xt=urn:tree:tiger:" + tthStr +
-					"&xl=" + Util::toString(fileSize) + 
-					"&dn=" + Util::encodeURI(Text::fromT(filenameWithoutPath));
+				magnet = Util::getMagnet(tthStr, Text::fromT(filenameWithoutPath), fileSize);
 				SetDlgItemText(IDC_MAGNET, Text::toT(magnet).c_str());
 				GetDlgItem(IDC_COPY).EnableWindow(TRUE);
 				GetDlgItem(IDC_COPY_WEB_LINK).EnableWindow(TRUE);

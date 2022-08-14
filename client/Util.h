@@ -319,6 +319,10 @@ namespace Util
 	void decodeUrl(const string& url, ParsedUrl& res, const string& defProto = "dchub");
 	string formatUrl(const ParsedUrl& p, bool omitDefaultPort);
 
+	string encodeUriQuery(const string& str);
+	string encodeUriPath(const string& str);
+	string decodeUri(const string& str);
+
 	enum
 	{
 		HUB_PROTOCOL_NMDC = 1,
@@ -427,8 +431,6 @@ namespace Util
 	wstring formatExactSizeW(int64_t bytes);
 #endif
 
-	string encodeURI(const string& /*aString*/, bool reverse = false);
-
 #ifdef _WIN32
 	int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
 	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
@@ -453,6 +455,7 @@ namespace Util
 	string formatDchubUrl(const string& url);
 	string formatDchubUrl(ParsedUrl& p);
 
+	string getMagnet(const string& hash, const string& file, int64_t size);
 	string getMagnet(const TTHValue& hash, const string& file, int64_t size);
 	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);
 

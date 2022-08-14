@@ -33,12 +33,12 @@ bool MagnetLink::parse(const string& url)
 		string::size_type pos = param.find('=');
 		if (pos != string::npos)
 		{
-			value = Util::encodeURI(param.substr(pos + 1), true);
+			value = Util::decodeUri(param.substr(pos + 1));
 			param.erase(pos);
 		}
 		else
 			value.clear();
-		param = Util::encodeURI(param, true);
+		param = Util::decodeUri(param);
 		if (param.length() == 2)
 		{
 			Text::asciiMakeLower(param);

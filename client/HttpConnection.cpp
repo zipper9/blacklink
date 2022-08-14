@@ -65,7 +65,7 @@ void HttpConnection::postData(const string &url, const StringMap &params)
 	requestBody.clear();
 
 	for (StringMap::const_iterator i = params.begin(); i != params.end(); ++i)
-		requestBody += "&" + Util::encodeURI(i->first) + "=" + Util::encodeURI(i->second);
+		requestBody += "&" + Util::encodeUriQuery(i->first) + "=" + Util::encodeUriQuery(i->second);
 
 	if (!requestBody.empty()) requestBody = requestBody.substr(1);
 	prepareRequest(Http::METHOD_POST);

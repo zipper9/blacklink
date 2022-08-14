@@ -174,12 +174,12 @@ bool MainFrame::processCommand(const ParsedCommand& pc, Result& res)
 		}
 		case COMMAND_WEB_SEARCH:
 			res.what = RESULT_NO_TEXT;
-			WinUtil::openLink(_T("http://www.google.com/search?q=") + Text::toT(Util::encodeURI(pc.args[1])));
+			WinUtil::openLink(_T("http://www.google.com/search?q=") + Text::toT(Util::encodeUriQuery(pc.args[1])));
 			return true;
 
 		case COMMAND_WHOIS:
 			res.what = RESULT_NO_TEXT;
-			WinUtil::openLink(_T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + Text::toT(Util::encodeURI(pc.args[1])));
+			WinUtil::openLink(_T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + Text::toT(Util::encodeUriQuery(pc.args[1])));
 			return true;
 #ifdef DEBUG_GDI_IMAGE
 		case COMMAND_DEBUG_GDI_INFO:

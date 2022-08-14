@@ -910,60 +910,72 @@ static inline int getHex(char c)
 	return -1;
 }
 
-string Util::encodeURI(const string& str, bool reverse)
+static string encodeUri(const string& str, const string& chars)
 {
-	// reference: rfc2396
-	string tmp;
-	tmp.reserve(str.length());
-	if (reverse)
+	static const char* hexDigits = "0123456789ABCDEF";
+	string res;
+	res.reserve(str.length());
+	char escape[4];
+	for (string::size_type i = 0; i < str.length(); ++i)
 	{
-		// TODO idna: convert host name from punycode
-		for (string::size_type i = 0; i < str.length(); ++i)
+		if (str[i] == ' ')
+			res += '+';
+		else if (str[i] <= 0x1F || str[i] >= 0x7F || chars.find(str[i]) != string::npos)
 		{
-			if (str[i] == '%' && i + 2 < str.length())
+			escape[0] = '%';
+			escape[1] = hexDigits[(str[i] >> 4) & 0xF];
+			escape[2] = hexDigits[str[i] & 0xF];
+			res.append(escape, 3);
+		}
+		else
+			res += str[i];
+	}
+	return res;
+}
+
+string Util::encodeUriQuery(const string& str)
+{
+	static const string disallowed =
+		";/?:@&=+$," // reserved
+		"<>#%\" "    // delimiters
+		"{}|\\^[]`"; // unwise
+	return encodeUri(str, disallowed);
+}
+
+string Util::encodeUriPath(const string& str)
+{
+	static const string disallowed =
+		";?&=+$,"    // reserved
+		"<>#%\" "    // delimiters
+		"{}|\\^[]`"; // unwise
+	return encodeUri(str, disallowed);
+}
+
+string Util::decodeUri(const string& str)
+{
+	string res;
+	res.reserve(str.length());
+	for (string::size_type i = 0; i < str.length(); ++i)
+	{
+		if (str[i] == '%' && i + 2 < str.length())
+		{
+			int h1 = getHex(str[i+1]);
+			int h2 = getHex(str[i+2]);
+			if (h1 != -1 && h2 != -1)
 			{
-				int h1 = getHex(str[i+1]);
-				int h2 = getHex(str[i+2]);
-				if (h1 != -1 && h2 != -1)
-				{
-					tmp += h1 << 4 | h2;
-					i += 2;
-					continue;
-				}
-			}
-			else if (str[i] == '+')
-			{
-				tmp += ' ';
+				res += h1 << 4 | h2;
+				i += 2;
 				continue;
 			}
-			tmp += str[i];
 		}
-	}
-	else
-	{
-		static const string disallowed = ";/?:@&=+$," // reserved
-		                                 "<>#%\" "    // delimiters
-		                                 "{}|\\^[]`"; // unwise
-		static const char* hexDigits = "0123456789ABCDEF";
-		char escape[4];
-		for (string::size_type i = 0; i < str.length(); ++i)
+		else if (str[i] == '+')
 		{
-			if (str[i] == ' ')
-			{
-				tmp += '+';
-			}
-			else if (str[i] <= 0x1F || str[i] >= 0x7F || disallowed.find(str[i]) != string::npos)
-			{
-				escape[0] = '%';
-				escape[1] = hexDigits[(str[i] >> 4) & 0xF];
-				escape[2] = hexDigits[str[i] & 0xF];
-				tmp.append(escape, 3);
-			}
-			else
-				tmp += str[i];
+			res += ' ';
+			continue;
 		}
+		res += str[i];
 	}
-	return tmp;
+	return res;
 }
 
 struct GetDirSizeControl
@@ -1476,18 +1488,24 @@ string Util::formatUrl(const Util::ParsedUrl& p, bool omitDefaultPort)
 	return result;
 }
 
-string Util::getMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
+string Util::getMagnet(const string& hash, const string& file, int64_t size)
 {
-	return "magnet:?xt=urn:tree:tiger:" + aHash.toBase32() + "&xl=" + toString(aSize) + "&dn=" + encodeURI(aFile);
+	return "magnet:?xt=urn:tree:tiger:" + hash + "&xl=" + toString(size) + "&dn=" + encodeUriQuery(file);
 }
 
-string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
+string Util::getMagnet(const TTHValue& hash, const string& file, int64_t size)
 {
+	return getMagnet(hash.toBase32(), file, size);
+}
+
+string Util::getWebMagnet(const TTHValue& hash, const string& file, int64_t size)
+{
+	string tthStr = hash.toBase32();
 	StringMap params;
-	params["magnet"] = getMagnet(aHash, aFile, aSize);
-	params["size"] = formatBytes(aSize);
-	params["TTH"] = aHash.toBase32();
-	params["name"] = aFile;
+	params["magnet"] = getMagnet(tthStr, file, size);
+	params["size"] = formatBytes(size);
+	params["TTH"] = tthStr;
+	params["name"] = file;
 	return formatParams(SETTING(WMLINK_TEMPLATE), params, false);
 }
 

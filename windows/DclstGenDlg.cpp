@@ -375,7 +375,7 @@ bool DclstGenDlg::calculateTTH()
 void DclstGenDlg::makeMagnet()
 {
 	magnet = "magnet:?xt=urn:tree:tiger:" + listTree.getRoot().toBase32() +
-	         "&xl=" + Util::toString(listTree.getFileSize()) + "&dn=" + Util::encodeURI(Util::getFileName(listName)) + "&dl=" + Util::toString(sizeProcessed);
+	         "&xl=" + Util::toString(listTree.getFileSize()) + "&dn=" + Util::encodeUriQuery(Util::getFileName(listName)) + "&dl=" + Util::toString(sizeProcessed);
 }
 
 LRESULT DclstGenDlg::onShareOrOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
