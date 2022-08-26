@@ -160,13 +160,13 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			RAW3_TEXT,
 			RAW4_TEXT,
 			RAW5_TEXT,
-		                  
+
 			// Players formats
 			WINAMP_FORMAT, WMP_FORMAT, ITUNES_FORMAT, MPLAYERC_FORMAT, JETAUDIO_FORMAT, QCDQMP_FORMAT,
 
 			// Font
 			TEXT_FONT,
-			
+
 			// Toolbar settings
 			TOOLBAR, TOOLBARIMAGE, TOOLBARHOTIMAGE,
 			WINAMPTOOLBAR,
@@ -183,6 +183,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SOUND_TYPING_NOTIFY, SOUND_SEARCHSPY,
 
 			// Themes and custom images
+			COLOR_THEME,
 			USERLIST_IMAGE,
 			THEME_MANAGER_THEME_DLL_NAME,
 			THEME_MANAGER_SOUNDS_THEME_NAME,
@@ -479,6 +480,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			REGISTER_MAGNET_HANDLER,
 			REGISTER_DCLST_HANDLER,
 
+			// Theme
+			COLOR_THEME_MODIFIED,
+
 			// Colors & text styles
 			BACKGROUND_COLOR,
 			TEXT_COLOR,
@@ -554,7 +558,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PROGRESS_TEXT_COLOR_DOWN, PROGRESS_TEXT_COLOR_UP, 
 			PROGRESS_OVERRIDE_COLORS, PROGRESS_3DDEPTH, PROGRESS_OVERRIDE_COLORS2,
 			PROGRESSBAR_ODC_STYLE, PROGRESSBAR_ODC_BUMPED,
-			STEALTHY_STYLE, STEALTHY_STYLE_ICO, STEALTHY_STYLE_ICO_SPEEDIGNORE,
+			STEALTHY_STYLE_ICO, STEALTHY_STYLE_ICO_SPEEDIGNORE,
 			TOP_DL_SPEED,
 			TOP_UL_SPEED,
 			UL_COLOR_DEPENDS_ON_SLOTS,
@@ -807,9 +811,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		
 		static bool loadLanguage();
 
-		static void importDcTheme(const tstring& file);
-		static void exportDcTheme(const tstring& file);
-
 		static void unset(size_t key)
 		{
 			isSet[key] = false;
@@ -825,17 +826,18 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		{
 			save(getConfigFile());
 		}
-		
-		void load(const string& aFileName);
-		void save(const string& aFileName);
+
+		void load(const string& fileName);
+		void save(const string& fileName);
 		void setDefaults();
 		void loadOtherSettings();
-		static void generateNewTCPPort();
-		static void generateNewUDPPort();
-		
+		static inline bool isIntSetting(int id) { return id >= INT_FIRST; }
+		static int getIdByName(const string& name) noexcept;
+		static string getNameById(int id) noexcept;
+
 		// Search types
 		static void validateSearchTypeName(const string& name);
-		
+
 		void setSearchTypeDefaults();
 		void addSearchType(const string& name, const StringList& extensions, bool validated = false);
 		void delSearchType(const string& name);

@@ -97,6 +97,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 			}
 		};
 
+		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
 		void appendText(const Message& message, unsigned maxSmiles, bool highlightNick);
 		void adjustTextSize();
 		bool findText();
@@ -162,7 +163,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		vector<LinkItem> links;
 
 		void initRichEditOle();
-		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
 		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		void parseText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
@@ -193,8 +193,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void setHubHint(const string& hint) { hubHint = hint; }
 
 		void Clear();
-		static void SetTextStyleMyNick(const CHARFORMAT2& ts);
-		
+
 		static tstring g_sSelectedText;
 		static tstring g_sSelectedIP;
 		static tstring g_sSelectedUserName;

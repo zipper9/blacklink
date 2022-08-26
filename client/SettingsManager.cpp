@@ -67,7 +67,7 @@ bool SettingsManager::isSet[SETTINGS_LAST];
 // Search types
 SettingsManager::SearchTypes SettingsManager::g_searchTypes; // name, extlist
 
-static const char* g_settingTags[] =
+static const char* settingTags[] =
 {
 	// Strings //
 	"ConfigVersion",
@@ -189,13 +189,13 @@ static const char* g_settingTags[] =
 	"RawThreeText",
 	"RawFourText",
 	"RawFiveText",
-	
+
 	// Players formats
 	"WinampFormat", "WMPFormat", "iTunesFormat", "MPCFormat", "JetAudioFormat", "QcdQmpFormat",
 
 	// Font
 	"TextFont",
-	
+
 	// Toolbar settings
 	"Toolbar", "ToolbarImage", "ToolbarHot",
 	"WinampToolBar",
@@ -212,11 +212,12 @@ static const char* g_settingTags[] =
 	"SoundTypingNotify", "SoundSearchSpy",
 
 	// Themes and custom images
+	"ColorTheme",
 	"UserListImage",
 	"ThemeDLLName",
 	"ThemeManagerSoundsThemeName",
 	"EmoticonsFile",
-	
+
 	// Password
 	"AuthPass",
 
@@ -504,7 +505,10 @@ static const char* g_settingTags[] =
 	"UrlHandler",
 	"MagnetRegister",
 	"DclstRegister",
-	
+
+	// Theme
+	"ColorThemeModified",
+
 	// Colors & text styles
 	"BackgroundColor",
 	"TextColor",
@@ -580,7 +584,7 @@ static const char* g_settingTags[] =
 	"ProgressTextDown", "ProgressTextUp",
 	"ProgressOverrideColors", "Progress3DDepth", "ProgressOverrideColors2",
 	"ProgressbaroDCStyle", "OdcStyleBumped",
-	"StealthyStyle", "StealthyStyleIco", "StealthyStyleIcoSpeedIgnore", 
+	"StealthyStyleIco", "StealthyStyleIcoSpeedIgnore", 
 	"TopDownSpeed",
 	"TopUpSpeed",
 	"ULColorDependsOnSlots",
@@ -776,7 +780,7 @@ static const char* g_settingTags[] =
 
 SettingsManager::SettingsManager()
 {
-	BOOST_STATIC_ASSERT(_countof(g_settingTags) == SETTINGS_LAST + 1);
+	BOOST_STATIC_ASSERT(_countof(settingTags) == SETTINGS_LAST + 1);
 	
 	for (size_t i = 0; i < SETTINGS_LAST; i++)
 		isSet[i] = false;
@@ -1396,14 +1400,14 @@ static bool isPathSetting(int setting)
 	       (setting >= SettingsManager::SOUND_BEEPFILE && setting <= SettingsManager::SOUND_SEARCHSPY);
 }
 
-void SettingsManager::load(const string& aFileName)
+void SettingsManager::load(const string& fileName)
 {
 	string modulePath = Util::getExePath();
 	if (!File::isAbsolute(modulePath) || modulePath.length() == 3) modulePath.clear();
 	try
 	{
 		SimpleXML xml;
-		const string fileData = File(aFileName, File::READ, File::OPEN).read();
+		const string fileData = File(fileName, File::READ, File::OPEN).read();
 		xml.fromXML(fileData);
 		xml.stepIn();
 		if (xml.findChild("Settings"))
@@ -1412,7 +1416,7 @@ void SettingsManager::load(const string& aFileName)
 			int i;
 			for (i = STR_FIRST; i < STR_LAST; i++)
 			{
-				const string& attr = g_settingTags[i];
+				const string& attr = settingTags[i];
 				dcassert(attr.find("SENTRY") == string::npos);
 				
 				if (xml.findChild(attr))
@@ -1430,7 +1434,7 @@ void SettingsManager::load(const string& aFileName)
 			}
 			for (i = INT_FIRST; i < INT_LAST; i++)
 			{
-				const string& attr = g_settingTags[i];
+				const string& attr = settingTags[i];
 				dcassert(attr.find("SENTRY") == string::npos);
 				
 				if (xml.findChild(attr))
@@ -1530,18 +1534,6 @@ void SettingsManager::load(const string& aFileName)
 	string& theme = strSettings[THEME_MANAGER_THEME_DLL_NAME - STR_FIRST];
 	if (Text::isAsciiSuffix2<string>(theme, ".dll")) theme.erase(theme.length() - 4);
 	if (Text::isAsciiSuffix2<string>(theme, "_x64")) theme.erase(theme.length() - 4);
-}
-
-void SettingsManager::generateNewTCPPort()
-{
-	int excludePort = get(TCP_PORT);
-	set(TCP_PORT, generateRandomPort(&excludePort, 1));
-}
-
-void SettingsManager::generateNewUDPPort()
-{
-	int excludePort = get(UDP_PORT);
-	set(UDP_PORT, generateRandomPort(&excludePort, 1));
 }
 
 void SettingsManager::loadOtherSettings()
@@ -1975,7 +1967,7 @@ bool SettingsManager::set(IntSetting key, int value)
 	return valueAdjusted;
 }
 
-void SettingsManager::save(const string& aFileName)
+void SettingsManager::save(const string& fileName)
 {
 	string modulePath = Util::getExePath();
 	if (!File::isAbsolute(modulePath) || modulePath.length() == 3) modulePath.clear();
@@ -1993,7 +1985,7 @@ void SettingsManager::save(const string& aFileName)
 	{
 		if (i == CONFIG_VERSION)
 		{
-			xml.addTag(g_settingTags[i], VERSION_STR);
+			xml.addTag(settingTags[i], VERSION_STR);
 			xml.addChildAttrib(type, curType);
 		}
 		else if (isSet[i])
@@ -2002,10 +1994,10 @@ void SettingsManager::save(const string& aFileName)
 			{
 				string path = get(StrSetting(i), false);
 				pathToRelative(path, modulePath);
-				xml.addTag(g_settingTags[i], path);
+				xml.addTag(settingTags[i], path);
 			}
 			else
-				xml.addTag(g_settingTags[i], get(StrSetting(i), false));
+				xml.addTag(settingTags[i], get(StrSetting(i), false));
 			xml.addChildAttrib(type, curType);
 		}
 	}
@@ -2015,7 +2007,7 @@ void SettingsManager::save(const string& aFileName)
 	{
 		if (isSet[i])
 		{
-			xml.addTag(g_settingTags[i], get(IntSetting(i), false));
+			xml.addTag(settingTags[i], get(IntSetting(i), false));
 			xml.addChildAttrib(type, curType);
 		}
 	}
@@ -2032,18 +2024,18 @@ void SettingsManager::save(const string& aFileName)
 	
 	try
 	{
-		string tempFile = aFileName + ".tmp";
+		string tempFile = fileName + ".tmp";
 		File out(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
 		BufferedOutputStream<false> f(&out, 1024);
 		f.write(SimpleXML::utf8Header);
 		xml.toXML(&f);
 		f.flushBuffers(true);
 		out.close();
-		File::renameFile(tempFile, aFileName);
+		File::renameFile(tempFile, fileName);
 	}
 	catch (const FileException& e)
 	{
-		LogManager::message("error create/write .xml file:" + aFileName + " error = " + e.getError());
+		LogManager::message("error create/write .xml file:" + fileName + " error = " + e.getError());
 	}
 }
 
@@ -2233,249 +2225,14 @@ void SettingsManager::getIPSettings(IPSettings& s, bool v6)
 	}
 }
 
-void SettingsManager::importDcTheme(const tstring& file)
+int SettingsManager::getIdByName(const string& name) noexcept
 {
-
-#define importData(x, y)\
-	if (xml.findChild(x)) set(y, xml.getChildData());\
-	xml.resetCurrentChild();
-
-	try
-	{
-		SimpleXML xml;
-		xml.fromXML(File(file, File::READ, File::OPEN).read());
-		xml.resetCurrentChild();
-		xml.stepIn();
-		if (xml.findChild(("Settings")))
-		{
-			xml.stepIn();
-			importData("Font", TEXT_FONT);
-			importData("BackgroundColor", BACKGROUND_COLOR);
-			importData("TextColor", TEXT_COLOR);
-			importData("DownloadBarColor", DOWNLOAD_BAR_COLOR);
-			importData("UploadBarColor", UPLOAD_BAR_COLOR);
-			importData("TextGeneralBackColor", TEXT_GENERAL_BACK_COLOR);
-			importData("TextGeneralForeColor", TEXT_GENERAL_FORE_COLOR);
-			importData("TextGeneralBold", TEXT_GENERAL_BOLD);
-			importData("TextGeneralItalic", TEXT_GENERAL_ITALIC);
-			importData("TextMyOwnBackColor", TEXT_MYOWN_BACK_COLOR);
-			importData("TextMyOwnForeColor", TEXT_MYOWN_FORE_COLOR);
-			importData("TextMyOwnBold", TEXT_MYOWN_BOLD);
-			importData("TextMyOwnItalic", TEXT_MYOWN_ITALIC);
-			importData("TextPrivateBackColor", TEXT_PRIVATE_BACK_COLOR);
-			importData("TextPrivateForeColor", TEXT_PRIVATE_FORE_COLOR);
-			importData("TextPrivateBold", TEXT_PRIVATE_BOLD);
-			importData("TextPrivateItalic", TEXT_PRIVATE_ITALIC);
-			importData("TextSystemBackColor", TEXT_SYSTEM_BACK_COLOR);
-			importData("TextSystemForeColor", TEXT_SYSTEM_FORE_COLOR);
-			importData("TextSystemBold", TEXT_SYSTEM_BOLD);
-			importData("TextSystemItalic", TEXT_SYSTEM_ITALIC);
-			importData("TextServerBackColor", TEXT_SERVER_BACK_COLOR);
-			importData("TextServerForeColor", TEXT_SERVER_FORE_COLOR);
-			importData("TextServerBold", TEXT_SERVER_BOLD);
-			importData("TextServerItalic", TEXT_SERVER_ITALIC);
-			importData("TextTimestampBackColor", TEXT_TIMESTAMP_BACK_COLOR);
-			importData("TextTimestampForeColor", TEXT_TIMESTAMP_FORE_COLOR);
-			importData("TextTimestampBold", TEXT_TIMESTAMP_BOLD);
-			importData("TextTimestampItalic", TEXT_TIMESTAMP_ITALIC);
-			importData("TextMyNickBackColor", TEXT_MYNICK_BACK_COLOR);
-			importData("TextMyNickForeColor", TEXT_MYNICK_FORE_COLOR);
-			importData("TextMyNickBold", TEXT_MYNICK_BOLD);
-			importData("TextMyNickItalic", TEXT_MYNICK_ITALIC);
-			importData("TextFavBackColor", TEXT_FAV_BACK_COLOR);
-			importData("TextFavForeColor", TEXT_FAV_FORE_COLOR);
-			importData("TextFavBold", TEXT_FAV_BOLD);
-			importData("TextFavItalic", TEXT_FAV_ITALIC);
-			importData("TextURLBackColor", TEXT_URL_BACK_COLOR);
-			importData("TextURLForeColor", TEXT_URL_FORE_COLOR);
-			importData("TextURLBold", TEXT_URL_BOLD);
-			importData("TextURLItalic", TEXT_URL_ITALIC);
-			importData("BoldAuthorsMess", BOLD_MSG_AUTHOR);
-			importData("ProgressTextDown", PROGRESS_TEXT_COLOR_DOWN);
-			importData("ProgressTextUp", PROGRESS_TEXT_COLOR_UP);
-			importData("ErrorColor", ERROR_COLOR);
-			importData("ProgressOverrideColors", PROGRESS_OVERRIDE_COLORS);
-			importData("MenubarTwoColors", MENUBAR_TWO_COLORS);
-			importData("MenubarLeftColor", MENUBAR_LEFT_COLOR);
-			importData("MenubarRightColor", MENUBAR_RIGHT_COLOR);
-			importData("MenubarBumped", MENUBAR_BUMPED);
-			importData("Progress3DDepth", PROGRESS_3DDEPTH);
-			importData("ProgressOverrideColors2", PROGRESS_OVERRIDE_COLORS2);
-			importData("TextOPBackColor", TEXT_OP_BACK_COLOR);
-			importData("TextOPForeColor", TEXT_OP_FORE_COLOR);
-			importData("TextOPBold", TEXT_OP_BOLD);
-			importData("TextOPItalic", TEXT_OP_ITALIC);
-			importData("TextEnemyBackColor", TEXT_ENEMY_BACK_COLOR);
-			importData("TextEnemyForeColor", TEXT_ENEMY_FORE_COLOR);
-			importData("TextEnemyBold", TEXT_ENEMY_BOLD);
-			importData("TextEnemyItalic", TEXT_ENEMY_ITALIC);
-			importData("ProgressBackColor", PROGRESS_BACK_COLOR);
-			importData("ProgressSegmentColor", PROGRESS_SEGMENT_COLOR);
-			importData("ColorDownloaded", COLOR_DOWNLOADED);
-			importData("ColorRunning", COLOR_RUNNING);
-			importData("ColorRunning2", COLOR_RUNNING_COMPLETED);
-			importData("ReservedSlotColor", RESERVED_SLOT_COLOR);
-			importData("IgnoredColor", IGNORED_COLOR);
-			importData("FavoriteColor", FAVORITE_COLOR);
-			importData("NormalColour", NORMAL_COLOR);
-			importData("FireballColor", FIREBALL_COLOR);
-			importData("ServerColor", SERVER_COLOR);
-			importData("PasiveColor", PASSIVE_COLOR);
-			importData("OpColor", OP_COLOR);
-			importData("FileListAndClientCheckedColour", CHECKED_COLOR);
-			importData("BadClientColour", BAD_CLIENT_COLOR);
-			importData("BadFilelistColour", BAD_FILELIST_COLOR);
-			importData("ProgressbaroDCStyle", PROGRESSBAR_ODC_STYLE);
-			// FileList Colors
-			importData("BanColor", BAN_COLOR);
-			// Popup Colors
-			importData("PopupMaxMsgLen", POPUP_MAX_LENGTH);
-			importData("PopupFoneImage", POPUP_IMAGE);
-			importData("PopupFoneImageFile", POPUP_IMAGE_FILE);
-			importData("PopupTypeBalloon", POPUP_TYPE);
-			importData("PopupTime", POPUP_TIME);
-			importData("PopupFont", POPUP_FONT);
-			importData("PopupTitleFont", POPUP_TITLE_FONT);
-			importData("PopupBackColor", POPUP_BACKCOLOR);
-			importData("PopupTextColor", POPUP_TEXTCOLOR);
-			importData("PopupTitleTextColor", POPUP_TITLE_TEXTCOLOR);
-		}
-		xml.resetCurrentChild();
-		xml.stepOut();
-	}
-	catch (const FileException& e)
-	{
-		LogManager::message(STRING(COULD_NOT_OPEN_TARGET_FILE) + e.getError());
-	}
-	catch (const SimpleXMLException& e)
-	{
-		LogManager::message(STRING(COULD_NOT_PARSE_XML_DATA) + e.getError());
-	}
-	
-#undef importData
+	for (int i = 0; i < SETTINGS_LAST; i++)
+		if (name == settingTags[i]) return i;
+	return -1;
 }
 
-void SettingsManager::exportDcTheme(const tstring& filename)
+string SettingsManager::getNameById(int id) noexcept
 {
-
-#define exportData(x, y)\
-	xml.addTag(x, SETTING(y));\
-	xml.addChildAttrib(type, typeid(y) == typeid(StrSetting) ? stringType : intType);
-
-	static const string type("type");
-	static const string stringType("string");
-	static const string intType("int");
-	
-	SimpleXML xml;
-	xml.addTag("DCPlusPlus");
-	xml.stepIn();
-	xml.addTag("Settings");
-	xml.stepIn();
-	
-	exportData("Font", TEXT_FONT);
-	exportData("BackgroundColor", BACKGROUND_COLOR);
-	exportData("TextColor", TEXT_COLOR);
-	exportData("DownloadBarColor", DOWNLOAD_BAR_COLOR);
-	exportData("UploadBarColor", UPLOAD_BAR_COLOR);
-	exportData("TextGeneralBackColor", TEXT_GENERAL_BACK_COLOR);
-	exportData("TextGeneralForeColor", TEXT_GENERAL_FORE_COLOR);
-	exportData("TextGeneralBold", TEXT_GENERAL_BOLD);
-	exportData("TextGeneralItalic", TEXT_GENERAL_ITALIC);
-	exportData("TextMyOwnBackColor", TEXT_MYOWN_BACK_COLOR);
-	exportData("TextMyOwnForeColor", TEXT_MYOWN_FORE_COLOR);
-	exportData("TextMyOwnBold", TEXT_MYOWN_BOLD);
-	exportData("TextMyOwnItalic", TEXT_MYOWN_ITALIC);
-	exportData("TextPrivateBackColor", TEXT_PRIVATE_BACK_COLOR);
-	exportData("TextPrivateForeColor", TEXT_PRIVATE_FORE_COLOR);
-	exportData("TextPrivateBold", TEXT_PRIVATE_BOLD);
-	exportData("TextPrivateItalic", TEXT_PRIVATE_ITALIC);
-	exportData("TextSystemBackColor", TEXT_SYSTEM_BACK_COLOR);
-	exportData("TextSystemForeColor", TEXT_SYSTEM_FORE_COLOR);
-	exportData("TextSystemBold", TEXT_SYSTEM_BOLD);
-	exportData("TextSystemItalic", TEXT_SYSTEM_ITALIC);
-	exportData("TextServerBackColor", TEXT_SERVER_BACK_COLOR);
-	exportData("TextServerForeColor", TEXT_SERVER_FORE_COLOR);
-	exportData("TextServerBold", TEXT_SERVER_BOLD);
-	exportData("TextServerItalic", TEXT_SERVER_ITALIC);
-	exportData("TextTimestampBackColor", TEXT_TIMESTAMP_BACK_COLOR);
-	exportData("TextTimestampForeColor", TEXT_TIMESTAMP_FORE_COLOR);
-	exportData("TextTimestampBold", TEXT_TIMESTAMP_BOLD);
-	exportData("TextTimestampItalic", TEXT_TIMESTAMP_ITALIC);
-	exportData("TextMyNickBackColor", TEXT_MYNICK_BACK_COLOR);
-	exportData("TextMyNickForeColor", TEXT_MYNICK_FORE_COLOR);
-	exportData("TextMyNickBold", TEXT_MYNICK_BOLD);
-	exportData("TextMyNickItalic", TEXT_MYNICK_ITALIC);
-	exportData("TextFavBackColor", TEXT_FAV_BACK_COLOR);
-	exportData("TextFavForeColor", TEXT_FAV_FORE_COLOR);
-	exportData("TextFavBold", TEXT_FAV_BOLD);
-	exportData("TextFavItalic", TEXT_FAV_ITALIC);
-	exportData("TextURLBackColor", TEXT_URL_BACK_COLOR);
-	exportData("TextURLForeColor", TEXT_URL_FORE_COLOR);
-	exportData("TextURLBold", TEXT_URL_BOLD);
-	exportData("TextURLItalic", TEXT_URL_ITALIC);
-	exportData("BoldAuthorsMess", BOLD_MSG_AUTHOR);
-	exportData("ProgressTextDown", PROGRESS_TEXT_COLOR_DOWN);
-	exportData("ProgressTextUp", PROGRESS_TEXT_COLOR_UP);
-	exportData("ErrorColor", ERROR_COLOR);
-	exportData("ProgressOverrideColors", PROGRESS_OVERRIDE_COLORS);
-	exportData("MenubarTwoColors", MENUBAR_TWO_COLORS);
-	exportData("MenubarLeftColor", MENUBAR_LEFT_COLOR);
-	exportData("MenubarRightColor", MENUBAR_RIGHT_COLOR);
-	exportData("MenubarBumped", MENUBAR_BUMPED);
-	exportData("Progress3DDepth", PROGRESS_3DDEPTH);
-	exportData("ProgressOverrideColors2", PROGRESS_OVERRIDE_COLORS2);
-	exportData("TextOPBackColor", TEXT_OP_BACK_COLOR);
-	exportData("TextOPForeColor", TEXT_OP_FORE_COLOR);
-	exportData("TextOPBold", TEXT_OP_BOLD);
-	exportData("TextOPItalic", TEXT_OP_ITALIC);
-	exportData("TextEnemyBackColor", TEXT_ENEMY_BACK_COLOR);
-	exportData("TextEnemyForeColor", TEXT_ENEMY_FORE_COLOR);
-	exportData("TextEnemyBold", TEXT_ENEMY_BOLD);
-	exportData("TextEnemyItalic", TEXT_ENEMY_ITALIC);
-	exportData("ProgressBackColor", PROGRESS_BACK_COLOR);
-	exportData("ProgressSegmentColor", PROGRESS_SEGMENT_COLOR);
-	exportData("ColorDownloaded", COLOR_DOWNLOADED);
-	exportData("ColorRunning", COLOR_RUNNING);
-	exportData("ColorRunning2", COLOR_RUNNING_COMPLETED);
-	exportData("ReservedSlotColor", RESERVED_SLOT_COLOR);
-	exportData("IgnoredColor", IGNORED_COLOR);
-	exportData("FavoriteColor", FAVORITE_COLOR);
-	exportData("NormalColour", NORMAL_COLOR);
-	exportData("FireballColor", FIREBALL_COLOR);
-	exportData("ServerColor", SERVER_COLOR);
-	exportData("PasiveColor", PASSIVE_COLOR);
-	exportData("OpColor", OP_COLOR);
-	exportData("FileListAndClientCheckedColour", CHECKED_COLOR);
-	exportData("BadClientColour", BAD_CLIENT_COLOR);
-	exportData("BadFilelistColour", BAD_FILELIST_COLOR);
-	exportData("ProgressbaroDCStyle", PROGRESSBAR_ODC_STYLE);
-	// FileList Colors
-	exportData("BanColor", BAN_COLOR);
-	// Popup Colors
-	exportData("PopupMaxMsgLen", POPUP_MAX_LENGTH);
-	exportData("PopupFoneImage", POPUP_IMAGE);
-	exportData("PopupFoneImageFile", POPUP_IMAGE_FILE);
-	exportData("PopupTypeBalloon", POPUP_TYPE);
-	exportData("PopupTime", POPUP_TIME);
-	exportData("PopupFont", POPUP_FONT);
-	exportData("PopupTitleFont", POPUP_TITLE_FONT);
-	exportData("PopupBackColor", POPUP_BACKCOLOR);
-	exportData("PopupTextColor", POPUP_TEXTCOLOR);
-	exportData("PopupTitleTextColor", POPUP_TITLE_TEXTCOLOR);
-	
-	try
-	{
-		File file(filename, File::WRITE, File::CREATE | File::TRUNCATE);
-		BufferedOutputStream<false> f(&file, 1024);
-		f.write(SimpleXML::utf8Header);
-		xml.toXML(&f);
-		f.flushBuffers(true);
-		file.close();
-	}
-	catch (const FileException& e)
-	{
-		LogManager::message(STRING(COULD_NOT_OPEN_TARGET_FILE) + e.getError());
-	}
-	
-#undef exportData
+	return settingTags[id];
 }

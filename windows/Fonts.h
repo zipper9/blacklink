@@ -9,7 +9,8 @@ struct Fonts
 	static void init();
 	static void uninit();
 	static void decodeFont(const tstring& setting, LOGFONT &dest);
-	
+	static tstring encodeFont(const LOGFONT& font);
+
 	static int g_fontHeight;
 	static int g_fontHeightPixl;
 	static HFONT g_font;

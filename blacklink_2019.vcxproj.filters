@@ -100,9 +100,6 @@
     <ClCompile Include="windows\NotepadFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\OperaColorsPage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\PopupManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -119,9 +116,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\PropertiesDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="windows\PropPageTextStyles.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\PropPage.cpp">
@@ -301,9 +295,6 @@
     <ClCompile Include="windows\KnownClients.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\UserListColors.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\CrashHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -404,6 +395,27 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\WinFirewall.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\ChatStylesTab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\OtherColorsTab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\ProgressBarTab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\UserListColorsTab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\StylesPage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\SettingsStore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\ThemeUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -528,9 +540,6 @@
     <ClInclude Include="windows\OMenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\OperaColorsPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\PopupDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -550,9 +559,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\PropPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\PropPageTextStyles.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\QueueFrame.h">
@@ -843,9 +849,6 @@
     <ClInclude Include="windows\KnownClients.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\UserListColors.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\ExtendedTrace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -943,6 +946,30 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\WinFirewall.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\OtherColorsTab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\StylesPage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\UserListColorsTab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ChatStylesTab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ProgressBarTab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\SettingsStore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ThemeUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\PropPageCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

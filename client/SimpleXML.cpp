@@ -25,7 +25,7 @@ enum
 	SXML_EMPTY_TAG_NAME = 1,
 	SXML_INVALID_FILE,
 	SXML_NO_TAG_SELECTED,
-	SXML_ONLE_ONE_ROOT,
+	SXML_ONLY_ONE_ROOT,
 	SXML_ALREADY_LOWEST
 };
 
@@ -39,7 +39,7 @@ static const char* STRING(int error)
 			return "Invalid XML file, missing or multiple root tags";
 		case SXML_NO_TAG_SELECTED:
 			return "No tag is currently selected";
-		case SXML_ONLE_ONE_ROOT:
+		case SXML_ONLY_ONE_ROOT:
 			return "Only one root tag allowed";
 		case SXML_ALREADY_LOWEST:
 			return "Already at lowest level";
@@ -223,7 +223,7 @@ void SimpleXML::Tag::toXML(int indent, OutputStream* f)
 
 bool SimpleXML::findChild(const string& aName) noexcept
 {
-	dcassert(current != NULL);
+	dcassert(current != nullptr);
 	if (!current)
 		return false;
 		
@@ -232,7 +232,7 @@ bool SimpleXML::findChild(const string& aName) noexcept
 		
 	while (currentChild != current->children.end())
 	{
-		if ((*currentChild)->name == aName) // https://www.box.net/shared/8622670a39f3c10523e0
+		if ((*currentChild)->name == aName)
 		{
 			found = true;
 			return true;
@@ -241,6 +241,19 @@ bool SimpleXML::findChild(const string& aName) noexcept
 			++currentChild;
 	}
 	return false;
+}
+
+bool SimpleXML::getNextChild() noexcept
+{
+	dcassert(current != nullptr);
+	if (!current)
+		return false;
+
+	if (found && currentChild != current->children.end())
+		++currentChild;
+
+	found = currentChild != current->children.end();
+	return found;
 }
 
 void SimpleXML::addTag(const string& aName, const string& aData /* = "" */)
@@ -252,7 +265,7 @@ void SimpleXML::addTag(const string& aName, const string& aData /* = "" */)
 	
 	if (current == &root && !current->children.empty())
 	{
-		throw SimpleXMLException(STRING(SXML_ONLE_ONE_ROOT));
+		throw SimpleXMLException(STRING(SXML_ONLY_ONE_ROOT));
 	}
 	else
 	{
@@ -295,6 +308,7 @@ void SimpleXML::fromXML(const string& aXML)
 	current = &root;
 	resetCurrentChild();
 }
+
 void SimpleXML::stepIn()
 {
 	checkChildSelected();
@@ -322,7 +336,7 @@ void SimpleXML::stepOut()
 void SimpleXML::resetCurrentChild()
 {
 	found = false;
-	dcassert(current != NULL);
+	dcassert(current != nullptr);
 	if (!current)
 		return;
 		

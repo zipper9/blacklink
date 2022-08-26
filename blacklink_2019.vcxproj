@@ -756,6 +756,7 @@
     <ClCompile Include="windows\CDMDebugFrame.cpp" />
     <ClCompile Include="windows\CertificatesPage.cpp" />
     <ClCompile Include="windows\ChatCtrl.cpp" />
+    <ClCompile Include="windows\ChatStylesTab.cpp" />
     <ClCompile Include="windows\CheckTargetDlg.cpp" />
     <ClCompile Include="windows\Colors.cpp" />
     <ClCompile Include="windows\ColorUtil.cpp" />
@@ -834,7 +835,7 @@
     <ClCompile Include="windows\NetworkPage.cpp" />
     <ClCompile Include="windows\NotepadFrame.cpp" />
     <ClCompile Include="windows\OMenu.cpp" />
-    <ClCompile Include="windows\OperaColorsPage.cpp" />
+    <ClCompile Include="windows\OtherColorsTab.cpp" />
     <ClCompile Include="windows\Players.cpp" />
     <ClCompile Include="windows\PopupManager.cpp" />
     <ClCompile Include="windows\PopupsPage.cpp" />
@@ -842,9 +843,9 @@
     <ClCompile Include="windows\PreviewMenu.cpp" />
     <ClCompile Include="windows\PriorityPage.cpp" />
     <ClCompile Include="windows\PrivateFrame.cpp" />
+    <ClCompile Include="windows\ProgressBarTab.cpp" />
     <ClCompile Include="windows\PropertiesDlg.cpp" />
     <ClCompile Include="windows\PropPage.cpp" />
-    <ClCompile Include="windows\PropPageTextStyles.cpp" />
     <ClCompile Include="windows\ProxyPage.cpp" />
     <ClCompile Include="windows\PublicHubsListDlg.cpp" />
     <ClCompile Include="windows\QueueFrame.cpp" />
@@ -859,6 +860,7 @@
     <ClCompile Include="windows\SearchFrm.cpp" />
     <ClCompile Include="windows\SearchHistory.cpp" />
     <ClCompile Include="windows\SearchPage.cpp" />
+    <ClCompile Include="windows\SettingsStore.cpp" />
     <ClCompile Include="windows\ShareGroupList.cpp" />
     <ClCompile Include="windows\ShareMiscPage.cpp" />
     <ClCompile Include="windows\ShellContextMenu.cpp" />
@@ -878,9 +880,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="windows\StylesPage.cpp" />
     <ClCompile Include="windows\TabsPage.cpp" />
     <ClCompile Include="windows\TextFrame.cpp" />
     <ClCompile Include="windows\ThemeManager.cpp" />
+    <ClCompile Include="windows\ThemeUtil.cpp" />
     <ClCompile Include="windows\Toolbar.cpp" />
     <ClCompile Include="windows\ToolbarManager.cpp" />
     <ClCompile Include="windows\ToolbarPage.cpp" />
@@ -893,7 +897,7 @@
     <ClCompile Include="windows\UserInfo.cpp" />
     <ClCompile Include="windows\UserInfoBaseHandler.cpp" />
     <ClCompile Include="windows\UserInfoSimple.cpp" />
-    <ClCompile Include="windows\UserListColors.cpp" />
+    <ClCompile Include="windows\UserListColorsTab.cpp" />
     <ClCompile Include="windows\UserListWindow.cpp" />
     <ClCompile Include="windows\UsersFrame.cpp" />
     <ClCompile Include="windows\WaitingUsersFrame.cpp" />
@@ -921,6 +925,7 @@
     <ClInclude Include="windows\CDMDebugFrame.h" />
     <ClInclude Include="windows\CertificatesPage.h" />
     <ClInclude Include="windows\ChatCtrl.h" />
+    <ClInclude Include="windows\ChatStylesTab.h" />
     <ClInclude Include="windows\CheckTargetDlg.h" />
     <ClInclude Include="windows\Colors.h" />
     <ClInclude Include="windows\ColorUtil.h" />
@@ -987,12 +992,14 @@
     <ClInclude Include="windows\NetworkPage.h" />
     <ClInclude Include="windows\NotepadFrame.h" />
     <ClInclude Include="windows\OMenu.h" />
-    <ClInclude Include="windows\OperaColorsPage.h" />
+    <ClInclude Include="windows\OtherColorsTab.h" />
     <ClInclude Include="windows\Players.h" />
     <ClInclude Include="windows\PopupDlg.h" />
     <ClInclude Include="windows\PopupManager.h" />
     <ClInclude Include="windows\PopupsPage.h" />
     <ClInclude Include="windows\PreviewMenu.h" />
+    <ClInclude Include="windows\ProgressBarTab.h" />
+    <ClInclude Include="windows\PropPageCallback.h" />
     <ClInclude Include="windows\PublicHubsFrm.h" />
     <ClInclude Include="windows\PublicHubsListDlg.h" />
     <ClInclude Include="windows\QCDCtrlMsgs.h" />
@@ -1000,6 +1007,7 @@
     <ClInclude Include="windows\SearchDlg.h" />
     <ClInclude Include="windows\SearchHistory.h" />
     <ClInclude Include="windows\SearchPage.h" />
+    <ClInclude Include="windows\SettingsStore.h" />
     <ClInclude Include="windows\ShareGroupList.h" />
     <ClInclude Include="windows\ShareMiscPage.h" />
     <ClInclude Include="windows\ShellContextMenu.h" />
@@ -1007,12 +1015,15 @@
     <ClInclude Include="windows\SplashWindow.h" />
     <ClInclude Include="windows\StaticFrame.h" />
     <ClInclude Include="windows\StatusMessageHistory.h" />
+    <ClInclude Include="windows\StylesPage.h" />
     <ClInclude Include="windows\ThemeManager.h" />
+    <ClInclude Include="windows\ThemeUtil.h" />
     <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />
     <ClInclude Include="windows\TypedTreeListViewCtrl.h" />
     <ClInclude Include="windows\UserInfo.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
+    <ClInclude Include="windows\UserListColorsTab.h" />
     <ClInclude Include="windows\UserListWindow.h" />
     <ClInclude Include="windows\UserMessages.h" />
     <ClInclude Include="windows\util_flylinkdc.h" />
@@ -1051,7 +1062,6 @@
     <ClInclude Include="windows\PrivateFrame.h" />
     <ClInclude Include="windows\PropertiesDlg.h" />
     <ClInclude Include="windows\PropPage.h" />
-    <ClInclude Include="windows\PropPageTextStyles.h" />
     <ClInclude Include="windows\ProxyPage.h" />
     <ClInclude Include="windows\QueueFrame.h" />
     <ClInclude Include="windows\QueuePage.h" />
@@ -1078,7 +1088,6 @@
     <ClInclude Include="windows\UCPage.h" />
     <ClInclude Include="windows\SharePage.h" />
     <ClInclude Include="windows\UserInfoSimple.h" />
-    <ClInclude Include="windows\UserListColors.h" />
     <ClInclude Include="windows\UsersFrame.h" />
     <ClInclude Include="windows\WaitingUsersFrame.h" />
     <ClInclude Include="windows\WebServerPage.h" />

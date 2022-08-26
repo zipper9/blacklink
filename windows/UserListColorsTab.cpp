@@ -1,16 +1,27 @@
 #include "stdafx.h"
-#include "UserListColors.h"
+#include "UserListColorsTab.h"
 #include "WinUtil.h"
 #include "Colors.h"
 #include "ImageLists.h"
+#include "DialogLayout.h"
 
-static const WinUtil::TextItem texts[] =
+extern SettingsManager *g_settings;
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 5,  DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_STATIC_ULC, ResourceManager::SETTINGS_USER_LIST },
-	{ IDC_CHANGE_COLOR, ResourceManager::SETTINGS_CHANGE },
-	{ IDC_USERLIST, ResourceManager::CUSTOM_USERLIST_ICONS },
-	{ IDC_HUB_POSITION_TEXT, ResourceManager::HUB_USERS_POSITION_TEXT },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_CAPTION_STYLES,     FLAG_TRANSLATE, UNSPEC, UNSPEC,            },
+	{ IDC_CAPTION_PREVIEW,    FLAG_TRANSLATE, UNSPEC, UNSPEC,            },
+	{ IDC_CHANGE_COLOR,       FLAG_TRANSLATE, UNSPEC, UNSPEC,            },
+	{ IDC_SET_DEFAULT,        FLAG_TRANSLATE, UNSPEC, UNSPEC,            },
+	{ IDC_HUB_POSITION_TEXT,  FLAG_TRANSLATE, AUTO,   UNSPEC,            },
+	{ IDC_HUB_POSITION_COMBO, 0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_USERLIST,           FLAG_TRANSLATE, AUTO,   UNSPEC             }
 };
 
 static const SettingsManager::IntSetting settings[] =
@@ -45,7 +56,7 @@ static const ResourceManager::Strings strings[] =
 	ResourceManager::SETTINGS_COLOR_BAD_FILELIST
 };
 
-LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT UserListColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	static const ResourceManager::Strings userNames[] =
 	{
@@ -56,19 +67,15 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 		ResourceManager::USER_DESC_SLOW
 	};
 
-	WinUtil::translate(*this, texts);
-	
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+
 	origImagePath = imagePath = Text::toT(g_settings->get(SettingsManager::USERLIST_IMAGE));
 
 	ctrlList.Attach(GetDlgItem(IDC_USERLIST_COLORS));
 	ctrlPreview.Attach(GetDlgItem(IDC_PREVIEW));
-	ctrlPreview.SetBackgroundColor(Colors::g_bgColor);
 	
 	for (int i = 0; i < numberOfColors; i++)
-	{
-		colors[i] = static_cast<uint32_t>(g_settings->get(settings[i]));
 		ctrlList.AddString(CTSTRING_I(strings[i]));
-	}
 	ctrlList.SetCurSel(0);
 
 	ctrlHubPosition.Attach(GetDlgItem(IDC_HUB_POSITION_COMBO));
@@ -119,23 +126,33 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	return TRUE;
 }
 
-LRESULT UserListColors::onChangeColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+LRESULT UserListColorsTab::onChangeColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int index = ctrlList.GetCurSel();
 	if (index == -1) return 0;
-	CColorDialog d(colors[index], 0, hWndCtl);
+	CColorDialog d(colors[index], CC_FULLOPEN, m_hWnd);
 	if (d.DoModal() == IDOK)
 	{
 		colors[index] = d.GetColor();
 		refreshPreview();
 	}
-	return TRUE;
+	return 0;
 }
 
-void UserListColors::refreshPreview()
+LRESULT UserListColorsTab::onSetDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int index = ctrlList.GetCurSel();
+	if (index == -1) return 0;
+	colors[index] = static_cast<uint32_t>(g_settings->getDefault(settings[index]));
+	refreshPreview();
+	return 0;
+}
+
+void UserListColorsTab::refreshPreview()
 {
 	CHARFORMAT2 cf;
 	ctrlPreview.SetWindowText(_T(""));
+	ctrlPreview.SetBackgroundColor(bg);
 	cf.dwMask = CFM_COLOR;
 	cf.dwEffects = 0;
 	
@@ -151,7 +168,14 @@ void UserListColors::refreshPreview()
 	ctrlPreview.InvalidateRect(NULL);
 }
 
-void UserListColors::write()
+void UserListColorsTab::loadSettings()
+{
+	for (int i = 0; i < numberOfColors; i++)
+		colors[i] = static_cast<uint32_t>(g_settings->get(settings[i]));
+	bg = g_settings->get(SettingsManager::BACKGROUND_COLOR);
+}
+
+void UserListColorsTab::saveSettings() const
 {
 	const tstring& path = ctrlCustomImage.GetCheck() == BST_CHECKED ? imagePath : Util::emptyStringT;
 	g_settings->set(SettingsManager::USERLIST_IMAGE, Text::fromT(path));
@@ -162,7 +186,36 @@ void UserListColors::write()
 	g_settings->set(SettingsManager::HUB_POSITION, ctrlHubPosition.GetCurSel());
 }
 
-LRESULT UserListColors::onImageBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void UserListColorsTab::getValues(SettingsStore& ss) const
+{
+	for (int i = 0; i < numberOfColors; i++)
+		ss.setIntValue(settings[i], static_cast<int>(colors[i]));
+}
+
+void UserListColorsTab::setValues(const SettingsStore& ss)
+{
+	int val;
+	for (int i = 0; i < numberOfColors; i++)
+		if (ss.getIntValue(settings[i], val)) colors[i] = val;
+	if (ss.getIntValue(SettingsManager::BACKGROUND_COLOR, val)) bg = val;
+}
+
+void UserListColorsTab::updateTheme()
+{
+	refreshPreview();
+}
+
+void UserListColorsTab::setBackgroundColor(COLORREF clr)
+{
+	if (bg != clr)
+	{
+		bg = clr;
+		if (ctrlPreview.m_hWnd)
+			refreshPreview();
+	}
+}
+
+LRESULT UserListColorsTab::onImageBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring x;
 	WinUtil::getWindowText(ctrlImagePath, x);
@@ -176,7 +229,7 @@ LRESULT UserListColors::onImageBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	return 0;
 }
 
-LRESULT UserListColors::onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+LRESULT UserListColorsTab::onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
 {
 	bool state = ctrlCustomImage.GetCheck() == BST_CHECKED;
 	ctrlImagePath.EnableWindow(state);
@@ -185,7 +238,7 @@ LRESULT UserListColors::onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 	return 0;
 }
 
-bool UserListColors::loadImage(ExCImage& newImg, const tstring& path, bool showError)
+bool UserListColorsTab::loadImage(ExCImage& newImg, const tstring& path, bool showError)
 {
 	if (FAILED(newImg.Load(path.c_str())))
 	{
@@ -202,7 +255,7 @@ bool UserListColors::loadImage(ExCImage& newImg, const tstring& path, bool showE
 	return true;
 }
 
-void UserListColors::loadImage(bool useCustom, bool init)
+void UserListColorsTab::loadImage(bool useCustom, bool init)
 {
 	ExCImage img;
 	bool isCustom = useCustom && !imagePath.empty() && loadImage(img, imagePath, false);

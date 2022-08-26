@@ -562,18 +562,6 @@ bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& 
 
 #endif
 
-tstring WinUtil::encodeFont(const LOGFONT& font)
-{
-	tstring res(font.lfFaceName);
-	res += _T(',');
-	res += Util::toStringT(font.lfHeight);
-	res += _T(',');
-	res += Util::toStringT(font.lfWeight);
-	res += _T(',');
-	res += Util::toStringT(font.lfItalic);
-	return res;
-}
-
 void WinUtil::setClipboard(const tstring& str)
 {
 	if (!::OpenClipboard(g_mainWnd))

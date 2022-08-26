@@ -34,13 +34,12 @@
 #include "UCPage.h"
 #include "LimitPage.h"
 #include "AVIPreviewPage.h"
-#include "OperaColorsPage.h"
+#include "StylesPage.h"
 #include "ToolbarPage.h"
 #include "FavoriteDirsPage.h"
 #include "PopupsPage.h"
 #include "SDCPage.h"
 #include "DefaultClickPage.h"
-#include "UserListColors.h"
 #include "NetworkPage.h"
 #include "ProxyPage.h"
 #include "WindowsPage.h"
@@ -63,7 +62,6 @@
 #include "FakeDetectPage.h"
 #endif
 
-bool PropertiesDlg::g_needUpdate = false;
 bool PropertiesDlg::g_is_create = false;
 
 PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent)
@@ -85,9 +83,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new SlotPage();
 	pages[n++] = new MessagesPage();
 	pages[n++] = new AppearancePage();
-	pages[n++] = new PropPageTextStyles();
-	pages[n++] = new OperaColorsPage();
-	pages[n++] = new UserListColors();
+	pages[n++] = new StylesPage();
 	pages[n++] = new Popups();
 	pages[n++] = new Sounds();
 	pages[n++] = new ToolbarPage();

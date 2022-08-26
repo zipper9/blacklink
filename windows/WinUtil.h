@@ -185,13 +185,11 @@ class WinUtil
 		}
 		
 		static void unlinkStaticMenus(OMenu &menu);
-		
+
 	private:
 		dcdrun(static bool g_staticMenuUnlinked;)
+
 	public:
-	
-		static tstring encodeFont(const LOGFONT& font);
-		
 		static bool browseFile(tstring& target, HWND owner = nullptr, bool save = true, const tstring& initialDir = Util::emptyStringT, const TCHAR* types = nullptr, const TCHAR* defExt = nullptr, const GUID* id = nullptr);
 		static bool browseDirectory(tstring& target, HWND owner = nullptr, const GUID* id = nullptr);
 		

@@ -263,8 +263,6 @@ void ChatCtrl::restoreChatCache()
 
 void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos)
 {
-	if (ClientManager::isBeforeShutdown())
-		return;
 	dcassert(!text.empty());
 	if (!text.empty())
 	{
@@ -1415,11 +1413,6 @@ void ChatCtrl::setHubParam(const string& url, const string& nick)
 {
 	myNick = Text::toT(nick);
 	hubHint = url;
-}
-
-void ChatCtrl::SetTextStyleMyNick(const CHARFORMAT2& ts)
-{
-	Colors::g_TextStyleMyNick = ts;
 }
 
 void ChatCtrl::Clear()

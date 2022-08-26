@@ -1,22 +1,27 @@
-#ifndef USER_LIST_COLORS_H_
-#define USER_LIST_COLORS_H_
+#ifndef USER_LIST_COLORS_TAB_H_
+#define USER_LIST_COLORS_TAB_H_
 
-#include "PropPage.h"
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atldlgs.h>
+#include <atlctrls.h>
+#include <atlcrack.h>
+#include "resource.h"
 #include "ResourceLoader.h"
+#include "SettingsStore.h"
+#include "PropPageCallback.h"
 
-class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public PropPage
+class UserListColorsTab : public CDialogImpl<UserListColorsTab>
 {
 	public:
-		explicit UserListColors() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(SETTINGS_TEXT_STYLES) + _T('\\') + TSTRING(SETTINGS_USER_LIST))
-		{
-			SetTitle(m_title.c_str());
-			m_psp.dwFlags |= PSP_RTLREADING;
-			customImageLoaded = false;
-		}
+		enum { IDD = IDD_USERLIST_TAB };
+
+		UserListColorsTab() : customImageLoaded(false), bg(0), callback(nullptr) {}
 		
-		BEGIN_MSG_MAP(UserListColors)
+		BEGIN_MSG_MAP(UserListColorsTab)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_CHANGE_COLOR, BN_CLICKED, onChangeColor)
+		COMMAND_HANDLER(IDC_SET_DEFAULT, BN_CLICKED, onSetDefault)
 		COMMAND_HANDLER(IDC_IMAGEBROWSE, BN_CLICKED, onImageBrowse)
 		COMMAND_HANDLER(IDC_USERLIST, BN_CLICKED, onCustomImage)
 		REFLECT_NOTIFICATIONS()
@@ -24,12 +29,17 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onChangeColor(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT onSetDefault(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onImageBrowse(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 
-		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) * this; }
-		int getPageIcon() const { return PROP_PAGE_ICON_USERS; }
-		void write();
+		void loadSettings();
+		void saveSettings() const;
+		void getValues(SettingsStore& ss) const;
+		void setValues(const SettingsStore& ss);
+		void updateTheme();
+		void setBackgroundColor(COLORREF clr);
+		void setCallback(PropPageCallback* p) { callback = p; }
 
 	private:
 		enum
@@ -48,8 +58,9 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 			badFileListColor,
 			numberOfColors
 		};
-		
+
 		uint32_t colors[numberOfColors];
+		COLORREF bg;
 
 		CListBox ctrlList;
 		ExCImage imgUsers;
@@ -62,10 +73,11 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 		tstring imagePath;
 		tstring origImagePath;
 		bool customImageLoaded;
+		PropPageCallback* callback;
 		
 		void refreshPreview();
 		bool loadImage(ExCImage& newImg, const tstring& path, bool showError);
 		void loadImage(bool useCustom, bool init);
 };
 
-#endif // USER_LIST_COLORS_H_
+#endif // USER_LIST_COLORS_TAB_H_

@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "PopupsPage.h"
 #include "WinUtil.h"
+#include "Fonts.h"
 #include "MainFrm.h"
 #include "PopupManager.h"
 
@@ -166,7 +167,7 @@ LRESULT Popups::onFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOO
 	if (dlg.DoModal() == IDOK)
 	{
 		SET_SETTING(POPUP_TEXTCOLOR, (int)dlg.GetColor());
-		SET_SETTING(POPUP_FONT, Text::fromT(WinUtil::encodeFont(font)));
+		SET_SETTING(POPUP_FONT, Text::fromT(Fonts::encodeFont(font)));
 	}
 	return 0;
 }
@@ -181,7 +182,7 @@ LRESULT Popups::onTitleFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 	{
 		myFont = tmp;
 		SET_SETTING(POPUP_TITLE_TEXTCOLOR, (int)dlg.GetColor());
-		SET_SETTING(POPUP_TITLE_FONT, Text::fromT(WinUtil::encodeFont(myFont)));
+		SET_SETTING(POPUP_TITLE_FONT, Text::fromT(Fonts::encodeFont(myFont)));
 	}
 	return 0;
 }

@@ -66,3 +66,15 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 	if (!face.empty() && face.length() < LF_FACESIZE)
 		_tcscpy(dest.lfFaceName, face.c_str());
 }
+
+tstring Fonts::encodeFont(const LOGFONT& font)
+{
+	tstring res(font.lfFaceName);
+	res += _T(',');
+	res += Util::toStringT(font.lfHeight);
+	res += _T(',');
+	res += Util::toStringT(font.lfWeight);
+	res += _T(',');
+	res += Util::toStringT(font.lfItalic);
+	return res;
+}

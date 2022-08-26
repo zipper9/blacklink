@@ -36,7 +36,6 @@ class PropertiesDlg : public TreePropertySheet
 		
 		PropertiesDlg(HWND parent, HICON icon);
 		~PropertiesDlg();
-		static bool g_needUpdate;
 		static bool g_is_create;
 		
 		LRESULT onOK(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);

@@ -107,15 +107,22 @@ class SimpleXML
 		
 		void stepOut();
 		void resetCurrentChild();
-		
+
 		bool findChild(const string& aName) noexcept;
-		
+		bool getNextChild() noexcept;
+
+		const string& getChildTag() const
+		{
+			checkChildSelected();
+			return (*currentChild)->name;
+		}
+
 		const string& getChildData() const
 		{
 			checkChildSelected();
 			return (*currentChild)->data;
 		}
-		
+
 		const string& getChildAttrib(const string& aName, const string& aDefault = Util::emptyString) const
 		{
 			checkChildSelected();
