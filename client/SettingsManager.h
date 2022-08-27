@@ -500,6 +500,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			RESERVED_SLOT_COLOR,
 			IGNORED_COLOR,
 			FAVORITE_COLOR,
+			FAV_BANNED_COLOR,
 			NORMAL_COLOR,
 			FIREBALL_COLOR,
 			SERVER_COLOR,

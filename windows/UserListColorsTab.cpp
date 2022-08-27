@@ -28,7 +28,7 @@ static const SettingsManager::IntSetting settings[] =
 {
 	SettingsManager::NORMAL_COLOR,
 	SettingsManager::FAVORITE_COLOR,
-	SettingsManager::TEXT_ENEMY_FORE_COLOR, // ???
+	SettingsManager::FAV_BANNED_COLOR,
 	SettingsManager::RESERVED_SLOT_COLOR,
 	SettingsManager::IGNORED_COLOR,
 	SettingsManager::FIREBALL_COLOR,

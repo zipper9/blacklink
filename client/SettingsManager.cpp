@@ -526,6 +526,7 @@ static const char* settingTags[] =
 	"ReservedSlotColor",
 	"IgnoredColor",
 	"FavoriteColor",
+	"FavBannedColor",
 	"NormalColor",
 	"FireballColor",
 	"ServerColor",
@@ -1143,6 +1144,7 @@ void SettingsManager::setDefaults()
 	setDefault(RESERVED_SLOT_COLOR, RGB(255, 0, 128));
 	setDefault(IGNORED_COLOR, RGB(128, 128, 128));
 	setDefault(FAVORITE_COLOR, RGB(0, 128, 255));
+	setDefault(FAV_BANNED_COLOR, RGB(255, 128, 64));
 	setDefault(NORMAL_COLOR, RGB(0, 0, 0));
 	setDefault(FIREBALL_COLOR, RGB(0, 0, 0));
 	setDefault(SERVER_COLOR, RGB(0, 0, 0));

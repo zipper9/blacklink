@@ -919,7 +919,7 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	else if (flags & IS_FAVORITE_ON)
 	{
 		if (flags & IS_BAN_ON)
-			fg = SETTING(TEXT_ENEMY_FORE_COLOR);
+			fg = SETTING(FAV_BANNED_COLOR);
 		else
 			fg = SETTING(FAVORITE_COLOR);
 	}
