@@ -586,15 +586,6 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					COLORREF clr = SETTING(PROGRESS_OVERRIDE_COLORS) ?
 					               (ii->download ? (!ii->parent ? SETTING(DOWNLOAD_BAR_COLOR) : SETTING(PROGRESS_SEGMENT_COLOR)) : SETTING(UPLOAD_BAR_COLOR)) :
 					               GetSysColor(COLOR_HIGHLIGHT);
-					if (!ii->download && BOOLSETTING(UL_COLOR_DEPENDS_ON_SLOTS))
-					{
-						int numSlots = ii->getUser()->getSlots();
-						if (numSlots != 0)
-						{
-							if (numSlots < 5) clr = RGB(0, 0, 0);
-							else if (numSlots < 10) clr = RGB(0xAE, 0xAE, 0xAE);
-						} else clr = RGB(0xFF, 0xD7, 0xFF);
-					}
 
 #if 0
 					//this is just severely broken, msdn says GetSubItemRect requires a one based index

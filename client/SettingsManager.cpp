@@ -456,10 +456,6 @@ static const char* settingTags[] =
 	"AllowUntrustedHubs",
 	"AllowUntrustedClients",
 
-	// Torrents
-	"UseTorrentSearch",
-	"UseTorrentRSS",
-
 	// Database
 	"DbLogFinishedDownloads",
 	"DbLogFinishedUploads",
@@ -587,7 +583,6 @@ static const char* settingTags[] =
 	"StealthyStyleIco", "StealthyStyleIcoSpeedIgnore", 
 	"TopDownSpeed",
 	"TopUpSpeed",
-	"ULColorDependsOnSlots",
 
 	// Popup settings (Ints)
 	"PopupsDisabled",
@@ -745,7 +740,6 @@ static const char* settingTags[] =
 	"SearchHistory",
 	"ClearSearch",
 	"UseSearchGroupTreeSettings",
-	"SearchDetectHash", 
 	"OnlyFreeSlots",
 
 	// Users frame
@@ -1084,16 +1078,6 @@ void SettingsManager::setDefaults()
 	setDefault(ALLOW_UNTRUSTED_HUBS, TRUE);
 	setDefault(ALLOW_UNTRUSTED_CLIENTS, TRUE);
 
-	// Torrents
-	setDefault(USE_TORRENT_SEARCH, TRUE);
-	setDefault(USE_TORRENT_RSS, TRUE);
-	
-	// DNS lookup <Not implemented>
-#ifdef FLYLINKDC_USE_DNS
-	setDefault(NSLOOKUP_MODE, Socket::DNSCache::NSLOOKUP_DELAYED);
-	setDefault(NSLOOKUP_DELAY, 100);
-#endif
-
 	// Database
 	setDefault(DB_LOG_FINISHED_DOWNLOADS, 365);	
 	setDefault(DB_LOG_FINISHED_UPLOADS, 365);
@@ -1339,7 +1323,6 @@ void SettingsManager::setDefaults()
 	setDefault(SEARCH_HISTORY, 30);
 	setDefault(CLEAR_SEARCH, TRUE);	
 	setDefault(USE_SEARCH_GROUP_TREE_SETTINGS, TRUE);
-	setDefault(SEARCH_DETECT_TTH, TRUE);
 
 	// Users frame
 	setDefault(SHOW_IGNORED_USERS, -1);

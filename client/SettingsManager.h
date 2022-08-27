@@ -430,10 +430,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			ALLOW_UNTRUSTED_HUBS,
 			ALLOW_UNTRUSTED_CLIENTS,
 
-			// Torrents
-			USE_TORRENT_SEARCH,
-			USE_TORRENT_RSS,
-
 			// Database
 			DB_LOG_FINISHED_DOWNLOADS,
 			DB_LOG_FINISHED_UPLOADS,
@@ -561,7 +557,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			STEALTHY_STYLE_ICO, STEALTHY_STYLE_ICO_SPEEDIGNORE,
 			TOP_DL_SPEED,
 			TOP_UL_SPEED,
-			UL_COLOR_DEPENDS_ON_SLOTS,
 
 			// Popup settings (Ints)
 			POPUPS_DISABLED,
@@ -718,7 +713,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEARCH_HISTORY,
 			CLEAR_SEARCH,
 			USE_SEARCH_GROUP_TREE_SETTINGS,
-			SEARCH_DETECT_TTH, // Unused
 			ONLY_FREE_SLOTS,
 
 			// Users frame
