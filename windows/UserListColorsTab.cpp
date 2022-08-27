@@ -133,8 +133,12 @@ LRESULT UserListColorsTab::onChangeColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	CColorDialog d(colors[index], CC_FULLOPEN, m_hWnd);
 	if (d.DoModal() == IDOK)
 	{
-		colors[index] = d.GetColor();
-		refreshPreview();
+		if (colors[index] != d.GetColor())
+		{
+			colors[index] = d.GetColor();
+			if (callback) callback->settingChanged(settings[index]);
+			refreshPreview();
+		}
 	}
 	return 0;
 }
@@ -143,8 +147,13 @@ LRESULT UserListColorsTab::onSetDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 {
 	int index = ctrlList.GetCurSel();
 	if (index == -1) return 0;
-	colors[index] = static_cast<uint32_t>(g_settings->getDefault(settings[index]));
-	refreshPreview();
+	uint32_t color = static_cast<uint32_t>(g_settings->getDefault(settings[index]));
+	if (colors[index] != color)
+	{
+		colors[index] = color;
+		if (callback) callback->settingChanged(settings[index]);
+		refreshPreview();
+	}
 	return 0;
 }
 

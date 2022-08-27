@@ -2,7 +2,6 @@
 #include "ChatStylesTab.h"
 #include "Colors.h"
 #include "Fonts.h"
-#include "WinUtil.h"
 #include "DialogLayout.h"
 #include "wtl_flylinkdc.h"
 
@@ -443,6 +442,7 @@ void ChatStylesTab::updateTheme()
 	ctrlBoldMsgAuthors.SetCheck(boldMsgAuthor ? BST_CHECKED : BST_UNCHECKED);
 	currentFont = Fonts::encodeFont(mainFont);
 	showFont();
+	updateFont();
 	refreshPreview();
 }
 
