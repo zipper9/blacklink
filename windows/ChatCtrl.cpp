@@ -298,10 +298,10 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highl
 	GetSel(selBeginSaved, selEndSaved);
 	POINT cr = { 0 };
 	GetScrollPos(&cr);
-	
+
 	LONG selBegin = 0;
 	LONG selEnd = 0;
-	
+
 	// Insert extra info and format with default style
 	if (!message.extra.empty())
 	{
@@ -312,35 +312,43 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highl
 		pf.dxStartIndent = 0;
 		SetParaFormat(pf);
 	}
-	
+
 	tstring text = message.msg;
-	if (message.nick.empty())
+	if (!message.nick.empty())
 	{
-		// Local message
-	}
-	else if (message.thirdPerson)
-	{
-		const CHARFORMAT2& currentCF =
-		    message.myMessage ? Colors::g_ChatTextMyOwn :
-		    BOOLSETTING(BOLD_MSG_AUTHOR) ? Colors::g_TextStyleBold :
-		    message.cf;
-		insertAndFormat(_T("* "), message.cf, selBegin, selEnd);
-		insertAndFormat(message.nick, currentCF, selBegin, selEnd);
-		insertAndFormat(_T(" "), message.cf, selBegin, selEnd);
-	}
-	else
-	{
-		static const tstring g_open = _T("<");
-		static const tstring g_close = _T("> ");
 		const CHARFORMAT2& currentCF =
 		    message.myMessage ? Colors::g_TextStyleMyNick :
 		    message.isFavorite ? (message.isBanned ? Colors::g_TextStyleFavUsersBan : Colors::g_TextStyleFavUsers) :
-		    message.isOp ? Colors::g_TextStyleOPs :
-		    BOOLSETTING(BOLD_MSG_AUTHOR) ? Colors::g_TextStyleBold :
-		    message.cf;
-		insertAndFormat(g_open, message.cf, selBegin, selEnd);
-		insertAndFormat(message.nick, currentCF, selBegin, selEnd);
-		insertAndFormat(g_close, message.cf, selBegin, selEnd);
+		    message.isOp ? Colors::g_TextStyleOPs : Colors::g_TextStyleOtherUsers;
+		if (message.thirdPerson)
+		{
+			static const tstring strStar = _T("* ");
+			insertAndFormat(strStar, message.cf, selBegin, selEnd);
+			if (BOOLSETTING(BOLD_MSG_AUTHOR))
+			{
+				CHARFORMAT2 cf = currentCF;
+				cf.dwEffects |= CFE_BOLD;
+				insertAndFormat(message.nick, cf, selBegin, selEnd);
+			}
+			else
+				insertAndFormat(message.nick, currentCF, selBegin, selEnd);
+			insertAndFormat(_T(" "), message.cf, selBegin, selEnd);
+		}
+		else
+		{
+			static const tstring strOpen = _T("<");
+			static const tstring strClose = _T("> ");
+			insertAndFormat(strOpen, message.cf, selBegin, selEnd);
+			if (BOOLSETTING(BOLD_MSG_AUTHOR))
+			{
+				CHARFORMAT2 cf = currentCF;
+				cf.dwEffects |= CFE_BOLD;
+				insertAndFormat(message.nick, cf, selBegin, selEnd);
+			}
+			else
+				insertAndFormat(message.nick, currentCF, selBegin, selEnd);
+			insertAndFormat(strClose, message.cf, selBegin, selEnd);
+		}
 	}
 
 	appendTextInternal(text, message, maxSmiles, highlightNick);

@@ -23,10 +23,10 @@ struct Colors
 	static CHARFORMAT2 g_ChatTextMyOwn;
 	static CHARFORMAT2 g_ChatTextServer;
 	static CHARFORMAT2 g_ChatTextSystem;
-	static CHARFORMAT2 g_TextStyleBold;
 	static CHARFORMAT2 g_TextStyleFavUsers;
 	static CHARFORMAT2 g_TextStyleFavUsersBan;
 	static CHARFORMAT2 g_TextStyleOPs;
+	static CHARFORMAT2 g_TextStyleOtherUsers;
 	static CHARFORMAT2 g_TextStyleURL;
 	static CHARFORMAT2 g_ChatTextPrivate;
 	static CHARFORMAT2 g_ChatTextLog;

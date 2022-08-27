@@ -14,10 +14,10 @@ CHARFORMAT2 Colors::g_TextStyleMyNick;
 CHARFORMAT2 Colors::g_ChatTextMyOwn;
 CHARFORMAT2 Colors::g_ChatTextServer;
 CHARFORMAT2 Colors::g_ChatTextSystem;
-CHARFORMAT2 Colors::g_TextStyleBold;
 CHARFORMAT2 Colors::g_TextStyleFavUsers;
 CHARFORMAT2 Colors::g_TextStyleFavUsersBan;
 CHARFORMAT2 Colors::g_TextStyleOPs;
+CHARFORMAT2 Colors::g_TextStyleOtherUsers;
 CHARFORMAT2 Colors::g_TextStyleURL;
 CHARFORMAT2 Colors::g_ChatTextPrivate;
 CHARFORMAT2 Colors::g_ChatTextLog;
@@ -87,10 +87,7 @@ void Colors::init()
 	g_ChatTextOldHistory.crBackColor = SETTING(TEXT_GENERAL_BACK_COLOR);
 	g_ChatTextOldHistory.crTextColor = SETTING(TEXT_GENERAL_FORE_COLOR);
 	g_ChatTextOldHistory.yHeight = 5;
-	
-	g_TextStyleBold = g_ChatTextGeneral;
-	g_TextStyleBold.dwEffects = CFE_BOLD;
-	
+
 	g_TextStyleMyNick = cf;
 	g_TextStyleMyNick.crBackColor = SETTING(TEXT_MYNICK_BACK_COLOR);
 	g_TextStyleMyNick.crTextColor = SETTING(TEXT_MYNICK_FORE_COLOR);
@@ -158,6 +155,14 @@ void Colors::init()
 	if (SETTING(TEXT_OP_ITALIC))
 		g_TextStyleOPs.dwEffects |= CFE_ITALIC;
 		
+	g_TextStyleOtherUsers = cf;
+	g_TextStyleOtherUsers.crBackColor = SETTING(TEXT_NORMAL_BACK_COLOR);
+	g_TextStyleOtherUsers.crTextColor = SETTING(TEXT_NORMAL_FORE_COLOR);
+	if (SETTING(TEXT_NORMAL_BOLD))
+		g_TextStyleOtherUsers.dwEffects |= CFE_BOLD;
+	if (SETTING(TEXT_NORMAL_ITALIC))
+		g_TextStyleOtherUsers.dwEffects |= CFE_ITALIC;
+
 	g_TextStyleURL = cf;
 	g_TextStyleURL.dwMask = CFM_COLOR | CFM_BOLD | CFM_ITALIC | CFM_BACKCOLOR | CFM_LINK | CFM_UNDERLINE;
 	g_TextStyleURL.crBackColor = SETTING(TEXT_URL_BACK_COLOR);

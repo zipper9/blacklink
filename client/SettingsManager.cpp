@@ -516,6 +516,7 @@ static const char* settingTags[] =
 	"TextServerBackColor", "TextServerForeColor", "TextServerBold", "TextServerItalic",
 	"TextTimestampBackColor", "TextTimestampForeColor", "TextTimestampBold", "TextTimestampItalic",
 	"TextMyNickBackColor", "TextMyNickForeColor", "TextMyNickBold", "TextMyNickItalic",
+	"TextNormBackColor", "TextNormForeColor", "TextNormBold", "TextNormItalic",
 	"TextFavBackColor", "TextFavForeColor", "TextFavBold", "TextFavItalic",
 	"TextOPBackColor", "TextOPForeColor", "TextOPBold", "TextOPItalic",
 	"TextURLBackColor", "TextURLForeColor", "TextURLBold", "TextURLItalic",
@@ -1125,6 +1126,8 @@ void SettingsManager::setDefaults()
 	setDefault(TEXT_MYNICK_BACK_COLOR, RGB(240, 255, 240));
 	setDefault(TEXT_MYNICK_FORE_COLOR, RGB(0, 170, 0));
 	setDefault(TEXT_MYNICK_BOLD, TRUE);
+	setDefault(TEXT_NORMAL_BACK_COLOR, RGB(255, 255, 255));
+	setDefault(TEXT_NORMAL_FORE_COLOR, RGB(80, 80, 80));
 	setDefault(TEXT_FAV_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_FAV_FORE_COLOR, RGB(0, 128, 255));
 	setDefault(TEXT_FAV_BOLD, TRUE);

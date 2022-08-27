@@ -178,13 +178,17 @@ ChatStylesTab::ChatStylesTab()
 	    SettingsManager::TEXT_FAV_BACK_COLOR, SettingsManager::TEXT_FAV_FORE_COLOR,
 	    SettingsManager::TEXT_FAV_BOLD, SettingsManager::TEXT_FAV_ITALIC);
 
-	textStyles[TS_FAV_ENEMY].init(this, ResourceManager::FAV_ENEMY_USER,
+	textStyles[TS_BANNED].init(this, ResourceManager::FAV_ENEMY_USER,
 	    SettingsManager::TEXT_ENEMY_BACK_COLOR, SettingsManager::TEXT_ENEMY_FORE_COLOR,
 	    SettingsManager::TEXT_ENEMY_BOLD, SettingsManager::TEXT_ENEMY_ITALIC);
 
 	textStyles[TS_OP].init(this, ResourceManager::OPERATOR,
 	    SettingsManager::TEXT_OP_BACK_COLOR, SettingsManager::TEXT_OP_FORE_COLOR,
 	    SettingsManager::TEXT_OP_BOLD, SettingsManager::TEXT_OP_ITALIC);
+
+	textStyles[TS_OTHER].init(this, ResourceManager::OTHER_USER,
+	    SettingsManager::TEXT_NORMAL_BACK_COLOR, SettingsManager::TEXT_NORMAL_FORE_COLOR,
+	    SettingsManager::TEXT_NORMAL_BOLD, SettingsManager::TEXT_NORMAL_ITALIC);
 
 	preview.disableChatCache();
 }

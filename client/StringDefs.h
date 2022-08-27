@@ -1395,6 +1395,7 @@ enum Strings   // @DontAdd
 	MY_MESSAGE, // "My message"
 	MY_NICK, // "My nick"
 	OPERATOR, // "Operator"
+	OTHER_USER, // "Other user"
 	SERVER_MESSAGE, // "Server message"
 	SYSTEM_MESSAGE, // "System message"
 	TIMESTAMP, // "Timestamp"
