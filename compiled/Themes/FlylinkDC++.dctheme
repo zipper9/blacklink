@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <DCPlusPlus>
 	<Settings>
-		<Font type="string">Arial,-12,400,0</Font>
+		<TextFont type="string">Arial,-12,400,0</TextFont>
 		<BackgroundColor type="int">16777215</BackgroundColor>
 		<TextColor type="int">10117699</TextColor>
 		<DownloadBarColor type="int">16744448</DownloadBarColor>
@@ -42,7 +42,11 @@
 		<TextURLForeColor type="int">13395456</TextURLForeColor>
 		<TextURLBold type="int">0</TextURLBold>
 		<TextURLItalic type="int">0</TextURLItalic>
-		<BoldAuthorsMess type="int">1</BoldAuthorsMess>
+		<TextEnemyBackColor type="int">16053492</TextEnemyBackColor>
+		<TextEnemyForeColor type="int">7972351</TextEnemyForeColor>
+		<TextEnemyBold type="int">0</TextEnemyBold>
+		<TextEnemyItalic type="int">0</TextEnemyItalic>
+		<BoldMsgAuthor type="int">1</BoldMsgAuthor>
 		<ProgressTextDown type="int">13056</ProgressTextDown>
 		<ProgressTextUp type="int">3211362</ProgressTextUp>
 		<ErrorColor type="int">255</ErrorColor>
@@ -57,6 +61,10 @@
 		<TextOPForeColor type="int">32512</TextOPForeColor>
 		<TextOPBold type="int">1</TextOPBold>
 		<TextOPItalic type="int">0</TextOPItalic>
+		<TextNormBackColor type="int">16777215</TextNormBackColor>
+		<TextNormForeColor type="int">10117699</TextNormForeColor>
+		<TextNormBold type="int">0</TextNormBold>
+		<TextNormItalic type="int">0</TextNormItalic>
 		<SearchAlternateColour type="int">0</SearchAlternateColour>
 		<ProgressBackColor type="int">6250335</ProgressBackColor>
 		<ProgressCompressColor type="int">41182</ProgressCompressColor>
@@ -68,14 +76,15 @@
 		<ReservedSlotColor type="int">8388863</ReservedSlotColor>
 		<IgnoredColor type="int">12632256</IgnoredColor>
 		<FavoriteColor type="int">10117699</FavoriteColor>
-		<NormalColour type="int">10117699</NormalColour>
-		<FireballColor type="int">255</FireballColor>
+		<FavBannedColor type="int">7972351</FavBannedColor>
+		<NormalColor type="int">10117699</NormalColor>
+		<FireballColor type="int">0</FireballColor>
 		<ServerColor type="int">16744576</ServerColor>
-		<PasiveColor type="int">10117699</PasiveColor>
+		<PassiveColor type="int">10117699</PassiveColor>
 		<OpColor type="int">4227072</OpColor>
-		<FileListAndClientCheckedColour type="int">40960</FileListAndClientCheckedColour>
-		<BadClientColour type="int">204</BadClientColour>
-		<BadFilelistColour type="int">13369548</BadFilelistColour>
+		<CheckedColor type="int">40960</CheckedColor>
+		<BadClientColor type="int">204</BadClientColor>
+		<BadFileListColor type="int">13369548</BadFileListColor>
 		<ProgressbaroDCStyle type="int">1</ProgressbaroDCStyle>
 		<UseCustomListBackground type="int">1</UseCustomListBackground>
 		<TabSelectedColor type="int">16758122</TabSelectedColor>
@@ -85,9 +94,6 @@
 		<TabOfflineTextColor type="int">16543</TabOfflineTextColor>
 		<TabActivityTextColor type="int">32768</TabActivityTextColor>
 		<BanColor type="int">11770484</BanColor>
-		<DupeColor type="int">15136627</DupeColor>
-		<DupeEx1Color type="int">15136627</DupeEx1Color>
-		<DupeEx2Color type="int">15136627</DupeEx2Color>
 		<PopupMaxMsgLen type="int">120</PopupMaxMsgLen>
 		<PopupFoneImage type="int">0</PopupFoneImage>
 		<PopupFoneImageFile type="string"/>
