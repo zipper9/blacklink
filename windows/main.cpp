@@ -17,10 +17,7 @@
  */
 
 #include "stdafx.h"
-#include <delayimp.h>
-#include <atlgdiraii.h>
-
-#include "Resource.h"
+#include "resource.h"
 #include "MainFrm.h"
 #include "ResourceLoader.h"
 #include "PopupManager.h"

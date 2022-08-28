@@ -18,8 +18,6 @@
 
 #include "stdafx.h"
 
-#include <atlgdiraii.h>
-
 #ifdef FLYLINKDC_USE_STATS_FRAME
 
 #include "StatsFrame.h"

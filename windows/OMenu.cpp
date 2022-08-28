@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include <atlgdiraii.h>
 #include "OMenu.h"
 #include "WinUtil.h"
 #include "ColorUtil.h"
@@ -583,10 +582,9 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					}
 					SetBkMode(dis->hDC, TRANSPARENT);
 					SetTextColor(dis->hDC, ColorUtil::textFromBackground(SETTING(MENUBAR_LEFT_COLOR)));
-					{
-						CSelectFont selectFont(dis->hDC, parent->fontBold);
-						DrawText(dis->hDC, omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
-					}
+					HGDIOBJ prevFont = SelectObject(dis->hDC, parent->fontBold);
+					DrawText(dis->hDC, omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
+					SelectObject(dis->hDC, prevFont);
 				}
 				else
 				if (parent->hTheme)
