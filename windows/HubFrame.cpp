@@ -664,43 +664,46 @@ void HubFrame::createTabMenu()
 {
 	bool isFav = false;
 	bool isAutoConnect = false;
-	auto fm = FavoriteManager::getInstance();
-	const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(serverUrl);
-	if (fhe)
-	{
-		isFav = true;
-		isAutoConnect = fhe->getAutoConnect();
-	}
-	fm->releaseFavoriteHubEntryPtr(fhe);
 
 	if (tabMenu)
 		tabMenu.ClearMenu();
 	else
 		tabMenu.CreatePopupMenu();
-	if (BOOLSETTING(LOG_MAIN_CHAT))
+	if (!isDHT)
 	{
-		tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
+		auto fm = FavoriteManager::getInstance();
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(serverUrl);
+		if (fhe)
+		{
+			isFav = true;
+			isAutoConnect = fhe->getAutoConnect();
+		}
+		fm->releaseFavoriteHubEntryPtr(fhe);
+		if (BOOLSETTING(LOG_MAIN_CHAT))
+		{
+			tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
+			tabMenu.AppendMenu(MF_SEPARATOR);
+		}
+		if (isFav)
+		{
+			tabMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
+			if (isAutoConnect)
+				tabMenu.AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
+			else
+				tabMenu.AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
+			tabMenu.AppendMenu(MF_STRING, IDC_EDIT_HUB_PROP, CTSTRING(PROPERTIES));
+		}
+		else
+		{
+			tabMenu.AppendMenu(MF_STRING, IDC_ADD_AS_FAVORITE, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE, 0));
+		}
+		tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT, CTSTRING(MENU_RECONNECT), g_iconBitmaps.getBitmap(IconBitmaps::RECONNECT, 0));
+		if (isConnected())
+			tabMenu.AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
+		WinUtil::g_copyHubMenu.EnableMenuItem(IDC_COPY_IP, client ? MFS_ENABLED : MFS_GRAYED);
+		tabMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
 		tabMenu.AppendMenu(MF_SEPARATOR);
 	}
-	if (isFav)
-	{
-		tabMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
-		if (isAutoConnect)
-			tabMenu.AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
-		else
-			tabMenu.AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
-		tabMenu.AppendMenu(MF_STRING, IDC_EDIT_HUB_PROP, CTSTRING(PROPERTIES));
-	}
-	else
-	{
-		tabMenu.AppendMenu(MF_STRING, IDC_ADD_AS_FAVORITE, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE, 0));
-	}
-	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT, CTSTRING(MENU_RECONNECT), g_iconBitmaps.getBitmap(IconBitmaps::RECONNECT, 0));
-	if (isConnected())
-		tabMenu.AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
-	WinUtil::g_copyHubMenu.EnableMenuItem(IDC_COPY_IP, client ? MFS_ENABLED : MFS_GRAYED);
-	tabMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
-	tabMenu.AppendMenu(MF_SEPARATOR);
 	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED), g_iconBitmaps.getBitmap(IconBitmaps::RESTORE_CONN, 0));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_DISCONNECTED, CTSTRING(MENU_CLOSE_DISCONNECTED));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
@@ -1726,8 +1729,13 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 LRESULT HubFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::HUB_ONLINE, 0);
-	opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::HUB_OFFLINE, 0);
+	if (isDHT)
+		opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::DHT, 0);
+	else
+	{
+		opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::HUB_ONLINE, 0);
+		opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::HUB_OFFLINE, 0);
+	}
 	opt->isHub = true;
 	return TRUE;
 }
