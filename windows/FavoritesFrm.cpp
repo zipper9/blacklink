@@ -734,14 +734,15 @@ LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 
 void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
-	if (isClosedOrShutdown())
-		return;
+	WINDOWPLACEMENT wp = { sizeof(wp) };
+	GetWindowPlacement(&wp);
+
 	RECT rect;
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 
-	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);

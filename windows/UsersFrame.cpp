@@ -235,7 +235,9 @@ LRESULT UsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 void UsersFrame::updateLayout()
 {
-	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	WINDOWPLACEMENT wp = { sizeof(wp) };
+	GetWindowPlacement(&wp);
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!barHeight)
 	{
 		int xdu, ydu;

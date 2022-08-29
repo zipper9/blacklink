@@ -276,7 +276,9 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 
 void StatsFrame::updateLayout()
 {
-	int splitBarHeight = BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	WINDOWPLACEMENT wp = { sizeof(wp) };
+	GetWindowPlacement(&wp);
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!checkBoxYOffset)
 	{
 		int xdu, ydu;
