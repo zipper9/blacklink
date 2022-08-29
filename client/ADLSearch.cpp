@@ -455,6 +455,8 @@ void ADLSearchManager::SearchContext::match() noexcept
 {
 	using Directory = DirectoryListing::Directory;
 	using File = DirectoryListing::File;
+
+	if (!dl) return;
 	vector<int> tmp;
 	const Directory* current = dl->getRoot();
 
@@ -613,6 +615,7 @@ bool ADLSearchManager::SearchContext::matchDirectory(const DirectoryListing::Dir
 
 void ADLSearchManager::SearchContext::insertResults() noexcept
 {
+	if (!dl) return;
 	DirectoryListing::Directory* root = dl->getRoot();
 	for (auto& dd : destDir)
 	{
