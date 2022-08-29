@@ -82,6 +82,7 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlShutdownAction.AddString(CTSTRING(REBOOT));
 	ctrlShutdownAction.AddString(CTSTRING(SUSPEND));
 	ctrlShutdownAction.AddString(CTSTRING(HIBERNATE));
+	ctrlShutdownAction.AddString(CTSTRING(LOCK_COMPUTER));
 	
 	ctrlShutdownAction.SetCurSel(SETTING(SHUTDOWN_ACTION));
 	fixControls();

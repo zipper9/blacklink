@@ -1315,8 +1315,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					ctrlStatus.SetText(i + 1, statusText[i].c_str());
 				}
 			}
-			
-			if (isShutDown())
+
+			if (shutdownEnabled)
 			{
 				const uint64_t second = GET_TICK() / 1000;
 				if (!shutdownStatusDisplayed)
@@ -1339,17 +1339,20 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					{
 						// We better not try again. It WON'T work...
 						shutdownEnabled = false;
-						
-						bool shutdownResult = WinUtil::shutDown(SETTING(SHUTDOWN_ACTION));
+
+						int action = SETTING(SHUTDOWN_ACTION);
+						bool shutdownResult = WinUtil::shutDown(action);
 						if (shutdownResult)
 						{
-							// Should we go faster here and force termination?
-							// We "could" do a manual shutdown of this app...
+							if (action == 5)
+								ctrlToolbar.CheckButton(IDC_SHUTDOWN, FALSE);
 						}
 						else
 						{
-							ctrlStatus.SetText(STATUS_PART_MESSAGE, CTSTRING(FAILED_TO_SHUTDOWN));
+							ctrlToolbar.CheckButton(IDC_SHUTDOWN, FALSE);
+							addStatusMessage(TSTRING(FAILED_TO_SHUTDOWN));
 							ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
+							ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);
 						}
 					}
 				}
@@ -1359,7 +1362,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				if (shutdownStatusDisplayed)
 				{
 					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
-					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, NULL);
+					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);
 					shutdownStatusDisplayed = false;
 				}
 			}
@@ -1373,15 +1376,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		LogManager::g_isLogSpeakerEnabled = true;
 		char* msg = reinterpret_cast<char*>(lParam);
 		if (!ClientManager::isShutdown() && !closing && ctrlStatus.IsWindow())
-		{
-			string msgStr = Util::formatDateTime("[%H:%M:%S] ", GET_TIME());
-			msgStr.append(msg);
-			tstring line = Text::toT(msgStr);
-			tstring::size_type rpos = line.find(_T('\r'));
-			if (rpos != tstring::npos) line.erase(rpos);
-			ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
-			statusHistory.addLine(line);
-		}
+			addStatusMessage(Text::toT(msg));
 		delete[] msg;
 	}
 	else if (wParam == DOWNLOAD_LISTING)
@@ -1507,6 +1502,16 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		dcassert(0);
 	}
 	return 0;
+}
+
+void MainFrame::addStatusMessage(const tstring& msg)
+{
+	tstring line = Text::toT(Util::formatDateTime("[%H:%M:%S] ", GET_TIME()));
+	line += msg;
+	tstring::size_type rpos = line.find(_T('\r'));
+	if (rpos != tstring::npos) line.erase(rpos);
+	ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
+	statusHistory.addLine(line);
 }
 
 void MainFrame::processCommandLine(const ParsedCommandLine& cmd)

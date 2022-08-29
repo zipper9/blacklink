@@ -569,6 +569,7 @@ enum Strings   // @DontAdd
 	LOCALE, // "Locale"
 	LOCATION_BARE, // "Location"
 	LOCK, // "Lock"
+	LOCK_COMPUTER, // "Lock the computer"
 	LOCK_TOOLBARS, // "Lock toolbars"
 	LOGGING_NOT_ENABLED_SYSTEM, // "System logging not enabled."
 	LOGGING_NOT_ENABLED_WEBSERVER, // "WebServer logging not enabled."

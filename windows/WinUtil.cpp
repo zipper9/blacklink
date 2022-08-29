@@ -1328,16 +1328,16 @@ bool WinUtil::shutDown(int action)
 		}
 		case 5:
 		{
-			typedef bool (CALLBACK * LPLockWorkStation)(void);
-			LPLockWorkStation _d_LockWorkStation = (LPLockWorkStation)GetProcAddress(LoadLibrary(_T("user32")), "LockWorkStation");
-			if (_d_LockWorkStation)
+			typedef BOOL (CALLBACK *fnLockWorkStation)();
+			HMODULE hModule = GetModuleHandle(_T("user32"));
+			if (hModule)
 			{
-				_d_LockWorkStation();
+				fnLockWorkStation ptrLockWorkStation = (fnLockWorkStation) GetProcAddress(hModule, "LockWorkStation");
+				if (ptrLockWorkStation) return ptrLockWorkStation();
 			}
-			return true;
+			return false;
 		}
 	}
-	
 	return ExitWindowsEx(action | forceIfHung, 0) != 0;
 }
 

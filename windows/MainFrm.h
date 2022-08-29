@@ -624,6 +624,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		int tuneTransferSplit();
 		void setAway(bool flag);
 		void setSpeedLimit(bool upload, int minValue, int maxValue);
+		void addStatusMessage(const tstring& msg);
 
 		void setTrayIcon(int newIcon);
 		void clearPMStatus();

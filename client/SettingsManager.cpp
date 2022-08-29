@@ -1943,6 +1943,16 @@ bool SettingsManager::set(IntSetting key, int value)
 			VERIFY(0, 30);
 			break;
 		}
+		case SHUTDOWN_ACTION:
+		{
+			VERIFY(0, 5);
+			break;
+		}
+		case SHUTDOWN_TIMEOUT:
+		{
+			VERIFY(1, 3600);
+			break;
+		}
 
 #undef VER_MIN
 #undef VER_MAX
