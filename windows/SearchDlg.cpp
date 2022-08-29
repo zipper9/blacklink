@@ -137,7 +137,7 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		int fileType = ctrlFileType.GetCurSel();
 		if (fileType == FILE_TYPE_TTH && !isTTH(text))
 		{
-			MessageBox(CTSTRING(INVALID_TTH), CTSTRING(SEARCH), MB_OK | MB_ICONWARNING);
+			WinUtil::showInputError(ctrlText, TSTRING(INVALID_TTH));
 			return 0;
 		}
 

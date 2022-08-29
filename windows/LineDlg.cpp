@@ -107,11 +107,7 @@ LRESULT LineDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 			if (!validator(*this, errorMsg))
 			{
 				if (errorMsg.empty()) errorMsg = TSTRING(INVALID_INPUT);
-				EDITBALLOONTIP ebt;
-				memset(&ebt, 0, sizeof(ebt));
-				ebt.cbStruct = sizeof(ebt);
-				ebt.pszText = errorMsg.c_str();
-				ctrlLine.ShowBalloonTip(&ebt);
+				WinUtil::showInputError(ctrlLine, errorMsg);
 				return 0;
 			}
 		}

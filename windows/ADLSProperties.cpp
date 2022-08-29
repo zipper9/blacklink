@@ -17,104 +17,180 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
 #include "ADLSProperties.h"
-#include "../client/ADLSearch.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
+#include "../client/ADLSearch.h"
 
-// Initialize dialog
-LRESULT ADLSProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+template<typename C>
+bool isTTH(const std::basic_string<C>& s)
 {
-	// Translate the texts
+	if (s.length() != 39) return false;
+	return Encoder::isBase32<C>(s.c_str());
+}
+
+static const DialogLayout::Align align1 = { 13, DialogLayout::SIDE_RIGHT, U_DU(6) };
+static const DialogLayout::Align align2 = { 10, DialogLayout::SIDE_RIGHT, 0 };
+
+static const DialogLayout::Item layoutItems[] =
+{
+	{ IDC_IS_ACTIVE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_SEARCH_STRING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_MATCH_CASE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_REGEXP, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_FILE_TYPE, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_MIN_FILE_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_MAX_FILE_SIZE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_CAPTION_SIZE_TYPE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_ADLSP_DESTINATION, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_DEST_DIR, 0, UNSPEC, UNSPEC },
+	{ IDC_AUTOQUEUE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_IS_FORBIDDEN, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_ADLSEARCH_ACTION, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_ADLSEARCH_RAW_ACTION, 0, UNSPEC, UNSPEC, 0, &align1, &align2 },
+	{ IDOK, FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDCANCEL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
+};
+
+LRESULT ADLSProperties::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
 	SetWindowText(CTSTRING(ADLS_PROPERTIES));
-	SetDlgItemText(IDC_ADLSP_SEARCH, CTSTRING(SEARCH_STRING));
-	SetDlgItemText(IDC_ADLSP_TYPE, CTSTRING(ADLS_TYPE));
-	SetDlgItemText(IDC_ADLSP_SIZE_MIN, CTSTRING(MIN_FILE_SIZE));
-	SetDlgItemText(IDC_ADLSP_SIZE_MAX, CTSTRING(MAX_FILE_SIZE));
-	SetDlgItemText(IDC_ADLSP_UNITS, CTSTRING(SIZE_TYPE));
-	SetDlgItemText(IDC_ADLSP_DESTINATION, CTSTRING(ADLS_DESTINATION));
-	SetDlgItemText(IDC_IS_ACTIVE, CTSTRING(ADLS_ENABLED));
-	SetDlgItemText(IDC_AUTOQUEUE, CTSTRING(ADLS_DOWNLOAD));
-	SetDlgItemText(IDC_IS_FORBIDDEN, CTSTRING(FORBIDDEN));
-	SetDlgItemText(IDC_ADLSEARCH_ACTION, CTSTRING(USER_CMD_RAW));
-	
-	cRaw.Attach(GetDlgItem(IDC_ADLSEARCH_RAW_ACTION));
-	cRaw.AddString(CTSTRING(NO_ACTION));
-	cRaw.AddString(Text::toT(SETTING(RAW1_TEXT)).c_str());
-	cRaw.AddString(Text::toT(SETTING(RAW2_TEXT)).c_str());
-	cRaw.AddString(Text::toT(SETTING(RAW3_TEXT)).c_str());
-	cRaw.AddString(Text::toT(SETTING(RAW4_TEXT)).c_str());
-	cRaw.AddString(Text::toT(SETTING(RAW5_TEXT)).c_str());
-	cRaw.SetCurSel(search->raw);
-	
-	// Initialize dialog items
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::ADL_SEARCH, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
+	ctrlRaw.Attach(GetDlgItem(IDC_ADLSEARCH_RAW_ACTION));
+	ctrlRaw.AddString(CTSTRING(NO_ACTION));
+	for (int i = SettingsManager::RAW1_TEXT; i <= SettingsManager::RAW5_TEXT; i++)
+		ctrlRaw.AddString(Text::toT(SettingsManager::get((SettingsManager::StrSetting) i)).c_str());
+	ctrlRaw.SetCurSel(search->raw);
+
 	ctrlSearch.Attach(GetDlgItem(IDC_SEARCH_STRING));
 	ctrlDestDir.Attach(GetDlgItem(IDC_DEST_DIR));
 	ctrlMinSize.Attach(GetDlgItem(IDC_MIN_FILE_SIZE));
 	ctrlMaxSize.Attach(GetDlgItem(IDC_MAX_FILE_SIZE));
 	ctrlActive.Attach(GetDlgItem(IDC_IS_ACTIVE));
 	ctrlAutoQueue.Attach(GetDlgItem(IDC_AUTOQUEUE));
-	
-	ctrlSearchType.Attach(GetDlgItem(IDC_SOURCE_TYPE));
-	ctrlSearchType.AddString(CTSTRING(FILENAME));
-	ctrlSearchType.AddString(CTSTRING(DIRECTORY));
+	ctrlFlagFile.Attach(GetDlgItem(IDC_IS_FORBIDDEN));
+	ctrlMatchCase.Attach(GetDlgItem(IDC_MATCH_CASE));
+	ctrlRegEx.Attach(GetDlgItem(IDC_REGEXP));
+
+	ctrlSearchType.Attach(GetDlgItem(IDC_FILE_TYPE));
+	ctrlSearchType.AddString(CTSTRING(ADLS_FILE_NAME));
+	ctrlSearchType.AddString(CTSTRING(ADLS_DIRECTORY_NAME));
 	ctrlSearchType.AddString(CTSTRING(ADLS_FULL_PATH));
-	
+	ctrlSearchType.AddString(CTSTRING(TTH));
+
 	ctrlSizeType.Attach(GetDlgItem(IDC_SIZE_TYPE));
 	ctrlSizeType.AddString(CTSTRING(B));
 	ctrlSizeType.AddString(CTSTRING(KB));
 	ctrlSizeType.AddString(CTSTRING(MB));
 	ctrlSizeType.AddString(CTSTRING(GB));
-	
-	// Load search data
+
 	ctrlSearch.SetWindowText(Text::toT(search->searchString).c_str());
 	ctrlDestDir.SetWindowText(Text::toT(search->destDir).c_str());
-	ctrlMinSize.SetWindowText(search->minFileSize > 0 ? Util::toStringW(search->minFileSize).c_str() : _T(""));
-	ctrlMaxSize.SetWindowText(search->maxFileSize > 0 ? Util::toStringW(search->maxFileSize).c_str() : _T(""));
-	ctrlActive.SetCheck(search->isActive ? 1 : 0);
-	ctrlAutoQueue.SetCheck(search->isAutoQueue ? 1 : 0);
+	if (search->minFileSize >= 0)
+		ctrlMinSize.SetWindowText(Util::toStringT(search->minFileSize).c_str());
+	if (search->maxFileSize >= 0)
+		ctrlMaxSize.SetWindowText(Util::toStringT(search->maxFileSize).c_str());
+	ctrlActive.SetCheck(search->isActive ? BST_CHECKED : BST_UNCHECKED);
 	ctrlSearchType.SetCurSel(search->sourceType);
 	ctrlSizeType.SetCurSel(search->typeFileSize);
-	::SendMessage(GetDlgItem(IDC_IS_FORBIDDEN), BM_SETCHECK, search->isForbidden ? 1 : 0, 0L);
-	
-	// Center dialog
+	ctrlMatchCase.SetCheck(search->isCaseSensitive ? BST_CHECKED : BST_UNCHECKED);
+	ctrlRegEx.SetCheck(search->isRegEx ? BST_CHECKED : BST_UNCHECKED);
+	ctrlAutoQueue.SetCheck(search->isAutoQueue ? BST_CHECKED : BST_UNCHECKED);
+	ctrlFlagFile.SetCheck(search->isForbidden ? BST_CHECKED : BST_UNCHECKED);
+	GetDlgItem(IDOK).EnableWindow(!search->searchString.empty());
+
+	ctrlSearch.SetFocus();
 	CenterWindow(GetParent());
-	
-	return FALSE;
+
+	return 0;
 }
 
-// Exit dialog
-LRESULT ADLSProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT ADLSProperties::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
-		// Update search
+		ADLSearch::SourceType sourceType = (ADLSearch::SourceType) ctrlSearchType.GetCurSel();
+		bool isRegEx = ctrlRegEx.GetCheck() == BST_CHECKED;
+		bool isCaseSensitive = ctrlMatchCase.GetCheck() == BST_CHECKED;
 		tstring buf;
-		
+
 		WinUtil::getWindowText(ctrlSearch, buf);
-		search->searchString = Text::fromT(buf);
+		if (sourceType == ADLSearch::TTH)
+		{
+			if (!isTTH(buf))
+			{
+				WinUtil::showInputError(ctrlSearch, TSTRING(INVALID_TTH));
+				return 0;
+			}
+			isRegEx = false;
+			isCaseSensitive = false;
+		}
+
+		string searchString = Text::fromT(buf);
+		if (isRegEx)
+		{
+			try
+			{
+				std::regex(searchString, isCaseSensitive ? std::regex::flag_type() : std::regex_constants::icase);
+			}
+			catch (...)
+			{
+				WinUtil::showInputError(ctrlSearch, TSTRING(INVALID_REG_EXP));
+				return 0;
+			}
+		}
+
 		WinUtil::getWindowText(ctrlDestDir, buf);
 		search->destDir = Text::fromT(buf);
-		
+
 		WinUtil::getWindowText(ctrlMinSize, buf);
-		search->minFileSize = (buf.empty() ? -1 : Util::toInt64(buf));
+		search->minFileSize = buf.empty() ? -1 : Util::toInt64(buf);
 		WinUtil::getWindowText(ctrlMaxSize, buf);
-		search->maxFileSize = (buf.empty() ? -1 : Util::toInt64(buf));
-		
-		search->isActive = (ctrlActive.GetCheck() == 1);
-		search->isAutoQueue = (ctrlAutoQueue.GetCheck() == 1);
-		
-		search->sourceType = (ADLSearch::SourceType)ctrlSearchType.GetCurSel();
-		search->typeFileSize = (ADLSearch::SizeType)ctrlSizeType.GetCurSel();
-		search->isForbidden = (::SendMessage(GetDlgItem(IDC_IS_FORBIDDEN), BM_GETCHECK, 0, 0L) != 0);
-		if (search->isForbidden)
-		{
-			search->destDir = "Forbidden Files";
-		}
-		search->raw = cRaw.GetCurSel();
+		search->maxFileSize = buf.empty() ? -1 : Util::toInt64(buf);
+
+		search->isActive = ctrlActive.GetCheck() == BST_CHECKED;
+		search->isCaseSensitive = isCaseSensitive;
+		search->isRegEx = isRegEx;
+		search->isAutoQueue = ctrlAutoQueue.GetCheck() == BST_CHECKED;
+		search->isForbidden = ctrlFlagFile.GetCheck() == BST_CHECKED;
+
+		search->sourceType = sourceType;
+		search->typeFileSize = (ADLSearch::SizeType) ctrlSizeType.GetCurSel();
+		search->raw = ctrlRaw.GetCurSel();
+		search->searchString = std::move(searchString);
 	}
-	
 	EndDialog(wID);
+	return 0;
+}
+
+void ADLSProperties::checkTTH(const tstring& str)
+{
+	if (isTTH(str))
+	{
+		ctrlSearchType.SetCurSel(ADLSearch::TTH);
+		autoSwitchToTTH = true;
+	}
+	else if (autoSwitchToTTH)
+	{
+		ctrlSearchType.SetCurSel(ADLSearch::OnlyFile);
+		autoSwitchToTTH = false;
+	}
+}
+
+LRESULT ADLSProperties::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	tstring str;
+	WinUtil::getWindowText(ctrlSearch, str);
+	checkTTH(str);
+	GetDlgItem(IDOK).EnableWindow(!str.empty());
 	return 0;
 }

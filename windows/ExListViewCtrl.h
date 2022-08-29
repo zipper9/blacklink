@@ -113,16 +113,6 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 			return InsertItem(LVIF_PARAM | LVIF_TEXT | LVIF_IMAGE, nItem, aString.c_str(), 0, 0, iImage, lParam);
 		}
 		
-		int getItemImage(int aItem) const
-		{
-			LVITEM lvi = {0};
-			lvi.iItem = aItem;
-			lvi.iSubItem = 0;
-			lvi.mask = LVIF_IMAGE;
-			GetItem(&lvi);
-			return lvi.iImage;
-		}
-		
 		int find(LPARAM lParam, int aStart = -1) const
 		{
 			LV_FINDINFO fi;

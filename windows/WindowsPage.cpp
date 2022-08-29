@@ -43,6 +43,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::OPEN_DHT, ResourceManager::DHT_TITLE },
 	{ SettingsManager::OPEN_NETWORK_STATISTICS, ResourceManager::NETWORK_STATISTICS },
 	{ SettingsManager::OPEN_NOTEPAD, ResourceManager::NOTEPAD },
+	{ SettingsManager::OPEN_ADLSEARCH, ResourceManager::ADL_SEARCH },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 	{ SettingsManager::OPEN_CDMDEBUG, ResourceManager::MENU_CDMDEBUG_MESSAGES },
 #endif

@@ -158,7 +158,6 @@ class SimpleXML
 		{
 			checkChildSelected();
 			const string& tmp = getChildAttrib(aName);
-			dcassert(tmp == "1" || tmp == "0" || tmp.empty());
 			return !tmp.empty() && tmp[0] == '1';
 		}
 		

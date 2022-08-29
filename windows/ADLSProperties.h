@@ -16,60 +16,55 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(ADLS_PROPERTIES_H)
-#define ADLS_PROPERTIES_H
+#ifndef ADLS_PROPERTIES_H_
+#define ADLS_PROPERTIES_H_
 
-#pragma once
-
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atldlgs.h>
+#include <atlctrls.h>
+#include <atlcrack.h>
+#include "resource.h"
+#include "../client/typedefs.h"
 
 class ADLSearch;
 
-///////////////////////////////////////////////////////////////////////////////
-//
-//  Dialog for new/edit ADL searches
-//
-///////////////////////////////////////////////////////////////////////////////
 class ADLSProperties : public CDialogImpl<ADLSProperties>
 {
 	public:
-	
-		// Constructor/destructor
-		explicit ADLSProperties(ADLSearch *_search) : search(_search) { }
-		~ADLSProperties() { }
-		
-		// Dilaog unique id
+		explicit ADLSProperties(ADLSearch* search) : search(search), autoSwitchToTTH(false) {}
+
 		enum { IDD = IDD_ADLS_PROPERTIES };
-		
-		// Inline message map
+
 		BEGIN_MSG_MAP(ADLSProperties)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_HANDLER(IDC_SEARCH_STRING, EN_CHANGE, onEditChange)
 		END_MSG_MAP()
-		
-		// Message handlers
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
 	private:
-	
-		// Current search
 		ADLSearch* search;
-		
+		bool autoSwitchToTTH;
+
 		CEdit ctrlSearch;
 		CEdit ctrlDestDir;
 		CEdit ctrlMinSize;
 		CEdit ctrlMaxSize;
 		CButton ctrlActive;
+		CButton ctrlMatchCase;
+		CButton ctrlRegEx;
 		CButton ctrlAutoQueue;
+		CButton ctrlFlagFile;
 		CComboBox ctrlSearchType;
 		CComboBox ctrlSizeType;
-		CComboBox cRaw;
+		CComboBox ctrlRaw;
+
+		void checkTTH(const tstring& str);
 };
 
-#endif // !defined(ADLS_PROPERTIES_H)
-
-/**
- * @file
- * $Id: ADLSProperties.h,v 1.11 2006/07/04 11:05:18 bigmuscle Exp $
- */
+#endif // ADLS_PROPERTIES_H_

@@ -77,7 +77,7 @@ DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag, bool createRoot,
 	abortFlag(abortFlag),
 	includeSelf(false), incomplete(false), aborted(false)
 {
-	root = createRoot ? new Directory(nullptr, Util::emptyString, false, true) : nullptr;
+	root = createRoot ? new Directory(nullptr, Util::emptyString, true) : nullptr;
 	tthSet = createRoot ? nullptr : new TTHMap;
 	ownList = src ? src->ownList : false;
 	hasTimestampsFlag = src ? src->hasTimestampsFlag : false;
@@ -448,9 +448,9 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				DirectoryListing::Directory* d;
 
 				if (fileName.empty())
-					d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), false, !incomp);
+					d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), !incomp);
 				else
-					d = new DirectoryListing::Directory(current, fileName, false, !incomp);
+					d = new DirectoryListing::Directory(current, fileName, !incomp);
 				if (!valDate.empty())
 				{
 					int64_t val = Util::toInt64(valDate);
@@ -828,10 +828,7 @@ void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
 	{
 		const DirectoryListing::Directory *dir = *i;
 		if (dir->getAdls()) continue;
-		flags |= dir->getFlags() &
-			(DirectoryListing::FLAG_HAS_SHARED | DirectoryListing::FLAG_HAS_DOWNLOADED |
-			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER |
-			DirectoryListing::FLAG_HAS_QUEUED);
+		flags |= dir->getFlags() & DirectoryListing::DIR_STATUS_FLAGS;
 		totalFileCount += dir->totalFileCount;
 		totalDirCount += dir->totalDirCount;
 		totalSize += dir->totalSize;
@@ -899,11 +896,7 @@ bool DirectoryListing::Directory::updateFlags()
 	for (auto i = directories.cbegin(); i != directories.cend(); i++)
 	{
 		const DirectoryListing::Directory *dir = *i;
-		if (dir->getAdls()) continue;
-		flags |= dir->getFlags() &
-			(DirectoryListing::FLAG_HAS_SHARED | DirectoryListing::FLAG_HAS_DOWNLOADED |
-			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER |
-			DirectoryListing::FLAG_HAS_QUEUED);
+		flags |= dir->getFlags() & DirectoryListing::DIR_STATUS_FLAGS;
 	}
 	if (getFlags() == flags) return false;
 	setFlags(flags);
@@ -1041,7 +1034,7 @@ bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr)
 	bool initFirstItem = true;
 	while (sl.getNextNonEmptyToken(token))
 	{
-		Directory* newDir = new Directory(dir, token, false, false);
+		Directory* newDir = new Directory(dir, token, false);
 		if (initFirstItem)
 		{
 			sr.parentUserData = dir->getUserData();
@@ -1138,8 +1131,8 @@ void DirectoryListing::SearchContext::createCopiedPath(const Directory *dir, vec
 		Directory *parent = copiedPath[j-1].copy;
 		const Directory *src = srcPath[i];
 		copiedPath[j].src = src;
-		copiedPath[j].copy = new Directory(parent, src->getName(), src->getAdls(), true);
-		copiedPath[j].copy->setFlag(src->getFlags() & (FLAG_HAS_QUEUED | FLAG_HAS_SHARED | FLAG_HAS_DOWNLOADED | FLAG_HAS_CANCELED | FLAG_HAS_OTHER));
+		copiedPath[j].copy = src->clone(parent);
+		copiedPath[j].copy->setFlag(src->getFlags() & DIR_STATUS_FLAGS);
 		parent->directories.push_back(copiedPath[j].copy);
 		j++;
 		i--;
@@ -1149,7 +1142,7 @@ void DirectoryListing::SearchContext::createCopiedPath(const Directory *dir, vec
 bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *root, DirectoryListing *dest, vector<const Directory*> &pathCache)
 {
 	vector<int> tmp;
-	
+
 	Directory *current = root;
 	whatFound = FOUND_NOTHING;
 	dir = nullptr;
@@ -1174,8 +1167,8 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 				{
 					if (dest)
 					{
-						File *copiedFile = new File(*file);
-						copiedFile->setFlag(file->getFlags() & (FLAG_QUEUED | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED));
+						File *copiedFile = file->clone();
+						copiedFile->setFlag(file->getFlags() & FILE_STATUS_FLAGS);
 						if (!copy)
 						{							
 							createCopiedPath(current, pathCache);

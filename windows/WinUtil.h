@@ -178,6 +178,8 @@ class WinUtil
 			return (y * ydu + 4) / 8;
 		}
 
+		static void showInputError(HWND hwndCtl, const tstring& text);
+
 		static void setClipboard(const tstring& str);
 		static void setClipboard(const string& str)
 		{

@@ -18,7 +18,7 @@
 
 /*
  * Automatic Directory Listing Search
- * Henrik Engstr�m, henrikengstrom at home se
+ * Henrik Engström, henrikengstrom at home se
  */
 
 #ifndef ADL_SEARCH_H
@@ -27,130 +27,164 @@
 #include "SettingsManager.h"
 #include "StringSearch.h"
 #include "DirectoryListing.h"
+#include "RWLock.h"
 
-class AdlSearchManager;
-
-// Class that represent an ADL search
 class ADLSearch
 {
 	public:
 		ADLSearch();
-		
+
 		// The search string
 		string searchString;
-		
+		bool isCaseSensitive;
+		bool isRegEx;
+
 		// Active search
 		bool isActive;
-		
+
 		// Forbidden file
 		bool isForbidden;
 		int raw;
-		
+
 		// Auto Queue Results
 		bool isAutoQueue;
-		
+
 		// Search source type
 		enum SourceType
 		{
-			TypeFirst = 0,
-			OnlyFile = TypeFirst,
+			OnlyFile,
 			OnlyDirectory,
 			FullPath,
+			TTH,
 			TypeLast
 		} sourceType;
-		
+
 		static SourceType stringToSourceType(const string& s);
 		static const string& sourceTypeToString(SourceType t);
 		static const tstring& sourceTypeToDisplayString(SourceType t);
-		
+
 		// Maximum & minimum file sizes (in bytes).
 		// Negative values means do not check.
 		int64_t minFileSize;
 		int64_t maxFileSize;
-		
+
 		enum SizeType
 		{
-			SizeBytes = TypeFirst,
+			SizeBytes,
 			SizeKiloBytes,
 			SizeMegaBytes,
 			SizeGigaBytes
 		};
-		
+
 		SizeType typeFileSize;
-		
+
 		static SizeType stringToSizeType(const string& s);
 		static const string& sizeTypeToString(SizeType t);
-		static const tstring& sizeTypeToDisplayString(SizeType t);
-		
-		// Name of the destination directory (empty = 'ADLSearch') and its index
+
 		string destDir;
-		size_t ddIndex;
-		
-	private:
-		friend class ADLSearchManager;
-		// Prepare search
-		void prepare(StringMap& params);
-		void unprepare();
-		
-		// Search for file match
-		bool matchesFile(const string& f, const string& fp, int64_t size) const;
-		// Search for directory match
-		bool matchesDirectory(const string& d) const;
-		
-		// Substring searches
-		StringSearch::List stringSearches;
-		bool searchAll(const string& s) const;
 };
 
-// Class that holds all active searches
 class ADLSearchManager : public Singleton<ADLSearchManager>
 {
 	public:
-		// Destination directory indexing
+		typedef vector<ADLSearch> SearchCollection;
+
+		ADLSearchManager();
+		~ADLSearchManager();
+
+		void load() noexcept;
+		void save() noexcept;
+		void saveOnTimer(uint64_t tick) noexcept;
+		void matchListing(DirectoryListing* dl) const noexcept;
+		void setDirtyL();
+
+		class LockInstance
+		{
+			const bool write;
+			ADLSearchManager* const am;
+
+		public:
+			explicit LockInstance(ADLSearchManager* am, bool write) : am(am), write(write)
+			{
+				if (write)
+					am->csCollection->acquireExclusive();
+				else
+					am->csCollection->acquireShared();
+			}
+			~LockInstance()
+			{
+				if (write)
+					am->csCollection->releaseExclusive();
+				else
+					am->csCollection->releaseShared();
+			}
+			SearchCollection& getCollection() { return am->collection; }
+		};
+
+	private:
+		SearchCollection collection;
+		mutable std::unique_ptr<RWLock> csCollection;
+		bool modified;
+		uint64_t nextSaveTime;
+
+		struct SearchContextItem
+		{
+			bool prepare(const ADLSearch& search, const StringMap& params) noexcept;
+			bool matchFile(const string& fullPath, const DirectoryListing::File* file) const noexcept;
+			bool matchDirectory(const DirectoryListing::Directory* dir) const noexcept;
+			bool matchString(const string& s) const noexcept;
+
+			ADLSearch::SourceType sourceType;
+			StringSearch::List stringSearches;
+			std::regex re;
+			bool isRegEx;
+			bool isAutoQueue;
+			bool isForbidden;
+			TTHValue tth;
+			size_t destDirIndex;
+			int64_t minFileSize;
+			int64_t maxFileSize;
+			ADLSearch::SizeType typeFileSize;
+		};
+
 		struct DestDir
 		{
 			string name;
-			DirectoryListing::Directory* dir;
-			DirectoryListing::Directory* subdir;
-			bool fileAdded;
-			DestDir() : dir(NULL), subdir(NULL), fileAdded(false) {}
+			DirectoryListing::AdlDirectory* dir;
 		};
-		typedef vector<DestDir> DestDirList;
-		
-		ADLSearchManager();
-		~ADLSearchManager();
-		
-		// Search collection
-		typedef vector<ADLSearch> SearchCollection;
-		SearchCollection collection;
-		
-		// Load/save search collection to XML file
-		void load();
-		void save() const;
-		
-		// Settings
-		GETSET(bool, breakOnFirst, BreakOnFirst)
-		GETSET(UserPtr, user, User)
-		GETSET(bool, sentRaw, SentRaw);
-		
-		// @remarks Used to add ADLSearch directories to an existing DirectoryListing
-		void matchListing(DirectoryListing& dirList) noexcept;
-		
-	private:
-		// @internal
-		void matchRecurse(DestDirList& destList, const DirectoryListing::Directory* dir, const string& path);
-		// Search for file match
-		void matchesFile(DestDirList& destDirVector, const DirectoryListing::File *currentFile, const string& fullPath);
-		// Search for directory match
-		void matchesDirectory(DestDirList& destDirVector, const DirectoryListing::Directory* currentDir, const string& fullPath) const;
-		// Step up directory
-		void stepUpDirectory(DestDirList& destDirVector) const;
-		
-		// Prepare destination directory indexing
-		void prepareDestinationDirectories(DestDirList& destDirVector, DirectoryListing::Directory* root, StringMap& params);
-		// Finalize destination directories
-		void finalizeDestinationDirectories(DestDirList& destDirVector, DirectoryListing::Directory* root);
-		
+
+		struct SearchContext
+		{
+			vector<SearchContextItem> collection;
+			vector<DestDir> destDir;
+			bool breakOnFirst = false;
+			bool sentRaw = false;
+			bool wantFullPath = false;
+			DirectoryListing* dl = nullptr;
+			UserPtr user = nullptr;
+
+			SearchContext() {}
+			~SearchContext();
+
+			SearchContext(const SearchContext&) = delete;
+			SearchContext& operator= (const SearchContext&) = delete;
+
+			void match() noexcept;
+			bool matchFile(const DirectoryListing::File* file) noexcept;
+			bool matchDirectory(const DirectoryListing::Directory* dir) noexcept;
+			void insertResults() noexcept;
+		};
+
+		struct CopiedDir
+		{
+			const DirectoryListing::Directory* src;
+			DirectoryListing::AdlDirectory* copy;
+		};
+
+		void saveL() const noexcept;
+		void prepare(SearchContext& ctx, DirectoryListing* dl) const noexcept;
+		static void copyDirectory(DirectoryListing::Directory* adlsDestDir, const DirectoryListing::Directory* src, const DirectoryListing* dl) noexcept;
+
 		static string getConfigFile();
 };
 

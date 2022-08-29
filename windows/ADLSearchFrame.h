@@ -40,7 +40,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		// Base class typedef
 		typedef MDITabChildWindowImpl<ADLSearchFrame> baseClass;
 
-		ADLSearchFrame(): xdu(0), ydu(0) {}
+		ADLSearchFrame(): xdu(0), ydu(0), setCheckState(0) {}
 
 		ADLSearchFrame(const ADLSearchFrame&) = delete;
 		ADLSearchFrame& operator= (const ADLSearchFrame&) = delete;
@@ -100,11 +100,13 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 
 	private:
-		// Communication with manager
-		void LoadAll();
-		void UpdateSearch(size_t index, BOOL doDelete = TRUE);
+		void getItemText(TStringList& sl, const ADLSearch& s) const;
+		void load();
+		void update(const ADLSearchManager::SearchCollection& collection, const vector<int>& selection);
+		void showItem(int index, const ADLSearch& s);
 
 		ExListViewCtrl ctrlList;
+		int setCheckState;
 		int xdu, ydu;
 		int buttonWidth, buttonHeight, buttonSpace;
 		int vertMargin, horizMargin;

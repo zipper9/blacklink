@@ -35,14 +35,15 @@ class StringSearch
 	public:
 		typedef vector<StringSearch> List;
 		
-		explicit StringSearch(const string& pattern) noexcept :
-			pattern(Text::toLower(pattern))
+		explicit StringSearch(const string& pattern, bool ignoreCase = true) noexcept :
+			pattern(pattern), ignoreCase(ignoreCase)
 		{
+			if (ignoreCase) Text::makeLower(this->pattern);
 			initDelta1();
 		}
 
 		StringSearch(const StringSearch& rhs) noexcept :
-			pattern(rhs.pattern)
+			pattern(rhs.pattern), ignoreCase(rhs.ignoreCase)
 		{
 			memcpy(delta1, rhs.delta1, sizeof(delta1));
 		}
@@ -50,30 +51,34 @@ class StringSearch
 		{
 			memcpy(delta1, rhs.delta1, sizeof(delta1));
 			pattern = rhs.pattern;
+			ignoreCase = rhs.ignoreCase;
 			return *this;
 		}
 
 		bool operator==(const StringSearch& rhs) const
 		{
-			return pattern == rhs.pattern;
+			return pattern == rhs.pattern && ignoreCase == rhs.ignoreCase;
 		}
 		
 		const string& getPattern() const
 		{
 			return pattern;
 		}
-		
-		// Match a text against the pattern
-		bool match(const string& text) const noexcept
+
+		bool getIgnoreCase() const
 		{
-			// Lower-case representation of UTF-8 string, since we no longer have that 1 char = 1 byte...
-			return matchLower(Text::toLower(text));
+			return ignoreCase;
 		}
 
-		// Match a text against the pattern
-		bool matchLower(const string& text) const noexcept
+		bool match(const string& text) const noexcept
 		{
-			dcassert(Text::toLower(text) == text);
+			if (ignoreCase)
+				return matchKeepCase(Text::toLower(text));
+			return matchKeepCase(text);
+		}
+
+		bool matchKeepCase(const string& text) const noexcept
+		{
 			const string::size_type plen = pattern.length();
 			const string::size_type tlen = text.length();
 			if (tlen < plen) return false;
@@ -94,7 +99,8 @@ class StringSearch
 	private:
 		uint16_t delta1[256];
 		string pattern;
-		
+		bool ignoreCase;
+
 		void initDelta1()
 		{
 			uint16_t x = (uint16_t)(pattern.length() + 1);

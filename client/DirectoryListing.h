@@ -55,7 +55,9 @@ class DirectoryListing : public UserInfoBase
 			FLAG_HAS_OTHER      = 1 << 8,
 			FLAG_FOUND          = 1 << 9,  // files and dirs
 			FLAG_HAS_FOUND      = 1 << 10, // dirs only
-			FLAG_DIR_TIMESTAMP  = 1 << 11  // temporary flag used during parsing
+			FLAG_DIR_TIMESTAMP  = 1 << 11, // temporary flag used during parsing
+			FILE_STATUS_FLAGS   = FLAG_QUEUED | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED,
+			DIR_STATUS_FLAGS    = FLAG_HAS_QUEUED | FLAG_HAS_SHARED | FLAG_HAS_DOWNLOADED | FLAG_HAS_CANCELED | FLAG_HAS_OTHER
 		};
 		
 		struct MediaInfo
@@ -81,16 +83,18 @@ class DirectoryListing : public UserInfoBase
 				
 				File(Directory* dir, const string& name, int64_t size, const TTHValue& tth, uint32_t hit, int64_t ts, const MediaInfo *media) noexcept :
 					name(name), size(size), parent(dir), tthRoot(tth),
-					hit(hit), ts(ts), adls(false), userData(nullptr)
+					hit(hit), ts(ts), userData(nullptr)
 				{
 					if (media) this->media = std::make_shared<MediaInfo>(*media);
 				}
 
 				File(const File& rhs) :
 					name(rhs.name), path(rhs.path), size(rhs.size), parent(rhs.parent), tthRoot(rhs.tthRoot),
-					hit(rhs.hit), ts(rhs.ts), media(rhs.media), adls(rhs.adls), userData(nullptr)
+					hit(rhs.hit), ts(rhs.ts), media(rhs.media), userData(nullptr)
 				{
 				}
+
+				virtual ~File() {}
 
 				bool match(const SearchQuery &sq) const;
 
@@ -99,12 +103,13 @@ class DirectoryListing : public UserInfoBase
 				void setParent(Directory* dir) { parent = dir; }
 				const Directory* getParent() const { return parent; }
 				const MediaInfo* getMedia() const { return media.get(); }
+				virtual bool getAdls() const { return false; }
+				virtual File* clone() const { return new File(*this); }
 
 				GETSET(int64_t, size, Size);
 				GETSET(TTHValue, tthRoot, TTH);
 				GETSET(uint32_t, hit, Hit);
 				GETSET(int64_t, ts, TS);
-				GETSET(bool, adls, Adls);
 				GETSET(void*, userData, UserData);
 
 				const string& getPath() const { return path; }
@@ -132,14 +137,14 @@ class DirectoryListing : public UserInfoBase
 
 		class Directory : public Flags
 		{
-			public:				
-				typedef vector<Directory*> List;				
-				
+			public:
+				typedef vector<Directory*> List;
+
 				List directories;				
 				File::List files;
 
-				Directory(Directory* parent, const string& name, bool adls, bool complete)
-					: parent(parent), name(name), adls(adls), complete(complete), userData(nullptr),
+				Directory(Directory* parent, const string& name, bool complete)
+					: parent(parent), name(name), complete(complete), userData(nullptr),
 					totalFileCount(0), totalDirCount(0), totalSize(0), maxTS(0), totalHits(0),
 					minBitrate(0xFFFF), maxBitrate(0)
 				{
@@ -155,7 +160,9 @@ class DirectoryListing : public UserInfoBase
 				const string& getName() const { return name; }
 				Directory* getParent() { return parent; }
 				const Directory* getParent() const { return parent; }
-				bool getAdls() const { return adls; }
+				virtual bool getAdls() const { return false; }
+				virtual Directory* clone(Directory* parent) const { return new Directory(parent, name, true); }
+
 				GETSET(bool, complete, Complete);
 				GETSET(void*, userData, UserData);
 
@@ -174,10 +181,9 @@ class DirectoryListing : public UserInfoBase
 				Directory(const Directory &) = delete;
 				Directory& operator= (const Directory &) = delete;
 
-			private:
+			protected:
 				Directory *parent;
 				string name;
-				bool adls;
 				size_t totalFileCount;
 				size_t totalDirCount;
 				int64_t totalSize;
@@ -198,11 +204,26 @@ class DirectoryListing : public UserInfoBase
 		{
 			public:
 				AdlDirectory(const string& fullPath, Directory* parent, const string& name) :
-					Directory(parent, name, true, true), fullPath(fullPath) { }
+					Directory(parent, name, true), fullPath(fullPath) {}
 				
+				bool getAdls() const override { return true; }
+				AdlDirectory* clone(Directory* parent) const override { return new AdlDirectory(fullPath, parent, getName()); }
+				GETSET(string, fullPath, FullPath);
+
+				using Directory::updateFlags;
+		};
+
+		class AdlFile : public File
+		{
+			public:
+				AdlFile(const string& fullPath, const File& rhs) :
+					File(rhs), fullPath(fullPath) {}
+
+				bool getAdls() const override { return true; }
+				AdlFile* clone() const override { return new AdlFile(fullPath, *this); }
 				GETSET(string, fullPath, FullPath);
 		};
-		
+
 		class SearchQuery
 		{			
 			public:

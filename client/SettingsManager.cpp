@@ -620,7 +620,7 @@ static const char* settingTags[] =
 	"OpenRecentHubs", "OpenPublic", "OpenFavoriteHubs", "OpenFavoriteUsers",
 	"OpenQueue", "OpenFinishedDownloads", "OpenFinishedUploads",
 	"OpenSearchSpy", "OpenNetworkStatistics", "OpenNotepad",
-	"OpenWaitingUsers", "OpenCdmDebug", "OpenDHT",
+	"OpenWaitingUsers", "OpenCdmDebug", "OpenDHT", "OpenADLSearch",
 
 	// Click actions
 	"UserListDoubleClick",

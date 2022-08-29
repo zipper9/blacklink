@@ -2188,7 +2188,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 	// Find any matches in the directory name
 	for (auto k = strings.cbegin(); k != strings.cend(); ++k)
 	{
-		if (k->matchLower(dir->getLowerName()))
+		if (k->matchKeepCase(dir->getLowerName()))
 		{
 			if (!newStr.get())
 				newStr = std::make_unique<StringSearch::List>(strings);
@@ -2222,7 +2222,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 
 			const string& name = file->getLowerName();
 			auto j = cur->cbegin();
-			while (j != cur->cend() && j->matchLower(name)) ++j;
+			while (j != cur->cend() && j->matchKeepCase(name)) ++j;
 			if (j != cur->cend())
 				continue;
 			
@@ -2408,7 +2408,7 @@ AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults, co
 bool AdcSearchParam::isExcluded(const string& strLower) const noexcept
 {
 	for (auto i = exclude.cbegin(); i != exclude.cend(); ++i)
-		if (i->matchLower(strLower)) return true;
+		if (i->matchKeepCase(strLower)) return true;
 	return false;
 }
 
@@ -2459,7 +2459,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 	// Find any matches in the directory name
 	for (auto k = cur->cbegin(); k != cur->cend(); ++k)
 	{
-		if (k->matchLower(dir->getLowerName()) && !sp.isExcluded(dir->getLowerName()))
+		if (k->matchKeepCase(dir->getLowerName()) && !sp.isExcluded(dir->getLowerName()))
 		{
 			if (!newStr.get())
 				newStr = std::make_unique<StringSearch::List>(*cur);
@@ -2494,7 +2494,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 				continue;
 
 			auto j = cur->cbegin();
-			while (j != cur->cend() && j->matchLower(name)) ++j;
+			while (j != cur->cend() && j->matchKeepCase(name)) ++j;
 			if (j != cur->cend())
 				continue;
 

@@ -552,6 +552,7 @@ void MainFrame::openDefaultWindows()
 		{ SettingsManager::OPEN_SEARCH_SPY,         IDC_SEARCH_SPY,      true  },
 		{ SettingsManager::OPEN_NETWORK_STATISTICS, IDC_NET_STATS,       true  },
 		{ SettingsManager::OPEN_NOTEPAD,            IDC_NOTEPAD,         true  },
+		{ SettingsManager::OPEN_ADLSEARCH,          IDC_FILE_ADL_SEARCH, true  },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 		{ SettingsManager::OPEN_CDMDEBUG,           IDC_CDMDEBUG_WINDOW, true  },
 #endif
@@ -716,6 +717,7 @@ void MainFrame::onMinute(uint64_t tick)
 	udpBans.removeExpired(tick);
 	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
 		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
+	ADLSearchManager::getInstance()->saveOnTimer(tick);
 	LogManager::closeOldFiles(tick);
 }
 

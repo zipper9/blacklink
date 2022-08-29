@@ -1842,6 +1842,15 @@ int WinUtil::getComboBoxHeight(HWND hwnd, HFONT font)
 	return res;	
 }
 
+void WinUtil::showInputError(HWND hwndCtl, const tstring& text)
+{
+	EDITBALLOONTIP ebt;
+	memset(&ebt, 0, sizeof(ebt));
+	ebt.cbStruct = sizeof(ebt);
+	ebt.pszText = text.c_str();
+	CEdit(hwndCtl).ShowBalloonTip(&ebt);
+}
+
 tstring WinUtil::getFileMaskString(const FileMaskItem* items)
 {
 	tstring result;

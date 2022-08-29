@@ -1377,12 +1377,7 @@ LRESULT DirectoryListingFrame::onGoToDirectory(WORD /*wNotifyCode*/, WORD /*wID*
 	{
 		if (!ii->file->getAdls())
 			return 0;
-		const DirectoryListing::Directory* pd = ii->file->getParent();
-		while (pd != NULL && pd != dl->getRoot())
-		{
-			fullPath = Text::toT(pd->getName()) + _T("\\") + fullPath;
-			pd = pd->getParent();
-		}
+		fullPath = Text::toT(static_cast<const DirectoryListing::AdlFile*>(ii->file)->getFullPath());
 	}
 	else if (ii->type == ItemInfo::DIRECTORY)
 	{
@@ -2993,7 +2988,7 @@ int ThreadedDirectoryListing::run()
 				window->dl->loadFile(filePath, this, user->isMe());
 				window->addToUserList(user, false);
 				window->setWindowTitle();
-				ADLSearchManager::getInstance()->matchListing(*window->dl);
+				ADLSearchManager::getInstance()->matchListing(window->dl.get());
 				window->refreshTree(window->dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}
