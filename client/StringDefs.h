@@ -1647,7 +1647,7 @@ enum Strings   // @DontAdd
 	SHARE_GROUP_EMPTY_NAME, // "Empty share group name"
 	SKIPPING_EXISTING_FILE, // "Skipping file %1% because it already exists"
 	COPYING_EXISTING_FILE, // "Copying existing file to %1%"
-	ERROR_COPYING_FILE, // "Error copying file to %1%: %2"
+	ERROR_COPYING_FILE, // "Error copying file to %1%: %2%"
 	SKIPPING_READ_ONLY_FILE, // "File %1% is read only, won't save tree to NTFS stream"
 	SHARE_GROUP_DEFAULT, // "Default"
 	SHARE_GROUP_NOTHING, // "Nothing"
