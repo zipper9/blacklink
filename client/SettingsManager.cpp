@@ -574,7 +574,7 @@ static const char* settingTags[] =
 	"ShowWinampControl", 
 	
 	// Menu settings
-	"MenubarTwoColors", "MenubarLeftColor", "MenubarRightColor", "MenubarBumped",
+	"UseCustomMenu", "MenubarTwoColors", "MenubarLeftColor", "MenubarRightColor", "MenubarBumped",
 	"UcSubMenu",
 	
 	// Progressbar settings
@@ -1196,10 +1196,13 @@ void SettingsManager::setDefaults()
 
 	// Menu settings
 #ifdef _WIN32
-	BOOL useFlatMenuHeader = CompatibilityManager::isWin8Plus();
+	bool useFlatMenuHeader = CompatibilityManager::isOsWin8Plus();
+	bool useCustomMenu = !CompatibilityManager::isOsWin11Plus();
 #else
 	int useFlatMenuHeader = FALSE;
+	int useCustomMenu = FALSE;
 #endif
+	setDefault(USE_CUSTOM_MENU, useCustomMenu);
 	setDefault(MENUBAR_TWO_COLORS, !useFlatMenuHeader);
 	setDefault(MENUBAR_LEFT_COLOR, RGB(0, 128, 255));
 	setDefault(MENUBAR_RIGHT_COLOR, RGB(168, 211, 255));

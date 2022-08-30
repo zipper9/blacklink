@@ -1714,6 +1714,7 @@ enum Strings   // @DontAdd
 	STYLE_ITALIC, // "Italic"
 	SAMPLE_URL, // "http://example.com"
 	SAMPLE_MESSAGE, // "Message text"
+	USE_CUSTOM_MENU, // "Use custom menu"
 	USER_DESC_OPERATOR, // "Operator"
 	USER_DESC_SERVER, // "Server"
 	USER_DESC_FAST, // "Fast user"

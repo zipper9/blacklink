@@ -82,7 +82,7 @@ void CompatibilityManager::init()
 	detectOsSupports();
 	getSystemInfoFromOS();
 	generateSystemInfoForApp();
-	if (CompatibilityManager::isWin7Plus())
+	if (CompatibilityManager::isOsWin7Plus())
 	{
 		findFileLevel = FindExInfoBasic;
 		findFileFlags = FIND_FIRST_EX_LARGE_FETCH;
@@ -101,51 +101,35 @@ void CompatibilityManager::getSystemInfoFromOS()
 void CompatibilityManager::detectOsSupports()
 {
 	g_osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-	
+
 	if (!GetVersionEx((OSVERSIONINFO*)&g_osvi))
 		memset(&g_osvi, 0, sizeof(OSVERSIONINFOEX));
-		
-#define FUTURE_VER(future_major_version) \
-	(getOsMajor() >= future_major_version)
-		
-#define FUTURE_MINOR_VER(current_major_version, future_minor_version) \
-	(getOsMajor() == current_major_version && getOsMinor() >= future_minor_version)
-		
-#define CURRENT_VER(current_major_version, current_minor_version) \
-	(getOsMajor() == current_major_version && getOsMinor() == current_minor_version)
-		
-#define CURRENT_VER_SP(current_major_version, current_minor_version, current_sp_version) \
-	(getOsMajor() == current_major_version && getOsMinor() == current_minor_version && getOsSpMajor() == current_sp_version)
-		
-	if (FUTURE_VER(8) || // future version
-	        FUTURE_MINOR_VER(10, 1) || // Windows 10 and newer
-	        CURRENT_VER(10, 0)) // Windows 10
-		set(OS_WINDOWS10_PLUS);
-		
-	if (FUTURE_VER(7) || // future version
-	        FUTURE_MINOR_VER(6, 3) || // Windows 8.1
-	        CURRENT_VER(6, 2)) // Windows 8
-		set(OS_WINDOWS8_PLUS);
-		
-	if (FUTURE_VER(7) || // future version
-	        FUTURE_MINOR_VER(6, 2) || // Windows 8 and newer
-	        CURRENT_VER(6, 1)) // Windows 7
-		set(OS_WINDOWS7_PLUS);
-	if (FUTURE_VER(7) || // future version
-	        FUTURE_MINOR_VER(6, 1) || // Windows 7 and newer
-	        CURRENT_VER(6, 0)) // Windows Vista
-		set(OS_VISTA_PLUS);
-		
-	if (FUTURE_VER(6) || // Windows Vista and newer
-	        CURRENT_VER_SP(5, 2, 2) || // Windows Server 2003 SP2
-	        CURRENT_VER_SP(5, 1, 3)) // Windows XP SP3
-		set(OS_XP_SP3_PLUS);
-		
-#undef FUTURE_VER
-#undef FUTURE_MINOR_VER
-#undef CURRENT_VER
-#undef CURRENT_VER_SP
-	
+
+	int version;	
+	if (g_osvi.dwMajorVersion >= 10)
+	{
+		version = g_osvi.dwBuildNumber >= 22000 ? OS_WINDOWS11_PLUS : OS_WINDOWS10_PLUS;
+	}
+	else
+	{
+		uint32_t v = g_osvi.dwMajorVersion << 16 | g_osvi.dwMinorVersion;
+		if (v >= 0x60002)
+			version = OS_WINDOWS8_PLUS;
+		else if (v >= 0x60001)
+			version = OS_WINDOWS7_PLUS;
+		else if (v >= 0x60000)
+			version = OS_VISTA_PLUS;
+		else if (v >= 0x50001)
+			version = OS_XP_PLUS;
+		else
+			version = -1;
+	}
+	while (version >= OS_XP_PLUS)
+	{
+		set(static_cast<Supports>(version));
+		--version;
+	}
+
 	g_comCtlVersion = getComCtlVersionFromOS();
 }
 

@@ -41,25 +41,29 @@ class CompatibilityManager
 		{
 			return isSet(RUNNING_IS_WOW64);
 		}
-		static bool IsXPSP3AndHigher()
+		static bool isOsXpPlus()
 		{
-			return isSet(OS_XP_SP3_PLUS);
+			return isSet(OS_XP_PLUS);
 		}
 		static bool isOsVistaPlus()
 		{
 			return isSet(OS_VISTA_PLUS);
 		}
-		static bool isWin7Plus()
+		static bool isOsWin7Plus()
 		{
 			return isSet(OS_WINDOWS7_PLUS);
 		}
-		static bool isWin8Plus()
+		static bool isOsWin8Plus()
 		{
 			return isSet(OS_WINDOWS8_PLUS);
 		}
-		static bool isWin10Plus()
+		static bool isOsWin10Plus()
 		{
 			return isSet(OS_WINDOWS10_PLUS);
+		}
+		static bool isOsWin11Plus()
+		{
+			return isSet(OS_WINDOWS11_PLUS);
 		}
 		static void setWine(bool p_wine)
 		{
@@ -160,11 +164,12 @@ class CompatibilityManager
 		enum Supports
 		{
 			IS_WINE = 0,
-			OS_XP_SP3_PLUS,
+			OS_XP_PLUS,
 			OS_VISTA_PLUS,
 			OS_WINDOWS7_PLUS,
 			OS_WINDOWS8_PLUS,
 			OS_WINDOWS10_PLUS,
+			OS_WINDOWS11_PLUS,
 			RUNNING_IS_WOW64,
 			LAST_SUPPORTS
 		};

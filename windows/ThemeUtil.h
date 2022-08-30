@@ -6,6 +6,7 @@
 
 namespace Util
 {
+	bool isThemeAttribute(int id);
 	void importDcTheme(const tstring& file, SettingsStore& ss);
 	void exportDcTheme(const tstring& file, const SettingsStore* ss);
 	void getDefaultTheme(SettingsStore& ss);

@@ -548,7 +548,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SHOW_PLAYER_CONTROLS,
 			
 			// Menu settings
-			MENUBAR_TWO_COLORS, MENUBAR_LEFT_COLOR, MENUBAR_RIGHT_COLOR, MENUBAR_BUMPED,
+			USE_CUSTOM_MENU, MENUBAR_TWO_COLORS, MENUBAR_LEFT_COLOR, MENUBAR_RIGHT_COLOR, MENUBAR_BUMPED,
 			UC_SUBMENU,
 
 			// Progressbar settings

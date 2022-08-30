@@ -412,6 +412,7 @@
 #define IDC_SETTINGS_SEARCH_HISTORY     1268
 #define IDC_SETTINGS_HINT1              1269
 #define IDC_SETTINGS_HINT2              1270
+#define IDC_USE_CUSTOM_MENU             1271
 #define IDC_ADLSP_DESTINATION           1276
 #define IDC_HELP_TYPE                   1277
 #define IDC_CAPTION_FILE_COUNT          1278

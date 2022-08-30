@@ -308,7 +308,8 @@ void StylesPage::setThemeModified()
 
 void StylesPage::settingChanged(int id)
 {
-	if (!themeModified) setThemeModified();
+	if (!themeModified && Util::isThemeAttribute(id))
+		setThemeModified();
 }
 
 void StylesPage::intSettingChanged(int id, int value)

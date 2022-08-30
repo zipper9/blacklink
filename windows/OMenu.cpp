@@ -118,11 +118,16 @@ void OMenu::SetOwnerDraw(int mode)
 BOOL OMenu::CreatePopupMenu()
 {
 	if (ownerDrawMode == OD_DEFAULT)
-		ownerDrawMode =
+	{
+		if (BOOLSETTING(USE_CUSTOM_MENU))
+			ownerDrawMode =
 #ifdef OSVER_WIN_XP
-			CompatibilityManager::isOsVistaPlus() &&
+				CompatibilityManager::isOsVistaPlus() &&
 #endif
-			IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
+				IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
+		else
+			ownerDrawMode = OD_NEVER;
+	}
 	return CMenu::CreatePopupMenu();
 }
 

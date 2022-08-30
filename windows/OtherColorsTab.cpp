@@ -20,7 +20,7 @@ static const DialogLayout::Item layoutItems[] =
 {
 	{ IDC_CHANGE_COLOR,                FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_SET_DEFAULT,                 FLAG_TRANSLATE, UNSPEC, UNSPEC },
-	{ IDC_SETTINGS_ODC_MENUBAR,        FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_USE_CUSTOM_MENU,             FLAG_TRANSLATE, AUTO,   UNSPEC },
 	{ IDC_SETTINGS_ODC_MENUBAR_USETWO, FLAG_TRANSLATE, AUTO,   UNSPEC },
 	{ IDC_SETTINGS_ODC_MENUBAR_BUMPED, FLAG_TRANSLATE, AUTO,   UNSPEC },
 	{ IDC_SETTINGS_ODC_MENUBAR_LEFT,   FLAG_TRANSLATE, UNSPEC, UNSPEC },
@@ -64,6 +64,7 @@ struct MenuOption
 
 static const MenuOption menuOptions[] =
 {
+	{ IDC_USE_CUSTOM_MENU,             SettingsManager::USE_CUSTOM_MENU,    &OtherColorsTab::useCustomMenu },
 	{ IDC_SETTINGS_ODC_MENUBAR_USETWO, SettingsManager::MENUBAR_TWO_COLORS, &OtherColorsTab::menuTwoColors },
 	{ IDC_SETTINGS_ODC_MENUBAR_BUMPED, SettingsManager::MENUBAR_BUMPED,     &OtherColorsTab::menuBumped    }
 };
@@ -76,6 +77,7 @@ void OtherColorsTab::loadSettings()
 	menuRightColor = g_settings->get(SettingsManager::MENUBAR_RIGHT_COLOR);
 	menuTwoColors = g_settings->getBool(SettingsManager::MENUBAR_TWO_COLORS);
 	menuBumped = g_settings->getBool(SettingsManager::MENUBAR_BUMPED);
+	useCustomMenu = g_settings->getBool(SettingsManager::USE_CUSTOM_MENU);
 }
 
 void OtherColorsTab::saveSettings() const
@@ -86,6 +88,7 @@ void OtherColorsTab::saveSettings() const
 	g_settings->set(SettingsManager::MENUBAR_RIGHT_COLOR, (int) menuRightColor);
 	g_settings->set(SettingsManager::MENUBAR_TWO_COLORS, menuTwoColors);
 	g_settings->set(SettingsManager::MENUBAR_BUMPED, menuBumped);
+	g_settings->set(SettingsManager::USE_CUSTOM_MENU, useCustomMenu);
 }
 
 void OtherColorsTab::getValues(SettingsStore& ss) const
@@ -96,6 +99,7 @@ void OtherColorsTab::getValues(SettingsStore& ss) const
 	ss.setIntValue(SettingsManager::MENUBAR_RIGHT_COLOR, menuRightColor);
 	ss.setIntValue(SettingsManager::MENUBAR_TWO_COLORS, menuTwoColors);
 	ss.setIntValue(SettingsManager::MENUBAR_BUMPED, menuBumped);
+	ss.setIntValue(SettingsManager::USE_CUSTOM_MENU, useCustomMenu);
 }
 
 void OtherColorsTab::setValues(const SettingsStore& ss)
@@ -109,6 +113,7 @@ void OtherColorsTab::setValues(const SettingsStore& ss)
 		menuRightColor = val;
 	ss.getBoolValue(SettingsManager::MENUBAR_TWO_COLORS, menuTwoColors);
 	ss.getBoolValue(SettingsManager::MENUBAR_BUMPED, menuBumped);
+	ss.getBoolValue(SettingsManager::USE_CUSTOM_MENU, useCustomMenu);
 }
 
 void OtherColorsTab::updateTheme()
@@ -250,8 +255,11 @@ LRESULT OtherColorsTab::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 void OtherColorsTab::updateMenuOptions()
 {
-	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_BUMPED).EnableWindow(menuTwoColors);
-	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_RIGHT).EnableWindow(menuTwoColors);
+	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_USETWO).EnableWindow(useCustomMenu);
+	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_BUMPED).EnableWindow(useCustomMenu && menuTwoColors);
+	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_LEFT).EnableWindow(useCustomMenu);
+	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_RIGHT).EnableWindow(useCustomMenu && menuTwoColors);
+	GetDlgItem(IDC_MENU_SET_DEFAULT).EnableWindow(useCustomMenu);
 }
 
 LRESULT OtherColorsTab::onMenuOption(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
@@ -282,11 +290,21 @@ LRESULT OtherColorsTab::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 		{
 			CDCHandle dc(dis->hDC);
 			CRect rc(dis->rcItem);
-			if (menuTwoColors)
-				OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, menuLeftColor, menuRightColor, menuBumped);
+			COLORREF backgroundColor;
+			if (useCustomMenu)
+			{
+				if (menuTwoColors)
+					OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, menuLeftColor, menuRightColor, menuBumped);
+				else
+					dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, menuLeftColor);
+				backgroundColor = menuLeftColor;
+			}
 			else
-				dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, menuLeftColor);
-			dc.SetTextColor(ColorUtil::textFromBackground(menuLeftColor));
+			{
+				backgroundColor = GetSysColor(COLOR_GRAYTEXT);
+				dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, backgroundColor);
+			}
+			dc.SetTextColor(ColorUtil::textFromBackground(backgroundColor));
 			dc.DrawText(CTSTRING(SETTINGS_MENUHEADER_EXAMPLE), -1, rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 		}
 		else

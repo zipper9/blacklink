@@ -24,7 +24,7 @@ static const struct
 
 #undef RANGE
 
-static bool isThemeAttribute(int id)
+bool Util::isThemeAttribute(int id)
 {
 	for (int i = 0; i < _countof(themeAttrib); ++i)
 		if (id >= themeAttrib[i].idFirst && id <= themeAttrib[i].idLast) return true;

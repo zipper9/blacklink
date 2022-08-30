@@ -28,6 +28,7 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 		COMMAND_HANDLER(IDC_TABCOLOR_LIST, LBN_SELCHANGE, onTabListChange)
 		COMMAND_HANDLER(IDC_SETTINGS_ODC_MENUBAR_LEFT, BN_CLICKED, onChooseMenuColor)
 		COMMAND_HANDLER(IDC_SETTINGS_ODC_MENUBAR_RIGHT, BN_CLICKED, onChooseMenuColor)
+		COMMAND_HANDLER(IDC_USE_CUSTOM_MENU, BN_CLICKED, onMenuOption)
 		COMMAND_HANDLER(IDC_SETTINGS_ODC_MENUBAR_USETWO, BN_CLICKED, onMenuOption)
 		COMMAND_HANDLER(IDC_SETTINGS_ODC_MENUBAR_BUMPED, BN_CLICKED, onMenuOption)
 		COMMAND_HANDLER(IDC_MENU_SET_DEFAULT, BN_CLICKED, onMenuDefaults)
@@ -55,6 +56,7 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 		void updateTheme();
 		void setCallback(PropPageCallback* p) { callback = p; }
 
+		bool useCustomMenu;
 		bool menuTwoColors;
 		bool menuBumped;
 
