@@ -1506,7 +1506,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 
 void MainFrame::addStatusMessage(const tstring& msg)
 {
-	tstring line = Text::toT(Util::formatDateTime("[%H:%M:%S] ", GET_TIME()));
+	tstring line = Text::toT(Util::formatDateTime("[" + SETTING(TIME_STAMPS_FORMAT) + "] ", GET_TIME()));
 	line += msg;
 	tstring::size_type rpos = line.find(_T('\r'));
 	if (rpos != tstring::npos) line.erase(rpos);
