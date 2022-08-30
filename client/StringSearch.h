@@ -21,8 +21,6 @@
 
 #include "Text.h"
 
-#include "noexcept.h"
-
 /**
  * A class that implements a fast substring search algo suited for matching
  * one pattern against many strings (currently Quick Search, a variant of
@@ -34,38 +32,80 @@ class StringSearch
 {
 	public:
 		typedef vector<StringSearch> List;
-		
+
 		explicit StringSearch(const string& pattern, bool ignoreCase = true) noexcept :
 			pattern(pattern), ignoreCase(ignoreCase)
 		{
 			if (ignoreCase) Text::makeLower(this->pattern);
-			initDelta1();
+			init();
+		}
+
+		~StringSearch() noexcept
+		{
+			::operator delete(delta1);
 		}
 
 		StringSearch(const StringSearch& rhs) noexcept :
-			pattern(rhs.pattern), ignoreCase(rhs.ignoreCase)
+			pattern(rhs.pattern), ignoreCase(rhs.ignoreCase), smallTable(rhs.smallTable)
 		{
-			memcpy(delta1, rhs.delta1, sizeof(delta1));
+			if (rhs.delta1)
+			{
+				size_t size = rhs.getTableSize();
+				delta1 = ::operator new(size);
+				memcpy(delta1, rhs.delta1, size);
+			}
+			else
+				delta1 = nullptr;
 		}
-		const StringSearch& operator=(const StringSearch& rhs)
+
+		StringSearch(StringSearch&& rhs) noexcept :
+			pattern(std::move(rhs.pattern)), ignoreCase(rhs.ignoreCase), smallTable(rhs.smallTable)
 		{
-			memcpy(delta1, rhs.delta1, sizeof(delta1));
+			delta1 = rhs.delta1;
+			rhs.delta1 = nullptr;
+			rhs.pattern.clear();
+		}
+
+		StringSearch& operator=(const StringSearch& rhs) noexcept
+		{
+			::operator delete(delta1);
+			if (rhs.delta1)
+			{
+				size_t size = rhs.getTableSize();
+				delta1 = ::operator new(size);
+				memcpy(delta1, rhs.delta1, size);
+			}
+			else
+				delta1 = nullptr;
 			pattern = rhs.pattern;
 			ignoreCase = rhs.ignoreCase;
+			smallTable = rhs.smallTable;
 			return *this;
 		}
 
-		bool operator==(const StringSearch& rhs) const
+		StringSearch& operator=(StringSearch&& rhs) noexcept
+		{
+			::operator delete(delta1);
+			delta1 = rhs.delta1;
+			pattern = std::move(rhs.pattern);
+			ignoreCase = rhs.ignoreCase;
+			smallTable = rhs.smallTable;
+			rhs.delta1 = nullptr;
+			rhs.pattern.clear();
+			return *this;
+		}
+
+		bool operator==(const StringSearch& rhs) const noexcept
 		{
 			return pattern == rhs.pattern && ignoreCase == rhs.ignoreCase;
 		}
-		
-		const string& getPattern() const
+
+		const string& getPattern() const noexcept
 		{
 			return pattern;
 		}
 
-		bool getIgnoreCase() const
+		bool getIgnoreCase() const noexcept
 		{
 			return ignoreCase;
 		}
@@ -79,37 +119,69 @@ class StringSearch
 
 		bool matchKeepCase(const string& text) const noexcept
 		{
+			if (!delta1) return false;
 			const string::size_type plen = pattern.length();
 			const string::size_type tlen = text.length();
 			if (tlen < plen) return false;
 			const uint8_t* tx = (const uint8_t*) text.data();
 			const uint8_t* px = (const uint8_t*) pattern.data();
-			const uint8_t *end = tx + tlen - plen + 1;
+			return smallTable ?
+				doMatch<uint8_t>(tx, px, tlen, plen) :
+				doMatch<uint16_t>(tx, px, tlen, plen);
+		}
+
+	private:
+		void* delta1;
+		string pattern;
+		bool ignoreCase;
+		bool smallTable;
+
+		template<typename T>
+		void initDelta1() noexcept
+		{
+			T x = (T) (pattern.length() + 1);
+			delta1 = ::operator new(256 * sizeof(T));
+			T* d = static_cast<T*>(delta1);
+			for (unsigned i = 0; i < 256; ++i)
+				d[i] = x;
+			x--;
+			const uint8_t* p = (const uint8_t*) pattern.data();
+			for (unsigned i = 0; i < x; ++i)
+				d[p[i]] = (T) (x - i);
+		}
+
+		template<typename T>
+		bool doMatch(const uint8_t* tx, const uint8_t* px, size_t tlen, size_t plen) const noexcept
+		{
+			const T* d = static_cast<const T*>(delta1);
+			const uint8_t* end = tx + tlen - plen + 1;
 			while (tx < end)
 			{
 				size_t i = 0;
 				while (i < plen && px[i] == tx[i]) ++i;
 				if (i == plen) return true;
-				tx += delta1[tx[plen]];
+				tx += d[tx[plen]];
 			}
-			
 			return false;
 		}
 
-	private:
-		uint16_t delta1[256];
-		string pattern;
-		bool ignoreCase;
-
-		void initDelta1()
+		void init() noexcept
 		{
-			uint16_t x = (uint16_t)(pattern.length() + 1);
-			for (uint16_t i = 0; i < 256; ++i)
-				delta1[i] = x;
-			x--;
-			const uint8_t* p = (const uint8_t*) pattern.data();
-			for (uint16_t i = 0; i < x; ++i)
-				delta1[p[i]] = (uint16_t)(x - i);
+			if (pattern.length() < 255)
+			{
+				smallTable = true;
+				initDelta1<uint8_t>();
+			}
+			else
+			{
+				smallTable = false;
+				initDelta1<uint16_t>();
+			}
+		}
+
+		size_t getTableSize() const noexcept
+		{
+			return smallTable ? 256 : 512;
 		}
 };
 
