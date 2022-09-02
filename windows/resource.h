@@ -31,7 +31,6 @@
 #define IDR_FILE_LIST_OFFLINE           136
 #define IDR_MAGNET                      138
 #define IDR_FAVORITE                    139
-#define IDR_TUSER                       141
 #define IDR_PURGE                       143
 #define IDR_PAUSE                       144
 #define IDD_ADLS_PROPERTIES             145
@@ -75,8 +74,7 @@
 #define IDR_USERS                       188
 #define IDR_BAD_FLAG                    189
 #define IDR_ARROWS                      190
-#define IDR_TSPEEDS                     191
-#define IDR_TSPEEDS_BW                  192
+#define IDR_TRANSFERS                   193
 #define IDR_FOLDERS                     194
 #define IDR_SEARCH_TYPES                195
 #define IDR_STATE                       196

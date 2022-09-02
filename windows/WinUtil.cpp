@@ -298,6 +298,7 @@ void WinUtil::init(HWND hWnd)
 	g_favImage.init();
 	g_favUserImage.init();
 	g_editorImage.init();
+	g_transfersImage.init();
 
 	Colors::init();
 	Fonts::init();

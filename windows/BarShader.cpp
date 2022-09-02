@@ -2,6 +2,8 @@
 #include "BarShader.h"
 #include "WinUtil.h"
 #include "ColorUtil.h"
+#include "Fonts.h"
+#include "ImageLists.h"
 
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -377,4 +379,152 @@ void OperaColors::FloodFill(HDC hdc, int x1, int y1, int x2, int y2, const COLOR
 		}
 	}
 	BitBlt(hdc, x1, y1, x2, y2, fci->hDC, 0, 0, SRCCOPY);
+}
+
+bool ProgressBar::Settings::operator== (const ProgressBar::Settings& rhs) const
+{
+	if (odcStyle != rhs.odcStyle || clrBackground != rhs.clrBackground)
+		return false;
+	if (setTextColor != rhs.setTextColor || clrText != rhs.clrText)
+		return false;
+	if (odcStyle && odcBumped != rhs.odcBumped)
+		return false;
+	if (!odcStyle && (clrEmptyBackground != rhs.clrEmptyBackground || depth != rhs.depth))
+		return false;
+	return true;
+}
+
+void ProgressBar::cleanup()
+{
+	if (backBrush)
+	{
+		DeleteObject(backBrush);
+		backBrush = nullptr;
+	}
+	if (framePen)
+	{
+		DeleteObject(framePen);
+		framePen = nullptr;
+	}
+	colorsInitialized = false;
+}
+
+void ProgressBar::set(const ProgressBar::Settings& s)
+{
+	settings = s;
+	cleanup();
+}
+
+void ProgressBar::setWindowBackground(COLORREF clr)
+{
+	windowBackground = clr;
+	if (settings.odcStyle) cleanup();
+}
+
+void ProgressBar::setEmptyBarBackground(COLORREF clr)
+{
+	settings.clrEmptyBackground = clr;
+	if (!settings.odcStyle) cleanup();
+}
+
+void ProgressBar::draw(HDC hdc, const RECT& rc, int pos, const tstring& text, int iconIndex)
+{
+	if (settings.odcStyle)
+	{
+		if (!framePen || !backBrush)
+		{
+			textColor[0] = textColor[1] = settings.clrText;
+			if (!settings.setTextColor)
+				textColor[0] = ColorUtil::textFromBackground(settings.clrBackground);
+			const HLSCOLOR hls = RGB2HLS(settings.clrBackground);
+			int hlsL = HLS_L(hls);
+			if (!framePen)
+			{
+				COLORREF clr = OperaColors::blendColors(windowBackground, settings.clrBackground, hlsL > 191 ? 0.6 : 0.4);
+				framePen = CreatePen(PS_SOLID, 1, clr);
+			}
+			if (!backBrush)
+			{
+				COLORREF clr = OperaColors::blendColors(windowBackground, settings.clrBackground, hlsL > 191 ? 0.85 : 0.70);
+				backBrush = CreateSolidBrush(clr);
+				if (!settings.setTextColor)
+					textColor[1] = ColorUtil::textFromBackground(clr);
+			}
+			colorsInitialized = true;
+		}
+
+		HGDIOBJ oldPen = SelectObject(hdc, framePen);
+		HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
+		Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+		RECT rcFill = rc;
+		InflateRect(&rcFill, -1, -1);
+		rcFill.left += pos;
+		FillRect(hdc, &rcFill, backBrush);
+
+		COLORREF a, b;
+		OperaColors::EnlightenFlood(settings.clrBackground, a, b);
+		OperaColors::FloodFill(hdc, rc.left + 1, rc.top + 1, rcFill.left, rc.bottom - 1, a, b, settings.odcBumped);
+
+		SelectObject(hdc, oldPen);
+		SelectObject(hdc, oldBrush);
+	}
+	else
+	{
+		if (!colorsInitialized)
+		{
+			if (!settings.setTextColor)
+			{
+				textColor[0] = ColorUtil::textFromBackground(settings.clrBackground);
+				textColor[1] = ColorUtil::textFromBackground(settings.clrEmptyBackground);
+			}
+			else
+				textColor[0] = textColor[1] = settings.clrText;
+			colorsInitialized = true;
+		}
+		CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, settings.clrEmptyBackground, rc.right - rc.left);
+		statusBar.FillRange(0, pos, settings.clrBackground);
+		statusBar.Draw(hdc, rc.top, rc.left, settings.depth);
+	}
+	RECT rc2 = rc;
+	if (iconIndex != -1)
+	{
+		POINT pt;
+		pt.x = rc2.left + 3;
+		pt.y = (rc2.top + rc2.bottom) / 2 - 8;
+		g_transfersImage.Draw(hdc, iconIndex, pt);
+		rc2.left = pt.x + 16 + 2;
+	}
+	else
+		rc2.left += 4;
+	rc2.right--;
+	int prevMode = SetBkMode(hdc, TRANSPARENT);
+	COLORREF prevColor = SetTextColor(hdc, textColor[0]);
+	HGDIOBJ oldFont = SelectObject(hdc, Fonts::g_systemFont);
+	if (textColor[0] != textColor[1])
+	{
+		HRGN oldRegion = CreateRectRgn(0, 0, 0, 0);
+		GetClipRgn(hdc, oldRegion);
+		int fillPos = rc.left + pos;
+		if (settings.odcStyle) fillPos++;
+		RECT rc3 = rc2;
+		rc3.right = fillPos;
+		HRGN region1 = CreateRectRgnIndirect(&rc3);
+		SelectClipRgn(hdc, region1);
+		DrawText(hdc, text.c_str(), text.length(), &rc2, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
+		rc3.right = rc2.right;
+		rc3.left = fillPos;
+		HRGN region2 = CreateRectRgnIndirect(&rc3);
+		SelectClipRgn(hdc, region2);
+		SetTextColor(hdc, textColor[1]);
+		DrawText(hdc, text.c_str(), text.length(), &rc2, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
+		SelectClipRgn(hdc, oldRegion);
+		DeleteObject(region1);
+		DeleteObject(region2);
+		DeleteObject(oldRegion);
+	}
+	else
+		DrawText(hdc, text.c_str(), text.length(), &rc2, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
+	SelectObject(hdc, oldFont);
+	SetTextColor(hdc, prevColor);
+	SetBkMode(hdc, prevMode);
 }

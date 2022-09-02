@@ -17,6 +17,7 @@ VideoImage g_videoImage;
 FavImage g_favImage;
 FavUserImage g_favUserImage;
 EditorImage g_editorImage;
+TransfersImage g_transfersImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -268,7 +269,7 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 	if (x_size >= 200 && x_size <= 640 && y_size >= 140 && y_size <= 480)
 		return 3; //Mobile or VHS
 	if (x_size >= 640 && x_size <= 1080 && y_size >= 240 && y_size <= 720)
-		return 2; //SD	
+		return 2; //SD
 	if (x_size >= 1080 && x_size <= 1920 && y_size >= 500 && y_size <= 1080)
 		return 1; //HD
 	if (x_size >= 1920 && y_size >= 1080)
@@ -289,6 +290,11 @@ void FavUserImage::init()
 void EditorImage::init()
 {
 	ResourceLoader::LoadImageList(IDR_EDITOR_ICONS, images, 16, 16);
+}
+
+void TransfersImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_TRANSFERS, images, 16, 16);
 }
 
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)

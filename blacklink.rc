@@ -122,11 +122,11 @@ BEGIN
     CONTROL         "",IDC_DEPTH_SPIN,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_ARROWKEYS | UDS_NOTHOUSANDS,113,60,11,14
     CONTROL         "@ProgressbarSetColor",IDC_PROGRESS_OVERRIDE,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,22,84,154,8
     CONTROL         "@ProgressbarSetTextColor",IDC_PROGRESS_OVERRIDE2,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,38,98,138,8
-    CONTROL         "",IDC_PROGRESS_COLOR_DOWN_SHOW,"Static",SS_OWNERDRAW,38,112,239,14,WS_EX_STATICEDGE
+    CONTROL         "",IDC_PROGRESS_COLOR_DOWN_SHOW,"Static",SS_OWNERDRAW | SS_NOTIFY,38,112,239,14
     PUSHBUTTON      "@ColorBackgnd",IDC_SET_DL_BACKGROUND,38,128,80,14
     PUSHBUTTON      "@ColorText",IDC_SET_DL_TEXT,118,128,80,14
     PUSHBUTTON      "@SettingsSetDefault",IDC_SET_DL_DEFAULT,198,128,80,14
-    CONTROL         "",IDC_PROGRESS_COLOR_UP_SHOW,"Static",SS_OWNERDRAW,38,146,239,14,WS_EX_STATICEDGE
+    CONTROL         "",IDC_PROGRESS_COLOR_UP_SHOW,"Static",SS_OWNERDRAW | SS_NOTIFY,38,146,239,14
     PUSHBUTTON      "@ColorBackgnd",IDC_SET_UL_BACKGROUND,38,162,80,14
     PUSHBUTTON      "@ColorText",IDC_SET_UL_TEXT,118,162,80,14
     PUSHBUTTON      "@SettingsSetDefault",IDC_SET_UL_DEFAULT,198,162,80,14
@@ -1557,7 +1557,7 @@ EXSTYLE WS_EX_CONTROLPARENT
 FONT 8, "MS Shell Dlg", 400, 0, 0xEE
 BEGIN
     LISTBOX         IDC_TABCOLOR_LIST,10,8,207,90,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        IDC_SAMPLE_TAB_COLOR,224,8,76,53,ES_READONLY | WS_DISABLED,WS_EX_TRANSPARENT
+    CONTROL         "",IDC_SAMPLE_TAB_COLOR,"Static",SS_OWNERDRAW,224,8,76,53
     PUSHBUTTON      "@SettingsSelectColor",IDC_CHANGE_COLOR,224,68,76,14
     PUSHBUTTON      "@SettingsSetDefault",IDC_SET_DEFAULT,224,84,76,14
     GROUPBOX        "",IDC_STATIC,10,104,290,65
@@ -2517,8 +2517,6 @@ IDR_FILE_LIST_OFFLINE   ICON                    "res\\File-List-Off.ico"
 
 IDR_MAGNET              ICON                    "res\\Magnet.ico"
 
-IDR_TUSER               ICON                    "res\\TransferUser.ico"
-
 IDR_TRAY_AND_TASKBAR_PM ICON                    "res\\PM.ico"
 
 IDR_PURGE               ICON                    "res\\Purge.ico"
@@ -2597,9 +2595,7 @@ IDR_BAD_FLAG            PNG                     "res\\zz.png"
 
 IDR_ARROWS              PNG                     "res\\Arrows.png"
 
-IDR_TSPEEDS             PNG                     "res\\TransferSpeeds.png"
-
-IDR_TSPEEDS_BW          PNG                     "res\\TransferSpeeds-BW.png"
+IDR_TRANSFERS           PNG                     "res\\Transfers.png"
 
 IDR_TORRENT_PNG         PNG                     "res\\torrent.png"
 

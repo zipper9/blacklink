@@ -3,6 +3,7 @@
 #include "DialogLayout.h"
 #include "BarShader.h"
 #include "ColorUtil.h"
+#include "Fonts.h"
 #include "../client/SettingsManager.h"
 
 extern SettingsManager *g_settings;
@@ -118,18 +119,39 @@ void OtherColorsTab::setValues(const SettingsStore& ss)
 
 void OtherColorsTab::updateTheme()
 {
-	BOOL unused;
-	onTabListChange(0, 0, 0, unused);
+	showCurrentColor();
 	for (int i = 0; i < _countof(menuOptions); i++)
 		CButton(GetDlgItem(menuOptions[i].idc)).SetCheck(this->*menuOptions[i].ptr ? BST_CHECKED : BST_UNCHECKED);
 	updateMenuOptions();
 	ctrlMenubar.Invalidate();
 }
 
+void OtherColorsTab::setColor(int index, COLORREF color)
+{
+	if (colors[index].value != color)
+	{
+		colors[index].value = color;
+		if (ctrlTabList.GetCurSel() == index)
+			setCurrentColor(color);
+	}
+}
+
+void OtherColorsTab::showCurrentColor()
+{
+	COLORREF color = colors[ctrlTabList.GetCurSel()].value;
+	setCurrentColor(color);
+}
+
 LRESULT OtherColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
-	ctrlTabExample.Attach(GetDlgItem(IDC_SAMPLE_TAB_COLOR));
+	ctrlSample.Attach(GetDlgItem(IDC_SAMPLE_TAB_COLOR));
+
+	if (hFont) ::DeleteObject(hFont);
+	LOGFONT lf;
+	GetObject(Fonts::g_systemFont, sizeof(lf), &lf);
+	lf.lfHeight = -14;
+	hFont = CreateFontIndirect(&lf);
 
 	ctrlTabList.Attach(GetDlgItem(IDC_TABCOLOR_LIST));
 	ctrlTabList.ResetContent();
@@ -137,8 +159,7 @@ LRESULT OtherColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 		ctrlTabList.AddString(Text::toT(ResourceManager::getString(colors[i].name)).c_str());
 
 	ctrlTabList.SetCurSel(0);
-	BOOL unused;
-	onTabListChange(0, 0, 0, unused);
+	showCurrentColor();
 
 	ctrlMenubar.Attach(GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_COLOR));
 	for (int i = 0; i < _countof(menuOptions); i++)
@@ -148,20 +169,13 @@ LRESULT OtherColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	return TRUE;
 }
 
-LRESULT OtherColorsTab::onTabListChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void OtherColorsTab::setCurrentColor(COLORREF cr)
 {
-	COLORREF color = colors[ctrlTabList.GetCurSel()].value;
-	setBrush(ctrlTabExample, color);
-	return 0;
-}
-
-void OtherColorsTab::setBrush(CEdit& cs, COLORREF cr)
-{
+	currentColor = cr;
 	HBRUSH newBrush = CreateSolidBrush(cr);
-	SetProp(cs.m_hWnd, _T("fillcolor"), newBrush);
 	if (hBrush) DeleteObject(hBrush);
 	hBrush = newBrush;
-	cs.RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_ERASENOW | RDW_UPDATENOW | RDW_FRAME);
+	ctrlSample.RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_ERASENOW | RDW_UPDATENOW | RDW_FRAME);
 }
 
 void OtherColorsTab::cleanup()
@@ -170,6 +184,11 @@ void OtherColorsTab::cleanup()
 	{
 		DeleteObject(hBrush);
 		hBrush = nullptr;
+	}
+	if (hFont)
+	{
+		DeleteObject(hFont);
+		hFont = nullptr;
 	}
 }
 
@@ -180,7 +199,7 @@ LRESULT OtherColorsTab::onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	if (colors[index].value != color)
 	{
 		colors[index].value = color;
-		setBrush(ctrlTabExample, colors[index].value);
+		setCurrentColor(colors[index].value);
 		if (callback)
 		{
 			callback->settingChanged(colors[index].setting);
@@ -199,7 +218,7 @@ LRESULT OtherColorsTab::onChooseColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		if (colors[index].value != d.GetColor())
 		{
 			colors[index].value = d.GetColor();
-			setBrush(ctrlTabExample, d.GetColor());
+			setCurrentColor(d.GetColor());
 			if (callback)
 			{
 				callback->settingChanged(colors[index].setting);
@@ -240,19 +259,6 @@ LRESULT OtherColorsTab::onMenuDefaults(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 	return 0;
 }
 
-LRESULT OtherColorsTab::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
-{
-	HWND hWnd = reinterpret_cast<HWND>(lParam);
-	if (hWnd == ctrlTabExample.m_hWnd)
-	{
-		::SetBkMode((HDC)wParam, TRANSPARENT);
-		HANDLE h = GetProp(hWnd, _T("fillcolor"));
-		if (h) return reinterpret_cast<LRESULT>(h);
-		return TRUE;
-	}
-	return FALSE;
-}
-
 void OtherColorsTab::updateMenuOptions()
 {
 	GetDlgItem(IDC_SETTINGS_ODC_MENUBAR_USETWO).EnableWindow(useCustomMenu);
@@ -286,7 +292,27 @@ LRESULT OtherColorsTab::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 	DRAWITEMSTRUCT* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
 	if (dis->CtlType == ODT_STATIC)
 	{
-		if (dis->CtlID == IDC_SETTINGS_ODC_MENUBAR_COLOR)
+		if (dis->CtlID == IDC_SAMPLE_TAB_COLOR)
+		{
+			unsigned r = GetRValue(currentColor);
+			unsigned g = GetGValue(currentColor);
+			unsigned b = GetBValue(currentColor);
+			TCHAR buf[64];
+			_sntprintf(buf, _countof(buf), _T("#%02X%02X%02X"), r, g, b);
+			CDCHandle dc(dis->hDC);
+			CRect rc(dis->rcItem);
+			dc.FrameRect(&rc, GetSysColorBrush(COLOR_GRAYTEXT));
+			rc.InflateRect(-1, -1);
+			dc.FrameRect(&rc, GetSysColorBrush(COLOR_WINDOW));
+			rc.InflateRect(-1, -1);
+			dc.FillRect(&rc, hBrush);
+			dc.SetTextColor(ColorUtil::textFromBackground(currentColor));
+			dc.SetBkMode(TRANSPARENT);
+			HFONT prevFont = dc.SelectFont(hFont);
+			dc.DrawText(buf, -1, rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+			dc.SelectFont(prevFont);
+		}
+		else if (dis->CtlID == IDC_SETTINGS_ODC_MENUBAR_COLOR)
 		{
 			CDCHandle dc(dis->hDC);
 			CRect rc(dis->rcItem);

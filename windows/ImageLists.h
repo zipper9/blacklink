@@ -142,12 +142,19 @@ class EditorImage : public BaseImageList
 		void init();
 };
 
+class TransfersImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern GenderImage g_genderImage;
 extern FavImage g_favImage;
 extern FavUserImage g_favUserImage;
 extern EditorImage g_editorImage;
+extern TransfersImage g_transfersImage;
 
 class TransferTreeImage : public BaseImageList
 {

@@ -2,9 +2,9 @@
 #include "ProgressBarTab.h"
 #include "DialogLayout.h"
 #include "PropPage.h"
-#include "BarShader.h"
-#include "ColorUtil.h"
-#include "../client/SearchManager.h"
+#include "Colors.h"
+#include "../client/SettingsManager.h"
+#include "../client/Random.h"
 
 static ProgressBarTab* instance;
 
@@ -66,6 +66,8 @@ void ProgressBarTab::loadSettings()
 	progressOverrideText = g_settings->getBool(SettingsManager::PROGRESS_OVERRIDE_COLORS2);
 	speedIconEnable = g_settings->getBool(SettingsManager::STEALTHY_STYLE_ICO);
 	speedIconCustom = g_settings->getBool(SettingsManager::STEALTHY_STYLE_ICO_SPEEDIGNORE);
+	windowBackground = g_settings->get(SettingsManager::BACKGROUND_COLOR);
+	emptyBarBackground = g_settings->get(SettingsManager::PROGRESS_BACK_COLOR);
 }
 
 void ProgressBarTab::saveSettings() const
@@ -117,13 +119,22 @@ void ProgressBarTab::setValues(const SettingsStore& ss)
 	ss.getBoolValue(SettingsManager::STEALTHY_STYLE_ICO, speedIconEnable);
 	ss.getBoolValue(SettingsManager::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
 #endif
+	if (ss.getIntValue(SettingsManager::BACKGROUND_COLOR, val)) windowBackground = val;
+	if (ss.getIntValue(SettingsManager::PROGRESS_BACK_COLOR, val)) emptyBarBackground = val;
+}
+
+void ProgressBarTab::redrawBars()
+{
+	GetDlgItem(IDC_PROGRESS_COLOR_DOWN_SHOW).Invalidate();
+	GetDlgItem(IDC_PROGRESS_COLOR_UP_SHOW).Invalidate();
 }
 
 void ProgressBarTab::updateTheme()
 {
 	updateControls();
-	GetDlgItem(IDC_PROGRESS_COLOR_DOWN_SHOW).Invalidate();
-	GetDlgItem(IDC_PROGRESS_COLOR_UP_SHOW).Invalidate();
+	applySettings(0, true);
+	applySettings(1, true);
+	redrawBars();
 }
 
 void ProgressBarTab::updateControls()
@@ -142,6 +153,52 @@ void ProgressBarTab::updateControls()
 	initializing = false;
 }
 
+void ProgressBarTab::setBackgroundColor(COLORREF clr)
+{
+	if (windowBackground != clr)
+	{
+		windowBackground = clr;
+		progress[0].setWindowBackground(windowBackground);
+		progress[1].setWindowBackground(windowBackground);
+		if (progressOdc) redrawBars();
+	}
+}
+
+void ProgressBarTab::setEmptyBarBackground(COLORREF clr)
+{
+	if (emptyBarBackground != clr)
+	{
+		emptyBarBackground = clr;
+		progress[0].setEmptyBarBackground(emptyBarBackground);
+		progress[1].setEmptyBarBackground(emptyBarBackground);
+		if (!progressOdc) redrawBars();
+	}
+}
+
+void ProgressBarTab::applySettings(int index, bool check)
+{
+	ProgressBar::Settings settings;
+	settings.odcStyle = progressOdc;
+	settings.odcBumped = progressBumped;
+	settings.setTextColor = progressOverrideText;
+	settings.depth = progressDepth;
+	settings.clrBackground = progressOverrideBackground ? progressBackground[index] : GetSysColor(COLOR_HIGHLIGHT);
+	settings.clrText = progressText[index];
+	settings.clrEmptyBackground = emptyBarBackground;
+	if (!check || progress[index].get() != settings)
+		progress[index].set(settings);
+	progress[index].setWindowBackground(windowBackground);
+}
+
+void ProgressBarTab::notifyColorChange(int id, int value)
+{
+	if (callback)
+	{
+		callback->settingChanged(id);
+		callback->intSettingChanged(id, value);
+	}
+}
+
 LRESULT ProgressBarTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
@@ -151,6 +208,8 @@ LRESULT ProgressBarTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	spin.SetBuddy(GetDlgItem(IDC_DEPTH));
 
 	updateControls();
+	applySettings(0, false);
+	applySettings(1, false);
 	return TRUE;
 }
 
@@ -177,17 +236,21 @@ LRESULT ProgressBarTab::onSetDefaultColor(WORD /*wNotifyCode*/, WORD wID, HWND /
 	if (progressBackground[index] != color)
 	{
 		progressBackground[index] = color;
-		if (callback) callback->settingChanged(bgSetting);
+		notifyColorChange(bgSetting, color);
 		update = true;
 	}
 	color = g_settings->getDefault(fgSetting);
 	if (progressText[index] != color)
 	{
 		progressText[index] = color;
-		if (callback) callback->settingChanged(fgSetting);
+		notifyColorChange(fgSetting, color);
 		update = true;
 	}
-	if (update) GetDlgItem(id).Invalidate();
+	if (update)
+	{
+		applySettings(index, false);
+		GetDlgItem(id).Invalidate();
+	}
 	return 0;
 }
 
@@ -286,8 +349,9 @@ LRESULT ProgressBarTab::onStyleOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	{
 		getStyleOptions();
 		updateStyleOptions();
-		GetDlgItem(IDC_PROGRESS_COLOR_DOWN_SHOW).Invalidate();
-		GetDlgItem(IDC_PROGRESS_COLOR_UP_SHOW).Invalidate();
+		applySettings(0, true);
+		applySettings(1, true);
+		redrawBars();
 	}
 	return 0;
 }
@@ -309,10 +373,19 @@ LRESULT ProgressBarTab::onSpeedIconOption(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 {
 	if (!initializing)
 	{
+		bool prevEnable = speedIconEnable;
 		getSpeedIconOptions();
 		updateSpeedIconOptions();
+		if (speedIconEnable != prevEnable)
+			redrawBars();
 	}
 	return 0;
+}
+
+static inline int getProportionalWidth(int width, int pos, int size)
+{
+	if (pos >= size || !size) return width;
+	return width*pos/size;
 }
 
 LRESULT ProgressBarTab::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
@@ -322,38 +395,37 @@ LRESULT ProgressBarTab::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 	{
 		if (dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW || dis->CtlID == IDC_PROGRESS_COLOR_UP_SHOW)
 		{
-			CDCHandle dc(dis->hDC);
-			CRect rc(dis->rcItem);
+			const int width = dis->rcItem.right - dis->rcItem.left;
+			const int height = dis->rcItem.bottom - dis->rcItem.top;
+			CDC dc;
+			dc.CreateCompatibleDC(dis->hDC);
+			HBITMAP hBmp = CreateCompatibleBitmap(dis->hDC, width, height);
+			HBITMAP oldBmp = dc.SelectBitmap(hBmp);
 			int index = dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW ? 0 : 1;
-			COLORREF clr = progressBackground[index];
-			COLORREF clrText = progressText[index];
-			if (!progressOverrideBackground)
-				clr = GetSysColor(COLOR_HIGHLIGHT);
-			if (!progressOverrideBackground || !progressOverrideText)
-				clrText = ColorUtil::textFromBackground(clr);
-			if (progressOdc)
-			{
-				COLORREF a, b;
-				OperaColors::EnlightenFlood(clr, a, b);
-				OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, a, b, progressBumped);
-			}
-			else
-			{
-				CBarShader shader(rc.bottom - rc.top, rc.right - rc.left);
-				shader.SetFileSize(16);
-				shader.FillRange(0, 16, clr);
-				shader.Draw(dc, rc.top, rc.left, progressDepth);
-			}
-			dc.SetTextColor(clrText);
-			dc.DrawText(
-				dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW ? CTSTRING(STYLES_DOWNLOAD_BAR) : CTSTRING(STYLES_UPLOAD_BAR),
-				-1, rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+			tstring text = dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW ? TSTRING(STYLES_DOWNLOAD_BAR) : TSTRING(STYLES_UPLOAD_BAR);
+			text += _T(" (");
+			text += Util::toStringT(percent[index]);
+			text += _T("%)");
+			progress[index].draw(dc, dis->rcItem, getProportionalWidth(width - (progressOdc ? 2 : 0), percent[index], 100),
+				text, speedIconEnable ? speedIcon[index] : -1);
+			BitBlt(dis->hDC, dis->rcItem.left, dis->rcItem.top, width, height, dc, 0, 0, SRCCOPY);
+			dc.SelectBitmap(oldBmp);
+			DeleteObject(hBmp);
 		}
 		else
 			bHandled = FALSE;
 	}
 	else
 		bHandled = FALSE;
+	return 0;
+}
+
+LRESULT ProgressBarTab::onClickProgress(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
+{
+	int index = wID == IDC_PROGRESS_COLOR_DOWN_SHOW ? 0 : 1;
+	percent[index] = Util::rand(101);
+	speedIcon[index] = Util::rand(5);
+	CWindow(hWndCtl).Invalidate();
 	return 0;
 }
 
@@ -375,7 +447,9 @@ UINT_PTR CALLBACK ProgressBarTab::hookProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 			int g = clamp(::GetDlgItemInt(hWnd, CTLID_VALUE_GREEN, nullptr, TRUE));
 			int b = clamp(::GetDlgItemInt(hWnd, CTLID_VALUE_BLUE, nullptr, TRUE));
 			*instance->selColor = RGB(r, g, b);
-			::InvalidateRect(instance->selHwnd, nullptr, TRUE);
+			instance->applySettings(instance->selIndex, true);
+			int idc = instance->selIndex == 0 ? IDC_PROGRESS_COLOR_DOWN_SHOW : IDC_PROGRESS_COLOR_UP_SHOW;
+			instance->GetDlgItem(idc).Invalidate();
 		}
 	}
 	return 0;
@@ -388,22 +462,22 @@ LRESULT ProgressBarTab::onChooseColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 	{
 		case IDC_SET_DL_BACKGROUND:
 			selColor = &progressBackground[0];
-			selHwnd = GetDlgItem(IDC_PROGRESS_COLOR_DOWN_SHOW);
+			selIndex = 0;
 			id = SettingsManager::DOWNLOAD_BAR_COLOR;
 			break;
 		case IDC_SET_UL_BACKGROUND:
 			selColor = &progressBackground[1];
-			selHwnd = GetDlgItem(IDC_PROGRESS_COLOR_UP_SHOW);
+			selIndex = 1;
 			id = SettingsManager::UPLOAD_BAR_COLOR;
 			break;
 		case IDC_SET_DL_TEXT:
 			selColor = &progressText[0];
-			selHwnd = GetDlgItem(IDC_PROGRESS_COLOR_DOWN_SHOW);
+			selIndex = 0;
 			id = SettingsManager::PROGRESS_TEXT_COLOR_DOWN;
 			break;
 		case IDC_SET_UL_TEXT:
 			selColor = &progressText[1];
-			selHwnd = GetDlgItem(IDC_PROGRESS_COLOR_UP_SHOW);
+			selIndex = 1;
 			id = SettingsManager::PROGRESS_TEXT_COLOR_UP;
 			break;
 		default:
@@ -418,14 +492,14 @@ LRESULT ProgressBarTab::onChooseColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 		if (savedColor != d.GetColor())
 		{
 			*selColor = d.GetColor();
-			if (callback)
-				callback->settingChanged(id);
+			notifyColorChange(id, *selColor);
 		}
 	}
 	else
 		*selColor = savedColor;
 	instance = nullptr;
-	::InvalidateRect(selHwnd, nullptr, TRUE);
-	selHwnd = nullptr;
+	applySettings(selIndex, true);
+	int idc = selIndex == 0 ? IDC_PROGRESS_COLOR_DOWN_SHOW : IDC_PROGRESS_COLOR_UP_SHOW;
+	GetDlgItem(idc).Invalidate();
 	return 0;
 }

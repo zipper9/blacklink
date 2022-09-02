@@ -29,14 +29,11 @@
 #include "../client/ThrottleManager.h"
 #include "../client/DatabaseManager.h"
 
-#include "UsersFrame.h"
-
 #include "WinUtil.h"
 #include "TransferView.h"
 #include "MainFrm.h"
 #include "QueueFrame.h"
 #include "WaitingUsersFrame.h"
-#include "BarShader.h"
 #include "ResourceLoader.h"
 #include "ExMessageBox.h"
 
@@ -45,8 +42,6 @@ static const unsigned TIMER_VAL = 1000;
 #ifdef _DEBUG
 std::atomic<long> TransferView::ItemInfo::g_count_transfer_item;
 #endif
-
-HIconWrapper TransferView::g_user_icon(IDR_TUSER);
 
 const int TransferView::columnId[] =
 {
@@ -128,16 +123,13 @@ TransferView::TransferView() : timer(m_hWnd), shouldSort(false)
 TransferView::~TransferView()
 {
 	imgArrows.Destroy();
-	imgSpeedBW.Destroy();
-	imgSpeed.Destroy();
 	OperaColors::ClearCache();
 }
 
 LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ResourceLoader::LoadImageList(IDR_ARROWS, imgArrows, 16, 16);
-	ResourceLoader::LoadImageList(IDR_TSPEEDS, imgSpeed, 16, 16);
-	ResourceLoader::LoadImageList(IDR_TSPEEDS_BW, imgSpeedBW, 16, 16);
+	initProgressBars(false);
 
 	ctrlTransfers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_TRANSFERS);
@@ -572,7 +564,6 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			{
 				CRect rc3;
 				tstring status = ii->getText(COLUMN_STATUS);
-				int shift = 0;
 				CustomDrawHelpers::startSubItemDraw(customDrawState, cd);
 				if (ii->status == ItemInfo::STATUS_RUNNING)
 				{
@@ -582,11 +573,6 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						return 0;
 					}
 					
-					// Get the color of this bar
-					COLORREF clr = SETTING(PROGRESS_OVERRIDE_COLORS) ?
-					               (ii->download ? (!ii->parent ? SETTING(DOWNLOAD_BAR_COLOR) : SETTING(PROGRESS_SEGMENT_COLOR)) : SETTING(UPLOAD_BAR_COLOR)) :
-					               GetSysColor(COLOR_HIGHLIGHT);
-
 #if 0
 					//this is just severely broken, msdn says GetSubItemRect requires a one based index
 					//but it wont work and index 0 gives the rect of the whole item
@@ -602,110 +588,29 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					}
 #endif
 					ctrlTransfers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, &rc);
-					
-					/* Thanks & credits for Stealthy style go to phaedrus */
-					const bool useODCstyle = BOOLSETTING(PROGRESSBAR_ODC_STYLE);
+					int barIndex = ii->download ? (!ii->parent ? 0 : 1) : 2;
+					int iconIndex = -1;
+
 					// Real rc, the original one.
 					CRect real_rc = rc;
 					// We need to offset the current rc to (0, 0) to paint on the New dc
 					rc.MoveToXY(0, 0);
-					
-					CRect rc4;
-					CRect rc2 = rc;
-					
-					// Text rect
-					if (BOOLSETTING(STEALTHY_STYLE_ICO))
-					{
-						rc2.left += 22; // indented for icon and text
-						rc2.right -= 2; // and without messing with the border of the cell
-						rc4 = rc;
-					}
-					else
-					{
-						rc2 = rc;
-						rc2.left += 6; // indented with 6 pixels
-						rc2.right -= 2; // and without messing with the border of the cell
-						// Background rect
-						rc4 = rc;
-						//rc2.left += 9;
-					}
-					rc3 = rc2;
-					
+
 					CDC cdc;
 					cdc.CreateCompatibleDC(cd->nmcd.hdc);
 					HBITMAP hBmp = CreateCompatibleBitmap(cd->nmcd.hdc, real_rc.Width(), real_rc.Height());
 					
 					HBITMAP pOldBmp = cdc.SelectBitmap(hBmp);
-					HDC& dc = cdc.m_hDC;
-					
-					const HLSCOLOR hls = RGB2HLS(clr);
-					
-					const HFONT oldFont = (HFONT)SelectObject(dc, Fonts::g_systemFont); //font -> systemfont [~]Sergey Shushkanov
-					SetBkMode(dc, TRANSPARENT);
-					COLORREF clrText;
-					if (BOOLSETTING(PROGRESS_OVERRIDE_COLORS2))
-						clrText = ii->download ? SETTING(PROGRESS_TEXT_COLOR_DOWN) : SETTING(PROGRESS_TEXT_COLOR_UP);
-					else
-						clrText = ColorUtil::textFromBackground(clr);
-					COLORREF oldColor = SetTextColor(dc, clrText);
-					                                 
-					// Draw the background and border of the bar
-					if (!useODCstyle)
-					{
-						const int64_t pos = ii->getPos();
-						CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, SETTING(PROGRESS_BACK_COLOR), ii->size);
-						rc.right = rc.left + getProportionalWidth(rc.Width(), pos, ii->size);
-						if (!ii->download)
-						{
-							statusBar.FillRange(0, pos, HLS2RGB(HLS_TRANSFORM2(hls, -20, 30)));
-							statusBar.FillRange(pos, pos, clr);
-						}
-						else
-						{
-							statusBar.FillRange(0, pos, clr);
-							if (ii->parent)
-								statusBar.FillRange(pos, pos, SETTING(PROGRESS_SEGMENT_COLOR));
-						}
-						statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
-					}
-					else
-					{
-						// New style progressbar tweaks the current colors
-						int hlsL = HLS_L(RGB2HLS(cd->clrTextBk));
+					HDC dc = cdc.m_hDC;
 
-						// Create pen (ie outline border of the cell)
-						HPEN penBorder = CreatePen(PS_SOLID, 1, OperaColors::blendColors(cd->clrTextBk, clr, hlsL > 191 ? 0.6 : 0.4));
-						HGDIOBJ oldPen = SelectObject(dc, penBorder);
-
-						COLORREF clrFill = OperaColors::blendColors(cd->clrTextBk, clr, hlsL > 191 ? 0.85 : 0.70);
-						HBRUSH hBrush = CreateSolidBrush(clrFill);
-						HGDIOBJ oldBrush = (HBRUSH)::SelectObject(dc, hBrush);
-
-						Rectangle(dc, rc.left, rc.top, rc.right, rc.bottom);
-
-						DeleteObject(::SelectObject(dc, oldPen));
-						DeleteObject(::SelectObject(dc, oldBrush));
-
-						const int right = rc.left + getProportionalWidth(rc.Width(), ii->getPos(), ii->size);
-						COLORREF a, b;
-						OperaColors::EnlightenFlood(clr, a, b);
-						OperaColors::FloodFill(cdc, rc.left + 1, rc.top + 1, right, rc.bottom - 1, a, b, BOOLSETTING(PROGRESSBAR_ODC_BUMPED));
-					}
 					if (BOOLSETTING(STEALTHY_STYLE_ICO))
 					{
-						int iconTop = (rc2.top + rc2.bottom)/2 - 8;
 						if (ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST)
 						{
-							DrawIconEx(dc, rc2.left - 20 + shift, iconTop, g_user_icon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
+							iconIndex = 5;
 						}
 						else if (ii->status == ItemInfo::STATUS_RUNNING)
 						{
-							RECT rc9 = rc2;
-							rc9.left -= 19 - shift;
-							rc9.top = iconTop;
-							rc9.right = rc9.left + 16;
-							rc9.bottom = rc9.top + 16;
-							
 							int64_t speedmark;
 							if (!BOOLSETTING(THROTTLE_ENABLE))
 							{
@@ -720,32 +625,22 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 								else
 									speedmark = ThrottleManager::getInstance()->getDownloadLimitInKBytes() / 5;
 							}
-							//CImageList& images = HLS_S(hls) > 30 || HLS_L(hls) < 70 ? imgSpeed : imgSpeedBW;
-							CImageList& images = imgSpeedBW;
 							const int64_t speedkb = ii->speed / 1000;
-							int image;
-							if (speedkb >= speedmark*4) image = 4; else
-							if (speedkb >= speedmark*3) image = 3; else
-							if (speedkb >= speedmark*2) image = 2; else
-							if (speedkb >= (speedmark*3)/2) image = 1; else image = 0;
-							images.DrawEx(image, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
+							if (speedkb >= speedmark*4) iconIndex = 4; else
+							if (speedkb >= speedmark*3) iconIndex = 3; else
+							if (speedkb >= speedmark*2) iconIndex = 2; else
+							if (speedkb >= (speedmark*3)/2) iconIndex = 1; else iconIndex = 0;
 						}
 					}
 
-					// Draw the text, the other stuff here was moved upwards due to stealthy style being added
-					if (!status.empty())
-					{
-						CRect rcText = rc3;
-						rcText.left += shift;
-						DrawText(dc, status.c_str(), status.length(), &rcText, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
-					}
-					
-					SelectObject(dc, oldFont);
-					SetTextColor(dc, oldColor);
-					
-					// New way:
+					int width = rc.Width();
+					if (progressBar[barIndex].get().odcStyle) width -= 2;
+					int pos = width > 1 ? getProportionalWidth(width, ii->getPos(), ii->size) : 0;
+					progressBar[barIndex].draw(dc, rc, pos, status, iconIndex);
+
 					BitBlt(cd->nmcd.hdc, real_rc.left, real_rc.top, real_rc.Width(), real_rc.Height(), dc, 0, 0, SRCCOPY);
-					DeleteObject(cdc.SelectBitmap(pOldBmp));
+					ATLVERIFY(cdc.SelectBitmap(pOldBmp) == hBmp);
+					DeleteObject(hBmp);
 					
 					if (cd->iSubItem == 0)
 					{
@@ -771,7 +666,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				}
 				else
 				{
-					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &imgSpeed, -1, status, false);
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, nullptr, -1, status, false);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
@@ -2000,6 +1895,7 @@ void TransferView::on(SettingsManagerListener::Repaint)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
+		initProgressBars(true);
 		if (ctrlTransfers.isRedraw())
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}
@@ -2245,6 +2141,30 @@ void TransferView::getSelectedUsers(vector<UserPtr>& v) const
 		v.push_back(ii->getUser());
 		i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED);
 	}
+}
+
+void TransferView::initProgressBars(bool check)
+{
+	ProgressBar::Settings settings;
+	bool setColors = BOOLSETTING(PROGRESS_OVERRIDE_COLORS);
+	settings.clrBackground = setColors ? SETTING(DOWNLOAD_BAR_COLOR) : GetSysColor(COLOR_HIGHLIGHT);
+	settings.clrText = SETTING(PROGRESS_TEXT_COLOR_DOWN);
+	settings.clrEmptyBackground = SETTING(PROGRESS_BACK_COLOR);
+	settings.odcStyle = BOOLSETTING(PROGRESSBAR_ODC_STYLE);
+	settings.odcBumped = BOOLSETTING(PROGRESSBAR_ODC_BUMPED);
+	settings.depth = SETTING(PROGRESS_3DDEPTH);
+	settings.setTextColor = BOOLSETTING(PROGRESS_OVERRIDE_COLORS2);
+	if (!check || progressBar[0].get() != settings) progressBar[0].set(settings);
+	progressBar[0].setWindowBackground(Colors::g_bgColor);
+
+	if (setColors) settings.clrBackground = SETTING(PROGRESS_SEGMENT_COLOR);
+	if (!check || progressBar[1].get() != settings) progressBar[1].set(settings);
+	progressBar[1].setWindowBackground(Colors::g_bgColor);
+
+	if (setColors) settings.clrBackground = SETTING(UPLOAD_BAR_COLOR);
+	settings.clrText = SETTING(PROGRESS_TEXT_COLOR_UP);
+	if (!check || progressBar[2].get() != settings) progressBar[2].set(settings);
+	progressBar[2].setWindowBackground(Colors::g_bgColor);
 }
 
 TransferView::ItemInfo::ItemInfo() : hintedUser(HintedUser(nullptr, Util::emptyString)), download(true)

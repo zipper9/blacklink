@@ -21,7 +21,11 @@ namespace ColorUtil
 
 	inline COLORREF textFromBackground(COLORREF bg) noexcept
 	{
-		return HLS_L(RGB2HLS(bg)) > 160 ? RGB(0, 0, 0) : RGB(255, 255, 255);
+		unsigned r = GetRValue(bg);
+		unsigned g = GetGValue(bg);
+		unsigned b = GetBValue(bg);
+		double y = 0.299 * r + 0.587 * g + 0.114 * b;
+		return y > 0.5 * 255 ? RGB(0, 0, 0) : RGB(255, 255, 255);
 	}
 
 	inline COLORREF lighter(COLORREF color) noexcept

@@ -15,13 +15,12 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 	public:
 		enum { IDD = IDD_OTHER_COLORS_TAB };
 
-		OtherColorsTab() : hBrush(nullptr), selColor(nullptr), callback(nullptr) {}
+		OtherColorsTab() : hBrush(nullptr), hFont(nullptr), selColor(nullptr), callback(nullptr) {}
 		~OtherColorsTab() { cleanup(); }
 
 		BEGIN_MSG_MAP(OtherColorsTab)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
-		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		COMMAND_HANDLER(IDC_CHANGE_COLOR, BN_CLICKED, onChooseColor)
 		COMMAND_HANDLER(IDC_SET_DEFAULT, BN_CLICKED, onSetDefaultColor)
@@ -35,11 +34,14 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onCtlColor(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onChooseColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onTabListChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onTabListChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			showCurrentColor();
+			return 0;
+		}
 		LRESULT onMenuOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChooseMenuColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMenuDefaults(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -54,6 +56,7 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 		void getValues(SettingsStore& ss) const;
 		void setValues(const SettingsStore& ss);
 		void updateTheme();
+		void setColor(int index, COLORREF clr);
 		void setCallback(PropPageCallback* p) { callback = p; }
 
 		bool useCustomMenu;
@@ -62,8 +65,10 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 
 	private:
 		CListBox ctrlTabList;
-		CEdit ctrlTabExample;
+		CStatic ctrlSample;
+		COLORREF currentColor;
 		HBRUSH hBrush;
+		HFONT hFont;
 
 		COLORREF menuLeftColor;
 		COLORREF menuRightColor;
@@ -71,7 +76,8 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 		CStatic ctrlMenubar;
 		PropPageCallback* callback;
 
-		void setBrush(CEdit& cs, COLORREF cr);
+		void showCurrentColor();
+		void setCurrentColor(COLORREF cr);
 		void updateMenuOptions();
 		void cleanup();
 		static UINT_PTR CALLBACK hookProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

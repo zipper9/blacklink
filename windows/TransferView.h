@@ -36,6 +36,7 @@
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
 #include "BaseHandlers.h"
+#include "BarShader.h"
 
 class TransferView : public CWindowImpl<TransferView>, private DownloadManagerListener,
 	private UploadManagerListener,
@@ -530,14 +531,10 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 	private:
 		static const int columnId[];
-		
+
 		CImageList imgArrows;
-		CImageList imgSpeed;
-		CImageList imgSpeedBW;
-		
-		static HIconWrapper g_user_icon;
-		//static HIconWrapper g_fiwrewall_icon;
-		
+		ProgressBar progressBar[3]; // download, download segment, upload
+
 		//OMenu transferMenu;
 		OMenu segmentedMenu;
 		OMenu usercmdsMenu;
@@ -606,6 +603,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 		void pauseSelectedTransfer(void);
 		void openDownloadQueue(const ItemInfo* ii);
+		void initProgressBars(bool check);
 };
 
 #endif // !defined(TRANSFER_VIEW_H)

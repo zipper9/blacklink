@@ -4,7 +4,7 @@
 #include "Colors.h"
 #include "DialogLayout.h"
 #include "ThemeUtil.h"
-#include "../client/File.h"
+#include "ColorUtil.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -318,5 +318,14 @@ void StylesPage::intSettingChanged(int id, int value)
 	{
 		tabChat.setBackgroundColor(value, true);
 		tabUserList.setBackgroundColor(value);
+		tabProgress.setBackgroundColor(value);
+	}
+	else if (id == SettingsManager::PROGRESS_BACK_COLOR)
+		tabProgress.setEmptyBarBackground(value);
+	else if (id == SettingsManager::DOWNLOAD_BAR_COLOR)
+	{
+		// Derive PROGRESS_SEGMENT_COLOR from DOWNLOAD_BAR_COLOR
+		COLORREF clr = HLS_TRANSFORM(value, 0, -35);
+		tabOther.setColor(4, clr);
 	}
 }

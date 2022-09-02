@@ -1,12 +1,15 @@
 #pragma once
 
 #include "../Client/typedefs.h"
+#include "atlapp.h"
+#include "atlwin.h"
+#include "atlctrls.h"
 #include "atlcoll.h"
 
 class CBarShader
 {
 	public:
-		CBarShader(uint32_t dwHeight, uint32_t dwWidth, COLORREF crColor = 0, uint64_t dwFileSize = 1ui64);
+		CBarShader(uint32_t height, uint32_t width, COLORREF color = 0, uint64_t fileSize = 1);
 		~CBarShader(void);
 		
 		//set the width of the bar
@@ -176,4 +179,44 @@ class OperaColors
 		typedef std::unordered_map<FloodCacheItem::FCIMapper, FloodCacheItem*, fci_hash<sizeof(size_t) == 8>, fci_equal_to> FCIMap;
 		
 		static FCIMap cache;
+};
+
+class ProgressBar
+{
+	public:
+		struct Settings
+		{
+			bool odcStyle;
+			bool odcBumped;
+			bool setTextColor;
+			int depth; // !odcStyle
+			COLORREF clrBackground;
+			COLORREF clrText;
+			COLORREF clrEmptyBackground; // !odcStyle
+
+			bool operator== (const Settings& rhs) const;
+			bool operator!= (const Settings& rhs) const { return !operator==(rhs); }
+		};
+
+		ProgressBar() : backBrush(nullptr), framePen(nullptr), colorsInitialized(false) {}
+		~ProgressBar() { cleanup(); }
+		ProgressBar(const ProgressBar&) = delete;
+		ProgressBar& operator= (const ProgressBar&) = delete;
+
+		void set(const Settings& s);
+		const Settings& get() const { return settings; }
+		void draw(HDC hdc, const RECT& rc, int pos, const tstring& text, int iconIndex);
+		void setWindowBackground(COLORREF clr);
+		void setEmptyBarBackground(COLORREF clr);
+
+	private:
+		Settings settings;
+		COLORREF windowBackground; // odcStyle, used to derive background colors
+		COLORREF textColor[2];
+		bool colorsInitialized;
+		// odcStyle, cached GDI objects
+		HBRUSH backBrush;
+		HPEN framePen;
+
+		void cleanup();
 };
