@@ -647,6 +647,7 @@ static const char* settingTags[] =
 	"ConfirmUserRemoval", 
 	"ConfirmShareFromShell",
 	"ConfirmClearSearchHistory",
+	"ConfirmAdlsRemoval",
 
 	// Password (Ints)
 	"ProtectTray", "ProtectStart", "ProtectClose",
@@ -1262,6 +1263,7 @@ void SettingsManager::setDefaults()
 	setDefault(CONFIRM_USER_REMOVAL, TRUE);
 	setDefault(CONFIRM_SHARE_FROM_SHELL, TRUE);
 	setDefault(CONFIRM_CLEAR_SEARCH_HISTORY, TRUE);
+	setDefault(CONFIRM_ADLS_REMOVAL, TRUE);
 
 	// Media player
 	setDefault(USE_MAGNETS_IN_PLAYERS_SPAM, TRUE);

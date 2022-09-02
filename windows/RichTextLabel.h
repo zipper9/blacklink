@@ -20,6 +20,8 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_SETTEXT, onSetText)
+		MESSAGE_HANDLER(WM_SETFONT, onSetFont)
+		MESSAGE_HANDLER(WM_GETFONT, onGetFont)
 		MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBkgnd)
 		MESSAGE_HANDLER(WM_PAINT, onPaint)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
@@ -36,6 +38,8 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled);
 		LRESULT onSetText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onSetFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onGetFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			return 1;
@@ -77,6 +81,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		struct Style
 		{
 			LOGFONT font;
+			COLORREF color;
 		};
 
 		struct StyleInstance : public Style
@@ -121,6 +126,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		int bitmapHeight = 0;
 		HCURSOR linkCursor = nullptr;
 		HCURSOR defaultCursor = nullptr;
+		HFONT font = nullptr;
 
 		bool useDialogBackground = false;
 		bool useSystemColors = false;

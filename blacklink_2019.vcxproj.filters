@@ -972,6 +972,9 @@
     <ClInclude Include="windows\PropPageCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\HelpTextDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

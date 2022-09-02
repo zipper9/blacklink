@@ -226,6 +226,7 @@ class IconBitmaps
 			CDM_DEBUG,
 			TTH,
 			HASH_PROGRESS,
+			HELP,
 			DHT,
 			ABOUT,
 			FAVORITE_DIRS,

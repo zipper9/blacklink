@@ -150,6 +150,7 @@
 #define IDD_IP_TAB                      348
 #define IDD_FIREWALL_TAB                349
 #define IDD_URLS_TAB                    350
+#define IDD_HELP_TEXT                   364
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_GROUP_TEMPLATES             1002

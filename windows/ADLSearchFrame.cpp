@@ -25,6 +25,8 @@
 #include "ADLSearchFrame.h"
 #include "AdlsProperties.h"
 #include "Colors.h"
+#include "ExMessageBox.h"
+#include "HelpTextDlg.h"
 
 int ADLSearchFrame::columnIndexes[] =
 {
@@ -111,16 +113,19 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlMoveDown.SetWindowText(CTSTRING(MOVE_DOWN));
 	ctrlMoveDown.SetFont(Fonts::g_systemFont);
 	
-	ctrlHelp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_ADLS_HELP);
+	ctrlHelp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_CHECKBOX | BS_PUSHLIKE, 0, IDC_ADLS_HELP);
 	ctrlHelp.SetWindowText(CTSTRING(WHATS_THIS));
 	ctrlHelp.SetFont(Fonts::g_systemFont);
 	
 	// Create context menu
 	contextMenu.CreatePopupMenu();
-	contextMenu.AppendMenu(MF_STRING, IDC_ADD,    CTSTRING(NEW));
+	contextMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(NEW));
 	contextMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-	contextMenu.AppendMenu(MF_STRING, IDC_EDIT,   CTSTRING(PROPERTIES));
-	
+	contextMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
+	contextMenu.AppendMenu(MF_SEPARATOR);
+	contextMenu.AppendMenu(MF_STRING, IDC_MOVE_UP, CTSTRING(MOVE_UP));
+	contextMenu.AppendMenu(MF_STRING, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN));
+
 	SettingsManager::getInstance()->addListener(this);
 	load();
 	
@@ -134,6 +139,12 @@ LRESULT ADLSearchFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	dcassert(pLoop);
 	pLoop->RemoveMessageFilter(this);
 	bHandled = FALSE;
+	if (dlgHelp)
+	{
+		dlgHelp->DestroyWindow();
+		delete dlgHelp;
+		dlgHelp = nullptr;
+	}
 	return 0;
 }
 
@@ -243,15 +254,17 @@ LRESULT ADLSearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPara
 	if (reinterpret_cast<HWND>(wParam) == ctrlList)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-		
+
 		if (pt.x == -1 && pt.y == -1)
 		{
 			WinUtil::getContextMenuPos(ctrlList, pt);
 		}
-		
-		int status = ctrlList.GetSelectedCount() > 0 ? MFS_ENABLED : MFS_GRAYED;
+
+		int status = ctrlList.GetNextItem(-1, LVNI_SELECTED) != -1 ? MFS_ENABLED : MFS_GRAYED;
 		contextMenu.EnableMenuItem(IDC_EDIT, status);
 		contextMenu.EnableMenuItem(IDC_REMOVE, status);
+		contextMenu.EnableMenuItem(IDC_MOVE_UP, status);
+		contextMenu.EnableMenuItem(IDC_MOVE_DOWN, status);
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		return TRUE;
 	}
@@ -335,6 +348,15 @@ LRESULT ADLSearchFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	int i = -1;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) >= 0) index.push_back(i);
 	if (index.empty()) return 0;
+
+	if (BOOLSETTING(CONFIRM_ADLS_REMOVAL))
+	{
+		UINT checkState = BST_UNCHECKED;
+		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+			return 0;
+		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_ADLS_REMOVAL, FALSE);
+	}
+
 	std::sort(index.begin(), index.end());
 
 	auto am = ADLSearchManager::getInstance();
@@ -350,9 +372,52 @@ LRESULT ADLSearchFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	return 0;
 }
 
-LRESULT ADLSearchFrame::onHelp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT ADLSearchFrame::onHelp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	MessageBox(CTSTRING(ADL_BRIEF), CTSTRING(ADL_TITLE), MB_OK);
+	CButton wnd(hWndCtl);
+	if (wnd.GetCheck() == BST_CHECKED)
+	{
+		wnd.SetCheck(BST_UNCHECKED);
+		if (dlgHelp)
+		{
+			dlgHelp->DestroyWindow();
+			delete dlgHelp;
+			dlgHelp = nullptr;
+		}
+	}
+	else
+	{
+		wnd.SetCheck(BST_CHECKED);
+		if (!dlgHelp)
+		{
+			dlgHelp = new HelpTextDlg;
+			CRect rc;
+			wnd.GetWindowRect(&rc);
+			dlgHelp->setNotifWnd(m_hWnd);
+			dlgHelp->Create(m_hWnd);
+			CRect rcDlg;
+			dlgHelp->GetWindowRect(&rcDlg);
+			rc.bottom = rc.top;
+			rc.top = rc.bottom - rcDlg.Height();
+			rc.right = rc.left + rcDlg.Width();
+			HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::HELP, 0);
+			dlgHelp->SetIcon(dialogIcon, TRUE);
+			dlgHelp->SetIcon(dialogIcon, FALSE);
+			dlgHelp->SetWindowPos(nullptr, &rc, SWP_SHOWWINDOW | SWP_NOSIZE);
+		}
+	}
+	return 0;
+}
+
+LRESULT ADLSearchFrame::onHelpDialogClosed(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	if (dlgHelp)
+	{
+		dlgHelp->DestroyWindow();
+		delete dlgHelp;
+		dlgHelp = nullptr;
+	}
+	CButton(GetDlgItem(IDC_ADLS_HELP)).SetCheck(BST_UNCHECKED);
 	return 0;
 }
 
@@ -430,10 +495,13 @@ LRESULT ADLSearchFrame::onMoveDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 LRESULT ADLSearchFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	if (setCheckState) return 0;
-	
+
+	BOOL hasSelected = ctrlList.GetNextItem(-1, LVNI_SELECTED) != -1;
 	NMITEMACTIVATE* item = reinterpret_cast<NMITEMACTIVATE*>(pnmh);
-	GetDlgItem(IDC_EDIT).EnableWindow(item->uNewState & LVIS_FOCUSED);
-	GetDlgItem(IDC_REMOVE).EnableWindow(item->uNewState & LVIS_FOCUSED);
+	GetDlgItem(IDC_EDIT).EnableWindow(hasSelected);
+	GetDlgItem(IDC_REMOVE).EnableWindow(hasSelected);
+	GetDlgItem(IDC_MOVE_UP).EnableWindow(hasSelected);
+	GetDlgItem(IDC_MOVE_DOWN).EnableWindow(hasSelected);
 
 	if ((item->uChanged & LVIF_STATE) == 0)
 		return 0;
@@ -559,6 +627,7 @@ BOOL ADLSearchFrame::PreTranslateMessage(MSG* pMsg)
 	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;
+	if (dlgHelp && dlgHelp->IsDialogMessage(pMsg)) return TRUE;
 	return IsDialogMessage(pMsg);
 }
 

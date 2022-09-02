@@ -4,6 +4,8 @@
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "WinUtil.h"
+#include "Colors.h"
+#include "../client/File.h"
 
 enum
 {
@@ -29,6 +31,7 @@ BOOL RichTextLabel::SubclassWindow(HWND hWnd)
 {
 	ATLASSERT(m_hWnd == NULL);
 	ATLASSERT(::IsWindow(hWnd));
+	font = CWindow(hWnd).GetFont();
 	if (!CWindowImpl<RichTextLabel>::SubclassWindow(hWnd)) return FALSE;
 	WinUtil::getWindowText(hWnd, text);
 	initialize();
@@ -55,6 +58,17 @@ LRESULT RichTextLabel::onSetText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam
 	text.assign(reinterpret_cast<const TCHAR*>(lParam));
 	initialize();
 	return TRUE;
+}
+
+LRESULT RichTextLabel::onSetFont(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	font = (HFONT) wParam;
+	return 0;
+}
+
+LRESULT RichTextLabel::onGetFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	return (LRESULT) font;
 }
 
 void RichTextLabel::drawUnderline(HDC dc, int xStart, int xEnd, int y, int yBottom, COLORREF color) const
@@ -99,9 +113,6 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 	if (layoutFlag)
 		layout(memDC, width);
 
-	COLORREF mainColor = colorText;
-	if (useSystemColors)
-		mainColor = GetSysColor(COLOR_BTNTEXT);
 	if (!bgBrush)
 		bgBrush = CreateSolidBrush(useSystemColors ? GetSysColor(COLOR_BTNFACE) : colorBackground);
 	if (useDialogBackground)
@@ -137,7 +148,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		if (fragment.link != -1)
 			color = fragment.link == hoverLink ? colorLinkHover : colorLink;
 		else
-			color = mainColor;
+			color = style.color;
 		SetTextColor(memDC, color);
 		ExtTextOut(memDC, fragment.x, fragment.y, ETO_CLIPPED, &rc, fragment.text.c_str(), static_cast<UINT>(fragment.text.length()), nullptr);
 		if ((style.font.lfUnderline || (fragment.link != -1 && fragment.link == hoverLink)) && underlinePos == -1)
@@ -173,7 +184,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 				{
 					if (fragment.x > xEnd) xEnd = fragment.x;
 					if (y >= bottom) break;
-					drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : mainColor);
+					drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : style.color);
 					y = yBaseLine;
 					xStart = fragment.x;
 					xEnd = fragment.x + fragment.width - fragment.spaceWidth;
@@ -183,15 +194,16 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 			else if (xStart != -1)
 			{
 				if (y >= bottom) break;
-				drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : mainColor);
+				drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : style.color);
 				xStart = -1;
 			}
 		}
 		if (xStart != -1 && y < bottom)
 		{
 			const Fragment& fragment = fragments.back();
+			COLORREF color = styles[fragment.style].color;
 			drawUnderline(memDC, xStart, fragment.x + fragment.width - fragment.spaceWidth,
-				y, bottom, isLink ? colorLinkHover : mainColor);
+				y, bottom, isLink ? colorLinkHover : color);
 		}
 	}
 
@@ -338,15 +350,15 @@ inline bool styleEq(const RichTextLabel::Style& s1, const RichTextLabel::Style& 
 	return s1.font.lfWeight == s2.font.lfWeight &&
 		s1.font.lfHeight == s2.font.lfHeight &&
 		s1.font.lfItalic == s2.font.lfItalic &&
-		s1.font.lfUnderline == s2.font.lfUnderline;
+		s1.font.lfUnderline == s2.font.lfUnderline &&
+		s1.color == s2.color;
 }
 
 int RichTextLabel::getStyle()
 {
 	if (!initialStyle.font.lfHeight)
 	{
-		HFONT font = GetFont();
-		GetObject(font, sizeof(LOGFONT), &initialStyle.font);
+		GetObject(font ? font : (HFONT) GetStockObject(SYSTEM_FONT), sizeof(LOGFONT), &initialStyle.font);
 		if (fontHeight) initialStyle.font.lfHeight = fontHeight;
 	}
 
@@ -362,6 +374,7 @@ int RichTextLabel::getStyle()
 	{
 		StyleInstance newStyle;
 		newStyle.font = currentStyle.font;
+		newStyle.color = currentStyle.color;
 		newStyle.hFont = nullptr;
 		style = static_cast<int>(styles.size());
 		styles.push_back(newStyle);
@@ -409,6 +422,7 @@ void RichTextLabel::initialize()
 	clearStyles();
 	parsingLink = -1;
 	lastFragment = -1;
+	initialStyle.color = useSystemColors ? GetSysColor(COLOR_BTNTEXT) : colorText;
 
 	tstring::size_type start = tstring::npos;
 	for (tstring::size_type i = 0; i < text.length(); ++i)
@@ -419,7 +433,8 @@ void RichTextLabel::initialize()
 				fragments[lastFragment].text += _T(' ');
 			else if (!fragments.empty() && start == tstring::npos)
 			{
-				addFragment(i, i, true);
+				if (!(fragments.back().text[0] == _T('\n') && (text[i] == _T('\r') || text[i] == _T('\n'))))
+					addFragment(i, i, true);
 				continue;
 			}
 			if (start == tstring::npos) continue;
@@ -731,6 +746,13 @@ void RichTextLabel::processTag(const tstring& data)
 				if (val) setFontSize(tagStack.back().style.font, val);
 			}
 		}
+		const string& colorValue = getAttribValue(attr, "color");
+		if (!colorValue.empty())
+		{
+			COLORREF color;
+			if (Colors::getColorFromString(Text::toT(colorValue), color))
+				tagStack.back().style.color = color;
+		}
 		return;
 	}
 	if (tag == "a")
@@ -756,8 +778,7 @@ RichTextLabel::TagStackItem RichTextLabel::newTagStackItem(const string& tag)
 	{
 		if (!initialStyle.font.lfHeight)
 		{
-			HFONT font = GetFont();
-			GetObject(font, sizeof(LOGFONT), &initialStyle.font);
+			GetObject(font ? font : (HFONT) GetStockObject(SYSTEM_FONT), sizeof(LOGFONT), &initialStyle.font);
 			if (fontHeight) initialStyle.font.lfHeight = fontHeight;
 		}
 		item.style = initialStyle;

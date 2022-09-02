@@ -28,7 +28,6 @@
 #include "FlatTabCtrl.h"
 #include "StaticFrame.h"
 #include "ExListViewCtrl.h"
-
 #include "../client/ADLSearch.h"
 
 class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
@@ -37,18 +36,15 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 	public CMessageFilter
 {
 	public:
-		// Base class typedef
 		typedef MDITabChildWindowImpl<ADLSearchFrame> baseClass;
 
-		ADLSearchFrame(): xdu(0), ydu(0), setCheckState(0) {}
+		ADLSearchFrame(): xdu(0), ydu(0), setCheckState(0), dlgHelp(nullptr) {}
 
 		ADLSearchFrame(const ADLSearchFrame&) = delete;
 		ADLSearchFrame& operator= (const ADLSearchFrame&) = delete;
 		
-		// Frame window declaration
 		static CFrameWndClassInfo& GetWndClassInfo();
 		
-		// Inline message map
 		BEGIN_MSG_MAP(ADLSearchFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
@@ -57,6 +53,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
+		MESSAGE_HANDLER(WMU_DIALOG_CLOSED, onHelpDialogClosed)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
@@ -86,6 +83,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
+		LRESULT onHelpDialogClosed(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 		// Update colors
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -110,6 +108,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		int xdu, ydu;
 		int buttonWidth, buttonHeight, buttonSpace;
 		int vertMargin, horizMargin;
+		class HelpTextDlg* dlgHelp;
 
 		CButton ctrlAdd;
 		CButton ctrlEdit;

@@ -1628,6 +1628,13 @@ BEGIN
     PUSHBUTTON      "@Cancel",IDCANCEL,167,215,50,14
 END
 
+IDD_HELP_TEXT DIALOGEX 0, 0, 330, 230
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Help"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

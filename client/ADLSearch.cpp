@@ -454,7 +454,6 @@ void ADLSearchManager::prepare(ADLSearchManager::SearchContext& ctx, DirectoryLi
 void ADLSearchManager::SearchContext::match() noexcept
 {
 	using Directory = DirectoryListing::Directory;
-	using File = DirectoryListing::File;
 
 	if (!dl) return;
 	vector<int> tmp;
