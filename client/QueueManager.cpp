@@ -1979,7 +1979,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						if (q->isSet(QueueItem::FLAG_USER_LIST))
 						{
 							// Blah...no use keeping an unfinished file list...
-							File::deleteFile(q->getListName());
+							File::deleteFile(q->getListName() + dctmpExtension);
 						}
 						if (download->getType() == Transfer::TYPE_FILE)
 						{
@@ -2225,7 +2225,7 @@ bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 	{
 		q->getUsers(x);
 	}
-	else if (!q->isSet(QueueItem::FLAG_PARTIAL_LIST) && !tempTarget.empty() && tempTarget != q->getTarget())
+	else if (!q->isSet(QueueItem::FLAG_USER_LIST) && !tempTarget.empty() && tempTarget != q->getTarget())
 	{
 		if (File::isExist(tempTarget))
 		{

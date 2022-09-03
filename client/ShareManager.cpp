@@ -1852,15 +1852,18 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 		attr[FILE_ATTR_FILES_BZ_XML].size = newXmlFile.getFilter().sizeCompressed;
 
 #if defined DEBUG_FILELIST
-		LogManager::message(origXmlName + " uncompressed size: " + Util::toString(xmlListLen[0]), false);
-		LogManager::message(origXmlName + " uncompressed TTH: " + xmlListRoot[0].toBase32(), false);
-		LogManager::message(origXmlName + " compressed size: " + Util::toString(xmlListLen[1]), false);
-		LogManager::message(origXmlName + " compressed TTH: " + xmlListRoot[1].toBase32(), false);
+		LogManager::message(origXmlName + " uncompressed size: " + Util::toString(attr[FILE_ATTR_FILES_XML].size), false);
+		LogManager::message(origXmlName + " uncompressed TTH: " + attr[FILE_ATTR_FILES_XML].root.toBase32(), false);
+		LogManager::message(origXmlName + " compressed size: " + Util::toString(attr[FILE_ATTR_FILES_BZ_XML].size), false);
+		LogManager::message(origXmlName + " compressed TTH: " + attr[FILE_ATTR_FILES_BZ_XML].root.toBase32(), false);
 #endif
 	}
 
 	{
 		result = File::renameFile(newXmlName, origXmlName);
+#if defined DEBUG_FILELIST
+		if (!result) LogManager::message("Failed to rename " + newXmlName + " to " + origXmlName + ": " + Util::translateError(), false);
+#endif
 		deleteTempFiles(origXmlName, result ? Util::emptyString : tempFileName);
 
 		WRITE_LOCK(*csShare);
