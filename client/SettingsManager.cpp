@@ -1157,9 +1157,9 @@ void SettingsManager::setDefaults()
 
 	// Other colors
 	setDefault(DOWNLOAD_BAR_COLOR, RGB(0x36, 0xDB, 0x24));
-	setDefault(UPLOAD_BAR_COLOR, RGB(0x00, 0xA8, 0xFB));
-	setDefault(PROGRESS_BACK_COLOR, RGB(95, 95, 95));
-	setDefault(PROGRESS_SEGMENT_COLOR, RGB(126, 232, 115));
+	setDefault(UPLOAD_BAR_COLOR, RGB(0x00, 0xAB, 0xFD));
+	setDefault(PROGRESS_BACK_COLOR, RGB(0xCC, 0xCC, 0xCC));
+	setDefault(PROGRESS_SEGMENT_COLOR, RGB(0x52, 0xB9, 0x44));
 	setDefault(COLOR_RUNNING, RGB(64, 64, 255));
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
@@ -1212,16 +1212,15 @@ void SettingsManager::setDefaults()
 
 	// Progressbar settings
 	setDefault(SHOW_PROGRESS_BARS, TRUE);
-	setDefault(PROGRESS_TEXT_COLOR_DOWN, RGB(0, 51, 0));
-	setDefault(PROGRESS_TEXT_COLOR_UP, RGB(98, 0, 49));
 	setDefault(PROGRESS_OVERRIDE_COLORS, TRUE);
-	setDefault(PROGRESS_3DDEPTH, 4);
-	setDefault(PROGRESS_OVERRIDE_COLORS2, TRUE);
+	setDefault(PROGRESS_TEXT_COLOR_DOWN, RGB(0, 0, 0));
+	setDefault(PROGRESS_TEXT_COLOR_UP, RGB(0, 0, 0));
+	setDefault(PROGRESS_3DDEPTH, 3);
 	setDefault(PROGRESSBAR_ODC_STYLE, TRUE);
 	setDefault(PROGRESSBAR_ODC_BUMPED, TRUE);
 	setDefault(STEALTHY_STYLE_ICO, TRUE);
-	setDefault(TOP_DL_SPEED, 100);
-	setDefault(TOP_UL_SPEED, 50);
+	setDefault(TOP_DL_SPEED, 512);
+	setDefault(TOP_UL_SPEED, 512);
 
 	// Popup settings (Ints)
 	setDefault(POPUP_TIME, 5);
