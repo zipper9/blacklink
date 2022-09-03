@@ -532,7 +532,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	private:
 		static const int columnId[];
 
-		CImageList imgArrows;
 		ProgressBar progressBar[3]; // download, download segment, upload
 
 		//OMenu transferMenu;

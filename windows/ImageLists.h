@@ -148,6 +148,12 @@ class TransfersImage : public BaseImageList
 		void init();
 };
 
+class TransferArrowsImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern GenderImage g_genderImage;
@@ -155,6 +161,7 @@ extern FavImage g_favImage;
 extern FavUserImage g_favUserImage;
 extern EditorImage g_editorImage;
 extern TransfersImage g_transfersImage;
+extern TransferArrowsImage g_transferArrowsImage;
 
 class TransferTreeImage : public BaseImageList
 {
@@ -240,6 +247,7 @@ class IconBitmaps
 			DCLST,
 			MESSAGES,
 			FAVORITE,
+			DOWNLOAD,
 			EDITOR_SEND,
 			EDITOR_MULTILINE,
 			EDITOR_EMOTICON,
@@ -278,6 +286,7 @@ class IconBitmaps
 			SOURCE_MAIN,
 			SOURCE_SETTINGS,
 			SOURCE_FAVORITE,
+			SOURCE_ARROWS,
 			SOURCE_EDITOR
 		};
 

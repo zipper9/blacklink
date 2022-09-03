@@ -299,10 +299,11 @@ void WinUtil::init(HWND hWnd)
 	g_favUserImage.init();
 	g_editorImage.init();
 	g_transfersImage.init();
+	g_transferArrowsImage.init();
 
 	Colors::init();
 	Fonts::init();
-	
+
 	if (BOOLSETTING(REGISTER_URL_HANDLER))
 		registerHubUrlHandlers();
 	

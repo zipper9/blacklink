@@ -18,6 +18,7 @@ FavImage g_favImage;
 FavUserImage g_favUserImage;
 EditorImage g_editorImage;
 TransfersImage g_transfersImage;
+TransferArrowsImage g_transferArrowsImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -297,6 +298,11 @@ void TransfersImage::init()
 	ResourceLoader::LoadImageList(IDR_TRANSFERS, images, 16, 16);
 }
 
+void TransferArrowsImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_ARROWS, images, 16, 16);
+}
+
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)
 {
 	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
@@ -392,6 +398,7 @@ IconBitmaps::IconBitmaps()
 	init(DCLST,              SOURCE_SETTINGS, 36);
 	init(MESSAGES,           SOURCE_SETTINGS, 39);
 	init(FAVORITE,           SOURCE_FAVORITE, 0);
+	init(DOWNLOAD,           SOURCE_ARROWS,   0);
 	init(EDITOR_SEND,        SOURCE_EDITOR,   0);
 	init(EDITOR_MULTILINE,   SOURCE_EDITOR,   1);
 	init(EDITOR_EMOTICON,    SOURCE_EDITOR,   2);
@@ -434,6 +441,8 @@ HIMAGELIST IconBitmaps::getImageList(MainFrame* mainFrame, int type, int size)
 			return mainFrame->getSettingsImages();
 		case SOURCE_FAVORITE:
 			return g_favImage.getIconList();
+		case SOURCE_ARROWS:
+			return g_transferArrowsImage.getIconList();
 		case SOURCE_EDITOR:
 			return g_editorImage.getIconList();
 	}

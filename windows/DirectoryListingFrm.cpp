@@ -1512,7 +1512,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			existingFile = ownList ? true : ShareManager::getInstance()->isTTHShared(ii->file->getTTH());
 		if (!ownList)
 		{
-			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
 #ifdef DEBUG_TRANSFERS
 			if (selCount == 1)
 				fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_BY_PATH, _T("Download by path"));
@@ -1712,7 +1712,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		if (!ownList)
 		{
-			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_TO));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 

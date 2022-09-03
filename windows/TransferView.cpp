@@ -122,13 +122,11 @@ TransferView::TransferView() : timer(m_hWnd), shouldSort(false)
 
 TransferView::~TransferView()
 {
-	imgArrows.Destroy();
 	OperaColors::ClearCache();
 }
 
 LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	ResourceLoader::LoadImageList(IDR_ARROWS, imgArrows, 16, 16);
 	initProgressBars(false);
 
 	ctrlTransfers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -145,7 +143,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	
 	setListViewColors(ctrlTransfers);
 	
-	ctrlTransfers.SetImageList(imgArrows, LVSIL_SMALL);
+	ctrlTransfers.SetImageList(g_transferArrowsImage.getIconList(), LVSIL_SMALL);
 	
 	copyMenu.CreatePopupMenu();
 	for (size_t i = 0; i < COLUMN_LAST; ++i)

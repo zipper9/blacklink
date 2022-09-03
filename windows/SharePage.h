@@ -59,7 +59,7 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage, public 
 		LRESULT onClickedShowTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
-		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD; }
+		int getPageIcon() const { return PROP_PAGE_ICON_SHARE; }
 		void write();
 
 	protected:
