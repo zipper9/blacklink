@@ -18,7 +18,6 @@ struct IGDdatas_service {
 	char scpdurl[MINIUPNPC_URL_MAXSIZE];
 	char servicetype[MINIUPNPC_URL_MAXSIZE];
 	/*char devicetype[MINIUPNPC_URL_MAXSIZE];*/
-	char friendlyName[MINIUPNPC_URL_MAXSIZE];
 };
 
 struct IGDdatas {
@@ -38,6 +37,8 @@ struct IGDdatas {
 	struct IGDdatas_service IPv6FC;
 	/* tmp */
 	struct IGDdatas_service tmp;
+	char friendlyName[MINIUPNPC_URL_MAXSIZE];
+	int friendlyNameParsed;
 };
 
 void IGDstartelt(void *, const char *, int);

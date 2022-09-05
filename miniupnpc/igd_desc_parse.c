@@ -81,8 +81,11 @@ void IGDdata(void * d, const char * data, int l)
 		dstmember = datas->tmp.scpdurl;
 /*	else if( !strcmp(datas->cureltname, "deviceType") )
 		dstmember = datas->devicetype_tmp;*/
-	else if (!strcmp(datas->cureltname, "friendlyName"))
-		dstmember = datas->tmp.friendlyName;
+	else if (!strcmp(datas->cureltname, "friendlyName") && l && !datas->friendlyNameParsed)
+	{
+		dstmember = datas->friendlyName;
+		datas->friendlyNameParsed = 1;
+	}
 	if(dstmember)
 	{
 		if(l>=MINIUPNPC_URL_MAXSIZE)
