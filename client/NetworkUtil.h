@@ -25,7 +25,8 @@ namespace Util
 		return ((ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
 		        (ip & 0xffff0000) == 0xa9fe0000 || // 169.254.0.0/16
 		        (ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
-		        (ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
+		        (ip & 0xffff0000) == 0xc0a80000 || // 192.168.0.0/16
+		        (ip & 0xffc00000) == 0x64400000);  // 100.64.0.0/10 - RFC6598
 	}
 	inline bool isPublicIp(Ip4Address ip)
 	{
