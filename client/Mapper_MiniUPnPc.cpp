@@ -49,9 +49,9 @@ bool Mapper_MiniUPnPc::init()
 	if (!url.empty()) return true;
 
 #if MINIUPNPC_API_VERSION < 14
-	UPNPDev *devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), nullptr, 0, af == AF_INET6, nullptr);
+	UPNPDev *devices = upnpDiscover(2000, Util::isValidIp4(localIp) ? localIp.c_str() : nullptr, nullptr, 0, af == AF_INET6, nullptr);
 #else
-	UPNPDev *devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), nullptr, 0, af == AF_INET6, 2, nullptr);
+	UPNPDev *devices = upnpDiscover(2000, Util::isValidIp4(localIp) ? localIp.c_str() : nullptr, nullptr, 0, af == AF_INET6, 2, nullptr);
 #endif
 	if (!devices) return false;
 
