@@ -175,6 +175,7 @@ SearchFrame::SearchFrame() :
 	ctrlHubs.setColumns(2, hubsColumnIds, hubsColumnNames, hubsColumnSizes);
 	ctrlHubs.enableHeaderMenu = false;
 	ctrlHubs.setSortColumn(0);
+	hashDb = DatabaseManager::getInstance()->getDefaultHashDatabaseConnection();
 }
 
 SearchFrame::~SearchFrame()
@@ -2568,7 +2569,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 			if (si)
 			{
 				si->calcImageIndex();
-				si->sr.checkTTH();
+				si->sr.checkTTH(hashDb);
 				getFileItemColor(si->sr.flags, cd->clrText, cd->clrTextBk);
 #ifdef BL_FEATURE_IP_DATABASE
 				if (!si->ipUpdated && storeIP && si->getUser())

@@ -1131,7 +1131,7 @@ string DatabaseManager::getDBInfo()
 				message += " (" + Util::formatBytes(size) + ")\n";
 			}
 		}
-#ifdef BL_FEATURE_LMDB
+
 		size_t hashDbItems;
 		uint64_t hashDbSize;
 		if (lmdb.getDBInfo(hashDbItems, hashDbSize))
@@ -1143,7 +1143,6 @@ string DatabaseManager::getDBInfo()
 			message += STRING_F(HASH_DB_INFO, hashDbItems % size);
 			message += ")\n";
 		}
-#endif
 
 		File::VolumeInfo vi;
 		if (File::getVolumeInfo(path, vi))
@@ -1270,6 +1269,7 @@ void DatabaseManager::closeIdleConnections(uint64_t tick)
 		}
 	}
 	v.clear();
+	lmdb.closeIdleConnections(tick);
 }
 
 void DatabaseManager::init(ErrorCallback errorCallback)
@@ -1303,9 +1303,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 		}
 	}
 	defThreadId = BaseThread::getCurrentThreadId();
-#ifdef BL_FEATURE_LMDB
 	lmdb.open();
-#endif
 	string dbInfo = getDBInfo();
 	if (!dbInfo.empty())
 		LogManager::message(dbInfo, false);
@@ -1448,6 +1446,7 @@ DatabaseManager::GlobalRatio DatabaseManager::getGlobalRatio() const
 
 void DatabaseManager::shutdown()
 {
+	lmdb.close();
 	{
 		LOCK(cs);
 		defConn.reset();
@@ -1459,39 +1458,7 @@ void DatabaseManager::shutdown()
 		LogManager::message("[Error] sqlite3_shutdown = " + Util::toString(status));
 }
 
-bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize)
-{
-#ifdef BL_FEATURE_LMDB
-	return lmdb.getFileInfo(tth.data, flags, path, treeSize);
-#else
-	flags = 0;
-	if (path) path->clear();
-	if (treeSize) *treeSize = 0;
-	return false;
-#endif
-}
-
-bool DatabaseManager::setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path)
-{
-#ifdef BL_FEATURE_LMDB
-	if (tth.isZero()) return false;
-	return lmdb.putFileInfo(tth.data, FLAG_DOWNLOADED, fileSize, path.empty() ? nullptr : &path);
-#else
-	return false;
-#endif
-}
-
-bool DatabaseManager::setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize)
-{
-#ifdef BL_FEATURE_LMDB
-	if (tth.isZero()) return false;
-	return lmdb.putFileInfo(tth.data, FLAG_DOWNLOAD_CANCELED, fileSize, nullptr);
-#else
-	return false;
-#endif
-}
-
-bool DatabaseManager::addTree(const TigerTree &tree)
+bool DatabaseManager::addTree(HashDatabaseConnection* conn, const TigerTree& tree) noexcept
 {
 	if (tree.getRoot().isZero())
 	{
@@ -1513,19 +1480,15 @@ bool DatabaseManager::addTree(const TigerTree &tree)
 				return false;
 		}
 	}
-#ifdef BL_FEATURE_LMDB
 	if (tree.getLeaves().size() < 2)
 		return true;
-	bool result = lmdb.putTigerTree(tree);
+	bool result = conn->putTigerTree(tree);
 	if (!result)
 		LogManager::message("Failed to add tiger tree to DB (" + tree.getRoot().toBase32() + ')', false);
 	return result;
-#else
-	return false;
-#endif
 }
 
-bool DatabaseManager::getTree(const TTHValue &tth, TigerTree &tree)
+bool DatabaseManager::getTree(HashDatabaseConnection* conn, const TTHValue &tth, TigerTree &tree) noexcept
 {
 	if (tth.isZero())
 		return false;
@@ -1538,11 +1501,7 @@ bool DatabaseManager::getTree(const TTHValue &tth, TigerTree &tree)
 			return true;
 		}
 	}
-#ifdef BL_FEATURE_LMDB
-	return lmdb.getTigerTree(tth.data, tree);
-#else
-	return false;
-#endif
+	return conn->getTigerTree(tth.data, tree);
 }
 
 bool DatabaseManager::checkDbPrefix(const string& path, const string& str)

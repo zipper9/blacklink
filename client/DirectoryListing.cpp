@@ -185,9 +185,14 @@ class ListLoader : public SimpleXMLReader::CallBack
 		{
 			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
 			list->basePath = "/";
+			hashDb = DatabaseManager::getInstance()->getHashDatabaseConnection();
 		}
 		
-		~ListLoader() { }
+		~ListLoader()
+		{
+			if (hashDb)
+				DatabaseManager::getInstance()->putHashDatabaseConnection(hashDb);
+		}
 		
 		void startTag(const string& name, StringPairList& attribs, bool simple);
 		void endTag(const string& name, const string& data);
@@ -209,11 +214,12 @@ class ListLoader : public SimpleXMLReader::CallBack
 	private:
 		DirectoryListing* list;
 		DirectoryListing::Directory* current;
-		
+		HashDatabaseConnection* hashDb;
+
 		bool inListing;
 		bool ownList;
 		unsigned emptyFileNameCounter;
-		
+
 		uint64_t nextProgressReport;
 		DirectoryListing::ProgressNotif *progressNotif;
 		InputStream& stream;
@@ -415,7 +421,10 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				else
 				{
 					unsigned flags;
-					DatabaseManager::getInstance()->getFileInfo(f->getTTH(), flags, &path, nullptr);
+					if (hashDb && !f->getTTH().isZero())
+						hashDb->getFileInfo(f->getTTH().data, flags, &path, nullptr);
+					else
+						flags = 0;
 					if (flags & DatabaseManager::FLAG_SHARED)
 					{
 						f->setFlag(DirectoryListing::FLAG_SHARED);

@@ -1562,15 +1562,14 @@ string ShareManager::getFileByTTH(const TTHValue& tth, bool hideShare, const CID
 MemoryInputStream* ShareManager::getTreeFromStore(const TTHValue& tth) noexcept
 {
 	ByteVector buf;
-	try
+	TigerTree tree;
+	auto db = DatabaseManager::getInstance();
+	auto hashDb = db->getHashDatabaseConnection();
+	if (hashDb)
 	{
-		TigerTree tree;
-		if (DatabaseManager::getInstance()->getTree(tth, tree))
-			tree.getLeafData(buf);			
-	}
-	catch (const Exception&)
-	{
-		return nullptr;
+		if (db->getTree(hashDb, tth, tree))
+			tree.getLeafData(buf);
+		db->putHashDatabaseConnection(hashDb);
 	}
 	if (buf.empty()) // If tree is not available, send only the root
 		return new MemoryInputStream(tth.data, TTHValue::BYTES);

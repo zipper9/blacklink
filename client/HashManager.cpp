@@ -160,7 +160,13 @@ void HashManager::deleteTree(const string& filePath) noexcept
 
 void HashManager::hashDone(uint64_t tick, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t size)
 {
-	DatabaseManager::getInstance()->addTree(tth);
+	auto db = DatabaseManager::getInstance();
+	auto hashDb = db->getHashDatabaseConnection();
+	if (hashDb)
+	{
+		db->addTree(hashDb, tth);
+		db->putHashDatabaseConnection(hashDb);
+	}
 	fire(HashManagerListener::FileHashed(), fileID, file, fileName, tth.getRoot(), size);
 
 	bool useStatus = false;

@@ -866,6 +866,9 @@ LRESULT DirectoryListingFrame::onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, 
 
 LRESULT DirectoryListingFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto db = DatabaseManager::getInstance();
+	auto hashDb = db->getHashDatabaseConnection();
+	if (!hashDb) return 0;
 	int i = -1;
 	DirectoryListing::Directory* parent = nullptr;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
@@ -874,12 +877,14 @@ LRESULT DirectoryListingFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*w
 		if (ii->type == ItemInfo::FILE &&
 		    ii->file->getSize() &&
 		    !ii->file->isAnySet(DirectoryListing::FLAG_DOWNLOADED | DirectoryListing::FLAG_SHARED) &&
-		    DatabaseManager::getInstance()->setFileInfoDownloaded(ii->file->getTTH(), ii->file->getSize(), Util::emptyString))
+		    !ii->file->getTTH().isZero() &&
+		    hashDb->putFileInfo(ii->file->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, ii->file->getSize(), nullptr))
 		{
 			ii->file->setFlag(DirectoryListing::FLAG_DOWNLOADED);
 			parent = ii->file->getParent();
 		}
 	}
+	db->putHashDatabaseConnection(hashDb);
 	if (parent)
 	{
 		DirectoryListing::Directory::updateFlags(parent);

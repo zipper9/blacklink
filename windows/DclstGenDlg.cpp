@@ -403,7 +403,13 @@ LRESULT DclstGenDlg::onShareOrOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWnd
 			MessageBox(Text::toT(e.getError()).c_str(), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
 			return 0;
 		}
-		DatabaseManager::getInstance()->addTree(listTree);
+		auto db = DatabaseManager::getInstance();
+		auto hashDb = db->getHashDatabaseConnection();
+		if (hashDb)
+		{
+			db->addTree(hashDb, listTree);
+			db->putHashDatabaseConnection(hashDb);
+		}
 		MessageBox(CTSTRING(DCLSTGEN_METAFILEREADY), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONINFORMATION);
 		CButton(hWndCtl).EnableWindow(FALSE);
 	}

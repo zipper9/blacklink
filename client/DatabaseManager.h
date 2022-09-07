@@ -10,8 +10,6 @@
 #ifndef DATABASE_MANAGER_H_
 #define DATABASE_MANAGER_H_
 
-#define BL_FEATURE_LMDB
-
 #include "Singleton.h"
 #include "Locks.h"
 #include "LruCache.h"
@@ -22,13 +20,10 @@
 #include "IpAddress.h"
 #include "IpKey.h"
 #include "HttpClientListener.h"
+#include "HashDatabaseLMDB.h"
 #include "forward.h"
 #include "sqlite/sqlite3x.hpp"
 #include <atomic>
-
-#ifdef BL_FEATURE_LMDB
-#include "HashDatabaseLMDB.h"
-#endif
 
 #ifdef BL_FEATURE_IP_DATABASE
 #include "IPStat.h"
@@ -242,11 +237,11 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		DatabaseConnection* getConnection();
 		void putConnection(DatabaseConnection* conn);
 		void closeIdleConnections(uint64_t tick);
-		bool getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize);
-		bool setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path);
-		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
-		bool addTree(const TigerTree &tree);
-		bool getTree(const TTHValue &tth, TigerTree &tree);
+		bool addTree(HashDatabaseConnection* conn, const TigerTree& tree) noexcept;
+		bool getTree(HashDatabaseConnection* conn, const TTHValue& tth, TigerTree& tree) noexcept;
+		HashDatabaseConnection* getHashDatabaseConnection() noexcept { return lmdb.getConnection(); }
+		HashDatabaseConnection* getDefaultHashDatabaseConnection() noexcept { return lmdb.getDefaultConnection(); }
+		void putHashDatabaseConnection(HashDatabaseConnection* conn) noexcept { lmdb.putConnection(conn); }
 		static void quoteString(string& s) noexcept;
 
 	public:
@@ -310,10 +305,8 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		std::unique_ptr<DatabaseConnection> defConn;
 		std::list<std::unique_ptr<DatabaseConnection>> conn;
 		uintptr_t defThreadId;
-
-#ifdef BL_FEATURE_LMDB
 		HashDatabaseLMDB lmdb;
-#endif
+
 		struct MMDB_s* mmdb;
 		CriticalSection csMmdb;
 		uint64_t timeCheckMmdb;

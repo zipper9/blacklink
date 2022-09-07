@@ -565,6 +565,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COLORREF colorDownloaded;
 		COLORREF colorCanceled;
 		COLORREF colorInQueue;
+		class HashDatabaseConnection* hashDb;
 
 		void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const;
 		void showPortStatus();

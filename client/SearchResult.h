@@ -19,10 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_SEARCHRESULT_H
 #define DCPLUSPLUS_DCPP_SEARCHRESULT_H
 
-#include "forward.h"
-#include "SearchQueue.h"
 #include "HintedUser.h"
-#include "StrUtil.h"
 #include "BaseUtil.h"
 #include "HashValue.h"
 #include "IPInfo.h"
@@ -31,6 +28,7 @@
 class Client;
 class AdcCommand;
 class SearchManager;
+class HashDatabaseConnection;
 
 class SearchResultCore
 {
@@ -132,7 +130,7 @@ class SearchResult : public SearchResultCore
 		unsigned freeSlots;
 		unsigned slots;
 		
-		void checkTTH();
+		void checkTTH(HashDatabaseConnection* hashDb);
 		void loadLocation();
 		void loadP2PGuard();
 		const IPInfo& getIpInfo() const { return ipInfo; }

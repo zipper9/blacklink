@@ -507,7 +507,13 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			try
 			{
 				ShareManager::getInstance()->addFile(path, tree.getRoot());
-				DatabaseManager::getInstance()->addTree(tree);
+				auto db = DatabaseManager::getInstance();
+				auto hashDb = db->getHashDatabaseConnection();
+				if (hashDb)
+				{
+					db->addTree(hashDb, tree);
+					db->putHashDatabaseConnection(hashDb);
+				}
 				res.text = STRING_F(COMMAND_FILE_SHARED, Util::getMagnet(tree.getRoot(), Util::getFileName(path), tree.getFileSize()));
 				res.what = RESULT_LOCAL_TEXT;
 			}
@@ -529,13 +535,17 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				res.what = RESULT_ERROR_MESSAGE;
 				return true;
 			}
-			if (DatabaseManager::getInstance()->addTree(tree))
+			auto db = DatabaseManager::getInstance();
+			auto hashDb = db->getHashDatabaseConnection();
+			if (hashDb && db->addTree(hashDb, tree))
 			{
+				db->putHashDatabaseConnection(hashDb);
 				res.text = STRING_F(COMMAND_TTH_ADDED, tree.getRoot().toBase32());
 				res.what = RESULT_LOCAL_TEXT;
 			}
 			else
 			{
+				if (hashDb) db->putHashDatabaseConnection(hashDb);
 				res.text = "Unable to add tree";
 				res.what = RESULT_ERROR_MESSAGE;
 			}
@@ -744,7 +754,9 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				unsigned flags;
 				string tthText = "TTH " + pc.args[2] + ": ";
 				res.text = tthText;
-				if (!DatabaseManager::getInstance()->getFileInfo(tth, flags, &path, &treeSize))
+				auto db = DatabaseManager::getInstance();
+				auto hashDb = db->getHashDatabaseConnection();
+				if (!(hashDb && hashDb->getFileInfo(tth.data, flags, &path, &treeSize)))
 				{
 					res.text += "not found in database\n";
 				}
@@ -755,6 +767,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					if (treeSize) { res.text += ", treeSize="; res.text += Util::toString(treeSize); }
 					res.text += '\n';
 				}
+				if (hashDb) db->putHashDatabaseConnection(hashDb);
 				res.text += tthText;
 				int64_t size;
 				if (!ShareManager::getInstance()->getFileInfo(tth, path, size))
@@ -788,13 +801,17 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					f.read(data.data(), len);
 					TigerTree tree;
 					tree.load(fileSize, data.data(), data.size());
-					if (DatabaseManager::getInstance()->addTree(tree))
+					auto db = DatabaseManager::getInstance();
+					auto hashDb = db->getHashDatabaseConnection();
+					if (hashDb && db->addTree(hashDb, tree))
 					{
+						db->putHashDatabaseConnection(hashDb);
 						res.text = STRING_F(COMMAND_TTH_ADDED, tree.getRoot().toBase32());
 						res.what = RESULT_LOCAL_TEXT;
 					}
 					else
 					{
+						if (hashDb) db->putHashDatabaseConnection(hashDb);
 						res.text = "Unable to add tree";
 						res.what = RESULT_ERROR_MESSAGE;
 					}

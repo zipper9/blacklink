@@ -1871,14 +1871,17 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					else
 						q->flags &= ~QueueItem::FLAG_XML_BZLIST;
 				}
-				
+
 				if (finished)
 				{
+					auto db = DatabaseManager::getInstance();
+					auto hashDb = db->getHashDatabaseConnection();
 					if (download->getType() == Transfer::TYPE_TREE)
 					{
 						// Got a full tree, now add it to the database
 						dcassert(download->getTreeValid());
-						DatabaseManager::getInstance()->addTree(download->getTigerTree());
+						if (hashDb)
+							db->addTree(hashDb, download->getTigerTree());
 						userQueue.removeDownload(q, download->getUser());
 						fireStatusUpdated(q);
 					}
@@ -1934,9 +1937,9 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 								}
 							}
 
-							if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-								DatabaseManager::getInstance()->setFileInfoDownloaded(q->getTTH(), q->getSize(), path);
-							
+							if (hashDb && !q->getTTH().isZero() && !q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
+								hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, q->getSize(), path.empty() ? nullptr : &path);
+
 							if (!ClientManager::isBeforeShutdown())
 							{
 								fire(QueueManagerListener::Finished(), q, dir, download);
@@ -1967,6 +1970,8 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						}
 						setDirty();
 					}
+					if (hashDb)
+						db->putHashDatabaseConnection(hashDb);
 				}
 				else
 				{
@@ -2210,9 +2215,17 @@ bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 		}
 	}
 
-	if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-		DatabaseManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
-		
+	if (!q->getTTH().isZero() && !q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
+	{
+		auto db = DatabaseManager::getInstance();
+		auto hashDb = db->getHashDatabaseConnection();
+		if (hashDb)
+		{
+			hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOAD_CANCELED, q->getSize(), nullptr);
+			db->putHashDatabaseConnection(hashDb);
+		}
+	}
+
 	const string& tempTarget = q->getTempTargetConst();
 	if (!q->isSet(QueueItem::FLAG_USER_LIST) && !tempTarget.empty())
 	{
@@ -3231,12 +3244,16 @@ void QueueManager::RecheckerJob::run()
 		q = fileQueue.findTarget(file);
 		if (!q)
 			return;
-		if (!DatabaseManager::getInstance()->getTree(tth, tt))
+		auto db = DatabaseManager::getInstance();
+		auto hashDb = db->getHashDatabaseConnection();
+		if (!hashDb || !db->getTree(hashDb, tth, tt))
 		{
+			if (hashDb) db->putHashDatabaseConnection(hashDb);
 			manager.fire(QueueManagerListener::RecheckNoTree(), q->getTarget());
 			return;
 		}
-		
+
+		db->putHashDatabaseConnection(hashDb);
 		tempTarget = q->getTempTarget();
 	}
 	

@@ -100,16 +100,16 @@ void SearchResult::loadP2PGuard()
 		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
 }
 
-void SearchResult::checkTTH()
+void SearchResult::checkTTH(HashDatabaseConnection* hashDb)
 {
 	if (type != TYPE_FILE || (flags & FLAG_STATUS_KNOWN)) return;
 	if (ShareManager::getInstance()->isTTHShared(getTTH()))
 		flags |= FLAG_SHARED;
-	else
+	else if (hashDb && !getTTH().isZero())
 	{
 		unsigned status;
 		string path;
-		DatabaseManager::getInstance()->getFileInfo(getTTH(), status, &path, nullptr);
+		hashDb->getFileInfo(getTTH().data, status, &path, nullptr);
 		if (status & DatabaseManager::FLAG_DOWNLOADED)
 			flags |= FLAG_DOWNLOADED;
 		if (status & DatabaseManager::FLAG_DOWNLOAD_CANCELED)

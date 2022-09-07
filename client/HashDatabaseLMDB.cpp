@@ -1,7 +1,10 @@
 #include "stdinc.h"
 #include "HashDatabaseLMDB.h"
+#include "StrUtil.h"
 #include "Util.h"
 #include "File.h"
+#include "TimerManager.h"
+#include "LogManager.h"
 
 static const size_t TTH_SIZE = 24;
 static const size_t BASE_ITEM_SIZE = 10;
@@ -12,28 +15,20 @@ enum
 	ITEM_LOCAL_PATH = 2
 };
 
-HashDatabaseLMDB::HashDatabaseLMDB()
-{
-	env = nullptr;
-	dbi = 0;
-	txnRead = nullptr;
-	txnReadReset = false;
-}
-
 #if defined(_WIN64) || defined(__LP64__)
 #define PLATFORM_TAG "x64"
 #else
 #define PLATFORM_TAG "x32"
 #endif
 
-string HashDatabaseLMDB::getDBPath()
+string HashDatabaseLMDB::getDBPath() noexcept
 {
 	string path = Util::getConfigPath();
 	path += "hash-db." PLATFORM_TAG;
 	return path;
 }
 
-bool HashDatabaseLMDB::open()
+bool HashDatabaseLMDB::open() noexcept
 {
 	if (env) return false;
 
@@ -51,7 +46,7 @@ bool HashDatabaseLMDB::open()
 		return false;
 	}
 
-	static const mdb_size_t minMapSize = 1024ull*1024ull*1024ull;	
+	static const mdb_size_t minMapSize = 1024ull*1024ull*1024ull;
 	MDB_envinfo info;
 	error = mdb_env_info(env, &info);
 	if (error || info.me_mapsize < minMapSize)
@@ -65,31 +60,16 @@ bool HashDatabaseLMDB::open()
 		}
 	}
 
-	error = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txnRead);
-	if (!checkError(error))
-	{
-		mdb_env_close(env);
-		env = nullptr;
-		return false;
-	}
-
-	error = mdb_dbi_open(txnRead, nullptr, 0, &dbi);
-	if (!checkError(error))
-	{
-		mdb_env_close(env);
-		env = nullptr;
-		return false;
-	}
-
+	defThreadId = BaseThread::getCurrentThreadId();
 	return true;
 }
 
-void HashDatabaseLMDB::close()
+void HashDatabaseLMDB::close() noexcept
 {
-	if (txnRead)
 	{
-		mdb_txn_abort(txnRead);
-		txnRead = nullptr;
+		LOCK(cs);
+		defConn.reset();
+		conn.clear();
 	}
 	if (env)
 	{
@@ -98,11 +78,11 @@ void HashDatabaseLMDB::close()
 	}
 }
 
-bool HashDatabaseLMDB::checkError(int error)
+bool HashDatabaseLMDB::checkError(int error) noexcept
 {
 	if (!error) return true;
-	// TODO: log error
-	//string errorText = mdb_strerror(error);
+	string errorText = "LMDB error: " + Util::toString(error);
+	LogManager::message(errorText);
 	return false;
 }
 
@@ -113,15 +93,15 @@ class ItemParser
 		{
 		}
 
-		bool getItem(int &itemType, const void* &itemData, size_t &itemSize, size_t &headerSize);
-	
+		bool getItem(int &itemType, const void* &itemData, size_t &itemSize, size_t &headerSize) noexcept;
+
 	private:
 		const uint8_t* const data;
 		const size_t dataSize;
 		size_t ptr;
 };
 
-bool ItemParser::getItem(int &itemType, const void* &itemData, size_t &itemSize, size_t &headerSize)
+bool ItemParser::getItem(int &itemType, const void* &itemData, size_t &itemSize, size_t &headerSize) noexcept
 {
 	if (ptr >= dataSize) return false;
 	uint8_t type = data[ptr];
@@ -145,7 +125,7 @@ bool ItemParser::getItem(int &itemType, const void* &itemData, size_t &itemSize,
 	return true;
 }
 
-static size_t putItem(uint8_t *ptr, int type, const void *data, size_t dataSize)
+static size_t putItem(uint8_t *ptr, int type, const void *data, size_t dataSize) noexcept
 {
 	size_t result = 0;
 	*ptr = type;
@@ -167,42 +147,95 @@ static size_t putItem(uint8_t *ptr, int type, const void *data, size_t dataSize)
 	return result;
 }
 
-bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string *path, size_t *treeSize)
-{	
+HashDatabaseConnection::~HashDatabaseConnection() noexcept
+{
+	mdb_txn_abort(txnRead);
+}
+
+bool HashDatabaseConnection::createReadTxn(MDB_dbi &dbi) noexcept
+{
+	int error;
+	if (!txnRead)
+		error = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txnRead);
+	else
+		error = mdb_txn_renew(txnRead);
+	if (!HashDatabaseLMDB::checkError(error)) return false;
+	error = mdb_dbi_open(txnRead, nullptr, 0, &dbi);
+	return HashDatabaseLMDB::checkError(error);
+}
+
+bool HashDatabaseConnection::createWriteTxn(MDB_dbi &dbi, MDB_txn* &txnWrite) noexcept
+{
+	int error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
+	if (!HashDatabaseLMDB::checkError(error)) return false;
+	error = mdb_dbi_open(txnWrite, nullptr, 0, &dbi);
+	return HashDatabaseLMDB::checkError(error);
+}
+
+bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key, MDB_val &val) noexcept
+{
+	int error = mdb_put(txnWrite, dbi, &key, &val, 0);
+	if (error == MDB_MAP_FULL)
+	{
+		if (!resizeMap())
+		{
+			mdb_txn_abort(txnWrite);
+			return false;
+		}
+		error = mdb_put(txnWrite, dbi, &key, &val, 0);
+	}
+	if (!HashDatabaseLMDB::checkError(error))
+	{
+		mdb_txn_abort(txnWrite);
+		return false;
+	}
+	error = mdb_txn_commit(txnWrite);
+	bool result = HashDatabaseLMDB::checkError(error);
+	mdb_dbi_close(env, dbi);
+	return result;
+}
+
+bool HashDatabaseConnection::resizeMap() noexcept
+{
+	MDB_envinfo info;
+	int error = mdb_env_info(env, &info);
+	if (!HashDatabaseLMDB::checkError(error)) return false;
+
+	size_t newMapSize = info.me_mapsize << 1;
+	error = mdb_env_set_mapsize(env, newMapSize);
+	return HashDatabaseLMDB::checkError(error);
+}
+
+bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, string *path, size_t *treeSize) noexcept
+{
 	flags = 0;
 	if (path) path->clear();
 	if (treeSize) *treeSize = 0;
 
-	LOCK(cs);
-	if (!txnRead) return false;
-
-	if (txnReadReset)
-	{
-		mdb_txn_renew(txnRead);
-		txnReadReset = false;
-	}
+	MDB_dbi dbi;
+	if (!createReadTxn(dbi)) return false;
 
 	MDB_val key, val;
 	key.mv_data = const_cast<void*>(tth);
 	key.mv_size = TTH_SIZE;
 	int error = mdb_get(txnRead, dbi, &key, &val);
 	if (error)
-	{		
-		resetReadTrans();
+	{
+		mdb_txn_reset(txnRead);
 		return false;
 	}
 
 	if (val.mv_size < BASE_ITEM_SIZE)
 	{
-		resetReadTrans();
+		mdb_txn_reset(txnRead);
 		return false;
 	}
-	
+
 	const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
 	flags = *(const uint16_t *) ptr;
 
 	ItemParser parser(ptr + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
-	int itemType;	
+	int itemType;
 	size_t itemSize, headerSize;
 	const void *itemData;
 	while (parser.getItem(itemType, itemData, itemSize, headerSize))
@@ -219,42 +252,36 @@ bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string *pat
 				path->assign(static_cast<const char*>(itemData), itemSize);
 		}
 	}
-	
-	resetReadTrans();
+
+	mdb_txn_reset(txnRead);
 	return true;
 }
 
-bool HashDatabaseLMDB::getTigerTree(const void *tth, TigerTree &tree)
+bool HashDatabaseConnection::getTigerTree(const void *tth, TigerTree &tree) noexcept
 {
-	LOCK(cs);
-	if (!txnRead) return false;
-
-	if (txnReadReset)
-	{
-		mdb_txn_renew(txnRead);
-		txnReadReset = false;
-	}
+	MDB_dbi dbi;
+	if (!createReadTxn(dbi)) return false;
 
 	MDB_val key, val;
 	key.mv_data = const_cast<void*>(tth);
 	key.mv_size = TTH_SIZE;
 	int error = mdb_get(txnRead, dbi, &key, &val);
 	if (error)
-	{		
-		resetReadTrans();
+	{
+		mdb_txn_reset(txnRead);
 		return false;
 	}
 
 	if (val.mv_size < BASE_ITEM_SIZE)
 	{
-		resetReadTrans();
+		mdb_txn_reset(txnRead);
 		return false;
 	}
-	
+
 	const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
 	uint64_t fileSize = *(const uint64_t *) (ptr + 2);
 	ItemParser parser(ptr + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
-	int itemType;	
+	int itemType;
 	size_t itemSize, headerSize;
 	const void *itemData;
 	bool found = false;
@@ -268,32 +295,27 @@ bool HashDatabaseLMDB::getTigerTree(const void *tth, TigerTree &tree)
 			break;
 		}
 	}
-	
-	resetReadTrans();
+
+	mdb_txn_reset(txnRead);
 	return found;
 }
 
-bool HashDatabaseLMDB::putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path)
+bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path) noexcept
 {
-	LOCK(cs);
-	if (!txnRead) return false;
-
-	if (txnReadReset)
-	{
-		mdb_txn_renew(txnRead);
-		txnReadReset = false;
-	}
-
 	unsigned setFlags = 0;
 	bool updateFlags = false, updatePath = false;
 	size_t prevSize = 0;
 
+	MDB_txn *txnWrite = nullptr;
+	MDB_dbi dbi;
+	if (!createWriteTxn(dbi, txnWrite)) return false;
+
 	MDB_val key, val;
 	key.mv_data = const_cast<void*>(tth);
 	key.mv_size = TTH_SIZE;
-	int error = mdb_get(txnRead, dbi, &key, &val);
+	int error = mdb_get(txnWrite, dbi, &key, &val);
 	if (!error && val.mv_size >= BASE_ITEM_SIZE)
-	{		
+	{
 		const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
 		setFlags = *(const uint16_t *) ptr;
 		prevSize = val.mv_size;
@@ -318,23 +340,25 @@ bool HashDatabaseLMDB::putFileInfo(const void *tth, unsigned flags, uint64_t fil
 		if (path) updatePath = true;
 	}
 
-	resetReadTrans();
-
 	if ((setFlags | flags) != setFlags)
 	{
 		setFlags |= flags;
 		updateFlags = true;
 	}
 
-	if (!updateFlags && !updatePath) return true;
+	if (!updateFlags && !updatePath)
+	{
+		mdb_txn_abort(txnWrite);
+		return true;
+	}
 
 	size_t outSize = prevSize ? prevSize : BASE_ITEM_SIZE;
 	if (updatePath)
-	{		
+	{
 		outSize += path->length() + 2;
 		if (path->length() > 255) outSize++;
 	}
-	
+
 	buf.resize(outSize);
 	if (prevSize)
 		memcpy(buf.data(), val.mv_data, prevSize);
@@ -354,30 +378,16 @@ bool HashDatabaseLMDB::putFileInfo(const void *tth, unsigned flags, uint64_t fil
 
 	val.mv_data = buf.data();
 	val.mv_size = outSize;
-
-	error = writeData(key, val);
-	if (!error) return true;
-	if (error == MDB_MAP_FULL)
-	{
-		error = resizeMap();
-		if (!error) error = writeData(key, val);
-	}
-
-	return error == 0;
+	return writeData(txnWrite, dbi, key, val);
 }
 
-bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
+bool HashDatabaseConnection::putTigerTree(const TigerTree &tree) noexcept
 {
 	if (tree.getLeaves().size() < 2) return false;
-	
-	LOCK(cs);
-	if (!txnRead) return false;
 
-	if (txnReadReset)
-	{
-		mdb_txn_renew(txnRead);
-		txnReadReset = false;
-	}
+	MDB_txn *txnWrite = nullptr;
+	MDB_dbi dbi;
+	if (!createWriteTxn(dbi, txnWrite)) return false;
 
 	const TigerTree::MerkleList &leaves = tree.getLeaves();
 	unsigned setFlags = 0;
@@ -389,15 +399,15 @@ bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
 	MDB_val key, val;
 	key.mv_data = (void *)(tree.getRoot().data);
 	key.mv_size = TTH_SIZE;
-	int error = mdb_get(txnRead, dbi, &key, &val);
+	int error = mdb_get(txnWrite, dbi, &key, &val);
 	if (!error && val.mv_size >= BASE_ITEM_SIZE)
-	{		
+	{
 		const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
 		setFlags = *(const uint16_t *) ptr;
 		uint64_t fileSize = *(const uint64_t *) (ptr + 2);
 		prevSize = val.mv_size;
 		ItemParser parser(ptr + BASE_ITEM_SIZE, prevSize - BASE_ITEM_SIZE);
-		int itemType;	
+		int itemType;
 		size_t itemSize, headerSize;
 		const void *itemData;
 		while (parser.getItem(itemType, itemData, itemSize, headerSize))
@@ -412,9 +422,11 @@ bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
 		}
 	}
 
-	resetReadTrans();
-
-	if (!updateTree) return true;
+	if (!updateTree)
+	{
+		mdb_txn_abort(txnWrite);
+		return true;
+	}
 
 	size_t outSize = (prevSize ? prevSize - prevTreeSize : BASE_ITEM_SIZE) + newTreeSize + 2;
 	if (newTreeSize > 255) outSize++;
@@ -438,7 +450,7 @@ bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
 		ItemParser parser(static_cast<const uint8_t*>(val.mv_data) + BASE_ITEM_SIZE, prevSize - BASE_ITEM_SIZE);
 		int itemType;
 		size_t itemSize, headerSize;
-		const void *itemData;	
+		const void *itemData;
 		while (parser.getItem(itemType, itemData, itemSize, headerSize))
 		{
 			if (itemType != ITEM_TIGER_TREE)
@@ -451,62 +463,76 @@ bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
 
 	val.mv_data = buf.data();
 	val.mv_size = outSize;
-
-	error = writeData(key, val);
-	if (!error) return true;
-	if (error == MDB_MAP_FULL)
-	{
-		error = resizeMap();
-		if (!error) error = writeData(key, val);
-	}
-
-	return error == 0;
+	return writeData(txnWrite, dbi, key, val);
 }
 
-int HashDatabaseLMDB::writeData(MDB_val &key, MDB_val &val)
-{
-	MDB_txn *txnWrite = nullptr;
-	int error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
-	if (error) return error;
-
-	error = mdb_put(txnWrite, dbi, &key, &val, 0);
-	mdb_txn_commit(txnWrite);
-	return error;
-}
-
-int HashDatabaseLMDB::resizeMap()
-{
-	MDB_envinfo info;
-	int error = mdb_env_info(env, &info);
-	if (error) return error;
-
-	size_t newMapSize = info.me_mapsize << 1;
-	error = mdb_env_set_mapsize(env, newMapSize);
-	return error;
-}
-
-void HashDatabaseLMDB::resetReadTrans()
-{
-	if (!txnReadReset)
-	{
-		mdb_txn_reset(txnRead);
-		txnReadReset = true;
-	}
-}
-
-bool HashDatabaseLMDB::getDBInfo(size_t &dataItems, uint64_t &dbSize)
+bool HashDatabaseLMDB::getDBInfo(size_t &dataItems, uint64_t &dbSize) noexcept
 {
 	MDB_stat stat;
+	if (mdb_env_stat(env, &stat))
 	{
-		LOCK(cs);
-		if (mdb_env_stat(env, &stat))
-		{
-			dataItems = 0;
-			dbSize = 0;
-			return false;
-		}
+		dataItems = 0;
+		dbSize = 0;
+		return false;
 	}
 	dataItems = stat.ms_entries;
 	dbSize = uint64_t(stat.ms_branch_pages + stat.ms_leaf_pages + stat.ms_overflow_pages) * stat.ms_psize;
 	return true;
+}
+
+HashDatabaseConnection *HashDatabaseLMDB::getDefaultConnection() noexcept
+{
+	ASSERT_MAIN_THREAD();
+	LOCK(cs);
+	if (!defConn) defConn.reset(new HashDatabaseConnection(env));
+	return defConn.get();
+}
+
+HashDatabaseConnection *HashDatabaseLMDB::getConnection() noexcept
+{
+	if (BaseThread::getCurrentThreadId() == defThreadId)
+		return getDefaultConnection();
+	{
+		LOCK(cs);
+		for (auto& c : conn)
+			if (!c->busy)
+			{
+				c->busy = true;
+				return c.get();
+			}
+	}
+	HashDatabaseConnection *newConn = new HashDatabaseConnection(env);
+	std::unique_ptr<HashDatabaseConnection> c(newConn);
+	LOCK(cs);
+	conn.emplace_back(std::move(c));
+	return newConn;
+}
+
+void HashDatabaseLMDB::putConnection(HashDatabaseConnection *conn) noexcept
+{
+	uint64_t removeTime = GET_TICK() + 120 * 1000;
+	LOCK(cs);
+	dcassert(conn->busy || conn == defConn.get());
+	conn->busy = false;
+	conn->removeTime = removeTime;
+}
+
+void HashDatabaseLMDB::closeIdleConnections(uint64_t tick) noexcept
+{
+	vector<unique_ptr<HashDatabaseConnection>> v;
+	{
+		LOCK(cs);
+		for (auto i = conn.begin(); i != conn.end();)
+		{
+			unique_ptr<HashDatabaseConnection> &c = *i;
+			if (!c->busy && tick > c->removeTime)
+			{
+				v.emplace_back(std::move(c));
+				i = conn.erase(i);
+			}
+			else
+				++i;
+		}
+	}
+	v.clear();
 }

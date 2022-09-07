@@ -60,7 +60,13 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 	
 	if (!getTTH().isZero() && isFile)
 	{
-		treeValid = DatabaseManager::getInstance()->getTree(getTTH(), tigerTree);
+		auto db = DatabaseManager::getInstance();
+		auto hashDb = db->getHashDatabaseConnection();
+		if (hashDb)
+		{
+			treeValid = db->getTree(hashDb, getTTH(), tigerTree);
+			db->putHashDatabaseConnection(hashDb);
+		}
 		if (treeValid)
 			qi->updateBlockSize(tigerTree.getBlockSize());
 	}
