@@ -568,32 +568,30 @@ void BaseChatFrame::sendCommandResult(Commands::Result& res)
 
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	const char* cmd;
+	switch (SETTING(MEDIA_PLAYER))
+	{
+		case SettingsManager::WinAmp:
+			cmd = "winamp";
+			break;
+		case SettingsManager::WinMediaPlayer:
+			cmd = "wmp";
+			break;
+		case SettingsManager::iTunes:
+			cmd = "itunes";
+			break;
+		case SettingsManager::WinMediaPlayerClassic:
+			cmd = "mpc";
+			break;
+		case SettingsManager::JetAudio:
+			cmd = "ja";
+			break;
+		default:
+			addStatus(TSTRING(NO_MEDIA_SPAM));
+			return 0;
+	}
 	Commands::ParsedCommand pc;
-	if (SETTING(MEDIA_PLAYER) == SettingsManager::WinAmp)
-	{
-		pc.args = { "/winamp" };
-	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::WinMediaPlayer)
-	{
-		pc.args = { "/wmp" };
-	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::iTunes)
-	{
-		pc.args = { "/itunes" };
-	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::WinMediaPlayerClassic)
-	{
-		pc.args = { "/mpc" };
-	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::JetAudio)
-	{
-		pc.args = { "/ja" };
-	}
-	else
-	{
-		addStatus(TSTRING(NO_MEDIA_SPAM));
-		return 0;
-	}
+	pc.args.push_back(cmd);
 	pc.command = Commands::COMMAND_MEDIA_PLAYER;
 	Commands::Result res;
 	if (MainFrame::getMainFrame()->processCommand(pc, res))
