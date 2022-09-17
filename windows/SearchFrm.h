@@ -34,6 +34,10 @@
 #include "../client/SearchResult.h"
 #include "../client/ShareManager.h"
 
+#ifdef OSVER_WIN_XP
+#include "ImageButton.h"
+#endif
+
 #define FLYLINKDC_USE_TREE_SEARCH
 
 #define SEARCH_MESSAGE_MAP 6
@@ -392,7 +396,17 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			HUB_CHANGED,
 			HUB_REMOVED
 		};
-		
+
+		enum
+		{
+			STATUS_CHECKBOX,
+			STATUS_PROGRESS,
+			STATUS_TIME,
+			STATUS_COUNT,
+			STATUS_DROPPED,
+			STATUS_LAST
+		};
+
 		tstring initialString;
 		int64_t initialSize;
 		SizeModes initialMode;
@@ -408,8 +422,13 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CComboBox ctrlSizeMode;
 		CComboBox ctrlFiletype;
 		CImageList searchTypesImageList;
+
 		CButton ctrlPurge;
 		CButton ctrlDoSearch;
+#ifdef OSVER_WIN_XP
+		ImageButton ctrlPurgeSubclass;
+		ImageButton ctrlDoSearchSubclass;
+#endif
 
 		CFlyToolTipCtrl tooltip;
 		

@@ -238,6 +238,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
+	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
 	
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP, 0, IDC_SEARCH_STRING);
@@ -248,11 +249,19 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                    BS_DEFPUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
+#ifdef OSVER_WIN_XP
+	if (!CompatibilityManager::isOsVistaPlus())
+		ctrlDoSearchSubclass.SubclassWindow(ctrlDoSearch);
+#endif
 	ctrlDoSearch.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0));
 	tooltip.AddTool(ctrlDoSearch, ResourceManager::SEARCH);
 
 	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_PURGE);
+#ifdef OSVER_WIN_XP
+	if (!CompatibilityManager::isOsVistaPlus())
+		ctrlPurgeSubclass.SubclassWindow(ctrlPurge);
+#endif
 	ctrlPurge.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::CLEAR, 0));
 	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
 
@@ -494,7 +503,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
 
 	ctrlFilterSel.SetCurSel(0);
-	ctrlStatus.SetText(1, 0, SBT_OWNERDRAW);
+	ctrlStatus.SetText(STATUS_PROGRESS, nullptr, SBT_OWNERDRAW);
 	tooltip.SetMaxTipWidth(200);
 	tooltip.Activate(TRUE);
 	onSizeMode();   //Get Mode, and turn ON or OFF controlls Size
@@ -558,51 +567,48 @@ LRESULT SearchFrame::onMeasure(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	const DRAWITEMSTRUCT* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
-	bHandled = FALSE;
-	
 	if (wParam == IDC_FILETYPES)
 	{
 		CustomDrawHelpers::drawComboBox(ctrlFiletype, dis, searchTypesImageList);
 		return TRUE;
 	}
-	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == 1)
+	if (dis->CtlType == ODT_MENU)
+	{
+		HWND hwnd = 0; // ???
+		return OMenu::onDrawItem(hwnd, uMsg, wParam, lParam, bHandled);
+	}
+	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == STATUS_PROGRESS)
 	{
 		const auto delta = searchEndTime - searchStartTime;
 		if (searchStartTime > 0 && delta)
 		{
-			bHandled = TRUE;
 			const RECT rc = dis->rcItem;
 			int borders[3];
-			
 			ctrlStatus.GetBorders(borders);
-			
+
 			const uint64_t now = GET_TICK();
-			const uint64_t length = min((uint64_t)(rc.right - rc.left), (rc.right - rc.left) * (now - searchStartTime) / delta);
+			const int width = rc.right - rc.left - 1;
+			const int pos = (int) min<int64_t>(width, width * (now - searchStartTime) / delta);
 			
-			OperaColors::FloodFill(dis->hDC, rc.left, rc.top, rc.left + (LONG)length, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
+			OperaColors::FloodFill(dis->hDC, rc.left, rc.top, rc.left + pos, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
 			
 			SetBkMode(dis->hDC, TRANSPARENT);
 			const int textHeight = WinUtil::getTextHeight(dis->hDC);
-			const LONG top = rc.top + (rc.bottom - rc.top - textHeight) / 2;
+			const int top = rc.top + (rc.bottom - rc.top - textHeight) / 2;
 			
 			SetTextColor(dis->hDC, RGB(255, 255, 255));
 			RECT rc2 = rc;
-			rc2.right = rc.left + (LONG)length;
-			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
+			rc2.right = rc.left + pos;
+			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), nullptr);
 			
 			SetTextColor(dis->hDC, Colors::g_textColor);
 			rc2 = rc;
-			rc2.left = rc.left + (LONG)length;
-			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
+			rc2.left = rc.left + pos;
+			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), nullptr);
 		}
+		return TRUE;
 	}
-	else if (dis->CtlType == ODT_MENU)
-	{
-		HWND hwnd = 0; // ???
-		bHandled = TRUE;
-		return OMenu::onDrawItem(hwnd, uMsg, wParam, lParam, bHandled);
-	}
-	
+	bHandled = FALSE;
 	return FALSE;
 }
 
@@ -738,8 +744,8 @@ void SearchFrame::onEnter()
 	else
 		searchParam.sizeMode = SizeModes(ctrlMode.GetCurSel());
 		
-	ctrlStatus.SetText(3, _T(""));
-	ctrlStatus.SetText(4, _T(""));
+	ctrlStatus.SetText(STATUS_COUNT, _T(""));
+	ctrlStatus.SetText(STATUS_DROPPED, _T(""));
 	
 	isExactSize = searchParam.sizeMode == SIZE_EXACT;
 	exactSize = searchParam.size;
@@ -1529,7 +1535,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	if (ctrlStatus.IsWindow())
 	{
 		CRect sr;
-		int w[5];
+		int w[STATUS_LAST];
 		ctrlStatus.GetClientRect(sr);
 		int tmp = (sr.Width()) > 420 ? 376 : ((sr.Width() > 116) ? sr.Width() - 100 : 16);
 		
@@ -2976,8 +2982,8 @@ void SearchFrame::speak(Speakers s, const Client* c)
 
 void SearchFrame::updateResultCount()
 {
-	ctrlStatus.SetText(3, (Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES)).c_str());
-	ctrlStatus.SetText(4, (Util::toStringT(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
+	ctrlStatus.SetText(STATUS_COUNT, (Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES)).c_str());
+	ctrlStatus.SetText(STATUS_DROPPED, (Util::toStringT(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
 	needUpdateResultCount = false;
 	#if 0 // not used
 	setCountMessages(resultsCount);
@@ -2992,12 +2998,12 @@ void SearchFrame::updateStatusLine(uint64_t tick)
 	if (searchDone)
 	{
 		statusLine = searchTarget + _T(" - ") + TSTRING(DONE);
-		ctrlStatus.SetText(2, CTSTRING(DONE));
+		ctrlStatus.SetText(STATUS_TIME, CTSTRING(DONE));
 	}
 	else
 	{
 		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + searchTarget + _T(" ... ") + Util::toStringT(percent) + _T("%");
-		ctrlStatus.SetText(2, Util::formatSecondsT((searchEndTime - tick) / 1000).c_str());
+		ctrlStatus.SetText(STATUS_TIME, Util::formatSecondsT((searchEndTime - tick) / 1000).c_str());
 	}
 	SetWindowText(statusLine.c_str());
 	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);
