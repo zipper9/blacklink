@@ -162,11 +162,7 @@ SearchFrame::SearchFrame() :
 	hTheme(nullptr),
 	useDHT(false)
 {
-	colorShared = SETTING(FILE_SHARED_COLOR);
-	colorDownloaded = SETTING(FILE_DOWNLOADED_COLOR);
-	colorCanceled = SETTING(FILE_CANCELED_COLOR);
-	colorInQueue = SETTING(FILE_QUEUED_COLOR);
-
+	colors.get();
 	ctrlResults.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlResults.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlResults.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
@@ -2541,21 +2537,21 @@ void SearchFrame::getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const
 	bg = Colors::g_bgColor;
 	if (flags & SearchResult::FLAG_SHARED)
 	{
-		fg = colorContrastText;
-		bg = colorShared;
+		fg = colors.fgNormal[FileStatusColors::SHARED];
+		bg = colors.bgNormal[FileStatusColors::SHARED];
 	}
 	else if (flags & SearchResult::FLAG_DOWNLOADED)
 	{
-		fg = colorContrastText;
-		bg = colorDownloaded;
+		fg = colors.fgNormal[FileStatusColors::DOWNLOADED];
+		bg = colors.bgNormal[FileStatusColors::DOWNLOADED];
 	}
 	else if (flags & SearchResult::FLAG_DOWNLOAD_CANCELED)
 	{
-		fg = colorContrastText;
-		bg = colorCanceled;
+		fg = colors.fgNormal[FileStatusColors::CANCELED];
+		bg = colors.bgNormal[FileStatusColors::CANCELED];
 	}
 	if (flags & SearchResult::FLAG_QUEUED)
-		fg = colorInQueue;
+		fg = colors.fgInQueue;
 }
 
 LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -2591,7 +2587,10 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 				customDrawState.indent = si->parent ? 1 : 0;
 			}
 			CustomDrawHelpers::startItemDraw(customDrawState, cd);
-			if (hTheme) CustomDrawHelpers::drawBackground(hTheme, customDrawState, cd);
+			if (customDrawState.flags & CustomDrawHelpers::FLAG_SELECTED)
+				cd->clrText = Colors::g_textColor;
+			if (hTheme)
+				CustomDrawHelpers::drawBackground(hTheme, customDrawState, cd);
 			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
 		}
 
@@ -2947,8 +2946,11 @@ void SearchFrame::onUserUpdated(const UserPtr& user) noexcept
 
 void SearchFrame::on(SettingsManagerListener::Repaint)
 {
-	if (ctrlResults.isRedraw())
+	FileStatusColors newColors;
+	newColors.get();
+	if (ctrlResults.isRedraw() || !colors.compare(newColors))
 	{
+		colors = newColors;
 		ctrlHubs.SetBkColor(Colors::g_bgColor);
 		ctrlHubs.SetTextBkColor(Colors::g_bgColor);
 		ctrlHubs.SetTextColor(Colors::g_textColor);

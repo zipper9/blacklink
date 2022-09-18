@@ -26,12 +26,12 @@
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
 #include "BaseHandlers.h"
+#include "FileStatusColors.h"
 
 #include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"
 #include "../client/ADLSearch.h"
 #include "../client/ShareManager.h"
-#include "../client/SettingsManager.h"
 
 class ThreadedDirectoryListing;
 
@@ -450,12 +450,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CButton ctrlListDiff;
 		CButton ctrlMatchQueue;
 
-		COLORREF colorShared, colorSharedLighter;
-		COLORREF colorDownloaded, colorDownloadedLighter;
-		COLORREF colorCanceled, colorCanceledLighter;
-		COLORREF colorFound, colorFoundLighter;
-		COLORREF colorContrastText;
-		COLORREF colorInQueue;
+		FileStatusColorsEx colors;
 
 		uint64_t loadStartTime;
 		string fileName;

@@ -26,6 +26,7 @@
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
 #include "SearchHistory.h"
+#include "FileStatusColors.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
@@ -580,10 +581,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		};
 		std::map<int, DownloadTarget> dlTargets;
 
-		COLORREF colorShared;
-		COLORREF colorDownloaded;
-		COLORREF colorCanceled;
-		COLORREF colorInQueue;
+		FileStatusColors colors;
 		class HashDatabaseConnection* hashDb;
 
 		void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const;

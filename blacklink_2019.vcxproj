@@ -954,6 +954,7 @@
     <ClInclude Include="windows\FavoritesFrm.h" />
     <ClInclude Include="windows\FavUserDlg.h" />
     <ClInclude Include="windows\FileHashDlg.h" />
+    <ClInclude Include="windows\FileStatusColors.h" />
     <ClInclude Include="windows\FindDuplicatesDlg.h" />
     <ClInclude Include="windows\FinishedDLFrame.h" />
     <ClInclude Include="windows\FinishedFrameBase.h" />

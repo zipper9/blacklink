@@ -234,16 +234,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	this->dl.reset(dl);
 	dl->setHintedUser(user);
 
-	colorContrastText = RGB(0,0,0);
-	colorShared = SETTING(FILE_SHARED_COLOR);
-	colorSharedLighter = ColorUtil::lighter(colorShared);
-	colorDownloaded = SETTING(FILE_DOWNLOADED_COLOR);
-	colorDownloadedLighter = ColorUtil::lighter(colorDownloaded);
-	colorCanceled = SETTING(FILE_CANCELED_COLOR);
-	colorCanceledLighter = ColorUtil::lighter(colorCanceled);
-	colorFound = SETTING(FILE_FOUND_COLOR);
-	colorFoundLighter = ColorUtil::lighter(colorFound);
-	colorInQueue = SETTING(FILE_QUEUED_COLOR);
+	colors.get();
 
 	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlList.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
@@ -2245,8 +2236,11 @@ LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL
 
 void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 {
-	if (ctrlList.isRedraw())
+	FileStatusColorsEx newColors;
+	newColors.get();
+	if (ctrlList.isRedraw() || !colors.compare(newColors))
 	{
+		colors = newColors;
 		ctrlTree.SetBkColor(Colors::g_bgColor);
 		ctrlTree.SetTextColor(Colors::g_textColor);
 		redraw();
@@ -2331,40 +2325,55 @@ void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORRE
 	bg = Colors::g_bgColor;
 	if (flags & DirectoryListing::FLAG_FOUND)
 	{
-		fg = colorContrastText;
-		bg = colorFound;
+		fg = colors.fgNormal[FileStatusColors::FOUND];
+		bg = colors.bgNormal[FileStatusColors::FOUND];
 	}
 	else if (flags & DirectoryListing::FLAG_HAS_FOUND)
 	{
-		fg = colorContrastText;
-		bg = colorFoundLighter;	
+		fg = colors.fgLighter[FileStatusColors::FOUND];
+		bg = colors.bgLighter[FileStatusColors::FOUND];
 	}
 	else if (flags & DirectoryListing::FLAG_HAS_SHARED)
 	{
-		fg = colorContrastText;
 		if (flags & (DirectoryListing::FLAG_HAS_DOWNLOADED | DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER))
-			bg = colorSharedLighter;
+		{
+			fg = colors.fgLighter[FileStatusColors::SHARED];
+			bg = colors.bgLighter[FileStatusColors::SHARED];
+		}
 		else
-			bg = colorShared;
+		{
+			fg = colors.fgNormal[FileStatusColors::SHARED];
+			bg = colors.bgNormal[FileStatusColors::SHARED];
+		}
 	}
 	else if (flags & DirectoryListing::FLAG_HAS_DOWNLOADED)
 	{
-		fg = colorContrastText;
 		if (flags & (DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER))
-			bg = colorDownloadedLighter;
+		{
+			fg = colors.fgLighter[FileStatusColors::DOWNLOADED];
+			bg = colors.bgLighter[FileStatusColors::DOWNLOADED];
+		}
 		else
-			bg = colorDownloaded;
+		{
+			fg = colors.fgNormal[FileStatusColors::DOWNLOADED];
+			bg = colors.bgNormal[FileStatusColors::DOWNLOADED];
+		}
 	}
 	else if (flags & DirectoryListing::FLAG_HAS_CANCELED)
 	{
-		fg = colorContrastText;
 		if (flags & DirectoryListing::FLAG_HAS_OTHER)
-			bg = colorCanceledLighter;
+		{
+			fg = colors.fgLighter[FileStatusColors::CANCELED];
+			bg = colors.bgLighter[FileStatusColors::CANCELED];
+		}
 		else
-			bg = colorCanceled;
+		{
+			fg = colors.fgNormal[FileStatusColors::CANCELED];
+			bg = colors.bgNormal[FileStatusColors::CANCELED];
+		}
 	}
 	if (flags & DirectoryListing::FLAG_HAS_QUEUED)
-		fg = colorInQueue;
+		fg = colors.fgInQueue;
 }
 
 void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
@@ -2373,31 +2382,31 @@ void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORR
 	bg = Colors::g_bgColor;
 	if (flags & DirectoryListing::FLAG_FOUND)
 	{
-		fg = colorContrastText;
-		bg = colorFound;
+		fg = colors.fgNormal[FileStatusColors::FOUND];
+		bg = colors.bgNormal[FileStatusColors::FOUND];
 	}
 	else if (flags & DirectoryListing::FLAG_HAS_FOUND)
 	{
-		fg = colorContrastText;
-		bg = colorFoundLighter;
+		fg = colors.fgLighter[FileStatusColors::FOUND];
+		bg = colors.bgLighter[FileStatusColors::FOUND];
 	}
 	else if (flags & DirectoryListing::FLAG_SHARED)
 	{
-		fg = colorContrastText;
-		bg = colorShared;
+		fg = colors.fgNormal[FileStatusColors::SHARED];
+		bg = colors.bgNormal[FileStatusColors::SHARED];
 	}
 	else if (flags & DirectoryListing::FLAG_DOWNLOADED)
 	{
-		fg = colorContrastText;
-		bg = colorDownloaded;
+		fg = colors.fgNormal[FileStatusColors::DOWNLOADED];
+		bg = colors.bgNormal[FileStatusColors::DOWNLOADED];
 	}
 	else if (flags & DirectoryListing::FLAG_CANCELED)
 	{
-		fg = colorContrastText;
-		bg = colorCanceled;
+		fg = colors.fgNormal[FileStatusColors::CANCELED];
+		bg = colors.bgNormal[FileStatusColors::CANCELED];
 	}
 	if (flags & DirectoryListing::FLAG_QUEUED)
-		fg = colorInQueue;
+		fg = colors.fgInQueue;
 }
 
 LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -2424,7 +2433,10 @@ LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BO
 				getDirItemColor(flags, plvcd->clrText, plvcd->clrTextBk);
 			}
 			CustomDrawHelpers::startItemDraw(customDrawState, plvcd);
-			if (hTheme) CustomDrawHelpers::drawBackground(hTheme, customDrawState, plvcd);
+			if (customDrawState.flags & CustomDrawHelpers::FLAG_SELECTED)
+				plvcd->clrText = Colors::g_textColor;
+			if (hTheme)
+				CustomDrawHelpers::drawBackground(hTheme, customDrawState, plvcd);
 			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
 		}
 
@@ -2469,10 +2481,15 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 			DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(plvcd->nmcd.lItemlParam);
 			if (dir)
 			{
-				COLORREF bg;
-				getDirItemColor(dir->getFlags(), plvcd->clrText, bg);
+				COLORREF bg, fg;
+				getDirItemColor(dir->getFlags(), fg, bg);
 				if (!(plvcd->nmcd.uItemState & CDIS_SELECTED))
+				{
 					plvcd->clrTextBk = bg;
+					plvcd->clrText = fg;
+				}
+				else
+					plvcd->clrText = Colors::g_textColor;
 			}
 		}
 	}
