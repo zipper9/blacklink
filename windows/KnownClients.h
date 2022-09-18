@@ -11,6 +11,7 @@ namespace KnownClients
 	};
 
 	extern const Client clients[];
+	extern const char* userAgents[];
 }
 
 #endif /* KNOWN_CLIENTS_H_ */

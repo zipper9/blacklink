@@ -61,8 +61,6 @@ NUMBERFMT Util::g_nf = { 0 };
 #define swprintf _snwprintf
 #endif
 
-static const string httpUserAgent = "FlylinkDC++ r504 build 22345";
-
 const string& getAppName()
 {
 	static const string s(APPNAME);
@@ -97,11 +95,6 @@ const tstring& getAppVersionT()
 {
 	static const tstring s(_T(VERSION_STR));
 	return s;
-}
-
-const string& getHttpUserAgent()
-{
-	return httpUserAgent;
 }
 
 extern "C" void bz_internal_error(int errcode)

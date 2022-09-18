@@ -31,6 +31,7 @@
 #include "../client/HashManager.h"
 #include "SplashWindow.h"
 #include "CommandLine.h"
+#include "KnownClients.h"
 
 #ifndef _DEBUG
 #define USE_CRASH_HANDLER
@@ -290,6 +291,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ToolbarManager::newInstance();
 	
 	SettingsManager::newInstance();
+	SettingsManager::setDefault(SettingsManager::HTTP_USER_AGENT, KnownClients::userAgents[0]);
 	SettingsManager::getInstance()->addListener(ToolbarManager::getInstance());
 	SettingsManager::getInstance()->load();
 	LogManager::init();

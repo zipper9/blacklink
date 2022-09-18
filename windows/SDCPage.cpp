@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "SDCPage.h"
 #include "DialogLayout.h"
+#include "KnownClients.h"
 #include "../client/SettingsManager.h"
 
 #ifdef OSVER_WIN_XP
@@ -63,7 +64,8 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_CAPTION_DOWNCONN,             FLAG_TRANSLATE, AUTO,   UNSPEC, 2          },
 	{ IDC_MIN_MULTI_CHUNK_SIZE,         0,              UNSPEC, UNSPEC, 0, &align8 },
 	{ IDC_DOWNCONN,                     0,              UNSPEC, UNSPEC, 0, &align8 },
-	{ IDC_SETTINGS_MB,                  FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align9 }
+	{ IDC_SETTINGS_MB,                  FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align9 },
+	{ IDC_CAPTION_HTTP_UA,              FLAG_TRANSLATE, UNSPEC, UNSPEC             }
 };
 
 static const PropPage::Item items[] =
@@ -75,7 +77,8 @@ static const PropPage::Item items[] =
 	{ IDC_MAX_COMPRESSION, SettingsManager::MAX_COMPRESSION, PropPage::T_INT },
 	{ IDC_COMPRESSED_PATTERN, SettingsManager::COMPRESSED_FILES, PropPage::T_STR },
 	{ IDC_DOWNCONN, SettingsManager::DOWNCONN_PER_SEC, PropPage::T_INT },
-	{ IDC_MIN_MULTI_CHUNK_SIZE, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT},
+	{ IDC_MIN_MULTI_CHUNK_SIZE, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT },
+	{ IDC_HTTP_USER_AGENT, SettingsManager::HTTP_USER_AGENT, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -89,7 +92,6 @@ void SDCPage::setRange(int idcEdit, int idcSpin, int minVal, int maxVal)
 LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
-	PropPage::read(*this, items);
 
 	setRange(IDC_SHUTDOWN_TIMEOUT, IDC_SHUTDOWN_SPIN, 1, 3600);
 	setRange(IDC_BUFFERSIZE, IDC_BUFFER_SPIN, 0, 1024  * 1024);
@@ -99,6 +101,10 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	setRange(IDC_MIN_MULTI_CHUNK_SIZE, IDC_MIN_MULTI_CHUNK_SIZE_SPIN, 0, 100);
 	setRange(IDC_DOWNCONN, IDC_DOWNCONN_SPIN, 0, 100);
 
+	CComboBox ctrlHttpUserAgent(GetDlgItem(IDC_HTTP_USER_AGENT));
+	for (size_t i = 0; KnownClients::userAgents[i]; ++i)
+		ctrlHttpUserAgent.AddString(Text::toT(KnownClients::userAgents[i]).c_str());
+
 	ctrlShutdownAction.Attach(GetDlgItem(IDC_SHUTDOWN_ACTION));
 	ctrlShutdownAction.AddString(CTSTRING(POWER_OFF));
 	ctrlShutdownAction.AddString(CTSTRING(LOG_OFF));
@@ -107,7 +113,9 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlShutdownAction.AddString(CTSTRING(HIBERNATE));
 	ctrlShutdownAction.AddString(CTSTRING(LOCK_COMPUTER));
 
+	PropPage::read(*this, items);
 	ctrlShutdownAction.SetCurSel(SETTING(SHUTDOWN_ACTION));
+
 	fixControls();
 	return TRUE;
 }

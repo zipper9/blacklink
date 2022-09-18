@@ -68,6 +68,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			MAPPER6,
 			SOCKS_SERVER, SOCKS_USER, SOCKS_PASSWORD,
 			HTTP_PROXY,
+			HTTP_USER_AGENT,
 
 			// Directories
 			DOWNLOAD_DIRECTORY, 
@@ -805,7 +806,17 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		{
 			return !isSet[aSet];
 		}
-		
+
+		static void setDefault(StrSetting key, const string& value)
+		{
+			strDefaults[key - STR_FIRST] = value;
+		}
+
+		static void setDefault(IntSetting key, int value)
+		{
+			intDefaults[key - INT_FIRST] = value;
+		}
+
 		static bool loadLanguage();
 
 		static void unset(size_t key)
@@ -887,20 +898,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			return Util::getConfigPath() + "DCPlusPlus.xml";
 		}
 
-		static void setDefault(StrSetting key, const string& value)
-		{
-			strDefaults[key - STR_FIRST] = value;
-		}
-		
-		static void setDefault(IntSetting key, int value)
-		{
-			intDefaults[key - INT_FIRST] = value;
-		}
-		
-		static void setDefault(IntSetting key, const string& value)
-		{
-			intDefaults[key - INT_FIRST] = Util::toInt(value);
-		}
 		static void pathToRelative(string& path, const string& prefix);
 		static void pathFromRelative(string& path, const string& prefix);
 };

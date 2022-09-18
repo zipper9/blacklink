@@ -1270,6 +1270,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				req.url = pc.args[2];
 				req.maxRedirects = 5;
 				req.frameId = pc.frameId;
+				req.userAgent = SETTING(HTTP_USER_AGENT);
 				uint64_t id = httpClient.addRequest(req);
 				if (id)
 				{

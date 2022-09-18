@@ -27,7 +27,7 @@ bool IpTest::runTest(int type, uint64_t frameId, string* message) noexcept
 	cr.maxRedirects = 0;
 	cr.noCache = true;
 	cr.closeConn = true;
-	cr.userAgent = getHttpUserAgent();
+	cr.userAgent = SETTING(HTTP_USER_AGENT);
 	cr.maxErrorBodySize = cr.maxRespBodySize = 64 * 1024;
 	uint64_t id = httpClient.addRequest(cr);
 	if (!id) return false;

@@ -1776,6 +1776,7 @@ enum Strings   // @DontAdd
 	SETTINGS_MAX_HUB_UC, // "Maximum number of user commands from hub"
 	SETTINGS_USE_HTTP_PROXY, // "Use HTTP proxy"
 	SETTINGS_HTTP_PROXY, // "HTTP proxy URL"
+	SETTINGS_HTTP_USER_AGENT, // "HTTP User-Agent"
 	SETTINGS_URLS, // "URLs"
 	LISTENING_SOCKET_ERROR, // "Listening socket (%1%) has failed to initialize.\nError: %2%.\nYou will need to configure the network settings manually."
 	CONNECTION_STATUS_FMT, // "%1%, %2% ago"

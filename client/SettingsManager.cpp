@@ -97,7 +97,8 @@ static const char* settingTags[] =
 	"Mapper6",
 	"SocksServer", "SocksUser", "SocksPassword",
 	"HttpProxy",
-	
+	"HttpUserAgent",
+
 	// Directories
 	"DownloadDirectory",
 	"TempDownloadDirectory",

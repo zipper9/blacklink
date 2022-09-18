@@ -998,6 +998,8 @@
 #define IDC_CAPTION_DISABLE_COMP        1985
 #define IDC_COMPRESSED_PATTERN          1986
 #define IDC_OPTIONS                     1987
+#define IDC_CAPTION_HTTP_UA             1988
+#define IDC_HTTP_USER_AGENT             1989
 #define IDC_SET_DL_BACKGROUND           1996
 #define IDC_SET_DL_TEXT                 1997
 #define IDC_SET_DL_DEFAULT              1998
@@ -1008,7 +1010,6 @@
 #define IDC_SOUND_ENABLE                2009
 #define IDC_DOWNLOAD_ASK_COMBO          2011
 #define IDC_POPUP_ENABLE                2012
-#define IDC_UPNPCHECK_STATIC            2041
 #define IDC_SPEEDLIMITDLG_SLIDER        2044
 #define IDC_SPEEDLIMITDLG_EDIT          2045
 #define IDC_SECURITY_GROUP              2046

@@ -9,6 +9,7 @@
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
 static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
+static const string userAgent = "FlylinkDC++ r504 build 22345";
 
 PortTest g_portTest;
 
@@ -34,7 +35,7 @@ bool PortTest::runTest(int typeMask) noexcept
 	req.maxRedirects = 0;
 	req.noCache = true;
 	req.closeConn = true;
-	req.userAgent = getHttpUserAgent();
+	req.userAgent = userAgent;
 	req.maxErrorBodySize = req.maxRespBodySize = 64 * 1024;
 	uint64_t id = httpClient.addRequest(req);
 	if (!id) return false;
@@ -230,7 +231,7 @@ string PortTest::createBody(const string& pid, const string& cid, int typeMask) 
 	f.appendKey("CID");
 	f.appendStringValue(cid);
 	f.appendKey("Client");
-	f.appendStringValue(getHttpUserAgent());
+	f.appendStringValue(userAgent);
 	f.appendKey("Name");
 	f.appendStringValue("Manual");
 	f.appendKey("PID");

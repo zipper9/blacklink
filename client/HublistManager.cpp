@@ -201,7 +201,7 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 	req.url = url;
 	req.maxRedirects = 5;
 	req.maxRespBodySize = 1024 * 1204;
-	req.userAgent = getHttpUserAgent();
+	req.userAgent = SETTING(HTTP_USER_AGENT);
 	reqId = httpClient.addRequest(req);
 	if (!reqId)
 	{

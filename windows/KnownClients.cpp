@@ -17,3 +17,15 @@ const KnownClients::Client KnownClients::clients[] =
 	{ "Lama", "500"           }, // http://lamalama.tv
 	{ nullptr, nullptr        }  // terminating, don't delete this
 };
+
+const char* KnownClients::userAgents[] =
+{
+	"FlylinkDC++ r504 build 22345",
+	"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36", // Chrome
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0", // Firefox
+	"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", // Google bot
+	"Mozilla/5.0 (iPhone12,1; U; CPU iPhone OS 13_0 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) Version/10.0 Mobile/15E148 Safari/602.1", // iPhone 11
+	"curl/7.64.1",
+	"python-requests/2.27.1",
+	nullptr
+};

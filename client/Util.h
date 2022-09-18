@@ -49,8 +49,6 @@ const tstring& getAppNameVerT();
 const string& getAppVersion();
 const tstring& getAppVersionT();
 
-const string& getHttpUserAgent();
-
 class File;
 
 #ifdef _DEBUG
