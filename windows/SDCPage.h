@@ -29,14 +29,14 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP(SDCPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -48,6 +48,7 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 	private:
 		CComboBox ctrlShutdownAction;
 		void fixControls();
+		void setRange(int idcEdit, int idcSpin, int minVal, int maxVal);
 };
 
 #endif // SDC_PAGE_H_

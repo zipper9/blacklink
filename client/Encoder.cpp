@@ -18,12 +18,8 @@
 
 #include "stdinc.h"
 #include "Encoder.h"
-
-#include "Exception.h"
-
-#include <cstring>
-
 #include "debug.h"
+
 const int8_t Encoder::g_base32Table[] =
 {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,

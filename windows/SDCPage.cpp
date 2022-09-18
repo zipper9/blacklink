@@ -18,72 +18,95 @@
 
 #include "stdafx.h"
 #include "SDCPage.h"
+#include "DialogLayout.h"
 #include "../client/SettingsManager.h"
-#include "WinUtil.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
-static const WinUtil::TextItem texts[] =
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
+
+static const DialogLayout::Align align1 = { 1,  DialogLayout::SIDE_RIGHT, U_DU(6)  };
+static const DialogLayout::Align align2 = { 2,  DialogLayout::SIDE_RIGHT, U_DU(20) };
+static const DialogLayout::Align align3 = { 3,  DialogLayout::SIDE_RIGHT, U_DU(6)  };
+static const DialogLayout::Align align4 = { 4,  DialogLayout::SIDE_RIGHT, U_DU(4)  };
+static const DialogLayout::Align align5 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6)  };
+static const DialogLayout::Align align6 = { 9,  DialogLayout::SIDE_RIGHT, U_DU(4)  };
+static const DialogLayout::Align align7 = { 16, DialogLayout::SIDE_RIGHT, U_DU(6)  };
+static const DialogLayout::Align align8 = { -2, DialogLayout::SIDE_RIGHT, U_DU(6)  };
+static const DialogLayout::Align align9 = { 21, DialogLayout::SIDE_RIGHT, U_DU(4)  };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_SETTINGS_B, ResourceManager::B },
-	{ IDC_B1, ResourceManager::B },
-	{ IDC_B2, ResourceManager::B },
-	{ IDC_S2, ResourceManager::S },
-	{ IDC_SETTINGS_WRITE_BUFFER, ResourceManager::SETTINGS_WRITE_BUFFER },
-#ifdef OSVER_WIN_XP
-	{ IDC_SETTINGS_SOCKET_IN_BUFFER, ResourceManager::SETTINGS_SOCKET_IN_BUFFER },
-	{ IDC_SETTINGS_SOCKET_OUT_BUFFER, ResourceManager::SETTINGS_SOCKET_OUT_BUFFER },
-#endif
-	{ IDC_SETTINGS_KB, ResourceManager::KB },
-	{ IDC_CAPTION_SHUTDOWN_TIMEOUT, ResourceManager::TIMEOUT },
-	{ IDC_MAX_COMPRESSION, ResourceManager::SETTINGS_MAX_COMPRESS },
-	{ IDC_CAPTION_DISABLE_COMP, ResourceManager::SETTINGS_DISABLE_COMP },
-	{ IDC_SHUTDOWN_ACTION, ResourceManager::SHUTDOWN_ACTION },
-	{ IDC_CAPTION_DOWNCONN, ResourceManager::SETTINGS_DOWNCONN },
-	{ IDC_MIN_MULTI_CHUNK_SIZE, ResourceManager::SETTINGS_MIN_MULTI_CHUNK_SIZE },
-	{ IDC_SETTINGS_MB, ResourceManager::MB },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_CAPTION_SHUTDOWN_ACTION,      FLAG_TRANSLATE, AUTO,   UNSPEC             },
+	{ IDC_SHUTDOWN_ACTION,              0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CAPTION_SHUTDOWN_TIMEOUT,     FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align2 },
+	{ IDC_SHUTDOWN_TIMEOUT,             0,              UNSPEC, UNSPEC, 0, &align3 },
+	{ IDC_S2,                           FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align4 },
+	{ IDC_SETTINGS_WRITE_BUFFER,        FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_SETTINGS_SOCKET_IN_BUFFER,    FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_SETTINGS_SOCKET_OUT_BUFFER,   FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_BUFFERSIZE,                   0,              UNSPEC, UNSPEC, 0, &align5 },
+	{ IDC_SOCKET_IN_BUFFER,             0,              UNSPEC, UNSPEC, 0, &align5 },
+	{ IDC_SOCKET_OUT_BUFFER,            0,              UNSPEC, UNSPEC, 0, &align5 },
+	{ IDC_SOCKET_OUT_BUFFER,            0,              UNSPEC, UNSPEC, 0, &align5 },
+	{ IDC_SETTINGS_KB,                  FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align6 },
+	{ IDC_B1,                           FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align6 },
+	{ IDC_B2,                           FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align6 },
+	{ IDC_CAPTION_MAX_COMPRESSION,      FLAG_TRANSLATE, AUTO,   UNSPEC             },
+	{ IDC_MAX_COMPRESSION,              0,              UNSPEC, UNSPEC, 0, &align7 },
+	{ IDC_CAPTION_DISABLE_COMP,         FLAG_TRANSLATE, UNSPEC, UNSPEC             },
+	{ IDC_CAPTION_MIN_MULTI_CHUNK_SIZE, FLAG_TRANSLATE, AUTO,   UNSPEC, 2          },
+	{ IDC_CAPTION_DOWNCONN,             FLAG_TRANSLATE, AUTO,   UNSPEC, 2          },
+	{ IDC_MIN_MULTI_CHUNK_SIZE,         0,              UNSPEC, UNSPEC, 0, &align8 },
+	{ IDC_DOWNCONN,                     0,              UNSPEC, UNSPEC, 0, &align8 },
+	{ IDC_SETTINGS_MB,                  FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align9 }
 };
 
 static const PropPage::Item items[] =
 {
 	{ IDC_BUFFERSIZE, SettingsManager::BUFFER_SIZE_FOR_DOWNLOADS, PropPage::T_INT },
-#ifdef OSVER_WIN_XP
 	{ IDC_SOCKET_IN_BUFFER, SettingsManager::SOCKET_IN_BUFFER, PropPage::T_INT },
 	{ IDC_SOCKET_OUT_BUFFER, SettingsManager::SOCKET_OUT_BUFFER, PropPage::T_INT },
-#endif
 	{ IDC_SHUTDOWN_TIMEOUT, SettingsManager::SHUTDOWN_TIMEOUT, PropPage::T_INT },
 	{ IDC_MAX_COMPRESSION, SettingsManager::MAX_COMPRESSION, PropPage::T_INT },
 	{ IDC_COMPRESSED_PATTERN, SettingsManager::COMPRESSED_FILES, PropPage::T_STR },
 	{ IDC_DOWNCONN, SettingsManager::DOWNCONN_PER_SEC, PropPage::T_INT },
-	{ IDC_CAPTION_MIN_MULTI_CHUNK_SIZE, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT},
+	{ IDC_MIN_MULTI_CHUNK_SIZE, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT},
 	{ 0, 0, PropPage::T_END }
 };
 
+void SDCPage::setRange(int idcEdit, int idcSpin, int minVal, int maxVal)
+{
+	CUpDownCtrl spin(GetDlgItem(idcSpin));
+	spin.SetRange32(minVal, maxVal);
+	spin.SetBuddy(GetDlgItem(idcEdit));
+}
+
 LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	WinUtil::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
-	
-	CUpDownCtrl updown;
-	SET_MIN_MAX(IDC_BUFFER_SPIN, 0, 1024  * 1024);
-	SET_MIN_MAX(IDC_READ_SPIN, 1024, 128 * 1024);
-	SET_MIN_MAX(IDC_WRITE_SPIN, 1024, 128 * 1024);
-	SET_MIN_MAX(IDC_SHUTDOWN_SPIN, 1, 3600);
-	SET_MIN_MAX(IDC_MAX_COMP_SPIN, 0, 9);
-	SET_MIN_MAX(IDC_DOWNCONN_SPIN, 0, 100);
-	SET_MIN_MAX(IDC_MIN_MULTI_CHUNK_SIZE_SPIN, 0, 100);
-	
-	ctrlShutdownAction.Attach(GetDlgItem(IDC_COMBO1));
+
+	setRange(IDC_SHUTDOWN_TIMEOUT, IDC_SHUTDOWN_SPIN, 1, 3600);
+	setRange(IDC_BUFFERSIZE, IDC_BUFFER_SPIN, 0, 1024  * 1024);
+	setRange(IDC_SOCKET_IN_BUFFER, IDC_READ_SPIN, 1024, 128 * 1024);
+	setRange(IDC_SOCKET_OUT_BUFFER, IDC_WRITE_SPIN, 1024, 128 * 1024);
+	setRange(IDC_MAX_COMPRESSION, IDC_MAX_COMP_SPIN, 0, 9);
+	setRange(IDC_MIN_MULTI_CHUNK_SIZE, IDC_MIN_MULTI_CHUNK_SIZE_SPIN, 0, 100);
+	setRange(IDC_DOWNCONN, IDC_DOWNCONN_SPIN, 0, 100);
+
+	ctrlShutdownAction.Attach(GetDlgItem(IDC_SHUTDOWN_ACTION));
 	ctrlShutdownAction.AddString(CTSTRING(POWER_OFF));
 	ctrlShutdownAction.AddString(CTSTRING(LOG_OFF));
 	ctrlShutdownAction.AddString(CTSTRING(REBOOT));
 	ctrlShutdownAction.AddString(CTSTRING(SUSPEND));
 	ctrlShutdownAction.AddString(CTSTRING(HIBERNATE));
 	ctrlShutdownAction.AddString(CTSTRING(LOCK_COMPUTER));
-	
+
 	ctrlShutdownAction.SetCurSel(SETTING(SHUTDOWN_ACTION));
 	fixControls();
 	return TRUE;
@@ -98,12 +121,12 @@ LRESULT SDCPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 void SDCPage::fixControls()
 {
 #ifdef OSVER_WIN_XP
-	::EnableWindow(GetDlgItem(IDC_SOCKET_IN_BUFFER), !CompatibilityManager::isOsVistaPlus());
-	::EnableWindow(GetDlgItem(IDC_SOCKET_OUT_BUFFER), !CompatibilityManager::isOsVistaPlus());
+	BOOL enable = !CompatibilityManager::isOsVistaPlus();
 #else
-	::EnableWindow(GetDlgItem(IDC_SOCKET_IN_BUFFER), FALSE);
-	::EnableWindow(GetDlgItem(IDC_SOCKET_OUT_BUFFER), FALSE);
+	BOOL enable = FALSE;
 #endif
+	GetDlgItem(IDC_SOCKET_IN_BUFFER).EnableWindow(enable);
+	GetDlgItem(IDC_SOCKET_OUT_BUFFER).EnableWindow(enable);
 }
 
 void SDCPage::write()

@@ -1115,6 +1115,7 @@
     <Image Include="res\StateUsers.png" />
     <Image Include="res\torrent.png" />
     <Image Include="res\Trackers.png" />
+    <Image Include="res\Transfers.png" />
     <Image Include="res\TransferSpeeds.png" />
     <Image Include="res\TransferTree.png" />
     <Image Include="res\ADLSearch.ico" />

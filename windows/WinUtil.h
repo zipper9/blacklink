@@ -62,11 +62,6 @@ do \
 #define SET_LIST_COLOR_IN_SETTING(ctrlList)
 #endif
 
-#define SET_MIN_MAX(x, y, z) \
-	updown.Attach(GetDlgItem(x)); \
-	updown.SetRange32(y, z); \
-	updown.Detach();
-
 class FlatTabCtrl;
 class UserCommand;
 

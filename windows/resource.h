@@ -608,7 +608,6 @@
 #define IDC_DIRECT                      1494
 #define IDC_FIREWALL_STATUS             1495
 #define IDC_FIREWALL_UPNP               1496
-#define IDC_SHUTDOWN_ACTION             1497
 #define IDC_FIREWALL_NAT                1498
 #define IDC_READ_SPIN                   1499
 #define IDC_CAPTION_SET_PRIORITY1       1500
@@ -970,7 +969,8 @@
 #define IDC_DCLSTGEN_INFO_SIZESTATIC    1949
 #define IDC_DCLSTGEN_INFO_SIZEEDIT      1950
 #define IDC_DCLSTGEN_INFO_FILES         1951
-#define IDC_UPNPCHECK_PROGRESS          1956
+#define IDC_SHUTDOWN_ACTION             1952
+#define IDC_CAPTION_SHUTDOWN_ACTION     1953
 #define IDC_DCLSTGEN_PROGRESS           1957
 #define IDC_DOUBLE_CLICK_ACTION         1958
 #define IDC_DCLST_CLICK_STATIC          1960
