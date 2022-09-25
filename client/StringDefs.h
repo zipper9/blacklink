@@ -934,7 +934,7 @@ enum Strings   // @DontAdd
 	SAVED, // "Save..."
 	SAVE_PASSWORD, // "Save password"
 	SAVE_SEARCH_SETTINGS_TEXT, // "Save search settings"
-	USE_SEARCH_GROUP_TREE_SETTINGS_TEXT, // "Use group tree"
+	USE_SEARCH_GROUP_TREE_SETTINGS_TEXT, // "Group by file type"
 	SAVE_SEARCH_SETTINGS_TOOLTIP, // "This option involves maintaining search parameters: size, type, method, and so on."
 	SEARCH, // "Search"
 	SEARCH_DETECT_TTH, // "Automatically switch search type to TTH when one is found in search string"

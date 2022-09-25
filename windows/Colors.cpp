@@ -4,6 +4,8 @@
 #include "../client/SettingsManager.h"
 
 HBRUSH Colors::g_bgBrush = nullptr;
+HBRUSH Colors::g_tabBackgroundBrush = nullptr;
+
 COLORREF Colors::g_textColor = 0;
 COLORREF Colors::g_bgColor = 0;
 
@@ -54,10 +56,13 @@ void Colors::init()
 {
 	g_textColor = SETTING(TEXT_COLOR);
 	g_bgColor = SETTING(BACKGROUND_COLOR);
-	
+
 	if (g_bgBrush) DeleteObject(g_bgBrush);
 	g_bgBrush = CreateSolidBrush(Colors::g_bgColor);
-	
+
+	// This color must match FlatTabCtrl::colorSelected
+	if (!g_tabBackgroundBrush) g_tabBackgroundBrush = CreateSolidBrush(RGB(255,255,255));
+
 	CHARFORMAT2 cf;
 	memset(&cf, 0, sizeof(CHARFORMAT2));
 	cf.cbSize = sizeof(cf);
@@ -172,6 +177,12 @@ void Colors::init()
 		g_TextStyleURL.dwEffects |= CFE_BOLD;
 	if (SETTING(TEXT_URL_ITALIC))
 		g_TextStyleURL.dwEffects |= CFE_ITALIC;
+}
+
+void Colors::uninit()
+{
+	DeleteObject(g_bgBrush);
+	DeleteObject(g_tabBackgroundBrush);
 }
 
 static inline int fromHexChar(int ch)

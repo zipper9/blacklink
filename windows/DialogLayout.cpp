@@ -51,17 +51,27 @@ class DialogInfo
 	SIZE radioSize;
 	int comboBoxHeight;
 	bool hasTheme;
+	const Options* const options;
+	HFONT hFont;
 
 	void getDialogUnits()
 	{
-		RECT rect = { 0, 0, 4, 8 };
-		MapDialogRect(hwnd, &rect);
-		xdu = rect.right;
-		ydu = rect.bottom;
+		if (!WinUtil::getDialogUnits(hwnd, nullptr, xdu, ydu))
+		{
+			dcassert(0);
+			xdu = 1;
+			ydu = 1;
+		}
 	}
 
 	void getDialogSize()
 	{
+		if (options && options->width && options->height)
+		{
+			dlgWidth = getXSize(options->width);
+			dlgHeight = getYSize(options->height);
+			return;
+		}
 		RECT rc;
 		GetClientRect(hwnd, &rc);
 		dlgWidth = rc.right;
@@ -71,8 +81,9 @@ class DialogInfo
 	void getTextSize(HDC hdc, HWND ctrlHwnd, int drawFlags, SIZE& size);
 
 public:
-	DialogInfo(HWND hwnd) : hwnd(hwnd), xdu(-1), ydu(-1),
-		dlgWidth(-1), dlgHeight(-1), checkBoxGap(-1), comboBoxHeight(-1), hasTheme(true) {}
+	DialogInfo(HWND hwnd, const Options* options) : hwnd(hwnd), xdu(-1), ydu(-1),
+		dlgWidth(-1), dlgHeight(-1), checkBoxGap(-1), comboBoxHeight(-1), hasTheme(true),
+		options(options), hFont(nullptr) {}
 
 	int getXDialogUnits()
 	{
@@ -202,8 +213,12 @@ static void alignHorizontal(DialogInfo& di, ItemInfo* ii, const RECT* groups, in
 	}
 	else if (j > 0)
 	{
-		dcassert(j - 1 < i);
-		if (align->side == SIDE_LEFT) x = ii[j-1].rc.left; else x = ii[j-1].rc.right;
+		if (j & INDEX_RELATIVE)
+			j = i - (j ^ INDEX_RELATIVE);
+		else
+			--j;
+		dcassert(j < i);
+		if (align->side == SIDE_LEFT) x = ii[j].rc.left; else x = ii[j].rc.right;
 	}
 	else
 	{
@@ -233,8 +248,12 @@ static void alignVertical(DialogInfo& di, ItemInfo* ii, const RECT* groups, int 
 	}
 	else if (j > 0)
 	{
-		dcassert(j - 1 < i);
-		if (align->side == SIDE_TOP) y = ii[j-1].rc.top; else y = ii[j-1].rc.bottom;
+		if (j & INDEX_RELATIVE)
+			j = i - (j ^ INDEX_RELATIVE);
+		else
+			--j;
+		dcassert(j < i);
+		if (align->side == SIDE_TOP) y = ii[j].rc.top; else y = ii[j].rc.bottom;
 	}
 	else
 	{
@@ -265,9 +284,9 @@ void DialogInfo::getOrigRect(ItemInfo& ii) const
 	}
 }
 
-void DialogLayout::layout(HWND hWnd, const DialogLayout::Item* items, int count)
+void DialogLayout::layout(HWND hWnd, const Item* items, int count, const Options* options)
 {
-	DialogInfo di(hWnd);
+	DialogInfo di(hWnd, options);
 	ItemInfo* ii = new ItemInfo[count];
 
 	int maxGroup = 0;
@@ -287,7 +306,12 @@ void DialogLayout::layout(HWND hWnd, const DialogLayout::Item* items, int count)
 	for (int i = 0; i < count; i++)
 	{
 		ItemInfo& cur = ii[i];
-		cur.hwnd = GetDlgItem(hWnd, items[i].id);
+		if (items[i].flags & FLAG_PLACEHOLDER)
+		{
+			cur.hwnd = nullptr;
+			continue;
+		}
+		cur.hwnd = (items[i].flags & FLAG_HWND) ? (HWND) items[i].id : GetDlgItem(hWnd, items[i].id);
 		dcassert(cur.hwnd);
 		if (items[i].flags & FLAG_TRANSLATE)
 		{
@@ -390,17 +414,20 @@ void DialogLayout::layout(HWND hWnd, const DialogLayout::Item* items, int count)
 		}
 	}
 
+	UINT flags = SWP_NOZORDER;
+	if (options && options->show) flags |= SWP_SHOWWINDOW;
 	HDWP dwp = BeginDeferWindowPos(count);
 	for (int i = 0; i < count; i++)
 	{
 		ItemInfo& cur = ii[i];
+		if (!cur.hwnd) continue;
 		if ((cur.flags & FLAG_RC_ORIG) &&
 		    cur.rc.left == cur.rcOrig.left && cur.rc.right == cur.rcOrig.right &&
 		    cur.rc.top == cur.rcOrig.top && cur.rc.bottom == cur.rcOrig.bottom) continue;
 		DeferWindowPos(dwp, cur.hwnd, nullptr, cur.rc.left, cur.rc.top,
 			cur.rc.right - cur.rc.left,
 			cur.type == CTRL_COMBOBOX ? cur.rcOrig.bottom - cur.rcOrig.top : cur.rc.bottom - cur.rc.top,
-			SWP_NOZORDER);
+			flags);
 	}
 	EndDeferWindowPos(dwp);
 
@@ -413,7 +440,12 @@ void DialogInfo::getTextSize(HDC dc, HWND ctrlHwnd, int drawFlags, SIZE& size)
 	tstring text;
 	WinUtil::getWindowText(ctrlHwnd, text);
 	RECT rc;
-	HFONT hFont = (HFONT) SendMessage(hwnd, WM_GETFONT, 0, 0);
+	if (!hFont)
+	{
+		hFont = (HFONT) SendMessage(hwnd, WM_GETFONT, 0, 0);
+		if (!hFont)
+			hFont = (HFONT) SendMessage(ctrlHwnd, WM_GETFONT, 0, 0);
+	}
 	HGDIOBJ prevFont = SelectObject(dc, hFont);
 	DrawText(dc, text.c_str(), (int) text.length(), &rc, drawFlags | DT_NOCLIP | DT_CALCRECT);
 	SelectObject(dc, prevFont);
@@ -428,8 +460,6 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 	{
 		case CTRL_TEXT:
 		{
-			tstring text;
-			WinUtil::getWindowText(hwnd, text);
 			HDC dc = GetDC(hwnd);
 			if (!dc) return false;
 			getTextSize(dc, hwnd, drawFlags, size);
@@ -441,8 +471,6 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 			break;
 		case CTRL_BUTTON:
 		{
-			tstring text;
-			WinUtil::getWindowText(hwnd, text);
 			HDC dc = GetDC(hwnd);
 			if (!dc) return false;
 			getTextSize(dc, hwnd, drawFlags, size);
@@ -456,8 +484,6 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 		case CTRL_CHECKBOX:
 		case CTRL_RADIO:
 		{
-			tstring text;
-			WinUtil::getWindowText(hwnd, text);
 			HDC dc = GetDC(hwnd);
 			if (!dc) return false;
 			getTextSize(dc, hwnd, drawFlags, size);

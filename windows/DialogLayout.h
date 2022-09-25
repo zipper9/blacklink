@@ -6,7 +6,11 @@
 namespace DialogLayout
 {
 
-static const int FLAG_TRANSLATE = 1;
+static const int FLAG_TRANSLATE   = 1;
+static const int FLAG_HWND        = 2;
+static const int FLAG_PLACEHOLDER = 4;
+
+static const int INDEX_RELATIVE = 0x8000;
 
 #define U_PX(val) ((val)<<1)
 #define U_DU(val) ((val)<<1 | 1)
@@ -31,7 +35,7 @@ struct Align
 
 struct Item
 {
-	int id;
+	UINT_PTR id;
 	int flags;
 	int width;
 	int height;
@@ -42,7 +46,14 @@ struct Item
 	const Align* bottom;
 };
 
-void layout(HWND hWnd, const Item* items, int count);
+struct Options
+{
+	int width;
+	int height;
+	bool show;
+};
+
+void layout(HWND hWnd, const Item* items, int count, const Options* opt = nullptr);
 
 }
 

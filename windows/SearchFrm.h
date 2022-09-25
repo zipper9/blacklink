@@ -27,6 +27,7 @@
 #include "CustomDrawHelpers.h"
 #include "SearchHistory.h"
 #include "FileStatusColors.h"
+#include "DialogLayout.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
@@ -39,9 +40,6 @@
 #include "ImageButton.h"
 #endif
 
-#define FLYLINKDC_USE_TREE_SEARCH
-
-#define SEARCH_MESSAGE_MAP 6
 #define SHOWUI_MESSAGE_MAP 7
 #define SEARCH_FILTER_MESSAGE_MAP 11
 
@@ -121,9 +119,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZEMODE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_MODE, onFiletypeChange)
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		NOTIFY_HANDLER(IDC_TRANSFER_TREE, TVN_SELCHANGED, onSelChangedTree);
-#endif
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TO_FAV, IDC_DOWNLOAD_TO_FAV + 499, onDownload)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + 499, onDownloadWhole)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET, IDC_DOWNLOAD_TARGET + 499, onDownload)
@@ -132,13 +128,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uicBase)
 		CHAIN_MSG_MAP(baseClass)
-		ALT_MSG_MAP(SEARCH_MESSAGE_MAP)
 		ALT_MSG_MAP(SHOWUI_MESSAGE_MAP)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowUI)
 		ALT_MSG_MAP(SEARCH_FILTER_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
 		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
-		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
+		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onFilterChange)
 		END_MSG_MAP()
 		
 		SearchFrame();
@@ -164,7 +159,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onFilterChar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onFilterChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -175,9 +170,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onDownloadWhole(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-#endif
 		
 		void UpdateLayout(BOOL resizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
@@ -418,6 +411,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CComboBox ctrlSearchBox;
 		void initSearchHistoryBox();
 		
+		DialogLayout::Item layout[18];
 		CEdit ctrlSize;
 		CComboBox ctrlMode;
 		CComboBox ctrlSizeMode;
@@ -433,20 +427,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		CFlyToolTipCtrl tooltip;
 		
-		CContainedWindow searchContainer;
-		CContainedWindow searchBoxContainer;
-		CContainedWindow sizeContainer;
-		CContainedWindow modeContainer;
-		CContainedWindow sizeModeContainer;
-		CContainedWindow fileTypeContainer;
 #ifdef BL_FEATURE_IP_DATABASE
 		CButton ctrlStoreIP;
 		bool storeIP;
 #endif
 		CContainedWindow showUIContainer;
 		
-		CContainedWindow resultsContainer;
-		CContainedWindow hubsContainer;
 		CContainedWindow ctrlFilterContainer;
 		CContainedWindow ctrlFilterSelContainer;
 		tstring filter;
@@ -463,10 +449,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		CButton ctrlStoreSettings;
 		bool storeSettings;
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		CButton ctrlUseGroupTreeSettings;
 		bool useTree;
-#endif
+
 		bool autoSwitchToTTH;
 		bool shouldSort;
 		CImageList images;
@@ -475,7 +460,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		HTHEME hTheme;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
 		
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		CTreeViewCtrl ctrlSearchFilterTree;
 		HTREEITEM treeItemRoot;
 		HTREEITEM treeItemCurrent;
@@ -495,9 +479,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool treeExpanded;
 		bool itemMatchesSelType(const SearchInfo* si) const;
 		HTREEITEM getInsertAfter(int type) const;
-#else
-		vector<SearchInfo*> results;
-#endif
+
 		std::unordered_set<SearchInfo*> everything;
 		std::unordered_set<UserPtr> allUsers;
 		FastCriticalSection csEverything;

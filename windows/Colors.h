@@ -9,13 +9,10 @@
 struct Colors
 {
 	static void init();
-	static void uninit()
-	{
-		::DeleteObject(g_bgBrush);
-	}
+	static void uninit();
 
 	static bool getColorFromString(const tstring& colorText, COLORREF& color);
-	
+
 	static CHARFORMAT2 g_TextStyleTimestamp;
 	static CHARFORMAT2 g_ChatTextGeneral;
 	static CHARFORMAT2 g_ChatTextOldHistory;
@@ -30,17 +27,19 @@ struct Colors
 	static CHARFORMAT2 g_TextStyleURL;
 	static CHARFORMAT2 g_ChatTextPrivate;
 	static CHARFORMAT2 g_ChatTextLog;
-	
+
 	static COLORREF g_textColor;
 	static COLORREF g_bgColor;
-	
+
 	static HBRUSH g_bgBrush;
-	static LRESULT setColor(const HDC hdc)
+	static LRESULT setColor(HDC hdc)
 	{
 		::SetBkColor(hdc, g_bgColor);
 		::SetTextColor(hdc, g_textColor);
 		return reinterpret_cast<LRESULT>(g_bgBrush);
 	}
+
+	static HBRUSH g_tabBackgroundBrush;
 };
 
 static inline void setListViewColors(CListViewCtrl& ctrlList)

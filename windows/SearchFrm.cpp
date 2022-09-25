@@ -47,7 +47,55 @@ static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
 
 extern bool g_DisableTestPort;
 
-static const COLORREF colorContrastText = RGB(0,0,0);
+using DialogLayout::FLAG_HWND;
+using DialogLayout::FLAG_PLACEHOLDER;
+using DialogLayout::AUTO;
+using DialogLayout::UNSPEC;
+using DialogLayout::INDEX_RELATIVE;
+
+static const DialogLayout::Align hal1 = { 0, DialogLayout::SIDE_LEFT, U_DU(4) };
+static const DialogLayout::Align hal2 = { 0, DialogLayout::SIDE_RIGHT, U_DU(4) };
+static const DialogLayout::Align val1 = { 0, DialogLayout::SIDE_TOP, U_DU(2) };
+static const DialogLayout::Align hal3 = { 1 | INDEX_RELATIVE, DialogLayout::SIDE_LEFT, U_DU(1) };
+static const DialogLayout::Align hal4 = { 0, DialogLayout::SIDE_LEFT, U_DU(8) };
+static const DialogLayout::Align val2 = { 1, DialogLayout::SIDE_BOTTOM, U_PX(2) };
+static const DialogLayout::Align val3 = { 4, DialogLayout::SIDE_BOTTOM, U_DU(6) };
+static const DialogLayout::Align val4 = { 5, DialogLayout::SIDE_BOTTOM, U_PX(2) };
+static const DialogLayout::Align hal5 = { 1 | INDEX_RELATIVE, DialogLayout::SIDE_LEFT, U_DU(2) };
+static const DialogLayout::Align val5 = { 8, DialogLayout::SIDE_BOTTOM, U_DU(6) };
+static const DialogLayout::Align val6 = { 1 | INDEX_RELATIVE, DialogLayout::SIDE_BOTTOM, U_PX(2) };
+static const DialogLayout::Align val7 = { 10, DialogLayout::SIDE_BOTTOM, U_DU(6) };
+static const DialogLayout::Align val8 = { 11, DialogLayout::SIDE_BOTTOM, U_DU(2) };
+static const DialogLayout::Align val9 = { 1, DialogLayout::SIDE_BOTTOM, U_PX(1) };
+static const DialogLayout::Align val10 = { 1 | INDEX_RELATIVE, DialogLayout::SIDE_BOTTOM, U_DU(2) };
+static const DialogLayout::Align val11 = { 16, DialogLayout::SIDE_BOTTOM, U_DU(6) };
+static const DialogLayout::Align val12 = { 0, DialogLayout::SIDE_BOTTOM, U_PX(0) };
+
+static const DialogLayout::Item layoutItems[] =
+{
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal2, &val1 }, // 1. "Search for"
+	{ 0, FLAG_HWND, U_PX(30), U_PX(25), 0, nullptr, &hal2, &val9 }, // 2. Clear button
+	{ 0, FLAG_HWND, U_PX(30), U_PX(25), 0, nullptr, &hal3, &val9 }, // 3. Search button
+	{ 0, FLAG_HWND, UNSPEC, U_DU(12), 0, &hal1, &hal3, &val2 }, // 4. Search box
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal2, &val3 }, // 5. "Size"
+	{ 0, FLAG_HWND, U_DU(30), U_DU(12), 0, nullptr, &hal2, &val4 }, // 6. Size units
+	{ 0, FLAG_HWND, U_DU(40), U_DU(12), 0, nullptr, &hal5, &val4}, // 7. Size box
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal5, &val4 }, // 8. Size type combobox
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal2, &val5 }, // 9. "File type"
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal2, &val6 }, // 10. File type combobox
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal2, &val7 }, // 11. "Search options"
+	{ 0, FLAG_HWND, AUTO, AUTO, 0, &hal4, nullptr, &val8 }, // 12. ctrlSlots
+	{ 0, FLAG_HWND, AUTO, AUTO, 0, &hal4, nullptr, &val10 }, // 13. ctrlCollapsed
+#ifdef BL_FEATURE_IP_DATABASE
+	{ 0, FLAG_HWND, AUTO, AUTO, 0, &hal4, nullptr, &val10 }, // 14. ctrlStoreIP
+#else
+	{ 0, FLAG_PLACEHOLDER },
+#endif
+	{ 0, FLAG_HWND, AUTO, AUTO, 0, &hal4, nullptr, &val10 }, // 15. ctrlStoreSettings
+	{ 0, FLAG_HWND, AUTO, AUTO, 0, &hal4, nullptr, &val10 }, // 16. ctrlUseGroupTreeSettings
+	{ 0, FLAG_HWND, UNSPEC, AUTO, 0, &hal1, &hal2, &val11 }, // 17. "Hubs"
+	{ 0, FLAG_HWND, UNSPEC, UNSPEC, 0, &hal1, &hal2, &val6, &val12 } // 18. Hubs ListView
+};
 
 const int SearchFrame::columnId[] =
 {
@@ -123,18 +171,10 @@ bool isTTH(const std::basic_string<C>& s)
 
 SearchFrame::SearchFrame() :
 	TimerHelper(m_hWnd),
-	searchBoxContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
-	searchContainer(WC_EDIT, this, SEARCH_MESSAGE_MAP),
-	sizeContainer(WC_EDIT, this, SEARCH_MESSAGE_MAP),
-	modeContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
-	sizeModeContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
-	fileTypeContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
 	showUIContainer(WC_COMBOBOX, this, SHOWUI_MESSAGE_MAP),
 #ifdef BL_FEATURE_IP_DATABASE
 	storeIP(false),
 #endif
-	resultsContainer(WC_LISTVIEW, this, SEARCH_MESSAGE_MAP),
-	hubsContainer(WC_LISTVIEW, this, SEARCH_MESSAGE_MAP),
 	ctrlFilterContainer(WC_EDIT, this, SEARCH_FILTER_MESSAGE_MAP),
 	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
 	initialSize(0), initialMode(SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
@@ -149,13 +189,11 @@ SearchFrame::SearchFrame() :
 	needUpdateResultCount(false),
 	updateList(false),
 	hasWaitTime(false),
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	treeExpanded(false),
 	treeItemRoot(nullptr),
 	treeItemCurrent(nullptr),
 	treeItemOld(nullptr),
 	useTree(true),
-#endif
 	shouldSort(false),
 	startingSearch(false),
 	portStatus(PortTest::STATE_UNKNOWN),
@@ -218,8 +256,8 @@ LRESULT SearchFrame::onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 void SearchFrame::onSizeMode()
 {
 	BOOL isNormal = ctrlMode.GetCurSel() != 0;
-	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZE), isNormal);
-	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZEMODE), isNormal);
+	ctrlSize.EnableWindow(isNormal);
+	ctrlSizeMode.EnableWindow(isNormal);
 }
 
 LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -231,16 +269,15 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
-	
+
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
 	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
-	
+
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP, 0, IDC_SEARCH_STRING);
 	lastSearches.load(e_SearchHistory);
 	initSearchHistoryBox();
-	searchBoxContainer.SubclassWindow(ctrlSearchBox.m_hWnd);
 	ctrlSearchBox.SetExtendedUI();
 
 	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
@@ -263,20 +300,16 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	ctrlMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_MODE);
-	modeContainer.SubclassWindow(ctrlMode.m_hWnd);
-	
+
 	ctrlSize.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZE);
-	sizeContainer.SubclassWindow(ctrlSize.m_hWnd);
-	
+
 	ctrlSizeMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZEMODE);
-	sizeModeContainer.SubclassWindow(ctrlSizeMode.m_hWnd);
 	
 	ctrlFiletype.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_HASSTRINGS | CBS_OWNERDRAWFIXED | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILETYPES);
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, searchTypesImageList, 16, 16);
-	fileTypeContainer.SubclassWindow(ctrlFiletype.m_hWnd);
 
 	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_FREESLOTS);
 	ctrlSlots.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
@@ -311,14 +344,12 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		onlyFree = true;
 	}
 
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_USE_TREE);
 	ctrlUseGroupTreeSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	if (BOOLSETTING(USE_SEARCH_GROUP_TREE_SETTINGS))
 		ctrlUseGroupTreeSettings.SetCheck(BST_CHECKED);
 	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlUseGroupTreeSettings.SetWindowText(CTSTRING(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
-#endif
 
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_HUB);
@@ -328,9 +359,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
 		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
-	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
 
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
 	ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
 	ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
@@ -338,7 +367,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlSearchFilterTree.SetImageList(searchTypesImageList, TVSIL_NORMAL);
 
 	useTree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
-#endif
 
 	const bool useSystemIcons = BOOLSETTING(USE_SYSTEM_ICONS);
 	ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -346,7 +374,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	                   WS_EX_CLIENTEDGE, IDC_RESULTS);
 	ctrlResults.ownsItemData = false;
 	ctrlResults.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	resultsContainer.SubclassWindow(ctrlResults.m_hWnd);
 	
 	if (useSystemIcons)
 	{
@@ -434,7 +461,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlFiletype.SetCurSel(SETTING(SAVED_SEARCH_TYPE));
 		ctrlSizeMode.SetCurSel(SETTING(SAVED_SEARCH_SIZEMODE));
 		ctrlMode.SetCurSel(SETTING(SAVED_SEARCH_MODE));
-		SetDlgItemText(IDC_SEARCH_SIZE, Text::toT(SETTING(SAVED_SEARCH_SIZE)).c_str());
+		ctrlSize.SetWindowText(Text::toT(SETTING(SAVED_SEARCH_SIZE)).c_str());
 	}
 	else
 	{
@@ -466,6 +493,29 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
 	WinUtil::setExplorerTheme(ctrlHubs);
+
+	for (int i = 0; i < _countof(layoutItems); ++i)
+		layout[i] = layoutItems[i];
+	layout[0].id = (UINT_PTR) searchLabel.m_hWnd;
+	layout[1].id = (UINT_PTR) ctrlPurge.m_hWnd;
+	layout[2].id = (UINT_PTR) ctrlDoSearch.m_hWnd;
+	layout[3].id = (UINT_PTR) ctrlSearchBox.m_hWnd;
+	layout[4].id = (UINT_PTR) sizeLabel.m_hWnd;
+	layout[5].id = (UINT_PTR) ctrlSizeMode.m_hWnd;
+	layout[6].id = (UINT_PTR) ctrlSize.m_hWnd;
+	layout[7].id = (UINT_PTR) ctrlMode.m_hWnd;
+	layout[8].id = (UINT_PTR) typeLabel.m_hWnd;
+	layout[9].id = (UINT_PTR) ctrlFiletype.m_hWnd;
+	layout[10].id = (UINT_PTR) optionLabel.m_hWnd;
+	layout[11].id = (UINT_PTR) ctrlSlots.m_hWnd;
+	layout[12].id = (UINT_PTR) ctrlCollapsed.m_hWnd;
+#ifdef BL_FEATURE_IP_DATABASE
+	layout[13].id = (UINT_PTR) ctrlStoreIP.m_hWnd;
+#endif
+	layout[14].id = (UINT_PTR) ctrlStoreSettings.m_hWnd;
+	layout[15].id = (UINT_PTR) ctrlUseGroupTreeSettings.m_hWnd;
+	layout[16].id = (UINT_PTR) hubsLabel.m_hWnd;
+	layout[17].id = (UINT_PTR) ctrlHubs.m_hWnd;
 
 	copyMenu.CreatePopupMenu();
 	targetDirMenu.CreatePopupMenu();
@@ -506,11 +556,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	SearchManager::getInstance()->addListener(this);
 	FavoriteManager::getInstance()->addListener(this);
 	initHubs();
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	treeItemRoot = nullptr;
 	treeItemCurrent = nullptr;
 	treeItemOld = nullptr;
-#endif
 	clearFound();
 	if (!initialString.empty())
 	{
@@ -981,7 +1029,6 @@ LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 
 LRESULT SearchFrame::onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	useTree = ctrlUseGroupTreeSettings.GetCheck() == BST_CHECKED;
 	SET_SETTING(USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
 	UpdateLayout();
@@ -1007,7 +1054,6 @@ LRESULT SearchFrame::onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			}
 		}
 	}
-#endif
 	return 0;
 }
 
@@ -1503,25 +1549,21 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 {
 	if (isClosedOrShutdown())
 		return;
+
 	tooltip.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 
-	static const int width = 256;
+	int xdu, ydu;
+	WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+	const int width = WinUtil::dialogUnitsToPixelsX(145, xdu);
+	const int comboBoxHeight = WinUtil::dialogUnitsToPixelsY(120, ydu);
 	static const int labelH = 16;
-	static const int comboH = 140;
 	static const int lMargin = 4;
 	static const int rMargin = 4;
-	static const int smallButtonWidth = 30;
-	static const int largeButtonWidth = 88;
-	static const int buttonHeight = 25;
-	static const int labelOffset = 4;
 	static const int vertLabelOffset = 3;
-	static const int vertSpacing = 10;
-	static const int checkboxOffset = 6;
-	static const int checkboxHeight = 17;
 	static const int bottomMargin = 5;
 
 	const int textHeight = WinUtil::getTextHeight(m_hWnd, Fonts::g_systemFont);
@@ -1535,7 +1577,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		ctrlStatus.GetClientRect(sr);
 		int tmp = (sr.Width()) > 420 ? 376 : ((sr.Width() > 116) ? sr.Width() - 100 : 16);
 		
-		w[0] = 42;
+		w[0] = WinUtil::dialogUnitsToPixelsX(28, xdu);
 		w[1] = sr.right - tmp;
 		w[2] = w[1] + (tmp - 16) / 3;
 		w[3] = w[2] + (tmp - 16) / 3;
@@ -1552,16 +1594,11 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	if (showUI)
 	{
 		CRect rc = rect;
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		const int treeWidth = useTree ? 200 : 0;
-#else
-		const int treeWidth = 0;
-#endif
 		rc.left += width + treeWidth;
 		rc.bottom -= searchInResultsHeight;
 		ctrlResults.MoveWindow(rc);
-		
-#ifdef FLYLINKDC_USE_TREE_SEARCH
+
 		if (useTree)
 		{
 			CRect rcTree = rc;
@@ -1572,153 +1609,50 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		}
 		else
 			ctrlSearchFilterTree.ShowWindow(SW_HIDE);
-#endif
-		// "Search for"
-		rc.left = lMargin + labelOffset;
-		rc.right = width - rMargin - 2*(lMargin + smallButtonWidth);
-		rc.top += 8;
-		rc.bottom = rc.top + labelH;
-		searchLabel.MoveWindow(rc);
 
-		// Search box
-		rc.left = lMargin;
-		rc.top = rc.bottom;
-		rc.bottom = rc.top + comboH;
-		ctrlSearchBox.MoveWindow(rc);
+		// required for DialogLayout
+		ctrlSearchBox.MoveWindow(0, 0, 0, comboBoxHeight);
+		ctrlMode.MoveWindow(0, 0, 0, comboBoxHeight);
+		ctrlSizeMode.MoveWindow(0, 0, 0, comboBoxHeight);
 
-		// "Search"
-		rc.top--;
-		rc.left = rc.right + lMargin;
-		rc.right = rc.left + smallButtonWidth;
-		rc.bottom = rc.top + buttonHeight;
-		ctrlDoSearch.MoveWindow(rc);
-
-		// "Clear search history"
-		rc.left = rc.right + lMargin;
-		rc.right = rc.left + smallButtonWidth;
-		ctrlPurge.MoveWindow(rc);
-
-		// "Size"
-		rc.left = lMargin + labelOffset;
-		rc.top = rc.bottom + vertSpacing;
-		rc.bottom = rc.top + labelH;
-		rc.right = width - rMargin;
-		sizeLabel.MoveWindow(rc);
-
-		// Size mode
-		int w2 = width - lMargin - rMargin;
-		rc.left = lMargin;
-		rc.right = w2 / 2;
-		rc.top = rc.bottom;
-		rc.bottom = rc.top + comboH;
-		ctrlMode.MoveWindow(rc);
-		
-		// Size input field
-		rc.left = rc.right + lMargin;
-		rc.right += w2 / 4;
-		rc.bottom = rc.top + controlHeight;
-		ctrlSize.MoveWindow(rc);
-		
-		// Units combo
-		rc.left = rc.right + lMargin;
-		rc.right = width - rMargin;
-		rc.bottom = rc.top + comboH;
-		ctrlSizeMode.MoveWindow(rc);
-
-		// "File type"
-		rc.left = lMargin + labelOffset;
-		rc.top += controlHeight + vertSpacing;
-		rc.bottom = rc.top + labelH;
-		rc.right = width - rMargin;
-		typeLabel.MoveWindow(rc);
-		
-		// File type combo
-		rc.left = lMargin;
-		rc.top = rc.bottom;
-		rc.bottom = rc.top + comboH + 21;
-		ctrlFiletype.MoveWindow(rc);
-		
-		// "Search options"
-		rc.top += controlHeight + vertSpacing;
-		rc.bottom = rc.top + labelH;
-		rc.left = lMargin + labelOffset;
-		optionLabel.MoveWindow(rc);
-		
-		// Checkboxes
-		rc.top = rc.bottom + 2;
-		rc.bottom = rc.top + checkboxHeight;
-		rc.left = lMargin + checkboxOffset;
-		ctrlSlots.MoveWindow(rc);
-		
-		rc.top += checkboxHeight;
-		rc.bottom += checkboxHeight;
-		ctrlCollapsed.MoveWindow(rc);
-#ifdef BL_FEATURE_IP_DATABASE
-		rc.top += checkboxHeight;
-		rc.bottom += checkboxHeight;
-		ctrlStoreIP.MoveWindow(rc);
-#endif
-		rc.top += checkboxHeight;
-		rc.bottom += checkboxHeight;
-		ctrlStoreSettings.MoveWindow(rc);
-
-#ifdef FLYLINKDC_USE_TREE_SEARCH
-		rc.top += checkboxHeight;
-		rc.bottom += checkboxHeight;
-		ctrlUseGroupTreeSettings.MoveWindow(rc);
-#endif
-
-		// "Hubs"
-		rc.left = lMargin + labelOffset;
-		rc.top = rc.bottom + vertSpacing;
-		rc.bottom = rc.top + labelH;
-		hubsLabel.MoveWindow(rc);
-
-		// Hubs listview
-		rc.left = lMargin;
-		rc.top = rc.bottom;
-		rc.bottom = rect.bottom - bottomMargin;
-		if (rc.bottom < rc.top + (labelH * 3) / 2)
-			rc.bottom = rc.top + (labelH * 3) / 2;
-		ctrlHubs.MoveWindow(rc);
+		DialogLayout::Options opt;
+		opt.width = U_PX(width);
+		int dialogHeight = rect.bottom - rect.top - bottomMargin;
+		opt.height = U_PX(dialogHeight);
+		opt.show = true;
+		DialogLayout::layout(m_hWnd, layout, _countof(layout), &opt);
 	}
 	else
 	{
 		CRect rc = rect;
 		rc.bottom -= searchInResultsHeight;
 		ctrlResults.MoveWindow(rc);
-		
-		rc.SetRect(0, 0, 0, 0);
-		ctrlSearchBox.MoveWindow(rc);
-		ctrlMode.MoveWindow(rc);
-		ctrlPurge.MoveWindow(rc);
-		ctrlSize.MoveWindow(rc);
-		ctrlSizeMode.MoveWindow(rc);
-		ctrlFiletype.MoveWindow(rc);
-		
-		ctrlCollapsed.MoveWindow(rc);
-		ctrlSlots.MoveWindow(rc);
-#ifdef BL_FEATURE_IP_DATABASE
-		ctrlStoreIP.MoveWindow(rc);
-#endif
-		ctrlStoreSettings.MoveWindow(rc);
-#ifdef FLYLINKDC_USE_TREE_SEARCH
-		ctrlUseGroupTreeSettings.MoveWindow(rc);
-		ctrlSearchFilterTree.ShowWindow(SW_HIDE);
-#endif
 
-		ctrlHubs.MoveWindow(rc);
-		//  srLabel.MoveWindow(rc);
-		//  ctrlFilterSel.MoveWindow(rc);
-		//  ctrlFilter.MoveWindow(rc);
-		ctrlDoSearch.MoveWindow(rc);
-		typeLabel.MoveWindow(rc);
-		hubsLabel.MoveWindow(rc);
-		sizeLabel.MoveWindow(rc);
-		searchLabel.MoveWindow(rc);
-		optionLabel.MoveWindow(rc);
+		ctrlSearchBox.ShowWindow(SW_HIDE);
+		ctrlMode.ShowWindow(SW_HIDE);
+		ctrlPurge.ShowWindow(SW_HIDE);
+		ctrlSize.ShowWindow(SW_HIDE);
+		ctrlSizeMode.ShowWindow(SW_HIDE);
+		ctrlFiletype.ShowWindow(SW_HIDE);
+
+		ctrlCollapsed.ShowWindow(SW_HIDE);
+		ctrlSlots.ShowWindow(SW_HIDE);
+#ifdef BL_FEATURE_IP_DATABASE
+		ctrlStoreIP.ShowWindow(SW_HIDE);
+#endif
+		ctrlStoreSettings.ShowWindow(SW_HIDE);
+		ctrlUseGroupTreeSettings.ShowWindow(SW_HIDE);
+		ctrlSearchFilterTree.ShowWindow(SW_HIDE);
+
+		ctrlHubs.ShowWindow(SW_HIDE);
+		ctrlDoSearch.ShowWindow(SW_HIDE);
+		typeLabel.ShowWindow(SW_HIDE);
+		hubsLabel.ShowWindow(SW_HIDE);
+		sizeLabel.ShowWindow(SW_HIDE);
+		searchLabel.ShowWindow(SW_HIDE);
+		optionLabel.ShowWindow(SW_HIDE);
 	}
-	
+
 	// "Search in results"
 	CRect rc;
 	rc.left = rect.left + lMargin;
@@ -1754,13 +1688,13 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	rc.top++;
 	ctrlUDPTestResult.MoveWindow(rc);
 	
-	const POINT pt = {10, 10};
-	const HWND hWnd = ctrlSearchBox.ChildWindowFromPoint(pt);
-	if (hWnd != NULL && !ctrlSearch.IsWindow() && hWnd != ctrlSearchBox.m_hWnd)
+	if (!ctrlSearch)
 	{
-		ctrlSearch.Attach(hWnd);
-		searchContainer.SubclassWindow(ctrlSearch.m_hWnd);
+		COMBOBOXINFO inf = { sizeof(inf) };
+		ctrlSearchBox.GetComboBoxInfo(&inf);
+		ctrlSearch.Attach(inf.hwndItem);
 	}
+
 	tooltip.Activate(TRUE);
 }
 
@@ -1819,15 +1753,13 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	        hWnd == ctrlStoreIP.m_hWnd ||
 #endif
 	        hWnd == ctrlStoreSettings.m_hWnd ||
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	        hWnd == ctrlUseGroupTreeSettings.m_hWnd ||
-#endif
 	        hWnd == ctrlCollapsed.m_hWnd || hWnd == srLabel.m_hWnd ||
 			hWnd == ctrlUDPTestResult.m_hWnd || hWnd == ctrlUDPMode.m_hWnd)
 	{
-		::SetBkColor(hDC, ::GetSysColor(COLOR_3DFACE));
-		::SetTextColor(hDC, ::GetSysColor(COLOR_BTNTEXT));
-		return (LRESULT)::GetSysColorBrush(COLOR_3DFACE);
+		//::SetBkColor(hDC, ::GetSysColor(COLOR_3DFACE));
+		//::SetTextColor(hDC, ::GetSysColor(COLOR_BTNTEXT));
+		return (LRESULT) GetWndClassInfo().m_wc.hbrBackground;
 	}
 	return Colors::setColor(hDC);
 }
@@ -1883,7 +1815,6 @@ bool SearchFrame::isSkipSearchResult(SearchInfo* si)
 	return false;
 }
 
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 {
 	if (closed) return 0;
@@ -1940,7 +1871,6 @@ static int getPrimaryFileType(const string& fileName, bool includeExtended) noex
 	}
 	return FILE_TYPE_ANY;
 }
-#endif // FLYLINKDC_USE_TREE_SEARCH
 
 void SearchFrame::addSearchResult(SearchInfo* si)
 {
@@ -1996,7 +1926,6 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 	if (running)
 	{
 		resultsCount++;
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		if (!treeItemRoot)
 		{
 			treeItemRoot = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
@@ -2063,29 +1992,17 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			res2.data.push_back(si);
 			res2.ext = std::move(fileExt);
 		}
-#endif
 		{
 			CLockRedraw<> lockRedraw(ctrlResults);
-#ifndef FLYLINKDC_USE_TREE_SEARCH
-			results.push_back(si);
-#endif
 			if (!si->getText(COLUMN_TTH).empty())
 			{
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 				if (itemMatchesSelType(si))
-#endif
-				{
 					ctrlResults.insertGroupedItem(si, expandSR, false, true);
-				}
 			}
 			else
 			{
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 				if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
-#endif
-				{
 					ctrlResults.insertItem(si, I_IMAGECALLBACK);
-				}
 			}
 		}
 		if (!filter.empty())
@@ -2785,7 +2702,6 @@ bool SearchFrame::matchFilter(const SearchInfo* si, int sel, bool doSizeCompare,
 
 void SearchFrame::clearFound()
 {
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	extToTreeItem.clear();
 	groupedResults.clear();
 	for (int i = 0; i < _countof(typeNodes); i++)
@@ -2795,9 +2711,6 @@ void SearchFrame::clearFound()
 	treeItemRoot = nullptr;
 	treeExpanded = false;
 	ctrlSearchFilterTree.DeleteAllItems();
-#else
-	results.clear();
-#endif
 	{
 		LOCK(csEverything);
 		for (auto i = everything.begin(); i != everything.end(); ++i)
@@ -2820,13 +2733,9 @@ void SearchFrame::removeSearchInfo(SearchInfo* si)
 
 void SearchFrame::insertStoredResults(HTREEITEM treeItem, int filter, bool doSizeCompare, FilterModes mode, int64_t size)
 {
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	auto it = groupedResults.find(treeItem);
 	if (it == groupedResults.cend()) return;
 	auto& data = it->second.data;
-#else
-	auto& data = results;
-#endif
 	for (SearchInfo* si : data)
 		if (matchFilter(si, filter, doSizeCompare, mode, size))
 		{
@@ -2857,7 +2766,6 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 	{
 		CLockRedraw<> lockRedraw(ctrlResults);
 		ctrlResults.deleteAll();
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		if (treeItemCurrent == nullptr || treeItemCurrent == treeItemRoot)
 		{
 			for (int i = 0; i < _countof(typeNodes); ++i)
@@ -2866,15 +2774,12 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 		}
 		else
 			insertStoredResults(treeItemCurrent, sel, doSizeCompare, mode, size);
-#else
-		insertStoredResults(nullptr, sel, doSizeCompare, mode, size);
-#endif
 		ctrlResults.resort();
 		shouldSort = false;
 	}
 }
 
-LRESULT SearchFrame::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
+LRESULT SearchFrame::onFilterChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
 {
 	WinUtil::getWindowText(ctrlFilter, filter);
 	updateSearchList();
@@ -2954,10 +2859,8 @@ void SearchFrame::on(SettingsManagerListener::Repaint)
 		ctrlHubs.SetBkColor(Colors::g_bgColor);
 		ctrlHubs.SetTextBkColor(Colors::g_bgColor);
 		ctrlHubs.SetTextColor(Colors::g_textColor);
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 		ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
 		ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
-#endif
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}
 }
@@ -3082,7 +2985,7 @@ CFrameWndClassInfo& SearchFrame::GetWndClassInfo()
 	{
 		{
 			sizeof(WNDCLASSEX), 0, StartWindowProc,
-			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("SearchFrame"), NULL
+			0, 0, NULL, NULL, NULL, Colors::g_tabBackgroundBrush, NULL, _T("SearchFrame"), NULL
 		},
 		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
 	};
