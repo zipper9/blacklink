@@ -142,7 +142,7 @@ namespace sqlite3x
 		return sqlite3_column_name(cmd->stmt, index);
 	}
 
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 	std::wstring sqlite3_reader::getstring16(int index)
 	{
 		checkreader();

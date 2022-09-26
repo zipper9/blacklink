@@ -35,6 +35,7 @@ bool g_EnableSQLtrace = false; // http://www.sqlite.org/c3ref/profile.html
 bool g_UseSynchronousOff = false;
 int g_DisableSQLtrace = 0;
 
+static const unsigned BUSY_TIMEOUT = 120000;
 static const unsigned GEOIP_DOWNLOAD_RETRY_TIME = 600000; // 10 minutes
 
 static const string fileNameGeoIP = "country_ip_db.mmdb";
@@ -80,18 +81,23 @@ static int64_t posixTimeToLocal(int64_t pt)
 }
 #endif
 
-static void traceCallback(void*, const char* sql)
+static int traceCallback(unsigned what, void* ctx, void* p, void* x)
 {
 	if (g_DisableSQLtrace == 0)
 	{
 		if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
 		{
+			const char* z = static_cast<const char*>(x);
+			if (*z == '-') return 0;
+			char* sql = sqlite3_expanded_sql(static_cast<sqlite3_stmt*>(p));
 			StringMap params;
 			params["sql"] = sql;
 			params["thread_id"] = Util::toString(BaseThread::getCurrentThreadId());
 			LOG(SQLITE_TRACE, params);
+			free(sql);
 		}
 	}
+	return 0;
 }
 
 int DatabaseConnection::progressHandler(void* ctx)
@@ -185,11 +191,13 @@ void DatabaseConnection::open(const string& prefix)
 {
 	const string& dbPath = Util::getConfigPath();
 	connection.open((dbPath + prefix + ".sqlite").c_str());
-	if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
-		sqlite3_trace(connection.getdb(), traceCallback, nullptr);
 
 	for (int i = 1; i < _countof(dbNames); i++)
 		attachDatabase(dbPath, fileNames[i], prefix, dbNames[i]);
+
+	if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
+		sqlite3_trace_v2(connection.getdb(), SQLITE_TRACE_STMT, traceCallback, nullptr);
+	sqlite3_busy_timeout(connection.getdb(), BUSY_TIMEOUT);
 
 	setPragma("page_size=4096");
 	if (g_DisableSQLJournal || BOOLSETTING(SQLITE_USE_JOURNAL_MEMORY))
@@ -202,7 +210,6 @@ void DatabaseConnection::open(const string& prefix)
 			setPragma("journal_mode=WAL");
 		else
 			setPragma("journal_mode=PERSIST");
-		setPragma("journal_size_limit=16384"); // http://src.chromium.org/viewvc/chrome/trunk/src/sql/connection.cc
 		setPragma("secure_delete=OFF"); // http://www.sqlite.org/pragma.html#pragma_secure_delete
 		if (g_UseSynchronousOff)
 			setPragma("synchronous=OFF");

@@ -133,7 +133,7 @@ namespace sqlite3x
 	}
 #endif
 
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 	sqlite3_connection::sqlite3_connection(const wchar_t *dbpath) : db(nullptr)
 	{
 		open(dbpath);
@@ -182,6 +182,7 @@ namespace sqlite3x
 		return sqlite3_command(this, sql).executeint64();
 	}
 
+#ifndef SQLITE_OMIT_FLOATING_POINT
 	double sqlite3_connection::executedouble(const wchar_t *sql)
 	{
 		checkdb();
@@ -193,6 +194,7 @@ namespace sqlite3x
 		checkdb();
 		return sqlite3_command(this, sql).executedouble();
 	}
+#endif
 
 	std::wstring sqlite3_connection::executestring16(const wchar_t *sql)
 	{

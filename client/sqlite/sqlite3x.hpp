@@ -28,10 +28,6 @@
 #include "sqlite3.h"
 #include "../client/Exception.h"
 
-#ifndef SQLITE_USE_UNICODE
-#define SQLITE_USE_UNICODE
-#endif
-
 namespace sqlite3x
 {
 	class sqlite3_connection
@@ -46,7 +42,7 @@ namespace sqlite3x
 	public:
 		sqlite3_connection();
 		explicit sqlite3_connection(const char *db);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		explicit sqlite3_connection(const wchar_t *db);
 #endif
 		sqlite3_connection(const sqlite3_connection &) = delete;
@@ -55,7 +51,7 @@ namespace sqlite3x
 		sqlite3 *getdb() { return db; }
 
 		void open(const char *dbpath);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		void open(const wchar_t *dbpath);
 #endif
 		void close();
@@ -66,7 +62,7 @@ namespace sqlite3x
 
 		const char* executenonquery(const char *sql);
 		void executenonquery(const std::string &sql);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		void executenonquery(const wchar_t *sql);
 		void executenonquery(const std::wstring &sql);
 		int executeint(const wchar_t *sql);
@@ -129,7 +125,7 @@ namespace sqlite3x
 		sqlite3_command() noexcept;
 		sqlite3_command(sqlite3_connection *conn, const char *sql);
 		sqlite3_command(sqlite3_connection *conn, const std::string &sql);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		sqlite3_command(sqlite3_connection *conn, const wchar_t *sql);
 		sqlite3_command(sqlite3_connection *conn, const std::wstring &sql);
 #endif
@@ -138,7 +134,7 @@ namespace sqlite3x
 		
 		void open(sqlite3_connection *conn, const char *sql);
 		void open(sqlite3_connection *conn, const std::string &sql);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		void open(sqlite3_connection *conn, const wchar_t *sql);
 		void open(sqlite3_connection *conn, const std::wstring &sql);
 #endif
@@ -154,7 +150,7 @@ namespace sqlite3x
 		void bind(int index, const char *data, int datalen, sqlite3_destructor_type dtype /*= SQLITE_STATIC or SQLITE_TRANSIENT*/);
 		void bind(int index, const void *data, int datalen, sqlite3_destructor_type dtype /*= SQLITE_STATIC or SQLITE_TRANSIENT*/);
 		void bind(int index, const std::string &data, sqlite3_destructor_type dtype /*= SQLITE_STATIC or SQLITE_TRANSIENT*/);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		void bind(int index, const wchar_t *data, int datalen);
 		void bind(int index, const std::wstring &data);
 #endif
@@ -166,7 +162,7 @@ namespace sqlite3x
 		double executedouble();
 #endif
 		std::string executestring();
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		std::wstring executestring16();
 #endif
 		bool empty() const { return stmt == nullptr; }
@@ -201,7 +197,7 @@ namespace sqlite3x
 		double getdouble(int index);
 #endif
 		std::string getstring(int index);
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 		std::wstring getstring16(int index);
 		std::wstring getcolname16(int index);
 #endif

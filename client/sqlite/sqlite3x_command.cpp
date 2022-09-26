@@ -40,7 +40,7 @@ namespace sqlite3x
 		open(conn, sql);
 	}
 
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 	sqlite3_command::sqlite3_command(sqlite3_connection *conn, const wchar_t *sql) : conn(nullptr), stmt(nullptr), refs(0)
 	{
 		open(conn, sql);
@@ -75,7 +75,7 @@ namespace sqlite3x
 			throw database_error(conn);
 	}
 
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 	void sqlite3_command::open(sqlite3_connection *conn, const wchar_t *sql)
 	{
 		checknotopen();
@@ -146,7 +146,7 @@ namespace sqlite3x
 			throw database_error(conn);
 	}
 
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 	void sqlite3_command::bind(int index, const wchar_t *data, int datalen)
 	{
 		checkopen();
@@ -225,7 +225,7 @@ namespace sqlite3x
 		return reader.getstring(0);
 	}
 
-#ifdef SQLITE_USE_UNICODE
+#ifndef SQLITE_OMIT_UTF16
 	std::wstring sqlite3_command::executestring16()
 	{
 		checkopen();
