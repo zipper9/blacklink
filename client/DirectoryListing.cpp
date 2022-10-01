@@ -1112,7 +1112,7 @@ void DirectoryListing::Directory::addFile(DirectoryListing::File *f)
 }
 
 DirectoryListing::SearchContext::SearchContext(): fileIndex(0), whatFound(FOUND_NOTHING),
-	dir(nullptr), file(nullptr)
+	dir(nullptr), file(nullptr), matched{0, 0}
 {
 }
 
@@ -1156,6 +1156,7 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 	whatFound = FOUND_NOTHING;
 	dir = nullptr;
 	file = nullptr;
+	matched[0] = matched[1] = 0;
 
 	copiedPath.clear();
 	if (dest) copiedPath.emplace_back(root, dest->getRoot());
@@ -1174,6 +1175,7 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 				File *file = current->files[i];
 				if (file->match(sq))
 				{
+					++matched[0];
 					if (dest)
 					{
 						File *copiedFile = file->clone();
@@ -1212,6 +1214,7 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 			current->unsetFlag(FLAG_FOUND | FLAG_HAS_FOUND);
 			if (current->match(sq))
 			{
+				++matched[1];
 				current->setFlag(FLAG_FOUND);
 				Directory *parent = current->getParent();
 				parent->setFlag(FLAG_HAS_FOUND);
@@ -1516,6 +1519,7 @@ void DirectoryListing::SearchContext::clear()
 	file = nullptr;
 	dirIndex.clear();
 	copiedPath.clear();
+	matched[0] = matched[1] = 0;
 }
 
 bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const

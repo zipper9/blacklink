@@ -1435,10 +1435,10 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		static const uint8_t segCounts[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 150, 200 };
 		for (int i = 0; i < _countof(segCounts); i++)
 		{
-			tstring text = Util::toStringT(segCounts[i]);
-			text += _T(' ');
-			text += segCounts[i] == 1 ? TSTRING(SEGMENT) : TSTRING(SEGMENTS);
-			mii.wID = IDC_SEGMENTONE + segCounts[i] - 1;
+			int count = segCounts[i];
+			const tstring& fmt = TSTRING_I(count == 1 ? ResourceManager::SEGMENTS_1 : ResourceManager::SEGMENTS_N);
+			tstring text = (dcpp_fmt(fmt) % count).str();
+			mii.wID = IDC_SEGMENTONE + count - 1;
 			mii.dwTypeData = const_cast<TCHAR*>(text.c_str());
 			segmentsMenu.InsertMenuItem(i, TRUE, &mii);
 		}

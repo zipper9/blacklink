@@ -80,6 +80,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			FINISHED,
 			ABORTED,
 			SPLICE_TREE,
+			ADL_SEARCH,
 			PROGRESS = 0x1000
 		};
 

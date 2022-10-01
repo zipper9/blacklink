@@ -395,6 +395,12 @@ void ADLSearchManager::setDirtyL()
 	nextSaveTime = GET_TICK() + 60000;
 }
 
+bool ADLSearchManager::isEmpty() const
+{
+	READ_LOCK(*csCollection);
+	return collection.empty();
+}
+
 void ADLSearchManager::prepare(ADLSearchManager::SearchContext& ctx, DirectoryListing* dl) const noexcept
 {
 	if (collection.empty()) return;

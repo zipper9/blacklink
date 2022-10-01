@@ -97,6 +97,7 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 		void saveOnTimer(uint64_t tick) noexcept;
 		void matchListing(DirectoryListing* dl) const noexcept;
 		void setDirtyL();
+		bool isEmpty() const;
 
 		class LockInstance
 		{

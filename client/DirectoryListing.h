@@ -287,6 +287,7 @@ class DirectoryListing : public UserInfoBase
 				bool setFound(const Directory *dir);
 				bool setFound(const File *file);
 				void clear();
+				const size_t* getCount() const { return matched; }
 
 			private:
 				int fileIndex;
@@ -295,6 +296,7 @@ class DirectoryListing : public UserInfoBase
 				const File *file;
 				vector<int> dirIndex;
 				vector<CopiedDir> copiedPath;
+				size_t matched[2];
 
 				bool makeIndexForFound(const Directory *dir);
 				void createCopiedPath(const Directory *dir, vector<const Directory*> &pathCache);

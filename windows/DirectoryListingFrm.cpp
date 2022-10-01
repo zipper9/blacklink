@@ -2304,6 +2304,9 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			}
 			break;
 		}
+		case ADL_SEARCH:
+			ctrlStatus.SetText(0, CTSTRING(PERFORMING_ADL_SEARCH));
+			break;
 		default:
 			if (wParam & PROGRESS)
 			{
@@ -2849,6 +2852,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		if (hasMatches)
 		{
 			clearSearch();
+			ctrlStatus.SetText(STATUS_TEXT, _T(""));
 			dl->getRoot()->clearMatches();
 			updateSearchButtons();
 			redraw();
@@ -2942,6 +2946,21 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	redraw();
 	showFound();
 
+	const size_t* count = search->getCount();
+	tstring statusText;
+	if (count[0] && count[1])
+	{
+		tstring found0 = TSTRING_F(FOUND_FILES_FMT, count[0]);
+		tstring found1 = TSTRING_F(FOUND_FOLDERS_FMT, count[1]);
+		statusText = TSTRING_F(FOUND_FILES_AND_FOLDERS, found0 % found1);
+	}
+	else
+	{
+		tstring found = count[0] ? TSTRING_F(FOUND_FILES_FMT, count[0]) : TSTRING_F(FOUND_FOLDERS_FMT, count[1]);
+		statusText = TSTRING_F(FOUND_FILES_OR_FOLDERS, found);
+	}
+	ctrlStatus.SetText(STATUS_TEXT, statusText.c_str());
+
 	if (dest)
 	{
 		DirectoryListingFrame* newFrame = openWindow(dest, dl->getHintedUser(), speed, true);
@@ -3010,7 +3029,12 @@ int ThreadedDirectoryListing::run()
 				window->dl->loadFile(filePath, this, user->isMe());
 				window->addToUserList(user, false);
 				window->setWindowTitle();
-				ADLSearchManager::getInstance()->matchListing(window->dl.get());
+				auto adls = ADLSearchManager::getInstance();
+				if (!adls->isEmpty())
+				{
+					window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ADL_SEARCH);
+					adls->matchListing(window->dl.get());
+				}
 				window->refreshTree(window->dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}

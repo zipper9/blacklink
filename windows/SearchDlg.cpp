@@ -137,7 +137,9 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		int fileType = ctrlFileType.GetCurSel();
 		if (fileType == FILE_TYPE_TTH && !isTTH(text))
 		{
-			WinUtil::showInputError(ctrlText, TSTRING(INVALID_TTH));
+			COMBOBOXINFO inf = { sizeof(inf) };
+			ctrlText.GetComboBoxInfo(&inf);
+			WinUtil::showInputError(inf.hwndItem, TSTRING(INVALID_TTH));
 			return 0;
 		}
 
