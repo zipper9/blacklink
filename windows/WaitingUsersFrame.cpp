@@ -100,6 +100,8 @@ WaitingUsersFrame::~WaitingUsersFrame()
 
 LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	initProgressBar(false);
+
 	// status bar
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
@@ -593,6 +595,7 @@ void WaitingUsersFrame::on(SettingsManagerListener::Repaint)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
+		initProgressBar(true);
 		if (ctrlList.isRedraw())
 		{
 			ctrlQueued.SetBkColor(Colors::g_bgColor);
@@ -626,45 +629,35 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
 			int column = ctrlList.findColumn(cd->iSubItem);
-			if (BOOLSETTING(SHOW_PROGRESS_BARS) && column == UploadQueueItem::COLUMN_TRANSFERRED)
+			if (column == UploadQueueItem::COLUMN_TRANSFERRED && BOOLSETTING(SHOW_PROGRESS_BARS))
 			{
-				// draw something nice...
-				TCHAR buf[256];
-				ctrlList.GetItemText((int)cd->nmcd.dwItemSpec, cd->iSubItem, buf, _countof(buf));
+				const tstring& text = ii->getText(UploadQueueItem::COLUMN_TRANSFERRED);
 				ctrlList.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
 				// Real rc, the original one.
 				CRect real_rc = rc;
 				// We need to offset the current rc to (0, 0) to paint on the New dc
 				rc.MoveToXY(0, 0);
-				
-				// Text rect
-				CRect rc2 = rc;
-				rc2.left += 6; // indented with 6 pixels
-				rc2.right -= 2; // and without messing with the border of the cell
-				
-				// Set references
+
 				CDC cdc;
 				cdc.CreateCompatibleDC(cd->nmcd.hdc);
-				HBITMAP hBmp = CreateCompatibleBitmap(cd->nmcd.hdc,  real_rc.Width(),  real_rc.Height());
+				HBITMAP hBmp = CreateCompatibleBitmap(cd->nmcd.hdc, real_rc.Width(), real_rc.Height());
 				HBITMAP pOldBmp = cdc.SelectBitmap(hBmp);
-				HDC& dc = cdc.m_hDC;
-				
-				HFONT oldFont = (HFONT)SelectObject(dc, Fonts::g_font);
-				SetBkMode(dc, TRANSPARENT);
-				
+				HDC dc = cdc.m_hDC;
+
 				const UploadQueueFilePtr& file = ii->getFile();
-				CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, RGB(150, 0, 0), file->getSize());
-				statusBar.FillRange(0, file->getPos(), RGB(222, 160, 0));
-				statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
-				
-				SetTextColor(dc, SETTING(PROGRESS_TEXT_COLOR_UP));
-				::ExtTextOut(dc, rc2.left, rc2.top + (rc2.Height() - WinUtil::getTextHeight(dc) - 1) / 2, ETO_CLIPPED, rc2, buf, _tcslen(buf), nullptr);
-				
-				SelectObject(dc, oldFont);
-				
+				auto size = file->getSize();
+				auto pos = file->getPos();
+				int width;
+				if (pos >= size || !size)
+					width = rc.right;
+				else
+					width = static_cast<int>(rc.right*pos/size);
+
+				progressBar.draw(dc, rc, width, text, -1);
+
 				BitBlt(cd->nmcd.hdc, real_rc.left, real_rc.top, real_rc.Width(), real_rc.Height(), dc, 0, 0, SRCCOPY);
-				
-				DeleteObject(cdc.SelectBitmap(pOldBmp));
+				ATLVERIFY(cdc.SelectBitmap(pOldBmp) == hBmp);
+				DeleteObject(hBmp);
 				return CDRF_SKIPDEFAULT;
 			}
 			if (column == UploadQueueItem::COLUMN_LOCATION)
@@ -679,6 +672,20 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 		}
 	}
 	return CDRF_DODEFAULT;
+}
+
+void WaitingUsersFrame::initProgressBar(bool check)
+{
+	ProgressBar::Settings settings;
+	settings.clrBackground = BOOLSETTING(PROGRESS_OVERRIDE_COLORS) ? SETTING(UPLOAD_BAR_COLOR) : GetSysColor(COLOR_HIGHLIGHT);
+	settings.clrText = SETTING(PROGRESS_TEXT_COLOR_UP);
+	settings.clrEmptyBackground = SETTING(PROGRESS_BACK_COLOR);
+	settings.odcStyle = false;
+	settings.odcBumped = false;
+	settings.depth = SETTING(PROGRESS_3DDEPTH);
+	settings.setTextColor = BOOLSETTING(PROGRESS_OVERRIDE_COLORS2);
+	if (!check || progressBar.get() != settings) progressBar.set(settings);
+	progressBar.setWindowBackground(Colors::g_bgColor);
 }
 
 int WaitingUsersFrame::UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col)

@@ -246,20 +246,22 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 
 		CtrlList ctrlList;
 		CustomDrawHelpers::CustomDrawState customDrawState;
+		ProgressBar progressBar;
 
 	private:
 		CTreeViewCtrl ctrlQueued;
 		HTREEITEM treeRoot;
-		
+
 		CStatusBarCtrl ctrlStatus;
 		int statusSizes[4];
-		
+
 		void addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser);
 		void removeFile(const UploadQueueFilePtr& uqi);
 		void removeUser(const UserPtr& user);
-		
+
 		void updateStatus();
-		
+		void initProgressBar(bool check);
+
 		bool shouldUpdateStatus;
 		bool shouldSort;
 
