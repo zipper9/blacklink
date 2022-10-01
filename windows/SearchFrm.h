@@ -43,7 +43,6 @@
 #define SHOWUI_MESSAGE_MAP 7
 #define SEARCH_FILTER_MESSAGE_MAP 11
 
-class HIconWrapper;
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private SearchManagerListener,
 	private ClientManagerListener,
@@ -523,10 +522,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		static SearchHistory lastSearches;
 
 	private:
-		static HIconWrapper iconUdpOk;
-		static HIconWrapper iconUdpFail;
-		static HIconWrapper iconUdpWait;
-		
 		CStatic ctrlUDPMode;
 		CStatic ctrlUDPTestResult;
 		tstring portStatusText;

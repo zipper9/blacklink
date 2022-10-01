@@ -14,6 +14,9 @@ BlackLink is an advanced DC++ client, initially started as a fork of [FlylinkDC+
 - Tons of bugfixes and improvements
 - No ads, no preference for specific hubs
 
+This program uses Fugue Icons by Yusuke Kamiyamane.  
+https://p.yusukekamiyamane.com
+
 ## How to build
 
 BlackLink can be built on Windows with Visual Studio 2019, either full or Community Edition. Use the provided solution, blacklink_2019.sln.

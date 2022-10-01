@@ -292,7 +292,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			transferMenu.AppendMenu(MF_SEPARATOR);
 			appendPreviewItems(transferMenu);
 			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
-			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
+			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 			transferMenu.AppendMenu(MF_SEPARATOR);
 				
 			if (ii->download)
@@ -303,8 +303,8 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #ifdef FLYLINKDC_USE_DROP_SLOW
 			transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
-			transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP));
-			transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION));
+			transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP), g_iconBitmaps.getBitmap(IconBitmaps::WALL, 0));
+			transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION), g_iconBitmaps.getBitmap(IconBitmaps::DISCONNECT, 0));
 			transferMenu.AppendMenu(MF_SEPARATOR);
 			if (!main && (i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
 			{

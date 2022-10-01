@@ -119,12 +119,12 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	
 	// Create context menu
 	contextMenu.CreatePopupMenu();
-	contextMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(NEW));
-	contextMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-	contextMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
+	contextMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(NEW), g_iconBitmaps.getBitmap(IconBitmaps::ADD, 0));
+	contextMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
+	contextMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
 	contextMenu.AppendMenu(MF_SEPARATOR);
-	contextMenu.AppendMenu(MF_STRING, IDC_MOVE_UP, CTSTRING(MOVE_UP));
-	contextMenu.AppendMenu(MF_STRING, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN));
+	contextMenu.AppendMenu(MF_STRING, IDC_MOVE_UP, CTSTRING(MOVE_UP), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_UP, 0));
+	contextMenu.AppendMenu(MF_STRING, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_DOWN, 0));
 
 	SettingsManager::getInstance()->addListener(this);
 	load();

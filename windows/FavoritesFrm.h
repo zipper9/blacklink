@@ -177,8 +177,6 @@ class FavoriteHubsFrame :
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
 
-		static HIconWrapper stateIconOn, stateIconOff;
-
 		static tstring printConnectionStatus(const ConnectionStatus& cs, time_t curTime);
 		static tstring printLastConnected(const ConnectionStatus& cs);
 		void addEntryL(const FavoriteHubEntry* entry, int pos, int groupIndex, time_t now);

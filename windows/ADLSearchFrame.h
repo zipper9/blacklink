@@ -116,7 +116,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		CButton ctrlMoveUp;
 		CButton ctrlMoveDown;
 		CButton ctrlHelp;
-		CMenu contextMenu;
+		OMenu contextMenu;
 
 		// Column order
 		enum

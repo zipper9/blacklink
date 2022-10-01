@@ -22,7 +22,6 @@
 #include <atldlgs.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "ResourceLoader.h"
 #include "WinUtil.h"
 
 #ifdef OSVER_WIN_XP
@@ -56,7 +55,6 @@ class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 	private:
 		const TTHValue hash;
 		tstring fileName;
-		ExCImage image;
 		const int64_t fileSize;
 		const int64_t dirSize;
 		const bool dclst;

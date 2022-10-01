@@ -726,8 +726,8 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 	}
 	menu.AppendMenu(MF_SEPARATOR);
 	
-	menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL));
-	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR));
+	menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL), g_iconBitmaps.getBitmap(IconBitmaps::SELECTION, 0));
+	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR), g_iconBitmaps.getBitmap(IconBitmaps::ERASE, 0));
 	menu.AppendMenu(MF_STRING, IDC_SAVE, CTSTRING(SAVE_TO_FILE));
 	menu.AppendMenu(MF_SEPARATOR);
 	

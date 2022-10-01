@@ -45,19 +45,20 @@ LRESULT ClassicMagnetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	CenterWindow(GetParent());
 
 	WinUtil::translate(*this, texts);
+	HBITMAP image;
 	if (dclst)
 	{
 		SetDlgItemText(IDC_MAGNET_QUEUE, CTSTRING(MAGNET_DLG_DOWNLOAD_DCLST));
 		SetDlgItemText(IDC_MAGNET_OPEN, CTSTRING(MAGNET_DLG_OPEN_DCLST));
-		image.LoadFromResourcePNG(IDR_DCLST);
+		image = g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 1);
 	}
 	else
 	{
 		SetDlgItemText(IDC_MAGNET_QUEUE, CTSTRING(MAGNET_DLG_DOWNLOAD_FILE));
 		SetDlgItemText(IDC_MAGNET_OPEN, CTSTRING(MAGNET_DLG_OPEN_FILE));
-		image.LoadFromResourcePNG(IDR_MAGNET_PNG);
+		image = g_iconBitmaps.getBitmap(IconBitmaps::MAGNET, 1);
 	}
-	GetDlgItem(IDC_MAGNET_PIC).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)(HBITMAP) image);
+	GetDlgItem(IDC_MAGNET_PIC).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, (LPARAM) image);
 	if (fileSize <= 0 || fileName.empty())
 	{
 		GetDlgItem(IDC_MAGNET_QUEUE).EnableWindow(FALSE);
@@ -271,7 +272,7 @@ WinUtil::DefinedMagnetAction MagnetDlg::showDialog(HWND hWndParent, const TTHVal
 	taskDlg.SetWindowTitle(CWSTRING(MAGNET_DLG_BRIEF_TITLE));
 	taskDlg.SetMainInstructionText(CWSTRING(MAGNET_DLG_TITLE));
 	taskDlg.SetContentText(CWSTRING(MAGNET_DLG_TEXT_GOOD));
-	taskDlg.SetMainIcon(IDR_MAGNET);
+	taskDlg.SetMainIcon(dclst? IDR_DCLST : IDR_MAGNET);
 	taskDlg.SetVerificationText(CWSTRING(MAGNET_DLG_REMEMBER));
 	taskDlg.ModifyFlags(0, TDF_ALLOW_DIALOG_CANCELLATION | TDF_USE_COMMAND_LINKS | TDF_ENABLE_HYPERLINKS);
 	BOOL flagChecked = FALSE;

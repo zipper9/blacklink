@@ -14,7 +14,7 @@ GenderImage g_genderImage;
 FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
 VideoImage g_videoImage;
-FavImage g_favImage;
+OtherImage g_otherImage;
 FavUserImage g_favUserImage;
 EditorImage g_editorImage;
 TransfersImage g_transfersImage;
@@ -278,9 +278,9 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 	return -1;
 }
 
-void FavImage::init()
+void OtherImage::init()
 {
-	ResourceLoader::LoadImageList(IDR_FAVORITE, images, 16, 16);
+	ResourceLoader::LoadImageList(IDR_OTHER_ICONS, images, 16, 16);
 }
 
 void FavUserImage::init()
@@ -395,10 +395,40 @@ IconBitmaps::IconBitmaps()
 	init(COMMANDS,           SOURCE_SETTINGS, 25);
 	init(LIMIT,              SOURCE_SETTINGS, 26);
 	init(BANNED_USER,        SOURCE_SETTINGS, 27);
-	init(DCLST,              SOURCE_SETTINGS, 36);
+	init(WALL,               SOURCE_SETTINGS, 32);
 	init(MESSAGES,           SOURCE_SETTINGS, 39);
-	init(FAVORITE,           SOURCE_FAVORITE, 0);
 	init(DOWNLOAD,           SOURCE_ARROWS,   0);
+	init(FAVORITE,           SOURCE_OTHER,    0);
+	init(INFORMATION,        SOURCE_OTHER,    1);
+	init(QUESTION,           SOURCE_OTHER,    2);
+	init(EXCLAMATION,        SOURCE_OTHER,    3);
+	init(WARNING,            SOURCE_OTHER,    4);
+	init(STATUS_SUCCESS,     SOURCE_OTHER,    5);
+	init(STATUS_FAILURE,     SOURCE_OTHER,    6);
+	init(STATUS_PAUSE,       SOURCE_OTHER,    7);
+	init(STATUS_ONLINE,      SOURCE_OTHER,    8);
+	init(STATUS_OFFLINE,     SOURCE_OTHER,    9);
+	init(MOVE_UP,            SOURCE_OTHER,    10);
+	init(MOVE_DOWN,          SOURCE_OTHER,    11);
+	init(ADD,                SOURCE_OTHER,    12);
+	init(REMOVE,             SOURCE_OTHER,    13);
+	init(PROPERTIES,         SOURCE_OTHER,    14);
+	init(COPY_TO_CLIPBOARD,  SOURCE_OTHER,    15);
+	init(ADD_HUB,            SOURCE_OTHER,    16);
+	init(REMOVE_HUB,         SOURCE_OTHER,    17);
+	init(GOTO_HUB,           SOURCE_OTHER,    18);
+	init(ADD_USER,           SOURCE_OTHER,    19);
+	init(REMOVE_USER,        SOURCE_OTHER,    20);
+	init(GOTO_USER,          SOURCE_OTHER,    21);
+	init(CHAT_PROHIBIT,      SOURCE_OTHER,    22);
+	init(CHAT_ALLOW,         SOURCE_OTHER,    23);
+	init(DISCONNECT,         SOURCE_OTHER,    24);
+	init(MOVE,               SOURCE_OTHER,    25);
+	init(RENAME,             SOURCE_OTHER,    26);
+	init(SELECTION,          SOURCE_OTHER,    27);
+	init(ERASE,              SOURCE_OTHER,    28);
+	init(PAUSE,              SOURCE_OTHER,    29);
+	init(CLEAR,              SOURCE_OTHER,    30);
 	init(EDITOR_SEND,        SOURCE_EDITOR,   0);
 	init(EDITOR_MULTILINE,   SOURCE_EDITOR,   1);
 	init(EDITOR_EMOTICON,    SOURCE_EDITOR,   2);
@@ -414,9 +444,7 @@ IconBitmaps::IconBitmaps()
 	init(HUB_OFFLINE,        SOURCE_ICON,     IDR_HUB_OFF);
 	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
 	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
-	init(CLEAR,              SOURCE_ICON,     IDR_PURGE);
-	init(PAUSE,              SOURCE_ICON,     IDR_PAUSE);
-	init(EXCLAMATION,        SOURCE_ICON,     IDR_ERROR);
+	init(DCLST,              SOURCE_ICON,     IDR_DCLST);
 	init(PADLOCK_CLOSED,     SOURCE_ICON,     IDR_PADLOCK_CLOSED);
 	init(PADLOCK_OPEN,       SOURCE_ICON,     IDR_PADLOCK_OPEN);
 }
@@ -439,8 +467,8 @@ HIMAGELIST IconBitmaps::getImageList(MainFrame* mainFrame, int type, int size)
 			return size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
 		case SOURCE_SETTINGS:
 			return mainFrame->getSettingsImages();
-		case SOURCE_FAVORITE:
-			return g_favImage.getIconList();
+		case SOURCE_OTHER:
+			return g_otherImage.getIconList();
 		case SOURCE_ARROWS:
 			return g_transferArrowsImage.getIconList();
 		case SOURCE_EDITOR:

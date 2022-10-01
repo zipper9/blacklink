@@ -2496,8 +2496,6 @@ END
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\app.ico"
 
-IDR_NETWORK_STATISTICS_ICON ICON                    "res\\Network-Statistics.ico"
-
 IDR_HUB                 ICON                    "res\\Hub.ico"
 
 IDR_HUB_OFF             ICON                    "res\\HubOff.ico"
@@ -2516,23 +2514,11 @@ IDR_FILE_LIST_OFFLINE   ICON                    "res\\File-List-Off.ico"
 
 IDR_MAGNET              ICON                    "res\\Magnet.ico"
 
+IDR_DCLST               ICON                    "res\\DcLst.ico"
+
 IDR_TRAY_AND_TASKBAR_PM ICON                    "res\\PM.ico"
 
-IDR_PURGE               ICON                    "res\\Purge.ico"
-
-IDR_PAUSE               ICON                    "res\\Pause.ico"
-
 IDR_SWITCH_PANELS_ICON  ICON                    "res\\SwitchPanels.ico"
-
-IDR_ICON_SUCCESS_ICON   ICON                    "res\\f_green_16.ico"
-
-IDR_ICON_FAIL_ICON      ICON                    "res\\f_red_16.ico"
-
-IDR_ICON_WARN_ICON      ICON                    "res\\f_yellow_16.ico"
-
-IDR_ICON_QUESTION_ICON  ICON                    "res\\f_question_16.ico"
-
-IDR_ICON_PAUSE_ICON     ICON                    "res\\f_grey_16.ico"
 
 IDR_SKULL_ICO           ICON                    "res\\skull.ico"
 
@@ -2547,12 +2533,6 @@ IDR_MODE_ACTIVE_ICO     ICON                    "res\\mode_active.ico"
 IDR_MODE_PASSIVE_ICO    ICON                    "res\\mode_passive.ico"
 
 IDR_MODE_OFFLINE_ICO    ICON                    "res\\mode_offline.ico"
-
-IDR_OFFLINE_ICO         ICON                    "res\\offline.ico"
-
-IDR_ONLINE_ICO          ICON                    "res\\online.ico"
-
-IDR_ERROR               ICON                    "res\\Error.ico"
 
 IDR_PADLOCK_CLOSED      ICON                    "res\\padlock_closed.ico"
 
@@ -2577,6 +2557,8 @@ IDR_PLAYERS_CONTROL_HL  PNG                     "res\\PlayersControl-highlight.p
 IDR_PLAYERS_CONTROL_MINI PNG                     "res\\PlayersControl-mini.png"
 
 IDR_SETTINGS_ICONS      PNG                     "res\\Settings-icons.png"
+
+IDR_OTHER_ICONS         PNG                     "res\\Other.png"
 
 IDR_EDITOR_ICONS        PNG                     "res\\Editor.png"
 
@@ -2609,13 +2591,6 @@ IDR_STATE               PNG                     "res\\State.png"
 IDR_FAV_USERS_STATES    PNG                     "res\\Fav-Users-States.png"
 
 IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
-
-IDR_DCLST               PNG                     "res\\dclst.png"
-
-IDR_MAGNET_PNG          PNG                     "res\\Magnet.png"
-
-IDR_FAVORITE            PNG                     "res\\favorite.png"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //

@@ -162,7 +162,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		
 		OMenu usersMenu;
 		usersMenu.CreatePopupMenu();
-		usersMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
+		usersMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
 		
 		if (ctrlUsers.GetSelectedCount() == 1)
 		{
@@ -192,6 +192,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(COPY));
 			mii.hSubMenu = copyMenu;
 			usersMenu.InsertMenuItem(copyIndex, TRUE, &mii);
+			usersMenu.SetBitmap(copyIndex, TRUE, g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 			mii.fMask = MIIM_FTYPE;
 			mii.fType = MFT_SEPARATOR;
 			usersMenu.InsertMenuItem(copyIndex + 1, TRUE, &mii);
@@ -200,7 +201,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		}
 		else
 		{
-			usersMenu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
+			usersMenu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_USER, 0));
 		}
 		int defaultCommand = getDefaultCommand();
 		if (defaultCommand)

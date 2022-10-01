@@ -31,9 +31,6 @@ static const WCHAR PASSWORD_CHAR = L'\x25CF';
 static const char PASSWORD_CHAR = '*';
 #endif
 
-HIconWrapper FavoriteHubsFrame::stateIconOn(IDR_ONLINE_ICO);
-HIconWrapper FavoriteHubsFrame::stateIconOff(IDR_OFFLINE_ICO);
-
 int FavoriteHubsFrame::columnIndexes[] =
 {
 	COLUMN_NAME,
@@ -151,8 +148,8 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlManageGroups.SetFont(Fonts::g_systemFont);
 
 	onlineStatusImg.Create(16, 16, ILC_COLOR32 | ILC_MASK,  0, 2);
-	onlineStatusImg.AddIcon(stateIconOn);
-	onlineStatusImg.AddIcon(stateIconOff);
+	onlineStatusImg.AddIcon(g_iconBitmaps.getIcon(IconBitmaps::STATUS_ONLINE, 0));
+	onlineStatusImg.AddIcon(g_iconBitmaps.getIcon(IconBitmaps::STATUS_OFFLINE, 0));
 	ctrlHubs.SetImageList(onlineStatusImg, LVSIL_SMALL);
 	ClientManager::getOnlineClients(onlineHubs);
 	
@@ -168,13 +165,13 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	hubsMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 	hubsMenu.AppendMenu(MF_SEPARATOR);
 	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_NEWFAV, CTSTRING(NEW));
-	hubsMenu.AppendMenu(MF_STRING, IDC_MOVE_UP, CTSTRING(MOVE_UP));
-	hubsMenu.AppendMenu(MF_STRING, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN));
+	hubsMenu.AppendMenu(MF_STRING, IDC_NEWFAV, CTSTRING(NEW), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
+	hubsMenu.AppendMenu(MF_STRING, IDC_MOVE_UP, CTSTRING(MOVE_UP), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_UP, 0));
+	hubsMenu.AppendMenu(MF_STRING, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_DOWN, 0));
 	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+	hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
 	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
+	hubsMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
 	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
 	
 	noSave = false;

@@ -1,13 +1,10 @@
 #include "stdafx.h"
 #include "GeoIPPage.h"
 #include "DialogLayout.h"
-#include "HIconWrapper.h"
 #include "WinUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
 
-static HIconWrapper iconError(IDR_ICON_WARN_ICON);
-static HIconWrapper iconSuccess(IDR_ICON_SUCCESS_ICON);
 static const int ICON_SIZE = 16;
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -99,12 +96,12 @@ void GeoIPPage::updateState()
 		{
 			tstring date = Text::toT(Util::formatDateTime("%x", timestamp));
 			text = TSTRING_F(GEOIP_DB_DATE, date);
-			icon = iconSuccess;
+			icon = g_iconBitmaps.getIcon(IconBitmaps::STATUS_SUCCESS, 0);
 			break;
 		}
 		case DatabaseManager::MMDB_STATUS_MISSING:
 			text = TSTRING(GEOIP_DB_MISSING);
-			icon = iconError;
+			icon = g_iconBitmaps.getIcon(IconBitmaps::STATUS_FAILURE, 0);
 			break;
 		case DatabaseManager::MMDB_STATUS_DOWNLOADING:
 			text = TSTRING(GEOIP_DB_DOWNLOADING);
@@ -112,7 +109,7 @@ void GeoIPPage::updateState()
 			break;
 		default:
 			text = TSTRING(GEOIP_DB_FAIL);
-			icon = iconError;
+			icon = g_iconBitmaps.getIcon(IconBitmaps::STATUS_FAILURE, 0);
 	}
 
 	CWindow ctrlIcon(GetDlgItem(IDC_STATUS_ICON));	

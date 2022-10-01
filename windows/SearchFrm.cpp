@@ -39,9 +39,6 @@
 #define USE_DOWNLOAD_DIR
 
 SearchHistory SearchFrame::lastSearches;
-HIconWrapper SearchFrame::iconUdpOk(IDR_ICON_SUCCESS_ICON);
-HIconWrapper SearchFrame::iconUdpFail(IDR_ICON_FAIL_ICON);
-HIconWrapper SearchFrame::iconUdpWait(IDR_ICON_WARN_ICON);
 
 static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
 
@@ -2167,12 +2164,12 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 #endif
 			resultsMenu.AppendMenu(MF_SEPARATOR);
-			resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
+			resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 			
-			resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY));
+			resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			appendAndActivateUserItems(resultsMenu, true);
-			resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+			resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 			resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_TO_FAV);
 
 			// Add target menu
@@ -2922,20 +2919,21 @@ void SearchFrame::showPortStatus()
 	int state = g_portTest.getState(PortTest::PORT_UDP, port, &reflectedAddress);
 	if (state == portStatus && currentReflectedAddress == reflectedAddress) return;
 	tstring newText;
+	int icon;
 	switch (state)
 	{
 		case PortTest::STATE_RUNNING:
-			ctrlUDPMode.SetIcon(iconUdpWait);
+			icon = IconBitmaps::WARNING;
 			newText = CTSTRING(UDP_PORT_TEST_WAIT);
 			break;
 
 		case PortTest::STATE_FAILURE:
-			ctrlUDPMode.SetIcon(iconUdpFail);
+			icon = IconBitmaps::STATUS_FAILURE;
 			newText = CTSTRING(UDP_PORT_TEST_FAILED);
 			break;
 
 		case PortTest::STATE_SUCCESS:
-			ctrlUDPMode.SetIcon(iconUdpOk);
+			icon = IconBitmaps::STATUS_SUCCESS;
 			newText = CTSTRING(UDP_PORT_TEST_OK);
 			if (!reflectedAddress.empty())
 			{
@@ -2948,6 +2946,7 @@ void SearchFrame::showPortStatus()
 		default:
 			return;
 	}
+	ctrlUDPMode.SetIcon(g_iconBitmaps.getIcon(icon, 0));
 	portStatus = state;
 	currentReflectedAddress = std::move(reflectedAddress);
 	if (newText != portStatusText)

@@ -1508,17 +1508,17 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				int indexPM = singleMenu.GetMenuItemCount();
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)pmMenu, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)readdMenu, CTSTRING(READD_SOURCE));
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
+				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 				singleMenu.AppendMenu(MF_SEPARATOR);
-				singleMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
-				singleMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
+				singleMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE), g_iconBitmaps.getBitmap(IconBitmaps::MOVE, 0));
+				singleMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME), g_iconBitmaps.getBitmap(IconBitmaps::RENAME, 0));
 				singleMenu.AppendMenu(MF_SEPARATOR);
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)removeMenu, CTSTRING(REMOVE_SOURCE));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)removeAllMenu, CTSTRING(REMOVE_FROM_ALL));
 				singleMenu.AppendMenu(MF_STRING, IDC_REMOVE_OFFLINE, CTSTRING(REMOVE_OFFLINE));
 				singleMenu.AppendMenu(MF_SEPARATOR);
 				singleMenu.AppendMenu(MF_STRING, IDC_RECHECK, CTSTRING(RECHECK_FILE));
-				singleMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+				singleMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 				if (!isFileList)
 					singleMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				
@@ -1623,12 +1623,12 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
 				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
-				multiMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
+				multiMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE), g_iconBitmaps.getBitmap(IconBitmaps::MOVE, 0));
 				multiMenu.AppendMenu(MF_SEPARATOR);
 				multiMenu.AppendMenu(MF_STRING, IDC_REMOVE_OFFLINE, CTSTRING(REMOVE_OFFLINE));
 				multiMenu.AppendMenu(MF_STRING, IDC_RECHECK, CTSTRING(RECHECK_FILE));
 				multiMenu.AppendMenu(MF_SEPARATOR);
-				multiMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+				multiMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 				multiMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				multiMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
@@ -1666,10 +1666,10 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 		if (dir != fileLists)
 		{
-			dirMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
-			dirMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
+			dirMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE), g_iconBitmaps.getBitmap(IconBitmaps::MOVE, 0));
+			dirMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME), g_iconBitmaps.getBitmap(IconBitmaps::RENAME, 0));
 		}
-		dirMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+		dirMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 
 		CMenu copyDirMenu;
 		if (dir != fileLists)
@@ -1678,7 +1678,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
 			dirMenu.AppendMenu(MF_SEPARATOR);
-			dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY));
+			dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 		}
 
 		OMenu deleteAllMenu;

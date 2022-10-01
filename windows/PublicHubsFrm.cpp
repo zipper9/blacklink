@@ -132,7 +132,7 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.insertColumns(SettingsManager::PUBLIC_HUBS_FRAME_ORDER, SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, SettingsManager::PUBLIC_HUBS_FRAME_VISIBLE);
 	ctrlHubs.setSortFromSettings(SETTING(PUBLIC_HUBS_FRAME_SORT), COLUMN_USERS, false);
 	setListViewColors(ctrlHubs);
-	ctrlHubs.SetImageList(g_favImage.getIconList(), LVSIL_SMALL);
+	ctrlHubs.SetImageList(g_otherImage.getIconList(), LVSIL_SMALL);
 
 	ctrlFilterDesc.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | BS_GROUPBOX, WS_EX_TRANSPARENT);
 	ctrlFilterDesc.SetWindowText(CTSTRING(FILTER));
@@ -189,9 +189,9 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	hubsMenu.CreatePopupMenu();
 	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
-	hubsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY));
+	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
+	hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
+	hubsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
 	
 	onListSelChanged();

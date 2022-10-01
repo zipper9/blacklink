@@ -124,7 +124,7 @@ class GenderImage : public BaseImageList
 		void init();
 };
 
-class FavImage : public BaseImageList
+class OtherImage : public BaseImageList
 {
 	public:
 		void init();
@@ -157,7 +157,7 @@ class TransferArrowsImage : public BaseImageList
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern GenderImage g_genderImage;
-extern FavImage g_favImage;
+extern OtherImage g_otherImage;
 extern FavUserImage g_favUserImage;
 extern EditorImage g_editorImage;
 extern TransfersImage g_transfersImage;
@@ -244,10 +244,40 @@ class IconBitmaps
 			COMMANDS,
 			LIMIT,
 			BANNED_USER,
-			DCLST,
+			WALL,
 			MESSAGES,
-			FAVORITE,
 			DOWNLOAD,
+			FAVORITE,
+			INFORMATION,
+			QUESTION,
+			EXCLAMATION,
+			WARNING,
+			STATUS_SUCCESS,
+			STATUS_FAILURE,
+			STATUS_PAUSE,
+			STATUS_ONLINE,
+			STATUS_OFFLINE,
+			MOVE_UP,
+			MOVE_DOWN,
+			ADD,
+			REMOVE,
+			PROPERTIES,
+			COPY_TO_CLIPBOARD,
+			ADD_HUB,
+			REMOVE_HUB,
+			GOTO_HUB,
+			ADD_USER,
+			REMOVE_USER,
+			GOTO_USER,
+			CHAT_PROHIBIT,
+			CHAT_ALLOW,
+			DISCONNECT,
+			MOVE,
+			RENAME,
+			SELECTION,
+			ERASE,
+			PAUSE,
+			CLEAR,
 			EDITOR_SEND,
 			EDITOR_MULTILINE,
 			EDITOR_EMOTICON,
@@ -263,9 +293,7 @@ class IconBitmaps
 			HUB_OFFLINE,
 			FILELIST_OFFLINE,
 			MAGNET,
-			CLEAR,
-			PAUSE,
-			EXCLAMATION,
+			DCLST,
 			PADLOCK_CLOSED,
 			PADLOCK_OPEN,
 			MAX_BITMAPS
@@ -285,7 +313,7 @@ class IconBitmaps
 			SOURCE_ICON,
 			SOURCE_MAIN,
 			SOURCE_SETTINGS,
-			SOURCE_FAVORITE,
+			SOURCE_OTHER,
 			SOURCE_ARROWS,
 			SOURCE_EDITOR
 		};

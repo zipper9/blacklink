@@ -405,42 +405,35 @@ int NetworkIPTab::getConnectionType() const
 
 static void setIcon(HWND hwnd, int stateIcon)
 {
-	static HIconWrapper g_hModeActiveIco(IDR_ICON_SUCCESS_ICON);
-	static HIconWrapper g_hModePassiveIco(IDR_ICON_WARN_ICON);
-	static HIconWrapper g_hModeQuestionIco(IDR_ICON_QUESTION_ICON);
-	static HIconWrapper g_hModeFailIco(IDR_ICON_FAIL_ICON);
-	static HIconWrapper g_hModePauseIco(IDR_ICON_PAUSE_ICON);
-	static HIconWrapper g_hModeProcessIco(IDR_NETWORK_STATISTICS_ICON);
-
-	HICON icon;
+	int icon;
 	switch (stateIcon)
 	{
 		case IconFailure:
-			icon = (HICON) g_hModeFailIco;
+			icon = IconBitmaps::STATUS_FAILURE;
 			break;
 		case IconSuccess:
-			icon = (HICON) g_hModeActiveIco;
+			icon = IconBitmaps::STATUS_SUCCESS;
 			break;
 		case IconWarning:
-			icon = (HICON) g_hModePassiveIco;
+			icon = IconBitmaps::WARNING;
 			break;
 		case IconUnknown:
-			icon = (HICON) g_hModePauseIco;
+			icon = IconBitmaps::STATUS_PAUSE;
 			break;
 		case IconQuestion:
-			icon = (HICON) g_hModeQuestionIco;
+			icon = IconBitmaps::QUESTION;
 			break;
 		case IconDisabled:
-			icon = nullptr;
+			icon = -1;
 			break;
 		case IconWaiting:
 		default:
-			icon = (HICON) g_hModeProcessIco;
+			icon = IconBitmaps::NETWORK_STATISTICS;
 	}
 	CWindow wnd(hwnd);
-	if (icon)
+	if (icon != -1)
 	{
-		wnd.SendMessage(STM_SETICON, (WPARAM) icon, 0);
+		wnd.SendMessage(STM_SETICON, (WPARAM) g_iconBitmaps.getIcon(icon, 0), 0);
 		wnd.ShowWindow(SW_SHOW);
 	}
 	else

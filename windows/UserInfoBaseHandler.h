@@ -499,7 +499,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		static void appendIgnoreByNameItem(OMenu& menu, const FavUserTraits& traits)
 		{
 			bool isIgnored = traits.isIgnoredByName || traits.isIgnoredByWildcard;
-			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, isIgnored ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
+			if (isIgnored)
+				menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, CTSTRING(UNIGNORE_USER_BY_NAME), g_iconBitmaps.getBitmap(IconBitmaps::CHAT_ALLOW, 0));
+			else
+				menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, CTSTRING(IGNORE_USER_BY_NAME), g_iconBitmaps.getBitmap(IconBitmaps::CHAT_PROHIBIT, 0));
 			if (traits.isIgnoredByWildcard)
 				menu.EnableMenuItem(IDC_IGNORE_BY_NAME, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 		}
@@ -507,9 +510,9 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		static void internal_appendContactListItems(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (traits.isEmpty || !traits.isFav)
-				menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
+				menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES), g_iconBitmaps.getBitmap(IconBitmaps::ADD_USER, 0));
 			if (traits.isEmpty || traits.isFav)
-				menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
+				menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_USER, 0));
 			if (DISABLE(options, NO_CONNECT_FAV_HUB) && traits.isFav)
 				menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
 		}
@@ -538,7 +541,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 				int count = copyUserMenu.GetMenuItemCount();
 				for (int i = 1; i < count; i++)
 					copyUserMenu.EnableMenuItem(i, MF_BYPOSITION | flags);
-				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY));
+				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 				appendSeparator(menu);
 			}
 		}

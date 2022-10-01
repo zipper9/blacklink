@@ -295,7 +295,7 @@ void WinUtil::init(HWND hWnd)
 	g_userImage.init();
 	g_userStateImage.init();
 	g_genderImage.init();
-	g_favImage.init();
+	g_otherImage.init();
 	g_favUserImage.init();
 	g_editorImage.init();
 	g_transfersImage.init();
@@ -336,7 +336,7 @@ void WinUtil::uninit()
 	g_userImage.uninit();
 	g_userStateImage.uninit();
 	g_genderImage.uninit();
-	g_favImage.uninit();
+	g_otherImage.uninit();
 	g_favUserImage.uninit();
 	g_editorImage.uninit();
 	g_TransferTreeImage.uninit();
