@@ -35,6 +35,8 @@
 #include "DatabaseManager.h"
 #include "LogManager.h"
 #include "DebugManager.h"
+#include "Tag16.h"
+#include "unaligned.h"
 
 STANDARD_EXCEPTION(ShareLoaderException);
 STANDARD_EXCEPTION(ShareWriterException);
@@ -557,7 +559,7 @@ void ShareManager::loadShareData(File& file)
 				break;
 			case SHARE_DATA_ATTRIB_SIZE:
 				if (attribSize != 8) { invalidSize = true; break; }
-				fileSize = *(const int64_t*) buf;
+				fileSize = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_SIZE;
 				break;
 			case SHARE_DATA_ATTRIB_TTH:
@@ -567,17 +569,17 @@ void ShareManager::loadShareData(File& file)
 				break;
 			case SHARE_DATA_ATTRIB_TIMESTAMP:
 				if (attribSize != 8) { invalidSize = true; break; }
-				timestamp = *(const int64_t*) buf;
+				timestamp = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_TIMESTAMP;
 				break;
 			case SHARE_DATA_ATTRIB_TIME_SHARED:
 				if (attribSize != 8) { invalidSize = true; break; }
-				timeShared = *(const int64_t*) buf;
+				timeShared = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_TIME_SHARED;
 				break;
 			case SHARE_DATA_ATTRIB_HIT:
 				if (attribSize != 4) { invalidSize = true; break; }
-				hit = *(const uint32_t*) buf;
+				hit = loadUnaligned32(buf);
 				attribMask |= ATTRIB_MASK_HIT;
 				break;
 		}
@@ -606,6 +608,28 @@ static bool addAttribValue(uint8_t outBuf[], size_t& ptr, uint8_t type, const vo
 	return true;
 }
 
+#if 0
+static bool addAttribValue32(uint8_t outBuf[], size_t& ptr, uint8_t type, uint32_t data)
+{
+	if (ptr + 6 > TEMP_BUF_SIZE) return false;
+	outBuf[ptr] = type;
+	outBuf[ptr + 1] = 4;
+	storeUnaligned32(outBuf + ptr + 2, data);
+	ptr += 6;
+	return true;
+}
+#endif
+
+static bool addAttribValue64(uint8_t outBuf[], size_t& ptr, uint8_t type, uint64_t data)
+{
+	if (ptr + 10 > TEMP_BUF_SIZE) return false;
+	outBuf[ptr] = type;
+	outBuf[ptr + 1] = 8;
+	storeUnaligned64(outBuf + ptr + 2, data);
+	ptr += 10;
+	return true;
+}
+
 void ShareManager::writeShareDataDirStart(OutputStream* os, const SharedDir* dir, uint8_t tempBuf[])
 {
 	tempBuf[0] = SHARE_DATA_DIR_START;
@@ -621,11 +645,11 @@ void ShareManager::writeShareDataFile(OutputStream* os, const SharedFilePtr& fil
 	tempBuf[0] = SHARE_DATA_FILE;
 	size_t ptr = 1;
 	if (!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_NAME, file->name.data(), file->name.length()) ||
-	    !addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_SIZE, &file->size, sizeof(file->size)) ||
-		!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TTH, file->tth.data, TTHValue::BYTES) ||
-		!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TIMESTAMP, &file->timestamp, sizeof(file->timestamp)) ||
-		(file->timeShared && !addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TIME_SHARED, &file->timeShared, sizeof(file->timeShared))) ||
-		!addAttribValue(tempBuf, ptr, 0, nullptr, 0))
+	    !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_SIZE, file->size) ||
+	    !addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TTH, file->tth.data, TTHValue::BYTES) ||
+	    !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_TIMESTAMP, file->timestamp) ||
+	    (file->timeShared && !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_TIME_SHARED, file->timeShared)) ||
+	    !addAttribValue(tempBuf, ptr, 0, nullptr, 0))
 		throw ShareWriterException("Can't write file attributes");
 	os->write(tempBuf, ptr);
 }
@@ -2313,11 +2337,6 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 	}
 }
 
-inline static uint16_t toCode(char a, char b)
-{
-	return (uint16_t)a | ((uint16_t)b) << 8;
-}
-
 AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults, const CID& shareGroup) noexcept :
 	shareGroup(shareGroup), gt(0), lt(std::numeric_limits<int64_t>::max()), hasRoot(false), isDirectory(false), maxResults(maxResults)
 {
@@ -2326,71 +2345,70 @@ AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults, co
 		const string& p = *i;
 		if (p.length() <= 2)
 			continue;
-			
-		const uint16_t cmd = toCode(p[0], p[1]);
-		if (toCode('T', 'R') == cmd)
+		const uint16_t cmd = *reinterpret_cast<const uint16_t*>(p.data());
+		if (TAG('T', 'R') == cmd)
 		{
 			hasRoot = true;
 			root = TTHValue(p.substr(2));
 			cacheKey.clear();
 			return;
 		}
-		else if (toCode('A', 'N') == cmd)
+		else if (TAG('A', 'N') == cmd)
 		{
 			include.push_back(StringSearch(p.substr(2)));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('N', 'O') == cmd)
+		else if (TAG('N', 'O') == cmd)
 		{
 			exclude.push_back(StringSearch(p.substr(2)));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('E', 'X') == cmd)
+		else if (TAG('E', 'X') == cmd)
 		{
 			exts.push_back(p.substr(2));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('G', 'R') == cmd)
+		else if (TAG('G', 'R') == cmd)
 		{
 			const auto extGroup = AdcHub::parseSearchExts(Util::toInt(p.substr(2)));
 			exts.insert(exts.begin(), extGroup.begin(), extGroup.end());
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('R', 'X') == cmd)
+		else if (TAG('R', 'X') == cmd)
 		{
 			noExts.push_back(p.substr(2));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('G', 'E') == cmd)
+		else if (TAG('G', 'E') == cmd)
 		{
 			gt = Util::toInt64(p.substr(2));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('L', 'E') == cmd)
+		else if (TAG('L', 'E') == cmd)
 		{
 			lt = Util::toInt64(p.substr(2));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('E', 'Q') == cmd)
+		else if (TAG('E', 'Q') == cmd)
 		{
 			lt = gt = Util::toInt64(p.substr(2));
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('T', 'Y') == cmd)
+		else if (TAG('T', 'Y') == cmd)
 		{
 			isDirectory = p[2] == '2';
 			cacheKey += ' ';
 			cacheKey += p;
 		}
-		else if (toCode('T', 'O') == cmd)
+		else if (TAG('T', 'O') == cmd)
 		{
 			token = p.substr(2);
 		}

@@ -5,6 +5,7 @@
 #include "File.h"
 #include "TimerManager.h"
 #include "LogManager.h"
+#include "unaligned.h"
 
 static const size_t TTH_SIZE = 24;
 static const size_t BASE_ITEM_SIZE = 10;
@@ -110,7 +111,7 @@ bool ItemParser::getItem(int &itemType, const void* &itemData, size_t &itemSize,
 		type &= 0x7F;
 		headerSize = 3;
 		if (dataSize - ptr < 3) return false;
-		itemSize = *(const uint16_t *) (data + ptr + 1);
+		itemSize = loadUnaligned16(data + ptr + 1);
 	} else
 	{
 		headerSize = 2;
@@ -132,7 +133,7 @@ static size_t putItem(uint8_t *ptr, int type, const void *data, size_t dataSize)
 	if (dataSize > 255)
 	{
 		*ptr |= 0x80;
-		*(uint16_t *)(ptr + 1) = static_cast<uint16_t>(dataSize);
+		storeUnaligned16(ptr + 1, dataSize);
 		result = 3;
 	} else
 	{
@@ -232,7 +233,7 @@ bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, strin
 	}
 
 	const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
-	flags = *(const uint16_t *) ptr;
+	flags = loadUnaligned16(ptr);
 
 	ItemParser parser(ptr + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
 	int itemType;
@@ -279,7 +280,7 @@ bool HashDatabaseConnection::getTigerTree(const void *tth, TigerTree &tree) noex
 	}
 
 	const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
-	uint64_t fileSize = *(const uint64_t *) (ptr + 2);
+	uint64_t fileSize = loadUnaligned64(ptr + 2);
 	ItemParser parser(ptr + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
 	int itemType;
 	size_t itemSize, headerSize;
@@ -317,7 +318,7 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 	if (!error && val.mv_size >= BASE_ITEM_SIZE)
 	{
 		const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
-		setFlags = *(const uint16_t *) ptr;
+		setFlags = loadUnaligned16(ptr);
 		prevSize = val.mv_size;
 		if (path)
 		{
@@ -364,9 +365,9 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 		memcpy(buf.data(), val.mv_data, prevSize);
 
 	uint8_t *ptr = buf.data();
-	*(uint16_t *) ptr = setFlags;
+	storeUnaligned16(ptr, setFlags);
 	ptr += 2;
-	*(uint64_t *) ptr = fileSize;
+	storeUnaligned64(ptr, fileSize);
 	ptr += 8;
 
 	if (updatePath)
@@ -403,8 +404,8 @@ bool HashDatabaseConnection::putTigerTree(const TigerTree &tree) noexcept
 	if (!error && val.mv_size >= BASE_ITEM_SIZE)
 	{
 		const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
-		setFlags = *(const uint16_t *) ptr;
-		uint64_t fileSize = *(const uint64_t *) (ptr + 2);
+		setFlags = loadUnaligned16(ptr);
+		uint64_t fileSize = loadUnaligned64(ptr + 2);
 		prevSize = val.mv_size;
 		ItemParser parser(ptr + BASE_ITEM_SIZE, prevSize - BASE_ITEM_SIZE);
 		int itemType;
@@ -433,9 +434,9 @@ bool HashDatabaseConnection::putTigerTree(const TigerTree &tree) noexcept
 
 	buf.resize(outSize);
 	uint8_t *ptr = buf.data();
-	*(uint16_t *) ptr = setFlags;
+	storeUnaligned16(ptr, setFlags);
 	ptr += 2;
-	*(uint64_t *) ptr = tree.getFileSize();
+	storeUnaligned64(ptr, tree.getFileSize());
 	ptr += 8;
 
 	ptr += putItem(ptr, ITEM_TIGER_TREE, nullptr, newTreeSize);
