@@ -10,21 +10,6 @@ bool parseCommandLine(ParsedCommandLine& out, const WCHAR* cmdLine)
 	if (!result) return false;
 	for (int i = 0; i < count; ++i)
 	{
-		if (!wcscmp(result[i], L"/nowal"))
-		{
-			out.sqliteNoWAL = true;
-			continue;
-		}
-		if (!wcscmp(result[i], L"/sqlite_use_memory"))
-		{
-			out.sqliteUseMemory = true;
-			continue;
-		}
-		if (!wcscmp(result[i], L"/sqlite_use_wal"))
-		{
-			out.sqliteUseWAL = true;
-			continue;
-		}
 		if (!wcscmp(result[i], L"/sqlite_synchronous_off"))
 		{
 			out.sqliteSyncOff = true;

@@ -7,9 +7,6 @@
 struct ParsedCommandLine
 {
 	bool sqliteDisableJournal = false;
-	bool sqliteUseMemory = false;
-	bool sqliteUseWAL = false;
-	bool sqliteNoWAL = false;
 	bool sqliteSyncOff = false;
 	bool sqliteTrace = false;
 	bool disableSplash = false;

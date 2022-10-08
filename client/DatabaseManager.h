@@ -153,7 +153,7 @@ class DatabaseConnection
 #endif
 
 	private:
-		void open(const string& prefix);
+		void open(const string& prefix, int journalMode);
 		void initQuery(sqlite3_command &command, const char *sql);
 		void attachDatabase(const string& path, const string& file, const string& prefix, const string& name);
 		void upgradeDatabase();
@@ -217,6 +217,13 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		friend class DatabaseConnection;
 
 	public:
+		enum
+		{
+			JOUNRAL_MODE_PERSIST = 1,
+			JOUNRAL_MODE_WAL     = 2,
+			JOUNRAL_MODE_MEMORY  = 3
+		};
+
 		typedef void (*ErrorCallback)(const string& message,  bool forceExit);
 
 		DatabaseManager() noexcept;
@@ -232,7 +239,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 			FLAG_DOWNLOAD_CANCELED = 4
 		};
 
-		void init(ErrorCallback errorCallback);
+		void init(ErrorCallback errorCallback, int journalMode);
 		DatabaseConnection* getDefaultConnection();
 		DatabaseConnection* getConnection();
 		void putConnection(DatabaseConnection* conn);
@@ -301,6 +308,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		string prefix;
 		int64_t dbSize;
 		ErrorCallback errorCallback;
+		int journalMode;
 		mutable CriticalSection cs;
 		std::unique_ptr<DatabaseConnection> defConn;
 		std::list<std::unique_ptr<DatabaseConnection>> conn;

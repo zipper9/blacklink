@@ -250,13 +250,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 #else
 	SingleInstance dcapp(_T("{BLDC-C8052503-235C-486A-A7A2-1D614A9A4241}"));
 #endif
-	extern bool g_DisableSQLJournal;
-	extern bool g_UseWALJournal;
 	extern bool g_EnableSQLtrace;
 	extern bool g_UseSynchronousOff;
 	parseCommandLine(cmdLine, nullptr);
-	if (cmdLine.sqliteNoWAL || cmdLine.sqliteUseMemory) g_DisableSQLJournal = true;
-	if (cmdLine.sqliteUseWAL) g_UseWALJournal = true;
 	if (cmdLine.sqliteSyncOff) g_UseSynchronousOff = true;
 	if (cmdLine.sqliteTrace) g_EnableSQLtrace = true;
 	g_DisableSplash = cmdLine.disableSplash;

@@ -62,11 +62,11 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 		pProgressCallbackProc(pProgressParam, TSTRING(nameKey));\
 		function;\
 	} while (0)
-	
+
 	dcassert(pProgressCallbackProc != nullptr);
-	
+
 	LOAD_STEP_L(STARTUP_SQLITE_DATABASE, DatabaseManager::newInstance());
-	DatabaseManager::getInstance()->init(dbErrorCallback);
+	DatabaseManager::getInstance()->init(dbErrorCallback, SETTING(SQLITE_JOURNAL_MODE));
 
 	LOAD_STEP_L(STARTUP_P2P_GUARD, Util::loadP2PGuard());
 	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());

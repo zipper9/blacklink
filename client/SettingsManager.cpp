@@ -462,7 +462,7 @@ static const char* settingTags[] =
 	"DbLogFinishedUploads",
 	"EnableLastIP",
 	"EnableRatioUserList",
-	"SQLiteUseJournalMemory",
+	"SQLiteJournalMode",
 	"GeoIPAutoUpdate",
 	"GeoIPCheckHours",
 	"UseCustomLocations",
@@ -1956,6 +1956,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case SHUTDOWN_TIMEOUT:
 		{
 			VERIFY(1, 3600);
+			break;
+		}
+		case SQLITE_JOURNAL_MODE:
+		{
+			VERIFY(0, 3);
 			break;
 		}
 

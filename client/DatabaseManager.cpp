@@ -29,8 +29,6 @@ using sqlite3x::database_error;
 using sqlite3x::sqlite3_transaction;
 using sqlite3x::sqlite3_reader;
 
-bool g_DisableSQLJournal = false;
-bool g_UseWALJournal = false;
 bool g_EnableSQLtrace = false; // http://www.sqlite.org/c3ref/profile.html
 bool g_UseSynchronousOff = false;
 int g_DisableSQLtrace = 0;
@@ -187,7 +185,7 @@ void DatabaseManager::quoteString(string& s) noexcept
 	}
 }
 
-void DatabaseConnection::open(const string& prefix)
+void DatabaseConnection::open(const string& prefix, int journalMode)
 {
 	const string& dbPath = Util::getConfigPath();
 	connection.open((dbPath + prefix + ".sqlite").c_str());
@@ -200,13 +198,13 @@ void DatabaseConnection::open(const string& prefix)
 	sqlite3_busy_timeout(connection.getdb(), BUSY_TIMEOUT);
 
 	setPragma("page_size=4096");
-	if (g_DisableSQLJournal || BOOLSETTING(SQLITE_USE_JOURNAL_MEMORY))
+	if (journalMode == DatabaseManager::JOUNRAL_MODE_MEMORY)
 	{
 		setPragma("journal_mode=MEMORY");
 	}
 	else
 	{
-		if (g_UseWALJournal)
+		if (journalMode == DatabaseManager::JOUNRAL_MODE_WAL)
 			setPragma("journal_mode=WAL");
 		else
 			setPragma("journal_mode=PERSIST");
@@ -1090,6 +1088,7 @@ DatabaseManager::DatabaseManager() noexcept
 #ifdef BL_FEATURE_IP_DATABASE
 	globalRatio.download = globalRatio.upload = 0;
 #endif
+	journalMode = JOUNRAL_MODE_PERSIST;
 	defThreadId = 0;
 	timeLoadGlobalRatio = 0;
 	deleteOldTransfers = true;
@@ -1237,7 +1236,7 @@ DatabaseConnection* DatabaseManager::getConnection()
 	std::unique_ptr<DatabaseConnection> c(newConn);
 	try
 	{
-		c->open(prefix);
+		c->open(prefix, journalMode);
 	}
 	catch (const database_error& e)
 	{
@@ -1279,11 +1278,13 @@ void DatabaseManager::closeIdleConnections(uint64_t tick)
 	lmdb.closeIdleConnections(tick);
 }
 
-void DatabaseManager::init(ErrorCallback errorCallback)
+void DatabaseManager::init(ErrorCallback errorCallback, int journalMode)
 {
 	{
 		LOCK(cs);
 		this->errorCallback = errorCallback;
+		if (journalMode >= JOUNRAL_MODE_PERSIST && journalMode <= JOUNRAL_MODE_MEMORY)
+			this->journalMode = journalMode;
 		try
 		{
 			const string& dbPath = Util::getConfigPath();
@@ -1300,7 +1301,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 			dcassert(status == SQLITE_OK);
 
 			std::unique_ptr<DatabaseConnection> c(new DatabaseConnection);
-			c->open(prefix);
+			c->open(prefix, this->journalMode);
 			c->upgradeDatabase();
 			defConn = std::move(c);
 		}
