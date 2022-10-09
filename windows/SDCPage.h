@@ -32,6 +32,7 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 
 		BEGIN_MSG_MAP(SDCPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_HANDLER(IDC_ENABLE_ZLIB_COMP, BN_CLICKED, onFixControls)
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

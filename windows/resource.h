@@ -975,6 +975,7 @@
 #define IDC_CAPTION_SHARE_GROUP         1975
 #define IDC_CAPTION_UPLOAD_SPEED        1976
 #define IDC_CAPTION_PM_HANDLING         1977
+#define IDC_ENABLE_ZLIB_COMP            1978
 #define IDC_PREFER_IPV6                 1981
 #define IDC_AUTO_GRANT                  1982
 #define IDC_CAPTION_DESCRIPTION         1983

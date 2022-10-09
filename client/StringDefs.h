@@ -1057,7 +1057,7 @@ enum Strings   // @DontAdd
 	SETTINGS_COLOR_NORMAL, // "Normal"
 	SETTINGS_COLOR_RESERVED, // "Has reserved slot"
 	SETTINGS_COMMAND, // "Command"
-	SETTINGS_COMPRESS_TRANSFERS, // "Enable safe and compressed transfers"
+	SETTINGS_ENABLE_ZLIB, // "Enable zlib compression"
 	SETTINGS_CONFIRM_DIALOG_OPTIONS, // "Confirm dialog options"
 	SETTINGS_CONFIRM_EXIT, // "Confirm application exit"
 	SETTINGS_CONFIRM_HUBGROUP_REMOVAL, // "Confirm hub group removal"

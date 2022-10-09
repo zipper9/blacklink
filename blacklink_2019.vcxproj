@@ -1102,6 +1102,10 @@
     <Image Include="res\DcLst.ico" />
     <Image Include="res\Editor.png" />
     <Image Include="res\Gender.png" />
+    <Image Include="res\MediaToolbar16.png" />
+    <Image Include="res\MediaToolbar24.png" />
+    <Image Include="res\MediaToolbarHot16.png" />
+    <Image Include="res\MediaToolbarHot24.png" />
     <Image Include="res\mode_active.ico" />
     <Image Include="res\mode_offline.ico" />
     <Image Include="res\mode_passive.ico" />
@@ -1115,6 +1119,10 @@
     <Image Include="res\skull2_red.ico" />
     <Image Include="res\skull_red.ico" />
     <Image Include="res\StateUsers.png" />
+    <Image Include="res\Toolbar16.png" />
+    <Image Include="res\Toolbar24.png" />
+    <Image Include="res\ToolbarHot16.png" />
+    <Image Include="res\ToolbarHot24.png" />
     <Image Include="res\torrent.png" />
     <Image Include="res\Trackers.png" />
     <Image Include="res\Transfers.png" />

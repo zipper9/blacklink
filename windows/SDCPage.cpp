@@ -65,7 +65,8 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_MIN_MULTI_CHUNK_SIZE,         0,              UNSPEC, UNSPEC, 0, &align8 },
 	{ IDC_DOWNCONN,                     0,              UNSPEC, UNSPEC, 0, &align8 },
 	{ IDC_SETTINGS_MB,                  FLAG_TRANSLATE, AUTO,   UNSPEC, 0, &align9 },
-	{ IDC_CAPTION_HTTP_UA,              FLAG_TRANSLATE, UNSPEC, UNSPEC             }
+	{ IDC_CAPTION_HTTP_UA,              FLAG_TRANSLATE, UNSPEC, UNSPEC             },
+	{ IDC_ENABLE_ZLIB_COMP,             FLAG_TRANSLATE, AUTO,   UNSPEC             }
 };
 
 static const PropPage::Item items[] =
@@ -74,6 +75,7 @@ static const PropPage::Item items[] =
 	{ IDC_SOCKET_IN_BUFFER, SettingsManager::SOCKET_IN_BUFFER, PropPage::T_INT },
 	{ IDC_SOCKET_OUT_BUFFER, SettingsManager::SOCKET_OUT_BUFFER, PropPage::T_INT },
 	{ IDC_SHUTDOWN_TIMEOUT, SettingsManager::SHUTDOWN_TIMEOUT, PropPage::T_INT },
+	{ IDC_ENABLE_ZLIB_COMP, SettingsManager::COMPRESS_TRANSFERS, PropPage::T_BOOL },
 	{ IDC_MAX_COMPRESSION, SettingsManager::MAX_COMPRESSION, PropPage::T_INT },
 	{ IDC_COMPRESSED_PATTERN, SettingsManager::COMPRESSED_FILES, PropPage::T_STR },
 	{ IDC_DOWNCONN, SettingsManager::DOWNCONN_PER_SEC, PropPage::T_INT },
@@ -116,7 +118,15 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	PropPage::read(*this, items);
 	ctrlShutdownAction.SetCurSel(SETTING(SHUTDOWN_ACTION));
 
+#ifdef OSVER_WIN_XP
+	BOOL enable = !CompatibilityManager::isOsVistaPlus();
+#else
+	BOOL enable = FALSE;
+#endif
+	GetDlgItem(IDC_SOCKET_IN_BUFFER).EnableWindow(enable);
+	GetDlgItem(IDC_SOCKET_OUT_BUFFER).EnableWindow(enable);
 	fixControls();
+
 	return TRUE;
 }
 
@@ -128,13 +138,10 @@ LRESULT SDCPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 
 void SDCPage::fixControls()
 {
-#ifdef OSVER_WIN_XP
-	BOOL enable = !CompatibilityManager::isOsVistaPlus();
-#else
-	BOOL enable = FALSE;
-#endif
-	GetDlgItem(IDC_SOCKET_IN_BUFFER).EnableWindow(enable);
-	GetDlgItem(IDC_SOCKET_OUT_BUFFER).EnableWindow(enable);
+	BOOL enable = IsDlgButtonChecked(IDC_ENABLE_ZLIB_COMP) == BST_CHECKED;
+	GetDlgItem(IDC_MAX_COMPRESSION).EnableWindow(enable);
+	GetDlgItem(IDC_MAX_COMP_SPIN).EnableWindow(enable);
+	GetDlgItem(IDC_COMPRESSED_PATTERN).EnableWindow(enable);
 }
 
 void SDCPage::write()

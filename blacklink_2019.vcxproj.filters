@@ -1147,6 +1147,14 @@
     <Image Include="res\Transfers.png" />
     <Image Include="res\DcLst.ico" />
     <Image Include="res\Other.png" />
+    <Image Include="res\Toolbar24.png" />
+    <Image Include="res\ToolbarHot24.png" />
+    <Image Include="res\Toolbar16.png" />
+    <Image Include="res\ToolbarHot16.png" />
+    <Image Include="res\MediaToolbar24.png" />
+    <Image Include="res\MediaToolbarHot24.png" />
+    <Image Include="res\MediaToolbar16.png" />
+    <Image Include="res\MediaToolbarHot16.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />
