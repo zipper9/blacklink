@@ -448,7 +448,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		CImageList& getToolbarImages();
 		CImageList& getToolbarHotImages();
-		CImageList& getSmallToolbarImages() { return smallImages; }
+		CImageList& getSmallToolbarImages() { return toolbar16; }
 		CImageList& getSettingsImages() { return settingsImages; }
 
 		bool processCommand(const Commands::ParsedCommand& cmd, Commands::Result& res);
@@ -491,7 +491,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		TransferView transferView;
 
 		// Images
-		CImageList smallImages, largeImages, largeImagesHot, winampImages, winampImagesHot;
+		CImageList toolbar16, toolbarHot16;
+		CImageList toolbar24, toolbarHot24;
+		CImageList mediaToolbar, mediaToolbarHot;
 		CImageList settingsImages;
 		HIconWrapper mainIcon;
 		HIconWrapper pmIcon;

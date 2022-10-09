@@ -186,11 +186,12 @@ MainFrame::~MainFrame()
 {
 	LogManager::g_mainWnd = nullptr;
 	ctrlCmdBar.m_hImageList = NULL;
-	smallImages.Destroy();
-	largeImages.Destroy();
-	largeImagesHot.Destroy();
-	winampImages.Destroy();
-	winampImagesHot.Destroy();
+	toolbar16.Destroy();
+	toolbarHot16.Destroy();
+	toolbar24.Destroy();
+	toolbarHot24.Destroy();
+	mediaToolbar.Destroy();
+	mediaToolbarHot.Destroy();
 	settingsImages.Destroy();
 	
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -249,20 +250,20 @@ void MainFrame::createMainMenu(void)
 	
 	CImageList tmp;
 	
-	ResourceLoader::LoadImageList(IDR_TOOLBAR_MINI, smallImages, 16, 16);
-	ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_MINI, tmp, 16, 16);
+	ResourceLoader::LoadImageList(IDR_TOOLBAR_SMALL, toolbar16, 16, 16);
+	ResourceLoader::LoadImageList(IDR_MEDIA_TOOLBAR_SMALL, tmp, 16, 16);
 	
 	int imageCount = tmp.GetImageCount();
 	for (int i = 0; i < imageCount; i++)
 	{
 		HICON icon = tmp.GetIcon(i);
-		smallImages.AddIcon(icon);
+		toolbar16.AddIcon(icon);
 		DestroyIcon(icon);
 	}
 	
 	tmp.Destroy();
 	
-	ctrlCmdBar.m_hImageList = smallImages;
+	ctrlCmdBar.m_hImageList = toolbar16;
 	
 	for (size_t i = 0; g_ToolbarButtons[i].id; i++)
 		ctrlCmdBar.m_arrCommand.Add(g_ToolbarButtons[i].id);
@@ -791,15 +792,16 @@ void MainFrame::createToolbar(int imageSize)
 	{
 		if (imageSize == 16)
 		{
-			ctrlToolbar.SetImageList(smallImages);
-			ctrlToolbar.SetHotImageList(smallImages);
+			checkImageList(toolbarHot16, IDR_TOOLBAR_SMALL_HOT, 16);
+			ctrlToolbar.SetImageList(toolbar16);
+			ctrlToolbar.SetHotImageList(toolbarHot16);
 		}
 		else
 		{
-			checkImageList(largeImages, IDR_TOOLBAR, 24);
-			checkImageList(largeImagesHot, IDR_TOOLBAR_HL, 24);
-			ctrlToolbar.SetImageList(largeImages);
-			ctrlToolbar.SetHotImageList(largeImagesHot);
+			checkImageList(toolbar24, IDR_TOOLBAR, 24);
+			checkImageList(toolbarHot24, IDR_TOOLBAR_HOT, 24);
+			ctrlToolbar.SetImageList(toolbar24);
+			ctrlToolbar.SetHotImageList(toolbarHot24);
 		}
 	}
 
@@ -816,14 +818,14 @@ void MainFrame::checkImageList(CImageList& imageList, int resource, int size)
 
 CImageList& MainFrame::getToolbarImages()
 {
-	checkImageList(largeImages, IDR_TOOLBAR, 24);
-	return largeImages;
+	checkImageList(toolbar24, IDR_TOOLBAR, 24);
+	return toolbar24;
 }
 
 CImageList& MainFrame::getToolbarHotImages()
 {
-	checkImageList(largeImagesHot, IDR_TOOLBAR_HL, 24);
-	return largeImagesHot;
+	checkImageList(toolbarHot24, IDR_TOOLBAR_HOT, 24);
+	return toolbarHot24;
 }
 
 void MainFrame::createWinampToolbar(int imageSize)
@@ -841,20 +843,21 @@ void MainFrame::createWinampToolbar(int imageSize)
 
 	if (toolbarImageSize != imageSize)
 	{
-		if (winampImages.m_hImageList) winampImages.Destroy();
-		if (winampImagesHot.m_hImageList) winampImagesHot.Destroy();
+		if (mediaToolbar.m_hImageList) mediaToolbar.Destroy();
+		if (mediaToolbarHot.m_hImageList) mediaToolbarHot.Destroy();
 		if (imageSize == 16)
 		{
-			ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_MINI, winampImages, 16, 16);
-			ctrlWinampToolbar.SetImageList(winampImages);
-			ctrlWinampToolbar.SetHotImageList(winampImages);
+			ResourceLoader::LoadImageList(IDR_MEDIA_TOOLBAR_SMALL, mediaToolbar, 16, 16);
+			ResourceLoader::LoadImageList(IDR_MEDIA_TOOLBAR_SMALL_HOT, mediaToolbarHot, 16, 16);
+			ctrlWinampToolbar.SetImageList(mediaToolbar);
+			ctrlWinampToolbar.SetHotImageList(mediaToolbarHot);
 		}
 		else
 		{
-			ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL, winampImages, 24, 24);
-			ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_HL, winampImagesHot, 24, 24);
-			ctrlWinampToolbar.SetImageList(winampImages);
-			ctrlWinampToolbar.SetHotImageList(winampImagesHot);
+			ResourceLoader::LoadImageList(IDR_MEDIA_TOOLBAR, mediaToolbar, 24, 24);
+			ResourceLoader::LoadImageList(IDR_MEDIA_TOOLBAR_HOT, mediaToolbarHot, 24, 24);
+			ctrlWinampToolbar.SetImageList(mediaToolbar);
+			ctrlWinampToolbar.SetHotImageList(mediaToolbarHot);
 		}
 	}
 

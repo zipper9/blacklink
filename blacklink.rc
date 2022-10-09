@@ -2534,17 +2534,21 @@ IDR_PADLOCK_OPEN        ICON                    "res\\padlock_open.ico"
 // PNG
 //
 
-IDR_TOOLBAR             PNG                     "res\\Toolbar.png"
+IDR_TOOLBAR             PNG                     "res\\Toolbar24.png"
 
-IDR_TOOLBAR_HL          PNG                     "res\\Toolbar-highlight.png"
+IDR_TOOLBAR_HOT         PNG                     "res\\ToolbarHot24.png"
 
-IDR_TOOLBAR_MINI        PNG                     "res\\Toolbar-mini.png"
+IDR_TOOLBAR_SMALL       PNG                     "res\\Toolbar16.png"
 
-IDR_PLAYERS_CONTROL     PNG                     "res\\PlayersControl.png"
+IDR_TOOLBAR_SMALL_HOT   PNG                     "res\\ToolbarHot16.png"
 
-IDR_PLAYERS_CONTROL_HL  PNG                     "res\\PlayersControl-highlight.png"
+IDR_MEDIA_TOOLBAR       PNG                     "res\\MediaToolbar24.png"
 
-IDR_PLAYERS_CONTROL_MINI PNG                     "res\\PlayersControl-mini.png"
+IDR_MEDIA_TOOLBAR_HOT   PNG                     "res\\MediaToolbarHot24.png"
+
+IDR_MEDIA_TOOLBAR_SMALL PNG                     "res\\MediaToolbar16.png"
+
+IDR_MEDIA_TOOLBAR_SMALL_HOT PNG                 "res\\MediaToolbarHot16.png"
 
 IDR_SETTINGS_ICONS      PNG                     "res\\Settings-icons.png"
 

@@ -61,11 +61,11 @@
 #define IDD_TABS_PAGE                   177
 #define IDD_PRIORITY_PAGE               178
 #define IDR_TOOLBAR                     181
-#define IDR_TOOLBAR_HL                  182
-#define IDR_TOOLBAR_MINI                183
-#define IDR_PLAYERS_CONTROL             184
-#define IDR_PLAYERS_CONTROL_HL          185
-#define IDR_PLAYERS_CONTROL_MINI        186
+#define IDR_TOOLBAR_HOT                 182
+#define IDR_TOOLBAR_SMALL               183
+#define IDR_MEDIA_TOOLBAR               184
+#define IDR_MEDIA_TOOLBAR_HOT           185
+#define IDR_MEDIA_TOOLBAR_SMALL         186
 #define IDR_SETTINGS_ICONS              187
 #define IDR_USERS                       188
 #define IDR_BAD_FLAG                    189
@@ -80,6 +80,8 @@
 #define IDR_STATE_USERS                 209
 #define IDR_EDITOR_ICONS                210
 #define IDR_OTHER_ICONS                 217
+#define IDR_TOOLBAR_SMALL_HOT           218
+#define IDR_MEDIA_TOOLBAR_SMALL_HOT     219
 #define IDR_CLOSE_PNG                   220
 #define IDD_DCLS_GENERATOR              222
 #define IDR_DCLST                       223

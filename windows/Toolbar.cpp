@@ -75,8 +75,6 @@ const MenuImage g_MenuImages[] =
 	{ID_APP_ABOUT,           45},
 	{-1,                     46},
 	{IDC_ADD_MAGNET,         47},
-	{-1,                     48},
-	{-1,                     49},
 	{0,  0}
 };
 
