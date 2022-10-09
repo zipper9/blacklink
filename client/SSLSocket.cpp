@@ -77,8 +77,10 @@ bool SSLSocket::waitConnected(unsigned millis)
 			SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
 		else
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
-		
+
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
+		if (!serverName.empty())
+			SSL_set_tlsext_host_name(ssl, serverName.c_str());
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 		if (nextProto == Socket::PROTO_NMDC)
 		{

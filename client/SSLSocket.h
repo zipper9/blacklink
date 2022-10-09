@@ -76,12 +76,15 @@ class SSLSocket : public Socket
 		
 		virtual bool waitConnected(unsigned millis) override;
 		virtual bool waitAccepted(unsigned millis) override;
-		
+
+		void setServerName(const string& name) { serverName = name; }
+
 	private:
 		SSL_CTX* ctx;
 		ssl::SSL ssl;
 		Socket::Protocol nextProto;
 		mutable bool isTrustedCached;
+		string serverName;
 		
 		unique_ptr<CryptoManager::SSLVerifyData> verifyData;    // application data used by CryptoManager::verify_callback(...)
 		

@@ -21,6 +21,7 @@ int Resolver::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string
 {
 	if (v4) *v4 = 0;
 	if (v6) memset(v6, 0, sizeof(*v6));
+	if (isNumeric) *isNumeric = false;
 	if (host.find(':') != string::npos)
 	{
 		if (!(af == 0 || af == AF_INET6)) return 0;

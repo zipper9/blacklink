@@ -862,9 +862,21 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 				}
 				if (!sock)
 				{
-					std::unique_ptr<Socket> s(ci->secure && !ci->useProxy ? (ci->natRole == NAT_SERVER ? 
-						CryptoManager::getInstance()->getServerSocket(ci->allowUntrusted) : 
-						CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol)) : new Socket);
+					std::unique_ptr<Socket> s;
+					if (ci->secure && !ci->useProxy)
+					{
+						SSLSocket* sslSocket;
+						if (ci->natRole == NAT_SERVER)
+							sslSocket = CryptoManager::getInstance()->getServerSocket(ci->allowUntrusted);
+						else
+						{
+							sslSocket = CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol);
+							if (!isNumeric) sslSocket->setServerName(*host);
+						}
+						s.reset(sslSocket);
+					}
+					else
+						s.reset(new Socket);
 					s->create(ip.type, Socket::TYPE_TCP);
 					setSocket(move(s));
 					IpAddressEx bindAddr;
