@@ -1000,7 +1000,7 @@ void SettingsManager::setDefaults()
 	setDefault(USE_TTH_LIST, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
-	setDefault(MAX_HUB_USER_COMMANDS, 100);
+	setDefault(MAX_HUB_USER_COMMANDS, 500);
 	setDefault(MYINFO_DELAY, 35);
 	setDefault(NMDC_ENCODING_FROM_DOMAIN, TRUE);
 
@@ -1160,7 +1160,7 @@ void SettingsManager::setDefaults()
 	setDefault(UPLOAD_BAR_COLOR, RGB(0x00, 0xAB, 0xFD));
 	setDefault(PROGRESS_BACK_COLOR, RGB(0xCC, 0xCC, 0xCC));
 	setDefault(PROGRESS_SEGMENT_COLOR, RGB(0x52, 0xB9, 0x44));
-	setDefault(COLOR_RUNNING, RGB(64, 64, 255));
+	setDefault(COLOR_RUNNING, RGB(84, 130, 252));
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
 	setDefault(BAN_COLOR, RGB(116, 154, 179));
