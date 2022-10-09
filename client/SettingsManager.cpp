@@ -198,7 +198,7 @@ static const char* settingTags[] =
 	"TextFont",
 
 	// Toolbar settings
-	"Toolbar", "ToolbarImage", "ToolbarHot",
+	"Toolbar",
 	"WinampToolBar",
 
 	// Popup settings
@@ -571,7 +571,6 @@ static const char* settingTags[] =
 	// Toolbar settings (Ints)
 	"LockToolbars",
 	"TbImageSize",
-	"TbImageSizeHot",
 	"ShowWinampControl", 
 	
 	// Menu settings
@@ -1194,7 +1193,6 @@ void SettingsManager::setDefaults()
 
 	// Toolbar settings (Ints)
 	setDefault(TB_IMAGE_SIZE, 24);
-	setDefault(TB_IMAGE_SIZE_HOT, 24);
 
 	// Menu settings
 #ifdef _WIN32
@@ -1849,6 +1847,15 @@ bool SettingsManager::set(IntSetting key, int value)
 		case POPUP_TRANSPARENCY:
 		{
 			VERIFY(50, 255);
+			break;
+		}
+		case TB_IMAGE_SIZE:
+		{
+			if (value != 24 && value != 16)
+			{
+				value = 24;
+				valueAdjusted = true;
+			}
 			break;
 		}
 		case MAX_UPLOAD_SPEED_LIMIT_NORMAL:

@@ -25,15 +25,15 @@ const ToolbarButton g_ToolbarButtons[] =
 	{ IDC_AWAY,                   true,  ResourceManager::AWAY                        },
 	{ IDC_SHUTDOWN,               true,  ResourceManager::SHUTDOWN                    },
 	{ IDC_LIMITER,                true,  ResourceManager::SETCZDC_ENABLE_LIMITING     },
-	{ -1,                         false, ResourceManager::UPDATE_CHECK                },
+	{ -1,                         false, ResourceManager::Strings()                   },
 	{ IDC_DISABLE_SOUNDS,         true,  ResourceManager::DISABLE_SOUNDS              },
 	{ IDC_OPEN_DOWNLOADS,         false, ResourceManager::MENU_OPEN_DOWNLOADS_DIR     },
 	{ IDC_REFRESH_FILE_LIST,      false, ResourceManager::MENU_REFRESH_FILE_LIST      },
-	{ ID_TOGGLE_TOOLBAR,          true,  ResourceManager::TOGGLE_TOOLBAR              },
+	{ ID_VIEW_MEDIA_TOOLBAR,      true,  ResourceManager::TOGGLE_TOOLBAR              },
 	{ IDC_QUICK_CONNECT,          false, ResourceManager::MENU_QUICK_CONNECT          },
 	{ IDC_OPEN_FILE_LIST,         false, ResourceManager::MENU_OPEN_FILE_LIST         },
 	{ IDC_RECONNECT_DISCONNECTED, false, ResourceManager::MENU_RECONNECT_DISCONNECTED },
-	{ -1,                         true,  ResourceManager::MENU_RSS_NEWS               },
+	{ -1,                         true,  ResourceManager::Strings()                   },
 	{ IDC_DISABLE_POPUPS,         true,  ResourceManager::DISABLE_POPUPS              },
 	{ 0,                          false, ResourceManager::MENU_NOTEPAD                }
 };

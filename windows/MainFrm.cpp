@@ -160,7 +160,9 @@ MainFrame::MainFrame() :
 	shutdownStatusDisplayed(false),
 	passwordDlg(nullptr),
 	stopperThread(nullptr),
-	statusHistory(20)
+	statusHistory(20),
+	toolbarImageSize(0),
+	visToolbar(TRUE), visWinampBar(TRUE), visQuickSearch(TRUE)
 {
 	m_bUpdateProportionalPos = false;
 	memset(statusSizes, 0, sizeof(statusSizes));
@@ -381,21 +383,23 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, settingsImages, 16, 16);
 	
-	HWND hWndToolBar = createToolbar();
-	HWND hWndQuickSearchBar = createQuickSearchBar();
-	HWND hWndWinampBar = createWinampToolbar();
+	int imageSize = SETTING(TB_IMAGE_SIZE);
+	createToolbar(imageSize);
+	createQuickSearchBar();
+	createWinampToolbar(imageSize);
+	toolbarImageSize = imageSize;
 	
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
+	ctrlRebar = m_hWndToolBar;
 	
-	AddSimpleReBarBand(ctrlCmdBar);
-	AddSimpleReBarBand(hWndToolBar, NULL, TRUE);
+	AddSimpleReBarBandCtrl(ctrlRebar, ctrlCmdBar);
+	AddSimpleReBarBandCtrl(ctrlRebar, ctrlToolbar, 0, NULL, TRUE);
 		
-	AddSimpleReBarBand(hWndQuickSearchBar, NULL, FALSE, 200, TRUE);
-	AddSimpleReBarBand(hWndWinampBar, NULL, TRUE);
+	AddSimpleReBarBandCtrl(ctrlRebar, ctrlQuickSearchBar, 0, NULL, FALSE, 200, TRUE);
+	AddSimpleReBarBandCtrl(ctrlRebar, ctrlWinampToolbar, 0, NULL, TRUE);
 	
 	CreateSimpleStatusBar();
 	
-	ctrlRebar = m_hWndToolBar;
 	ToolbarManager::getInstance()->applyTo(m_hWndToolBar, "MainToolBar");
 	
 	ctrlStatus.Attach(m_hWndStatusBar);
@@ -431,28 +435,22 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	tuneTransferSplit();
 	
-	UIAddToolBar(hWndToolBar);
-	UIAddToolBar(hWndWinampBar);
-	UIAddToolBar(hWndQuickSearchBar);
+	UIAddToolBar(ctrlToolbar);
+	UIAddToolBar(ctrlWinampToolbar);
+	UIAddToolBar(ctrlQuickSearchBar);
 	UISetCheck(ID_VIEW_TOOLBAR, 1);
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
 	UISetCheck(ID_VIEW_TRANSFER_VIEW, BOOLSETTING(SHOW_TRANSFERVIEW));
-	UISetCheck(ID_TOGGLE_TOOLBAR, 1);
-	UISetCheck(ID_TOGGLE_QSEARCH, 1);
-	
+	UISetCheck(ID_VIEW_MEDIA_TOOLBAR, 1);
+	UISetCheck(ID_VIEW_QUICK_SEARCH, 1);
+
 	UISetCheck(IDC_TRAY_LIMITER, BOOLSETTING(THROTTLE_ENABLE));
 	UISetCheck(IDC_TOPMOST, BOOLSETTING(TOPMOST));
 	UISetCheck(IDC_LOCK_TOOLBARS, BOOLSETTING(LOCK_TOOLBARS));
-	
-	if (BOOLSETTING(TOPMOST))
-	{
-		toggleTopmost();
-	}
-	if (BOOLSETTING(LOCK_TOOLBARS))
-	{
-		toggleLockToolbars();
-	}
-	
+
+	if (BOOLSETTING(TOPMOST)) toggleTopmost();
+	if (BOOLSETTING(LOCK_TOOLBARS)) toggleLockToolbars(TRUE);
+
 	// register object for message filtering and idle updates
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	ATLASSERT(pLoop != NULL);
@@ -463,8 +461,8 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	tbMenu.CreatePopupMenu();
 	tbMenu.AppendMenu(MF_STRING, ID_VIEW_TOOLBAR, CTSTRING(MENU_TOOLBAR));
-	tbMenu.AppendMenu(MF_STRING, ID_TOGGLE_TOOLBAR, CTSTRING(TOGGLE_TOOLBAR));
-	tbMenu.AppendMenu(MF_STRING, ID_TOGGLE_QSEARCH, CTSTRING(TOGGLE_QSEARCH));
+	tbMenu.AppendMenu(MF_STRING, ID_VIEW_MEDIA_TOOLBAR, CTSTRING(TOGGLE_TOOLBAR));
+	tbMenu.AppendMenu(MF_STRING, ID_VIEW_QUICK_SEARCH, CTSTRING(TOGGLE_QSEARCH));
 	
 	tbMenu.AppendMenu(MF_SEPARATOR);
 	tbMenu.AppendMenu(MF_STRING, IDC_LOCK_TOOLBARS, CTSTRING(LOCK_TOOLBARS));
@@ -506,7 +504,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	ctrlToolbar.CheckButton(IDC_LIMITER, BOOLSETTING(THROTTLE_ENABLE));
 	ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
 	ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
-	ctrlToolbar.CheckButton(ID_TOGGLE_TOOLBAR, BOOLSETTING(SHOW_PLAYER_CONTROLS));
+	ctrlToolbar.CheckButton(ID_VIEW_MEDIA_TOOLBAR, BOOLSETTING(SHOW_PLAYER_CONTROLS));
 	
 	if (SETTING(NICK).empty())
 	{
@@ -542,24 +540,24 @@ void MainFrame::openDefaultWindows()
 		bool value;
 	} openSettings[] =
 	{
-		{ SettingsManager::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,       true  },
-		{ SettingsManager::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,        true  },
-		{ SettingsManager::OPEN_PUBLIC_HUBS,        IDC_PUBLIC_HUBS,     true  },
-		{ SettingsManager::OPEN_QUEUE,              IDC_QUEUE,           true  },
-		{ SettingsManager::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,        true  },
-		{ SettingsManager::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,    true  },
-		{ SettingsManager::OPEN_FINISHED_UPLOADS,   IDC_FINISHED_UL,     true  },
-		{ SettingsManager::OPEN_SEARCH_SPY,         IDC_SEARCH_SPY,      true  },
-		{ SettingsManager::OPEN_NETWORK_STATISTICS, IDC_NET_STATS,       true  },
-		{ SettingsManager::OPEN_NOTEPAD,            IDC_NOTEPAD,         true  },
-		{ SettingsManager::OPEN_ADLSEARCH,          IDC_FILE_ADL_SEARCH, true  },
+		{ SettingsManager::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,         true  },
+		{ SettingsManager::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,          true  },
+		{ SettingsManager::OPEN_PUBLIC_HUBS,        IDC_PUBLIC_HUBS,       true  },
+		{ SettingsManager::OPEN_QUEUE,              IDC_QUEUE,             true  },
+		{ SettingsManager::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,          true  },
+		{ SettingsManager::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,      true  },
+		{ SettingsManager::OPEN_FINISHED_UPLOADS,   IDC_FINISHED_UL,       true  },
+		{ SettingsManager::OPEN_SEARCH_SPY,         IDC_SEARCH_SPY,        true  },
+		{ SettingsManager::OPEN_NETWORK_STATISTICS, IDC_NET_STATS,         true  },
+		{ SettingsManager::OPEN_NOTEPAD,            IDC_NOTEPAD,           true  },
+		{ SettingsManager::OPEN_ADLSEARCH,          IDC_FILE_ADL_SEARCH,   true  },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-		{ SettingsManager::OPEN_CDMDEBUG,           IDC_CDMDEBUG_WINDOW, true  },
+		{ SettingsManager::OPEN_CDMDEBUG,           IDC_CDMDEBUG_WINDOW,   true  },
 #endif
-		{ SettingsManager::SHOW_STATUSBAR,          ID_VIEW_STATUS_BAR,  false },
-		{ SettingsManager::SHOW_TOOLBAR,            ID_VIEW_TOOLBAR,     false },
-		{ SettingsManager::SHOW_PLAYER_CONTROLS,    ID_TOGGLE_TOOLBAR,   false },
-		{ SettingsManager::SHOW_QUICK_SEARCH,       ID_TOGGLE_QSEARCH,   false }
+		{ SettingsManager::SHOW_STATUSBAR,          ID_VIEW_STATUS_BAR,    false },
+		{ SettingsManager::SHOW_TOOLBAR,            ID_VIEW_TOOLBAR,       false },
+		{ SettingsManager::SHOW_PLAYER_CONTROLS,    ID_VIEW_MEDIA_TOOLBAR, false },
+		{ SettingsManager::SHOW_QUICK_SEARCH,       ID_VIEW_QUICK_SEARCH,  false }
 	};
 	for (int i = 0; i < _countof(openSettings); ++i)
 		if (g_settings->getBool(openSettings[i].setting) == openSettings[i].value)
@@ -721,7 +719,7 @@ void MainFrame::onMinute(uint64_t tick)
 	LogManager::closeOldFiles(tick);
 }
 
-void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
+void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount, const uint8_t* checkState)
 {
 	ctrlToolbar.SetButtonStructSize();
 	SimpleStringTokenizer<char> t(setting, ',');
@@ -742,7 +740,12 @@ void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting,
 					tbb.iBitmap = i;
 					tbb.idCommand = buttons[i].id;
 					tbb.fsState = TBSTATE_ENABLED;
-					tbb.fsStyle = buttons[i].check ? TBSTYLE_CHECK : TBSTYLE_BUTTON;
+					tbb.fsStyle = TBSTYLE_BUTTON;
+					if (buttons[i].check)
+					{
+						tbb.fsStyle = TBSTYLE_CHECK;
+						if (checkState) tbb.fsState |= checkState[i];
+					}
 					tbb.iString = (INT_PTR)(CTSTRING_I(buttons[i].tooltip));
 					dcassert(tbb.iString != -1);
 					if (tbb.idCommand  == IDC_WINAMP_SPAM)
@@ -753,79 +756,113 @@ void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting,
 	}
 }
 
-HWND MainFrame::createToolbar()
+void MainFrame::createToolbar(int imageSize)
 {
+	uint8_t* checkState = nullptr;
 	if (!ctrlToolbar)
 	{
-		if (SETTING(TOOLBARIMAGE).empty())
-		{
-			ResourceLoader::LoadImageList(IDR_TOOLBAR, largeImages, 24, 24);
-		}
-		else
-		{
-			const int size = SETTING(TB_IMAGE_SIZE);
-			ResourceLoader::LoadImageList(Text::toT(SETTING(TOOLBARIMAGE)).c_str(), largeImages, size, size);
-		}
-		if (SETTING(TOOLBARHOTIMAGE).empty())
-		{
-			ResourceLoader::LoadImageList(IDR_TOOLBAR_HL, largeImagesHot, 24, 24);
-		}
-		else
-		{
-			const int size = SETTING(TB_IMAGE_SIZE_HOT);
-			ResourceLoader::LoadImageList(Text::toT(SETTING(TOOLBARHOTIMAGE)).c_str(), largeImagesHot, size, size);
-		}
-		ctrlToolbar.Create(m_hWnd, NULL, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST, 0, ATL_IDW_TOOLBAR); // [~]Drakon. Fix with toolbar.
+		ctrlToolbar.Create(m_hWnd, NULL, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST, 0, ATL_IDW_TOOLBAR);
 		ctrlToolbar.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-		ctrlToolbar.SetImageList(largeImages);
-		ctrlToolbar.SetHotImageList(largeImagesHot);
 	}
-
-	while (ctrlToolbar.GetButtonCount() > 0)
-		ctrlToolbar.DeleteButton(0);
-
-	fillToolbarButtons(ctrlToolbar, SETTING(TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount);
-	ctrlToolbar.AutoSize();
-	if (ctrlRebar.IsWindow())   // resize of reband to fix position of chevron
+	else
 	{
-		const int nCount = ctrlRebar.GetBandCount();
-		for (int i = 0; i < nCount; i++)
+		checkState = new uint8_t[g_ToolbarButtonsCount];
+		memset(checkState, 0, g_ToolbarButtonsCount);
+		TBBUTTON tbb;
+		int count = ctrlToolbar.GetButtonCount();
+		while (count)
 		{
-			REBARBANDINFO rbBand = {0};
-			rbBand.cbSize = sizeof(REBARBANDINFO);
-			rbBand.fMask = RBBIM_IDEALSIZE | RBBIM_CHILD;
-			ctrlRebar.GetBandInfo(i, &rbBand);
-			if (rbBand.hwndChild == ctrlToolbar.m_hWnd)
+			int index = --count;
+			ctrlToolbar.GetButton(index, &tbb);
+			if (tbb.fsState & TBSTATE_CHECKED)
 			{
-				RECT rect = { 0, 0, 0, 0 };
-				ctrlToolbar.GetItemRect(ctrlToolbar.GetButtonCount() - 1, &rect);
-				rbBand.cxIdeal = rect.right;
-				ctrlRebar.SetBandInfo(i, &rbBand);
+				for (int i = 0; i < g_ToolbarButtonsCount; ++i)
+					if (g_ToolbarButtons[i].id == tbb.idCommand)
+					{
+						checkState[i] = TBSTATE_CHECKED;
+						break;
+					}
 			}
+			ctrlToolbar.DeleteButton(index);
 		}
 	}
-	return ctrlToolbar.m_hWnd;
+
+	if (toolbarImageSize != imageSize)
+	{
+		if (imageSize == 16)
+		{
+			ctrlToolbar.SetImageList(smallImages);
+			ctrlToolbar.SetHotImageList(smallImages);
+		}
+		else
+		{
+			checkImageList(largeImages, IDR_TOOLBAR, 24);
+			checkImageList(largeImagesHot, IDR_TOOLBAR_HL, 24);
+			ctrlToolbar.SetImageList(largeImages);
+			ctrlToolbar.SetHotImageList(largeImagesHot);
+		}
+	}
+
+	fillToolbarButtons(ctrlToolbar, SETTING(TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount, checkState);
+	delete[] checkState;
+	ctrlToolbar.AutoSize();
 }
 
-HWND MainFrame::createWinampToolbar()
+void MainFrame::checkImageList(CImageList& imageList, int resource, int size)
+{
+	if (!imageList.m_hImageList)
+		ResourceLoader::LoadImageList(resource, imageList, size, size);
+}
+
+CImageList& MainFrame::getToolbarImages()
+{
+	checkImageList(largeImages, IDR_TOOLBAR, 24);
+	return largeImages;
+}
+
+CImageList& MainFrame::getToolbarHotImages()
+{
+	checkImageList(largeImagesHot, IDR_TOOLBAR_HL, 24);
+	return largeImagesHot;
+}
+
+void MainFrame::createWinampToolbar(int imageSize)
 {
 	if (!ctrlWinampToolbar)
 	{
-		ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL, winampImages, 24, 24);
-		ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_HL, winampImagesHot, 24, 24);
-		
 		ctrlWinampToolbar.Create(m_hWnd, NULL, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST, 0, ATL_IDW_TOOLBAR);
 		ctrlWinampToolbar.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
-		ctrlWinampToolbar.SetImageList(winampImages);
-		ctrlWinampToolbar.SetHotImageList(winampImagesHot);
-		
-		fillToolbarButtons(ctrlWinampToolbar, SETTING(WINAMPTOOLBAR), g_WinampToolbarButtons, g_WinampToolbarButtonsCount);
-		ctrlWinampToolbar.AutoSize();
 	}
-	return ctrlWinampToolbar.m_hWnd;
+	else
+	{
+		int count = ctrlWinampToolbar.GetButtonCount();
+		while (count) ctrlWinampToolbar.DeleteButton(--count);
+	}
+
+	if (toolbarImageSize != imageSize)
+	{
+		if (winampImages.m_hImageList) winampImages.Destroy();
+		if (winampImagesHot.m_hImageList) winampImagesHot.Destroy();
+		if (imageSize == 16)
+		{
+			ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_MINI, winampImages, 16, 16);
+			ctrlWinampToolbar.SetImageList(winampImages);
+			ctrlWinampToolbar.SetHotImageList(winampImages);
+		}
+		else
+		{
+			ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL, winampImages, 24, 24);
+			ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_HL, winampImagesHot, 24, 24);
+			ctrlWinampToolbar.SetImageList(winampImages);
+			ctrlWinampToolbar.SetHotImageList(winampImagesHot);
+		}
+	}
+
+	fillToolbarButtons(ctrlWinampToolbar, SETTING(WINAMPTOOLBAR), g_WinampToolbarButtons, g_WinampToolbarButtonsCount, nullptr);
+	ctrlWinampToolbar.AutoSize();
 }
 
-HWND MainFrame::createQuickSearchBar()
+void MainFrame::createQuickSearchBar()
 {
 	if (!ctrlQuickSearchBar)
 	{
@@ -857,20 +894,64 @@ HWND MainFrame::createQuickSearchBar()
 		quickSearchBoxContainer.SubclassWindow(quickSearchBox.m_hWnd);
 		quickSearchBox.SetExtendedUI();
 		quickSearchBox.SetFont(Fonts::g_systemFont, FALSE);
-		
-		POINT pt;
-		pt.x = 10;
-		pt.y = 10;
-		
-		HWND hWnd = quickSearchBox.ChildWindowFromPoint(pt);
-		if (hWnd != NULL && !quickSearchEdit.IsWindow() && hWnd != quickSearchBox.m_hWnd)
+
+		COMBOBOXINFO inf = { sizeof(inf) };
+		quickSearchBox.GetComboBoxInfo(&inf);
+		if (inf.hwndItem && !quickSearchEdit.IsWindow() && inf.hwndItem != quickSearchBox.m_hWnd)
 		{
-			quickSearchEdit.Attach(hWnd);
+			quickSearchEdit.Attach(inf.hwndItem);
 			quickSearchEdit.SetCueBannerText(CTSTRING(QSEARCH_STR));
 			quickSearchEditContainer.SubclassWindow(quickSearchEdit.m_hWnd);
 		}
 	}
-	return ctrlQuickSearchBar.m_hWnd;
+}
+
+LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	int imageSize = SETTING(TB_IMAGE_SIZE);
+	bool changeSize = imageSize != toolbarImageSize;
+	if (changeSize)
+	{
+		ctrlRebar.DeleteBand(3);
+		ctrlRebar.DeleteBand(2);
+		ctrlRebar.DeleteBand(1);
+	}
+	createToolbar(imageSize);
+	if (changeSize)
+	{
+		createWinampToolbar(imageSize);
+		AddSimpleReBarBandCtrl(ctrlRebar, ctrlToolbar, 0, NULL, TRUE);
+	}
+	if (ctrlRebar.IsWindow())   // resize of reband to fix position of chevron
+	{
+		const int nCount = ctrlRebar.GetBandCount();
+		for (int i = 0; i < nCount; i++)
+		{
+			REBARBANDINFO rbBand = {0};
+			rbBand.cbSize = sizeof(REBARBANDINFO);
+			rbBand.fMask = RBBIM_IDEALSIZE | RBBIM_CHILD;
+			ctrlRebar.GetBandInfo(i, &rbBand);
+			if (rbBand.hwndChild == ctrlToolbar.m_hWnd)
+			{
+				RECT rect = { 0, 0, 0, 0 };
+				ctrlToolbar.GetItemRect(ctrlToolbar.GetButtonCount() - 1, &rect);
+				rbBand.cxIdeal = rect.right;
+				ctrlRebar.SetBandInfo(i, &rbBand);
+			}
+		}
+	}
+	if (changeSize)
+	{
+		AddSimpleReBarBandCtrl(ctrlRebar, ctrlQuickSearchBar, 0, NULL, FALSE, 200, TRUE);
+		AddSimpleReBarBandCtrl(ctrlRebar, ctrlWinampToolbar, 0, NULL, TRUE);
+		toolbarImageSize = imageSize;
+		toggleRebarBand(visToolbar, 1, ID_VIEW_TOOLBAR, SettingsManager::SHOW_TOOLBAR);
+		toggleRebarBand(visWinampBar, 3, ID_VIEW_MEDIA_TOOLBAR, SettingsManager::SHOW_PLAYER_CONTROLS);
+		toggleRebarBand(visQuickSearch, 2, ID_VIEW_QUICK_SEARCH, SettingsManager::SHOW_QUICK_SEARCH);
+		if (BOOLSETTING(LOCK_TOOLBARS)) toggleLockToolbars(TRUE);
+		UpdateLayout();
+	}
+	return 0;
 }
 
 LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -2407,44 +2488,53 @@ void MainFrame::ShowBalloonTip(const tstring& message, const tstring& title, int
 	}
 }
 
+void MainFrame::toggleLockToolbars(BOOL state)
+{
+	REBARBANDINFO rbi = {};
+	rbi.cbSize = sizeof(rbi);
+	rbi.fMask  = RBBIM_STYLE;
+	int count = ctrlRebar.GetBandCount();
+	for (int i = 0; i < count; i++)
+	{
+		ctrlRebar.GetBandInfo(i, &rbi);
+		if (state)
+			rbi.fStyle |= RBBS_NOGRIPPER | RBBS_GRIPPERALWAYS;
+		else
+			rbi.fStyle &= ~(RBBS_NOGRIPPER | RBBS_GRIPPERALWAYS);
+		ctrlRebar.SetBandInfo(i, &rbi);
+	}
+}
+
+void MainFrame::toggleRebarBand(BOOL state, int bandNumber, int commandId, SettingsManager::IntSetting setting)
+{
+	int bandIndex = ctrlRebar.IdToIndex(ATL_IDW_BAND_FIRST + bandNumber);
+	ctrlRebar.ShowBand(bandIndex, state);
+	UISetCheck(commandId, state);
+	SettingsManager::set(setting, state);
+	ctrlToolbar.CheckButton(commandId, state);
+}
+
 LRESULT MainFrame::onViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	static BOOL bVisible = TRUE;
-	bVisible = !bVisible;
-	CReBarCtrl rebar(m_hWndToolBar);
-	int nBandIndex = rebar.IdToIndex(ATL_IDW_BAND_FIRST + 1);
-	rebar.ShowBand(nBandIndex, bVisible);
-	UISetCheck(ID_VIEW_TOOLBAR, bVisible);
+	visToolbar = !visToolbar;
+	toggleRebarBand(visToolbar, 1, ID_VIEW_TOOLBAR, SettingsManager::SHOW_TOOLBAR);
 	UpdateLayout();
-	SET_SETTING(SHOW_TOOLBAR, bVisible);
-	ctrlToolbar.CheckButton(ID_VIEW_TOOLBAR, bVisible);
 	return 0;
 }
 
 LRESULT MainFrame::onViewWinampBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	static BOOL bVisible = TRUE;
-	bVisible = !bVisible;
-	CReBarCtrl rebar(m_hWndToolBar);
-	int nBandIndex = rebar.IdToIndex(ATL_IDW_BAND_FIRST + 3);
-	rebar.ShowBand(nBandIndex, bVisible);
-	UISetCheck(ID_TOGGLE_TOOLBAR, bVisible);
+	visWinampBar = !visWinampBar;
+	toggleRebarBand(visWinampBar, 3, ID_VIEW_MEDIA_TOOLBAR, SettingsManager::SHOW_PLAYER_CONTROLS);
 	UpdateLayout();
-	SET_SETTING(SHOW_PLAYER_CONTROLS, bVisible);
-	ctrlToolbar.CheckButton(ID_TOGGLE_TOOLBAR, bVisible);
 	return 0;
 }
 
 LRESULT MainFrame::onViewQuickSearchBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	static BOOL bVisible = TRUE;
-	bVisible = !bVisible;
-	CReBarCtrl rebar(m_hWndToolBar);
-	int nBandIndex = rebar.IdToIndex(ATL_IDW_BAND_FIRST + 2);
-	rebar.ShowBand(nBandIndex, bVisible);
-	UISetCheck(ID_TOGGLE_QSEARCH, bVisible);
+	visQuickSearch = !visQuickSearch;
+	toggleRebarBand(visQuickSearch, 2, ID_VIEW_QUICK_SEARCH, SettingsManager::SHOW_QUICK_SEARCH);
 	UpdateLayout();
-	SET_SETTING(SHOW_QUICK_SEARCH, bVisible);
 	return 0;
 }
 
@@ -2710,9 +2800,10 @@ LRESULT MainFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 LRESULT MainFrame::onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	UISetCheck(IDC_LOCK_TOOLBARS, !BOOLSETTING(LOCK_TOOLBARS));
-	SET_SETTING(LOCK_TOOLBARS, !BOOLSETTING(LOCK_TOOLBARS));
-	toggleLockToolbars();
+	BOOL state = !BOOLSETTING(LOCK_TOOLBARS);
+	UISetCheck(IDC_LOCK_TOOLBARS, state);
+	SET_SETTING(LOCK_TOOLBARS, state);
+	toggleLockToolbars(state);
 	return 0;
 }
 
@@ -2797,21 +2888,6 @@ void MainFrame::toggleTopmost()
 	GetWindowRect(rc);
 	HWND order = (dwExStyle & WS_EX_TOPMOST) ? HWND_NOTOPMOST : HWND_TOPMOST;
 	::SetWindowPos(m_hWnd, order, rc.left, rc.top, rc.Width(), rc.Height(), SWP_SHOWWINDOW);
-}
-
-void MainFrame::toggleLockToolbars()
-{
-	CReBarCtrl rebar(m_hWndToolBar);
-	REBARBANDINFO rbi = {};
-	rbi.cbSize = sizeof(rbi);
-	rbi.fMask  = RBBIM_STYLE;
-	int count = rebar.GetBandCount();
-	for (int i = 0; i < count; i++)
-	{
-		rebar.GetBandInfo(i, &rbi);
-		rbi.fStyle ^= RBBS_NOGRIPPER | RBBS_GRIPPERALWAYS;
-		rebar.SetBandInfo(i, &rbi);
-	}
 }
 
 #ifdef IRAINMAN_INCLUDE_SMILE

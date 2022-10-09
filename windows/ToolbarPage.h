@@ -30,21 +30,17 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP(ToolbarPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_HANDLER(IDC_IMAGEBROWSE, BN_CLICKED, onImageBrowse)
-		COMMAND_HANDLER(IDC_HOTBROWSE, BN_CLICKED, onHotBrowse)
 		COMMAND_HANDLER(IDC_TOOLBAR_ADD, BN_CLICKED, onAdd)
 		COMMAND_HANDLER(IDC_TOOLBAR_REMOVE, BN_CLICKED, onRemove)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onImageBrowse(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT onHotBrowse(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onAdd(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onRemove(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		
+
 		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_TOOLBAR; }
 		void write();
@@ -52,9 +48,8 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 	protected:
 		CListViewCtrl ctrlCommands;
 		CListViewCtrl ctrlToolbar;
-		tstring name;
+		CComboBox ctrlIconSize;
 
-		void browseForPic(int dlgItem);
 		void makeItem(LVITEM* lvi, int item, tstring& tmp);
 };
 

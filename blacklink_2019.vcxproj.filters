@@ -1048,24 +1048,6 @@
     <Image Include="res\Users.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\ADLSearch.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\CDM.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Error.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\f_green_16.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\f_red_16.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\f_yellow_16.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\File-List-Off.ico">
       <Filter>Resource Files</Filter>
     </Image>
@@ -1081,22 +1063,7 @@
     <Image Include="res\Magnet.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\Network-Statistics.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Pause.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\PM.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Purge.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Search.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Sounds.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\SwitchPanels.ico">
@@ -1112,12 +1079,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\UserOff.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\f_grey_16.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\f_question_16.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\StateUsers.png">
@@ -1165,9 +1126,6 @@
     <Image Include="res\app.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\favorite.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\zz.png">
       <Filter>Resource Files</Filter>
     </Image>
@@ -1187,6 +1145,8 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Transfers.png" />
+    <Image Include="res\DcLst.ico" />
+    <Image Include="res\Other.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />

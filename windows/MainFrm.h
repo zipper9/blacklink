@@ -100,7 +100,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WMU_DIALOG_CREATED, onLineDlgCreated)
 		MESSAGE_HANDLER(WM_ACTIVATEAPP, onActivateApp)
 		MESSAGE_HANDLER(WM_APPCOMMAND, onAppCommand)
-		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, onCreateToolbar)
+		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, onRebuildToolbar)
 		MESSAGE_HANDLER(WEBSERVER_SOCKET_MESSAGE, onWebServerSocket)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_MENUSELECT, onMenuSelect)
@@ -168,8 +168,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_QUICK_CONNECT, onQuickConnect)
 		COMMAND_ID_HANDLER(IDC_HASH_PROGRESS, onHashProgress)
 		COMMAND_ID_HANDLER(IDC_TRAY_LIMITER, onLimiter)
-		COMMAND_ID_HANDLER(ID_TOGGLE_TOOLBAR, onViewWinampBar)
-		COMMAND_ID_HANDLER(ID_TOGGLE_QSEARCH, onViewQuickSearchBar)
+		COMMAND_ID_HANDLER(ID_VIEW_MEDIA_TOOLBAR, onViewWinampBar)
+		COMMAND_ID_HANDLER(ID_VIEW_QUICK_SEARCH, onViewQuickSearchBar)
 		COMMAND_ID_HANDLER(IDC_TOPMOST, onViewTopmost)
 		COMMAND_ID_HANDLER(IDC_LOCK_TOOLBARS, onLockToolbars)
 		COMMAND_RANGE_HANDLER(IDC_WINAMP_BACK, IDC_WINAMP_VOL_HALF, onWinampButton)
@@ -198,8 +198,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		UPDATE_ELEMENT(ID_VIEW_TOOLBAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_VIEW_STATUS_BAR, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(ID_VIEW_TRANSFER_VIEW, UPDUI_MENUPOPUP)
-		UPDATE_ELEMENT(ID_TOGGLE_TOOLBAR, UPDUI_MENUPOPUP)
-		UPDATE_ELEMENT(ID_TOGGLE_QSEARCH, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_VIEW_MEDIA_TOOLBAR, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(ID_VIEW_QUICK_SEARCH, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(IDC_TRAY_LIMITER, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(IDC_TOPMOST, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(IDC_LOCK_TOOLBARS, UPDUI_MENUPOPUP)
@@ -390,19 +390,15 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			}
 			return 0;
 		}
-		
+
 		LRESULT onShutDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			setShutDown(!isShutDown());
 			return S_OK;
 		}
 
-		LRESULT onCreateToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			createToolbar();
-			return S_OK;
-		}
-		
+		LRESULT onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		void onMinute(uint64_t tick);
 		
@@ -449,14 +445,13 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void updateQuickSearches(bool clear = false);
 
 		JAControl* getJAControl() { return jaControl.get(); }
-		
-		CImageList& getToolbarImages() { return largeImages; }
-		CImageList& getToolbarHotImages() { return largeImagesHot; }
+
+		CImageList& getToolbarImages();
+		CImageList& getToolbarHotImages();
 		CImageList& getSmallToolbarImages() { return smallImages; }
 		CImageList& getSettingsImages() { return settingsImages; }
 
 		bool processCommand(const Commands::ParsedCommand& cmd, Commands::Result& res);
-		void sendFrameInfoText(uint64_t frameId, const tstring& text);
 
 	private:
 		static MainFrame* instance;
@@ -483,12 +478,16 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			tstring text;
 		};
 
-		// Controls
+		// Toolbar
 		CMDICommandBarCtrl ctrlCmdBar;
 		CReBarCtrl ctrlRebar;
-		FlatTabCtrl ctrlTab;
 		CToolBarCtrl ctrlToolbar;
 		CToolBarCtrl ctrlWinampToolbar;
+		int toolbarImageSize;
+		BOOL visToolbar, visWinampBar, visQuickSearch;
+
+		// Controls
+		FlatTabCtrl ctrlTab;
 		TransferView transferView;
 
 		// Images
@@ -609,12 +608,14 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			ShowWindow(wasMaximized ? SW_MAXIMIZE : SW_RESTORE);
 		}
 
-		void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount);
-		HWND createToolbar();
-		HWND createWinampToolbar();
-		HWND createQuickSearchBar();
+		void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount, const uint8_t* checkState);
+		void createToolbar(int imageSize);
+		void createWinampToolbar(int imageSize);
+		void createQuickSearchBar();
+		static void checkImageList(CImageList& imageList, int resource, int size);
 		void toggleTopmost();
-		void toggleLockToolbars();
+		void toggleLockToolbars(BOOL state);
+		void toggleRebarBand(BOOL state, int bandNumber, int commandId, SettingsManager::IntSetting setting);
 		
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 		LRESULT onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);

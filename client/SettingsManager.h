@@ -169,7 +169,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			TEXT_FONT,
 
 			// Toolbar settings
-			TOOLBAR, TOOLBARIMAGE, TOOLBARHOTIMAGE,
+			TOOLBAR,
 			WINAMPTOOLBAR,
 			
 			// Popup settings
@@ -545,7 +545,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// Toolbar settings (Ints)
 			LOCK_TOOLBARS,
 			TB_IMAGE_SIZE,
-			TB_IMAGE_SIZE_HOT,
 			SHOW_PLAYER_CONTROLS,
 			
 			// Menu settings

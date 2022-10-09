@@ -443,7 +443,6 @@
 #define IDC_POPUPTYPE                   1319
 #define IDC_STATIC3                     1320
 #define IDC_MAX_HASH_SPEED              1323
-#define IDC_TOOLBAR_IMAGE               1324
 #define IDC_TREE                        1326
 #define IDC_STATIC4                     1327
 #define IDC_SETTINGS_SLOTS_PER_HUB      1329
@@ -451,11 +450,9 @@
 #define IDC_CAPTION_MAX_HASH_SPEED      1332
 #define IDC_TOOLBAR_POSSIBLE            1333
 #define IDC_SETTINGS_MBS                1335
-#define IDC_MOUSE_OVER                  1336
 #define IDC_STATIC5                     1338
 #define IDC_CAPTION_MIN_MULTI_CHUNK_SIZE 1339
-#define IDC_NORMAL                      1340
-#define IDC_TOOLBAR_IMAGE_BOX           1341
+#define IDC_CAPTION_ICON_SIZE           1340
 #define IDC_FAKE_SLOTS                  1342
 #define IDC_FAKE_SLOTS_EDIT             1343
 #define IDC_MAGNET_QUEUE                1345
@@ -650,7 +647,6 @@
 #define IDC_SKIPLIST_SHARE              1554
 #define IDC_SETTINGS_SOCKET_IN_BUFFER   1555
 #define IDC_ICON_SIZE                   1558
-#define IDC_ICON_SIZE_HOVER             1559
 #define IDC_TABSTEXT                    1566
 #define IDC_THOLD                       1567
 #define IDC_SETTINGS_NOMINALBW          1570
@@ -876,11 +872,9 @@
 #define IDC_FILELIST_UNAVAILABLE        1859
 #define IDC_SAVE                        1860
 #define IDC_TOOLBAR_ADD                 1861
-#define IDC_HOTBROWSE                   1862
 #define IDC_TOOLBAR_REMOVE              1863
 #define IDC_PREVIEW_NAME                1864
 #define IDC_PREVIEW_APPLICATION         1865
-#define IDC_TOOLBAR_HOT_IMAGE           1866
 #define IDC_LIMITER                     1867
 #define IDC_ADLS_HELP                   1868
 #define IDC_PROGRESSBAR_ODC             1869
@@ -1315,8 +1309,8 @@
 #define IDC_USER_INFO                   7700
 #define IDC_COPY_URL                    7800
 #define IDC_COPY_URL_TREE               7900
-#define ID_TOGGLE_TOOLBAR               32771
-#define ID_TOGGLE_QSEARCH               32772
+#define ID_VIEW_MEDIA_TOOLBAR           32771
+#define ID_VIEW_QUICK_SEARCH            32772
 #define ID_VIEW_TRANSFER_VIEW           32773
 #define ID_GET_TTH                      32774
 #define ID_SHELLCONTEXTMENU_MIN         32775
