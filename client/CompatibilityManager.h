@@ -190,7 +190,7 @@ class CompatibilityManager
 		static bool detectWine();
 		static LONG getComCtlVersionFromOS();
 		static void getSystemInfoFromOS();
-		static string getProcArchString();
+		static const char* getProcArchString();
 		static void generateSystemInfoForApp();
 		static bool isWow64Process();
 		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* status);

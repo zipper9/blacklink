@@ -233,25 +233,26 @@ string CompatibilityManager::getFormattedOsVersion()
 	return s;
 }
 
-string CompatibilityManager::getProcArchString()
+const char* CompatibilityManager::getProcArchString()
 {
-	string s;
 	switch (g_sysInfo.wProcessorArchitecture)
 	{
 		case PROCESSOR_ARCHITECTURE_AMD64:
-			s = " x86-x64";
-			break;
+			return "x86-x64";
 		case PROCESSOR_ARCHITECTURE_INTEL:
-			s = " x86";
-			break;
+			return "x86";
 		case PROCESSOR_ARCHITECTURE_IA64:
-			s = " Intel Itanium-based";
-			break;
-		default: // PROCESSOR_ARCHITECTURE_UNKNOWN
-			s = " Unknown";
-			break;
+			return "Intel Itanium-based";
+#ifdef PROCESSOR_ARCHITECTURE_ARM
+		case PROCESSOR_ARCHITECTURE_ARM:
+			return "ARM";
+#endif
+#ifdef PROCESSOR_ARCHITECTURE_ARM64
+		case PROCESSOR_ARCHITECTURE_ARM64:
+			return "ARM64";
+#endif
 	};
-	return s;
+	return "Unknown";
 }
 
 #include "winprod.h"

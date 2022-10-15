@@ -33,7 +33,7 @@
 #include "CommandLine.h"
 #include "KnownClients.h"
 
-#ifndef _DEBUG
+#if !defined(_DEBUG) && (defined(_M_IX86) || defined(_M_X64))
 #define USE_CRASH_HANDLER
 #endif
 

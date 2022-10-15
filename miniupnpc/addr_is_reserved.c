@@ -10,11 +10,7 @@
 /* Win32 Specific includes and defines */
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#if !defined(_MSC_VER)
 #include <stdint.h>
-#else /* !defined(_MSC_VER) */
-typedef unsigned long uint32_t;
-#endif /* !defined(_MSC_VER) */
 #else /* _WIN32 */
 #include <sys/types.h>
 #include <sys/socket.h>

@@ -4,7 +4,7 @@
 #if !defined(OSVER_WIN_XP) && !defined(OSVER_WIN_VISTA) && !defined(OSVER_WIN_7)
 
 // Default is Windows 7 for x64 and Windows XP for x32
-#ifdef _WIN64
+#if defined(_WIN64) || defined(_M_ARM)
 #undef  OSVER_WIN_XP
 #undef  OSVER_WIN_VISTA
 #define OSVER_WIN_7
