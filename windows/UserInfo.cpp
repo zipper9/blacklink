@@ -22,7 +22,6 @@
 #include "LocationUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/FavoriteManager.h"
-#include "../client/CFlyProfiler.h"
 
 int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 {
@@ -30,7 +29,6 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		return 0;
 	if (col == COLUMN_NICK)
 	{
-		PROFILE_THREAD_SCOPED_DESC("COLUMN_NICK")
 		const bool a_isOp = a->isOP(),
 		           b_isOp = b->isOP();
 		if (a_isOp && !b_isOp)
@@ -52,101 +50,51 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 	switch (col)
 	{
 		case COLUMN_NICK:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_NICK")
 			return Util::defaultSort(Text::toT(a->getIdentity().getNick()), Text::toT(b->getIdentity().getNick()));
-		}
 		case COLUMN_SHARED:
 		case COLUMN_EXACT_SHARED:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_SHARED")
 			return compare(a->getIdentity().getBytesShared(), b->getIdentity().getBytesShared());
-		}
 		case COLUMN_SLOTS:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_SLOTS")
 			return compare(a->getIdentity().getSlots(), b->getIdentity().getSlots());
-		}
 		case COLUMN_HUBS:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_HUBS")
 			return compare(a->getIdentity().getHubNormalRegOper(), b->getIdentity().getHubNormalRegOper());
-		}
 #ifdef BL_FEATURE_IP_DATABASE
 		case COLUMN_UPLOAD:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_UPLOAD")
 			return compare(a->getUser()->getBytesUploaded(), b->getUser()->getBytesUploaded());
-		}
 		case COLUMN_DOWNLOAD:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_DOWNLOAD")
 			return compare(a->getUser()->getBytesDownloaded(), b->getUser()->getBytesDownloaded());
-		}
 		case COLUMN_MESSAGES:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_MESSAGES")
 			return compare(a->getUser()->getMessageCount(), b->getUser()->getMessageCount());
-		}
 #endif
 		case COLUMN_P2P_GUARD:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_P2P_GUARD")
 			const_cast<UserInfo*>(a)->loadP2PGuard();
 			const_cast<UserInfo*>(b)->loadP2PGuard();
 			return compare(a->getIdentity().getP2PGuard(), b->getIdentity().getP2PGuard());
-		}
 		case COLUMN_IP:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_IP")
 			return compare(a->getIdentity().getConnectIP(), b->getIdentity().getConnectIP());
-		}
 		case COLUMN_GEO_LOCATION:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_GEO_LOCATION")
 			const_cast<UserInfo*>(a)->loadLocation();
 			const_cast<UserInfo*>(b)->loadLocation();
 			return Util::defaultSort(a->getText(col), b->getText(col));
-		}
 		case COLUMN_FLY_HUB_GENDER:
-		{
-			PROFILE_THREAD_SCOPED_DESC("COLUMN_FLY_HUB_GENDER")
 			return compare(a->getIdentity().getGenderType(), b->getIdentity().getGenderType());
-		}
 		case COLUMN_FLY_HUB_COUNT_FILES:
-		{
 			return compare(a->getIdentity().getExtJSONCountFiles(), b->getIdentity().getExtJSONCountFiles());
-		}
 		case COLUMN_FLY_HUB_LAST_SHARE_DATE:
-		{
 			return compare(a->getIdentity().getExtJSONLastSharedDate(), b->getIdentity().getExtJSONLastSharedDate());
-		}
 		case COLUMN_FLY_HUB_RAM:
-		{
 			return compare(a->getIdentity().getExtJSONRAMWorkingSet(), b->getIdentity().getExtJSONRAMWorkingSet());
-		}
 		case COLUMN_FLY_HUB_SQLITE_DB_SIZE:
-		{
 			return compare(a->getIdentity().getExtJSONSQLiteDBSize(), b->getIdentity().getExtJSONSQLiteDBSize());
-		}
 		case COLUMN_FLY_HUB_QUEUE:
-		{
 			return compare(a->getIdentity().getExtJSONQueueFiles(), b->getIdentity().getExtJSONQueueFiles());
-		}
 		case COLUMN_FLY_HUB_TIMES:
-		{
 			return compare(a->getIdentity().getExtJSONTimesStartGUI() + a->getIdentity().getExtJSONTimesStartCore(),
 			               b->getIdentity().getExtJSONTimesStartGUI() + b->getIdentity().getExtJSONTimesStartCore());
-		}
 		case COLUMN_FLY_HUB_SUPPORT_INFO:
-		{
 			return compare(a->getIdentity().getExtJSONSupportInfo(), b->getIdentity().getExtJSONSupportInfo());
-		}
 	}
-	{
-		PROFILE_THREAD_SCOPED_DESC("COLUMN_DEFAULT")
-		return Util::defaultSort(a->getText(col), b->getText(col));
-	}
+	return Util::defaultSort(a->getText(col), b->getText(col));
 }
 
 tstring UserInfo::getText(int col) const

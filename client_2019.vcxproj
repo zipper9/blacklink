@@ -492,7 +492,6 @@
     <ClCompile Include="client\BaseUtil.cpp" />
     <ClCompile Include="client\BufferedSocket.cpp" />
     <ClCompile Include="client\BZUtils.cpp" />
-    <ClCompile Include="client\CFlyProfiler.cpp" />
     <ClCompile Include="client\ChatMessage.cpp" />
     <ClCompile Include="client\CID.cpp" />
     <ClCompile Include="client\Client.cpp" />
@@ -730,7 +729,6 @@
     <ClInclude Include="client\BaseThread.h" />
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\BusyCounter.h" />
-    <ClInclude Include="client\CFlyProfiler.h" />
     <ClInclude Include="client\CommandCallback.h" />
     <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />

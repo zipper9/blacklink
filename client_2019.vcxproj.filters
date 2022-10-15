@@ -211,9 +211,6 @@
     <ClCompile Include="client\LogManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\CFlyProfiler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\AdcSupports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -697,9 +694,6 @@
       <Filter>Header Files\jsoncpp</Filter>
     </ClInclude>
     <ClInclude Include="client\HintedUser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\CFlyProfiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\AdcSupports.h">
