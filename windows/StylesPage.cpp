@@ -193,7 +193,9 @@ bool StylesPage::saveTheme()
 		if (path.find(copy) == tstring::npos)
 			path = TSTRING_F(THEME_COPY, path);
 	}
-	if (WinUtil::browseFile(path, m_hWnd, true, Text::toT(Util::getThemesPath()), WinUtil::getFileMaskString(types).c_str(), defExt.c_str()))
+	tstring themesPath = Text::toT(Util::getThemesPath());
+	File::ensureDirectory(themesPath);
+	if (WinUtil::browseFile(path, m_hWnd, true, themesPath, WinUtil::getFileMaskString(types).c_str(), defExt.c_str()))
 	{
 		SettingsStore ss;
 		tabChat.getValues(ss);
