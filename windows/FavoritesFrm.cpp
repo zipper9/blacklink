@@ -23,6 +23,7 @@
 #include "FavHubProperties.h"
 #include "FavHubGroupsDlg.h"
 #include "ExMessageBox.h"
+#include "Fonts.h"
 #include "../client/ShareManager.h"
 
 #ifdef _UNICODE

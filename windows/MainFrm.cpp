@@ -427,7 +427,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	CreateMDIClient();
 	ctrlCmdBar.SetMDIClient(m_hWndMDIClient);
 	WinUtil::g_mdiClient = m_hWndMDIClient;
-	ctrlTab.setOptions(SETTING(TABS_POS), SETTING(MAX_TAB_ROWS), SETTING(TAB_SIZE), true, BOOLSETTING(TABS_CLOSEBUTTONS), BOOLSETTING(TABS_BOLD), BOOLSETTING(NON_HUBS_FRONT), false);
+	ctrlTab.updateSettings(false);
 	ctrlTab.Create(m_hWnd, rcDefault);
 	WinUtil::g_tabCtrl = &ctrlTab;
 	
@@ -911,6 +911,7 @@ void MainFrame::createQuickSearchBar()
 
 LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	LockWindowUpdate(TRUE);
 	int imageSize = SETTING(TB_IMAGE_SIZE);
 	bool changeSize = imageSize != toolbarImageSize;
 	if (changeSize)
@@ -954,6 +955,7 @@ LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 		if (BOOLSETTING(LOCK_TOOLBARS)) toggleLockToolbars(TRUE);
 		UpdateLayout();
 	}
+	LockWindowUpdate(FALSE);
 	return 0;
 }
 
@@ -1792,7 +1794,7 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			ctrlToolbar.CheckButton(IDC_SHUTDOWN, isShutDown());
 
 			bool needUpdateLayout = ctrlTab.getTabsPosition() != SETTING(TABS_POS);
-			bool needInvalidateTabs = ctrlTab.setOptions(SETTING(TABS_POS), SETTING(MAX_TAB_ROWS), SETTING(TAB_SIZE), true, BOOLSETTING(TABS_CLOSEBUTTONS), BOOLSETTING(TABS_BOLD), BOOLSETTING(NON_HUBS_FRONT), false);
+			bool needInvalidateTabs = ctrlTab.updateSettings(false);
 
 			if (needUpdateLayout)
 			{
@@ -1805,10 +1807,10 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 
 			if (needInvalidateTabs)
 				ctrlTab.Invalidate();
-			
+
 			if (!BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 				SetWindowText(getAppNameVerT().c_str());
-			
+
 			ShareManager::getInstance()->refreshShareIfChanged();
 			ClientManager::infoUpdated(true);
 		}

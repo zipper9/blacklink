@@ -8,6 +8,8 @@ HBRUSH Colors::g_tabBackgroundBrush = nullptr;
 
 COLORREF Colors::g_textColor = 0;
 COLORREF Colors::g_bgColor = 0;
+COLORREF Colors::g_tabBackground = 0;
+COLORREF Colors::g_tabText = 0;
 
 CHARFORMAT2 Colors::g_TextStyleTimestamp;
 CHARFORMAT2 Colors::g_ChatTextGeneral;
@@ -56,12 +58,14 @@ void Colors::init()
 {
 	g_textColor = SETTING(TEXT_COLOR);
 	g_bgColor = SETTING(BACKGROUND_COLOR);
+	g_tabBackground = SETTING(TABS_ACTIVE_BACKGROUND_COLOR);
+	g_tabText = SETTING(TABS_ACTIVE_TEXT_COLOR);
 
 	if (g_bgBrush) DeleteObject(g_bgBrush);
-	g_bgBrush = CreateSolidBrush(Colors::g_bgColor);
+	g_bgBrush = CreateSolidBrush(g_bgColor);
 
-	// This color must match FlatTabCtrl::colorSelected
-	if (!g_tabBackgroundBrush) g_tabBackgroundBrush = CreateSolidBrush(RGB(255,255,255));
+	if (g_tabBackgroundBrush) DeleteObject(g_tabBackgroundBrush);
+	g_tabBackgroundBrush = CreateSolidBrush(g_tabBackground);
 
 	CHARFORMAT2 cf;
 	memset(&cf, 0, sizeof(CHARFORMAT2));

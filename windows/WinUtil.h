@@ -162,6 +162,7 @@ class WinUtil
 
 		static int getComboBoxHeight(HWND hwnd, HFONT font);
 		static bool getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy);
+		static bool getDialogUnits(HDC hdc, int& cx, int& cy);
 
 		static inline int dialogUnitsToPixelsX(int x, int xdu)
 		{

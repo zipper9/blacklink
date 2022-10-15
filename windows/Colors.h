@@ -30,6 +30,8 @@ struct Colors
 
 	static COLORREF g_textColor;
 	static COLORREF g_bgColor;
+	static COLORREF g_tabBackground;
+	static COLORREF g_tabText;
 
 	static HBRUSH g_bgBrush;
 	static LRESULT setColor(HDC hdc)

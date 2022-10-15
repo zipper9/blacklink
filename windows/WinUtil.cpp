@@ -1803,8 +1803,15 @@ bool WinUtil::getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy)
 	}
 	HDC hdc = GetDC(hwnd);
 	if (!hdc) return false;
-	bool res = false;
 	HGDIOBJ prevFont = SelectObject(hdc, font);
+	bool res = getDialogUnits(hdc, cx, cy);
+	SelectObject(hdc, prevFont);
+	ReleaseDC(hwnd, hdc);
+	return res;
+}
+
+bool WinUtil::getDialogUnits(HDC hdc, int& cx, int& cy)
+{
 	TEXTMETRIC tm;
 	if (GetTextMetrics(hdc, &tm))
 	{
@@ -1816,12 +1823,10 @@ bool WinUtil::getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy)
 		{
 			cx = (size.cx / 26 + 1) / 2;
 			cy = tm.tmHeight;
-			res = true;
+			return true;
 		}
 	}
-	SelectObject(hdc, prevFont);
-	ReleaseDC(hwnd, hdc);
-	return res;
+	return false;
 }
 
 int WinUtil::getComboBoxHeight(HWND hwnd, HFONT font)

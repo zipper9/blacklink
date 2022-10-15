@@ -20,6 +20,7 @@
 #include "NotepadFrame.h"
 #include "WinUtil.h"
 #include "Colors.h"
+#include "Fonts.h"
 #include "../client/LogManager.h"
 #include "../client/File.h"
 

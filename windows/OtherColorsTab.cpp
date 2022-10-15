@@ -41,14 +41,26 @@ static ColorSettings colors[] =
 	{ ResourceManager::COLOR_WND,                  SettingsManager::BACKGROUND_COLOR,         0 },
 	{ ResourceManager::COLOR_TEXT,                 SettingsManager::TEXT_COLOR,               0 },
 	{ ResourceManager::COLOR_ERROR,                SettingsManager::ERROR_COLOR,              0 },
+	// Progress bars
 	{ ResourceManager::PROGRESS_BACK,              SettingsManager::PROGRESS_BACK_COLOR,      0 },
 	{ ResourceManager::PROGRESS_SEGMENT,           SettingsManager::PROGRESS_SEGMENT_COLOR,   0 },
 	{ ResourceManager::PROGRESS_DOWNLOADED,        SettingsManager::COLOR_DOWNLOADED,         0 },
 	{ ResourceManager::PROGRESS_RUNNING,           SettingsManager::COLOR_RUNNING,            0 },
 	{ ResourceManager::PROGRESS_RUNNING_COMPLETED, SettingsManager::COLOR_RUNNING_COMPLETED,  0 },
+	// Tabs
+	{ ResourceManager::TABS_INACTIVE_BACKGROUND_COLOR,       SettingsManager::TABS_INACTIVE_BACKGROUND_COLOR,       0 },
+	{ ResourceManager::TABS_ACTIVE_BACKGROUND_COLOR,         SettingsManager::TABS_ACTIVE_BACKGROUND_COLOR,         0 },
+	{ ResourceManager::TABS_INACTIVE_TEXT_COLOR,             SettingsManager::TABS_INACTIVE_TEXT_COLOR,             0 },
+	{ ResourceManager::TABS_ACTIVE_TEXT_COLOR,               SettingsManager::TABS_ACTIVE_TEXT_COLOR,               0 },
+	{ ResourceManager::TABS_OFFLINE_BACKGROUND_COLOR,        SettingsManager::TABS_OFFLINE_BACKGROUND_COLOR,        0 },
+	{ ResourceManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, SettingsManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, 0 },
+	{ ResourceManager::TABS_UPDATED_BACKGROUND_COLOR,        SettingsManager::TABS_UPDATED_BACKGROUND_COLOR,        0 },
+	{ ResourceManager::TABS_BORDER_COLOR,                    SettingsManager::TABS_BORDER_COLOR,                    0 },
 #if 0
+	// Not used
 	{ ResourceManager::BAN_COLOR_DLG,              SettingsManager::BAN_COLOR,                0 },
 #endif
+	// File status
 	{ ResourceManager::COLOR_SHARED,               SettingsManager::FILE_SHARED_COLOR,        0 },
 	{ ResourceManager::COLOR_DOWNLOADED,           SettingsManager::FILE_DOWNLOADED_COLOR,    0 },
 	{ ResourceManager::COLOR_CANCELED,             SettingsManager::FILE_CANCELED_COLOR,      0 },

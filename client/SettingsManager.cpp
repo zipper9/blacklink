@@ -551,6 +551,14 @@ static const char* settingTags[] =
 	"FileCanceledColor",
 	"FileFoundColor",
 	"FileQueuedColor",
+	"TabsInactiveBgColor",
+	"TabsActiveBgColor",
+	"TabsInactiveTextColor",
+	"TabsActiveTextColor",
+	"TabsOfflineBgColor",
+	"TabsOfflineActiveBgColor",
+	"TabsUpdatedBgColor",
+	"TabsBorderColor",
 
 	// Assorted UI settings (Ints)
 	"ShowGrid",
@@ -1164,11 +1172,19 @@ void SettingsManager::setDefaults()
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
 	setDefault(BAN_COLOR, RGB(116, 154, 179));
-	setDefault(FILE_SHARED_COLOR, RGB(114,219,139));
-	setDefault(FILE_DOWNLOADED_COLOR, RGB(145,194,196));
-	setDefault(FILE_CANCELED_COLOR, RGB(210,168,211));
-	setDefault(FILE_FOUND_COLOR, RGB(255,255,0));
-	setDefault(FILE_QUEUED_COLOR, RGB(186,0,42));
+	setDefault(FILE_SHARED_COLOR, RGB(114, 219, 139));
+	setDefault(FILE_DOWNLOADED_COLOR, RGB(145, 194, 196));
+	setDefault(FILE_CANCELED_COLOR, RGB(210, 168, 211));
+	setDefault(FILE_FOUND_COLOR, RGB(255, 255, 0));
+	setDefault(FILE_QUEUED_COLOR, RGB(186, 0, 42));
+	setDefault(TABS_INACTIVE_BACKGROUND_COLOR, RGB(220, 220, 220));
+	setDefault(TABS_ACTIVE_BACKGROUND_COLOR, RGB(255, 255, 255));
+	setDefault(TABS_INACTIVE_TEXT_COLOR, RGB(82, 82, 82));
+	setDefault(TABS_ACTIVE_TEXT_COLOR, RGB(0, 0, 0));
+	setDefault(TABS_OFFLINE_BACKGROUND_COLOR, RGB(230, 148, 148));
+	setDefault(TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, RGB(255, 183, 183));
+	setDefault(TABS_UPDATED_BACKGROUND_COLOR, /*RGB(153, 189, 255)*/RGB(126, 209, 254));
+	setDefault(TABS_BORDER_COLOR, RGB(157, 157, 161));
 
 	// Assorted UI settings (Ints)
 	setDefault(SHOW_INFOTIPS, TRUE);

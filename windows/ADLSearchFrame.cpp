@@ -25,6 +25,7 @@
 #include "ADLSearchFrame.h"
 #include "AdlsProperties.h"
 #include "Colors.h"
+#include "Fonts.h"
 #include "ExMessageBox.h"
 #include "HelpTextDlg.h"
 

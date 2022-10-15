@@ -23,6 +23,7 @@
 #include "LineDlg.h"
 #include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
+#include "Fonts.h"
 #include "BarShader.h"
 #include "MainFrm.h"
 #include "ExMessageBox.h"

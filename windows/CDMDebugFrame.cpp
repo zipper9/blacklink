@@ -4,6 +4,7 @@
 
 #include "Resource.h"
 #include "CDMDebugFrame.h"
+#include "Fonts.h"
 #include "../client/File.h"
 #include "../client/DatabaseManager.h"
 

@@ -814,6 +814,7 @@
     <ClCompile Include="windows\FileHashDlg.cpp" />
     <ClCompile Include="windows\FindDuplicatesDlg.cpp" />
     <ClCompile Include="windows\FinishedFrameBase.cpp" />
+    <ClCompile Include="windows\FlatTabCtrl.cpp" />
     <ClCompile Include="windows\FolderTree.cpp" />
     <ClCompile Include="windows\Fonts.cpp" />
     <ClCompile Include="windows\GeneralPage.cpp" />

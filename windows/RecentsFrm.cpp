@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 #include "RecentsFrm.h"
+#include "Fonts.h"
 #include "HubFrame.h"
 #include "LineDlg.h"
 

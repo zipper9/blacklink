@@ -2,6 +2,7 @@
 #define FILE_STATUS_COLORS_H_
 
 #include "../client/SettingsManager.h"
+#include "ColorUtil.h"
 
 struct FileStatusColors
 {

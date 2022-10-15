@@ -22,6 +22,7 @@
 #include "MainFrm.h"
 #include "WinUtil.h"
 #include "Colors.h"
+#include "Fonts.h"
 #include "BarShader.h"
 #include "ImageLists.h"
 #include "ExMessageBox.h"
@@ -174,6 +175,7 @@ SearchFrame::SearchFrame() :
 #endif
 	ctrlFilterContainer(WC_EDIT, this, SEARCH_FILTER_MESSAGE_MAP),
 	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
+	colorText(0), colorBackground(0),
 	initialSize(0), initialMode(SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
 	showUI(true), onlyFree(false), isHash(false), droppedResults(0), resultsCount(0),
 	expandSR(false),
@@ -262,6 +264,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
+
+	colorBackground = Colors::g_tabBackground;
+	colorText = Colors::g_tabText;
 
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
@@ -1754,9 +1759,9 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	        hWnd == ctrlCollapsed.m_hWnd || hWnd == srLabel.m_hWnd ||
 			hWnd == ctrlUDPTestResult.m_hWnd || hWnd == ctrlUDPMode.m_hWnd)
 	{
-		//::SetBkColor(hDC, ::GetSysColor(COLOR_3DFACE));
-		//::SetTextColor(hDC, ::GetSysColor(COLOR_BTNTEXT));
-		return (LRESULT) GetWndClassInfo().m_wc.hbrBackground;
+		SetTextColor(hDC, colorText);
+		SetBkColor(hDC, colorBackground);
+		return reinterpret_cast<LRESULT>(Colors::g_tabBackgroundBrush);
 	}
 	return Colors::setColor(hDC);
 }
@@ -2848,6 +2853,15 @@ void SearchFrame::onUserUpdated(const UserPtr& user) noexcept
 
 void SearchFrame::on(SettingsManagerListener::Repaint)
 {
+	SetClassLongPtr(m_hWnd, GCLP_HBRBACKGROUND, (LONG_PTR) Colors::g_tabBackgroundBrush);
+	bool redraw = false;
+	if (colorBackground != Colors::g_tabBackground || colorText != Colors::g_tabText)
+	{
+		colorBackground = Colors::g_tabBackground;
+		colorText = Colors::g_tabText;
+		redraw = true;
+	}
+
 	FileStatusColors newColors;
 	newColors.get();
 	if (ctrlResults.isRedraw() || !colors.compare(newColors))
@@ -2858,8 +2872,10 @@ void SearchFrame::on(SettingsManagerListener::Repaint)
 		ctrlHubs.SetTextColor(Colors::g_textColor);
 		ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
 		ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
-		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+		redraw = true;
 	}
+	if (redraw)
+		RedrawWindow(nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 void SearchFrame::getSelectedUsers(vector<UserPtr>& v) const

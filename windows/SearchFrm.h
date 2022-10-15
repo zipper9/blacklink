@@ -436,6 +436,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CContainedWindow ctrlFilterSelContainer;
 		tstring filter;
 		
+		COLORREF colorBackground;
+		COLORREF colorText;
 		CStatic searchLabel, sizeLabel, optionLabel, typeLabel, hubsLabel, srLabel;
 		CButton ctrlSlots;
 		bool onlyFree;

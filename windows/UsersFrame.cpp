@@ -25,6 +25,7 @@
 #include "HubFrame.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
+#include "Fonts.h"
 #include "ExMessageBox.h"
 #include "../client/Util.h"
 #include "../client/UserManager.h"

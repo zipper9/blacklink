@@ -32,6 +32,7 @@
 #include "SearchDlg.h"
 #include "FindDuplicatesDlg.h"
 #include "DuplicateFilesDlg.h"
+#include "Fonts.h"
 
 static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;

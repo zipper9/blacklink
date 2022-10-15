@@ -21,6 +21,7 @@
 #include "PublicHubsListDlg.h"
 #include "HubFrame.h"
 #include "WinUtil.h"
+#include "Fonts.h"
 #include "CountryList.h"
 
 const int PublicHubsFrame::columnId[] =

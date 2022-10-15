@@ -20,6 +20,7 @@
 #include "SpyFrame.h"
 #include "SearchFrm.h"
 #include "WinUtil.h"
+#include "Fonts.h"
 #include "../client/Client.h"
 #include "../client/LocationUtil.h"
 #include "../client/Tag16.h"
