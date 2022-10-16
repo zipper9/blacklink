@@ -58,7 +58,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 			PM_CPMI_RECEIVED
 		};
 
-		DECLARE_FRAME_WND_CLASS_EX(_T("PrivateFrame"), IDR_PRIVATE, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 
 		typedef MDITabChildWindowImpl<PrivateFrame> baseClass;
 		typedef UCHandler<PrivateFrame> ucBase;
@@ -187,8 +187,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool created; // TODO: fix me please.
 		typedef boost::unordered_map<UserPtr, PrivateFrame*, User::Hash> FrameMap;
 		static FrameMap frames;
-
-		static HIconWrapper frameIconOn, frameIconOff;
 
 		HintedUser replyTo;
 		tstring replyToRealName;

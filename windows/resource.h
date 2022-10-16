@@ -21,13 +21,7 @@
 #define IDR_PADLOCK_CLOSED              118
 #define IDR_PADLOCK_OPEN                119
 #define IDR_HUB                         129
-#define IDR_HUB_OFF                     130
 #define IDR_PRIVATE                     131
-#define IDR_PRIVATE_OFF                 132
-#define IDR_BANNED_ONLINE               133
-#define IDR_BANNED_OFF                  134
-#define IDR_FILE_LIST                   135
-#define IDR_FILE_LIST_OFFLINE           136
 #define IDR_MAGNET                      138
 #define IDD_ADLS_PROPERTIES             145
 #define IDD_UCPAGE                      146
@@ -79,6 +73,8 @@
 #define IDD_CHECKTARGETDLG              208
 #define IDR_STATE_USERS                 209
 #define IDR_EDITOR_ICONS                210
+#define IDR_HUB_ICONS                   212
+#define IDR_FILELIST_ICONS              216
 #define IDR_OTHER_ICONS                 217
 #define IDR_TOOLBAR_SMALL_HOT           218
 #define IDR_MEDIA_TOOLBAR_SMALL_HOT     219
@@ -101,7 +97,6 @@
 #define IDD_SLOT_PAGE                   266
 #define IDD_ADD_MAGNET                  267
 #define IDD_MESSAGES_CHAT_PAGE          268
-#define IDR_SWITCH_PANELS_ICON          275
 #define IDR_MEDIAFILES                  281
 #define IDD_ABOUTCMDS                   286
 #define IDD_ABOUTTABS                   287
@@ -109,9 +104,6 @@
 #define IDD_SHARE_MISC_PAGE             289
 #define IDD_SEARCH_PAGE                 290
 #define IDD_ABOUTSTAT                   300
-#define IDR_MODE_ACTIVE_ICO             304
-#define IDR_MODE_PASSIVE_ICO            305
-#define IDR_MODE_OFFLINE_ICO            306
 #define IDR_SKULL_ICO                   309
 #define IDR_SKULL_RED_ICO               310
 #define IDR_SKULL2_ICO                  311

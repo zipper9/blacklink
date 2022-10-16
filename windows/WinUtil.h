@@ -88,10 +88,7 @@ class WinUtil
 
 		static CMenu g_mainMenu;
 		static OMenu g_copyHubMenu;
-		
-		static HIconWrapper g_banIconOnline;
-		static HIconWrapper g_banIconOffline;
-		
+
 		static HWND g_mainWnd;
 		static HWND g_mdiClient;
 		static FlatTabCtrl* g_tabCtrl;

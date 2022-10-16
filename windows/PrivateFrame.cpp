@@ -43,9 +43,6 @@ static const int iconSize = 16;
 static const int flagIconWidth = 25;
 static const int iconTextMargin = 2;
 
-HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
-HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
-
 PrivateFrame::FrameMap PrivateFrame::frames;
 
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
@@ -508,8 +505,8 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 LRESULT PrivateFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = frameIconOn;
-	opt->icons[1] = frameIconOff;
+	opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::USER, 0);
+	opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::USER_OFFLINE, 0);
 	opt->isHub = true;
 	return TRUE;
 }
@@ -1235,4 +1232,21 @@ BOOL PrivateFrame::PreTranslateMessage(MSG* pMsg)
 	if (isFindDialogMessage(pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
+}
+
+CFrameWndClassInfo& PrivateFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("PrivateFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::USER, 0);
+
+	return wc;
 }

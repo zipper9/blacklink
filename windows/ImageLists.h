@@ -124,6 +124,18 @@ class GenderImage : public BaseImageList
 		void init();
 };
 
+class HubImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
+class FileListImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 class OtherImage : public BaseImageList
 {
 	public:
@@ -157,6 +169,8 @@ class TransferArrowsImage : public BaseImageList
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern GenderImage g_genderImage;
+extern HubImage g_hubImage;
+extern FileListImage g_fileListImage;
 extern OtherImage g_otherImage;
 extern FavUserImage g_favUserImage;
 extern EditorImage g_editorImage;
@@ -221,7 +235,6 @@ class IconBitmaps
 			ADL_SEARCH,
 			SEARCH_SPY,
 			NETWORK_STATISTICS,
-			FILELIST,
 			SETTINGS,
 			NOTEPAD,
 			SHUTDOWN,
@@ -243,9 +256,21 @@ class IconBitmaps
 			LOGS,
 			COMMANDS,
 			LIMIT,
-			BANNED_USER,
 			WALL,
 			MESSAGES,
+			HUB_ONLINE,
+			HUB_OFFLINE,
+			HUB_MODE_ACTIVE,
+			HUB_MODE_PASSIVE,
+			HUB_MODE_OFFLINE,
+			HUB_SWITCH,
+			FILELIST,
+			FILELIST_OFFLINE,
+			FILELIST_SEARCH,
+			FILELIST_SEARCH_OFFLINE,
+			USER,
+			USER_OFFLINE,
+			BANNED_USER,
 			DOWNLOAD,
 			FAVORITE,
 			INFORMATION,
@@ -288,10 +313,6 @@ class IconBitmaps
 			EDITOR_STRIKE,
 			EDITOR_COLOR,
 			PM,
-			USER,
-			HUB_ONLINE,
-			HUB_OFFLINE,
-			FILELIST_OFFLINE,
 			MAGNET,
 			DCLST,
 			PADLOCK_CLOSED,
@@ -312,7 +333,10 @@ class IconBitmaps
 		{
 			SOURCE_ICON,
 			SOURCE_MAIN,
+			SOURCE_HUB,
+			SOURCE_FILELIST,
 			SOURCE_SETTINGS,
+			SOURCE_FAVUSERS,
 			SOURCE_OTHER,
 			SOURCE_ARROWS,
 			SOURCE_EDITOR

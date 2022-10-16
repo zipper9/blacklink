@@ -72,8 +72,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			void copySettings(const FavoriteHubEntry& entry);
 		};
 
-		DECLARE_FRAME_WND_CLASS_EX(_T("HubFrame"), IDR_HUB, 0, COLOR_3DFACE);
-		
+		static CFrameWndClassInfo& GetWndClassInfo();
+
 		typedef CSplitterImpl<HubFrame> splitBase;
 		typedef MDITabChildWindowImpl<HubFrame> baseClass;
 		typedef UCHandler<HubFrame> ucBase;
@@ -416,18 +416,14 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool swapPanels;
 		CButton ctrlSwitchPanels;
 		CContainedWindow* switchPanelsContainer;
-		static HIconWrapper iconSwitchPanels;
 		CFlyToolTipCtrl tooltip;
 		CButton ctrlShowUsers;
 		CContainedWindow* showUsersContainer;
-		
+
 		OMenu tabMenu;
 		bool  isTabMenuShown;
-		
+
 		CStatic ctrlModeIcon;
-		static HIconWrapper iconModeActive;
-		static HIconWrapper iconModePassive;
-		static HIconWrapper iconModeNone;
 		void updateModeIcon();
 
 		void setSplitterPanes();

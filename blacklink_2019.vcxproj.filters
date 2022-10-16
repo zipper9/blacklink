@@ -1003,85 +1003,22 @@
     <Image Include="res\CloseIcon.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\dclst.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Fav-Users-States.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\Folders.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Magnet.png">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Mediafiles.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\PlayersControl-highlight.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\PlayersControl-mini.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\PlayersControl.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Search-Types.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Settings-icons.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\State.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\Toolbar-highlight.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Toolbar-mini.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Toolbar.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\TransferSpeeds-BW.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\Users.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\File-List-Off.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\File-List.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Hub.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\HubOff.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Magnet.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\PM.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\SwitchPanels.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\User.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\UserBan.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\UserBanOff.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\UserOff.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\StateUsers.png">
@@ -1091,21 +1028,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Gender.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\mode_active.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\mode_offline.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\mode_passive.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\offline.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\online.ico">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\skull.ico">
@@ -1141,27 +1063,47 @@
     <Image Include="res\Editor.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\TransferUser.ico">
+    <Image Include="res\DcLst.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\TransferSpeeds.png">
+    <Image Include="res\MediaToolbar16.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\Transfers.png" />
-    <Image Include="res\DcLst.ico" />
-    <Image Include="res\Other.png" />
-    <Image Include="res\Toolbar24.png" />
-    <Image Include="res\ToolbarHot24.png" />
-    <Image Include="res\Toolbar16.png" />
-    <Image Include="res\ToolbarHot16.png" />
-    <Image Include="res\MediaToolbar24.png" />
-    <Image Include="res\MediaToolbarHot24.png" />
-    <Image Include="res\MediaToolbar16.png" />
-    <Image Include="res\MediaToolbarHot16.png" />
+    <Image Include="res\MediaToolbar24.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MediaToolbarHot16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MediaToolbarHot24.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Other.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Toolbar24.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Toolbar16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\ToolbarHot16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\ToolbarHot24.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Transfers.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="blacklink.rc" />
-    <ResourceCompile Include="version.rc" />
+    <ResourceCompile Include="blacklink.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="version.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\logo.dat">

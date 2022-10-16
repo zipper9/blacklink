@@ -2487,29 +2487,11 @@ END
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\app.ico"
 
-IDR_HUB                 ICON                    "res\\Hub.ico"
-
-IDR_HUB_OFF             ICON                    "res\\HubOff.ico"
-
-IDR_PRIVATE             ICON                    "res\\User.ico"
-
-IDR_PRIVATE_OFF         ICON                    "res\\UserOff.ico"
-
-IDR_BANNED_ONLINE       ICON                    "res\\UserBan.ico"
-
-IDR_BANNED_OFF          ICON                    "res\\UserBanOff.ico"
-
-IDR_FILE_LIST           ICON                    "res\\File-List.ico"
-
-IDR_FILE_LIST_OFFLINE   ICON                    "res\\File-List-Off.ico"
-
 IDR_MAGNET              ICON                    "res\\Magnet.ico"
 
 IDR_DCLST               ICON                    "res\\DcLst.ico"
 
 IDR_TRAY_AND_TASKBAR_PM ICON                    "res\\PM.ico"
-
-IDR_SWITCH_PANELS_ICON  ICON                    "res\\SwitchPanels.ico"
 
 IDR_SKULL_ICO           ICON                    "res\\skull.ico"
 
@@ -2518,12 +2500,6 @@ IDR_SKULL_RED_ICO       ICON                    "res\\skull_red.ico"
 IDR_SKULL2_ICO          ICON                    "res\\skull2.ico"
 
 IDR_SKULL2_RED_ICO      ICON                    "res\\skull2_red.ico"
-
-IDR_MODE_ACTIVE_ICO     ICON                    "res\\mode_active.ico"
-
-IDR_MODE_PASSIVE_ICO    ICON                    "res\\mode_passive.ico"
-
-IDR_MODE_OFFLINE_ICO    ICON                    "res\\mode_offline.ico"
 
 IDR_PADLOCK_CLOSED      ICON                    "res\\padlock_closed.ico"
 
@@ -2551,7 +2527,11 @@ IDR_MEDIA_TOOLBAR_SMALL PNG                     "res\\MediaToolbar16.png"
 
 IDR_MEDIA_TOOLBAR_SMALL_HOT PNG                     "res\\MediaToolbarHot16.png"
 
-IDR_SETTINGS_ICONS      PNG                     "res\\Settings-icons.png"
+IDR_SETTINGS_ICONS      PNG                     "res\\Settings.png"
+
+IDR_HUB_ICONS           PNG                     "res\\Hub.png"
+
+IDR_FILELIST_ICONS      PNG                     "res\\FileList.png"
 
 IDR_OTHER_ICONS         PNG                     "res\\Other.png"
 
@@ -2577,13 +2557,13 @@ IDR_TORRENT_PNG         PNG                     "res\\torrent.png"
 
 IDR_FOLDERS             PNG                     "res\\Folders.png"
 
-IDR_MEDIAFILES          PNG                     "res\\Mediafiles.png"
+IDR_MEDIAFILES          PNG                     "res\\MediaFiles.png"
 
-IDR_SEARCH_TYPES        PNG                     "res\\Search-Types.png"
+IDR_SEARCH_TYPES        PNG                     "res\\SearchTypes.png"
 
 IDR_STATE               PNG                     "res\\State.png"
 
-IDR_FAV_USERS_STATES    PNG                     "res\\Fav-Users-States.png"
+IDR_FAV_USERS_STATES    PNG                     "res\\FavUserStates.png"
 
 IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
 

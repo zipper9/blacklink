@@ -36,11 +36,6 @@ static const int STATUS_PART_PADDING = 12;
 
 HubFrame::FrameMap HubFrame::frames;
 
-HIconWrapper HubFrame::iconSwitchPanels(IDR_SWITCH_PANELS_ICON);
-HIconWrapper HubFrame::iconModeActive(IDR_MODE_ACTIVE_ICO);
-HIconWrapper HubFrame::iconModePassive(IDR_MODE_PASSIVE_ICO);
-HIconWrapper HubFrame::iconModeNone(IDR_MODE_OFFLINE_ICO);
-
 template<>
 string UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::getNick(const OnlineUserPtr& user)
 {
@@ -243,7 +238,7 @@ void HubFrame::createMessagePanel()
 			switchPanelsContainer = new CContainedWindow(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
 			ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
 			ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
-			ctrlSwitchPanels.SetIcon(iconSwitchPanels);
+			ctrlSwitchPanels.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::HUB_SWITCH, 0));
 			switchPanelsContainer->SubclassWindow(ctrlSwitchPanels.m_hWnd);
 			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
 
@@ -1304,31 +1299,31 @@ void HubFrame::updateDisabledChatSettings()
 void HubFrame::updateModeIcon()
 {
 	if (!ctrlModeIcon) return;
+	ResourceManager::Strings stateText;
+	int icon;
 	if (isDHT)
 	{
-		ResourceManager::Strings stateText;
-		HICON hIcon;
 		switch (currentDHTState)
 		{
 			case dht::DHT::STATE_INITIALIZING:
 			case dht::DHT::STATE_BOOTSTRAP:
 				stateText = ResourceManager::DHT_STATE_INITIALIZING;
-				hIcon = iconModePassive;
+				icon = IconBitmaps::HUB_MODE_PASSIVE;
 				break;
 			case dht::DHT::STATE_ACTIVE:
 				stateText = ResourceManager::DHT_STATE_ACTIVE;
-				hIcon = iconModeActive;
+				icon = IconBitmaps::HUB_MODE_ACTIVE;
 				break;
 			case dht::DHT::STATE_FAILED:
 				stateText = ResourceManager::DHT_STATE_FAILED;
-				hIcon = iconModePassive;
+				icon = IconBitmaps::HUB_MODE_PASSIVE;
 				break;
 			default:
 				stateText = ResourceManager::DHT_STATE_DISABLED;
-				hIcon = iconModeNone;
+				icon = IconBitmaps::HUB_MODE_OFFLINE;
 		}
 		const tstring& s = TSTRING_I(stateText);
-		ctrlModeIcon.SetIcon(hIcon);
+		ctrlModeIcon.SetIcon(g_iconBitmaps.getIcon(icon, 0));
 		if (tooltip)
 			tooltip.AddTool(ctrlModeIcon, CTSTRING_F(DHT_STATE_FMT, s));
 		return;
@@ -1337,23 +1332,23 @@ void HubFrame::updateModeIcon()
 	{
 		if (client->isActive())
 		{
-			ctrlModeIcon.SetIcon(iconModeActive);
-			if (tooltip)
-				tooltip.AddTool(ctrlModeIcon, ResourceManager::ACTIVE_NOTICE);
+			stateText = ResourceManager::ACTIVE_NOTICE;
+			icon = IconBitmaps::HUB_MODE_ACTIVE;
 		}
 		else
 		{
-			ctrlModeIcon.SetIcon(iconModePassive);
-			if (tooltip)
-				tooltip.AddTool(ctrlModeIcon, ResourceManager::PASSIVE_NOTICE);
+			stateText = ResourceManager::PASSIVE_NOTICE;
+			icon = IconBitmaps::HUB_MODE_PASSIVE;
 		}
 	}
 	else
 	{
-		ctrlModeIcon.SetIcon(iconModeNone);
-		if (tooltip)
-			tooltip.AddTool(ctrlModeIcon, ResourceManager::UNKNOWN_MODE_NOTICE);
+		stateText = ResourceManager::UNKNOWN_MODE_NOTICE;
+		icon = IconBitmaps::HUB_MODE_OFFLINE;
 	}
+	ctrlModeIcon.SetIcon(g_iconBitmaps.getIcon(icon, 0));
+	if (tooltip)
+		tooltip.AddTool(ctrlModeIcon, stateText);
 }
 
 void HubFrame::storeColumnsInfo()
@@ -2809,4 +2804,21 @@ BOOL HubFrame::PreTranslateMessage(MSG* pMsg)
 	if (isFindDialogMessage(pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
+}
+
+CFrameWndClassInfo& HubFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("HubFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::HUB_ONLINE, 0);
+
+	return wc;
 }

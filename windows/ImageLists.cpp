@@ -14,6 +14,8 @@ GenderImage g_genderImage;
 FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
 VideoImage g_videoImage;
+HubImage g_hubImage;
+FileListImage g_fileListImage;
 OtherImage g_otherImage;
 FavUserImage g_favUserImage;
 EditorImage g_editorImage;
@@ -278,6 +280,16 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 	return -1;
 }
 
+void HubImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_HUB_ICONS, images, 16, 16);
+}
+
+void FileListImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_FILELIST_ICONS, images, 16, 16);
+}
+
 void OtherImage::init()
 {
 	ResourceLoader::LoadImageList(IDR_OTHER_ICONS, images, 16, 16);
@@ -359,94 +371,101 @@ void IconBitmaps::init(int index, int source, int id)
 IconBitmaps::IconBitmaps()
 {
 	memset(data, 0, sizeof(data));
-	init(INTERNET_HUBS,      SOURCE_MAIN,     0);
-	init(RECONNECT,          SOURCE_MAIN,     1);
-	init(FAVORITES,          SOURCE_MAIN,     3);
-	init(FAVORITE_USERS,     SOURCE_MAIN,     4);
-	init(RECENT_HUBS,        SOURCE_MAIN,     5);
-	init(DOWNLOAD_QUEUE,     SOURCE_MAIN,     6);
-	init(FINISHED_DOWNLOADS, SOURCE_MAIN,     7);
-	init(UPLOAD_QUEUE,       SOURCE_MAIN,     8);
-	init(FINISHED_UPLOADS,   SOURCE_MAIN,     9);
-	init(SEARCH,             SOURCE_MAIN,     10);
-	init(ADL_SEARCH,         SOURCE_MAIN,     11);
-	init(SEARCH_SPY,         SOURCE_MAIN,     12);
-	init(NETWORK_STATISTICS, SOURCE_MAIN,     13);
-	init(FILELIST,           SOURCE_MAIN,     14);
-	init(SETTINGS,           SOURCE_MAIN,     15);
-	init(NOTEPAD,            SOURCE_MAIN,     16);
-	init(SHUTDOWN,           SOURCE_MAIN,     18);
-	init(INTERNET,           SOURCE_MAIN,     20);
-	init(DOWNLOADS_DIR,      SOURCE_MAIN,     22);
-	init(REFRESH_SHARE,      SOURCE_MAIN,     23);
-	init(QUICK_CONNECT,      SOURCE_MAIN,     25);
-	init(RESTORE_CONN,       SOURCE_MAIN,     27);
-	init(CDM_DEBUG,          SOURCE_MAIN,     30);
-	init(TTH,                SOURCE_MAIN,     36);
-	init(HASH_PROGRESS,      SOURCE_MAIN,     39);
-	init(HELP,               SOURCE_MAIN,     41);
-	init(DHT,                SOURCE_MAIN,     44);
-	init(ABOUT,              SOURCE_MAIN,     45);
-	init(FAVORITE_DIRS,      SOURCE_SETTINGS, 5);
-	init(PREVIEW,            SOURCE_SETTINGS, 6);
-	init(PRIORITY,           SOURCE_SETTINGS, 8);
-	init(CONTACT_LIST,       SOURCE_SETTINGS, 15);
-	init(LOGS,               SOURCE_SETTINGS, 24);
-	init(COMMANDS,           SOURCE_SETTINGS, 25);
-	init(LIMIT,              SOURCE_SETTINGS, 26);
-	init(BANNED_USER,        SOURCE_SETTINGS, 27);
-	init(WALL,               SOURCE_SETTINGS, 32);
-	init(MESSAGES,           SOURCE_SETTINGS, 39);
-	init(DOWNLOAD,           SOURCE_ARROWS,   0);
-	init(FAVORITE,           SOURCE_OTHER,    0);
-	init(INFORMATION,        SOURCE_OTHER,    1);
-	init(QUESTION,           SOURCE_OTHER,    2);
-	init(EXCLAMATION,        SOURCE_OTHER,    3);
-	init(WARNING,            SOURCE_OTHER,    4);
-	init(STATUS_SUCCESS,     SOURCE_OTHER,    5);
-	init(STATUS_FAILURE,     SOURCE_OTHER,    6);
-	init(STATUS_PAUSE,       SOURCE_OTHER,    7);
-	init(STATUS_ONLINE,      SOURCE_OTHER,    8);
-	init(STATUS_OFFLINE,     SOURCE_OTHER,    9);
-	init(MOVE_UP,            SOURCE_OTHER,    10);
-	init(MOVE_DOWN,          SOURCE_OTHER,    11);
-	init(ADD,                SOURCE_OTHER,    12);
-	init(REMOVE,             SOURCE_OTHER,    13);
-	init(PROPERTIES,         SOURCE_OTHER,    14);
-	init(COPY_TO_CLIPBOARD,  SOURCE_OTHER,    15);
-	init(ADD_HUB,            SOURCE_OTHER,    16);
-	init(REMOVE_HUB,         SOURCE_OTHER,    17);
-	init(GOTO_HUB,           SOURCE_OTHER,    18);
-	init(ADD_USER,           SOURCE_OTHER,    19);
-	init(REMOVE_USER,        SOURCE_OTHER,    20);
-	init(GOTO_USER,          SOURCE_OTHER,    21);
-	init(CHAT_PROHIBIT,      SOURCE_OTHER,    22);
-	init(CHAT_ALLOW,         SOURCE_OTHER,    23);
-	init(DISCONNECT,         SOURCE_OTHER,    24);
-	init(MOVE,               SOURCE_OTHER,    25);
-	init(RENAME,             SOURCE_OTHER,    26);
-	init(SELECTION,          SOURCE_OTHER,    27);
-	init(ERASE,              SOURCE_OTHER,    28);
-	init(PAUSE,              SOURCE_OTHER,    29);
-	init(CLEAR,              SOURCE_OTHER,    30);
-	init(EDITOR_SEND,        SOURCE_EDITOR,   0);
-	init(EDITOR_MULTILINE,   SOURCE_EDITOR,   1);
-	init(EDITOR_EMOTICON,    SOURCE_EDITOR,   2);
-	init(EDITOR_TRANSCODE,   SOURCE_EDITOR,   3);
-	init(EDITOR_BOLD,        SOURCE_EDITOR,   4);
-	init(EDITOR_ITALIC,      SOURCE_EDITOR,   5);
-	init(EDITOR_UNDERLINE,   SOURCE_EDITOR,   6);
-	init(EDITOR_STRIKE,      SOURCE_EDITOR,   7);
-	init(EDITOR_COLOR,       SOURCE_EDITOR,   8);
-	init(PM,                 SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
-	init(USER,               SOURCE_ICON,     IDR_PRIVATE);
-	init(HUB_ONLINE,         SOURCE_ICON,     IDR_HUB);
-	init(HUB_OFFLINE,        SOURCE_ICON,     IDR_HUB_OFF);
-	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
-	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
-	init(DCLST,              SOURCE_ICON,     IDR_DCLST);
-	init(PADLOCK_CLOSED,     SOURCE_ICON,     IDR_PADLOCK_CLOSED);
-	init(PADLOCK_OPEN,       SOURCE_ICON,     IDR_PADLOCK_OPEN);
+	init(INTERNET_HUBS,           SOURCE_MAIN,     0);
+	init(RECONNECT,               SOURCE_MAIN,     1);
+	init(FAVORITES,               SOURCE_MAIN,     3);
+	init(FAVORITE_USERS,          SOURCE_MAIN,     4);
+	init(RECENT_HUBS,             SOURCE_MAIN,     5);
+	init(DOWNLOAD_QUEUE,          SOURCE_MAIN,     6);
+	init(FINISHED_DOWNLOADS,      SOURCE_MAIN,     7);
+	init(UPLOAD_QUEUE,            SOURCE_MAIN,     8);
+	init(FINISHED_UPLOADS,        SOURCE_MAIN,     9);
+	init(SEARCH,                  SOURCE_MAIN,     10);
+	init(ADL_SEARCH,              SOURCE_MAIN,     11);
+	init(SEARCH_SPY,              SOURCE_MAIN,     12);
+	init(NETWORK_STATISTICS,      SOURCE_MAIN,     13);
+	init(SETTINGS,                SOURCE_MAIN,     15);
+	init(NOTEPAD,                 SOURCE_MAIN,     16);
+	init(SHUTDOWN,                SOURCE_MAIN,     18);
+	init(INTERNET,                SOURCE_MAIN,     20);
+	init(DOWNLOADS_DIR,           SOURCE_MAIN,     22);
+	init(REFRESH_SHARE,           SOURCE_MAIN,     23);
+	init(QUICK_CONNECT,           SOURCE_MAIN,     25);
+	init(RESTORE_CONN,            SOURCE_MAIN,     27);
+	init(CDM_DEBUG,               SOURCE_MAIN,     30);
+	init(TTH,                     SOURCE_MAIN,     36);
+	init(HASH_PROGRESS,           SOURCE_MAIN,     39);
+	init(HELP,                    SOURCE_MAIN,     41);
+	init(DHT,                     SOURCE_MAIN,     44);
+	init(ABOUT,                   SOURCE_MAIN,     45);
+	init(FAVORITE_DIRS,           SOURCE_SETTINGS, 5);
+	init(PREVIEW,                 SOURCE_SETTINGS, 6);
+	init(PRIORITY,                SOURCE_SETTINGS, 8);
+	init(CONTACT_LIST,            SOURCE_SETTINGS, 15);
+	init(LOGS,                    SOURCE_SETTINGS, 24);
+	init(COMMANDS,                SOURCE_SETTINGS, 25);
+	init(LIMIT,                   SOURCE_SETTINGS, 26);
+	init(WALL,                    SOURCE_SETTINGS, 32);
+	init(MESSAGES,                SOURCE_SETTINGS, 39);
+	init(HUB_ONLINE,              SOURCE_HUB,      0);
+	init(HUB_OFFLINE,             SOURCE_HUB,      1);
+	init(HUB_MODE_ACTIVE,         SOURCE_HUB,      2);
+	init(HUB_MODE_PASSIVE,        SOURCE_HUB,      3);
+	init(HUB_MODE_OFFLINE,        SOURCE_HUB,      4);
+	init(HUB_SWITCH,              SOURCE_HUB,      5);
+	init(FILELIST,                SOURCE_FILELIST, 0);
+	init(FILELIST_OFFLINE,        SOURCE_FILELIST, 1);
+	init(FILELIST_SEARCH,         SOURCE_FILELIST, 2);
+	init(FILELIST_SEARCH_OFFLINE, SOURCE_FILELIST, 3);
+	init(USER,                    SOURCE_FAVUSERS, 0);
+	init(USER_OFFLINE,            SOURCE_FAVUSERS, 2);
+	init(BANNED_USER,             SOURCE_FAVUSERS, 3);
+	init(DOWNLOAD,                SOURCE_ARROWS,   0);
+	init(FAVORITE,                SOURCE_OTHER,    0);
+	init(INFORMATION,             SOURCE_OTHER,    1);
+	init(QUESTION,                SOURCE_OTHER,    2);
+	init(EXCLAMATION,             SOURCE_OTHER,    3);
+	init(WARNING,                 SOURCE_OTHER,    4);
+	init(STATUS_SUCCESS,          SOURCE_OTHER,    5);
+	init(STATUS_FAILURE,          SOURCE_OTHER,    6);
+	init(STATUS_PAUSE,            SOURCE_OTHER,    7);
+	init(STATUS_ONLINE,           SOURCE_OTHER,    8);
+	init(STATUS_OFFLINE,          SOURCE_OTHER,    9);
+	init(MOVE_UP,                 SOURCE_OTHER,    10);
+	init(MOVE_DOWN,               SOURCE_OTHER,    11);
+	init(ADD,                     SOURCE_OTHER,    12);
+	init(REMOVE,                  SOURCE_OTHER,    13);
+	init(PROPERTIES,              SOURCE_OTHER,    14);
+	init(COPY_TO_CLIPBOARD,       SOURCE_OTHER,    15);
+	init(ADD_HUB,                 SOURCE_OTHER,    16);
+	init(REMOVE_HUB,              SOURCE_OTHER,    17);
+	init(GOTO_HUB,                SOURCE_OTHER,    18);
+	init(ADD_USER,                SOURCE_OTHER,    19);
+	init(REMOVE_USER,             SOURCE_OTHER,    20);
+	init(GOTO_USER,               SOURCE_OTHER,    21);
+	init(CHAT_PROHIBIT,           SOURCE_OTHER,    22);
+	init(CHAT_ALLOW,              SOURCE_OTHER,    23);
+	init(DISCONNECT,              SOURCE_OTHER,    24);
+	init(MOVE,                    SOURCE_OTHER,    25);
+	init(RENAME,                  SOURCE_OTHER,    26);
+	init(SELECTION,               SOURCE_OTHER,    27);
+	init(ERASE,                   SOURCE_OTHER,    28);
+	init(PAUSE,                   SOURCE_OTHER,    29);
+	init(CLEAR,                   SOURCE_OTHER,    30);
+	init(EDITOR_SEND,             SOURCE_EDITOR,   0);
+	init(EDITOR_MULTILINE,        SOURCE_EDITOR,   1);
+	init(EDITOR_EMOTICON,         SOURCE_EDITOR,   2);
+	init(EDITOR_TRANSCODE,        SOURCE_EDITOR,   3);
+	init(EDITOR_BOLD,             SOURCE_EDITOR,   4);
+	init(EDITOR_ITALIC,           SOURCE_EDITOR,   5);
+	init(EDITOR_UNDERLINE,        SOURCE_EDITOR,   6);
+	init(EDITOR_STRIKE,           SOURCE_EDITOR,   7);
+	init(EDITOR_COLOR,            SOURCE_EDITOR,   8);
+	init(PM,                      SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
+	init(MAGNET,                  SOURCE_ICON,     IDR_MAGNET);
+	init(DCLST,                   SOURCE_ICON,     IDR_DCLST);
+	init(PADLOCK_CLOSED,          SOURCE_ICON,     IDR_PADLOCK_CLOSED);
+	init(PADLOCK_OPEN,            SOURCE_ICON,     IDR_PADLOCK_OPEN);
 }
 
 bool IconBitmaps::loadIcon(int index, int size)
@@ -465,8 +484,14 @@ HIMAGELIST IconBitmaps::getImageList(MainFrame* mainFrame, int type, int size)
 	{
 		case SOURCE_MAIN:
 			return size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
+		case SOURCE_HUB:
+			return g_hubImage.getIconList();
+		case SOURCE_FILELIST:
+			return g_fileListImage.getIconList();
 		case SOURCE_SETTINGS:
 			return mainFrame->getSettingsImages();
+		case SOURCE_FAVUSERS:
+			return g_favUserImage.getIconList();
 		case SOURCE_OTHER:
 			return g_otherImage.getIconList();
 		case SOURCE_ARROWS:

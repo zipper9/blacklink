@@ -69,11 +69,7 @@ const WinUtil::FileMaskItem WinUtil::allFilesMask[] =
 uint64_t WinUtil::nextFrameId = 0;
 
 CMenu WinUtil::g_mainMenu;
-
 OMenu WinUtil::g_copyHubMenu;
-
-HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE);
-HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF);
 
 TStringList LastDir::dirs;
 HWND WinUtil::g_mainWnd = nullptr;
@@ -295,6 +291,8 @@ void WinUtil::init(HWND hWnd)
 	g_userImage.init();
 	g_userStateImage.init();
 	g_genderImage.init();
+	g_hubImage.init();
+	g_fileListImage.init();
 	g_otherImage.init();
 	g_favUserImage.init();
 	g_editorImage.init();
@@ -336,6 +334,8 @@ void WinUtil::uninit()
 	g_userImage.uninit();
 	g_userStateImage.uninit();
 	g_genderImage.uninit();
+	g_hubImage.uninit();
+	g_fileListImage.uninit();
 	g_otherImage.uninit();
 	g_favUserImage.uninit();
 	g_editorImage.uninit();
