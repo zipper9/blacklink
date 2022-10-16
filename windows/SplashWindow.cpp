@@ -188,6 +188,19 @@ static void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height
 
 static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
+	unsigned c1 = (color>>16) & 0xFF;
+	unsigned c2 = (color>>8) & 0xFF;
+	unsigned c3 = color & 0xFF;
+	while (count)
+	{
+		uint32_t x = *data;
+		uint8_t m = *mask++;
+		unsigned d1 = (c1*m + (255-m)*((x>>16) & 0xFF))/255;
+		unsigned d2 = (c2*m + (255-m)*((x>>8) & 0xFF))/255;
+		unsigned d3 = (c3*m + (255-m)*(x & 0xFF))/255;
+		*data++ = d1<<16 | d2<<8 | d3;
+		count--;
+	}
 }
 
 static inline bool useEffect() { return false; }
