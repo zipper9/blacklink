@@ -6,6 +6,17 @@
 
 static const int FRAMES = 40;
 static const int FRAME_TIME = 40;
+static const int EFFECT_DELAY_TIME = 5000;
+
+static const uint8_t f1[10] = { 9, 8, 9, 0, 5, 0, 9, 8, 9 };
+static const uint8_t f2[10] = { 9, 8, 9, 0, 0, 0, 2, 5, 2 };
+static const uint8_t f3[10] = { 7, 1, 5, 4, 0, 4, 5, 1, 7 };
+
+static const int FILTER_COUNT = 3;
+static const uint8_t* filters[FILTER_COUNT] = { f1, f2, f3 };
+
+static const uint32_t SHADE_COLOR = 0xFFFFB4FF;
+static const uint32_t LOGO_COLOR  = 0xFF000000;
 
 #ifdef _M_X64
 #include <immintrin.h>
@@ -70,7 +81,7 @@ static void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height
 	}
 }
 
-static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+static void blendOpaque(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
 	__m128i zero = _mm_setzero_si128();
 	__m128i c = _mm_unpacklo_epi8(_mm_set1_epi32(color), zero);
@@ -86,6 +97,38 @@ static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned 
 		v1 = _mm_add_epi16(v1, v2);
 		__m128i v3 = _mm_srli_epi16(_mm_mulhi_epu16(v1, m), 7);
 		__m128i res = _mm_packus_epi16(v3, v3);
+		_mm_storeu_si32(data, res);
+		data++;
+		mask++;
+		count--;
+	}
+}
+
+static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+{
+	unsigned c0 = color>>24;
+	if (c0 == 255)
+	{
+		blendOpaque(data, mask, color, count);
+		return;
+	}
+	__m128i zero = _mm_setzero_si128();
+	__m128i c = _mm_unpacklo_epi8(_mm_set1_epi32(color), zero);
+	__m128i d = _mm_set1_epi16(255);
+	__m128i q = _mm_set1_epi16(c0);
+	__m128i m = _mm_set1_epi16((short)(unsigned short)0x8081);
+	while (count)
+	{
+		__m128i x = _mm_loadu_si32(data);
+		x = _mm_unpacklo_epi8(x, zero);
+		__m128i w = _mm_set1_epi16(*mask);
+		__m128i v1 = _mm_mullo_epi16(q, w);
+		__m128i v2 = _mm_srli_epi16(_mm_mulhi_epu16(v1, m), 7);
+		__m128i v3 = _mm_mullo_epi16(c, v2);
+		__m128i v4 = _mm_mullo_epi16(x, _mm_sub_epi16(d, v2));
+		v3 = _mm_add_epi16(v3, v4);
+		__m128i v5 = _mm_srli_epi16(_mm_mulhi_epu16(v3, m), 7);
+		__m128i res = _mm_packus_epi16(v5, v5);
 		_mm_storeu_si32(data, res);
 		data++;
 		mask++;
@@ -152,7 +195,7 @@ static void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height
 	_m_empty();
 }
 
-static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+static void blendOpaque(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
 	__m64 c = _m_punpcklbw(_m_from_int(color), _mm_setzero_si64());
 	__m64 d = _mm_set1_pi16(255);
@@ -175,6 +218,38 @@ static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned 
 	_m_empty();
 }
 
+static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+{
+	unsigned c0 = color>>24;
+	if (c0 == 255)
+	{
+		blendOpaque(data, mask, color, count);
+		return;
+	}
+	__m64 c = _m_punpcklbw(_m_from_int(color), _mm_setzero_si64());
+	__m64 d = _mm_set1_pi16(255);
+	__m64 q = _mm_set1_pi16(c0);
+	__m64 m = _mm_set1_pi16((short)(unsigned short) 0x8081);
+	while (count)
+	{
+		__m64 x = _m_from_int(*data);
+		x = _m_punpcklbw(x, _mm_setzero_si64());
+		__m64 w = _mm_set1_pi16(*mask);
+		__m64 v1 = _m_pmullw(q, w);
+		__m64 v2 = _m_psrlwi(_m_pmulhuw(v1, m), 7);
+		__m64 v3 = _m_pmullw(c, v2);
+		__m64 v4 = _m_pmullw(x, _m_psubw(d, v2));
+		v3 = _m_paddw(v3, v4);
+		__m64 v5 = _m_psrlwi(_m_pmulhuw(v3, m), 7);
+		__m64 res = _m_packuswb(v5, v5);
+		*data = _m_to_int(res);
+		data++;
+		mask++;
+		count--;
+	}
+	_m_empty();
+}
+
 static inline bool useEffect()
 {
 	int info[4];
@@ -186,7 +261,7 @@ static void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height
 {
 }
 
-static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+static void blendOpaque(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
 	unsigned c1 = (color>>16) & 0xFF;
 	unsigned c2 = (color>>8) & 0xFF;
@@ -203,22 +278,32 @@ static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned 
 	}
 }
 
-static inline bool useEffect() { return false; }
-#endif
-
-static uint32_t interpolateColor(uint32_t c1, uint32_t c2, double frac)
+static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
-	uint32_t r1 = (c1 >> 16) & 0xFF;
-	uint32_t g1 = (c1 >> 8) & 0xFF;
-	uint32_t b1 = c1 & 0xFF;
-	uint32_t r2 = (c2 >> 16) & 0xFF;
-	uint32_t g2 = (c2 >> 8) & 0xFF;
-	uint32_t b2 = c2 & 0xFF;
-	uint32_t r = (uint32_t) (r1*frac + r2*(1-frac));
-	uint32_t g = (uint32_t) (g1*frac + g2*(1-frac));
-	uint32_t b = (uint32_t) (b1*frac + b2*(1-frac));
-	return r << 16 | g << 8 | b;
+	unsigned c0 = color>>24;
+	if (c0 == 255)
+	{
+		blendOpaque(data, mask, color, count);
+		return;
+	}
+
+	unsigned c1 = (color>>16) & 0xFF;
+	unsigned c2 = (color>>8) & 0xFF;
+	unsigned c3 = color & 0xFF;
+	while (count)
+	{
+		uint32_t x = *data;
+		uint8_t m = ((*mask++)*c0)/255;
+		unsigned d1 = (c1*m + (255-m)*((x>>16) & 0xFF))/255;
+		unsigned d2 = (c2*m + (255-m)*((x>>8) & 0xFF))/255;
+		unsigned d3 = (c3*m + (255-m)*(x & 0xFF))/255;
+		*data++ = d1<<16 | d2<<8 | d3;
+		count--;
+	}
 }
+
+static inline bool useEffect() { return true; }
+#endif
 
 SplashWindow::SplashWindow()
 {
@@ -283,7 +368,7 @@ LRESULT SplashWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 		useDialogBackground = false;
 
 	frameIndex = filterIndex = maskIndex = 0;
-	if (useEffect) SetTimer(2, 5000);
+	if (useEffect) SetTimer(2, EFFECT_DELAY_TIME);
 	return 0;
 }
 
@@ -322,7 +407,7 @@ LRESULT SplashWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		uint32_t* destBuf = static_cast<uint32_t*>(dibBuf[0]);
 		if (!(useDialogBackground && SUCCEEDED(DrawThemeParentBackground(m_hWnd, memDC, nullptr))))
 			memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
-		blend(destBuf, maskBuf[useEffect ? 2 : 0], 0, WIDTH * HEIGHT);
+		blend(destBuf, maskBuf[useEffect ? 2 : 0], LOGO_COLOR, WIDTH * HEIGHT);
 		if (hasBorder) drawBorder(destBuf);
 	}
 	SelectObject(memDC, dibSect[frameIndex == 0 ? 0 : 1]);
@@ -353,8 +438,8 @@ LRESULT SplashWindow::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 		{
 			frameIndex = 0;
 			KillTimer(1);
-			SetTimer(2, 5000);
-			filterIndex ^= 1;
+			SetTimer(2, EFFECT_DELAY_TIME);
+			filterIndex = (filterIndex + 1) % FILTER_COUNT;
 		}
 		else
 			drawNextFrame();
@@ -368,10 +453,6 @@ LRESULT SplashWindow::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	return 0;
 }
 
-static const uint8_t filter1[10] = { 9, 8, 9, 0, 5, 0, 9, 8, 9 };
-static const uint8_t filter2[10] = { 9, 8, 9, 0, 0, 0, 2, 5, 2 };
-static const uint32_t SHADE_COLOR = 0xFFB4FF;
-
 void SplashWindow::drawNextFrame()
 {
 	bool whiteBackground = true;
@@ -383,25 +464,25 @@ void SplashWindow::drawNextFrame()
 	uint32_t* destBuf = static_cast<uint32_t*>(dibBuf[1]);
 	uint8_t* destMask = maskBuf[maskIndex ^ 1];
 	const uint8_t* srcMask = frameIndex == 1 ? maskBuf[2] : maskBuf[maskIndex];
-	const uint8_t* filter = filterIndex == 0 ? filter1 : filter2;
+	const uint8_t* filter = filters[filterIndex];
 	applyFilter(srcMask, destMask, WIDTH, HEIGHT, filter);
 	maskIndex ^= 1;
 	uint32_t shadeColor;
 	if (frameIndex <= 12)
 	{
-		double frac = 1.0 - (double) frameIndex / 12;
-		shadeColor = interpolateColor(0, SHADE_COLOR, frac);
+		unsigned alpha = (unsigned) (255 * ((double) frameIndex / 12));
+		shadeColor = (SHADE_COLOR & 0xFFFFFF) | alpha<<24;
 	}
 	else if (frameIndex >= 24)
 	{
-		double frac = ((double) (frameIndex - 24)) / (FRAMES - 24);
-		shadeColor = interpolateColor(0xFFFFFF, SHADE_COLOR, frac);
+		unsigned alpha = (unsigned) (255 * (1.0 - ((double) (frameIndex - 24)) / (FRAMES - 24)));
+		shadeColor = (SHADE_COLOR & 0xFFFFFF) | alpha<<24;
 	}
 	else
 		shadeColor = SHADE_COLOR;
 	if (whiteBackground) memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
 	blend(destBuf, destMask, shadeColor, WIDTH * HEIGHT);
-	blend(destBuf, maskBuf[2], 0, WIDTH * HEIGHT);
+	blend(destBuf, maskBuf[2], LOGO_COLOR, WIDTH * HEIGHT);
 	if (hasBorder) drawBorder(destBuf);
 }
 
