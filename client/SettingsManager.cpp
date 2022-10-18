@@ -329,8 +329,13 @@ static const char* settingTags[] =
 	"SaveTthInNtfsFilestream",
 	"SetMinLengthTthInNtfsFilestream",
 	"FastHash",
+
+	// File lists
 	"EnableHitFileList",
 	"FileListUseTS",
+	"FileListShowShared",
+	"FileListShowDownloaded",
+	"FileListShowCanceled",
 
 	// Downloads & Queue
 	"DownloadSlots", 
@@ -1019,8 +1024,13 @@ void SettingsManager::setDefaults()
 	setDefault(SAVE_TTH_IN_NTFS_FILESTREAM, TRUE);
 	setDefault(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, 16);
 	setDefault(FAST_HASH, TRUE);
+
+	// File lists
 	setDefault(FILELIST_INCLUDE_HIT, TRUE);
 	setDefault(FILELIST_INCLUDE_TIMESTAMP, TRUE);
+	setDefault(FILELIST_SHOW_SHARED, TRUE);
+	setDefault(FILELIST_SHOW_DOWNLOADED, TRUE);
+	setDefault(FILELIST_SHOW_CANCELED, TRUE);
 
 	// Downloads & Queue
 	setDefault(EXTRA_DOWNLOAD_SLOTS, 3);

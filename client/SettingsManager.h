@@ -303,8 +303,13 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SAVE_TTH_IN_NTFS_FILESTREAM,
 			SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM,
 			FAST_HASH,
+
+			// File lists
 			FILELIST_INCLUDE_HIT,
 			FILELIST_INCLUDE_TIMESTAMP,
+			FILELIST_SHOW_SHARED,
+			FILELIST_SHOW_DOWNLOADED,
+			FILELIST_SHOW_CANCELED,
 
 			// Downloads & Queue
 			DOWNLOAD_SLOTS,

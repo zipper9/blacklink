@@ -75,7 +75,7 @@ static bool checkFormat(const char *s, const char *fmt)
 
 DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag, bool createRoot, const DirectoryListing* src) :
 	abortFlag(abortFlag),
-	includeSelf(false), incomplete(false), aborted(false)
+	includeSelf(false), incomplete(false), aborted(false), scanOptions(0)
 {
 	root = createRoot ? new Directory(nullptr, Util::emptyString, true) : nullptr;
 	tthSet = createRoot ? nullptr : new TTHMap;
@@ -179,12 +179,19 @@ class ListLoader : public SimpleXMLReader::CallBack
 {
 	public:
 		ListLoader(DirectoryListing* list, InputStream &is, DirectoryListing::Directory* root,
-		           const UserPtr& user, bool ownList)
+		           const UserPtr& user, bool ownList, int scanOptions)
 			: list(list), current(root), inListing(false), ownList(ownList),
 			  emptyFileNameCounter(0), progressNotif(nullptr), stream(is), filesProcessed(0)
 		{
 			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
 			list->basePath = "/";
+			scanFlags = 0;
+			if (scanOptions & DirectoryListing::SCAN_OPTION_SHARED)
+				scanFlags |= DatabaseManager::FLAG_SHARED;
+			if (scanOptions & DirectoryListing::SCAN_OPTION_DOWNLOADED)
+				scanFlags |= DatabaseManager::FLAG_DOWNLOADED;
+			if (scanOptions & DirectoryListing::SCAN_OPTION_CANCELED)
+				scanFlags |= DatabaseManager::FLAG_DOWNLOAD_CANCELED;
 			hashDb = DatabaseManager::getInstance()->getHashDatabaseConnection();
 		}
 		
@@ -219,6 +226,7 @@ class ListLoader : public SimpleXMLReader::CallBack
 		bool inListing;
 		bool ownList;
 		unsigned emptyFileNameCounter;
+		unsigned scanFlags;
 
 		uint64_t nextProgressReport;
 		DirectoryListing::ProgressNotif *progressNotif;
@@ -240,7 +248,7 @@ void DirectoryListing::loadXML(const string& xml, DirectoryListing::ProgressNoti
 
 void DirectoryListing::loadXML(InputStream& is, DirectoryListing::ProgressNotif *progressNotif, bool ownList)
 {
-	ListLoader ll(this, is, getRoot(), getUser(), ownList);
+	ListLoader ll(this, is, getRoot(), getUser(), ownList, scanOptions);
 	ll.setProgressNotif(progressNotif);
 	SimpleXMLReader(&ll).parse(is);
 	this->ownList = ownList;
@@ -412,17 +420,20 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);
 				}
 				string path;
-				if (ShareManager::getInstance()->getFileInfo(f->getTTH(), path))
+				if ((scanFlags & DatabaseManager::FLAG_SHARED) && ShareManager::getInstance()->getFileInfo(f->getTTH(), path))
 				{
 					f->setFlag(DirectoryListing::FLAG_SHARED);
 					f->setPath(path);
 					current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
 				}
-				else
+				else if (scanFlags & (DatabaseManager::FLAG_DOWNLOADED | DatabaseManager::FLAG_DOWNLOAD_CANCELED))
 				{
 					unsigned flags;
 					if (hashDb && !f->getTTH().isZero())
+					{
 						hashDb->getFileInfo(f->getTTH().data, flags, &path, nullptr);
+						flags &= scanFlags;
+					}
 					else
 						flags = 0;
 					if (flags & DatabaseManager::FLAG_SHARED)
@@ -443,6 +454,8 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 						current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
 					} else current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
 				}
+				else
+					current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
 			}
 
 			fileProcessed();

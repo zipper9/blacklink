@@ -28,11 +28,6 @@ static const WinUtil::TextItem texts[] =
 	{ IDC_SETTINGS_LOG_DIR,                     ResourceManager::DIRECTORY                 },
 	{ IDC_SETTINGS_FORMAT,                      ResourceManager::SETTINGS_FORMAT           },
 	{ IDC_WRITE_LOGS,                           ResourceManager::SETTINGS_LOGS             },
-	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS_L,      ResourceManager::MAX_FINISHED_UPLOADS      },
-	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS_L,    ResourceManager::MAX_FINISHED_DOWNLOADS    },
-	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS_L,   ResourceManager::DB_LOG_FINISHED_UPLOADS   },
-	{ IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS_L, ResourceManager::DB_LOG_FINISHED_DOWNLOADS },
-	{ IDC_CAPTION_KEEP_LISTS,                   ResourceManager::SETTINGS_KEEP_LISTS_DAYS  },
 	{ IDC_SETTINGS_FILE_NAME,                   ResourceManager::SETTINGS_FILE_NAME        },
 	{ 0,                                        ResourceManager::Strings()                 }
 };
@@ -40,11 +35,6 @@ static const WinUtil::TextItem texts[] =
 static const PropPage::Item items[] =
 {
 	{ IDC_LOG_DIRECTORY,                      SettingsManager::LOG_DIRECTORY,             PropPage::T_STR },
-	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS,      SettingsManager::MAX_FINISHED_UPLOADS,      PropPage::T_INT },
-	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS,    SettingsManager::MAX_FINISHED_DOWNLOADS,    PropPage::T_INT },
-	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS,   SettingsManager::DB_LOG_FINISHED_UPLOADS,   PropPage::T_INT },
-	{ IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS, SettingsManager::DB_LOG_FINISHED_DOWNLOADS, PropPage::T_INT },
-	{ IDC_SETTINGS_KEEP_LISTS,                SettingsManager::KEEP_LISTS_DAYS,           PropPage::T_INT },
 	{ 0,                                      0,                                          PropPage::T_END }
 };
 

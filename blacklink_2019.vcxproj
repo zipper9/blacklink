@@ -787,6 +787,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="windows\CustomDrawHelpers.cpp" />
+    <ClCompile Include="windows\DatabasePage.cpp" />
     <ClCompile Include="windows\DclstGenDlg.cpp" />
     <ClCompile Include="windows\DCLSTPage.cpp" />
     <ClCompile Include="windows\DefaultClickPage.cpp" />
@@ -812,6 +813,7 @@
     <ClCompile Include="windows\FavoritesFrm.cpp" />
     <ClCompile Include="windows\FavUserDlg.cpp" />
     <ClCompile Include="windows\FileHashDlg.cpp" />
+    <ClCompile Include="windows\FileListPage.cpp" />
     <ClCompile Include="windows\FindDuplicatesDlg.cpp" />
     <ClCompile Include="windows\FinishedFrameBase.cpp" />
     <ClCompile Include="windows\FlatTabCtrl.cpp" />
@@ -962,6 +964,7 @@
     <ClInclude Include="windows\CompiledDateTime.h" />
     <ClInclude Include="windows\CountryList.h" />
     <ClInclude Include="windows\CustomDrawHelpers.h" />
+    <ClInclude Include="windows\DatabasePage.h" />
     <ClInclude Include="windows\DclstGenDlg.h" />
     <ClInclude Include="windows\DCLSTPage.h" />
     <ClInclude Include="windows\DefaultClickPage.h" />
@@ -982,6 +985,7 @@
     <ClInclude Include="windows\FavoritesFrm.h" />
     <ClInclude Include="windows\FavUserDlg.h" />
     <ClInclude Include="windows\FileHashDlg.h" />
+    <ClInclude Include="windows\FileListPage.h" />
     <ClInclude Include="windows\FileStatusColors.h" />
     <ClInclude Include="windows\FindDuplicatesDlg.h" />
     <ClInclude Include="windows\FinishedDLFrame.h" />
@@ -1129,7 +1133,10 @@
     <Image Include="res\app.ico" />
     <Image Include="res\DcLst.ico" />
     <Image Include="res\Editor.png" />
+    <Image Include="res\FavUserStates.png" />
+    <Image Include="res\FileList.png" />
     <Image Include="res\Gender.png" />
+    <Image Include="res\Hub.png" />
     <Image Include="res\MediaToolbar16.png" />
     <Image Include="res\MediaToolbar24.png" />
     <Image Include="res\MediaToolbarHot16.png" />
@@ -1137,6 +1144,8 @@
     <Image Include="res\Other.png" />
     <Image Include="res\padlock_closed.ico" />
     <Image Include="res\padlock_open.ico" />
+    <Image Include="res\SearchTypes.png" />
+    <Image Include="res\Settings.png" />
     <Image Include="res\skull.ico" />
     <Image Include="res\skull2.ico" />
     <Image Include="res\skull2_red.ico" />

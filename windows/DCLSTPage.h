@@ -46,7 +46,7 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
-		int getPageIcon() const { return PROP_PAGE_ICON_FOLDERS; }
+		int getPageIcon() const { return PROP_PAGE_ICON_DCLST; }
 		void write();
 		void fixControls();
 		

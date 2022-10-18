@@ -26,8 +26,6 @@
 #include <atomic>
 #include <regex>
 
-class ListLoader;
-class DirectoryListingFrame;
 STANDARD_EXCEPTION(AbortException);
 
 class DirectoryListing : public UserInfoBase
@@ -59,7 +57,14 @@ class DirectoryListing : public UserInfoBase
 			FILE_STATUS_FLAGS   = FLAG_QUEUED | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED,
 			DIR_STATUS_FLAGS    = FLAG_HAS_QUEUED | FLAG_HAS_SHARED | FLAG_HAS_DOWNLOADED | FLAG_HAS_CANCELED | FLAG_HAS_OTHER
 		};
-		
+
+		enum
+		{
+			SCAN_OPTION_SHARED     = 1 << 0,
+			SCAN_OPTION_DOWNLOADED = 1 << 1,
+			SCAN_OPTION_CANCELED   = 1 << 2
+		};
+
 		struct MediaInfo
 		{
 			uint16_t width;
@@ -344,7 +349,8 @@ class DirectoryListing : public UserInfoBase
 
 		GETSET(HintedUser, hintedUser, HintedUser);
 		GETSET(bool, includeSelf, IncludeSelf);
-	
+		GETSET(int, scanOptions, ScanOptions);
+
 	private:
 		friend class ListLoader;
 		

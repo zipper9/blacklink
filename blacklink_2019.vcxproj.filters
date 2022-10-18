@@ -421,6 +421,12 @@
     <ClCompile Include="windows\FlatTabCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\FileListPage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\DatabasePage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -981,6 +987,12 @@
     <ClInclude Include="windows\FileStatusColors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\FileListPage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\DatabasePage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -1094,6 +1106,21 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Transfers.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\FavUserStates.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\FileList.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Hub.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\SearchTypes.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Settings.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

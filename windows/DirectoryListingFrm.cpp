@@ -232,6 +232,14 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	originalId(0)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
+	int scanOptions = 0;
+	if (BOOLSETTING(FILELIST_SHOW_SHARED))
+		scanOptions |= DirectoryListing::SCAN_OPTION_SHARED;
+	if (BOOLSETTING(FILELIST_SHOW_DOWNLOADED))
+		scanOptions |= DirectoryListing::SCAN_OPTION_DOWNLOADED;
+	if (BOOLSETTING(FILELIST_SHOW_CANCELED))
+		scanOptions |= DirectoryListing::SCAN_OPTION_CANCELED;
+	dl->setScanOptions(scanOptions);
 	this->dl.reset(dl);
 	dl->setHintedUser(user);
 
@@ -2185,14 +2193,9 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 		ctrlList.saveHeaderOrder(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
 		SET_SETTING(DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
 		SET_SETTING(DIRLIST_FRAME_SPLIT, m_nProportionalPos);
-		PostMessage(WM_CLOSE);
-		return 0;
-	}
-	else
-	{
 		bHandled = FALSE;
-		return 0;
 	}
+	return 0;
 }
 
 LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
@@ -3056,6 +3059,7 @@ int ThreadedDirectoryListing::run()
 			case MODE_LOAD_PARTIAL_LIST:
 			{
 				unique_ptr<DirectoryListing> newListing(new DirectoryListing(window->abortFlag));
+				newListing->setScanOptions(window->dl->getScanOptions());
 				newListing->setHintedUser(window->dl->getHintedUser());
 				newListing->loadXML(text, this, false);
 				WinUtil::postSpeakerMsg(*window, DirectoryListingFrame::SPLICE_TREE, newListing.release());

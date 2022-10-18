@@ -19,7 +19,6 @@
 #ifndef GENERAL_PAGE_H
 #define GENERAL_PAGE_H
 
-#include "wtl_flylinkdc.h"
 #include "PropPage.h"
 
 class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage

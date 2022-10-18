@@ -57,6 +57,8 @@
 #include "ShareMiscPage.h"
 #include "SearchPage.h"
 #include "GeoIPPage.h"
+#include "FileListPage.h"
+#include "DatabasePage.h"
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 #include "FakeDetectPage.h"
@@ -104,11 +106,13 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new RangesPage();
 	pages[n++] = new RemoteControlPage();
 	pages[n++] = new WebServerPage();
+	pages[n++] = new FileListPage();
 	pages[n++] = new DCLSTPage();
 	pages[n++] = new IntegrationPage();
 	pages[n++] = new MessagesChatPage();
 	pages[n++] = new ShareMiscPage();
 	pages[n++] = new SearchPage();
+	pages[n++] = new DatabasePage();
 	
 	for (size_t i = 0; i < n; i++)
 		AddPage(pages[i]->getPSP());

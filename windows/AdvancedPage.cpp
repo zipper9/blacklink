@@ -46,7 +46,7 @@ static const PropPage::Item items[] =
 	{ 0, 0, PropPage::T_END }
 };
 
-static const AdvancedPage::ListItem listItems[] =
+static const PropPage::ListItem listItems[] =
 {
 	{ SettingsManager::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
 	{ SettingsManager::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
@@ -54,11 +54,6 @@ static const AdvancedPage::ListItem listItems[] =
 	{ SettingsManager::AUTO_KICK_NO_FAVS, ResourceManager::SETTINGS_AUTO_KICK_NO_FAVS },
 	{ SettingsManager::AUTO_CHANGE_NICK, ResourceManager::SETTINGS_AUTO_CHANGE_NICK },
 	{ SettingsManager::USE_MEMORY_MAPPED_FILES, ResourceManager::SETTINGS_USE_MM_FILES },
-#ifdef BL_FEATURE_IP_DATABASE
-	{ SettingsManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
-#endif
-	{ SettingsManager::FILELIST_INCLUDE_HIT, ResourceManager::ENABLE_HIT_FILE_LIST },
-	{ SettingsManager::ENABLE_RATIO_USER_LIST, ResourceManager::ENABLE_RATIO_USER_LIST },
 	{ SettingsManager::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, ResourceManager::REDUCE_PRIORITY_IF_MINIMIZED },
 	{ SettingsManager::USE_MAGNETS_IN_PLAYERS_SPAM, ResourceManager::USE_MAGNETS_IN_PLAYERS_SPAM },
 	{ SettingsManager::USE_BITRATE_FIX_FOR_SPAM, ResourceManager::USE_BITRATE_FIX_FOR_SPAM },

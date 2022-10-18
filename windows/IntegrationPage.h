@@ -52,7 +52,7 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		{
 			return (PROPSHEETPAGE *) *this;
 		}
-		int getPageIcon() const { return PROP_PAGE_ICON_VIDEO1; }
+		int getPageIcon() const { return PROP_PAGE_ICON_OS; }
 		void write();
 
 	private:
