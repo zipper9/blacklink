@@ -424,6 +424,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			MIN_SEARCH_INTERVAL_PASSIVE,
 			INCOMING_SEARCH_TTH_ONLY,
 			INCOMING_SEARCH_IGNORE_BOTS,
+			INCOMING_SEARCH_IGNORE_PASSIVE,
 			
 			// Away settings
 			AWAY,

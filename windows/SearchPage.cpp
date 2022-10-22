@@ -47,6 +47,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::SEARCH_PASSIVE, ResourceManager::SETCZDC_PASSIVE_SEARCH },
 	{ SettingsManager::INCOMING_SEARCH_TTH_ONLY, ResourceManager::INCOMING_SEARCH_TTH_ONLY },
 	{ SettingsManager::INCOMING_SEARCH_IGNORE_BOTS, ResourceManager::INCOMING_SEARCH_IGNORE_BOTS },
+	{ SettingsManager::INCOMING_SEARCH_IGNORE_PASSIVE, ResourceManager::INCOMING_SEARCH_IGNORE_PASSIVE },
 	{ SettingsManager::FILTER_ENTER, ResourceManager::SETTINGS_FILTER_ENTER },
 	{ 0, ResourceManager::Strings()}
 };

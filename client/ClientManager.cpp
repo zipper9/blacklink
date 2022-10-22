@@ -961,9 +961,9 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	getShareGroup(ou, hideShare, shareGroup);
 	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE, shareGroup);
 	ClientManagerListener::SearchReply re;
-	if (hideShare)
-		re = ClientManagerListener::SEARCH_MISS;
-	else if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
+	if (hideShare ||
+	    (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY)) ||
+	    (!isUdpActive && BOOLSETTING(INCOMING_SEARCH_IGNORE_PASSIVE)))
 		re = ClientManagerListener::SEARCH_MISS;
 	else
 		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIp, hubPort);

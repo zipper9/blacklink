@@ -450,6 +450,7 @@ static const char* settingTags[] =
 	"MinimumSearchIntervalPassive",
 	"IncomingSearchTTHOnly",
 	"IncomingSearchIgnoreBots",
+	"IncomingSearchIgnorePassive",
 
 	// Away settings
 	"Away",

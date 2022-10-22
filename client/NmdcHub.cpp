@@ -666,6 +666,7 @@ void NmdcHub::searchParse(const string& param, int type)
 			return;
 		if (BOOLSETTING(INCOMING_SEARCH_IGNORE_BOTS) && ip == getIp())
 		{
+			ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, ClientManagerListener::SEARCH_MISS);
 			if (BOOLSETTING(LOG_SEARCH_TRACE))
 			{
 				string message = STRING_F(SEARCH_HIT_IGNORED, searchParam.seeker % getHubUrl() % searchParam.filter);
@@ -678,8 +679,12 @@ void NmdcHub::searchParse(const string& param, int type)
 	}
 	else
 	{
+		if (BOOLSETTING(INCOMING_SEARCH_IGNORE_PASSIVE))
+		{
+			ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, ClientManagerListener::SEARCH_MISS);
+			return;
+		}
 		OnlineUserPtr u = findUser(searchParam.seeker.substr(4));
-
 		if (!u)
 			return;
 
