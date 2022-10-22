@@ -899,6 +899,7 @@
     <ClCompile Include="windows\SplashWindow.cpp" />
     <ClCompile Include="windows\SpyFrame.cpp" />
     <ClCompile Include="windows\StatsFrame.cpp" />
+    <ClCompile Include="windows\StatusLabelCtrl.cpp" />
     <ClCompile Include="windows\StatusMessageHistory.cpp" />
     <ClCompile Include="windows\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -1048,6 +1049,7 @@
     <ClInclude Include="windows\SoundsPage.h" />
     <ClInclude Include="windows\SplashWindow.h" />
     <ClInclude Include="windows\StaticFrame.h" />
+    <ClInclude Include="windows\StatusLabelCtrl.h" />
     <ClInclude Include="windows\StatusMessageHistory.h" />
     <ClInclude Include="windows\StylesPage.h" />
     <ClInclude Include="windows\ThemeManager.h" />

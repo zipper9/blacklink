@@ -28,6 +28,7 @@
 #include "SearchHistory.h"
 #include "FileStatusColors.h"
 #include "DialogLayout.h"
+#include "StatusLabelCtrl.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
@@ -524,9 +525,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		static SearchHistory lastSearches;
 
 	private:
-		CStatic ctrlUDPMode;
-		CStatic ctrlUDPTestResult;
-		tstring portStatusText;
+		StatusLabelCtrl ctrlPortStatus;
 		int portStatus;
 		string currentReflectedAddress;
 		

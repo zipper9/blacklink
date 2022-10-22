@@ -64,13 +64,13 @@
 #include "FakeDetectPage.h"
 #endif
 
-bool PropertiesDlg::g_is_create = false;
+PropertiesDlg* PropertiesDlg::instance = nullptr;
 
 PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent)
 {
 	this->icon = icon;
 	::g_settings = SettingsManager::getInstance();
-	g_is_create = true;
+	instance = this;
 	memset(pages, 0, sizeof(pages));
 	size_t n = 0;
 	pages[n++] = new GeneralPage();
@@ -126,7 +126,7 @@ PropertiesDlg::~PropertiesDlg()
 {
 	for (size_t i = 0; i < numPages; i++)
 		delete pages[i];
-	g_is_create = false;
+	instance = nullptr;
 }
 
 void PropertiesDlg::onTimerSec()

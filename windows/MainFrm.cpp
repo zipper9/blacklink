@@ -1716,7 +1716,7 @@ LRESULT MainFrame::onToggleDHT(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 
 LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!PropertiesDlg::g_is_create)
+	if (!PropertiesDlg::instance)
 	{
 		PropertiesDlg dlg(m_hWnd, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
 		

@@ -5,7 +5,6 @@
 #include "BaseUtil.h"
 #include "WinUtil.h"
 #include "Colors.h"
-#include "../client/File.h"
 
 enum
 {

@@ -427,6 +427,9 @@
     <ClCompile Include="windows\DatabasePage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\StatusLabelCtrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -991,6 +994,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\DatabasePage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\StatusLabelCtrl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

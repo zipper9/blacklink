@@ -21,42 +21,37 @@
 
 #include <atldlgs.h>
 #include "resource.h"
-#include "../client/SettingsManager.h"
+#include "StatusLabelCtrl.h"
 #include "TimerHelper.h"
-#include "wtl_flylinkdc.h"
+#include "UserMessages.h"
+#include "../client/SettingsManager.h"
 
 class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protected TimerHelper
 {
 	public:
-		enum { WM_USER_INITDIALOG = WM_APP + 501 };
 		enum { TAB_MESSAGE_MAP = 13 };
+
+		typedef CPropertySheetImpl<TreePropertySheet> baseClass;
+
 		TreePropertySheet(ATL::_U_STRINGorID title = (LPCTSTR)NULL, UINT uStartPage = 0, HWND hWndParent = NULL) :
 			CPropertySheetImpl<TreePropertySheet>(title, uStartPage, hWndParent)
 			, tabContainer(WC_TABCONTROL, this, TAB_MESSAGE_MAP)
 			, TimerHelper(m_hWnd)
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-			, sliderPos(255)
-#endif
 			, icon(NULL)
 		{
 		
-			m_psh.pfnCallback = &PropSheetProc;
+			m_psh.pfnCallback = propSheetProc;
 			m_psh.dwFlags |= PSH_RTLREADING;
 		}
-		virtual void onTimerSec()
-		{
-		}
-		typedef CPropertySheetImpl<TreePropertySheet> baseClass;
+
 		BEGIN_MSG_MAP(TreePropertySheet)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_COMMAND, baseClass::OnCommand)
-		MESSAGE_HANDLER(WM_USER_INITDIALOG, onInitDialog)
+		MESSAGE_HANDLER(WMU_USER_INITDIALOG, onInitDialog)
+		MESSAGE_HANDLER(WMU_RESTART_REQUIRED, onRestartRequired)
 		MESSAGE_HANDLER(WM_NOTIFYFORMAT, onNotifyFormat)
 		NOTIFY_HANDLER(IDC_PAGE, TVN_SELCHANGED, onSelChanged)
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-		MESSAGE_HANDLER(WM_HSCROLL, onTranspChanged)    // TrackBar control
-#endif
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(TAB_MESSAGE_MAP)
 		MESSAGE_HANDLER(TCM_SETCURSEL, onSetCurSel)
@@ -68,9 +63,6 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		LRESULT onSetCurSel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		
 		LRESULT onSelChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-		LRESULT onTranspChanged(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-#endif
 		LRESULT onNotifyFormat(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 #ifdef _UNICODE
@@ -79,20 +71,19 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 			return NFR_ANSI;
 #endif
 		}
-		
-		static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam);
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-		void addTransparencySlider();
-		void setTransparency(int value);
-		CTrackBarCtrl slider;
-		CFlyToolTipCtrl tooltip;
-		int sliderPos;
-#endif
-	
+		LRESULT onRestartRequired(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		{
+			showStatusText();
+			return 0;
+		}
+
+		static int CALLBACK propSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam);
+
 		TreePropertySheet(const TreePropertySheet &) = delete;
 		TreePropertySheet& operator= (const TreePropertySheet &) = delete;
 
 	protected:
+		virtual void onTimerSec() {}
 		virtual int getItemImage(int page) const { return 0; }
 		virtual void pageChanged(int oldPage, int newPage) {}
 		
@@ -110,11 +101,12 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		};
 		
 		static const int MAX_NAME_LENGTH = 256;
-		
+
 		void hideTab();
 		void addTree();
 		void fillTree();
-		
+		void showStatusText();
+
 		HTREEITEM addItem(const tstring& str, HTREEITEM parent, int page, int image);
 		HTREEITEM findItem(const tstring& str, HTREEITEM start);
 		HTREEITEM findItem(int page, HTREEITEM start);
@@ -122,6 +114,7 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		CImageList treeIcons;
 		CTreeViewCtrl ctrlTree;
 		CContainedWindow tabContainer;
+		StatusLabelCtrl ctrlStatus;
 };
 
 #endif // !defined(TREE_PROPERTY_SHEET_H)

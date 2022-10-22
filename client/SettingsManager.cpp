@@ -775,7 +775,6 @@ static const char* settingTags[] =
 	// Settings dialog
 	"RememberSettingsPage",
 	"SettingsPage",
-	"SettingsWindowTransp",
 	"UseOldSharingUI",
 
 	// Main window size & position

@@ -63,9 +63,6 @@ static const PropPage::ListItem optionItems[] =
 	{ SettingsManager::TOGGLE_ACTIVE_WINDOW, ResourceManager::SETTINGS_TOGGLE_ACTIVE_WINDOW },
 	{ SettingsManager::PROMPT_HUB_PASSWORD, ResourceManager::SETTINGS_PROMPT_PASSWORD },
 	{ SettingsManager::REMEMBER_SETTINGS_PAGE, ResourceManager::REMEMBER_SETTINGS_PAGE },
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-	{ SettingsManager::SETTINGS_WINDOW_TRANSP, ResourceManager::SETTINGS_WINDOW_TRANSP },
-#endif
 	{ 0, ResourceManager::Strings() }
 };
 

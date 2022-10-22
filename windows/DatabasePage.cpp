@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "DatabasePage.h"
 #include "DialogLayout.h"
+#include "UserMessages.h"
 #include "../client/SettingsManager.h"
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -67,7 +68,19 @@ LRESULT DatabasePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	ctrlJournal.AddString(CTSTRING(SETTINGS_DB_JOURNAL_WAL));
 	ctrlJournal.AddString(CTSTRING(SETTINGS_DB_JOURNAL_MEMORY));
 	ctrlJournal.SetCurSel(value);
+	currentJournalMode = value;
 	return TRUE;
+}
+
+LRESULT DatabasePage::onSetJournalMode(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int newSel = ctrlJournal.GetCurSel();
+	if (currentJournalMode != newSel)
+	{
+		currentJournalMode = newSel;
+		GetParent().SendMessage(WMU_RESTART_REQUIRED);
+	}
+	return 0;
 }
 
 void DatabasePage::write()

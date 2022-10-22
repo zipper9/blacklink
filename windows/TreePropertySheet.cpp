@@ -17,9 +17,6 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
-
 #include "TreePropertySheet.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
@@ -27,7 +24,7 @@
 
 static const TCHAR SEPARATOR = _T('\\');
 
-int TreePropertySheet::PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
+int TreePropertySheet::propSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
 {
 	if (uMsg == PSCB_PRECREATE)
 	{
@@ -45,7 +42,7 @@ int TreePropertySheet::PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
 	}
 	if (uMsg == PSCB_INITIALIZED)
 	{
-		::PostMessage(hwndDlg, WM_USER_INITDIALOG, 0, 0);
+		::PostMessage(hwndDlg, WMU_USER_INITDIALOG, 0, 0);
 	}
 	return CPropertySheet::PropSheetCallback(hwndDlg, uMsg, lParam);
 }
@@ -77,64 +74,24 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		SetIcon(icon, TRUE);		
 	}
 	
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-	if (BOOLSETTING(SETTINGS_WINDOW_TRANSP))
-	{
-		sliderPos = 255;
-		setTransparency(sliderPos);
-	}
-#endif
 	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, treeIcons, 16, 16);
 	hideTab();
 	addTree();
 	fillTree();
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-	if (BOOLSETTING(SETTINGS_WINDOW_TRANSP))
-		addTransparencySlider();
-#endif
+
+	CRect rectStatus, rectWin;
+	GetDlgItem(IDOK).GetWindowRect(rectStatus);
+	ctrlTree.GetWindowRect(rectWin);
+	ScreenToClient(rectStatus);
+	ScreenToClient(rectWin);
+	rectStatus.left = rectWin.left;
+	rectStatus.right = rectStatus.left + 120;
+	ctrlStatus.Create(m_hWnd, rectStatus, NULL, WS_CHILD, 0);
+	
 	CenterWindow(GetParent());
 	ShowWindow(SW_SHOW);
 	return 0;
 }
-
-#ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-void TreePropertySheet::addTransparencySlider()
-{
-	CRect rectOk, rectWin;
-	GetDlgItem(IDOK).GetWindowRect(rectOk);
-	GetWindowRect(rectWin);
-	ScreenToClient(rectOk);
-	ScreenToClient(rectWin);
-	rectOk.left = rectWin.left + 7;
-	rectOk.right = rectOk.left + 80;
-	slider.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_BOTH | TBS_NOTICKS, 0, IDC_PROPPAGE_TRANSPARENCY);
-	slider.MoveWindow(rectOk);
-	slider.SetRange(50, 255, TRUE);
-	slider.SetPos(sliderPos);
-	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(tooltip.IsWindow());
-	tooltip.AddTool(slider, ResourceManager::TRANSPARENCY_PROPPAGE);
-	tooltip.Activate(TRUE);
-}
-
-void TreePropertySheet::setTransparency(int value)
-{
-	typedef bool (CALLBACK * LPFUNC)(HWND hwnd, COLORREF crKey, BYTE bAlpha, DWORD dwFlags);
-	LPFUNC _d_SetLayeredWindowAttributes = (LPFUNC)GetProcAddress(LoadLibrary(_T("user32")), "SetLayeredWindowAttributes");
-	if (_d_SetLayeredWindowAttributes)
-	{
-		SetWindowLongPtr(GWL_EXSTYLE, GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYERED /*| WS_EX_TRANSPARENT*/);
-		_d_SetLayeredWindowAttributes(m_hWnd, 0, value, LWA_ALPHA);
-	}
-}
-
-LRESULT TreePropertySheet::onTranspChanged(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	setTransparency(slider.GetPos());
-	return 0;
-}
-#endif // SCALOLAZ_PROPPAGE_TRANSPARENCY
 
 void TreePropertySheet::hideTab()
 {
@@ -314,4 +271,18 @@ LRESULT TreePropertySheet::onSetCurSel(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lP
 	ctrlTree.SelectItem(findItem((int)wParam, ctrlTree.GetRootItem()));
 	bHandled = FALSE;
 	return 0;
+}
+
+void TreePropertySheet::showStatusText()
+{
+	if (ctrlStatus.IsWindowVisible()) return;
+	ctrlStatus.setImage(IconBitmaps::INFORMATION, 0);
+	ctrlStatus.setText(CTSTRING(SETTINGS_RESTART_REQUIRED));
+	HDC hdc = ctrlStatus.GetDC();
+	SIZE size = ctrlStatus.getIdealSize(hdc);
+	ctrlStatus.ReleaseDC(hdc);
+	RECT rc;
+	ctrlStatus.GetClientRect(&rc);
+	ctrlStatus.SetWindowPos(nullptr, 0, 0, size.cx, rc.bottom - rc.top, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOREPOSITION);
+	ctrlStatus.ShowWindow(SW_SHOW);
 }

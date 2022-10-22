@@ -22,7 +22,6 @@
 #include "PropPage.h"
 #include "TreePropertySheet.h"
 
-class NetworkPage;
 class PropertiesDlg : public TreePropertySheet
 {
 	public:
@@ -36,15 +35,16 @@ class PropertiesDlg : public TreePropertySheet
 		
 		PropertiesDlg(HWND parent, HICON icon);
 		~PropertiesDlg();
-		static bool g_is_create;
-		
+
+		static PropertiesDlg* instance;
+
 		LRESULT onOK(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onCANCEL(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 
 	protected:
 		void write();
 		void cancel();
-		
+
 		virtual int getItemImage(int page) const override;
 		virtual void pageChanged(int oldPage, int newPage) override;
 

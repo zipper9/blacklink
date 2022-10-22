@@ -540,12 +540,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
 
-	ctrlUDPMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-	ctrlUDPTestResult.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlUDPTestResult.SetFont(Fonts::g_systemFont, FALSE);
-	
+	ctrlPortStatus.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0);
+	ctrlPortStatus.SetFont(Fonts::g_systemFont, FALSE);
 	showPortStatus();
-	
+
 	UpdateLayout();
 	for (int j = 0; j < _countof(columnNames); j++)
 		ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
@@ -1676,20 +1674,12 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	rc.left = rc.right + lMargin;
 	rc.right = rc.left + 120;
 	ctrlFilterSel.MoveWindow(rc);
-	
-	// Icon
-	rc.left = rc.right + 5;
-	rc.right = rc.left + 16;
-	rc.top += 3;
-	rc.bottom = rc.top + 16;
-	ctrlUDPMode.MoveWindow(rc);
-	
-	// Port status text
-	rc.left += 19;
-	rc.right = rect.right - rMargin;
-	rc.top++;
-	ctrlUDPTestResult.MoveWindow(rc);
-	
+
+	// Port status
+	rc.left = rc.right + WinUtil::dialogUnitsToPixelsX(6, xdu);
+	rc.right = std::min(rect.right, rc.left + WinUtil::dialogUnitsToPixelsX(200, xdu));
+	ctrlPortStatus.MoveWindow(rc);
+
 	if (!ctrlSearch)
 	{
 		COMBOBOXINFO inf = { sizeof(inf) };
@@ -1757,7 +1747,7 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	        hWnd == ctrlStoreSettings.m_hWnd ||
 	        hWnd == ctrlUseGroupTreeSettings.m_hWnd ||
 	        hWnd == ctrlCollapsed.m_hWnd || hWnd == srLabel.m_hWnd ||
-			hWnd == ctrlUDPTestResult.m_hWnd || hWnd == ctrlUDPMode.m_hWnd)
+			hWnd == ctrlPortStatus.m_hWnd)
 	{
 		SetTextColor(hDC, colorText);
 		SetBkColor(hDC, colorBackground);
@@ -2962,13 +2952,13 @@ void SearchFrame::showPortStatus()
 		default:
 			return;
 	}
-	ctrlUDPMode.SetIcon(g_iconBitmaps.getIcon(icon, 0));
+	ctrlPortStatus.setImage(icon, 0);
 	portStatus = state;
 	currentReflectedAddress = std::move(reflectedAddress);
-	if (newText != portStatusText)
+	if (newText != ctrlPortStatus.getText())
 	{
-		portStatusText = std::move(newText);
-		ctrlUDPTestResult.SetWindowText(portStatusText.c_str());
+		ctrlPortStatus.setText(newText);
+		ctrlPortStatus.Invalidate();
 	}
 	ClientManager::infoUpdated(true);
 }
