@@ -275,6 +275,14 @@ static const string attrAudio = "MA";
 static const string attrShared = "Shared";
 static const string attrDate = "Date";
 
+static bool isValidName(const string& name)
+{
+	if (name.empty()) return false;
+	if (name.length() <= 2 && name[0] == '.' && (name.length() == 1 || name[1] == '.')) return false;
+	if (name.find('/') != string::npos || name.find('\\') != string::npos) return false;
+	return true;
+}
+
 void ListLoader::startTag(const string& name, StringPairList& attribs, bool simple)
 {
 	if (ClientManager::isBeforeShutdown())
@@ -319,13 +327,10 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				if (attrib == attrShared) valShared = &value; else
 				if (attrib == attrDate) valTS = &value;
 			}
-			
-			if (!valFilename) return;
-			
+
 			if (!valSize) return;
-			
 			if (!valTTH || valTTH->length() != 39) return;
-			
+
 			TTHValue tth;
 			bool error;
 			Encoder::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
@@ -401,7 +406,11 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				media = &tempMedia;
 			}
 
-			auto f = new DirectoryListing::File(current, *valFilename, size, tth, hit, shared, media);
+			DirectoryListing::File* f;
+			if (valFilename && isValidName(*valFilename))
+				f = new DirectoryListing::File(current, *valFilename, size, tth, hit, shared, media);
+			else
+				f = new DirectoryListing::File(current, *valTTH, size, tth, hit, shared, media);
 			current->files.push_back(f);
 			current->totalSize += size;
 			current->totalHits += hit;
@@ -467,12 +476,13 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				const string &fileName = getAttrib(attribs, attrName, 0);
 				const bool incomp = getAttrib(attribs, attrIncomplete, 1) == "1";
 				const string& valDate = getAttrib(attribs, attrDate, 1);
-				DirectoryListing::Directory* d;
 
-				if (fileName.empty())
-					d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), !incomp);
-				else
+				DirectoryListing::Directory* d;
+				if (isValidName(fileName))
 					d = new DirectoryListing::Directory(current, fileName, !incomp);
+				else
+					d = new DirectoryListing::Directory(current, "invalid_folder_name_" + Util::toString(++emptyFileNameCounter), !incomp);
+					
 				if (!valDate.empty())
 				{
 					int64_t val = Util::toInt64(valDate);
@@ -539,7 +549,7 @@ struct SortFunc
 		const wchar_t *bName = static_cast<wchar_t*>(b->getUserData());
 		return Util::defaultSort(aName, bName, false) < 0;
 #else
-		return stricmp(a->getName(), b->getName());
+		return stricmp(a->getName(), b->getName()) < 0;
 #endif
 	}
 };
