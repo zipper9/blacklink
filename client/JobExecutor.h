@@ -24,7 +24,7 @@ class JobExecutor : public Thread
 		}
 
 		bool addJob(Job* job) noexcept;
-		void shutdown() noexcept;
+		void shutdown(bool finishJob = false) noexcept;
 
 		void setMaxSleepTime(int milliseconds) noexcept
 		{

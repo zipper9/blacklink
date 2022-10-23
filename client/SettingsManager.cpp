@@ -469,6 +469,7 @@ static const char* settingTags[] =
 	"EnableLastIP",
 	"EnableRatioUserList",
 	"SQLiteJournalMode",
+	"DbFinishedBatch",
 	"GeoIPAutoUpdate",
 	"GeoIPCheckHours",
 	"UseCustomLocations",
@@ -1104,6 +1105,7 @@ void SettingsManager::setDefaults()
 	setDefault(DB_LOG_FINISHED_UPLOADS, 365);
 	setDefault(ENABLE_LAST_IP_AND_MESSAGE_COUNTER, TRUE);
 	setDefault(ENABLE_RATIO_USER_LIST, TRUE);
+	setDefault(DB_FINISHED_BATCH, 300);
 	setDefault(GEOIP_AUTO_UPDATE, TRUE);
 	setDefault(GEOIP_CHECK_HOURS, 30);
 	setDefault(USE_CUSTOM_LOCATIONS, TRUE);
@@ -1838,6 +1840,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MAX_HUB_USER_COMMANDS:
 		{
 			VER_MIN(0);
+			break;
+		}
+		case DB_FINISHED_BATCH:
+		{
+			VERIFY(0, 2000);
 			break;
 		}
 		case GEOIP_CHECK_HOURS:

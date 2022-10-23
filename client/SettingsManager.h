@@ -443,6 +443,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			ENABLE_LAST_IP_AND_MESSAGE_COUNTER,
 			ENABLE_RATIO_USER_LIST,
 			SQLITE_JOURNAL_MODE,
+			DB_FINISHED_BATCH,
 			GEOIP_AUTO_UPDATE,
 			GEOIP_CHECK_HOURS,
 			USE_CUSTOM_LOCATIONS,

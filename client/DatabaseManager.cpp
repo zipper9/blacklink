@@ -516,6 +516,13 @@ void DatabaseConnection::deleteTransferHistory(const vector<int64_t>& id)
 	}
 }
 
+void DatabaseConnection::initInsertTransferQuery()
+{
+	initQuery(insertTransfer,
+		"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
+		"values(?,?,?,?,?,?,?,?,?,?,?)");
+}
+
 void DatabaseConnection::addTransfer(eTypeTransfer type, const FinishedItemPtr& item)
 {
 	int64_t timestamp = posixTimeToLocal(item->getTime());
@@ -526,10 +533,7 @@ void DatabaseConnection::addTransfer(eTypeTransfer type, const FinishedItemPtr& 
 		string path = Text::toLower(Util::getFilePath(item->getTarget()));
 		inc_hitL(path, name);
 #endif
-
-		initQuery(insertTransfer,
-			"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
-			"values(?,?,?,?,?,?,?,?,?,?,?)");
+		initInsertTransferQuery();
 		insertTransfer.bind(1, type);
 		insertTransfer.bind(2, (long long) (timestamp/(60*60*24)));
 		insertTransfer.bind(3, (long long) timestamp);
@@ -549,6 +553,40 @@ void DatabaseConnection::addTransfer(eTypeTransfer type, const FinishedItemPtr& 
 	catch (const database_error& e)
 	{
 		DatabaseManager::getInstance()->reportError("SQLite - addTransfer: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void DatabaseConnection::addTransfers(const vector<DBTransferItem>& items)
+{
+	dcassert(!items.empty());
+	try
+	{
+		sqlite3_transaction trans(connection, true);
+		initInsertTransferQuery();
+		for (auto& p : items)
+		{
+			int64_t timestamp = posixTimeToLocal(p.item->getTime());
+			insertTransfer.bind(1, p.type);
+			insertTransfer.bind(2, (long long) (timestamp/(60*60*24)));
+			insertTransfer.bind(3, (long long) timestamp);
+			insertTransfer.bind(4, p.item->getTarget(), SQLITE_STATIC);
+			insertTransfer.bind(5, p.item->getNick(), SQLITE_STATIC);
+			insertTransfer.bind(6, p.item->getHub(), SQLITE_STATIC);
+			insertTransfer.bind(7, (long long) p.item->getSize());
+			insertTransfer.bind(8, (long long) p.item->getAvgSpeed());
+			insertTransfer.bind(9, p.item->getIP(), SQLITE_STATIC);
+			if (!p.item->getTTH().isZero())
+				insertTransfer.bind(10, p.item->getTTH().toBase32(), SQLITE_TRANSIENT);
+			else
+				insertTransfer.bind(10);
+			insertTransfer.bind(11, (long long) p.item->getActual());
+			insertTransfer.executenonquery();
+		}
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - addTransfers: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1093,6 +1131,7 @@ DatabaseManager::DatabaseManager() noexcept
 	timeLoadGlobalRatio = 0;
 	deleteOldTransfers = true;
 	errorCallback = nullptr;
+	timeTransfersSaved = 0;
 	dbSize = 0;
 	mmdb = nullptr;
 	timeCheckMmdb = 0;
@@ -1452,9 +1491,73 @@ DatabaseManager::GlobalRatio DatabaseManager::getGlobalRatio() const
 }
 #endif
 
+void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item) noexcept
+{
+	unsigned maxCount = SETTING(DB_FINISHED_BATCH);
+	if (!maxCount)
+	{
+		auto conn = getConnection();
+		if (conn)
+		{
+			conn->addTransfer(type, item);
+			putConnection(conn);
+		}
+		return;
+	}
+	SaveTransfersJob* job = nullptr;
+	{
+		LOCK(csTransfers);
+		transfers.emplace_back(DBTransferItem{type, item});
+		if (transfers.size() >= maxCount)
+		{
+			job = new SaveTransfersJob;
+			job->transfers = std::move(transfers);
+			transfers.clear();
+			timeTransfersSaved = GET_TICK();
+		}
+	}
+	if (job && !saveTransfersThread.addJob(job))
+		delete job;
+}
+
+void DatabaseManager::savePendingTransfers(uint64_t tick) noexcept
+{
+	SaveTransfersJob* job = nullptr;
+	{
+		LOCK(csTransfers);
+		if (!transfers.empty() && timeTransfersSaved + 60000 <= tick)
+		{
+				job = new SaveTransfersJob;
+				job->transfers = std::move(transfers);
+				transfers.clear();
+				timeTransfersSaved = tick;
+		}
+	}
+	if (job && !saveTransfersThread.addJob(job))
+		delete job;
+}
+
+void DatabaseManager::SaveTransfersJob::run()
+{
+	auto db = DatabaseManager::getInstance();
+	auto conn = db->getConnection();
+	if (conn)
+	{
+		conn->addTransfers(transfers);
+		db->putConnection(conn);
+	}
+}
+
+void DatabaseManager::processTimer(uint64_t tick) noexcept
+{
+	closeIdleConnections(tick);
+	savePendingTransfers(tick);
+}
+
 void DatabaseManager::shutdown()
 {
 	lmdb.close();
+	saveTransfersThread.shutdown(true);
 	{
 		LOCK(cs);
 		defConn.reset();
@@ -1512,7 +1615,7 @@ bool DatabaseManager::getTree(HashDatabaseConnection* conn, const TTHValue &tth,
 	return conn->getTigerTree(tth.data, tree);
 }
 
-bool DatabaseManager::checkDbPrefix(const string& path, const string& str)
+bool DatabaseManager::checkDbPrefix(const string& path, const string& str) noexcept
 {
 	if (File::isExist(path + str + ".sqlite"))
 	{

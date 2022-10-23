@@ -96,7 +96,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 			                                           GET_TIME(), qi->getTTH(),
 			                                           ip, d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
-				addToDatabase(e_TransferDownload, item);
+				DatabaseManager::getInstance()->addTransfer(e_TransferDownload, item);
 			addItem(item, e_Download);
 			fire(FinishedManagerListener::AddedDl(), isFile, item);
 		}
@@ -124,19 +124,8 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		                                           GET_TIME(), u->getTTH(),
 		                                           ip, u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
-			addToDatabase(e_TransferUpload, item);
+			DatabaseManager::getInstance()->addTransfer(e_TransferUpload, item);
 		addItem(item, e_Upload);
 		fire(FinishedManagerListener::AddedUl(), isFile, item);
-	}
-}
-
-void FinishedManager::addToDatabase(int type, FinishedItemPtr& item)
-{
-	auto dm = DatabaseManager::getInstance();
-	auto conn = dm->getConnection();
-	if (conn)
-	{
-		conn->addTransfer((eTypeTransfer) type, item);
-		dm->putConnection(conn);
 	}
 }

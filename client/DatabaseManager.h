@@ -19,6 +19,7 @@
 #include "CID.h"
 #include "IpAddress.h"
 #include "IpKey.h"
+#include "JobExecutor.h"
 #include "HttpClientListener.h"
 #include "HashDatabaseLMDB.h"
 #include "forward.h"
@@ -119,6 +120,12 @@ struct DBIgnoreListItem
 	int type;
 };
 
+struct DBTransferItem
+{
+	eTypeTransfer type;
+	FinishedItemPtr item;
+};
+
 class DatabaseConnection
 {
 		friend class DatabaseManager;
@@ -132,6 +139,7 @@ class DatabaseConnection
 		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
 		void loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
 		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item);
+		void addTransfers(const vector<DBTransferItem>& items);
 		void deleteTransferHistory(const vector<int64_t>& id);
 		void loadIgnoredUsers(vector<DBIgnoreListItem>& items);
 		void saveIgnoredUsers(const vector<DBIgnoreListItem>& items);
@@ -163,6 +171,7 @@ class DatabaseConnection
 		void clearRegistryL(DBRegistryType type, int64_t tick);
 		int64_t getRandValForRegistry();
 		void deleteOldTransferHistory();
+		void initInsertTransferQuery();
 #ifdef BL_FEATURE_IP_DATABASE
 		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
 		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
@@ -250,6 +259,9 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		HashDatabaseConnection* getDefaultHashDatabaseConnection() noexcept { return lmdb.getDefaultConnection(); }
 		void putHashDatabaseConnection(HashDatabaseConnection* conn) noexcept { lmdb.putConnection(conn); }
 		static void quoteString(string& s) noexcept;
+		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item) noexcept;
+		void savePendingTransfers(uint64_t tick) noexcept;
+		void processTimer(uint64_t tick) noexcept;
 
 	public:
 		void reportError(const string& text, int errorCode = SQLITE_ERROR);
@@ -297,7 +309,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 #endif
 
 	private:
-		bool checkDbPrefix(const string& path, const string& str);
+		bool checkDbPrefix(const string& path, const string& str) noexcept;
 
 	protected:
 		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
@@ -339,7 +351,17 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		LruCacheEx<IpCacheItem, IpKey> ipCache;
 		mutable FastCriticalSection csIpCache;
 
+		struct SaveTransfersJob : public JobExecutor::Job
+		{
+			vector<DBTransferItem> transfers;
+			void run() override;
+		};
+
 		std::atomic_bool deleteOldTransfers;
+		vector<DBTransferItem> transfers;
+		CriticalSection csTransfers;
+		uint64_t timeTransfersSaved;
+		JobExecutor saveTransfersThread;
 
 #ifdef BL_FEATURE_IP_DATABASE
 		mutable CriticalSection csGlobalRatio;

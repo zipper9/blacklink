@@ -32,7 +32,7 @@ bool JobExecutor::addJob(JobExecutor::Job *job) noexcept
 	return true;
 }
 
-void JobExecutor::shutdown() noexcept
+void JobExecutor::shutdown(bool finishJob) noexcept
 {
 	Handle savedHandle = INVALID_THREAD_HANDLE;
 	std::list<Job*> savedJobs;
@@ -44,8 +44,11 @@ void JobExecutor::shutdown() noexcept
 	cs.unlock();
 	if (savedHandle != INVALID_THREAD_HANDLE)
 		BaseThread::join(savedHandle);
-	for (auto i = savedJobs.begin(); i != savedJobs.end(); i++)
-		delete *i;
+	for (Job* job : savedJobs)
+	{
+		if (finishJob) job->run();
+		delete job;
+	}
 }
 
 int JobExecutor::run() noexcept

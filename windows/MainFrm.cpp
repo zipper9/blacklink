@@ -610,7 +610,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 #endif
 	if (tick >= timeDbCleanup)
 	{
-		DatabaseManager::getInstance()->closeIdleConnections(tick);
+		DatabaseManager::getInstance()->processTimer(tick);
 		timeDbCleanup = tick + 60000;
 	}
 	if (ClientManager::isStartup())
