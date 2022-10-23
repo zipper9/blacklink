@@ -175,7 +175,7 @@ class FinishedFrameBase
 		void updateList(const FinishedItemList& fl);		
 		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);
 		void removeDroppedItems(int64_t maxTempId);
-		void appendMenuItems(CMenu& menu, bool fileExists, int& copyMenuPos);
+		void appendMenuItems(OMenu& menu, bool fileExists, int& copyMenuPos);
 
 		void onCreate(HWND hwnd, int id);
 		bool onSpeaker(WPARAM wParam, LPARAM lParam);

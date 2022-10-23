@@ -24,38 +24,39 @@
 #ifndef DCPLUSPLUS_WIN32_SHELL_CONTEXT_MENU_H
 #define DCPLUSPLUS_WIN32_SHELL_CONTEXT_MENU_H
 
-#pragma once
+#include "../client/typedefs.h"
+#include "../client/w.h"
 
-#include "typedefs.h"
-
-class CShellContextMenu
+class ShellContextMenu
 {
-		static IContextMenu2* g_IContext2;
-		static IContextMenu3* g_IContext3;
-		static WNDPROC OldWndProc;
-		
+		static ShellContextMenu* instance;
+
 	public:
-		CShellContextMenu();
-		~CShellContextMenu();
-		
-		void SetPath(const tstring& strPath);
-		CMenu* GetMenu();
-		UINT ShowContextMenu(HWND hWnd, const CPoint& pt);
-		
+		ShellContextMenu();
+		~ShellContextMenu();
+
+		void setPath(const wstring& strPath);
+		HMENU getMenu();
+		void attachMenu(HMENU hMenu);
+		HMENU detachMenu();
+		UINT showContextMenu(HWND hWnd, POINT pt);
+
 	private:
-		bool bDelete;
-		CMenu* m_Menu;
-		IShellFolder* m_psfFolder;
-		LPITEMIDLIST* m_pidlArray;
-		
-		void FreePIDLArray(LPITEMIDLIST* pidlArray);
-		// this functions determines which version of IContextMenu is available for those objects(always the highest one)
-		// and returns that interface
-		bool GetContextMenu(LPVOID* ppContextMenu, int& iMenuType);
-		
-		void InvokeCommand(LPCONTEXTMENU pContextMenu, UINT idCommand);
-		
-		static LRESULT CALLBACK HookWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+		bool menuAttached;
+		HMENU hMenu;
+		IShellFolder* shellFolder;
+		LPITEMIDLIST pidlParent;
+		LPCITEMIDLIST pidlChild;
+
+		IContextMenu* contextMenu;
+		IContextMenu2* contextMenu2;
+		IContextMenu3* contextMenu3;
+		WNDPROC oldWndProc;
+
+		int initContextMenu();
+		void invokeCommand(UINT idCommand);
+		void cleanup();
+		static LRESULT CALLBACK hookWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 };
 
 

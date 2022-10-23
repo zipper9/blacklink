@@ -410,7 +410,7 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 	return updated;
 }
 
-void FinishedFrameBase::appendMenuItems(CMenu& menu, bool fileExists, int& copyMenuPos)
+void FinishedFrameBase::appendMenuItems(OMenu& menu, bool fileExists, int& copyMenuPos)
 {
 	if (fileExists)
 	{
@@ -420,12 +420,12 @@ void FinishedFrameBase::appendMenuItems(CMenu& menu, bool fileExists, int& copyM
 	if (transferType == e_TransferDownload)
 		menu.AppendMenu(MF_STRING, IDC_REDOWNLOAD_FILE, CTSTRING(DOWNLOAD));
 	copyMenuPos = menu.GetMenuItemCount();
-	menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
+	menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 	menu.AppendMenu(MF_SEPARATOR);
 	menu.AppendMenu(MF_STRING, IDC_GRANTSLOT, CTSTRING(GRANT_EXTRA_SLOT));
 	menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
 	menu.AppendMenu(MF_SEPARATOR);
-	menu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+	menu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 	menu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL));
 	if (fileExists) menu.SetMenuDefaultItem(IDC_OPEN_FILE);
 }
@@ -455,23 +455,25 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 		}
 		if (BOOLSETTING(SHOW_SHELL_MENU) && !filePath.empty())
 		{
-			CShellContextMenu shellMenu;
-			shellMenu.SetPath(filePath);
+			ShellContextMenu shellMenu;
+			shellMenu.setPath(filePath);
 
-			CMenu* pShellMenu = shellMenu.GetMenu();
-			appendMenuItems(*pShellMenu, true, copyMenuPos);
-			pShellMenu->AppendMenu(MF_SEPARATOR);
-			UINT idCommand = shellMenu.ShowContextMenu(hwnd, pt);
-			pShellMenu->RemoveMenu(copyMenuPos, MF_BYPOSITION);
+			OMenu ctxMenu;
+			ctxMenu.SetOwnerDraw(OMenu::OD_NEVER);
+			ctxMenu.CreatePopupMenu();
+			shellMenu.attachMenu(ctxMenu);
+			appendMenuItems(ctxMenu, true, copyMenuPos);
+			ctxMenu.AppendMenu(MF_SEPARATOR);
+			UINT idCommand = shellMenu.showContextMenu(hwnd, pt);
+			ctxMenu.RemoveMenu(copyMenuPos, MF_BYPOSITION);
 			if (idCommand != 0)
 				::PostMessage(hwnd, WM_COMMAND, idCommand, 0);
-
 			shellMenuShown = true;
 		}
 
 		if (!shellMenuShown)
 		{
-			CMenu ctxMenu;
+			OMenu ctxMenu;
 			ctxMenu.CreatePopupMenu();
 			appendMenuItems(ctxMenu, !filePath.empty(), copyMenuPos);
 			ctxMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, hwnd);

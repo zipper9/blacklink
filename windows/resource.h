@@ -1311,12 +1311,12 @@
 #define IDC_USER_INFO                   7700
 #define IDC_COPY_URL                    7800
 #define IDC_COPY_URL_TREE               7900
+#define ID_SHELLCONTEXTMENU_MIN         28000
+#define ID_SHELLCONTEXTMENU_MAX         29000
 #define ID_VIEW_MEDIA_TOOLBAR           32771
 #define ID_VIEW_QUICK_SEARCH            32772
 #define ID_VIEW_TRANSFER_VIEW           32773
 #define ID_GET_TTH                      32774
-#define ID_SHELLCONTEXTMENU_MIN         32775
-#define ID_SHELLCONTEXTMENU_MAX         32776
 #define ID_FILE_SETTINGS                32778
 #define ID_FILE_SEARCH                  32780
 #define ID_HELP_ACCELERATOR             32782

@@ -754,6 +754,9 @@ bool OMenu::SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap)
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
 	if (ownerDrawMode == OD_NEVER)
 	{
+#ifdef OSVER_WIN_XP
+		if (!CompatibilityManager::isOsVistaPlus()) return false;
+#endif
 		mii.fMask = MIIM_BITMAP;
 		mii.hbmpItem = hBitmap;
 		return SetMenuItemInfo(item, byPosition, &mii) != FALSE;
