@@ -600,8 +600,7 @@ LRESULT SearchFrame::onMeasure(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 {
 	if (wParam == IDC_FILETYPES)
 	{
-		auto mis = reinterpret_cast<MEASUREITEMSTRUCT*>(lParam);
-		mis->itemHeight = 16;
+		CustomDrawHelpers::measureComboBox(reinterpret_cast<MEASUREITEMSTRUCT*>(lParam), Fonts::g_systemFont);
 		return TRUE;
 	}
 	HWND hwnd = 0; // ???

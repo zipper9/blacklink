@@ -4,6 +4,7 @@
 #include "BarShader.h"
 #include "WinUtil.h"
 #include "Colors.h"
+#include "Fonts.h"
 #include "../client/SettingsManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/LruCache.h"
@@ -413,7 +414,20 @@ bool CustomDrawHelpers::parseVideoResString(const tstring& text, unsigned& width
 	return true;
 }
 
-void CustomDrawHelpers::drawComboBox(CComboBox& cb, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList)
+void CustomDrawHelpers::measureComboBox(MEASUREITEMSTRUCT* mis, HFONT hFont)
+{
+	int height = 0;
+	HDC hdc = CreateIC(_T("DISPLAY"), nullptr, nullptr, nullptr);
+	HGDIOBJ prevFont = SelectObject(hdc, hFont);
+	SIZE size;
+	TCHAR ch = _T('0');
+	if (GetTextExtentPoint(hdc, &ch, 1, &size)) height = size.cy;
+	SelectObject(hdc, prevFont);
+	DeleteDC(hdc);
+	mis->itemHeight = std::max(iconSize, height + GetSystemMetrics(SM_CYEDGE));
+}
+
+void CustomDrawHelpers::drawComboBox(HWND hWnd, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList)
 {
 	switch (dis->itemAction)
 	{
@@ -421,13 +435,11 @@ void CustomDrawHelpers::drawComboBox(CComboBox& cb, const DRAWITEMSTRUCT* dis, H
 			if (!(dis->itemState & ODS_NOFOCUSRECT))
 				DrawFocusRect(dis->hDC, &dis->rcItem);
 			break;
-			
+
 		case ODA_SELECT:
 		case ODA_DRAWENTIRE:
 		{
-			int len = cb.GetLBTextLen(dis->itemID);
-			TCHAR* text = static_cast<TCHAR*>(_alloca((len + 1) * sizeof(TCHAR)));
-			cb.GetLBText(dis->itemID, text);
+			tstring text = WinUtil::getComboBoxItemText(hWnd, dis->itemID);
 			if (dis->itemState & ODS_SELECTED)
 			{
 				SetTextColor(dis->hDC, GetSysColor(COLOR_HIGHLIGHTTEXT));
@@ -438,16 +450,20 @@ void CustomDrawHelpers::drawComboBox(CComboBox& cb, const DRAWITEMSTRUCT* dis, H
 				SetTextColor(dis->hDC, Colors::g_textColor);
 				SetBkColor(dis->hDC, Colors::g_bgColor);
 			}
-			
-			ExtTextOut(dis->hDC, dis->rcItem.left + 22, dis->rcItem.top + 1, ETO_OPAQUE, &dis->rcItem, text, _tcslen(text), 0);
+
+			int textHeight = WinUtil::getTextHeight(dis->hDC);
+			ExtTextOut(dis->hDC, dis->rcItem.left + iconSize + margin1 + margin2,
+				(dis->rcItem.top + dis->rcItem.bottom - textHeight) / 2,
+				ETO_OPAQUE | ETO_CLIPPED, &dis->rcItem, text.c_str(), text.length(), nullptr);
 			if (dis->itemState & ODS_FOCUS)
 			{
 				if (!(dis->itemState & ODS_NOFOCUSRECT))
 					DrawFocusRect(dis->hDC, &dis->rcItem);
 			}
-			
+
 			ImageList_Draw(hImgList, dis->itemID, dis->hDC,
-			               dis->rcItem.left + 2, dis->rcItem.top, ILD_TRANSPARENT);
+				dis->rcItem.left + margin2,
+				(dis->rcItem.top + dis->rcItem.bottom - iconSize) / 2, ILD_TRANSPARENT);
 			break;
 		}
 	}

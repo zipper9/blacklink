@@ -8,10 +8,23 @@ int Fonts::g_fontHeight = 0;
 int Fonts::g_fontHeightPixl = 0;
 HFONT Fonts::g_boldFont = nullptr;
 HFONT Fonts::g_systemFont = nullptr;
+HFONT Fonts::g_dialogFont = nullptr;
 
 void Fonts::init()
 {
+	HDC hDC = CreateIC(_T("DISPLAY"), nullptr, nullptr, nullptr);
+	int dpi = GetDeviceCaps(hDC, LOGPIXELSY);
+	DeleteDC(hDC);
+
 	LOGFONT lf;
+	memset(&lf, 0, sizeof(LOGFONT));
+	_tcscpy(lf.lfFaceName, _T("MS Shell Dlg 2"));
+	lf.lfHeight = -MulDiv(8, dpi, 72);
+	lf.lfWeight = FW_NORMAL;
+	g_dialogFont = CreateFontIndirect(&lf);
+	if (!g_dialogFont)
+		g_dialogFont = (HFONT) GetStockObject(DEFAULT_GUI_FONT);
+
 	NONCLIENTMETRICS ncm = { sizeof(ncm) };
 	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
 		memcpy(&lf, &ncm.lfMessageFont, sizeof(LOGFONT));
@@ -19,7 +32,7 @@ void Fonts::init()
 		GetObject((HFONT) GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
 
 	g_systemFont = CreateFontIndirect(&lf);
-	
+
 	lf.lfWeight = FW_BOLD;
 	g_boldFont = CreateFontIndirect(&lf);
 	
@@ -28,9 +41,7 @@ void Fonts::init()
 	g_font = ::CreateFontIndirect(&lf);
 	g_fontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_font);
 
-	HDC hDC = CreateIC(_T("DISPLAY"), nullptr, nullptr, nullptr);
-	g_fontHeightPixl = -MulDiv(lf.lfHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72); // FIXME
-	DeleteDC(hDC);
+	g_fontHeightPixl = -MulDiv(lf.lfHeight, dpi, 72); // FIXME
 }
 
 void Fonts::uninit()
@@ -41,6 +52,8 @@ void Fonts::uninit()
 	g_boldFont = nullptr;
 	::DeleteObject(g_systemFont);
 	g_systemFont = nullptr;
+	::DeleteObject(g_dialogFont);
+	g_dialogFont = nullptr;
 }
 
 void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)

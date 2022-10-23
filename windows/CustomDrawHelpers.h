@@ -5,7 +5,6 @@
 #include "../client/IPInfo.h"
 #include <atlapp.h>
 #include <atlwin.h>
-#include <atlctrls.h>
 
 namespace CustomDrawHelpers
 {
@@ -60,7 +59,8 @@ namespace CustomDrawHelpers
 	void drawVideoResIcon(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const tstring& text, unsigned width, unsigned height);
 	bool parseVideoResString(const tstring& text, unsigned& width, unsigned& height);
 
-	void drawComboBox(CComboBox& cb, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList);
+	void measureComboBox(MEASUREITEMSTRUCT* mis, HFONT hFont);
+	void drawComboBox(HWND hWnd, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList);
 }
 
 #endif /* CUSTOM_DRAW_HELPERS_H */

@@ -5,6 +5,7 @@
 #include "CustomDrawHelpers.h"
 #include "DialogLayout.h"
 #include "ExMessageBox.h"
+#include "Fonts.h"
 #include "../client/Util.h"
 #include "../client/SearchManager.h"
 #include "../client/BusyCounter.h"
@@ -209,8 +210,7 @@ LRESULT SearchDlg::onMeasureItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 {
 	if (wParam == IDC_FILE_TYPE)
 	{
-		auto mis = reinterpret_cast<MEASUREITEMSTRUCT*>(lParam);
-		mis->itemHeight = 16;
+		CustomDrawHelpers::measureComboBox(reinterpret_cast<MEASUREITEMSTRUCT*>(lParam), Fonts::g_dialogFont);
 		return TRUE;
 	}
 	bHandled = FALSE;

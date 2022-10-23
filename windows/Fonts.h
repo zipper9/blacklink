@@ -16,6 +16,7 @@ struct Fonts
 	static HFONT g_font;
 	static HFONT g_boldFont;
 	static HFONT g_systemFont;
+	static HFONT g_dialogFont;
 };
 
 #endif // FONTS_H_
