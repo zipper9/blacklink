@@ -44,18 +44,12 @@ LRESULT GeoIPPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
 
-	CWindow ctrlIcon(GetDlgItem(IDC_STATUS_ICON));
+	CStatic placeholder(GetDlgItem(IDC_STATUS));
 	RECT rc;
-	ctrlIcon.GetClientRect(&rc);
-	ctrlIcon.MapWindowPoints(m_hWnd, &rc);
-	int iconY = rc.top;
-	iconX = rc.left;
-	textX = iconX + ICON_SIZE + 6;
-	CWindow ctrlText(GetDlgItem(IDC_STATUS));
-	ctrlText.GetClientRect(&rc);
-	textWidth = rc.right - rc.left;
-	textHeight = rc.bottom - rc.top;
-	textY = iconY + ICON_SIZE - textHeight;
+	placeholder.GetWindowRect(&rc);
+	placeholder.DestroyWindow();
+	ScreenToClient(&rc);
+	ctrlStatus.Create(m_hWnd, rc, nullptr, WS_CHILD | WS_VISIBLE, 0, IDC_STATUS);
 
 	fixControls();
 	updateState();
@@ -88,7 +82,7 @@ void GeoIPPage::updateState()
 	int status = DatabaseManager::getInstance()->getGeoIPDatabaseStatus(timestamp);
 	GetDlgItem(IDC_GEOIP_DOWNLOAD).EnableWindow(status == DatabaseManager::MMDB_STATUS_DOWNLOADING ? FALSE : TRUE);
 
-	HICON icon;
+	int icon;
 	tstring text;
 	switch (status)
 	{
@@ -96,31 +90,26 @@ void GeoIPPage::updateState()
 		{
 			tstring date = Text::toT(Util::formatDateTime("%x", timestamp));
 			text = TSTRING_F(GEOIP_DB_DATE, date);
-			icon = g_iconBitmaps.getIcon(IconBitmaps::STATUS_SUCCESS, 0);
+			icon = IconBitmaps::STATUS_SUCCESS;
 			break;
 		}
 		case DatabaseManager::MMDB_STATUS_MISSING:
 			text = TSTRING(GEOIP_DB_MISSING);
-			icon = g_iconBitmaps.getIcon(IconBitmaps::STATUS_FAILURE, 0);
+			icon = IconBitmaps::STATUS_FAILURE;
 			break;
 		case DatabaseManager::MMDB_STATUS_DOWNLOADING:
 			text = TSTRING(GEOIP_DB_DOWNLOADING);
-			icon = nullptr;
+			icon = -1;
 			break;
 		default:
 			text = TSTRING(GEOIP_DB_FAIL);
-			icon = g_iconBitmaps.getIcon(IconBitmaps::STATUS_FAILURE, 0);
+			icon = IconBitmaps::STATUS_FAILURE;
 	}
 
-	CWindow ctrlIcon(GetDlgItem(IDC_STATUS_ICON));	
-	if (icon)
+	if (text != ctrlStatus.getText())
 	{
-		ctrlIcon.SendMessage(STM_SETICON, (WPARAM) icon, 0);
-		ctrlIcon.MoveWindow(iconX, textY + textHeight - ICON_SIZE, ICON_SIZE, ICON_SIZE);
+		ctrlStatus.setText(text);
+		ctrlStatus.setImage(icon, 0);
+		ctrlStatus.Invalidate();
 	}
-
-	CWindow ctrlText(GetDlgItem(IDC_STATUS));
-	ctrlText.SetWindowText(text.c_str());
-	ctrlText.MoveWindow(icon ? textX : iconX, textY, textWidth, textHeight);
-	ctrlIcon.ShowWindow(icon ? SW_SHOW : SW_HIDE);
 }

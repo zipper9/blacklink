@@ -66,7 +66,7 @@ void StatusLabelCtrl::updateTextSize(HDC hdc)
 
 void StatusLabelCtrl::setImage(int index, int size)
 {
-	hIcon = g_iconBitmaps.getIcon(index, 0);
+	hIcon = index < 0 ? nullptr : g_iconBitmaps.getIcon(index, 0);
 	if (hIcon)
 		bitmapWidth = bitmapHeight = 16;
 	else

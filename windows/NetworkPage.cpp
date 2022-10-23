@@ -19,8 +19,6 @@
 #include "stdafx.h"
 
 #include <comdef.h>
-#include "Resource.h"
-
 #include "NetworkPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
@@ -669,8 +667,12 @@ LRESULT NetworkFirewallTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	appPath = Util::getModuleFileName();
 	ctrlButton.Attach(GetDlgItem(IDC_ADD_FIREWALL_EXCEPTION));
 	ctrlButton.SetWindowText(CTSTRING(ADD_FIREWALL_EXCEPTION));
-	ctrlText.Attach(GetDlgItem(IDC_FIREWALL_STATUS));
-	ctrlIcon.Attach(GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO));
+	CStatic placeholder(GetDlgItem(IDC_FIREWALL_STATUS));
+	RECT rc;
+	placeholder.GetWindowRect(&rc);
+	placeholder.DestroyWindow();
+	ScreenToClient(&rc);
+	ctrlStatus.Create(m_hWnd, rc, nullptr, WS_CHILD | WS_VISIBLE, 0, IDC_FIREWALL_STATUS);
 #ifdef OSVER_WIN_XP
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
@@ -715,9 +717,10 @@ bool NetworkFirewallTab::testWinFirewall()
 	fw.initialize(&hr);
 	if (!fw.enabled())
 	{
-		ctrlText.SetWindowText(CTSTRING(WINDOWS_FIREWALL_DISABLED));
+		ctrlStatus.SetWindowText(CTSTRING(WINDOWS_FIREWALL_DISABLED));
+		ctrlStatus.setImage(IconBitmaps::STATUS_PAUSE, 0);
+		ctrlStatus.Invalidate();
 		ctrlButton.EnableWindow(FALSE);
-		setIcon(ctrlIcon, IconUnknown);
 		return false;
 	}
 
@@ -727,20 +730,21 @@ bool NetworkFirewallTab::testWinFirewall()
 	{
 		if (authorized)
 		{
-			ctrlText.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_ADDED));
-			setIcon(ctrlIcon, IconSuccess);
+			ctrlStatus.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_ADDED));
+			ctrlStatus.setImage(IconBitmaps::STATUS_SUCCESS, 0);
 		}
 		else
 		{
-			ctrlText.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_NOT_ADDED));
-			setIcon(ctrlIcon, IconFailure);
+			ctrlStatus.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_NOT_ADDED));
+			ctrlStatus.setImage(IconBitmaps::STATUS_FAILURE, 0);
 		}
 	}
 	else
 	{
-		ctrlText.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_NOT_ADDED));
-		setIcon(ctrlIcon, IconQuestion);
+		ctrlStatus.SetWindowText(CTSTRING(FIREWALL_EXCEPTION_NOT_ADDED));
+		ctrlStatus.setImage(IconBitmaps::QUESTION, 0);
 	}
+	ctrlStatus.Invalidate();
 	ctrlButton.EnableWindow(TRUE);
 	return authorized;
 }

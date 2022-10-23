@@ -20,6 +20,7 @@
 #define NETWORK_PAGE_H
 
 #include "PropPage.h"
+#include "StatusLabelCtrl.h"
 #include "../client/NetworkUtil.h"
 
 class NetworkPage;
@@ -118,8 +119,7 @@ class NetworkFirewallTab : public CDialogImpl<NetworkFirewallTab>
 		LRESULT onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 
 		CButton ctrlButton;
-		CStatic ctrlText;
-		CStatic ctrlIcon;
+		StatusLabelCtrl ctrlStatus;
 		tstring appPath;
 };
 

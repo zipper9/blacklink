@@ -2,6 +2,7 @@
 #define GEOIP_PAGE_H
 
 #include "PropPage.h"
+#include "StatusLabelCtrl.h"
 
 class GeoIPPage : public CPropertyPage<IDD_GEOIP_PAGE>, public PropPage
 {
@@ -32,11 +33,7 @@ class GeoIPPage : public CPropertyPage<IDD_GEOIP_PAGE>, public PropPage
 		void onTimer() { updateState(); }
 
 	private:
-		int iconX;
-		int textX;
-		int textY;
-		int textWidth;
-		int textHeight;
+		StatusLabelCtrl ctrlStatus;
 
 		void fixControls();
 		void updateState();
