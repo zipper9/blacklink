@@ -2229,8 +2229,8 @@ LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
 	if (!dclstFlag)
 	{
-		opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST, 0);
-		opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST_OFFLINE, 0);
+		opt->icons[0] = g_iconBitmaps.getIcon(searchResultsFlag ? IconBitmaps::FILELIST_SEARCH : IconBitmaps::FILELIST, 0);
+		opt->icons[1] = g_iconBitmaps.getIcon(searchResultsFlag ? IconBitmaps::FILELIST_SEARCH_OFFLINE : IconBitmaps::FILELIST_OFFLINE, 0);
 	}
 	else
 		opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
