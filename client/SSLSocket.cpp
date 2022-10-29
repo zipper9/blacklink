@@ -17,15 +17,13 @@
  */
 
 #include "stdinc.h"
-
-#include <openssl/err.h>
-
+#include "SSLSocket.h"
 #include "LogManager.h"
 #include "SettingsManager.h"
 #include "ResourceManager.h"
 #include "CryptoManager.h"
-
-#include "SSLSocket.h"
+#include "ParamExpander.h"
+#include <openssl/err.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 static const unsigned char alpnNMDC[] = { 4, 'n', 'm', 'd', 'c' };
@@ -419,5 +417,41 @@ void SSLSocket::logInfo(bool isServer) const
 		else
 			logText = "SSL: connected to " + ip + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
 		LogManager::message(logText, false);
+		if (BOOLSETTING(LOG_TLS_CERTIFICATES))
+		{
+			const string& path = SETTING(LOG_FILE_TLS_CERT);
+			if (!path.empty())
+			{
+				X509* cert = SSL_get_peer_certificate(ssl);
+				if (cert)
+				{
+					ByteVector digest = CryptoManager::X509_digest_internal(cert, EVP_sha256());
+					StringMap m;
+					m["IP"] = m["ip"] = Util::printIpAddress(getIp());
+					m["KP"] = m["kp"] = Encoder::toBase32(digest.data(), digest.size());
+					string expandedPath = SETTING(LOG_DIRECTORY);
+					expandedPath += Util::validateFileName(Util::formatParams(path, m, true));
+					if (!File::isExist(expandedPath))
+					{
+					    unsigned char *data = nullptr;
+						int size = ASN1_item_i2d((ASN1_VALUE*) cert, &data, ASN1_ITEM_rptr(X509));
+						if (size)
+						{
+							try
+							{
+								File::ensureDirectory(expandedPath);
+								File f(expandedPath, File::WRITE, File::CREATE | File::TRUNCATE, true);
+								f.write(data, size);
+							}
+							catch (Exception&)
+							{
+							}
+						}
+						OPENSSL_free(data);
+					}
+					X509_free(cert);
+				}
+			}
+		}
 	}
 }

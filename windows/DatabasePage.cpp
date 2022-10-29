@@ -46,6 +46,7 @@ static const PropPage::Item items[] =
 
 static const PropPage::ListItem listItems[] =
 {
+	{ SettingsManager::LOG_FILELIST_TRANSFERS, ResourceManager::SETTINGS_LOG_FILELIST_TRANSFERS },
 #ifdef BL_FEATURE_IP_DATABASE
 	{ SettingsManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
 #endif

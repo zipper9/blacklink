@@ -25,22 +25,22 @@
 class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 {
 	public:
-		explicit LogPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_LOGS)), oldSelection(-1)
+		explicit LogPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_LOGS)), initializing(0), oldSelection(-1)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP_EX(LogPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_BROWSE_LOG, onClickedBrowseDir)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, LVN_ITEMCHANGED, onItemChanged)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
-		
+
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -51,14 +51,17 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 
 	protected:
 		CListViewCtrl logOptions;
-		
+		CEdit logFile;
+		CEdit logFormat;
+
+		int initializing;
 		int oldSelection;
-		
+
 		//store all log options here so we can discard them
 		//if the user cancels the dialog.
 		//.first is filename and .second is format
 		TStringPairList options;
-		
+
 		void getValues();
 		void setEnabled();
 };

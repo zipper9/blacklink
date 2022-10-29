@@ -138,6 +138,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FILE_FLOOD_TRACE,
 			LOG_FILE_TCP_MESSAGES,
 			LOG_FILE_UDP_PACKETS,
+			LOG_FILE_TLS_CERT,
 			LOG_FORMAT_DOWNLOAD,
 			LOG_FORMAT_UPLOAD,
 			LOG_FORMAT_MAIN_CHAT,
@@ -475,6 +476,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_TCP_MESSAGES,
 			LOG_UDP_PACKETS,
 			LOG_SOCKET_INFO,
+			LOG_TLS_CERTIFICATES,
 
 			// Startup & shutdown
 			STARTUP_BACKUP,

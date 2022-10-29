@@ -167,6 +167,7 @@ static const char* settingTags[] =
 	"LogFileFloodTrace",
 	"LogFileCMDDebugTrace",
 	"LogFileUDPDebugTrace",
+	"LogFileTLSCert",
 	"LogFormatPostDownload",
 	"LogFormatPostUpload",
 	"LogFormatMainChat",
@@ -501,7 +502,8 @@ static const char* settingTags[] =
 	"LogCMDDebugTrace",
 	"LogUDPDebugTrace",
 	"LogSocketInfo",
-	
+	"LogTLSCertificates",
+
 	// Startup & shutdown
 	"StartupBackup",
 	"ShutdownAction",
@@ -900,6 +902,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_FLOOD_TRACE, "flood.log");
 	setDefault(LOG_FILE_TCP_MESSAGES, "Trace" PATH_SEPARATOR_STR "%[ip]" PATH_SEPARATOR_STR "%[ipPort].log");
 	setDefault(LOG_FILE_UDP_PACKETS, "Trace" PATH_SEPARATOR_STR "UDP-Packets.log");
+	setDefault(LOG_FILE_TLS_CERT, "Trace" PATH_SEPARATOR_STR "%[ip]" PATH_SEPARATOR_STR "%[kp].cer");
 	setDefault(LOG_FORMAT_DOWNLOAD, "%Y-%m-%d %H:%M:%S: %[target] " + STRING(DOWNLOADED_FROM) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_UPLOAD, "%Y-%m-%d %H:%M:%S %[source] " + STRING(UPLOADED_TO) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_MAIN_CHAT, "[%Y-%m-%d %H:%M:%S%[extra]] %[message]");
@@ -1651,6 +1654,14 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			}
 			break;
 		}
+		case LOG_FILE_TLS_CERT:
+		{
+			if (value.find("%[kp]") == string::npos && value.find("%[KP]") == string::npos)
+				strSettings[key - STR_FIRST].clear();
+			else
+				strSettings[key - STR_FIRST] = value;
+			break;
+		}
 		case BIND_ADDRESS:
 		case BIND_ADDRESS6:
 		case WEBSERVER_BIND_ADDRESS:
@@ -1697,6 +1708,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			break;
 			
 #undef REDUCE_LENGTH
+#undef REPLACE_SPACES
 	}
 	
 	if (valueAdjusted) // ≈сли параметр изменили в момент загрузки - ставим маркер что нужно записатьс€ обратно в файл.
