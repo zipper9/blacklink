@@ -93,8 +93,8 @@ int ThrottleManager::write(Socket* sock, const void* buffer, size_t& len)
 		// Apply individual restriction to the user if it is
 		const int64_t currentBucket = sock->getCurrentBucket();
 		len = min(len, static_cast<size_t>(currentBucket));
-		sock->setCurrentBucket(currentBucket - len);
-		
+		const int64_t newBucket = currentBucket - len;
+
 		if (!len)
 		{
 			uint64_t delay = GET_TICK() - sock->getBucketUpdateTick();
@@ -105,6 +105,8 @@ int ThrottleManager::write(Socket* sock, const void* buffer, size_t& len)
 
 		// write to socket
 		const int sent = sock->write(buffer, len);
+		if (sent > 0)
+			sock->setCurrentBucket(newBucket);
 		return sent;
 	}
 	else // general

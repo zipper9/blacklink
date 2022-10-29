@@ -263,7 +263,7 @@ uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 
 void Socket::listen()
 {
-	check(::listen(sock, 20));
+	check(::listen(sock, SOMAXCONN));
 }
 
 void Socket::connect(const string& host, uint16_t port)
