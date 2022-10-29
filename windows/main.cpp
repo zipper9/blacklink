@@ -240,6 +240,15 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 
 ParsedCommandLine cmdLine;
 
+BOOL setProcessDPIAware()
+{
+	HMODULE hMod = GetModuleHandle(_T("user32.dll"));
+	if (!hMod) return FALSE;
+	BOOL (WINAPI *pSetProcessDPIAware)() = (BOOL (WINAPI *)()) GetProcAddress(hMod, "SetProcessDPIAware");
+	if (pSetProcessDPIAware) return pSetProcessDPIAware();
+	return FALSE;
+}
+
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	ASSERT_MAIN_THREAD_INIT();
@@ -294,7 +303,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	SettingsManager::loadLanguage();
 	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
-	
+	if (BOOLSETTING(APP_DPI_AWARE)) setProcessDPIAware();
+
 	TimerManager::newInstance();
 	ClientManager::newInstance();
 	CompatibilityManager::detectIncompatibleSoftware();

@@ -542,6 +542,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			TABS_BORDER_COLOR,
 
 			// Assorted UI settings (Ints)
+			APP_DPI_AWARE,
 			SHOW_GRIDLINES,
 			SHOW_INFOTIPS,
 			USE_SYSTEM_ICONS,

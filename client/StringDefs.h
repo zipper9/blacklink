@@ -1800,6 +1800,7 @@ enum Strings   // @DontAdd
 	SETTINGS_HTTP_PROXY, // "HTTP proxy URL"
 	SETTINGS_HTTP_USER_AGENT, // "HTTP User-Agent"
 	SETTINGS_URLS, // "URLs"
+	SETTINGS_APP_DPI_AWARE, // "Enable DPI scaling"
 	LISTENING_SOCKET_ERROR, // "Listening socket (%1%) has failed to initialize.\nError: %2%.\nYou will need to configure the network settings manually."
 	CONNECTION_STATUS_FMT, // "%1%, %2% ago"
 	CONNECTION_STATUS_OK, // "Successful connection"

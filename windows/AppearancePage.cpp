@@ -19,8 +19,10 @@
 #include "stdafx.h"
 #include "AppearancePage.h"
 #include "WinUtil.h"
+#include "UserMessages.h"
 #include "../client/File.h"
 #include "../client/CompatibilityManager.h"
+#include "../client/BusyCounter.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -50,6 +52,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::FILTER_MESSAGES, ResourceManager::SETTINGS_FILTER_MESSAGES },
 	{ SettingsManager::UC_SUBMENU, ResourceManager::UC_SUBMENU },
 	{ SettingsManager::ENABLE_COUNTRY_FLAG, ResourceManager::ENABLE_COUNTRYFLAG },
+	{ SettingsManager::APP_DPI_AWARE, ResourceManager::SETTINGS_APP_DPI_AWARE },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -70,6 +73,7 @@ void AppearancePage::write()
 
 LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	BusyCounter<int> busyFlag(initializing);
 	ctrlList.Attach(GetDlgItem(IDC_APPEARANCE_BOOLEANS));
 	WinUtil::setExplorerTheme(ctrlList);
 
@@ -96,6 +100,23 @@ LRESULT AppearancePage::onClickedHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND
 {
 	MessageBox(CTSTRING(TIMESTAMP_HELP), CTSTRING(TIMESTAMP_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 	return S_OK;
+}
+
+LRESULT AppearancePage::onListItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+{
+	const NMLISTVIEW* l = reinterpret_cast<const NMLISTVIEW*>(pnmh);
+	if (!initializing && (l->uChanged & LVIF_STATE))
+	{
+		int setting = 0;
+		if (l->iItem >= 0 && l->iItem < _countof(listItems))
+			setting = listItems[l->iItem].setting;
+		if (setting == SettingsManager::APP_DPI_AWARE &&
+		    (bool) CListViewCtrl(l->hdr.hwndFrom).GetCheckState(l->iItem) != BOOLSETTING(APP_DPI_AWARE))
+		{
+			GetParent().SendMessage(WMU_RESTART_REQUIRED);
+		}
+	}
+	return 0;
 }
 
 void AppearancePage::getThemeList()

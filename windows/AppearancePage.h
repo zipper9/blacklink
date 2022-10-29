@@ -25,7 +25,7 @@
 class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPage
 {
 	public:
-		explicit AppearancePage() : PropPage(TSTRING(SETTINGS_APPEARANCE))
+		explicit AppearancePage() : PropPage(TSTRING(SETTINGS_APPEARANCE)), initializing(0)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -34,11 +34,13 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 		BEGIN_MSG_MAP_EX(AppearancePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_TIMESTAMP_HELP, BN_CLICKED, onClickedHelp)
+		NOTIFY_HANDLER(IDC_APPEARANCE_BOOLEANS, LVN_ITEMCHANGED, onListItemChanged)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClickedHelp(WORD /* wNotifyCode */, WORD wID, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		
+		LRESULT onListItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -49,6 +51,7 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 
 	protected:
 		CListViewCtrl ctrlList;
+		int initializing;
 		
 		struct ThemeInfo
 		{

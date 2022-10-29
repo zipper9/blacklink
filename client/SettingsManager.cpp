@@ -568,6 +568,7 @@ static const char* settingTags[] =
 	"TabsBorderColor",
 
 	// Assorted UI settings (Ints)
+	"AppDpiAware",
 	"ShowGrid",
 	"ShowInfoTips",
 	"UseSystemIcons", 
