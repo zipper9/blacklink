@@ -84,6 +84,10 @@
 #include "CommandLine.h"
 #include "CompatibilityManager.h"
 
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+#include "TextFrame.h"
+#endif
+
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
 #  ifdef FLYLINKDC_CALC_MEMORY_USAGE
 #   ifdef OSVER_WIN_VISTA
@@ -1481,14 +1485,16 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			DirectoryListingFrame::openWindow(i->hintedUser, i->text, 0);
 		}
 	}
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 	else if (wParam == VIEW_FILE_AND_DELETE)
 	{
 		std::unique_ptr<tstring> file(reinterpret_cast<tstring*>(lParam));
 		if (!ClientManager::isBeforeShutdown())
 		{
-			ShellExecute(NULL, NULL, file->c_str(), NULL, NULL, SW_SHOW); // FIXME
+			TextFrame::openWindow(*file);
 		}
 	}
+#endif
 	else if (wParam == PROCESS_COMMAND_LINE)
 	{
 		processCommandLine(cmdLine);
@@ -2700,10 +2706,12 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), qi->getListName(), dir, download->getRunningAverage(), qi->isSet(QueueItem::FLAG_DCLST_LIST));
 				WinUtil::postSpeakerMsg(*this, DOWNLOAD_LISTING, dirInfo);
 			}
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 			else if (qi->isSet(QueueItem::FLAG_TEXT))
 			{
 				WinUtil::postSpeakerMsg(*this, VIEW_FILE_AND_DELETE, new tstring(Text::toT(qi->getTarget())));
 			}
+#endif
 			else
 			{
 				WinUtil::openFile(Text::toT(qi->getTarget()));

@@ -140,7 +140,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO_USER, onDownloadCustom)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO_IP, onDownloadCustom)
 		COMMAND_ID_HANDLER(IDC_GO_TO_DIRECTORY, onGoToDirectory)
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchByTTH)
@@ -206,7 +206,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onDownloadToFavDirTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadToLastDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadToLastDirTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
 		LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

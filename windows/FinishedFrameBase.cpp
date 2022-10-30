@@ -5,6 +5,10 @@
 #include "../client/QueueManager.h"
 #include "../client/UploadManager.h"
 
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+#include "TextFrame.h"
+#endif
+
 static const int columnId[] =
 {
 	FinishedItem::COLUMN_FILE,
@@ -416,9 +420,12 @@ void FinishedFrameBase::appendMenuItems(OMenu& menu, bool fileExists, int& copyM
 	{
 		menu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
 		menu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+		menu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT), g_iconBitmaps.getBitmap(IconBitmaps::NOTEPAD, 0));
+#endif
 	}
-	if (transferType == e_TransferDownload)
-		menu.AppendMenu(MF_STRING, IDC_REDOWNLOAD_FILE, CTSTRING(DOWNLOAD));
+	else if (transferType == e_TransferDownload)
+		menu.AppendMenu(MF_STRING, IDC_REDOWNLOAD_FILE, CTSTRING(REDOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
 	copyMenuPos = menu.GetMenuItemCount();
 	menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 	menu.AppendMenu(MF_SEPARATOR);
@@ -571,7 +578,7 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	return 0;
 }
 
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 LRESULT FinishedFrameBase::onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int i;

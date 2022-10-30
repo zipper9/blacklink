@@ -17,29 +17,28 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
-#include "TextFrame.h"
 
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+// TODO: delete temporary file after closing the window
+
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+#include "TextFrame.h"
+#include "Colors.h"
+#include "Fonts.h"
 #include "../client/File.h"
 
-#define MAX_TEXT_LEN 32768
-
-void TextFrame::openWindow(const tstring& aFileName)
+void TextFrame::openWindow(const tstring& fileName)
 {
-	TextFrame* frame = new TextFrame(aFileName);
+	TextFrame* frame = new TextFrame(fileName);
 	frame->Create(WinUtil::g_mdiClient);
 }
 
-DWORD CALLBACK TextFrame::EditStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb)
+DWORD CALLBACK TextFrame::editStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb)
 {
 	DWORD dwRet = 0xffffffff;
 	File *pFile = reinterpret_cast<File *>(dwCookie);
-	
+
 	if (pFile)
 	{
-		//FileException e;
-		
 		try
 		{
 			size_t len = cb;
@@ -48,62 +47,64 @@ DWORD CALLBACK TextFrame::EditStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, 
 		}
 		catch (const FileException& /*e*/)
 		{
-			//UNREFERENCED_PARAMETER(e);
 		}
 	}
-	
+
 	return dwRet;
 }
 
-LRESULT TextFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT TextFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	               WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY, WS_EX_CLIENTEDGE);
-	               
+
 	ctrlPad.LimitText(0);
 	ctrlPad.SetFont(Fonts::g_font);
-	
+
 	try
 	{
-		File hFile(file, File::READ, File::OPEN);
-		
-		string str = hFile.read(4);
-		
-		static BYTE bUTF8signature[] = {0xef, 0xbb, 0xbf};
-		static BYTE bUnicodeSignature[] = {0xff, 0xfe};
+		File f(file, File::READ, File::OPEN);
+		uint8_t buf[4];
+		size_t size = sizeof(buf);
+		memset(buf, 0, sizeof(buf));
+		f.read(buf, size);
+
+		static const uint8_t bUTF8signature[] = {0xef, 0xbb, 0xbf};
+		static const uint8_t bUnicodeSignature[] = {0xff, 0xfe};
 		int nFormat = SF_TEXT;
-		if (memcmp(str.c_str(), bUTF8signature, sizeof(bUTF8signature)) == 0)
+		if (memcmp(buf, bUTF8signature, sizeof(bUTF8signature)) == 0)
 		{
 			nFormat = SF_TEXT | SF_USECODEPAGE | (CP_UTF8 << 16);
-			hFile.setPos(_countof(bUTF8signature));
+			f.setPos(sizeof(bUTF8signature));
 		}
-		else if (memcmp(str.c_str(), bUnicodeSignature, sizeof(bUnicodeSignature)) == 0)
+		else if (memcmp(buf, bUnicodeSignature, sizeof(bUnicodeSignature)) == 0)
 		{
 			nFormat = SF_TEXT | SF_UNICODE;
-			hFile.setPos(_countof(bUnicodeSignature));
+			f.setPos(sizeof(bUnicodeSignature));
 		}
 		else
 		{
 			nFormat = SF_TEXT;
-			hFile.setPos(0);
+			f.setPos(0);
 		}
-		
+
 		EDITSTREAM es =
 		{
-			(DWORD_PTR)&hFile,
+			(DWORD_PTR) &f,
 			0,
-			EditStreamCallback
+			editStreamCallback
 		};
 		ctrlPad.StreamIn(nFormat, es);
-		
+
 		ctrlPad.EmptyUndoBuffer();
-		SetWindowText(Text::toT(Util::getFileName(Text::fromT(file))).c_str());
+		SetWindowText(Util::getFileName(file).c_str());
 	}
 	catch (const FileException& e)
 	{
-		SetWindowText(Text::toT(Util::getFileName(Text::fromT(file)) + ": " + e.getError()).c_str());
+		tstring errorText = Util::getFileName(file) + _T(": ") + Text::toT(e.getError());
+		SetWindowText(errorText.c_str());
 	}
-	
+
 	bHandled = FALSE;
 	return 1;
 }
@@ -115,14 +116,32 @@ LRESULT TextFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	return 0;
 }
 
+LRESULT TextFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	HWND hWnd = (HWND) lParam;
+	HDC hDC = (HDC) wParam;
+	if (hWnd == ctrlPad.m_hWnd)
+		return Colors::setColor(hDC);
+	bHandled = FALSE;
+	return FALSE;
+}
+
+LRESULT TextFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NOTEPAD, 0);
+	opt->isHub = false;
+	return TRUE;
+}
+
 void TextFrame::UpdateLayout(BOOL /*bResizeBars*/ /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
 	CRect rc;
-	
+
 	GetClientRect(rc);
-	
+
 	rc.bottom -= 1;
 	rc.top += 1;
 	rc.left += 1;
@@ -137,6 +156,23 @@ void TextFrame::on(SettingsManagerListener::Repaint)
 	{
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}
+}
+
+CFrameWndClassInfo& TextFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("TextFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::NOTEPAD, 0);
+
+	return wc;
 }
 
 #endif

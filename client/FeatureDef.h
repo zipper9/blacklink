@@ -86,6 +86,7 @@
 #endif
 
 #define BL_UI_FEATURE_BB_CODES
+#undef  BL_UI_FEATURE_VIEW_AS_TEXT
 
 #define IRAINMAN_ENABLE_WHOIS
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
@@ -98,8 +99,6 @@
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 
 #define IRAINMAN_USE_SPIN_LOCK
-
-//#define FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 
 #define USE_APPDATA
 

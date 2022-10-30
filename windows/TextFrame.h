@@ -16,87 +16,68 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(TEXT_FRAME_H)
+#ifndef TEXT_FRAME_H
 #define TEXT_FRAME_H
 
-#pragma once
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 
 #include "FlatTabCtrl.h"
 #include "WinUtil.h"
 
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
-
 class TextFrame : public MDITabChildWindowImpl<TextFrame>, private SettingsManagerListener
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
-		static void openWindow(const tstring& aFileName);
-		
-		DECLARE_FRAME_WND_CLASS_EX(_T("TextFrame"), IDR_NOTEPAD, 0, COLOR_3DFACE);
-		
+		static void openWindow(const tstring& fileName);
+
+		static CFrameWndClassInfo& GetWndClassInfo();
+
 		TextFrame(const tstring& fileName) : file(fileName)
 		{
 			SettingsManager::getInstance()->addListener(this);
 		}
-		~TextFrame() { }
-		
+
+		TextFrame(const TextFrame&) = delete;
+		TextFrame& operator= (const TextFrame&) = delete;
+
 		typedef MDITabChildWindowImpl<TextFrame> baseClass;
 		BEGIN_MSG_MAP(TextFrame)
-		MESSAGE_HANDLER(WM_SETFOCUS, OnFocus)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
-		
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		
-		// [+] InfinitySky.
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		
-		void UpdateLayout(BOOL bResizeBars = TRUE);
-		
-		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-		{
-			const HWND hWnd = (HWND)lParam;
-			const HDC hDC = (HDC)wParam;
-			if (hWnd == ctrlPad.m_hWnd)
-			{
-				return Colors::setColor(hDC);
-			}
-			bHandled = FALSE;
-			return FALSE;
-		}
-		
-		LRESULT OnFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
+		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			ctrlPad.SetFocus();
 			return 0;
 		}
-		
+
+		void UpdateLayout(BOOL bResizeBars = TRUE);
+
 	private:
-	
 		tstring file;
 		CRichEditCtrl ctrlPad;
 		void on(SettingsManagerListener::Repaint) override;
-		
-		static DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb);
+
+		static DWORD CALLBACK editStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb);
 };
 
 #endif
 
 #endif // !defined(TEXT_FRAME_H)
-
-/**
- * @file
- * $Id: TextFrame.h,v 1.13 2006/05/08 08:36:20 bigmuscle Exp $
- */

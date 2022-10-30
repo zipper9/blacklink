@@ -1045,14 +1045,12 @@ void DirectoryListingFrame::downloadSelected(const tstring& target, bool view /*
 		{
 			if (ii->type == ItemInfo::FILE)
 			{
+				tstring path = itemTarget + ii->getText(COLUMN_FILENAME);
 				if (view)
-				{
-					// ???
-					File::deleteFile(itemTarget + Text::toT(Util::validateFileName(ii->file->getName())));
-				}
+					File::deleteFile(path);
 				redrawFlag = true;
 				parent = ii->file->getParent();
-				dl->download(ii->file, Text::fromT(itemTarget + ii->getText(COLUMN_FILENAME)), view,
+				dl->download(ii->file, Text::fromT(path), view,
 					(WinUtil::isShift() || view) ? QueueItem::HIGHEST : prio, false, getConnFlag);
 			}
 			else if (!view)
@@ -1210,10 +1208,10 @@ LRESULT DirectoryListingFrame::onDownloadByPath(WORD, WORD, HWND, BOOL&)
 }
 #endif
 
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 LRESULT DirectoryListingFrame::onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	downloadList(Text::toT(Util::getTempPath()), true);
+	downloadSelected(Text::toT(Util::getTempPath()), true);
 	return 0;
 }
 #endif
@@ -1535,8 +1533,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 			fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 		}
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
-		fileMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+		fileMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT), g_iconBitmaps.getBitmap(IconBitmaps::NOTEPAD, 0));
 #endif
 		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 		fileMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));

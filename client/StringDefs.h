@@ -888,6 +888,7 @@ enum Strings   // @DontAdd
 	RECHECK_FILE, // "Recheck integrity"
 	REDIRECT_ALREADY_CONNECTED, // "Redirect request received to a hub that's already connected"
 	REDIRECT_USER, // "Redirect user(s)"
+	REDOWNLOAD, // "Redownload"
 	REDUCE_PRIORITY_IF_MINIMIZED, // "Reduce process priority if application is minimized to tray"
 	REFRESH, // "&Refresh"
 	REFRESH_USER_LIST, // "Refresh user list"

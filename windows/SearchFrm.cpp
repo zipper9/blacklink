@@ -1371,6 +1371,25 @@ void SearchFrame::SearchInfo::browseList()
 	}
 }
 
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+void SearchFrame::SearchInfo::view()
+{
+	try
+	{
+		if (sr.getType() == SearchResult::TYPE_FILE)
+		{
+			bool getConnFlag = true;
+			QueueManager::getInstance()->add(Util::getTempPath() + sr.getFileName(), sr.getSize(), sr.getTTH(), sr.getHintedUser(),
+				QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_TEXT, QueueItem::DEFAULT, true, getConnFlag);
+			sr.flags |= SearchResult::FLAG_QUEUED;
+		}
+	}
+	catch (const Exception&)
+	{
+	}
+}
+#endif
+
 void SearchFrame::SearchInfo::CheckTTH::operator()(const SearchInfo* si)
 {
 	if (firstTTH)
@@ -2153,9 +2172,9 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
 			}
 #endif
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 			resultsMenu.AppendMenu(MF_SEPARATOR);
-			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
+			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT), g_iconBitmaps.getBitmap(IconBitmaps::NOTEPAD, 0));
 #endif
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));

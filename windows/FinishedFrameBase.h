@@ -186,7 +186,7 @@ class FinishedFrameBase
 		LRESULT onTreeItemDeleted(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
 		LRESULT onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -226,7 +226,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVE_TREE_ITEM, onRemoveTreeItem)
 		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemove)
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
 		COMMAND_ID_HANDLER(IDC_OPEN_FILE, onOpenFile)

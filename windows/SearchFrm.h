@@ -90,7 +90,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		MESSAGE_HANDLER(DM_GETDEFID, onGetDefID)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
@@ -176,7 +176,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void runUserCommand(UserCommand& uc);
 		void onSizeMode();
 		void removeSelected();
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			ctrlResults.forEachSelected(&SearchInfo::view);
@@ -314,6 +314,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 				void getList();
 				void browseList();
+#ifdef BL_UI_FEATURE_VIEW_AS_TEXT
+				void view();
+#endif
 
 				struct Download
 				{
