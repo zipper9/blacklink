@@ -615,7 +615,7 @@ LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 				if (ui->stateLocation == UserInfo::STATE_INITIAL || ui->stateP2PGuard == UserInfo::STATE_INITIAL)
 				{
 					IpAddress ip = ui->getIp();
-					if (ip.type == AF_INET && hubFrame)
+					if (ip.type && hubFrame)
 					{
 						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_IN_PROGRESS;
 						// FIXME: use background thread instead of the UI thread
