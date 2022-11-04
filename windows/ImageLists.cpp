@@ -452,6 +452,7 @@ IconBitmaps::IconBitmaps()
 	init(ERASE,                   SOURCE_OTHER,    28);
 	init(PAUSE,                   SOURCE_OTHER,    29);
 	init(CLEAR,                   SOURCE_OTHER,    30);
+	init(HAMMER,                  SOURCE_OTHER,    31);
 	init(EDITOR_SEND,             SOURCE_EDITOR,   0);
 	init(EDITOR_MULTILINE,        SOURCE_EDITOR,   1);
 	init(EDITOR_EMOTICON,         SOURCE_EDITOR,   2);

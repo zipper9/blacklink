@@ -32,6 +32,9 @@ static const WCHAR PASSWORD_CHAR = L'\x25CF';
 static const char PASSWORD_CHAR = '*';
 #endif
 
+static const int IMAGE_ONLINE  = 8;
+static const int IMAGE_OFFLINE = 9;
+
 int FavoriteHubsFrame::columnIndexes[] =
 {
 	COLUMN_NAME,
@@ -86,7 +89,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	pLoop->AddMessageFilter(this);
 
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
-	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
+	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	setListViewColors(ctrlHubs);
 	ctrlHubs.EnableGroupView(TRUE);
@@ -148,12 +151,9 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlManageGroups.SetWindowText(CTSTRING(MANAGE_GROUPS));
 	ctrlManageGroups.SetFont(Fonts::g_systemFont);
 
-	onlineStatusImg.Create(16, 16, ILC_COLOR32 | ILC_MASK,  0, 2);
-	onlineStatusImg.AddIcon(g_iconBitmaps.getIcon(IconBitmaps::STATUS_ONLINE, 0));
-	onlineStatusImg.AddIcon(g_iconBitmaps.getIcon(IconBitmaps::STATUS_OFFLINE, 0));
-	ctrlHubs.SetImageList(onlineStatusImg, LVSIL_SMALL);
+	ctrlHubs.SetImageList(g_otherImage.getIconList(), LVSIL_SMALL);
 	ClientManager::getOnlineClients(onlineHubs);
-	
+
 	FavoriteManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	ClientManager::getInstance()->addListener(this);
@@ -161,20 +161,15 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	createTimer(15000);
 	
 	fillList();
-	
-	hubsMenu.CreatePopupMenu();
-	hubsMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
-	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_NEWFAV, CTSTRING(NEW), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_MOVE_UP, CTSTRING(MOVE_UP), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_UP, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_DOWN, 0));
-	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
-	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
-	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
-	
+
+	copyMenu.CreatePopupMenu();
+	for (int i = 0; i < _countof(columnNames); i++)
+	{
+		if (i == COLUMN_PASSWORD) continue;
+		ResourceManager::Strings str = i == 0 ? ResourceManager::NAME : columnNames[i];
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(str));
+	}
+
 	noSave = false;
 	
 	bHandled = FALSE;
@@ -213,7 +208,6 @@ FavoriteHubsFrame::StateKeeper::~StateKeeper()
 {
 	// restore visual updating now, otherwise it doesn't always scroll
 	hubs.SetRedraw(TRUE);
-	
 	for (int i : selected)
 	{
 		const auto cnt = hubs.GetItemCount();
@@ -228,8 +222,7 @@ FavoriteHubsFrame::StateKeeper::~StateKeeper()
 			}
 		}
 	}
-	
-	ListView_Scroll(hubs.m_hWnd, 0, scroll);
+	hubs.Scroll(SIZE{0, scroll});
 }
 
 const std::vector<int>& FavoriteHubsFrame::StateKeeper::getSelection() const
@@ -307,9 +300,9 @@ void FavoriteHubsFrame::addEntryL(const FavoriteHubEntry* entry, int pos, int gr
 	lvItem.mask = LVIF_GROUPID | LVIF_IMAGE;
 	lvItem.iItem = i;
 	if (online)
-		lvItem.iImage = 0;
+		lvItem.iImage = IMAGE_ONLINE;
 	else
-		lvItem.iImage = wasConnecting ? 1 : -1;
+		lvItem.iImage = wasConnecting ? IMAGE_OFFLINE : -1;
 	lvItem.iGroupId = groupIndex;
 	ctrlHubs.SetItem(&lvItem);
 }
@@ -339,7 +332,7 @@ LRESULT FavoriteHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 			int index = findItem(id);
 			if (index != -1)
 			{
-				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, 0, 0, 0, 0);
+				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, IMAGE_ONLINE, 0, 0, 0);
 				ctrlHubs.SetItemText(index, COLUMN_CONNECTION_STATUS, CTSTRING(ONLINE));
 				tstring lastConn = printLastConnected(cs);
 				ctrlHubs.SetItemText(index, COLUMN_LAST_CONNECTED, lastConn.c_str());
@@ -363,7 +356,7 @@ LRESULT FavoriteHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 			int index = findItem(id);
 			if (index != -1)
 			{
-				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, 1, 0, 0, 0);
+				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, IMAGE_OFFLINE, 0, 0, 0);
 				tstring status = printConnectionStatus(cs, GET_TIME());
 				ctrlHubs.SetItemText(index, COLUMN_CONNECTION_STATUS, status.c_str());
 				ctrlHubs.Update(index);
@@ -393,35 +386,51 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			WinUtil::getContextMenuPos(ctrlHubs, pt);
 		}
 		
-		int status = ctrlHubs.GetSelectedCount() > 0 ? MFS_ENABLED : MFS_DISABLED;
-		hubsMenu.EnableMenuItem(IDC_OPEN_HUB_LOG, status);
-		hubsMenu.EnableMenuItem(IDC_CONNECT, status);
-		hubsMenu.EnableMenuItem(IDC_EDIT, status);
-		hubsMenu.EnableMenuItem(IDC_MOVE_UP, status);
-		hubsMenu.EnableMenuItem(IDC_MOVE_DOWN, status);
-		hubsMenu.EnableMenuItem(IDC_REMOVE, status);
+		int selCount = ctrlHubs.GetSelectedCount();
+
+		OMenu hubsMenu;
+		hubsMenu.CreatePopupMenu();
 		
-		tstring x;
-		if (ctrlHubs.GetSelectedCount() == 1)
+		tstring title;
+		bool online = false;
+		if (selCount == 1)
 		{
 			int index = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
 			auto fm = FavoriteManager::getInstance();
 			const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(static_cast<int>(ctrlHubs.GetItemData(index)));
 			if (fhe)
 			{
-				x = Text::toT(fhe->getName());
+				title = Text::toT(fhe->getName());
+				online = isOnline(fhe->getServer());
 				fm->releaseFavoriteHubEntryPtr(fhe);
 			}
 		}
-		
-		if (!x.empty())
-			hubsMenu.InsertSeparatorFirst(x);
-			
+
+		if (!title.empty())
+			hubsMenu.InsertSeparatorFirst(title);
+
+		int status = selCount == 0 ? MF_DISABLED : 0;
+		hubsMenu.AppendMenu(MF_STRING, IDC_NEWFAV, CTSTRING(NEW), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
+		hubsMenu.AppendMenu(MF_STRING | (selCount == 1 ? 0 : MFS_DISABLED), IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
+		hubsMenu.AppendMenu(MF_SEPARATOR);
+		if (online)
+			hubsMenu.AppendMenu(MF_STRING | status, IDC_CONNECT, CTSTRING(OPEN_HUB_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_HUB, 0));
+		else
+			hubsMenu.AppendMenu(MF_STRING | status, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
+		hubsMenu.AppendMenu(MF_STRING | status, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
+		hubsMenu.AppendMenu(MF_SEPARATOR);
+		int copyMenuIndex = hubsMenu.GetMenuItemCount();
+		hubsMenu.AppendMenu(MF_POPUP | status, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+		hubsMenu.AppendMenu(MF_SEPARATOR);
+		hubsMenu.AppendMenu(MF_STRING | status, IDC_MOVE_UP, CTSTRING(MOVE_UP), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_UP, 0));
+		hubsMenu.AppendMenu(MF_STRING | status, IDC_MOVE_DOWN, CTSTRING(MOVE_DOWN), g_iconBitmaps.getBitmap(IconBitmaps::MOVE_DOWN, 0));
+		hubsMenu.AppendMenu(MF_SEPARATOR);
+		hubsMenu.AppendMenu(MF_STRING | status, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
+		hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
+
 		hubsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		
-		if (!x.empty())
-			hubsMenu.RemoveFirstItem();
-			
+		hubsMenu.RemoveMenu(copyMenuIndex, MF_BYPOSITION);
+
 		return TRUE;
 	}
 	
@@ -691,11 +700,11 @@ LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 	if (l->iItem != -1)
 	{
 		BOOL enabled = ctrlHubs.GetItemState(l->iItem, LVIS_SELECTED);
-		::EnableWindow(GetDlgItem(IDC_CONNECT), enabled);
-		::EnableWindow(GetDlgItem(IDC_REMOVE), enabled);
-		::EnableWindow(GetDlgItem(IDC_EDIT), enabled);
-		::EnableWindow(GetDlgItem(IDC_MOVE_UP), enabled);
-		::EnableWindow(GetDlgItem(IDC_MOVE_DOWN), enabled);
+		GetDlgItem(IDC_CONNECT).EnableWindow(enabled);
+		GetDlgItem(IDC_REMOVE).EnableWindow(enabled);
+		GetDlgItem(IDC_EDIT).EnableWindow(enabled);
+		GetDlgItem(IDC_MOVE_UP).EnableWindow(enabled);
+		GetDlgItem(IDC_MOVE_DOWN).EnableWindow(enabled);
 		if (!noSave && ((l->uNewState & LVIS_STATEIMAGEMASK) != (l->uOldState & LVIS_STATEIMAGEMASK)))
 		{
 			auto fm = FavoriteManager::getInstance();
@@ -811,6 +820,26 @@ LRESULT FavoriteHubsFrame::onManageGroups(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	StateKeeper keeper(ctrlHubs);
 	fillList();
 	
+	return 0;
+}
+
+LRESULT FavoriteHubsFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int column = wID - IDC_COPY;
+	if (column < COLUMN_FIRST || column >= COLUMN_LAST) return 0;
+	tstring result;
+	int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+	while (i != -1)
+	{
+		const tstring text = ctrlHubs.ExGetItemTextT(i, column);
+		if (!text.empty())
+		{
+			if (!result.empty()) result += _T("\r\n");
+			result += text;
+		}
+		i = ctrlHubs.GetNextItem(i, LVNI_SELECTED);
+	}
+	if (!result.empty()) WinUtil::setClipboard(result);	
 	return 0;
 }
 

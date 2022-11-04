@@ -36,14 +36,14 @@
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...
 #define HUBSTATUS_MESSAGE_MAP 12 // Status frame
 
-struct CompareItems;
+static const int HUB_FRAME_TRAITS = UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG;
 
 class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	private ClientListener,
 	public CSplitterImpl<HubFrame>,
 	public CMessageFilter,
 	public UCHandler<HubFrame>,
-	public UserInfoBaseHandler<HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr>,
+	public UserInfoBaseHandler<HubFrame, HUB_FRAME_TRAITS, OnlineUserPtr>,
 	private SettingsManagerListener,
 	private FavoriteManagerListener,
 	private UserManagerListener,
@@ -77,8 +77,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		typedef CSplitterImpl<HubFrame> splitBase;
 		typedef MDITabChildWindowImpl<HubFrame> baseClass;
 		typedef UCHandler<HubFrame> ucBase;
-		typedef UserInfoBaseHandler < HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr > uibBase;
-		
+		typedef UserInfoBaseHandler<HubFrame, HUB_FRAME_TRAITS, OnlineUserPtr> uibBase;
+
 		BEGIN_MSG_MAP(HubFrame)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)

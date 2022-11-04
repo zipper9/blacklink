@@ -29,13 +29,15 @@
 #include "../client/UserManagerListener.h"
 #include "../client/OnlineUser.h"
 
+static const int USERS_FRAME_TRAITS = UserInfoGuiTraits::FAVORITES_VIEW | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY;
+
 class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public StaticFrame<UsersFrame, ResourceManager::FAVORITE_USERS, IDC_FAVUSERS>,
 	public CSplitterImpl<UsersFrame>,
 	public CMessageFilter,
 	private FavoriteManagerListener,
 	private UserManagerListener,
-	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY>,
+	public UserInfoBaseHandler<UsersFrame, USERS_FRAME_TRAITS>,
 	private SettingsManagerListener
 {
 	public:	
@@ -48,7 +50,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		
 		typedef MDITabChildWindowImpl<UsersFrame> baseClass;
 		typedef CSplitterImpl<UsersFrame> splitBase;
-		typedef UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY> uibBase;
+		typedef UserInfoBaseHandler<UsersFrame, USERS_FRAME_TRAITS> uibBase;
 		
 		BEGIN_MSG_MAP(UsersFrame)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)

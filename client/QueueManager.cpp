@@ -2344,7 +2344,6 @@ void QueueManager::removeSource(const UserPtr& user, Flags::MaskType reason) noe
 		userQueue.removeDownload(qi, user);
 		disconnect = dirty = true;
 		fireStatusUpdated(qi);
-		dirty = true;
 	}
 	if (disconnect)
 		ConnectionManager::getInstance()->disconnect(user, true);

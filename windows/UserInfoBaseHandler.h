@@ -11,7 +11,7 @@ class UserInfo;
 class UserInfoBase;
 struct FavUserTraits;
 
-struct UserInfoGuiTraits // internal class, please do not use it directly!
+struct UserInfoGuiTraits
 {
 		friend class UserInfoSimple;
 
@@ -51,11 +51,11 @@ struct UserInfoGuiTraits // internal class, please do not use it directly!
 			DEFAULT = 0,
 			NO_SEND_PM = 1,
 			NO_CONNECT_FAV_HUB = 2,
-			NO_COPY = 4, // Please disable if your want custom copy menu, for user items please use copyUserMenu.
+			NO_COPY = 4,
 			NO_FILE_LIST = 8,
 			NICK_TO_CHAT = 16,
 			USER_LOG = 32,
-			INLINE_CONTACT_LIST = 64,
+			FAVORITES_VIEW = 64
 		};
 
 	protected:
@@ -65,6 +65,7 @@ struct UserInfoGuiTraits // internal class, please do not use it directly!
 		static void processDetailsMenu(WORD id);
 		static void copyUserInfo(WORD idc, const Identity& id);
 		static void addSummaryMenu(const OnlineUserPtr& ou);
+		static void showFavUser(const UserPtr& user);
 
 		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
@@ -93,7 +94,7 @@ struct UserInfoGuiTraits // internal class, please do not use it directly!
 };
 
 template<class T>
-struct UserInfoBaseHandlerTraitsUser // technical class, please do not use it directly!
+struct UserInfoBaseHandlerTraitsUser
 {
 	protected:
 		static T g_user;
@@ -137,6 +138,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		COMMAND_RANGE_HANDLER(IDC_SPEED_NORMAL, IDC_SPEED_MANUAL, onSetUserLimit)
 		COMMAND_RANGE_HANDLER(IDC_SPEED_VALUE, IDC_SPEED_VALUE + 256, onSetUserLimit)
 		COMMAND_RANGE_HANDLER(IDC_USER_INFO, UserInfoGuiTraits::detailsItemMaxId, onDetailsMenu)
+		COMMAND_ID_HANDLER(IDC_SHOW_FAV_USER, onShowFavUser)
 		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemoveAll)
 		COMMAND_ID_HANDLER(IDC_REPORT, onReport)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onConnectFav)
@@ -321,6 +323,13 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			return 0;
 		}
 
+		LRESULT onShowFavUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			UserInfoSimple u(selectedUser, selectedHint);
+			showFavUser(u.getUser());
+			return 0;
+		}
+
 		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			doAction(&UserInfoBase::removeAll);
@@ -402,16 +411,14 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 					FavUserTraits traits; // empty
 					if (ENABLE(options, NICK_TO_CHAT))
 						menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
-					appendSendAutoMessageItems(menu, selected.size());
+					appendSendPMItems(menu, selected.size());
+					appendSeparator(menu);
 					appendFileListItems(menu, traits);
-					appendContactListMenu(menu, traits);
 					appendFavPrivateMenu(menu);
 					appendIgnoreByNameItem(menu, traits);
 					appendGrantItems(menu);
 					appendSpeedLimitMenu(menu, 0);
-					appendSeparator(menu);					
-					appendRemoveAllItems(menu);
-					appendSeparator(menu);
+					appendContactListMenu(menu, traits, selected.size());
 				}
 			}
 		}
@@ -420,30 +427,28 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		void appendAndActivateUserItemsForSingleUser(OMenu& menu, const string& hint)
 		{
 			dcassert(selectedUser);
-			
+
 			UserInfoSimple ui(selectedUser, hint);
 			FavUserTraits traits;
 			traits.init(ui);
 			OnlineUserPtr ou = static_cast<T*>(this)->getSelectedOnlineUser();
-			if (ou) addSummaryMenu(ou);
+			if (ou)
+				addSummaryMenu(ou);
 			if (ENABLE(options, NICK_TO_CHAT))
-			{
 				menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
-			}
 			if (ENABLE(options, USER_LOG))
-			{
 				menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
-			}
-			appendSendAutoMessageItems(menu, 1);
+			appendSendPMItems(menu, 1);
+			if (DISABLE(options, NO_CONNECT_FAV_HUB))
+				internal_appendConnectToHubItem(menu, traits);
+			appendSeparator(menu);
 			appendCopyMenuForSingleUser(menu);
 			appendFileListItems(menu, traits);
-			appendContactListMenu(menu, traits);
 			appendFavPrivateMenu(menu);
 			appendIgnoreByNameItem(menu, traits);
 			appendGrantItems(menu);
 			appendSpeedLimitMenu(menu, traits.uploadLimit);
-			appendSeparator(menu);
-			appendRemoveAllItems(menu);
+			appendContactListMenu(menu, traits, 1);
 			appendUserSummaryMenu(menu);
 			activateFavPrivateMenuForSingleUser(menu, traits);
 			activateSpeedLimitMenuForSingleUser(menu, traits);
@@ -457,7 +462,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		static void appendUserSummaryMenu(OMenu& menu)
 		{
 			if (userSummaryMenu.GetMenuItemCount() > 1)
+			{
+				appendSeparator(menu);
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
+			}
 		}
 		
 		static void appendFavPrivateMenu(OMenu& menu)
@@ -469,17 +477,11 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		{
 			dcassert(selectedUser);
 			if (traits.isIgnoredPm)
-			{
 				privateMenu.CheckMenuItem(IDC_PM_IGNORED, MF_BYCOMMAND | MF_CHECKED);
-			}
 			else if (traits.isFreePm)
-			{
 				privateMenu.CheckMenuItem(IDC_PM_FREE, MF_BYCOMMAND | MF_CHECKED);
-			}
 			else
-			{
 				privateMenu.CheckMenuItem(IDC_PM_NORMAL, MF_BYCOMMAND | MF_CHECKED);
-			}
 		}
 		
 		static void appendSpeedLimitMenu(OMenu& menu, int customSpeedVal)
@@ -506,27 +508,35 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			if (traits.isIgnoredByWildcard)
 				menu.EnableMenuItem(IDC_IGNORE_BY_NAME, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 		}
-		
-		static void internal_appendContactListItems(OMenu& menu, const FavUserTraits& traits)
+
+		static void internal_appendContactListItems(OMenu& menu, const FavUserTraits& traits, int count)
 		{
 			if (traits.isEmpty || !traits.isFav)
 				menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES), g_iconBitmaps.getBitmap(IconBitmaps::ADD_USER, 0));
+			if (DISABLE(options, FAVORITES_VIEW) && count == 1 && traits.isFav)
+				menu.AppendMenu(MF_STRING, IDC_SHOW_FAV_USER, CTSTRING(OPEN_USER_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_USER, 0));
 			if (traits.isEmpty || traits.isFav)
 				menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_USER, 0));
-			if (DISABLE(options, NO_CONNECT_FAV_HUB) && traits.isFav)
+		}
+
+		static void internal_appendConnectToHubItem(OMenu& menu, const FavUserTraits& traits)
+		{
+			if (traits.isHubConnected)
+				menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(OPEN_HUB_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_HUB, 0));
+			else
 				menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
 		}
-		
-		static void appendContactListMenu(OMenu& menu, const FavUserTraits& traits)
+
+		static void appendContactListMenu(OMenu& menu, const FavUserTraits& traits, int count)
 		{
-			if (ENABLE(options, INLINE_CONTACT_LIST))
+			if ((ENABLE(options, FAVORITES_VIEW) || !traits.isFav) && count == 1)
 			{
-				internal_appendContactListItems(menu, traits);
+				internal_appendContactListItems(menu, traits, 1);
 			}
 			else
 			{
 				favUserMenu.ClearMenu();
-				internal_appendContactListItems(favUserMenu, traits);
+				internal_appendContactListItems(favUserMenu, traits, count);
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favUserMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.getBitmap(IconBitmaps::CONTACT_LIST, 0));
 			}
 		}
@@ -547,18 +557,12 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 
 	private:
-		static void appendSendAutoMessageItems(OMenu& menu, int count)
+		static void appendSendPMItems(OMenu& menu, int count)
 		{
-			if (DISABLE(options, NO_SEND_PM))
-			{
-				if (count > 0 && count < 50)
-				{
-					menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
-					menu.AppendMenu(MF_SEPARATOR);
-				}
-			}
+			if (DISABLE(options, NO_SEND_PM) && count > 0 && count < 50)
+				menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
 		}		
-		
+
 		static void appendFileListItems(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (DISABLE(options, NO_FILE_LIST) && traits.isOnline)
@@ -569,12 +573,12 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 				appendSeparator(menu);
 			}
 		}
-		
+
 		static void appendRemoveAllItems(OMenu& menu)
 		{
 			menu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
 		}
-		
+
 		static void appendGrantItems(OMenu& menu)
 		{
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU), g_iconBitmaps.getBitmap(IconBitmaps::UPLOAD_QUEUE, 0));
@@ -678,10 +682,11 @@ struct FavUserTraits
 		isIgnoredPm(false), isFreePm(false),
 		isIgnoredByName(false),
 		isIgnoredByWildcard(false),
-		isOnline(true)
+		isOnline(true),
+		isHubConnected(false)
 	{
 	}
-	void init(const UserInfoBase& ui);
+	void init(const UserInfoSimple& ui);
 	
 	int uploadLimit;
 	
@@ -693,6 +698,7 @@ struct FavUserTraits
 	bool isIgnoredByName;
 	bool isIgnoredByWildcard;
 	bool isOnline;
+	bool isHubConnected;
 };
 
 #endif /* USER_INFO_BASE_HANDLER_H */

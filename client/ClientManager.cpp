@@ -751,26 +751,25 @@ void ClientManager::resendMyInfo()
 	}
 }
 
-void ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive)
+OnlineUserPtr ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive)
 {
 	dcassert(!token.empty());
 	dcassert(!isBeforeShutdown());
+	OnlineUserPtr ou;
 	if (!isBeforeShutdown())
 	{
 		const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 		
 		READ_LOCK(*g_csOnlineUsers);
-		OnlineUserPtr u = findOnlineUserL(user, priv);
-		
-		if (u)
+		ou = findOnlineUserL(user, priv);
+		if (ou)
 		{
 			if (forcePassive)
-			{
-				u->getClientBase()->resendMyINFO(false, true);
-			}
-			u->getClientBase()->connect(u, token, forcePassive);
+				ou->getClientBase()->resendMyINFO(false, true);
+			ou->getClientBase()->connect(ou, token, forcePassive);
 		}
 	}
+	return ou;
 }
 
 int ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic)

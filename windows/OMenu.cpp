@@ -228,7 +228,7 @@ BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem, HB
 	if (nFlags & (MF_DISABLED | MF_GRAYED))
 	{
 		nFlags &= ~(MF_DISABLED | MF_GRAYED);
-		//mii.fState |= MFS_DISABLED;
+		mii.fState |= MFS_DISABLED;
 	}
 	if (nFlags & MF_CHECKED)
 	{

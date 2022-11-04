@@ -36,12 +36,14 @@ class UCHandlerBase
 			appendUcMenu(menu, ctx, StringList(1, hubUrl));
 		}
 		void cleanUcMenu(OMenu& menu);
+		OMenu& getServiceSubMenu() { return serviceSubMenu; }
 
 	protected:
 		vector<UserCommand> userCommands;
 
 	private:
 		OMenu subMenu;
+		OMenu serviceSubMenu;
 		int menuPos;
 		int insertedItems;
 

@@ -36,7 +36,7 @@ class UserCommand : public Flags
 			TYPE_CHAT_ONCE,
 			TYPE_CLEAR = 255
 		};
-		
+
 		enum
 		{
 			CONTEXT_HUB = 0x01,
@@ -44,9 +44,11 @@ class UserCommand : public Flags
 			CONTEXT_SEARCH = 0x04,
 			CONTEXT_FILELIST = 0x08,
 			CONTEXT_MASK = CONTEXT_HUB | CONTEXT_USER | CONTEXT_SEARCH | CONTEXT_FILELIST,
-			CONTEXT_FLAG_ME = 0x100
+			CONTEXT_FLAG_ME = 0x100,
+			CONTEXT_FLAG_TRANSFERS = 0x200,
+			CONTEXT_FLAG_MULTIPLE = 0x400
 		};
-		
+
 		enum
 		{
 			FLAG_NOSAVE = 0x01,

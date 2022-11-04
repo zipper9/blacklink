@@ -38,22 +38,24 @@
 #include "BaseHandlers.h"
 #include "BarShader.h"
 
+static const int TRANSFERS_VIEW_TRAITS = UserInfoGuiTraits::NO_COPY;
+
 class TransferView : public CWindowImpl<TransferView>, private DownloadManagerListener,
 	private UploadManagerListener,
 	private ConnectionManagerListener,
 	private QueueManagerListener,
-	public UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY>,
+	public UserInfoBaseHandler<TransferView, TRANSFERS_VIEW_TRAITS>,
 	public PreviewBaseHandler,
 	public UCHandler<TransferView>,
 	private SettingsManagerListener
 {
 	public:
 		DECLARE_WND_CLASS(_T("TransferView"))
-		
+
 		TransferView();
 		~TransferView();
-		
-		typedef UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY> uibBase;
+
+		typedef UserInfoBaseHandler<TransferView, TRANSFERS_VIEW_TRAITS> uibBase;
 		typedef UCHandler<TransferView> ucBase;
 
 		class ItemInfo;
@@ -534,11 +536,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 		ProgressBar progressBar[3]; // download, download segment, upload
 
-		//OMenu transferMenu;
 		OMenu segmentedMenu;
-		OMenu usercmdsMenu;
 		OMenu copyMenu;
-		
+
 		StringMap ucLineParams;
 		bool shouldSort;
 

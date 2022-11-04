@@ -29,6 +29,7 @@
 #include "ExMessageBox.h"
 #include "../client/Util.h"
 #include "../client/UserManager.h"
+#include "../client/dht/DHT.h"
 #include <algorithm>
 
 const int UsersFrame::columnId[] =
@@ -180,7 +181,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i],
 						i == 0 ? CTSTRING(NICK) : CTSTRING_I(columnNames[i]));
 			}
-			int copyIndex = 5;
+			int copyIndex = 6;
 			if (!nick.empty())
 			{
 				usersMenu.InsertSeparatorFirst(nick);
@@ -197,7 +198,8 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			mii.fMask = MIIM_FTYPE;
 			mii.fType = MFT_SEPARATOR;
 			usersMenu.InsertMenuItem(copyIndex + 1, TRUE, &mii);
-			if (FavoriteManager::getInstance()->getUserUrl(user).empty())
+			string url = FavoriteManager::getInstance()->getUserUrl(user);
+			if (url.empty() || url == dht::NetworkName)
 				usersMenu.EnableMenuItem(IDC_CONNECT, MFS_GRAYED);
 		}
 		else

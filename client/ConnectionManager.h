@@ -88,10 +88,11 @@ class ConnectionQueueItem
 		bool isDownload() const { return download; }
 		const UserPtr& getUser() const { return hintedUser.user; }
 		const HintedUser& getHintedUser() const { return hintedUser; }
+		void setHubHint(const string& hubUrl) { hintedUser.hint = hubUrl; }
 		
 	private:
 		const string token;
-		const HintedUser hintedUser;
+		HintedUser hintedUser;
 		const bool download;
 };
 

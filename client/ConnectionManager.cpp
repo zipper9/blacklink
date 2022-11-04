@@ -734,9 +734,9 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 						{
 							cqi->setLastAttempt(tick);
 							cqi->setState(ConnectionQueueItem::CONNECTING);
-							ClientManager::getInstance()->connect(cqi->getHintedUser(),
-							                                      cqi->getConnectionQueueToken(),
-							                                      false);
+							OnlineUserPtr ou = ClientManager::getInstance()->connect(cqi->getHintedUser(), cqi->getConnectionQueueToken(), false);
+							if (ou)
+								cqi->setHubHint(ou->getClientBase()->getHubUrl());
 							statusChanged.emplace_back(TokenItem{cqi->getHintedUser(), cqi->getConnectionQueueToken()});
 							attempts++;
 						}

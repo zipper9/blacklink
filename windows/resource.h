@@ -285,6 +285,7 @@
 #define IDC_TEMP_DOWNLOAD_DIRECTORY     1155
 #define IDC_BROWSETEMPDIR               1156
 #define IDC_SOCKS_RESOLVE               1157
+#define IDC_SHOW_FAV_USER               1159
 #define IDC_REMOVEALL                   1160
 #define IDC_NATT                        1161
 #define IDC_AUTO_TEST_PORTS             1162

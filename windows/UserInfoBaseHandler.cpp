@@ -236,7 +236,7 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 		if (params.limit)
 			userInfo += _T(", ") + TSTRING(UPLOAD_SPEED_LIMIT) + _T(": ") + Util::formatBytesT(params.limit) + _T('/') + TSTRING(DATETIME_SECONDS);
 
-		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, userInfo.c_str());
+		userSummaryMenu.AppendMenu(MF_STRING, (UINT_PTR) 0, userInfo.c_str());
 
 		uint64_t slotTick = UploadManager::getInstance()->getReservedSlotTick(user);
 		if (slotTick)
@@ -245,7 +245,7 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 			if (slotTick >= currentTick + 1000)
 			{
 				const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsT((slotTick-currentTick)/1000);
-				userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
+				userSummaryMenu.AppendMenu(MF_STRING, (UINT_PTR) 0, note.c_str());
 			}
 		}
 
@@ -253,7 +253,7 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 		bool hasIp6 = Util::isValidIp6(params.ip6);
 		if (hasIp4 || hasIp6)
 		{
-			userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, UserInfoSimple::getTagIP(params).c_str());
+			userSummaryMenu.AppendMenu(MF_STRING, (UINT_PTR) 0, UserInfoSimple::getTagIP(params).c_str());
 			IPInfo ipInfo;
 			IpAddress ip;
 			if (hasIp4)
@@ -276,14 +276,14 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 					text += _T(", ");
 				}
 				text += Text::toT(Util::getDescription(ipInfo));
-				userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, text.c_str());
+				userSummaryMenu.AppendMenu(MF_STRING, (UINT_PTR) 0, text.c_str());
 			}
 		}
 		else
 		{
 			tstring tagIp = UserInfoSimple::getTagIP(params);
 			if (!tagIp.empty())
-				userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, tagIp.c_str());
+				userSummaryMenu.AppendMenu(MF_STRING, (UINT_PTR) 0, tagIp.c_str());
 		}
 		HubFrame::addDupUsersToSummaryMenu(params, detailsItems, idc);
 	}
@@ -311,7 +311,7 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 					    _T("% ") +
 					    Util::formatSecondsT(GET_TIME() - (*i)->getTime()) +
 					    _T(']');
-					userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
+					userSummaryMenu.AppendMenu(MF_STRING, (UINT_PTR) 0, note.c_str());
 					if (countAdded++ == 10)
 					{
 						userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, _T("..."));
@@ -491,7 +491,14 @@ void UserInfoGuiTraits::copyUserInfo(WORD idc, const Identity& id)
 	WinUtil::setClipboard(sCopy);
 }
 
-void FavUserTraits::init(const UserInfoBase& ui)
+void UserInfoGuiTraits::showFavUser(const UserPtr& user)
+{
+	UsersFrame::openWindow();
+	if (UsersFrame::g_frame && user)
+		UsersFrame::g_frame->showUser(user->getCID());
+}
+
+void FavUserTraits::init(const UserInfoSimple& ui)
 {
 	dcassert(ui.getUser());
 	if (ui.getUser())
@@ -522,6 +529,7 @@ void FavUserTraits::init(const UserInfoBase& ui)
 		else
 			isIgnoredByName = isIgnoredByWildcard = false;
 		isOnline = ui.getUser()->isOnline();
+		isHubConnected = ClientManager::isConnected(ui.hintedUser.hint);
 
 		isEmpty = false;
 	}

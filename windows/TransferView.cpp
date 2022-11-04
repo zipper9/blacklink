@@ -155,17 +155,13 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
 	
-	usercmdsMenu.CreatePopupMenu();
-	
 	segmentedMenu.CreatePopupMenu();
 	segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
-	segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
-	segmentedMenu.AppendMenu(MF_SEPARATOR);
-	appendPreviewItems(segmentedMenu);
-	segmentedMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY_USER_INFO));
-	segmentedMenu.AppendMenu(MF_SEPARATOR);
 	segmentedMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+	appendPreviewItems(segmentedMenu);
+	segmentedMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY_USER_INFO), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 	segmentedMenu.AppendMenu(MF_SEPARATOR);
+	segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
 #ifdef FLYLINKDC_USE_DROP_SLOW
 	segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
@@ -175,8 +171,10 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	segmentedMenu.AppendMenu(MF_SEPARATOR);
 	segmentedMenu.AppendMenu(MF_STRING, IDC_EXPAND_ALL, CTSTRING(EXPAND_ALL));
 	segmentedMenu.AppendMenu(MF_STRING, IDC_COLLAPSE_ALL, CTSTRING(COLLAPSE_ALL));
+#if 0
 	segmentedMenu.AppendMenu(MF_SEPARATOR);
 	segmentedMenu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_ALL));
+#endif
 	
 	ConnectionManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
@@ -280,43 +278,37 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			}
 			
 			const bool main = !ii->parent && ctrlTransfers.findChildren(ii->getGroupCond()).size() > 1;
-			
+
 			clearPreviewMenu();
 			OMenu transferMenu;
 			transferMenu.CreatePopupMenu();
 			clearUserMenu();
-				
+
 			transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
+			if (ii->download)
+				transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+			appendPreviewItems(transferMenu);
+			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+
+			transferMenu.AppendMenu(MF_SEPARATOR);
 			transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
 			transferMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
-			transferMenu.AppendMenu(MF_SEPARATOR);
-			appendPreviewItems(transferMenu);
-			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
-			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
-			transferMenu.AppendMenu(MF_SEPARATOR);
-				
-			if (ii->download)
-			{
-				transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
-				transferMenu.AppendMenu(MF_SEPARATOR);
-			}
 #ifdef FLYLINKDC_USE_DROP_SLOW
 			transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
-			transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP), g_iconBitmaps.getBitmap(IconBitmaps::WALL, 0));
-			transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION), g_iconBitmaps.getBitmap(IconBitmaps::DISCONNECT, 0));
 			transferMenu.AppendMenu(MF_SEPARATOR);
+
 			if (!main && (i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
 			{
 				const ItemInfo* ii = ctrlTransfers.getItemData(i);
 				showUserMenu = true;				
 				reinitUserMenu(ii->hintedUser.user, ii->hintedUser.hint);
+				appendAndActivateUserItems(transferMenu);
 				if (getSelectedUser())
-					appendUcMenu(usercmdsMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
+					appendUcMenu(transferMenu, UserCommand::CONTEXT_USER | UserCommand::CONTEXT_FLAG_TRANSFERS,
+						ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
 			}
 
-			appendAndActivateUserItems(transferMenu);
-				
 #ifdef FLYLINKDC_USE_DROP_SLOW
 			segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
 			transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
@@ -362,7 +354,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			if (ii->transferIp.type)
 			{
 				selectedIP = Util::printIpAddressT(ii->transferIp);  // set tstring for 'openlink function'
-				WinUtil::appendWhoisMenu(transferMenu, selectedIP, true);
+				WinUtil::appendWhoisMenu(getServiceSubMenu(), selectedIP, true);
 			}
 #endif
 
@@ -393,8 +385,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				segmentedMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, hasTTH ? MFS_ENABLED : MFS_DISABLED);
 				segmentedMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
-			
-			if (showUserMenu) usercmdsMenu.ClearMenu();
+
 			WinUtil::unlinkStaticMenus(transferMenu);
 			return TRUE;
 		}
@@ -503,11 +494,8 @@ LRESULT TransferView::onForce(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 
 void TransferView::ItemInfo::removeAll()
 {
-	// Не удаляются отдачи через контекстное меню
 	if (hits <= 1)
 		QueueManager::getInstance()->removeSource(hintedUser, QueueItem::Source::FLAG_REMOVED);
-	else
-		QueueManager::getInstance()->removeTarget(Text::fromT(target), false);
 }
 
 static inline int getProportionalWidth(int width, int64_t pos, int64_t size)
@@ -1312,6 +1300,7 @@ void TransferView::updateItem(int ii, uint32_t updateMask)
 TransferView::UpdateInfo* TransferView::createUpdateInfoForAddedEvent(const HintedUser& hintedUser, bool isDownload, const string& token)
 {
 	UpdateInfo* ui = new UpdateInfo(hintedUser, isDownload);
+	if (!hintedUser.hint.empty()) ui->updateMask |= UpdateInfo::MASK_USER;
 	dcassert(!token.empty());
 	ui->setToken(token);
 	if (ui->download)

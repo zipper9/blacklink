@@ -8,30 +8,35 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 	FavoriteManager::getInstance()->getUserCommands(userCommands, ctx, hubs);
 
 	const bool isMe = (ctx & UserCommand::CONTEXT_FLAG_ME) != 0;
-	ctx &= ~UserCommand::CONTEXT_FLAG_ME;
+	const bool isTransfers = (ctx & UserCommand::CONTEXT_FLAG_TRANSFERS) != 0;
+	const bool isMultiple = (ctx & UserCommand::CONTEXT_FLAG_MULTIPLE) != 0;
+	ctx &= UserCommand::CONTEXT_MASK;
 
-	const bool useSubMenu = BOOLSETTING(UC_SUBMENU);
+	const bool useSubMenu = BOOLSETTING(UC_SUBMENU) || isTransfers;
 	const int prevCount = menu.GetMenuItemCount();
 	menuPos = prevCount;
 
 	bool addOpCommands = ctx != UserCommand::CONTEXT_HUB && ctx != UserCommand::CONTEXT_SEARCH && ctx != UserCommand::CONTEXT_FILELIST;
 	if (addOpCommands)
 	{
-		for (int i = 0; i < prevCount; i++)
-			if (menu.GetMenuItemID(i) == IDC_REPORT)
-			{
-				addOpCommands = false;
-				break;
-			}
-		if (addOpCommands)
+		if (!serviceSubMenu.m_hMenu)
+			serviceSubMenu.CreatePopupMenu();
+		else
+			serviceSubMenu.ClearMenu();
+		serviceSubMenu.InsertSeparatorFirst(TSTRING(SERVICE_COMMANDS));
+		if (isTransfers)
 		{
-			WinUtil::appendSeparator(menu);
-			if (!isMe) menu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
-			menu.AppendMenu(MF_STRING, IDC_REPORT, CTSTRING(DUMP_USER_INFO));
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-			menu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));
-#endif
+			serviceSubMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION), g_iconBitmaps.getBitmap(IconBitmaps::DISCONNECT, 0));
+			serviceSubMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP), g_iconBitmaps.getBitmap(IconBitmaps::WALL, 0));
 		}
+		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
+		if (!isMultiple) serviceSubMenu.AppendMenu(MF_STRING, IDC_REPORT, CTSTRING(DUMP_USER_INFO));
+#ifdef IRAINMAN_INCLUDE_USER_CHECK
+		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));
+#endif
+		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
+		WinUtil::appendSeparator(menu);
+		menu.AppendMenu(MF_POPUP, serviceSubMenu, CTSTRING(SERVICE_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::HAMMER, 0));
 	}
 
 	int subMenuIndex = -1;
@@ -42,7 +47,7 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		else
 			subMenu.ClearMenu();
 		subMenu.InsertSeparatorFirst(TSTRING(USER_COMMANDS));
-		WinUtil::appendSeparator(menu);
+		if (!addOpCommands) WinUtil::appendSeparator(menu);
 		subMenuIndex = menu.GetMenuItemCount();
 		menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::COMMANDS, 0));
 	}
@@ -121,7 +126,7 @@ void UCHandlerBase::cleanUcMenu(OMenu& menu)
 	while (insertedItems)
 	{
 		menu.GetMenuItemInfo(menuPos, TRUE, &mii);
-		if (mii.hSubMenu == subMenu)
+		if (mii.hSubMenu == subMenu || mii.hSubMenu == serviceSubMenu)
 			menu.RemoveMenu(menuPos, MF_BYPOSITION);
 		else
 			menu.DeleteMenu(menuPos, MF_BYPOSITION);

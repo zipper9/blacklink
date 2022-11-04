@@ -136,7 +136,7 @@ LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
-	
+
 	setHubParam();
 	
 	// TODO - отложить создание контрола...
@@ -145,6 +145,7 @@ LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	if (isDHT)
 	{
 		SetWindowText(CTSTRING(DHT_TITLE));
+		SetIcon(g_iconBitmaps.getIcon(IconBitmaps::DHT, 0), FALSE);
 		dht::DHT* d = dht::DHT::getInstance();
 		const tstring& connState = TSTRING_I(d->isConnected() ? ResourceManager::DHT_CONN_STATE_YES : ResourceManager::DHT_CONN_STATE_NO);
 		string ipAddress;
@@ -1645,7 +1646,10 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 				reinitUserMenu(ou, baseClient->getHubUrl());
 			}
 			else
+			{
+				ctx |= UserCommand::CONTEXT_FLAG_MULTIPLE;
 				reinitUserMenu(nullptr, baseClient->getHubUrl());
+			}
 		}
 
 		appendHubAndUsersItems(*userMenu, false);
@@ -2625,7 +2629,6 @@ void HubFrame::addDupUsersToSummaryMenu(const ClientManager::UserParams& param, 
 			userSummaryMenu.AppendMenu(MF_SEPARATOR);
 			flags &= ~MF_SEPARATOR;
 		}
-		if (!item.id) flags |= MF_DISABLED;
 		userSummaryMenu.AppendMenu(MF_STRING | flags, item.id, item.text.c_str());
 	}
 }

@@ -303,6 +303,7 @@ class IconBitmaps
 			ERASE,
 			PAUSE,
 			CLEAR,
+			HAMMER,
 			EDITOR_SEND,
 			EDITOR_MULTILINE,
 			EDITOR_EMOTICON,
