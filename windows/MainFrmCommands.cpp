@@ -141,7 +141,7 @@ bool MainFrame::processCommand(const ParsedCommand& pc, Result& res)
 			{
 				Util::setAway(true);
 				setAwayButton(true);
-				Util::setAwayMessage(pc.args[1]);
+				Util::setAwayMessage(pc.args.size() >= 2 ? pc.args[1] : Util::emptyString);
 
 				StringMap sm;
 				sm["userNI"] = "<username>";
