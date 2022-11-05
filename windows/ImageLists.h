@@ -304,6 +304,8 @@ class IconBitmaps
 			PAUSE,
 			CLEAR,
 			HAMMER,
+			FINGER,
+			KEY,
 			EDITOR_SEND,
 			EDITOR_MULTILINE,
 			EDITOR_EMOTICON,

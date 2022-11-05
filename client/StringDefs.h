@@ -674,6 +674,7 @@ enum Strings   // @DontAdd
 	MENU_SEARCH_SPY, // "Search spy"
 	MENU_SETTINGS, // "Settings...\tF12"
 	MENU_SHOW, // "Show application"
+	MENU_SHUTDOWN, // "Shutdown"
 	MENU_STATUS_BAR, // "&Status bar\tCtrl+2"
 	MENU_TOOLBAR, // "&Toolbar\tCtrl+1"
 	MENU_TOOLS, // "T&ools"

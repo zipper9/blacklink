@@ -253,6 +253,8 @@ void WinUtil::init(HWND hWnd)
 	tools.AppendMenu(MF_STRING, IDC_MATCH_ALL, CTSTRING(MENU_OPEN_MATCH_ALL));
 	tools.AppendMenu(MF_STRING, ID_GET_TTH, CTSTRING(MENU_TTH));
 	tools.AppendMenu(MF_STRING, IDC_DCLST_FROM_FOLDER, CTSTRING(MENU_DCLST_FROM_FOLDER));
+	tools.AppendMenu(MF_SEPARATOR);
+	tools.AppendMenu(MF_STRING, IDC_SHUTDOWN, CTSTRING(MENU_SHUTDOWN));
 
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)tools, CTSTRING(MENU_TOOLS));
 
@@ -630,6 +632,7 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)
 			dlg.title = Text::toT(Util::toString(" > ", uc.getDisplayName()));
 			dlg.description = Text::toT(name);
 			dlg.line = Text::toT(sm["line:" + name]);
+			dlg.icon = uc.isSet(UserCommand::FLAG_NOSAVE) ? IconBitmaps::HUB_ONLINE : IconBitmaps::COMMANDS;
 
 			if (uc.isSet(UserCommand::FLAG_FROM_ADC_HUB))
 			{

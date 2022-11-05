@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Toolbar.h"
 #include "resource.h"
+#include "../client/StrUtil.h"
+#include "../client/SimpleStringTokenizer.h"
 
 // ToolbarButton::image values MUST be in order without gaps.
 const ToolbarButton g_ToolbarButtons[] =
@@ -52,9 +54,6 @@ const ToolbarButton g_WinampToolbarButtons[] =
 	{ 0,                   false, ResourceManager::WINAMP_PLAY     }
 };
 
-// Image ids MUST be synchronized with icon numbers in Toolbar-mini.png.
-// This is second path, first is described in ToolbarButtons.
-// So in this array images id continues after last image in ToolbarButtons array.
 const MenuImage g_MenuImages[] =
 {
 	{IDC_CDMDEBUG_WINDOW,    30},
@@ -69,8 +68,8 @@ const MenuImage g_MenuImages[] =
 	{IDC_HASH_PROGRESS,      39},
 	{ID_WINDOW_ARRANGE,      40},
 	{-1,                     41},
-	{-1,                     42}, 
-	{-1,                     43},
+	{-1,                     42},
+	{IDC_SHUTDOWN,           43},
 	{IDC_DHT,                44},
 	{ID_APP_ABOUT,           45},
 	{-1,                     46},
@@ -80,3 +79,40 @@ const MenuImage g_MenuImages[] =
 
 const int g_ToolbarButtonsCount = _countof(g_ToolbarButtons);
 const int g_WinampToolbarButtonsCount = _countof(g_WinampToolbarButtons);
+
+void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount, const uint8_t* checkState)
+{
+	toolbar.SetButtonStructSize();
+	SimpleStringTokenizer<char> t(setting, ',');
+	string tok;
+	while (t.getNextToken(tok))
+	{
+		const int i = Util::toInt(tok);
+		if (i < buttonCount)
+		{
+				TBBUTTON tbb = {0};
+				if (i < 0)
+				{
+					tbb.fsStyle = TBSTYLE_SEP;
+				}
+				else
+				{
+					if (buttons[i].id < 0) continue;
+					tbb.iBitmap = i;
+					tbb.idCommand = buttons[i].id;
+					tbb.fsState = TBSTATE_ENABLED;
+					tbb.fsStyle = TBSTYLE_BUTTON;
+					if (buttons[i].check)
+					{
+						tbb.fsStyle = TBSTYLE_CHECK;
+						if (checkState) tbb.fsState |= checkState[i];
+					}
+					tbb.iString = (INT_PTR)(CTSTRING_I(buttons[i].tooltip));
+					dcassert(tbb.iString != -1);
+					if (tbb.idCommand  == IDC_WINAMP_SPAM)
+						tbb.fsStyle |= TBSTYLE_DROPDOWN;
+				}
+				toolbar.AddButtons(1, &tbb);
+		}
+	}
+}

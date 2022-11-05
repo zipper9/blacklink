@@ -203,6 +203,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		UPDATE_ELEMENT(IDC_TRAY_LIMITER, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(IDC_TOPMOST, UPDUI_MENUPOPUP)
 		UPDATE_ELEMENT(IDC_LOCK_TOOLBARS, UPDUI_MENUPOPUP)
+		UPDATE_ELEMENT(IDC_SHUTDOWN, UPDUI_MENUPOPUP)
 		END_UPDATE_UI_MAP()
 		
 		LRESULT onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
@@ -393,7 +394,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		LRESULT onShutDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			setShutDown(!isShutDown());
+			bool flag = !isShutDown();
+			setShutDown(flag);
+			addStatusMessage(flag ? TSTRING(SHUTDOWN_ON) : TSTRING(SHUTDOWN_OFF));
 			return S_OK;
 		}
 
@@ -416,6 +419,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			if (flag)
 				shutdownTime = TimerManager::getTick() / 1000;
 			shutdownEnabled = flag;
+			setShutdownButton(flag);
 		}
 
 		bool isShutDown() const
@@ -439,7 +443,13 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 				instance->UISetCheck(IDC_TRAY_LIMITER, check);
 			}
 		}
-		
+
+		void setShutdownButton(bool check)
+		{
+			ctrlToolbar.CheckButton(IDC_SHUTDOWN, check);
+			UISetCheck(IDC_SHUTDOWN, check);
+		}
+
 		static void ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags = NIIF_INFO);
 
 		void updateQuickSearches(bool clear = false);
@@ -610,7 +620,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			ShowWindow(wasMaximized ? SW_MAXIMIZE : SW_RESTORE);
 		}
 
-		void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount, const uint8_t* checkState);
 		void createToolbar(int imageSize);
 		void createWinampToolbar(int imageSize);
 		void createQuickSearchBar();

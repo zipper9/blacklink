@@ -130,6 +130,10 @@ tstring KickDlg::lastMsg;
 
 LRESULT KickDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::FINGER, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
 	const size_t count = _countof(recent);
 	for (size_t i = 0; i < count; ++i)
 		recent[i] = Text::toT(SettingsManager::get((SettingsManager::StrSetting) (SettingsManager::KICK_MSG_RECENT_01 + i)));

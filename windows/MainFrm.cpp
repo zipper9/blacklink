@@ -69,7 +69,6 @@
 #include "../client/ThrottleManager.h"
 #include "../client/Text.h"
 #include "../client/NmdcHub.h"
-#include "../client/SimpleStringTokenizer.h"
 #include "../client/dht/DHT.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/HttpClient.h"
@@ -722,43 +721,6 @@ void MainFrame::onMinute(uint64_t tick)
 		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
 	ADLSearchManager::getInstance()->saveOnTimer(tick);
 	LogManager::closeOldFiles(tick);
-}
-
-void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount, const uint8_t* checkState)
-{
-	ctrlToolbar.SetButtonStructSize();
-	SimpleStringTokenizer<char> t(setting, ',');
-	string tok;
-	while (t.getNextToken(tok))
-	{
-		const int i = Util::toInt(tok);
-		if (i < buttonCount)
-		{
-				TBBUTTON tbb = {0};
-				if (i < 0)
-				{
-					tbb.fsStyle = TBSTYLE_SEP;
-				}
-				else
-				{
-					if (buttons[i].id < 0) continue;
-					tbb.iBitmap = i;
-					tbb.idCommand = buttons[i].id;
-					tbb.fsState = TBSTATE_ENABLED;
-					tbb.fsStyle = TBSTYLE_BUTTON;
-					if (buttons[i].check)
-					{
-						tbb.fsStyle = TBSTYLE_CHECK;
-						if (checkState) tbb.fsState |= checkState[i];
-					}
-					tbb.iString = (INT_PTR)(CTSTRING_I(buttons[i].tooltip));
-					dcassert(tbb.iString != -1);
-					if (tbb.idCommand  == IDC_WINAMP_SPAM)
-						tbb.fsStyle |= TBSTYLE_DROPDOWN;
-				}
-				toolbar.AddButtons(1, &tbb);
-		}
-	}
 }
 
 void MainFrame::createToolbar(int imageSize)
@@ -1434,12 +1396,11 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 						bool shutdownResult = WinUtil::shutDown(action);
 						if (shutdownResult)
 						{
-							if (action == 5)
-								ctrlToolbar.CheckButton(IDC_SHUTDOWN, FALSE);
+							if (action == 5) setShutdownButton(false);
 						}
 						else
 						{
-							ctrlToolbar.CheckButton(IDC_SHUTDOWN, FALSE);
+							setShutdownButton(false);
 							addStatusMessage(TSTRING(FAILED_TO_SHUTDOWN));
 							ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
 							ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);

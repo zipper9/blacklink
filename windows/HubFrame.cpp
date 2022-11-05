@@ -1020,6 +1020,7 @@ void HubFrame::processTasks()
 								linePwd.title = getHubTitle();
 								linePwd.description = Text::toT(STRING_F(ENTER_PASSWORD_FOR_NICK, nick));
 								linePwd.password = linePwd.checkBox = true;
+								linePwd.icon = IconBitmaps::KEY;
 								if (linePwd.DoModal(m_hWnd) == IDOK)
 								{
 									const string pwd = Text::fromT(linePwd.line);
