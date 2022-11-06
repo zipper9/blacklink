@@ -762,6 +762,7 @@ enum Strings   // @DontAdd
 	TE_ACTION_SKIP, // "Don't download this file"
 	OPCHAT, // "OP chat names + auto open PM\n(wildcards supported, use semicolon to separate)"
 	OPEN, // "Open"
+	OPEN_FAV_HUBS_WINDOW, // "Open favorite hubs window"
 	OPEN_FOLDER, // "Open folder"
 	OPEN_HUB_LOG, // "Open hub log"
 	OPEN_HUB_WINDOW, // "Open hub window"

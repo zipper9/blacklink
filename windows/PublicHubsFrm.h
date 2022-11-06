@@ -85,6 +85,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		COMMAND_ID_HANDLER(IDC_REFRESH, onClickedRefresh)
 		COMMAND_ID_HANDLER(IDC_PUB_LIST_CONFIG, onClickedConfigure)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onClickedConnect)
+		COMMAND_ID_HANDLER(IDC_FAVORITES, onOpenFavorites)
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		NOTIFY_HANDLER(IDC_HUBLIST, LVN_GETDISPINFO, ctrlHubs.onGetDispInfo)
@@ -115,6 +116,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onOpenFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
@@ -202,7 +204,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CButton ctrlLists;	
 		CButton ctrlFilterDesc;
 		CEdit ctrlFilter;
-		OMenu hubsMenu;
 		OMenu copyMenu;
 		
 		CContainedWindow filterContainer;

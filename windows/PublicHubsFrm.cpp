@@ -20,6 +20,7 @@
 #include "PublicHubsFrm.h"
 #include "PublicHubsListDlg.h"
 #include "HubFrame.h"
+#include "FavoritesFrm.h"
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "CountryList.h"
@@ -188,13 +189,6 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	for (int i = 0; i < _countof(columnNames); i++)
 		copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
 
-	hubsMenu.CreatePopupMenu();
-	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
-	hubsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
-	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
-	
 	onListSelChanged();
 
 	bHandled = FALSE;
@@ -679,43 +673,58 @@ LRESULT PublicHubsFrame::onFilterChar(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lPa
 
 LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	if (reinterpret_cast<HWND>(wParam) == ctrlHubs /*&& ctrlHubs.GetSelectedCount() == 1*/)
+	if (reinterpret_cast<HWND>(wParam) == ctrlHubs)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		CRect rc;
 		ctrlHubs.GetHeader().GetWindowRect(&rc);
 		if (PtInRect(&rc, pt))
-		{
 			return 0;
-		}
 		if (pt.x == -1 && pt.y == -1)
-		{
 			WinUtil::getContextMenuPos(ctrlHubs, pt);
-		}
-		int status = ctrlHubs.GetSelectedCount() > 0 ? MFS_ENABLED : MFS_DISABLED;
-		hubsMenu.EnableMenuItem(IDC_CONNECT, status);
-		hubsMenu.EnableMenuItem(IDC_ADD, status);
-		hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, status);
-		tstring x;
-		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
-		if (i == -1) return 0;
-		const HubInfo* data = ctrlHubs.getItemData(i);
-		x = data->getText(COLUMN_NAME);
-		if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(data)))
+
+		OMenu hubsMenu;
+		hubsMenu.CreatePopupMenu();
+		int selCount = ctrlHubs.GetSelectedCount();
+		tstring title;
+		int copyMenuIndex = -1;
+		if (selCount > 0)
 		{
-			hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
-			hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);
+			if (selCount == 1)
+			{
+				int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+				if (i == -1) return 0;
+				const HubInfo* data = ctrlHubs.getItemData(i);
+				title = data->getText(COLUMN_NAME);
+				if (data->isOnline())
+					hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(OPEN_HUB_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_HUB, 0));
+				else
+					hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
+				if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(data)))
+				{
+					hubsMenu.AppendMenu(MF_STRING, IDC_FAVORITES, CTSTRING(OPEN_FAV_HUBS_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
+					hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
+				}
+				else
+					hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
+			}
+			else
+			{
+				hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
+				hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
+				hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
+			}
+			copyMenuIndex = hubsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+			hubsMenu.AppendMenu(MF_SEPARATOR);
 		}
-		else
-		{
-			hubsMenu.EnableMenuItem(IDC_ADD, MFS_ENABLED);
-			hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_DISABLED);
-		}
-		if (!x.empty())
-			hubsMenu.InsertSeparatorFirst(x);
+		hubsMenu.AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH));
+		hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
+
+		if (!title.empty())
+			hubsMenu.InsertSeparatorFirst(title);
 		hubsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		if (!x.empty())
-			hubsMenu.RemoveFirstItem();
+		if (copyMenuIndex != -1)
+			hubsMenu.RemoveMenu(copyMenuIndex, MF_BYPOSITION);
 		return TRUE;
 	}
 	
@@ -750,6 +759,18 @@ LRESULT PublicHubsFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 		i = ctrlHubs.GetNextItem(i, LVNI_SELECTED);
 	}
 	if (!result.empty()) WinUtil::setClipboard(result);	
+	return 0;
+}
+
+LRESULT PublicHubsFrame::onOpenFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	FavoriteHubsFrame::openWindow();
+	if (FavoriteHubsFrame::g_frame)
+	{
+		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+		if (i != -1)
+			FavoriteHubsFrame::g_frame->showHub(getPubServer(i));
+	}
 	return 0;
 }
 

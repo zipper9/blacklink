@@ -258,6 +258,33 @@ void FavoriteHubsFrame::openSelected()
 	return;
 }
 
+void FavoriteHubsFrame::showHub(const string& url)
+{
+	auto fm = FavoriteManager::getInstance();
+	int index = -1;
+	int count = ctrlHubs.GetItemCount();
+	for (int i = 0; i < count; ++i)
+	{
+		int id = static_cast<int>(ctrlHubs.GetItemData(i));
+		auto fhe = fm->getFavoriteHubEntryPtr(id);
+		if (fhe)
+		{
+			if (fhe->getServer() == url)
+			{
+				fm->releaseFavoriteHubEntryPtr(fhe);
+				index = i;
+				break;
+			}
+			fm->releaseFavoriteHubEntryPtr(fhe);
+		}
+	}
+	if (index != -1)
+	{
+		ctrlHubs.SelectItem(index);
+		ctrlHubs.EnsureVisible(index, FALSE);
+	}
+}
+
 static void getAttributes(TStringList& l, const FavoriteHubEntry* entry)
 {
 	l.push_back(Text::toT(entry->getName()));
