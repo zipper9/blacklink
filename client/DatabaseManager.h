@@ -310,6 +310,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 
 	private:
 		bool checkDbPrefix(const string& path, const string& str) noexcept;
+		void flushPendingTransfers() noexcept;
 
 	protected:
 		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;

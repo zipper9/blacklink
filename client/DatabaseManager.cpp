@@ -1537,6 +1537,25 @@ void DatabaseManager::savePendingTransfers(uint64_t tick) noexcept
 		delete job;
 }
 
+void DatabaseManager::flushPendingTransfers() noexcept
+{
+	vector<DBTransferItem> tmp;
+	{
+		LOCK(csTransfers);
+		tmp = std::move(transfers);
+		transfers.clear();
+	}
+	if (!tmp.empty())
+	{
+		auto conn = getConnection();
+		if (conn)
+		{
+			conn->addTransfers(tmp);
+			putConnection(conn);
+		}
+	}
+}
+
 void DatabaseManager::SaveTransfersJob::run()
 {
 	auto db = DatabaseManager::getInstance();
@@ -1558,6 +1577,7 @@ void DatabaseManager::shutdown()
 {
 	lmdb.close();
 	saveTransfersThread.shutdown(true);
+	flushPendingTransfers();
 	{
 		LOCK(cs);
 		defConn.reset();
