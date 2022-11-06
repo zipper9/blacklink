@@ -26,6 +26,7 @@
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
 #include "BaseHandlers.h"
+#include "UserInfoBaseHandler.h"
 #include "FileStatusColors.h"
 
 #include "../client/DirectoryListing.h"
@@ -38,8 +39,11 @@ class ThreadedDirectoryListing;
 #define STATUS_MESSAGE_MAP 9
 #define CONTROL_MESSAGE_MAP 10
 
+static const int DL_FRAME_TRAITS = UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_FILE_LIST;
+
 class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame>,
 	public CSplitterImpl<DirectoryListingFrame>,
+	public UserInfoBaseHandler<DirectoryListingFrame, DL_FRAME_TRAITS>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
 	public InternetSearchBaseHandler,
 	private TimerHelper,
@@ -49,13 +53,14 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static const int MAX_FAV_DIRS = 100;
 
 	public:
-		static void openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t aSpeed, bool isDCLST = false);
-		static void openWindow(const HintedUser& aUser, const string& txt, int64_t aSpeed);
+		static void openWindow(const tstring& file, const tstring& dir, const HintedUser& user, int64_t speed, bool isDcLst = false);
+		static void openWindow(const HintedUser& user, const string& txt, int64_t speed);
 		static void closeAll();
 		static void closeAllOffline();
 
 		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
+		typedef UserInfoBaseHandler<DirectoryListingFrame, DL_FRAME_TRAITS> uibBase;
 
 		enum
 		{
@@ -147,7 +152,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
-		COMMAND_ID_HANDLER(IDC_ADD_TO_FAVORITES, onAddToFavorites)
 		COMMAND_ID_HANDLER(IDC_MARK_AS_DOWNLOADED, onMarkAsDownloaded)
 		COMMAND_ID_HANDLER(IDC_PRIVATE_MESSAGE, onPM)
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopy);
@@ -175,6 +179,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_RANGE_HANDLER(IDC_COPY_URL_TREE, IDC_COPY_URL_TREE + 99, onCopyUrlTree)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		CHAIN_COMMANDS(ucBase)
+		CHAIN_COMMANDS(uibBase)
 		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(CSplitterImpl<DirectoryListingFrame>)
 		CHAIN_MSG_MAP_ALT(DirectoryListingFrame, STATUS_MESSAGE_MAP)
@@ -223,7 +228,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCopyUrl(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyUrlTree(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGoToDirectory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -273,6 +277,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		}
 
 		void setWindowTitle();
+		StringMap getFrameLogParams() const;
 
 		LRESULT onEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -327,6 +332,11 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 
+		// UserInfoBaseHandler
+		OnlineUserPtr getSelectedOnlineUser() const;
+		void getSelectedUsers(vector<UserPtr>& v) const {}
+		void openUserLog();
+
 		DirectoryListingFrame(const DirectoryListingFrame &) = delete;
 		DirectoryListingFrame& operator= (const DirectoryListingFrame &) = delete;
 
@@ -369,7 +379,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void appendCustomTargetItems(OMenu& menu, int idc);
 		tstring getRootItemText() const;
 		void updateRootItemText();
-		bool addFavMenu(OMenu& menu);
 		string getFileUrl(const string& hubUrl, const string& path) const;
 		void appendCopyUrlItems(CMenu& menu, int idc, ResourceManager::Strings text);
 

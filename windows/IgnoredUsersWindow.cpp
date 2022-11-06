@@ -92,7 +92,7 @@ void IgnoredUsersWindow::updateButtons()
 LRESULT IgnoredUsersWindow::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
 	LineDlg dlg;
-	dlg.icon = IconBitmaps::BANNED_USER;
+	dlg.icon = IconBitmaps::CHAT_PROHIBIT;
 	dlg.limitText = 64;
 	dlg.allowEmpty = false;
 	dlg.description = TSTRING(ENTER_IGNORED_NICK);

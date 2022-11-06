@@ -17,18 +17,17 @@
  */
 
 
-#ifndef DCPLUSPLUS_DCPP_DIRECTORY_LISTING_H
-#define DCPLUSPLUS_DCPP_DIRECTORY_LISTING_H
+#ifndef DIRECTORY_LISTING_H_
+#define DIRECTORY_LISTING_H_
 
 #include "SimpleXML.h"
 #include "QueueItem.h"
-#include "UserInfoBase.h"
 #include <atomic>
 #include <regex>
 
 STANDARD_EXCEPTION(AbortException);
 
-class DirectoryListing : public UserInfoBase
+class DirectoryListing
 {
 	public:
 		class ProgressNotif
@@ -364,4 +363,4 @@ class DirectoryListing : public UserInfoBase
 		bool hasTimestampsFlag;
 };
 
-#endif // !defined(DIRECTORY_LISTING_H)
+#endif // !defined(DIRECTORY_LISTING_H_)

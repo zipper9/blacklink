@@ -128,58 +128,34 @@ void DirectoryListingFrame::removeFromUserList()
 		}
 }
 
-void DirectoryListingFrame::openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t speed, bool isDCLST /*= false*/)
+void DirectoryListingFrame::openWindow(const tstring& file, const tstring& dir, const HintedUser& user, int64_t speed, bool isDcLst /*= false*/)
 {
-#if 0 // Always open new window!
-	bool l_is_users_map_exists;
+	HWND hwnd;
+	DirectoryListingFrame* frame = new DirectoryListingFrame(user, nullptr);
+	frame->setSpeed(speed);
+	frame->setDclstFlag(isDcLst);
+	frame->setFileName(Text::fromT(file));
+	if (BOOLSETTING(POPUNDER_FILELIST))
+		hwnd = WinUtil::hiddenCreateEx(frame);
+	else
+		hwnd = frame->Create(WinUtil::g_mdiClient);
+	if (hwnd)
 	{
-		LOCK(g_csUsersMap);
-		auto i = g_usersMap.end();
-		if (!isDCLST && aHintedUser.user && !aHintedUser.user->getCID().isZero())
-			i = g_usersMap.find(aHintedUser);
-
-		l_is_users_map_exists = i != g_usersMap.end();
-		if (l_is_users_map_exists)
-		{
-			if (!BOOLSETTING(POPUNDER_FILELIST))
-			{
-				i->second->speed = speed;
-				i->second->MDIActivate(i->second->m_hWnd);
-			}
-		}
+		frame->loadFile(file, dir);
+		activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 	}
-	if (!l_is_users_map_exists)
-#endif
-	{
-		HWND aHWND = NULL;
-		DirectoryListingFrame* frame = new DirectoryListingFrame(aUser, nullptr);
-		frame->setSpeed(speed);
-		frame->setDclstFlag(isDCLST);
-		frame->setFileName(Text::fromT(aFile));
-		if (BOOLSETTING(POPUNDER_FILELIST))
-			aHWND = WinUtil::hiddenCreateEx(frame);
-		else
-			aHWND = frame->Create(WinUtil::g_mdiClient);
-		if (aHWND)
-		{
-			frame->loadFile(aFile, aDir);
-			activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
-		}
-		else
-		{
-			delete frame;
-		}
-	}
+	else
+		delete frame;
 }
 
-void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& txt, int64_t speed)
+void DirectoryListingFrame::openWindow(const HintedUser& user, const string& txt, int64_t speed)
 {
 	{
 		LOCK(lockUserList);
 		for (auto i = userList.begin(); i != userList.end(); ++i)
 		{
 			UserFrame& frame = *i;
-			if (frame.user == aUser.user && frame.isBrowsing)
+			if (frame.user == user.user && frame.isBrowsing)
 			{
 				frame.frame->setSpeed(speed);
 				frame.frame->loadXML(txt);
@@ -187,9 +163,9 @@ void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& tx
 			}
 		}
 	}
-	DirectoryListingFrame* frame = new DirectoryListingFrame(aUser, nullptr);
+	DirectoryListingFrame* frame = new DirectoryListingFrame(user, nullptr);
 	frame->setSpeed(speed);
-	frame->addToUserList(aUser, true);
+	frame->addToUserList(user, true);
 	if (BOOLSETTING(POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
@@ -198,9 +174,9 @@ void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& tx
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
 
-DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults)
+DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, const HintedUser& user, int64_t speed, bool searchResults)
 {
-	DirectoryListingFrame* frame = new DirectoryListingFrame(aUser, dl);
+	DirectoryListingFrame* frame = new DirectoryListingFrame(user, dl);
 	frame->searchResultsFlag = searchResults;
 	frame->setSpeed(speed);
 	if (BOOLSETTING(POPUNDER_FILELIST))
@@ -307,6 +283,24 @@ void DirectoryListingFrame::setWindowTitle()
 	}
 }
 
+StringMap DirectoryListingFrame::getFrameLogParams() const
+{
+	StringMap params;
+	const HintedUser& hintedUser = dl->getHintedUser();
+	if (hintedUser.user && !(hintedUser.user->getFlags() & User::FAKE))
+	{
+		if (!hintedUser.hint.empty())
+		{
+			params["hubNI"] = ClientManager::getInstance()->getOnlineHubName(hintedUser.hint);
+			params["hubURL"] = hintedUser.hint;
+		}
+		params["userCID"] = hintedUser.user->getCID().toBase32();
+		params["userNI"] = hintedUser.user->getLastNick();
+		params["myCID"] = ClientManager::getMyCID().toBase32();
+	}
+	return params;
+}
+
 void DirectoryListingFrame::loadFile(const tstring& name, const tstring& dir)
 {
 	loadStartTime = GET_TICK();
@@ -360,9 +354,9 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
 
-	if (dclstFlag)
+	if (dclstFlag || searchResultsFlag)
 	{
-		HICON icon = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
+		HICON icon = g_iconBitmaps.getIcon(dclstFlag ? IconBitmaps::DCLST : IconBitmaps::FILELIST_SEARCH, 0);
 		SetIcon(icon, FALSE);
 		SetIcon(icon, TRUE);
 	}
@@ -1226,15 +1220,6 @@ LRESULT DirectoryListingFrame::onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/,
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (const UserPtr& pUser = dl->getUser())
-	{
-		FavoriteManager::getInstance()->addFavoriteUser(pUser);
-	}
-	return 0;
-}
-
 LRESULT DirectoryListingFrame::onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	const HintedUser& pUser = dl->getHintedUser();
@@ -1473,15 +1458,6 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 	}
 }
 
-bool DirectoryListingFrame::addFavMenu(OMenu& menu)
-{
-	const UserPtr& user = dl->getUser();
-	bool result = !dl->isOwnList() && !(user->getFlags() & (User::FAKE | User::FAVORITE));
-	if (result)
-		menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES_USERS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE_USERS, 0));
-	return result;
-}
-
 LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bool ownList = dl->isOwnList();
@@ -1575,7 +1551,6 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
 
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
-		addFavMenu(fileMenu);
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
@@ -1731,7 +1706,6 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				directoryMenu.AppendMenu(MF_SEPARATOR);
 				directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 			}
-			addFavMenu(directoryMenu);
 		}
 		else
 		{
@@ -2200,25 +2174,27 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 {
 	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 
-	if (const UserPtr& user = dl->getUser())
+	OMenu tabMenu;
+	tabMenu.CreatePopupMenu();
+
+	clearUserMenu();
+	const HintedUser& hintedUser = dl->getHintedUser();
+	if (hintedUser.user && !(hintedUser.user->getFlags() & User::FAKE) && !dl->isOwnList())
 	{
-		OMenu tabMenu;
-		tabMenu.CreatePopupMenu();
-
-		string nick = user->getLastNick();
+		string nick = hintedUser.user->getLastNick();
 		tabMenu.InsertSeparatorFirst(Text::toT(nick));
-
-		if (addFavMenu(tabMenu))
-			tabMenu.AppendMenu(MF_SEPARATOR);
-		if (offline)
-			tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_OFFLINE_DIR_LIST));
-		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_DIR_LIST));
-		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
-
-		tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-
-		WinUtil::unlinkStaticMenus(tabMenu);
+		reinitUserMenu(hintedUser.user, hintedUser.hint);
+		appendAndActivateUserItems(tabMenu);
+		tabMenu.AppendMenu(MF_SEPARATOR);
 	}
+
+	if (offline)
+		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_OFFLINE_DIR_LIST));
+	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_DIR_LIST));
+	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
+
+	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+	WinUtil::unlinkStaticMenus(tabMenu);
 	return TRUE;
 }
 
@@ -2770,6 +2746,19 @@ void DirectoryListingFrame::openFileFromList(const tstring& file)
 		DirectoryListingFrame::openWindow(file, Util::emptyStringT, HintedUser(), 0, true);
 	else
 		WinUtil::openFile(file);
+}
+
+OnlineUserPtr DirectoryListingFrame::getSelectedOnlineUser() const
+{
+	if (offline || dclstFlag || dl->isOwnList()) return OnlineUserPtr();
+	const HintedUser& hintedUser = dl->getHintedUser();
+	if (!hintedUser.user || (hintedUser.user->getFlags() & User::FAKE)) return OnlineUserPtr();
+	return ClientManager::findOnlineUser(hintedUser.user->getCID(), hintedUser.hint, true);
+}
+
+void DirectoryListingFrame::openUserLog()
+{
+	WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
 }
 
 void DirectoryListingFrame::showFound()

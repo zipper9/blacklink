@@ -529,8 +529,13 @@ void FavUserTraits::init(const UserInfoSimple& ui)
 		else
 			isIgnoredByName = isIgnoredByWildcard = false;
 		isOnline = ui.getUser()->isOnline();
-		isHubConnected = ClientManager::isConnected(ui.hintedUser.hint);
-
+		if (!ui.hintedUser.hint.empty())
+			isHubConnected = ClientManager::isConnected(ui.hintedUser.hint);
+		else
+		{
+			string url = FavoriteManager::getInstance()->getUserUrl(ui.getUser());
+			isHubConnected = url.empty() ? false : ClientManager::isConnected(url);
+		}
 		isEmpty = false;
 	}
 }
