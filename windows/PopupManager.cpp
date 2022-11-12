@@ -188,7 +188,7 @@ void PopupManager::Remove(uint32_t pos)
 	//close the window and delete it, ensure that correct height is used from here
 	height = p->height;
 	p->SendMessage(WM_CLOSE, 0, 0);
-	safe_delete(p);
+	delete p;
 	
 	//set offset one window position lower
 	dcassert(offset > 0);

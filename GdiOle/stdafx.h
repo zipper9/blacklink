@@ -19,7 +19,6 @@
 #include <atlbase.h>
 #include <atlcom.h>
 #include <atlctl.h>
-#include "../windows/util_flylinkdc.h"
 
 using namespace ATL;
 

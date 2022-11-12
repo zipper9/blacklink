@@ -63,7 +63,7 @@ class UserListColorsTab : public CDialogImpl<UserListColorsTab>
 		COLORREF bg;
 
 		CListBox ctrlList;
-		ExCImage imgUsers;
+		CImageEx imgUsers;
 		CRichEditCtrl ctrlPreview;
 		CComboBox ctrlHubPosition;
 		CButton ctrlCustomImage;
@@ -76,7 +76,7 @@ class UserListColorsTab : public CDialogImpl<UserListColorsTab>
 		PropPageCallback* callback;
 		
 		void refreshPreview();
-		bool loadImage(ExCImage& newImg, const tstring& path, bool showError);
+		bool loadImage(CImageEx& newImg, const tstring& path, bool showError);
 		void loadImage(bool useCustom, bool init);
 };
 

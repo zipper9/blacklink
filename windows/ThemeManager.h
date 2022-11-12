@@ -19,66 +19,44 @@
 #ifndef _THEME_MANAGER_H_
 #define _THEME_MANAGER_H_
 
-#pragma once
-
 #include "../client/Singleton.h"
 #include "../client/SettingsManager.h"
 
-#ifdef IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
-class ThemeManagerListener
-{
-	public:
-		virtual ~ThemeManagerListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> ResourceLoaded;
-		
-		virtual void on(ResourceLoaded, const string&) { }
-};
-#endif // IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
-
-class ThemeManager :
-#ifdef IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
-	public Speaker<ThemeManagerListener>,
-#endif
-	public Singleton<ThemeManager>
+class ThemeManager : public Singleton<ThemeManager>
 {
 	public:
 	
 		static bool isResourceLibLoaded()
 		{
-			return g_resourceLibInstance != nullptr;
+			return resourceLibInstance != nullptr;
 		}
 		static HMODULE getResourceLibInstance()
 		{
-			return g_resourceLibInstance;
+			return resourceLibInstance;
 		}
 		void load()
 		{
 			loadResourceLib();
 		}
+
 	private:
 		void loadResourceLib();
-		
+
 		static void unloadResourceLib();
-		
-		static void setResourceLibInstance(HMODULE p_instance)
+
+		static void setResourceLibInstance(HMODULE instance)
 		{
-			g_resourceLibInstance = p_instance;
+			resourceLibInstance = instance;
 		}
-		
+
 		friend class Singleton<ThemeManager>;
-		
+
 		~ThemeManager()
 		{
 			unloadResourceLib();
 		}
-		
-		static HMODULE g_resourceLibInstance;
+
+		static HMODULE resourceLibInstance;
 };
 
 #endif // _THEME_MANAGER_H_
-

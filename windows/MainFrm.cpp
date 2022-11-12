@@ -999,7 +999,7 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		HWND hwndiTunes = FindWindow(_T("iTunes"), _T("iTunes"));
 		if (::IsWindow(hwndiTunes))
 		{
-			IiTunes *iITunes;
+			IiTunes *iITunes = nullptr;
 			CoInitialize(NULL);
 			if (SUCCEEDED(::CoCreateInstance(CLSID_iTunesApp, NULL, CLSCTX_LOCAL_SERVER, IID_IiTunes, (PVOID *)&iITunes)))
 			{
@@ -1034,7 +1034,7 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 						break;
 				}
 			}
-			safe_release(iITunes);
+			if (iITunes) iITunes->Release();
 			CoUninitialize();
 		}
 	}

@@ -229,7 +229,7 @@ LRESULT UserListColorsTab::onImageBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	tstring x;
 	WinUtil::getWindowText(ctrlImagePath, x);
 	if (WinUtil::browseFile(x, m_hWnd, false) != IDOK) return 0;
-	ExCImage newImg;
+	CImageEx newImg;
 	if (!loadImage(newImg, x, true)) return 0;
 	imagePath = std::move(x);
 	ctrlImagePath.SetWindowText(imagePath.c_str());
@@ -247,7 +247,7 @@ LRESULT UserListColorsTab::onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCt
 	return 0;
 }
 
-bool UserListColorsTab::loadImage(ExCImage& newImg, const tstring& path, bool showError)
+bool UserListColorsTab::loadImage(CImageEx& newImg, const tstring& path, bool showError)
 {
 	if (FAILED(newImg.Load(path.c_str())))
 	{
@@ -266,7 +266,7 @@ bool UserListColorsTab::loadImage(ExCImage& newImg, const tstring& path, bool sh
 
 void UserListColorsTab::loadImage(bool useCustom, bool init)
 {
-	ExCImage img;
+	CImageEx img;
 	bool isCustom = useCustom && !imagePath.empty() && loadImage(img, imagePath, false);
 	if (!isCustom && !customImageLoaded && !init) return;
 	if (!isCustom) img.LoadFromResourcePNG(IDR_USERS);

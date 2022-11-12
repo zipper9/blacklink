@@ -1062,7 +1062,6 @@
     <ClInclude Include="windows\UserListColorsTab.h" />
     <ClInclude Include="windows\UserListWindow.h" />
     <ClInclude Include="windows\UserMessages.h" />
-    <ClInclude Include="windows\util_flylinkdc.h" />
     <ClInclude Include="windows\WinFirewall.h" />
     <ClInclude Include="windows\wmp.h" />
     <ClInclude Include="windows\WMPlayerRemoteApi.h" />

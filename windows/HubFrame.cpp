@@ -64,10 +64,10 @@ HubFrame::HubFrame(const Settings& cs) :
 	waitingForPassword(false),
 	shouldUpdateStats(false),
 	showingPasswordDlg(false),
-	showUsersContainer(nullptr),
+	showUsersContainer(WC_BUTTON, this, EDIT_MESSAGE_MAP),
 	ctrlChatContainer(nullptr),
 	swapPanels(false),
-	switchPanelsContainer(nullptr),
+	switchPanelsContainer(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
 	isTabMenuShown(false),
 	showJoins(false),
 	showFavJoins(false),
@@ -236,11 +236,10 @@ void HubFrame::createMessagePanel()
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
 
-			switchPanelsContainer = new CContainedWindow(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
 			ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
 			ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
 			ctrlSwitchPanels.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::HUB_SWITCH, 0));
-			switchPanelsContainer->SubclassWindow(ctrlSwitchPanels.m_hWnd);
+			switchPanelsContainer.SubclassWindow(ctrlSwitchPanels.m_hWnd);
 			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
 
 			ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
@@ -248,11 +247,9 @@ void HubFrame::createMessagePanel()
 			ctrlShowUsers.SetFont(Fonts::g_systemFont);
 			ctrlShowUsers.SetCheck(showUsersStore ? BST_CHECKED : BST_UNCHECKED);
 
-			showUsersContainer = new CContainedWindow(WC_BUTTON, this, EDIT_MESSAGE_MAP);
-			showUsersContainer->SubclassWindow(ctrlShowUsers.m_hWnd);
+			showUsersContainer.SubclassWindow(ctrlShowUsers.m_hWnd);
 			tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_HELP_TOGGLE_USER_LIST);
 			ctrlModeIcon.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-			//  ctrlModeIcon.SetIcon(iconModeActive);
 
 			dcassert(baseClient->getHubUrl() == serverUrl);
 			auto fm = FavoriteManager::getInstance();
@@ -305,16 +302,12 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
 	if (tooltip)
 		tooltip.DestroyWindow();
-		
 	if (ctrlModeIcon)
 		ctrlModeIcon.DestroyWindow();
 	if (ctrlShowUsers)
 		ctrlShowUsers.DestroyWindow();
-	safe_delete(showUsersContainer);
-
 	if (ctrlSwitchPanels)
 		ctrlSwitchPanels.DestroyWindow();
-	safe_delete(switchPanelsContainer);
 
 	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel();

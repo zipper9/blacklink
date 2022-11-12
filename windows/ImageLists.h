@@ -3,6 +3,8 @@
 
 #include "../client/typedefs.h"
 #include <boost/unordered_map.hpp>
+#include <atlbase.h>
+#include <atlapp.h>
 #include <atlctrls.h>
 
 class BaseImageList

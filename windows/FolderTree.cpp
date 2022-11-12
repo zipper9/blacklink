@@ -276,7 +276,7 @@ FolderTree::FolderTree()
 
 FolderTree::~FolderTree()
 {
-	safe_release(m_pShellFolder);
+	if (m_pShellFolder) m_pShellFolder->Release();
 }
 
 void FolderTree::PopulateTree()
@@ -1312,7 +1312,7 @@ LRESULT FolderTree::OnDeleteItem(int /*idCtrl*/, LPNMHDR pnmh, BOOL &bHandled)
 			free(pItem->m_pNetResource->lpRemoteName);
 			free(pItem->m_pNetResource->lpComment);
 			free(pItem->m_pNetResource->lpProvider);
-			safe_delete(pItem->m_pNetResource);
+			delete pItem->m_pNetResource;
 		}
 		delete pItem;
 	}

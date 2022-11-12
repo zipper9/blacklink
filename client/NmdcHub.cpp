@@ -1009,9 +1009,6 @@ void NmdcHub::chatMessageParse(const string& line)
 			
 			if (message.empty())
 				return;
-				
-			if (isFloodCommand("<Nick>", line))
-				return;
 		}
 	}
 	if (nick.empty())
@@ -1540,10 +1537,6 @@ void NmdcHub::onLine(const string& line)
 				searchType = ST_SEARCH;
 		if (searchType != ST_NONE && hideShare)
 			return;
-	}
-	if (searchType == ST_NONE && isFloodCommand(cmd, param))
-	{
-		return;
 	}
 	if (searchType != ST_NONE)
 	{

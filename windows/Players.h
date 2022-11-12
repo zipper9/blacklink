@@ -84,12 +84,10 @@ class Players
 {
 	public:
 		static string getWMPSpam(HWND playerWnd = NULL, HWND g_mainWnd = NULL);
-//	static string getSpotifySpam(HWND playerWnd = NULL);
 		static string getItunesSpam(HWND playerWnd = NULL);
 		static string getMPCSpam();
 		static string getWinampSpam(HWND playerWnd = NULL, int playerType = 0);
 		static string getJASpam();
 };
-
 
 #endif

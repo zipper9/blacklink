@@ -19,25 +19,26 @@
 #ifndef RESOURCE_LOADER_H
 #define RESOURCE_LOADER_H
 
-#ifdef __ATLMISC_H__
-# define __ATLTYPES_H__
-#endif
-
-# include "ThemeManager.h"
-
-# define USE_THEME_MANAGER
-
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atlctrls.h>
 #include <atlimage.h>
 
-class ExCImage : public CImage
+#define USE_THEME_MANAGER
+
+#ifdef USE_THEME_MANAGER
+#include "ThemeManager.h"
+#endif
+
+class CImageEx : public CImage
 {
 	public:
-		ExCImage(): buffer(nullptr) {}
-		explicit ExCImage(LPCTSTR fileName) noexcept : buffer(nullptr)
+		CImageEx(): buffer(nullptr) {}
+		explicit CImageEx(LPCTSTR fileName) noexcept : buffer(nullptr)
 		{
 			Load(fileName);
 		}
-		ExCImage(UINT id, LPCTSTR pType = RT_RCDATA, HMODULE hInst =
+		CImageEx(UINT id, LPCTSTR pType = RT_RCDATA, HMODULE hInst =
 #if defined(USE_THEME_MANAGER)
 		             ThemeManager::getResourceLibInstance()
 #else
@@ -48,7 +49,7 @@ class ExCImage : public CImage
 		{
 			LoadFromResource(id, pType, hInst);
 		}
-		ExCImage(UINT id, UINT type, HMODULE hInst =
+		CImageEx(UINT id, UINT type, HMODULE hInst =
 #if defined(USE_THEME_MANAGER)
 		             ThemeManager::getResourceLibInstance()
 #else
@@ -60,14 +61,14 @@ class ExCImage : public CImage
 			LoadFromResource(id, MAKEINTRESOURCE(type), hInst);
 		}
 		
-		~ExCImage()
+		~CImageEx()
 		{
 			Destroy();
 		}
 
-		ExCImage(const ExCImage&) = delete;
-		ExCImage& operator= (const ExCImage&) = delete;
-		ExCImage& operator= (ExCImage&&);
+		CImageEx(const CImageEx&) = delete;
+		CImageEx& operator= (const CImageEx&) = delete;
+		CImageEx& operator= (CImageEx&&);
 
 		bool LoadFromResourcePNG(UINT id) noexcept;
 		bool LoadFromResource(UINT id, LPCTSTR pType = RT_RCDATA, HMODULE hInst =

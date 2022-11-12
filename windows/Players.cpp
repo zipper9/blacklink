@@ -156,8 +156,8 @@ string Players::getItunesSpam(HWND playerWnd /*= NULL*/)
 					params["size"] = Util::formatBytes(int64_t(size));
 				}
 				
-				//Release (decrement reference count to 0) track object so it can unload and free itself; otherwise, it's locked in memory.
-				safe_release(pTrack);
+				pTrack->Release();
+				pTrack = nullptr;
 			}
 			
 			//Player status (stopped, playing, FF, rewind)
@@ -204,8 +204,8 @@ string Players::getItunesSpam(HWND playerWnd /*= NULL*/)
 				params["version"] = Text::fromT(iVersion.m_szBuffer);
 			}
 			
-			//Release (decrement reference counter to 0) IiTunes object so it can unload and free itself; otherwise, it's locked in memory
-			safe_release(iITunes);
+			iITunes->Release();
+			iITunes = nullptr;
 		}
 		
 		//unload COM library -- this is also essential to prevent leaks and to keep it working the next time.
@@ -313,10 +313,10 @@ string Players::getMPCSpam()
 								mt.cbFormat = 0;
 								mt.pbFormat = NULL;
 							}
-							if (mt.pUnk != NULL)
+							if (mt.pUnk)
 							{
-								// Unecessary because pUnk should not be used, but safest.
-								safe_release(mt.pUnk);
+								mt.pUnk->Release();
+								mt.pUnk = nullptr;
 							}
 							// end provided by MSDN
 							break;
@@ -382,73 +382,6 @@ string Players::getMPCSpam()
 		return Util::emptyString;
 	}
 }
-
-/*
-string Players::getSpotifySpam(HWND playerWnd) {
-    if(playerWnd != NULL) {
-        ParamMap params;
-        TCHAR titleBuffer[2048];
-        GetWindowText(playerWnd, titleBuffer, sizeof(titleBuffer));
-        tstring title = titleBuffer;
-        if (strcmpi(Text::fromT(title).c_str(), "Spotify") == 0)
-            return "no_media";
-        boost::algorithm::replace_first(title, "Spotify - ", "");
-        params["title"] = Text::fromT(title);
-
-        TCHAR appDataPath[MAX_PATH];
-        ::SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, appDataPath);
-        string line;
-        boost::regex ritem;
-        boost::regex rname;
-        boost::regex rhash;
-
-        string path = Text::fromT(appDataPath) + "\\Spotify\\Users\\";
-        ifstream guistate;
-
-        ritem.assign("\"name\":\"([^\"]+)\",\"uri\":\"([^\"]+)");
-        rname.assign("(?<=\"name\":\")([^\"]+)");
-        rhash.assign("(?<=spotify:track:)([^\"]+)");
-        params["link"] = Util::emptyString;
-
-        StringList usersList = File::findFiles(path, "*");
-
-        //find the file containing the latest songs played
-        for(auto& u: usersList) {
-            auto userFiles = File::findFiles(u, "guistate");
-            for(auto& file: userFiles) {
-                guistate.open(Text::utf8ToAcp(file));
-                while (getline(guistate, line)) {
-                    boost::smatch result;
-                    string::const_iterator begin=line.begin(), end=line.end();
-                    //find each song
-                    while (regex_search(begin, end, result, ritem)) {
-                        std::string item( result[0].first, result[0].second );
-                        boost::smatch nresult;
-                        //compare the name with the song being played now
-                        if (regex_search(item, nresult, rname)) {
-                            std::string song( nresult[0].first, nresult[0].second );
-                            if (Text::fromT(title).find(song) != tstring::npos) {
-                                //current song found, get the hash
-                                boost::smatch hresult;
-                                if (regex_search(item, hresult, rhash)) {
-                                    std::string hash( hresult[0].first, hresult[0].second );
-                                    params["link"] = "spotify:track:" + hash;
-                                    break;
-                                }
-                            }
-                        }
-                        begin = result[0].second;
-                    }
-                }
-            }
-        }
-
-        return Util::formatParams(SETTING(SPOTIFY_FORMAT), params);
-    }
-
-    return Util::emptyString;
-}
-*/
 
 // This works for WMP 9+, but it's little slow, but hey we're talking about an MS app here, so what can you expect from the remote support for it...
 string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
@@ -741,7 +674,11 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 		}
 		
 		// Release WMPlayerRemoteApi, if it's there
-		safe_release(WMPlayerRemoteApiCtrl);
+		if (WMPlayerRemoteApiCtrl)
+		{
+			WMPlayerRemoteApiCtrl->Release();
+			WMPlayerRemoteApiCtrl = nullptr;
+		}
 		// Destroy the hoster window, and unload COM
 		DummyWnd->DestroyWindow();
 		delete DummyWnd;

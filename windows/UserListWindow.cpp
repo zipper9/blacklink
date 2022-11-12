@@ -173,19 +173,6 @@ void UserListWindow::initialize(const FavoriteManager::WindowInfo& wi)
 	}
 }
 
-#if 0
-void UserListWindow::destroyFilter()
-{
-	if (ctrlFilter)
-		ctrlFilter.DestroyWindow();
-	safe_delete(ctrlFilterContainer);
-		
-	if (ctrlFilterSel)
-		ctrlFilterSel.DestroyWindow();
-	safe_delete(ctrlFilterSelContainer);
-}
-#endif
-
 LRESULT UserListWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(UserListWindow::columnId));

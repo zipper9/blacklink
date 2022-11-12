@@ -20,12 +20,11 @@
 #include "ThemeManager.h"
 #include "../client/Util.h"
 
-HMODULE ThemeManager::g_resourceLibInstance = nullptr;
+HMODULE ThemeManager::resourceLibInstance = nullptr;
 #ifdef _DEBUG
 bool g_debugResourceLibIsLoaded = false;
 bool g_debugResourceLibIsUnloaded = false;
 #endif // _DEBUG
-
 
 void ThemeManager::unloadResourceLib()
 {
@@ -56,11 +55,5 @@ void ThemeManager::loadResourceLib()
 #endif
 		themeFullPath += ".dll";
 		setResourceLibInstance(::LoadLibrary(Text::toT(themeFullPath).c_str()));
-#ifdef IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
-		if (isResourceLibLoaded())
-		{
-			fire(ThemeManagerListener::ResourceLoaded(), themeDllName);
-		}
-#endif
 	}
 }

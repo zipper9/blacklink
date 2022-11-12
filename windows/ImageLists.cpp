@@ -218,7 +218,7 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, const POINT& pt)
 		}
 		else
 		{
-			ExCImage img;
+			CImageEx img;
 			if (img.LoadFromResource(IDR_BAD_FLAG, _T("PNG")))
 				bmp = img.Detach();
 		}

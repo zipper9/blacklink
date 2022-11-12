@@ -52,7 +52,8 @@ void CGDIImageOle::FinalRelease()
 			m_bRegistered = false;
 		}
 		m_pImage->DeleteBackDC(m_hBackDC);
-		safe_release(m_pImage);
+		m_pImage->Release();
+		m_pImage = nullptr;
 	}
 	
 	//DeleteCriticalSection(&m_csAdviseSink);
@@ -125,12 +126,11 @@ HRESULT CGDIImageOle::FireViewChangeEx(BOOL bEraseBackground)
 				RECT rcPos, rcClip;
 				frameInfo.cb = sizeof(OLEINPLACEFRAMEINFO);
 				
-				if (spInPlaceSite->GetWindowContext(&pInPlaceFrame,
-				                                    &pInPlaceUIWindow, &rcPos, &rcClip, &frameInfo) == S_OK)
+				if (spInPlaceSite->GetWindowContext(&pInPlaceFrame, &pInPlaceUIWindow, &rcPos, &rcClip, &frameInfo) == S_OK)
 				{
-					safe_release(pInPlaceFrame);
-					safe_release(pInPlaceUIWindow);
-					
+					if (pInPlaceFrame) pInPlaceFrame->Release();
+					if (pInPlaceUIWindow) pInPlaceUIWindow->Release();
+
 					DefinedTestRectValue TestRect = TestRectInRect(&rcClip, &rcPos);
 					
 					if (TestRect == TR_CONTAIN)

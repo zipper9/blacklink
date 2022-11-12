@@ -258,8 +258,6 @@ class Client : public ClientBase,
 		CFlyFloodCommandMap m_flood_detect;
 
 	protected:
-		bool isFloodCommand(const string& command, const string& line);
-
 		OnlineUserPtr myOnlineUser;
 		OnlineUserPtr hubOnlineUser;
 

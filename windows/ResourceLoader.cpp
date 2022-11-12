@@ -2,9 +2,8 @@
 
 #include "ResourceLoader.h"
 #include "resource.h"
-#include "File.h"
 
-void ExCImage::Destroy() noexcept
+void CImageEx::Destroy() noexcept
 {
 	CImage::Destroy();
 	if (buffer)
@@ -15,7 +14,7 @@ void ExCImage::Destroy() noexcept
 	}
 }
 
-ExCImage& ExCImage::operator= (ExCImage&& src)
+CImageEx& CImageEx::operator= (CImageEx&& src)
 {
 	CImage::Destroy();
 	Attach(src.Detach());
@@ -30,12 +29,12 @@ ExCImage& ExCImage::operator= (ExCImage&& src)
 	return *this;
 }
 
-bool ExCImage::LoadFromResourcePNG(UINT id) noexcept
+bool CImageEx::LoadFromResourcePNG(UINT id) noexcept
 {
 	return LoadFromResource(id, _T("PNG"));
 }
 
-bool ExCImage::LoadFromResource(UINT id, LPCTSTR pType, HMODULE hInst) noexcept
+bool CImageEx::LoadFromResource(UINT id, LPCTSTR pType, HMODULE hInst) noexcept
 {
 	HRESULT res = E_FAIL;
 	dcassert(buffer == nullptr);
@@ -97,7 +96,7 @@ int ResourceLoader::LoadImageList(LPCTSTR fileName, CImageList& imgList, int cx,
 {
 	if (cx <= 0 || cy <= 0)
 		return 0;
-	ExCImage img;
+	CImageEx img;
 	img.Load(fileName);
 	imgList.Create(cx, cy, ILC_COLOR32 | ILC_MASK, img.GetWidth() / cy, 0);
 	imgList.Add(img, img.GetPixel(0, 0));
@@ -110,7 +109,7 @@ int ResourceLoader::LoadImageList(UINT id, CImageList& imgList, int cx, int cy)
 	int imageCount = 0;
 	if (cx <= 0 || cy <= 0)
 		return imageCount;
-	ExCImage img;
+	CImageEx img;
 	bool imgAdded = false;
 	if (img.LoadFromResource(id, _T("PNG")))
 	{
@@ -120,7 +119,7 @@ int ResourceLoader::LoadImageList(UINT id, CImageList& imgList, int cx, int cy)
 		if (ThemeManager::isResourceLibLoaded() && imageCount > 0)
 		{
 			// Only for Not original images -- load
-			ExCImage imgOrig;
+			CImageEx imgOrig;
 			if (imgOrig.LoadFromResource(id, _T("PNG"), nullptr))
 			{
 				const int imageOriginalCount = imgOrig.GetWidth() / cx;

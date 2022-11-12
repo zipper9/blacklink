@@ -415,10 +415,10 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void storeColumnsInfo();
 		bool swapPanels;
 		CButton ctrlSwitchPanels;
-		CContainedWindow* switchPanelsContainer;
+		CContainedWindow switchPanelsContainer;
 		CFlyToolTipCtrl tooltip;
 		CButton ctrlShowUsers;
-		CContainedWindow* showUsersContainer;
+		CContainedWindow showUsersContainer;
 
 		OMenu tabMenu;
 		bool  isTabMenuShown;

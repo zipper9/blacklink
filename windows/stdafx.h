@@ -59,6 +59,4 @@ extern CAppModule _Module;
 #include <atlctrlx.h>
 #endif // _WIN32
 
-#include "util_flylinkdc.h"
-
 #endif // DCPLUSPLUS_WIN32_STDAFX_H
