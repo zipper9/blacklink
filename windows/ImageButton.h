@@ -20,6 +20,7 @@ class ImageButton : public CWindowImpl<ImageButton, CButton>
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_PAINT, onPaint)
 		MESSAGE_HANDLER(WM_ERASEBKGND, onErase)
+		MESSAGE_HANDLER(WM_ENABLE, onEnable)
 		MESSAGE_HANDLER(WM_THEMECHANGED, onThemeChanged)
 		MESSAGE_HANDLER(BM_SETIMAGE, onSetImage)
 		END_MSG_MAP()
@@ -30,6 +31,7 @@ class ImageButton : public CWindowImpl<ImageButton, CButton>
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onErase(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onEnable(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSetImage(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 

@@ -54,6 +54,12 @@ LRESULT ImageButton::onErase(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	return 1;
 }
 
+LRESULT ImageButton::onEnable(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	Invalidate();
+	return 0;
+}
+
 LRESULT ImageButton::onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	if (hTheme) CloseThemeData(hTheme);
@@ -75,22 +81,31 @@ LRESULT ImageButton::onSetImage(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 
 void ImageButton::drawBackground(HDC hdc, int width, int height)
 {
-	UINT state = GetState();
 	RECT rect = { 0, 0, width, height };
-	FillRect(hdc, &rect, GetSysColorBrush(COLOR_BTNFACE));
+	UINT state = GetState();
+	if (!IsWindowEnabled()) state |= WS_DISABLED;
 	if (hTheme)
 	{
 		int flags;
-		if (state & BST_PUSHED) flags = PBS_PRESSED;
+		if (state & WS_DISABLED) flags = PBS_DISABLED;
+		else if (state & BST_PUSHED) flags = PBS_PRESSED;
 		else if (state & BST_HOT) flags = PBS_HOT;
 		else flags = PBS_NORMAL;
+		if (IsThemeBackgroundPartiallyTransparent(hTheme, BP_PUSHBUTTON, flags))
+			DrawThemeParentBackground(m_hWnd, hdc, &rect);
 		DrawThemeBackground(hTheme, hdc, BP_PUSHBUTTON, flags, &rect, nullptr);
 	}
 	else
 	{
+		FillRect(hdc, &rect, GetSysColorBrush(COLOR_BTNFACE));
 		UINT flags = DFCS_BUTTONPUSH;
-		if (state & BST_PUSHED) flags |= DFCS_PUSHED;
-		if (state & BST_HOT) flags |= DFCS_HOT;
+		if (state & WS_DISABLED)
+			flags |= DFCS_INACTIVE;
+		else
+		{
+			if (state & BST_PUSHED) flags |= DFCS_PUSHED;
+			if (state & BST_HOT) flags |= DFCS_HOT;
+		}
 		DrawFrameControl(hdc, &rect, DFC_BUTTON, flags);
 	}
 	if (state & BST_FOCUS)

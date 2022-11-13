@@ -565,7 +565,6 @@
 #define IDC_FILE_TTH                    1474
 #define IDC_SETTINGS_OUTGOING           1475
 #define IDC_STATIC8                     1476
-#define IDC_CAPTION_PATH                1477
 #define IDC_LISTLEN                     1478
 #define IDC_PROGRESS_BUMPED             1480
 #define IDC_NO_IP_OVERRIDE              1481
