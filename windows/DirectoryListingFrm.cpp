@@ -1582,7 +1582,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
 			if (ownList)
-				appendCopyUrlItems(copyMenu, IDC_COPY_URL, ResourceManager::FILE_URL);			
+				appendCopyUrlItems(copyMenu, IDC_COPY_URL, ResourceManager::FILE_URL);
 			else if (!hubUrl.empty())
 			{
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY_URL, CTSTRING(FILE_URL));
@@ -2477,39 +2477,99 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 	return CDRF_DODEFAULT;
 }
 
-static void translateDuration(const string& src, tstring& columnAudio, tstring& columnDuration)
+static unsigned getUnit(const string& s)
 {
+	if (s == "ms" || s == "msec") return 1;
+	if (s == "s" || s == "sec") return 1000;
+	if (s == "mn" || s == "min") return 60000;
+	if (s == "h" || s == "hr") return 3600000;
+	return 0;
+}
+
+static bool parseDuration(const string& s, unsigned& msec)
+{
+	msec = 0;
+	bool getNum = true;
+	bool hasNum = false;
+	bool found = false;
+	unsigned val = 0;
+	string::size_type i = 0;
+	string::size_type j = string::npos;
+	while (i < s.length())
+	{
+		if (getNum)
+		{
+			if (s[i] == ' ')
+			{
+				++i;
+				continue;
+			}
+			if (s[i] >= '0' && s[i] <= '9')
+			{
+				val = val*10 + s[i]-'0';
+				hasNum = true;
+				++i;
+				continue;
+			}
+			if (!hasNum) return false;
+			getNum = false;
+		}
+		if (s[i] != ' ' && j == string::npos) j = i;
+		if (j != string::npos && (s[i] == ' ' || (s[i] >= '0' && s[i] <= '9')))
+		{
+			unsigned unit = getUnit(s.substr(j, i-j));
+			if (!unit) return false;
+			msec += val * unit;
+			val = 0;
+			getNum = true;
+			hasNum = false;
+			found = true;
+			j = string::npos;
+		}
+		++i;
+	}
+	if (j != string::npos)
+	{
+		unsigned unit = getUnit(s.substr(j));
+		if (!unit) return false;
+		msec += val * unit;
+		getNum = true;
+		hasNum = false;
+		found = true;
+	}
+	if (getNum && hasNum) return false;
+	return found;
+}
+
+static void parseDuration(const string& src, unsigned& msec, tstring& columnAudio, tstring& columnDuration)
+{
+	unsigned val;
+	bool result = false;
 	columnDuration.clear();
 	columnAudio.clear();
-	if (!src.empty())
+	auto pos = src.find('|');
+	if (pos != string::npos)
 	{
-		const size_t pos = src.find('|', 0);
-		if (pos != string::npos && pos)
+		result = parseDuration(src.substr(0, pos), val);
+		if (result)
 		{
-			if (src.size() > 6 && src[0] >= '1' && src[0] <= '9' && // ѕроверим факт наличи€ в начале длительности
-				(src[1] == 'm' || src[2] == 'n') || // "1mn XXs"
-				(src[1] == 's' || src[2] == ' ') || // "1s XXXms"
-				(src[2] == 's' || src[3] == ' ') || // "59s XXXms"
-				(src[2] == 'm' || src[3] == 'n') ||   // "59mn XXs"
-				(src[1] == 'h') ||  // "1h XXmn"
-				(src[2] == 'h')     // "60h XXmn"
-				)
-			{
-				Text::toT(src.substr(0, pos - 1), columnDuration);
-				if (pos + 2 < src.length())
-					Text::toT(src.substr(pos + 2), columnAudio);
-			}
-			else
-			{
-				columnAudio = Text::toT(src); // ≈сли не распарсили - показывает что есть
-				//dcassert(0); // fix "1 076 Kbps,23mn 9s | MPEG Audio, 160 Kbps, 2 channels"
-			}
+			Text::toT(src.substr(pos + 1), columnAudio);
+			boost::trim(columnAudio);
 		}
 	}
+	else
+		result = parseDuration(src, val);
+	if (!result)
+	{
+		Text::toT(src, columnAudio);
+		return;
+	}
+	msec = val;
+	Text::toT(Util::formatTime((val + 999) / 1000), columnDuration);
 }
 
 DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const DirectoryListing* dl) :
-	type(FILE), file(f), iconIndex(-1)
+	type(FILE), file(f), iconIndex(-1), duration(0)
 {
 	columns[COLUMN_FILENAME] = Text::toT(f->getName());
 	columns[COLUMN_TYPE] = Util::getFileExt(columns[COLUMN_FILENAME]);
@@ -2546,11 +2606,12 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 			columns[COLUMN_MEDIA_XY] = buf;
 		}
 		columns[COLUMN_MEDIA_VIDEO] = Text::toT(media->video);
-		translateDuration(media->audio, columns[COLUMN_MEDIA_AUDIO], columns[COLUMN_DURATION]);
+		parseDuration(media->audio, duration, columns[COLUMN_MEDIA_AUDIO], columns[COLUMN_DURATION]);
 	}
 }
 
-DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type(DIRECTORY), dir(d), iconIndex(-1)
+DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) :
+	type(DIRECTORY), dir(d), iconIndex(-1), duration(0)
 {
 	columns[COLUMN_FILENAME] = Text::toT(d->getName());
 	columns[COLUMN_EXACT_SIZE] = Util::formatExactSizeT(d->getTotalSize());
@@ -2634,6 +2695,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 			if (bMedia) return -1;
 			return 0;
 		}
+		case COLUMN_DURATION:
+			return compare(a->duration, b->duration);
 	}
 	return Util::defaultSort(a->columns[col], b->columns[col], false);
 }

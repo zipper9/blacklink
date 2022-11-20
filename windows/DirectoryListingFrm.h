@@ -425,6 +425,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			private:
 				tstring columns[COLUMN_LAST];
 				int iconIndex;
+				unsigned duration;
 		};
 
 		const uint64_t id;
