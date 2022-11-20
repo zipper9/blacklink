@@ -286,7 +286,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	return false;
 }
 
-bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, const string& fileName, bool hideShare, const CID& shareGroup, int64_t startPos, int64_t& bytes, bool listRecursive)
+bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, const string& fileName, bool hideShare, const CID& shareGroup, int64_t startPos, int64_t& bytes, bool listRecursive, string& errorText)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcdebug("Preparing %s %s " I64_FMT " " I64_FMT " %d\n", typeStr.c_str(), fileName.c_str(), startPos, bytes, listRecursive);
@@ -303,66 +303,13 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	const auto cipherName = source->getCipherName();
 	const bool isTypeTree = typeStr == Transfer::fileTypeNames[Transfer::TYPE_TREE];
 	const bool isTypePartialList = typeStr == Transfer::fileTypeNames[Transfer::TYPE_PARTIAL_LIST];
-#ifdef FLYLINKDC_USE_DOS_GUARD
-	if (isTypeTree || isTypePartialList)
-	{
-		const HintedUser& l_User = source->getHintedUser();
-		if (l_User.user)
-		{
-			// [!] IRainman opt: CID on ADC hub is unique to all hubs,
-			// in NMDC it is obtained from the hash of username and hub address (computed locally).
-			// There is no need to use any additional data, but it is necessary to consider TTH of the file.
-			// This ensures the absence of a random user locks sitting on several ADC hubs,
-			// because the number of connections from a single user much earlier limited in the ConnectionManager.
-			const string l_hash_key = Util::toString(l_User.user->getCID().toHash()) + fileName;
-			uint8_t l_count_dos;
-			{
-				LOCK(csDos);
-				l_count_dos = ++m_dos_map[l_hash_key];
-			}
-			const uint8_t l_count_attempts = isTypePartialList ? 5 : 30;
-			if (l_count_dos > l_count_attempts)
-			{
-				dcdebug("l_hash_key = %s ++m_dos_map[l_hash_key] = %d\n", l_hash_key.c_str(), l_count_dos);
-				if (BOOLSETTING(LOG_DDOS_TRACE))
-				{
-					char l_buf[2000];
-					l_buf[0] = 0;
-					snprintf(l_buf, _countof(l_buf), CSTRING(DOS_ATACK),
-					          l_User.user->getLastNick().c_str(),
-					          l_User.hint.c_str(),
-					          l_count_attempts,
-					          fileName.c_str());
-					LogManager::ddos_message(l_buf);
-				}
-				if (isTypePartialList)
-				{
-					/*
-					Fix
-					[2017-10-01 16:20:21] <MikeKMV> оказывается флай умеет флудить
-					[2017-10-01 16:20:25] <MikeKMV> Client: [Incoming][194.186.25.22]       $ADCGET list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 -1 ZL1
-					Client: [Outgoing][194.186.25.22]       $ADCSND list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 2029 ZL1|
-					Client: [Incoming][194.186.25.22]       $ADCGET list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 -1 ZL1
-					Client: [Outgoing][194.186.25.22]       $ADCSND list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 2029 ZL1|
-					Client: [Incoming][194.186.25.22]       $ADCGET list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 -1 ZL1
-					Client: [Outgoing][194.186.25.22]       $ADCSND list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 2029 ZL1|
-					*/
-					LogManager::message("Disconnect bug client: $ADCGET / $ADCSND User: " + l_User.user->getLastNick() + " Hub:" + source->getHubUrl());
-					source->disconnect();
-					
-				}
-				return false;
-			}
-		}
-	}
-#endif // FLYLINKDC_USE_DOS_GUARD
 	InputStream* is = nullptr;
 	int64_t start = 0;
 	int64_t size = 0;
 	int64_t fileSize = 0;
-	
+
 	const bool isFileList = fileName == Transfer::fileNameFilesBzXml || fileName == Transfer::fileNameFilesXml;
-	bool isFree = isFileList;
+	bool isMinislot = isFileList;
 	bool isPartial = false;
 	
 	string sourceFile;
@@ -403,10 +350,10 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 					delete f;
 					return false;
 				}
-				
+
 				if (fileSize <= (int64_t)(SETTING(MINISLOT_SIZE)) << 10)
-					isFree = true;
-				
+					isMinislot = true;
+
 				f->setPos(start);
 				is = f;
 				if (start + size < fileSize)
@@ -445,7 +392,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			start = 0;
 			fileSize = size = mis->getSize();
 			is = mis;
-			isFree = true;
+			isMinislot = true;
 			type = Transfer::TYPE_TREE;
 		}
 		else if (isTypePartialList)
@@ -469,7 +416,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			start = 0;
 			fileSize = size = mis->getSize();
 			is = mis;
-			isFree = true;
+			isMinislot = true;
 			type = Transfer::TYPE_PARTIAL_LIST;
 		}
 		else
@@ -544,27 +491,22 @@ ok:
 		if (slotTimeout) source->getUser()->unsetFlag(User::RESERVED_SLOT);
 		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::getInstance()->checkFileDownload(source->getUser());
 	}
-	const bool isFavorite = FavoriteManager::getInstance()->hasAutoGrantSlot(source->getUser());
+	if (slotType == UserConnection::RESSLOT && !hasReserved)
+		slotType = UserConnection::NOSLOT;
+	const bool isFavGrant = FavoriteManager::getInstance()->hasAutoGrantSlot(source->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-	// !SMT!-S
-	if (!isFavorite && SETTING(ENABLE_AUTO_BAN))
+	if (!isFavGrant && !hasReserved && !isFileList && SETTING(ENABLE_AUTO_BAN) && handleBan(source))
 	{
-		// фавориты под автобан не попадают
-		if (!isFileList && !hasReserved && handleBan(source))
-		{
-			delete is;
-			addFailedUpload(source, sourceFile, startPos, size, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0);
-			source->disconnect();
-			return false;
-		}
+		delete is;
+		addFailedUpload(source, sourceFile, startPos, size, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0);
+		source->disconnect();
+		errorText = STRING(USER_BANNED);
+		return false;
 	}
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 	
-	if (slotType != UserConnection::STDSLOT || hasReserved)
+	if ((slotType != UserConnection::STDSLOT && slotType != UserConnection::RESSLOT) || hasReserved)
 	{
-		//[-] IRainman autoban fix: please check this code after merge
-		//bool hasReserved = reservedSlots.find(source->getUser()) != reservedSlots.end();
-		//bool isFavorite = FavoriteManager::getInstance()->hasSlot(source->getUser());
 		bool hasFreeSlot = getFreeSlots() > 0;
 		if (hasFreeSlot)
 		{
@@ -573,13 +515,13 @@ ok:
 		}
 		
 		bool isAutoSlot = getAutoSlot();
-		bool isHasUpload = hasUpload(source);
+		bool isLeecher = (hasReserved || isFavGrant) ? false : hasUpload(source);
 		
-#ifdef SSA_IPGRANT_FEATURE // SSA - additional slots for special IP's
+#ifdef SSA_IPGRANT_FEATURE
 		bool hasSlotByIP = false;
 		if (BOOLSETTING(EXTRA_SLOT_BY_IP))
 		{
-			if (!(hasReserved || isFavorite || isAutoSlot || hasFreeSlot || isHasUpload))
+			if (!(hasReserved || isFavGrant || isAutoSlot || hasFreeSlot || isLeecher))
 			{
 				IpAddress addr = source->getRemoteIp();
 				if (addr.type == AF_INET && addr.data.v4)
@@ -587,27 +529,25 @@ ok:
 			}
 		}
 #endif // SSA_IPGRANT_FEATURE
-		if (!(hasReserved || isFavorite || isAutoSlot || hasFreeSlot
+		if (!(hasReserved || isFavGrant || isAutoSlot || hasFreeSlot
 #ifdef SSA_IPGRANT_FEATURE
 		        || hasSlotByIP
 #endif
-		     ) || isHasUpload)
+		     ) || isLeecher)
 		{
-			const bool supportsFree = source->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
-			const bool allowedFree = slotType == UserConnection::EXTRASLOT || getFreeExtraSlots() > 0;
-			bool partialFree = isPartial && ((slotType == UserConnection::PARTIALSLOT) || (extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)));
-			
-			if (isFree && supportsFree && allowedFree)
+			if (isMinislot && source->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS) &&
+				(slotType == UserConnection::MINISLOT || getFreeExtraSlots() > 0))
 			{
-				slotType = UserConnection::EXTRASLOT;
+				slotType = UserConnection::MINISLOT;
 			}
-			else if (partialFree)
+			else if (isPartial && (slotType == UserConnection::PFS_SLOT || extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)))
 			{
-				slotType = UserConnection::PARTIALSLOT;
+				slotType = UserConnection::PFS_SLOT;
 			}
 			else
 			{
 				delete is;
+				errorText = STRING(ALL_UPLOAD_SLOTS_TAKEN);
 				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
 				return false;
 			}
@@ -618,7 +558,7 @@ ok:
 			if (hasSlotByIP)
 				LogManager::message("IpGrant: " + STRING(GRANTED_SLOT_BY_IP) + ' ' + Util::printIpAddress(source->getRemoteIp()));
 #endif
-			slotType = UserConnection::STDSLOT;
+			slotType = hasReserved ? UserConnection::RESSLOT : UserConnection::STDSLOT;
 		}
 		
 		setLastGrant(GET_TICK());
@@ -862,7 +802,8 @@ void UploadManager::processGet(UserConnection* source, const string& fileName, i
 	getShareGroup(source, hideShare, shareGroup);
 
 	int64_t bytes = -1;
-	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fileName), hideShare, shareGroup, resume, bytes))
+	string errorText;
+	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fileName), hideShare, shareGroup, resume, bytes, false, errorText))
 	{
 		source->setState(UserConnection::STATE_SEND);
 		source->fileLength(Util::toString(source->getUpload()->getSize()));
@@ -916,7 +857,8 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 	else
 		zflag = cmd[4] == 'Z';
 		
-	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fname), hideShare, shareGroup, startPos, bytes, false))
+	string errorText;
+	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fname), hideShare, shareGroup, startPos, bytes, false, errorText))
 	{
 		auto u = source->getUpload();
 		dcassert(u != nullptr);
@@ -938,7 +880,7 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 		}
 
 		source->sending(Util::toString(u->getSize()));
-		
+
 		u->setStartTime(source->getLastActivity());
 		source->setState(UserConnection::STATE_RUNNING);
 		source->transmitFile(u->getReadStream());
@@ -946,14 +888,15 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 	}
 	else
 	{
+		if (errorText.empty()) errorText = STRING(UNABLE_TO_SEND_FILE);
 		auto u = source->getUpload();
 		if (u)
 		{
 			u->setType(Transfer::TYPE_FILE);
-			fire(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
+			fire(UploadManagerListener::Failed(), u, errorText);
 		}
 		else
-			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), STRING(UNABLE_TO_SEND_FILE), source->getConnectionQueueToken());
+			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), errorText, source->getConnectionQueueToken());
 	}
 }
 
@@ -974,7 +917,8 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 	CID shareGroup;
 	getShareGroup(source, hideShare, shareGroup);
 
-	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag("RE", 4)))
+	string errorText;
+	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag("RE", 4), errorText))
 	{
 		auto u = source->getUpload();
 		dcassert(u != nullptr);
@@ -1018,15 +962,16 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 	}
 	else
 	{
+		if (errorText.empty()) errorText = STRING(UNABLE_TO_SEND_FILE);
 		auto u = source->getUpload();
 		if (u)
 		{
 			if (type == Transfer::fileTypeNames[Transfer::TYPE_FILE])
 				u->setType(Transfer::TYPE_FILE);
-			fire(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
+			fire(UploadManagerListener::Failed(), u, errorText);
 		}
 		else
-			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), STRING(UNABLE_TO_SEND_FILE), source->getConnectionQueueToken());
+			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), errorText, source->getConnectionQueueToken());
 	}
 }
 
@@ -1213,12 +1158,13 @@ void UploadManager::processSlot(UserConnection::SlotTypes slotType, int delta)
 	switch (slotType)
 	{
 		case UserConnection::STDSLOT:
+		case UserConnection::RESSLOT:
 			g_running += delta;
 			break;
-		case UserConnection::EXTRASLOT:
+		case UserConnection::MINISLOT:
 			extra += delta;
 			break;
-		case UserConnection::PARTIALSLOT:
+		case UserConnection::PFS_SLOT:
 			extraPartial += delta;
 			break;
 	}

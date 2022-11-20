@@ -106,10 +106,11 @@ class UserConnection :
 
 		enum SlotTypes
 		{
-			NOSLOT      = 0,
-			STDSLOT     = 1,
-			EXTRASLOT   = 2,
-			PARTIALSLOT = 3
+			NOSLOT   = 0,
+			STDSLOT  = 1,
+			RESSLOT  = 2,
+			MINISLOT = 3,
+			PFS_SLOT = 4
 		};
 
 		int16_t getNumber() const { return number; }

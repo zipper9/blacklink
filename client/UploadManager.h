@@ -85,11 +85,6 @@ class WaitingUser
 
 class UploadManager : private ClientManagerListener, public Speaker<UploadManagerListener>, private TimerManagerListener, public Singleton<UploadManager>
 {
-#ifdef FLYLINKDC_USE_DOS_GUARD
-		typedef boost::unordered_map<string, uint8_t> CFlyDoSCandidatMap;
-		CFlyDoSCandidatMap m_dos_map;
-		mutable FastCriticalSection csDos;
-#endif
 	public:
 		static uint32_t g_count_WaitingUsersFrame;
 		/** @return Number of uploads. */
@@ -242,7 +237,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		void on(Second, uint64_t aTick) noexcept override;
 		void on(Minute, uint64_t aTick) noexcept override;
 		
-		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive = false);
+		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive, string& errorText);
 		bool isCompressedFile(const Upload* u);
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);
