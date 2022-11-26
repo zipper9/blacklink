@@ -381,8 +381,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 
 	setListViewColors(ctrlList);
-	ctrlTree.SetBkColor(Colors::g_bgColor);
-	ctrlTree.SetTextColor(Colors::g_textColor);
+	setTreeViewColors(ctrlTree);
 
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
@@ -2219,8 +2218,7 @@ void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 	if (ctrlList.isRedraw() || !colors.compare(newColors))
 	{
 		colors = newColors;
-		ctrlTree.SetBkColor(Colors::g_bgColor);
-		ctrlTree.SetTextColor(Colors::g_textColor);
+		setTreeViewColors(ctrlTree);
 		redraw();
 	}
 }

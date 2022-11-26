@@ -624,6 +624,7 @@ void UsersFrame::on(SettingsManagerListener::Repaint)
 	{
 		if (ctrlUsers.isRedraw())
 		{
+			ctrlIgnored.updateColors();
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}

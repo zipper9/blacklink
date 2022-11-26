@@ -51,4 +51,10 @@ static inline void setListViewColors(CListViewCtrl& ctrlList)
 	ctrlList.SetTextColor(Colors::g_textColor);
 }
 
+static inline void setTreeViewColors(CTreeViewCtrl& ctrlTree)
+{
+	ctrlTree.SetBkColor(Colors::g_bgColor);
+	ctrlTree.SetTextColor(Colors::g_textColor);
+}
+
 #endif // COLORS_H_

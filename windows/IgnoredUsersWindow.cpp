@@ -217,3 +217,8 @@ int IgnoredUsersWindow::getMinWidth()
 	if (!xdu) initMetrics();
 	return buttonWidth[0] + buttonWidth[1] + buttonWidth[2] + 2*buttonSpace + buttonSpaceLarge;
 }
+
+void IgnoredUsersWindow::updateColors()
+{
+	setListViewColors(ctrlIgnored);
+}

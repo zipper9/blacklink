@@ -73,10 +73,9 @@ class FinishedFrameBase
 	protected:
 		enum TreeItemType
 		{
-			Current,
-			History,
-			HistoryRootDC,
-			HistoryDateDC
+			RootRecent,
+			RootDatabase,
+			HistoryDate
 		};
 
 		enum
@@ -136,26 +135,14 @@ class FinishedFrameBase
 		CStatusBarCtrl ctrlStatus;
 		CMenu copyMenu;
 		OMenu directoryMenu;
-		
+
 		TypedListViewCtrl<FinishedItemInfo, 0> ctrlList;
-		
+
 		CTreeViewCtrl ctrlTree;
 		HTREEITEM rootItem;
-		
-		class SubtreeInfo
-		{
-			public:
-				HTREEITEM root;
-				HTREEITEM dc;
-				SubtreeInfo()
-				{
-					root = dc = nullptr;
-				}
-				void createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType);
-		};
-		SubtreeInfo currentItem;
-		SubtreeInfo historyItem;
-		
+		HTREEITEM rootRecent;
+		HTREEITEM rootDatabase;
+
 		int64_t totalBytes;
 		int64_t totalActual;
 		int64_t totalSpeed;
@@ -169,6 +156,7 @@ class FinishedFrameBase
 		SettingsManager::StrSetting columnVisible;
 		SettingsManager::IntSetting columnSort;
 		
+		HTREEITEM createRootItem(TreeItemType nodeType);
 		void insertData();
 		void addStatusLine(const tstring& aLine);
 		void updateStatus();
@@ -333,7 +321,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			DWORD_PTR itemData = ctrlTree.GetItemData(treeItem);
 			if (!itemData) return 0;
 			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(itemData);
-			if (data->type == HistoryDateDC)
+			if (data->type == HistoryDate)
 			{
 				SendMessage(WM_COMMAND, IDC_REMOVE_ALL);
 				ctrlTree.DeleteItem(treeItem);
@@ -372,7 +360,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			
 			// position bars and offset their dimensions
 			UpdateBarsPosition(rect, bResizeBars);
-			
+
 			if (ctrlStatus.IsWindow())
 			{
 				CRect sr;
@@ -383,12 +371,9 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				w[2] = max(w[3] - 100, 0);
 				w[1] = max(w[2] - 100, 0);
 				w[0] = max(w[1] - 100, 0);
-				
 				ctrlStatus.SetParts(5, w);
 			}
-			
-			CRect rc(rect);
-			ctrlList.MoveWindow(rc);
+
 			SetSplitterRect(&rect);
 		}
 		
@@ -401,7 +386,10 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		void on(SettingsManagerListener::Repaint) override
 		{
 			if (ctrlList.isRedraw())
+			{
+				setTreeViewColors(ctrlTree);
 				RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+			}
 		}
 
 		void on(FinishedManagerListener::DroppedItems, int64_t maxTempId) noexcept override

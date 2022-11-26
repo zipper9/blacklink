@@ -21,6 +21,7 @@ class IgnoredUsersWindow : public CWindowImpl<IgnoredUsersWindow>
 		void updateUsers();
 		int getCount() const;
 		int getMinWidth();
+		void updateColors();
 
 	private:
 		BEGIN_MSG_MAP(IgnoredUsersWindow)

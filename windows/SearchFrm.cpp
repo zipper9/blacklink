@@ -363,8 +363,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
 
 	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
-	ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
-	ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
+	setTreeViewColors(ctrlSearchFilterTree);
 	WinUtil::setExplorerTheme(ctrlSearchFilterTree);
 	ctrlSearchFilterTree.SetImageList(searchTypesImageList, TVSIL_NORMAL);
 
@@ -2878,8 +2877,7 @@ void SearchFrame::on(SettingsManagerListener::Repaint)
 		ctrlHubs.SetBkColor(Colors::g_bgColor);
 		ctrlHubs.SetTextBkColor(Colors::g_bgColor);
 		ctrlHubs.SetTextColor(Colors::g_textColor);
-		ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
-		ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
+		setTreeViewColors(ctrlSearchFilterTree);
 		redraw = true;
 	}
 	if (redraw)

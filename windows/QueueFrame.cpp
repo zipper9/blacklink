@@ -190,12 +190,10 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlQueue.insertColumns(SettingsManager::QUEUE_FRAME_ORDER, SettingsManager::QUEUE_FRAME_WIDTHS, SettingsManager::QUEUE_FRAME_VISIBLE);
 	ctrlQueue.setSortFromSettings(SETTING(QUEUE_FRAME_SORT));
-	
+
 	setListViewColors(ctrlQueue);
-	
-	ctrlDirs.SetBkColor(Colors::g_bgColor);
-	ctrlDirs.SetTextColor(Colors::g_textColor);
-	
+	setTreeViewColors(ctrlDirs);
+
 	ctrlShowTree.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	ctrlShowTree.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlShowTree.SetCheck(showTree);
@@ -2444,8 +2442,7 @@ void QueueFrame::on(SettingsManagerListener::Repaint)
 	{
 		if (ctrlQueue.isRedraw())
 		{
-			ctrlDirs.SetBkColor(Colors::g_bgColor);
-			ctrlDirs.SetTextColor(Colors::g_textColor);
+			setTreeViewColors(ctrlDirs);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}

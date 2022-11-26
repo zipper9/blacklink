@@ -130,10 +130,8 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	
 	// colors
 	setListViewColors(ctrlList);
-	
-	ctrlQueued.SetBkColor(Colors::g_bgColor);
-	ctrlQueued.SetTextColor(Colors::g_textColor);
-	
+	setTreeViewColors(ctrlQueued);
+
 	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(4, statusSizes);
@@ -464,8 +462,8 @@ void WaitingUsersFrame::updateStatus()
 		const int users = ctrlQueued.GetCount() - 1;
 
 		tstring tmp[2];
-		tmp[0] = TSTRING(USERS) + _T(": ") + Util::toStringT(users);
-		tmp[1] = TSTRING(ITEMS) + _T(": ") + Util::toStringT(cnt);
+		tmp[0] = TPLURAL_F(PLURAL_USERS, users);
+		tmp[0] = TPLURAL_F(PLURAL_ITEMS, cnt);
 		bool u = false;
 		
 		for (int i = 1; i < 3; i++)
@@ -598,7 +596,7 @@ void WaitingUsersFrame::on(SettingsManagerListener::Repaint)
 		initProgressBar(true);
 		if (ctrlList.isRedraw())
 		{
-			ctrlQueued.SetBkColor(Colors::g_bgColor);
+			setTreeViewColors(ctrlQueued);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}

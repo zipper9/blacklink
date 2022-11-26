@@ -54,33 +54,19 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::IP
 };
 
-void FinishedFrameBase::SubtreeInfo::createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType)
+HTREEITEM FinishedFrameBase::createRootItem(TreeItemType nodeType)
 {
 	auto data = new TreeItemData;
 	data->type = nodeType;
 	data->dateAsInt = 0;
-	root = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-		nodeType == Current ? CTSTRING(CURRENT_SESSION_RAM) : CTSTRING(HISTORY_DATABASE),
-		3, // g_ISPImage.m_flagImageCount + 14, // nImage
-		3, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
+	return ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+		nodeType == RootRecent ? CTSTRING(CURRENT_SESSION_RAM) : CTSTRING(HISTORY_DATABASE),
+		3, // nImage
+		3, // nSelectedImage
 		0, // nState
 		0, // nStateMask
 		reinterpret_cast<LPARAM>(data), // lParam
-		rootItem, // aParent,
-		TVI_LAST  // hInsertAfter
-		);
-
-	data = new TreeItemData;
-	data->type = nodeType == Current ? Current : HistoryRootDC;
-	data->dateAsInt = 0;
-	dc = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-		CTSTRING(HISTORY_DCPP),
-		1, // g_ISPImage.m_flagImageCount + 14, // nImage
-		1, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-		0, // nState
-		0, // nStateMask
-		reinterpret_cast<LPARAM>(data),
-		root, // aParent,
+		rootItem, // hParent,
 		TVI_LAST  // hInsertAfter
 		);
 }
@@ -122,21 +108,20 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 	directoryMenu.AppendMenu(MF_STRING, IDC_REMOVE_TREE_ITEM, CTSTRING(REMOVE));
 
 	ctrlTree.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
-	ctrlTree.SetBkColor(Colors::g_bgColor);
-	ctrlTree.SetTextColor(Colors::g_textColor);
+	setTreeViewColors(ctrlTree);
 	WinUtil::setExplorerTheme(ctrlTree);
 
 	g_TransferTreeImage.init();
 	ctrlTree.SetImageList(g_TransferTreeImage.getIconList(), TVSIL_NORMAL);
 			
 	rootItem = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-		transferType == e_TransferDownload ? CTSTRING(DOWNLOAD) : CTSTRING(UPLOAD),
-		2, // g_ISPImage.m_flagImageCount + 14, // nImage
-		2, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
+		transferType == e_TransferDownload ? CTSTRING(FINISHED_DOWNLOADS) : CTSTRING(FINISHED_UPLOADS),
+		2, // nImage
+		2, // nSelectedImage
 		0, // nState
 		0, // nStateMask
 		0, // lParam
-		0, // aParent,
+		0, // hParent,
 		TVI_ROOT  // hInsertAfter
 		);
 
@@ -151,8 +136,8 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 
 void FinishedFrameBase::insertData()
 {
-	currentItem.createChild(rootItem, ctrlTree, Current);
-	historyItem.createChild(rootItem, ctrlTree, History);
+	rootRecent = createRootItem(RootRecent);
+	rootDatabase = createRootItem(RootDatabase);
 
 	for (size_t index = 0; index < summary.size(); ++index)
 	{
@@ -162,24 +147,23 @@ void FinishedFrameBase::insertData()
 			caption += " (" + Util::formatBytes(s.actual) + ")";
 
 		TreeItemData* data = new TreeItemData;
-		data->type = HistoryDateDC;
+		data->type = HistoryDate;
 		data->dateAsInt = s.dateAsInt;
 
 		ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
 			Text::toT(caption).c_str(),
-			1, // g_ISPImage.m_flagImageCount + 14, // nImage
-			1, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
+			1, // nImage
+			1, // nSelectedImage
 			0, // nState
 			0, // nStateMask
 			reinterpret_cast<LPARAM>(data), // lParam
-			historyItem.dc, // aParent
+			rootDatabase, // hParent
 			TVI_LAST  // hInsertAfter
 			);
 	}
 	ctrlTree.Expand(rootItem);
-	ctrlTree.Expand(historyItem.root);
-	ctrlTree.Expand(historyItem.dc);
-	ctrlTree.SelectItem(currentItem.dc);
+	ctrlTree.Expand(rootDatabase);
+	ctrlTree.SelectItem(rootItem);
 }
 
 void FinishedFrameBase::addStatusLine(const tstring& text)
@@ -192,7 +176,7 @@ void FinishedFrameBase::updateStatus()
 	if (totalCountLast != totalCount)
 	{
 		totalCountLast = totalCount;
-		ctrlStatus.SetText(1, (Util::toStringW(totalCount) + _T(' ') + TSTRING(ITEMS)).c_str());
+		ctrlStatus.SetText(1, TPLURAL_F(PLURAL_ITEMS, totalCount).c_str());
 		ctrlStatus.SetText(2, Util::formatBytesT(totalBytes).c_str());
 		ctrlStatus.SetText(3, Util::formatBytesT(totalActual).c_str());
 		ctrlStatus.SetText(4, (Util::formatBytesT(totalCount > 0 ? totalSpeed / totalCount : 0) + _T('/') + TSTRING(S)).c_str());
@@ -301,7 +285,7 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 		if (p->itemNew.lParam)
 		{
 			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(p->itemNew.lParam);
-			if (data->type == Current)
+			if (data->type == RootRecent)
 			{
 				currentTreeItemSelected = true;
 				auto fm = FinishedManager::getInstance();
@@ -311,7 +295,7 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 			else
 			{
 				vector<FinishedItemPtr> items;
-				if (data->type == HistoryDateDC)
+				if (data->type == HistoryDate)
 				{
 					auto conn = DatabaseManager::getInstance()->getDefaultConnection();
 					if (conn) conn->loadTransferHistory(transferType, data->dateAsInt, items);
