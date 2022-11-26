@@ -46,8 +46,8 @@ static const int PFS_QUERY_INTERVAL = 300000; // 5 minutes
 
 QueueManager::FileQueue QueueManager::fileQueue;
 QueueManager::UserQueue QueueManager::userQueue;
-bool QueueManager::g_dirty = false;
-uint64_t QueueManager::g_lastSave = 0;
+bool QueueManager::dirty = false;
+uint64_t QueueManager::lastSave = 0;
 QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::userQueueMap[QueueItem::LAST];
 QueueManager::UserQueue::RunningMap QueueManager::UserQueue::runningMap;
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
@@ -65,6 +65,13 @@ QueueManager::FileQueue::FileQueue() :
 	csFQ(new CriticalSection)
 #endif
 {
+	generationId = 0;
+}
+
+uint64_t QueueManager::FileQueue::getGenerationId() const
+{
+	QueueRLock(*csFQ);
+	return generationId;
 }
 
 void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags)
@@ -132,15 +139,9 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 	updatePriority(p, autoPriority, fileName, targetSize, flags);
 
 	if (!maxSegments) maxSegments = getMaxSegments(targetSize);
-	
-	// TODO: make it configurable?
-	string fileExt = Util::getFileExt(fileName);
-	Text::asciiMakeLower(fileExt);
-	if (fileExt == ".mov" || fileExt == ".mp4" || fileExt == ".3gp")
-		flags |= QueueItem::FLAG_WANT_END;
+	flags |= QueueItem::checkExtension(fileName);
 
 	auto qi = std::make_shared<QueueItem>(target, targetSize, p, autoPriority, flags, added, root, maxSegments, tempTarget);
-	
 	if (!(flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)) && !tempTarget.empty())
 	{
 		if (!File::isExist(tempTarget) && File::isExist(tempTarget + ".antifrag"))
@@ -149,15 +150,10 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 			File::renameFile(tempTarget + ".antifrag", qi->getTempTarget());
 		}
 	}
-	if (findTarget(target) == nullptr)
+	if (!add(qi))
 	{
-		add(qi);
-	}
-	else
-	{
-		dcassert(0);
 		qi.reset();
-		LogManager::message("Skip duplicate target QueueManager::FileQueue::add file = " + target);
+		LogManager::message(STRING_F(DUPLICATE_QUEUE_ITEM, target));
 	}
 	return qi;
 }
@@ -168,15 +164,22 @@ bool QueueManager::FileQueue::isQueued(const TTHValue& tth) const
 	return queueTTH.find(tth) != queueTTH.end();
 }
 
-void QueueManager::FileQueue::add(const QueueItemPtr& qi)
+bool QueueManager::FileQueue::add(const QueueItemPtr& qi)
+{
+	QueueWLock(*csFQ);
+	return addL(qi);
+}
+
+bool QueueManager::FileQueue::addL(const QueueItemPtr& qi)
 {
 	dcassert(qi->downloads.empty());
-	QueueWLock(*csFQ);
 	if (!queue.insert(make_pair(Text::toLower(qi->getTarget()), qi)).second)
-		return;
+		return false;
 	auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), QueueItemList{qi}));
 	if (!countTTH.second)
 		countTTH.first->second.push_back(qi);
+	++generationId;
+	return true;
 }
 
 void QueueManager::FileQueue::remove(const QueueItemPtr& qi)
@@ -189,7 +192,15 @@ void QueueManager::FileQueue::remove(const QueueItemPtr& qi)
 		userQueue.modifyRunningCount(-(int) nrDownloads);
 	}
 	QueueWLock(*csFQ);
-	queue.erase(Text::toLower(qi->getTarget()));
+	auto j = queue.find(Text::toLower(qi->getTarget()));
+	if (j != queue.end())
+	{
+		queue.erase(j);
+		if (queue.empty())
+			generationId = 0;
+		else
+			++generationId;
+	}
 	auto i = queueTTH.find(qi->getTTH());
 	dcassert(i != queueTTH.end());
 	if (i != queueTTH.end())
@@ -215,6 +226,7 @@ void QueueManager::FileQueue::clearAll()
 	QueueWLock(*csFQ);
 	queueTTH.clear();
 	queue.clear();
+	generationId = 0;
 }
 
 int QueueManager::FileQueue::findQueueItems(QueueItemList& ql, const TTHValue& tth, int maxCount /*= 0 */) const
@@ -1105,10 +1117,10 @@ void QueueManager::readd(const string& target, const UserPtr& user)
 
 void QueueManager::setDirty()
 {
-	if (!g_dirty)
+	if (!dirty)
 	{
-		g_dirty = true;
-		g_lastSave = GET_TICK();
+		dirty = true;
+		lastSave = GET_TICK();
 	}
 }
 
@@ -1283,8 +1295,9 @@ int QueueManager::matchListing(DirectoryListing& dl) noexcept
 		{
 			QueueWLock(*QueueItem::g_cs);
 			{
-				QueueRLock(*fileQueue.csFQ);
-				for (auto i = fileQueue.getQueueL().cbegin(); i != fileQueue.getQueueL().cend(); ++i)
+				LockFileQueueShared lockQueue;
+				const auto& queue = lockQueue.getQueueL();
+				for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 				{
 					const QueueItemPtr& qi = i->second;
 					if (qi->isFinished())
@@ -1330,8 +1343,9 @@ int QueueManager::matchTTHList(const string& data, const UserPtr& user) noexcept
 	{
 		QueueWLock(*QueueItem::g_cs);
 		{
-			QueueRLock(*fileQueue.csFQ);
-			for (auto i = fileQueue.getQueueL().cbegin(); i != fileQueue.getQueueL().cend(); ++i)
+			LockFileQueueShared lockQueue;
+			const auto& queue = lockQueue.getQueueL();
+			for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 			{
 				const QueueItemPtr& qi = i->second;
 				if (qi->isFinished())
@@ -1472,7 +1486,6 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	DownloadPtr d;
 	{
 		QueueWLock(*QueueItem::g_cs);
-		
 		errorInfo.error = userQueue.getNextL(q, u, QueueItem::LOWEST, source->getChunkSize(), source->getSpeed(), true);
 		if (errorInfo.error != SUCCESS)
 		{
@@ -1495,7 +1508,7 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 			dcdebug("none\n");
 			return d;
 		}
-		
+
 		// Check that the file we will be downloading to exists
 		q->updateDownloadedBytesAndSpeedL();
 		if (q->getDownloadedBytes() > 0)
@@ -2436,7 +2449,7 @@ void QueueManager::setAutoPriority(const string& target, bool ap)
 
 void QueueManager::saveQueue(bool force) noexcept
 {
-	if (!g_dirty && !force)
+	if (!dirty && !force)
 		return;
 
 #if 0
@@ -2459,9 +2472,9 @@ void QueueManager::saveQueue(bool force) noexcept
 
 		QueueRLock(*QueueItem::g_cs);
 		{
-			QueueRLock(*fileQueue.csFQ);
-
-			for (auto i = fileQueue.getQueueL().cbegin(); i != fileQueue.getQueueL().cend(); ++i)
+			LockFileQueueShared lockQueue;
+			const auto& queue = lockQueue.getQueueL();
+			for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 			{
 				auto qi = i->second;
 				if (!qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
@@ -2538,14 +2551,14 @@ void QueueManager::saveQueue(bool force) noexcept
 		File::copyFile(queueFile, queueFile + ".bak");
 		File::renameFile(tempFile, queueFile);
 
-		g_dirty = false;
+		dirty = false;
 	}
 	catch(...)
 	{
 		// ...
 	}
 	// Put this here to avoid very many saves tries when disk is full...
-	g_lastSave = GET_TICK();
+	lastSave = GET_TICK();
 }
 
 class QueueLoader : public SimpleXMLReader::CallBack
@@ -2554,8 +2567,25 @@ class QueueLoader : public SimpleXMLReader::CallBack
 		QueueLoader() : cur(nullptr), isInDownloads(false)
 		{
 			qm = QueueManager::getInstance();
+#ifdef USE_QUEUE_RWLOCK
+			QueueItem::g_cs->acquireExclusive();
+			QueueManager::fileQueue.csFQ->acquireExclusive();
+#else
+			QueueItem::g_cs->lock();
+			QueueManager::fileQueue.csFQ->lock();
+#endif
 		}
-		~QueueLoader() { }
+		~QueueLoader()
+		{
+			QueueManager::fileQueue.generationId = QueueManager::fileQueue.empty() ? 0 : 1;
+#ifdef USE_QUEUE_RWLOCK
+			QueueManager::fileQueue.csFQ->releaseExclusive();
+			QueueItem::g_cs->releaseExclusive();
+#else
+			QueueManager::fileQueue.csFQ->unlock();
+			QueueItem::g_cs->unlock();
+#endif
+		}
 		void startTag(const string& name, StringPairList& attribs, bool simple);
 		void endTag(const string& name, const string& data);
 
@@ -2571,14 +2601,14 @@ void QueueManager::loadQueue() noexcept
 {
 	try
 	{
-		QueueLoader l;
 		File f(getQueueFile(), File::READ, File::OPEN);
+		QueueLoader l;
 		SimpleXMLReader(&l).parse(f);
 	}
 	catch (const Exception&)
 	{
 	}
-	g_dirty = false;
+	dirty = false;
 }
 
 static const string sDownload = "Download";
@@ -2630,7 +2660,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			}
 			QueueItem::Priority p = (QueueItem::Priority)Util::toInt(getAttrib(attribs, sPriority, 3));
 			time_t added = static_cast<time_t>(Util::toInt(getAttrib(attribs, sAdded, 4)));
-				
+
 			const string& tempTarget = getAttrib(attribs, sTempTarget, 5);
 			int maxSegments = Util::toInt(getAttrib(attribs, sMaxSegments, 5));
 			if (maxSegments < 0) maxSegments = 0;
@@ -2642,62 +2672,59 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				
 			if (added == 0)
 				added = GET_TIME();
-				
-			QueueItemPtr qi = QueueManager::fileQueue.findTarget(target);
-			
-			if (qi == nullptr)
+	
+			string fileName = Util::getFileName(target);
+			QueueItem::MaskType flags = 0;
+			if (!maxSegments) maxSegments = QueueManager::FileQueue::getMaxSegments(size);
+			flags |= QueueItem::checkExtension(fileName);
+
+			const bool autoPriority = Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1;
+			auto qi = std::make_shared<QueueItem>(target, size, p, autoPriority, flags, added, TTHValue(tthRoot), maxSegments, tempTarget);
+			if (!(flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)) && !tempTarget.empty())
 			{
-				qi = QueueManager::fileQueue.add(target, size, 0, p, tempTarget, added, TTHValue(tthRoot), static_cast<uint8_t>(maxSegments));
+				if (!File::isExist(tempTarget) && File::isExist(tempTarget + ".antifrag"))
+					File::renameFile(tempTarget + ".antifrag", qi->getTempTarget());
+			}
+
+			if (QueueManager::fileQueue.addL(qi))
+			{
 				if (downloaded > 0)
 					qi->addSegment(Segment(0, downloaded));
-				const bool ap = Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1;
-				qi->setAutoPriority(ap);
-				qm->fire(QueueManagerListener::Added(), qi);
-			}
-			if (simple)
-			{
-				qi->updateDownloadedBytes();
-				qi->setPriority(qi->calculateAutoPriority());
+				if (simple)
+				{
+					qi->updateDownloadedBytes();
+					qi->setPriority(qi->calculateAutoPriority());
+				}
 			}
 			else
+				qi.reset();
+			if (!simple)
 				cur = qi;
 		}
-		else if (cur && name == sSegment)
+		else if (name == sSegment)
 		{
-			int64_t start = Util::toInt64(getAttrib(attribs, sStart, 0));
-			int64_t size = Util::toInt64(getAttrib(attribs, sSize, 1));
-			
-			if (size > 0 && size <= cur->getSize() && start >= 0 && start + size <= cur->getSize())
-				cur->addSegment(Segment(start, size));
+			if (cur)
+			{
+				int64_t start = Util::toInt64(getAttrib(attribs, sStart, 0));
+				int64_t size = Util::toInt64(getAttrib(attribs, sSize, 1));
+				if (size > 0 && size <= cur->getSize() && start >= 0 && start + size <= cur->getSize())
+					cur->addSegment(Segment(start, size));
+			}
 		}
-		else if (cur && name == sSource)
+		else if (name == sSource)
 		{
-			const string cid = getAttrib(attribs, sCID, 0);
-			UserPtr user;
-			const string nick = getAttrib(attribs, sNick, 1);
-			const string hubHint = getAttrib(attribs, sHubHint, 1);
-			if (cid.length() != 39)
+			if (cur)
 			{
-				user = ClientManager::getUser(nick, hubHint);
-			}
-			else
-			{
-				user = ClientManager::createUser(CID(cid), nick, hubHint);
-			}
-			
-			bool wantConnection;
-			try
-			{
-				QueueWLock(*QueueItem::g_cs);
-				wantConnection = qm->addSourceL(cur, user, 0) && user->isOnline();
-			}
-			catch (const Exception&)
-			{
-				return;
-			}
-			if (wantConnection)
-			{
-				QueueManager::getDownloadConnection(user);
+				const string cid = getAttrib(attribs, sCID, 0);
+				UserPtr user;
+				const string nick = getAttrib(attribs, sNick, 1);
+				const string hubHint = getAttrib(attribs, sHubHint, 1);
+				if (cid.length() != 39)
+					user = ClientManager::getUser(nick, hubHint);
+				else
+					user = ClientManager::createUser(CID(cid), nick, hubHint);
+				try { qm->addSourceL(cur, user, 0) && user->isOnline(); }
+				catch (const Exception&) {}
 			}
 		}
 	}
@@ -2819,7 +2846,7 @@ void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& us
 			fire(QueueManagerListener::StatusUpdatedList(), itemList);
 		}
 	}
-	userQueue.removeRunning(user); // fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1673
+	userQueue.removeRunning(user);
 }
 
 bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& target)
@@ -2834,7 +2861,7 @@ bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int6
 
 void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
-	if (g_dirty && (g_lastSave + SAVE_QUEUE_TIME < tick))
+	if (dirty && lastSave + SAVE_QUEUE_TIME < tick)
 	{
 #ifdef _DEBUG
 		LogManager::message("Saving download queue");
@@ -2843,10 +2870,10 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	}
 	if (ClientManager::isBeforeShutdown())
 		return;
-		
+
 	QueueItemList runningItems;
 	{
-		QueueRLock(*fileQueue.csFQ);
+		LockFileQueueShared lock;
 		getRunningFilesL(runningItems);
 	}
 	if (!runningItems.empty())
@@ -2946,8 +2973,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 		if (!qi)
 			return false;
 
-		// don't add sources to finished files
-		// this could happen when "Keep finished files in queue" is enabled
+		// Don't add sources to finished files
 		if (qi->isFinished())
 			return false;
 

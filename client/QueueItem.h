@@ -168,10 +168,10 @@ class QueueItem
 		typedef SourceMap::const_iterator SourceConstIter;
 
 		typedef std::set<Segment> SegmentSet;
-		
-		QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, bool aAutoPriority, Flags::MaskType aFlag,
-		          time_t aAdded, const TTHValue& tth, uint8_t maxSegments, const string& aTempTarget);
-		          
+
+		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, Flags::MaskType flags,
+		          time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget);
+
 		QueueItem(const QueueItem &) = delete;
 		QueueItem& operator= (const QueueItem &) = delete;
 
@@ -278,6 +278,7 @@ class QueueItem
 		string getListName() const;
 		const string& getTempTarget();
 		const string& getTempTargetConst() const { return tempTarget; }
+		static MaskType checkExtension(const string& fileName);
 
 	private:
 		MaskType flags;

@@ -34,7 +34,7 @@ std::atomic_bool QueueItem::checkTempDir(true);
 
 const string dctmpExtension = ".dctmp";
 
-QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, Flags::MaskType flag,
+QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, Flags::MaskType flags,
                      time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget) :
 	target(target),
 	tempTarget(tempTarget),
@@ -54,16 +54,11 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool
 	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : 64 * 1024),
 	removed(false)
 {
-#ifdef _DEBUG
-	//LogManager::message("QueueItem::QueueItem aTarget = " + aTarget + " this = " + Util::toString(__int64(this)));
-#endif
 #ifdef FLYLINKDC_USE_DROP_SLOW
 	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
-	{
-		flag |= FLAG_AUTODROP;
-	}
+		flags |= FLAG_AUTODROP;
 #endif
-	flags = flag;
+	this->flags = flags;
 }
 
 int16_t QueueItem::getTransferFlags(int& flags) const
@@ -961,6 +956,16 @@ void QueueItem::updateBlockSize(uint64_t treeBlockSize)
 	if (treeBlockSize > blockSize)
 	{
 		dcassert(!(treeBlockSize % blockSize));
-		blockSize = treeBlockSize;		
+		blockSize = treeBlockSize;
 	}
+}
+
+QueueItem::MaskType QueueItem::checkExtension(const string& fileName)
+{
+	// TODO: make it configurable?
+	string fileExt = Util::getFileExt(fileName);
+	Text::asciiMakeLower(fileExt);
+	if (fileExt == ".mov" || fileExt == ".mp4" || fileExt == ".3gp")
+		return QueueItem::FLAG_WANT_END;
+	return 0;
 }

@@ -306,6 +306,7 @@ enum Strings   // @DontAdd
 	DOWNLOAD_WHOLE_DIR_TO, // "Download whole directory to..."
 	DOWNLOAD_WITH_PRIORITY, // "Download with priority..."
 	DUPLICATE_SOURCE, // "Duplicate source"
+	DUPLICATE_QUEUE_ITEM, // "The item %1% is already added to the queue"
 	DURATION, // "Duration"
 	EDIT, // "Edit"
 	EDIT_ACCEL, // "&Edit"

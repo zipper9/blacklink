@@ -258,15 +258,18 @@ class QueueManager : public Singleton<QueueManager>,
 		bool addSourceL(const QueueItemPtr& qi, const UserPtr& user, Flags::MaskType addBad, bool isFirstLoad = false);
 
 	private:
-		static uint64_t g_lastSave;
+		static uint64_t lastSave;
 
 	public:
 		/** All queue items by target */
 		class FileQueue
 		{
+				friend class LockFileQueueShared;
+				friend class QueueLoader;
+
 			public:
 				FileQueue();
-				void add(const QueueItemPtr& qi);
+				bool add(const QueueItemPtr& qi);
 				QueueItemPtr add(const string& target, int64_t size, Flags::MaskType flags,
 				                 QueueItem::Priority p, const string& tempTarget, time_t added,
 				                 const TTHValue& root, uint8_t maxSegments);
@@ -277,7 +280,7 @@ class QueueManager : public Singleton<QueueManager>,
 				static uint8_t getMaxSegments(uint64_t filesize);
 				// find some PFS sources to exchange parts info
 				void findPFSSources(QueueItem::SourceList& sl, uint64_t now) const;
-				
+
 				QueueItemPtr findAutoSearch(deque<string>& recent) const;
 				size_t getSize() const { return queue.size(); }
 				bool empty() const { return queue.empty(); }
@@ -286,17 +289,21 @@ class QueueManager : public Singleton<QueueManager>,
 				void moveTarget(const QueueItemPtr& qi, const string& target);
 				void remove(const QueueItemPtr& qi);
 				void clearAll();
-				
+
+				bool isQueued(const TTHValue& tth) const;
+				void updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags);
+				uint64_t getGenerationId() const;
+
+			private:
+				bool addL(const QueueItemPtr& qi);
+
 #ifdef USE_QUEUE_RWLOCK
 				std::unique_ptr<RWLock> csFQ;
 #else
 				std::unique_ptr<CriticalSection> csFQ;
 #endif
-				bool isQueued(const TTHValue& tth) const;
-				void updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags);
-
-			private:
 				QueueItem::QIStringMap queue;
+				uint64_t generationId;
 				boost::unordered_map<TTHValue, QueueItemList> queueTTH;
 				std::regex reAutoPriority;
 				string autoPriorityPattern;
@@ -381,7 +388,7 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Recent searches list, to avoid searching for the same thing too often */
 		deque<string> m_recent;
 		/** The queue needs to be saved */
-		static bool g_dirty;
+		static bool dirty;
 		/** Next search */
 		uint64_t nextSearch;
 
