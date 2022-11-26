@@ -3087,7 +3087,8 @@ int ThreadedDirectoryListing::run()
 				if (!adls->isEmpty())
 				{
 					window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ADL_SEARCH);
-					adls->matchListing(window->dl.get());
+					adls->matchListing(window->dl.get(), &window->abortFlag);
+					if (window->abortFlag) throw AbortException("ADL search aborted");
 				}
 				window->refreshTree(window->dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
 				break;

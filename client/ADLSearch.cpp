@@ -468,6 +468,7 @@ void ADLSearchManager::SearchContext::match() noexcept
 	tmp.push_back(-1);
 	while (current)
 	{
+		if (abortFlag && abortFlag->load()) break;
 		int& pos = tmp.back();
 		if (pos < 0)
 		{
@@ -541,12 +542,14 @@ void ADLSearchManager::copyDirectory(DirectoryListing::Directory* adlsDestDir, c
 	}
 }
 
-void ADLSearchManager::matchListing(DirectoryListing* dl) const noexcept
+void ADLSearchManager::matchListing(DirectoryListing* dl, std::atomic_bool* abortFlag) const noexcept
 {
 	SearchContext ctx;
+	ctx.abortFlag = abortFlag;
 	prepare(ctx, dl);
 	ctx.match();
-	ctx.insertResults();
+	if (!(abortFlag&& abortFlag->load()))
+		ctx.insertResults();
 }
 
 ADLSearchManager::SearchContext::~SearchContext()

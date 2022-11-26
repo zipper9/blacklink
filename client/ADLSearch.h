@@ -28,6 +28,7 @@
 #include "StringSearch.h"
 #include "DirectoryListing.h"
 #include "RWLock.h"
+#include <atomic>
 
 class ADLSearch
 {
@@ -95,7 +96,7 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 		void load() noexcept;
 		void save() noexcept;
 		void saveOnTimer(uint64_t tick) noexcept;
-		void matchListing(DirectoryListing* dl) const noexcept;
+		void matchListing(DirectoryListing* dl, std::atomic_bool* abortFlag) const noexcept;
 		void setDirtyL();
 		bool isEmpty() const;
 
@@ -163,6 +164,7 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 			bool wantFullPath = false;
 			DirectoryListing* dl = nullptr;
 			UserPtr user = nullptr;
+			std::atomic_bool* abortFlag = nullptr;
 
 			SearchContext() {}
 			~SearchContext();
