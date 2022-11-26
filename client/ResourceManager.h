@@ -38,13 +38,18 @@
 #define WSTRING_F(x, args) (dcpp_fmt(ResourceManager::getStringW(ResourceManager::x)) % args).str()
 #define CWSTRING_F(x, args) (dcpp_fmt(ResourceManager::getStringW(ResourceManager::x)) % args).str().c_str()
 
-#ifdef UNICODE
+#define PLURAL_F(x, number) (dcpp_fmt(ResourceManager::getPluralString(ResourceManager::x, ResourceManager::getPluralCategory(number))) % number).str()
+#define WPLURAL_F(x, number) (dcpp_fmt(ResourceManager::getPluralStringW(ResourceManager::x, ResourceManager::getPluralCategory(number))) % number).str()
+
+#ifdef _UNICODE
 #define TSTRING WSTRING
 #define CTSTRING CWSTRING
 #define TSTRING_I WSTRING_I
 #define CTSTRING_I CWSTRING_I
 #define TSTRING_F WSTRING_F
 #define CTSTRING_F CWSTRING_F
+#define TPLURAL_F WPLURAL_F
+#define getPluralStringT getPluralStringW
 #else
 #define TSTRING STRING
 #define CTSTRING CSTRING
@@ -52,38 +57,47 @@
 #define CTSTRING_I CSTRING_I
 #define TSTRING_F STRING_F
 #define CTSTRING_F CSTRING_F
+#define TPLURAL_F PLURAL_F
+#define getPluralStringT getPluralString
 #endif
 
 class ResourceManager
 {
 	public:
-	
+
 #include "StringDefs.h"
-	
+
 		static bool loadLanguage(const string& filePath);
-		static const string& getString(Strings x)
-		{
-			return g_strings[x];
-		}
+		static const string& getString(Strings x) { return g_strings[x]; }
 
 #ifdef _UNICODE
-		static const wstring& getStringW(Strings x)
-		{
-			return g_wstrings[x];
-		}
+		static const wstring& getStringW(Strings x) { return g_wstrings[x]; }
 #endif
 		static int getStringByName(const string& name);
 
+		enum
+		{
+			zero, one, two, few, many, other
+		};
+
+		static string getPluralString(const string& tpl, int category);
+		static string getPluralString(Strings x, int category) { return getPluralString(g_strings[x], category); }
+#ifdef _UNICODE
+		static wstring getPluralStringW(const wstring& tpl, int category);
+		static wstring getPluralStringW(Strings x, int category) { return getPluralStringW(g_wstrings[x], category); }
+#endif
+		static int getPluralCategory(int num) { return pluralCatFunc(num); }
+
 	private:
-		ResourceManager() {}
-		
 		static boost::unordered_map<string, int> nameToIndex;
 		static string g_names[LAST];
 		static string g_strings[LAST];
+		static int (*pluralCatFunc)(int val);
+
 #ifdef _UNICODE
 		static wstring g_wstrings[LAST];
 		static bool stringsChanged;
-		
+
 		static void createWide();
 #endif
 };

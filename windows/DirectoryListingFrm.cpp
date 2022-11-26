@@ -1270,7 +1270,7 @@ LRESULT DirectoryListingFrame::onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD
 	else
 	{
 		int count = QueueManager::getInstance()->matchListing(*dl);
-		tstring str = TSTRING_F(MATCHED_FILES_FMT, count);
+		tstring str = TPLURAL_F(PLURAL_MATCHED_FILES, count);
 		ctrlStatus.SetText(STATUS_TEXT, str.c_str());
 	}
 	return 0;
@@ -3004,13 +3004,13 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	tstring statusText;
 	if (count[0] && count[1])
 	{
-		tstring found0 = TSTRING_F(FOUND_FILES_FMT, count[0]);
-		tstring found1 = TSTRING_F(FOUND_FOLDERS_FMT, count[1]);
+		tstring found0 = TPLURAL_F(PLURAL_FILES, count[0]);
+		tstring found1 = TPLURAL_F(PLURAL_FOLDERS, count[1]);
 		statusText = TSTRING_F(FOUND_FILES_AND_FOLDERS, found0 % found1);
 	}
 	else
 	{
-		tstring found = count[0] ? TSTRING_F(FOUND_FILES_FMT, count[0]) : TSTRING_F(FOUND_FOLDERS_FMT, count[1]);
+		tstring found = count[0] ? TPLURAL_F(PLURAL_FILES, count[0]) : TPLURAL_F(PLURAL_FOLDERS, count[1]);
 		statusText = TSTRING_F(FOUND_FILES_OR_FOLDERS, found);
 	}
 	ctrlStatus.SetText(STATUS_TEXT, statusText.c_str());

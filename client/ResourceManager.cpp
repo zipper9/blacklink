@@ -29,6 +29,15 @@ wstring ResourceManager::g_wstrings[ResourceManager::LAST];
 
 boost::unordered_map<string, int> ResourceManager::nameToIndex;
 
+static int defaultPluralCatFunc(int num)
+{
+	if (num == 0) return ResourceManager::zero;
+	if (num == 1) return ResourceManager::one;
+	return ResourceManager::other;
+}
+
+int (*ResourceManager::pluralCatFunc)(int val) = defaultPluralCatFunc;
+
 bool ResourceManager::loadLanguage(const string& filePath)
 {
 	if (nameToIndex.empty())
@@ -42,7 +51,7 @@ bool ResourceManager::loadLanguage(const string& filePath)
 	try
 	{
 		File f(filePath, File::READ, File::OPEN);
-		SimpleXML xml;	
+		SimpleXML xml;
 		xml.fromXML(f.read());
 
 		if (xml.findChild("Language"))
@@ -106,3 +115,85 @@ int ResourceManager::getStringByName(const string& name)
 	auto i = nameToIndex.find(name);
 	return i != nameToIndex.end() ? i->second : -1;
 }
+
+static const char* pluralKeywords[] = { "zero", "one", "two", "few", "many", "other" };
+
+template<typename string_t>
+static int checkKeyword(const string_t& s, size_t start, size_t len, int index)
+{
+	const char* kw = pluralKeywords[index];
+	for (size_t i = 0; i < len; i++)
+		if (kw[i] != s[start + i]) return -1;
+	return kw[len] ? -1 : index;
+}
+
+template<typename string_t>
+static int getCategoryFromKeyword(const string_t& s, size_t start, size_t len)
+{
+	if (len < 3) return -1;
+	static const uint8_t offset[] = { 0, 1, 0, 0, 0, 1 };
+	for (int i = 0; i < 6; i++)
+		if (s[start + offset[i]] == pluralKeywords[i][offset[i]])
+			return checkKeyword<string_t>(s, start, len, i);
+	return -1;
+}
+
+template<typename string_t>
+static string_t getPluralStringText(const string_t& source, size_t start, size_t len)
+{
+	string_t s = source.substr(start, len);
+	size_t i = 0;
+	while (i < s.length())
+	{
+		size_t j = s.find('|', i);
+		if (j == string_t::npos || j + 1 >= s.length()) break;
+		if (s[j + 1] == '|') s.erase(j, 1);
+		i = j + 1;
+	}
+	return s;
+}
+
+template<typename string_t>
+static string_t getPluralStringImpl(const string_t& tpl, int category)
+{
+	string_t otherVal;
+	size_t i = 0;
+	while (i < tpl.length())
+	{
+		size_t j = tpl.find('|', i);
+		if (j == 0)
+		{
+			i = j + 1;
+			continue;
+		}
+		while (true)
+		{
+			if (j == string_t::npos) { j = tpl.length(); break; }
+			if (!(j + 1 < tpl.length() && tpl[j + 1] == '|')) break;
+			j = tpl.find('|', j + 2);
+		}
+		size_t k = tpl.find(':', i);
+		if (k != string_t::npos && k < j)
+		{
+			int cat = getCategoryFromKeyword<string_t>(tpl, i, k - i);
+			if (cat == category)
+				return getPluralStringText<string_t>(tpl, k + 1, j - (k + 1));
+			if (cat == ResourceManager::other)
+				otherVal = getPluralStringText<string_t>(tpl, k + 1, j - (k + 1));
+		}
+		i = j + 1;
+	}
+	return otherVal;
+}
+
+string ResourceManager::getPluralString(const string& tpl, int category)
+{
+	return getPluralStringImpl<string>(tpl, category);
+}
+
+#ifdef _UNICODE
+wstring ResourceManager::getPluralStringW(const wstring& tpl, int category)
+{
+	return getPluralStringImpl<wstring>(tpl, category);
+}
+#endif

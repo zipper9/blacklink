@@ -1464,9 +1464,9 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 	switch (col)
 	{
 		case COLUMN_USER:
-			return hits == -1 ? nicks : (Util::toStringT(hits) + _T(' ') + TSTRING(USERS));
+			return hits == -1 ? nicks : TPLURAL_F(PLURAL_USERS, hits);
 		case COLUMN_HUB:
-			return hits == -1 ? hubs : (Util::toStringT(running) + _T(' ') + TSTRING(NUMBER_OF_SEGMENTS));
+			return hits == -1 ? hubs : TPLURAL_F(PLURAL_SEGMENTS, running);
 		case COLUMN_STATUS:
 		{
 			if (status != STATUS_RUNNING && !errorStatusString.empty())

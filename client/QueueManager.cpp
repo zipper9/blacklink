@@ -2077,7 +2077,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 static void logMatchedFiles(const UserPtr& user, int count)
 {
 	dcassert(user);
-	string str = STRING_F(MATCHED_FILES_FMT, count);
+	string str = PLURAL_F(PLURAL_MATCHED_FILES, count);
 	str += ": ";
 	str += user->getLastNick();
 	LogManager::message(str);
