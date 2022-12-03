@@ -44,7 +44,10 @@ void FlatTabCtrl::addTab(HWND hWnd)
 	nextTab = --viewOrder.end();
 	active = t;
 	calcRows(false);
-	Invalidate();
+	if (tabs.size() == 1 && !IsWindowVisible())
+		::PostMessage(WinUtil::g_mainWnd, WMU_UPDATE_LAYOUT, 0, 0);
+	else
+		Invalidate();
 }
 
 void FlatTabCtrl::removeTab(HWND hWnd)
@@ -68,7 +71,10 @@ void FlatTabCtrl::removeTab(HWND hWnd)
 	if (!viewOrder.empty()) --nextTab;
 
 	calcRows(false);
-	Invalidate();
+	if (tabs.empty())
+		::PostMessage(WinUtil::g_mainWnd, WMU_UPDATE_LAYOUT, 0, 0);
+	else
+		Invalidate();
 }
 
 void FlatTabCtrl::startSwitch()
@@ -113,10 +119,13 @@ void FlatTabCtrl::setActive(HWND hWnd)
 	auto ti = getTabInfo(hWnd);
 	if (!ti) return;
 
-	active = ti;
-	ti->dirty = false;
-	calcRows(false);
-	Invalidate();
+	if (active != ti)
+	{
+		active = ti;
+		ti->dirty = false;
+		calcRows(false);
+		Invalidate();
+	}
 }
 
 bool FlatTabCtrl::getActive(HWND hWnd) const

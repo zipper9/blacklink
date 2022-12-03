@@ -148,7 +148,7 @@ tstring ChatCtrl::g_sSelectedIP;
 tstring ChatCtrl::g_sSelectedUserName;
 tstring ChatCtrl::g_sSelectedURL;
 
-ChatCtrl::ChatCtrl() : autoScroll(true), disableChatCacheFlag(false), chatCacheSize(0),
+ChatCtrl::ChatCtrl() : autoScroll(true), useChatCacheFlag(true), chatCacheSize(0),
 	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr),
 	findInit(true), findRangeStart(0), findRangeEnd(0), currentFindFlags(FR_DOWN)
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -227,10 +227,10 @@ void ChatCtrl::restoreChatCache()
 	CWaitCursor waitCursor;
 	{
 		std::list<Message> tempChatCache;
-		bool cacheDisabled = true;
+		bool flag = false;
 		{
 			LOCK(csChatCache);
-			std::swap(disableChatCacheFlag, cacheDisabled);
+			std::swap(useChatCacheFlag, flag);
 			tempChatCache.swap(chatCache);
 			chatCacheSize = 0;
 		}
@@ -252,7 +252,7 @@ void ChatCtrl::restoreChatCache()
 				insertAndFormat(oldText, i->cf, selBegin, selEnd);
 				oldText.clear();
 			}
-			if (!cacheDisabled)
+			if (flag)
 				appendText(*i, UINT_MAX, false);
 		}
 	}
@@ -282,7 +282,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highl
 		return;
 	{
 		LOCK(csChatCache);
-		if (!disableChatCacheFlag)
+		if (useChatCacheFlag)
 		{
 			chatCache.push_back(message);
 			chatCacheSize += message.length();

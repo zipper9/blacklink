@@ -177,57 +177,47 @@ LRESULT BaseChatFrame::onCreate(HWND hWnd, RECT &rc)
 	return 1;
 }
 
-void BaseChatFrame::destroyStatusbar()
+void BaseChatFrame::initStatusCtrl(HWND hWnd)
 {
-	if (ctrlStatus.m_hWnd)
-		ctrlStatus.DestroyWindow();
-	if (ctrlLastLinesToolTip.m_hWnd)
-		ctrlLastLinesToolTip.DestroyWindow();
-}
-
-void BaseChatFrame::createStatusCtrl(HWND hWnd)
-{
-	ctrlStatus.Attach(hWnd);
-	ctrlLastLinesToolTip.Create(ctrlStatus, messagePanelRect, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-	ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-	ctrlLastLinesToolTip.AddTool(ctrlStatus);
-	ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
-}
-
-void BaseChatFrame::destroyStatusCtrl()
-{
+	if (!ctrlStatus)
+	{
+		ctrlStatus.Attach(hWnd);
+		ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
+	}
+	if (!ctrlLastLinesToolTip)
+	{
+		ctrlLastLinesToolTip.Create(ctrlStatus, messagePanelRect, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+		ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+		ctrlLastLinesToolTip.AddTool(ctrlStatus);
+		ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
+	}
 }
 
 void BaseChatFrame::createChatCtrl()
 {
-	if (!ctrlClient.IsWindow())
+	if (ctrlClient) return;
+	HWND hwnd = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP, WS_EX_STATICEDGE, IDC_CLIENT);
+	if (!hwnd)
 	{
-		HWND hwnd = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP, WS_EX_STATICEDGE, IDC_CLIENT);
-		if (!hwnd)
-		{
-			dcdebug("Error create BaseChatFrame::createChatCtrl %s", Util::translateError().c_str());
-			dcassert(0);
-		}
-		else
-		{
-			ctrlClient.SetTabStops(120);
-			ctrlClient.LimitText(0);
-			ctrlClient.SetFont(Fonts::g_font);
-			ctrlClient.SetAutoURLDetect(FALSE);
-			ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
-			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
-			ctrlClient.SetUndoLimit(0);
-			if (!disableChat)
-				readFrameLog();
-		}
+		dcdebug("Error create BaseChatFrame::createChatCtrl %s", Util::translateError().c_str());
+		dcassert(0);
+		return;
 	}
+	ctrlClient.SetTabStops(120);
+	ctrlClient.LimitText(0);
+	ctrlClient.SetFont(Fonts::g_font);
+	ctrlClient.SetAutoURLDetect(FALSE);
+	ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
+	ctrlClient.SetBackgroundColor(Colors::g_bgColor);
+	ctrlClient.SetUndoLimit(0);
+	if (!disableChat)
+		readFrameLog();
 }
 
 void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID)
 {
-	dcassert(ctrlMessage == nullptr);
-	createChatCtrl();
+	if (ctrlMessage) return;
 	ctrlMessage.setCallback(this);
 	ctrlMessage.Create(messagePanelHwnd,
 	                   messagePanelRect,
@@ -255,7 +245,7 @@ void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 	dcassert(!msgPanel); // destroyMessagePanel must have been called before
 	if (ctrlMessage.m_hWnd)
 	{
-		if (!isShutdown && ctrlMessage.IsWindow())
+		if (!isShutdown)
 		{
 			WinUtil::getWindowText(ctrlMessage, lastMessage);
 			lastMessageSelPos = ctrlMessage.GetSel();
@@ -267,7 +257,6 @@ void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 void BaseChatFrame::createMessagePanel(bool showSelectHubButton, bool showCCPMButton)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	
 	if (!msgPanel && !ClientManager::isStartup())
 	{
 		msgPanel = new MessagePanel(ctrlMessage);

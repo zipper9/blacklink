@@ -1895,7 +1895,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 	}
 	ClientManager::stopStartup();
 	if (lastFrame)
-		lastFrame->createMessagePanel();
+		lastFrame->showActiveFrame();
 }
 
 void MainFrame::setTrayIcon(int newIcon)
@@ -2027,6 +2027,17 @@ void MainFrame::storeWindowsPos()
 		dcdebug("MainFrame:: WINDOW  GetWindowPlacement(&wp) -> NULL data !!!\n");
 	}
 #endif
+}
+
+void MainFrame::prepareNonMaximized()
+{
+	ctrlTab.ShowWindow(SW_HIDE);
+	CRect rect;
+	GetClientRect(&rect);
+	UpdateBarsPosition(rect, TRUE);
+	SetSplitterRect(&rect);
+	HubFrame::prepareNonMaximized();
+	PrivateFrame::prepareNonMaximized();
 }
 
 LRESULT MainFrame::onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/)
@@ -2192,7 +2203,7 @@ LRESULT MainFrame::onDcLstFromFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
-	if (!ClientManager::isStartup() || updateLayoutFlag)
+	if ((!ClientManager::isStartup() || updateLayoutFlag) && !closing)
 	{
 		RECT rect;
 		GetClientRect(&rect);
@@ -2244,23 +2255,30 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			ctrlStatus.GetRect(STATUS_PART_7, &tabDownSpeedRect);
 			ctrlStatus.GetRect(STATUS_PART_8, &tabUpSpeedRect);
 		}
+
 		CRect rc  = rect;
 		CRect rc2 = rect;
-		
-		switch (ctrlTab.getTabsPosition())
+
+		BOOL maximized;
+		MDIGetActive(&maximized);
+		BOOL showTabs = maximized && WinUtil::g_tabCtrl->getTabCount() != 0;
+		if (ctrlTab.IsWindowVisible() != showTabs)
+			ctrlTab.ShowWindow(showTabs ? SW_SHOW : SW_HIDE);
+		if (showTabs)
 		{
-			case SettingsManager::TABS_TOP:
-				rc.bottom = rc.top + ctrlTab.getHeight();
-				rc2.top = rc.bottom;
-				break;
-			default:
-				rc.top = rc.bottom - ctrlTab.getHeight();
-				rc2.bottom = rc.top;
-				break;
-		}
-		
-		if (ctrlTab.IsWindow())
+			switch (ctrlTab.getTabsPosition())
+			{
+				case SettingsManager::TABS_TOP:
+					rc.bottom = rc.top + ctrlTab.getHeight();
+					rc2.top = rc.bottom;
+					break;
+				default:
+					rc.top = rc.bottom - ctrlTab.getHeight();
+					rc2.bottom = rc.top;
+					break;
+			}
 			ctrlTab.MoveWindow(rc);
+		}
 		SetSplitterRect(rc2);
 	}
 }
@@ -2818,7 +2836,7 @@ LRESULT MainFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 	return FALSE;
 }
 
-LRESULT MainFrame::onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+LRESULT MainFrame::onStatusBarClick(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	const POINT ptClient = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	// AWAY area

@@ -176,9 +176,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			return 0;
 		}
 
-		virtual void onBeforeActiveTab(HWND aWnd) override;
-		virtual void onAfterActiveTab(HWND aWnd) override;
-		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
+		virtual void onDeactivate() override;
+		virtual void onActivate() override;
 
 		void UpdateLayout(BOOL resizeBars = TRUE) override;
 		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
@@ -195,6 +194,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void reconnectDisconnected();
 		static void closeAll(size_t threshold = 0);
 		static void updateAllTitles();
+		static void prepareNonMaximized();
 
 		static HubFrame* findFrameByID(uint64_t id);
 
@@ -239,6 +239,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void getSelectedUsers(vector<OnlineUserPtr>& v) const { ctrlUsers.getSelectedUsers(v); }
 		void addNickToChat();
 		void openUserLog();
+		void showActiveFrame();
 
 	private:
 		enum AutoConnectType
@@ -298,7 +299,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool shouldUpdateStats;
 		bool showUsers;
 		bool showUsersStore;
-		
+
 		void setShowUsers(bool value)
 		{
 			showUsers = value;
@@ -406,12 +407,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void updateWindowTitle();
 		void setWindowTitle(const string& text);
 		tstring getHubTitle() const;
-		
-		bool userListInitialized;
-		unsigned activateCounter;
-		
+
+		bool uiInitialized;
+
 		void updateSplitterPosition(int chatUserSplit, bool swapPanels);
-		void initUserList(const FavoriteManager::WindowInfo& wi);
+		void initUI();
 		void storeColumnsInfo();
 		bool swapPanels;
 		CButton ctrlSwitchPanels;
@@ -431,9 +431,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void addPasswordCommand();
 		void createTabMenu();
 
-	public:
 		void createMessagePanel();
-		void destroyMessagePanel(bool p_is_destroy);
+		void destroyMessagePanel(bool isShutdown);
 };
 
 #endif // !defined(HUB_FRAME_H)

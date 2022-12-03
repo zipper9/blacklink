@@ -52,6 +52,7 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	ccpmState(ConnectionManager::CCPM_STATE_DISCONNECTED),
 	autoStartCCPM(true), sendCPMI(false), newMessageSent(false), newMessageReceived(false),
 	remoteChatClosed(false), sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
+	uiInitialized(false),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
 	statusSizes{0, 220, 60}
 {
@@ -93,6 +94,9 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
 
+	createChatCtrl();
+	ctrlChatContainer.SubclassWindow(ctrlClient.m_hWnd);
+
 	PostMessage(WM_SPEAKER, PM_USER_UPDATED);
 	created = true;
 	ClientManager::getInstance()->addListener(this);
@@ -113,6 +117,16 @@ LRESULT PrivateFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 
 	bHandled = FALSE;
 	return 0;
+}
+
+void PrivateFrame::initUI()
+{
+	dcassert(!uiInitialized);
+	if (!m_hWndStatusBar)
+		CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
+	BaseChatFrame::initStatusCtrl(m_hWndStatusBar);
+	updateStatusTextWidth();
+	uiInitialized = true;
 }
 
 static void removeLineBreaks(string& text)
@@ -524,47 +538,44 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
-	if (ClientManager::isStartup())
+	if (ClientManager::isStartup() || ClientManager::isBeforeShutdown())
 		return;
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (ClientManager::isBeforeShutdown())
-		return;
-	if (ctrlMessage)
+
+	RECT rect;
+	GetClientRect(&rect);
+	// position bars and offset their dimensions
+	UpdateBarsPosition(rect, bResizeBars);
+	int h, panelHeight, buttonPanelWidth;
+	if (msgPanel && ctrlMessage)
 	{
-		RECT rect;
-		GetClientRect(&rect);
-		// position bars and offset their dimensions
-		UpdateBarsPosition(rect, bResizeBars);
-		const int h = getInputBoxHeight();
-		int panelHeight = h + 6;
+		h = getInputBoxHeight();
+		panelHeight = h + 6;
+		buttonPanelWidth = msgPanel->getPanelWidth();
+	}
+	else
+		h = panelHeight = buttonPanelWidth = 0;
 
-		CRect rc = rect;
-		rc.bottom -= panelHeight;
-		if (ctrlClient.IsWindow())
-			ctrlClient.MoveWindow(rc);
+	CRect rc = rect;
+	rc.bottom -= panelHeight;
+	if (ctrlClient)
+		ctrlClient.MoveWindow(rc);
 
-		const int buttonPanelWidth = msgPanel ? msgPanel->getPanelWidth() : 0;
-
+	if (msgPanel && ctrlMessage)
+	{
 		rc = rect;
 		rc.left += 2;
 		rc.bottom -= 4;
 		rc.top = rc.bottom - h;
 		rc.right -= buttonPanelWidth;
-
-		if (ctrlMessage)
-			ctrlMessage.MoveWindow(rc);
+		ctrlMessage.MoveWindow(rc);
 
 		rc.left = rc.right;
 		rc.right += buttonPanelWidth;
-		rc.bottom -= 1;
-
-		if (msgPanel)
-		{
-			rc.top++;
-			msgPanel->updatePanel(rc);
-			if (msgPanel->showSelectHubButton)
-				msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
-		}
+		rc.bottom--;
+		rc.top++;
+		msgPanel->updatePanel(rc);
+		if (msgPanel->showSelectHubButton)
+			msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
 	}
 	updateStatusParts();
 }
@@ -1124,6 +1135,16 @@ void PrivateFrame::closeAllOffline()
 	}
 }
 
+void PrivateFrame::prepareNonMaximized()
+{
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
+	{
+		PrivateFrame* frame = i->second;
+		if (!frame->uiInitialized)
+			frame->initUI();
+	}
+}
+
 void PrivateFrame::on(SettingsManagerListener::Repaint)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1149,38 +1170,32 @@ bool PrivateFrame::closeUser(const UserPtr& u)
 	return true;
 }
 
-void PrivateFrame::onBeforeActiveTab(HWND aWnd)
+void PrivateFrame::onDeactivate()
 {
-	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
-	{
-		i->second->destroyMessagePanel(false);
-	}
+	bool update = msgPanel != nullptr;
+	destroyMessagePanel(false);
+	if (update) UpdateLayout();
 }
 
-void PrivateFrame::onAfterActiveTab(HWND aWnd)
+void PrivateFrame::onActivate()
 {
 	if (!ClientManager::isBeforeShutdown())
-	{
-		createMessagePanel();
-		if (ctrlStatus) UpdateLayout();
-	}
+		showActiveFrame();
+}
+
+void PrivateFrame::showActiveFrame()
+{
+	if (!uiInitialized && !ClientManager::isStartup()) initUI();
+	createMessagePanel();
+	UpdateLayout();
+	ctrlMessage.SetFocus();
 }
 
 void PrivateFrame::createMessagePanel()
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		if (!ctrlStatus.m_hWnd && !ClientManager::isStartup())
-		{
-			BaseChatFrame::createMessageCtrl(this, PM_MESSAGE_MAP);
-			if (!ctrlChatContainer.IsWindow())
-				ctrlChatContainer.SubclassWindow(ctrlClient.m_hWnd);
-			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
-			updateStatusTextWidth();
-			ctrlMessage.SetFocus();
-		}
+		BaseChatFrame::createMessageCtrl(this, PM_MESSAGE_MAP);
 		auto flags = replyTo.user ? replyTo.user->getFlags() : 0;
 		bool showSelectHub = (flags & User::NMDC) == 0;
 		bool showCCPM = showSelectHub && (flags & (User::MYSELF | User::CCPM)) == User::CCPM;
@@ -1215,12 +1230,12 @@ void PrivateFrame::createMessagePanel()
 	}
 }
 
-void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
+void PrivateFrame::destroyMessagePanel(bool isShutdown)
 {
-	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
-	BaseChatFrame::destroyStatusbar();
+	if (ClientManager::isBeforeShutdown())
+		isShutdown = true;
 	BaseChatFrame::destroyMessagePanel();
-	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
+	BaseChatFrame::destroyMessageCtrl(isShutdown);
 }
 
 BOOL PrivateFrame::PreTranslateMessage(MSG* pMsg)

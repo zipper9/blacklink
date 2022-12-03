@@ -191,7 +191,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onQuickSearchColor)
 		COMMAND_CODE_HANDLER(EN_CHANGE, onQuickSearchEditChange)
 		ALT_MSG_MAP(STATUS_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_LBUTTONUP, onContextMenuL)
+		MESSAGE_HANDLER(WM_LBUTTONUP, onStatusBarClick)
 		END_MSG_MAP()
 		
 		BEGIN_UPDATE_UI_MAP(MainFrame)
@@ -246,7 +246,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onWinampButton(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onViewTopmost(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
-		LRESULT onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onStatusBarClick(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
@@ -338,18 +338,21 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		LRESULT onWindowCascade(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
+			prepareNonMaximized();
 			MDICascade();
 			return 0;
 		}
 		
 		LRESULT onWindowTile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			MDITile();
+			prepareNonMaximized();
+			MDITile(MDITILE_HORIZONTAL);
 			return 0;
 		}
 		
 		LRESULT onWindowTileVert(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
+			prepareNonMaximized();
 			MDITile(MDITILE_VERTICAL);
 			return 0;
 		}
@@ -641,6 +644,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void setTrayIcon(int newIcon);
 		void clearPMStatus();
 		void storeWindowsPos();
+		void prepareNonMaximized();
 
 		void createTrayMenu();
 		void createMainMenu();

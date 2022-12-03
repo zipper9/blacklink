@@ -26,6 +26,7 @@
 #include "ShellContextMenu.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
+#include "UserMessages.h"
 #include "resource.h"
 
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
@@ -96,6 +97,7 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	{
 		return getTabsPosition() == SettingsManager::TABS_TOP ? TPM_TOPALIGN : TPM_BOTTOMALIGN;
 	}
+	int getTabCount() const { return tabs.size(); }
 
 	bool updateSettings(bool invalidate);
 
@@ -146,8 +148,8 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 		typedef vector<TabInfo *> List;
 		typedef List::iterator ListIter;
 
-		TabInfo(HWND aWnd, unsigned tabChars)
-		: hWnd(aWnd), len(0), xpos(0), row(0), dirty(false), disconnected(false),
+		TabInfo(HWND hWnd, unsigned tabChars)
+		: hWnd(hWnd), len(0), xpos(0), row(0), dirty(false), disconnected(false),
 		  maxLength(std::min<unsigned>(TEXT_LEN_MAX, std::max<unsigned>(tabChars, TEXT_LEN_MIN)))
 		{
 			size.cx = size.cy = 0;
@@ -272,9 +274,8 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		delete this;
 	}
 
-	virtual void onBeforeActiveTab(HWND aWnd) {}
-	virtual void onAfterActiveTab(HWND aWnd) {}
-	virtual void onInvalidateAfterActiveTab(HWND aWnd) {}
+	virtual void onDeactivate() {}
+	virtual void onActivate() {}
 
 	typedef MDITabChildWindowImpl<T, TBase, TWinTraits> thisClass;
 	typedef CMDIChildWindowImpl<T, TBase, TWinTraits> baseClass;
@@ -283,6 +284,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	MESSAGE_HANDLER(WM_SYSCOMMAND, onSysCommand)
 	MESSAGE_HANDLER(WM_CREATE, onCreate)
 	MESSAGE_HANDLER(WM_MDIACTIVATE, onMDIActivate)
+	MESSAGE_HANDLER(WM_WINDOWPOSCHANGING, onWindowPosChanging)
 	MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 	MESSAGE_HANDLER(WM_SETTEXT, onSetText)
 	MESSAGE_HANDLER(WM_REALLY_CLOSE, onReallyClose)
@@ -391,18 +393,37 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		return 0;
 	}
 
-	LRESULT onMDIActivate(UINT /*uMsg*/, WPARAM /*wParam */, LPARAM lParam, BOOL &bHandled)
+	LRESULT onMDIActivate(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL &bHandled)
 	{
 		dcassert(getTab());
+		//dcdebug("onMDIActivate: wParam = 0x%X, lParam = 0x%X\n", wParam, lParam);
+		if (m_hWnd == (HWND) wParam)
+			onDeactivate();
 		if (m_hWnd == (HWND) lParam)
 		{
-			onBeforeActiveTab(m_hWnd);
 			getTab()->setActive(m_hWnd);
-			onAfterActiveTab(m_hWnd);
+			onActivate();
 		}
-		onInvalidateAfterActiveTab(m_hWnd);
 		bHandled = FALSE;
 		return 1;
+	}
+
+	LRESULT onWindowPosChanging(UINT /*uMsg*/, WPARAM /*wParam */, LPARAM lParam, BOOL &bHandled)
+	{
+		const WINDOWPOS* wp = reinterpret_cast<WINDOWPOS*>(lParam);
+		//dcdebug("onWindowPosChanging: hWnd = 0x%X, zoomed = %d, flags = 0x%X\n", m_hWnd, IsZoomed(), wp->flags);
+		if (!(wp->flags & SWP_HIDEWINDOW))
+		{
+			BOOL maximized = IsZoomed();
+			BOOL visible = getTab()->IsWindowVisible();
+			if (visible ^ maximized)
+			{
+				//dcdebug("onWindowPosChanging: WMU_UPDATE_LAYOUT\n");
+				::PostMessage(WinUtil::g_mainWnd, WMU_UPDATE_LAYOUT, 0, 0);
+			}
+		}
+		bHandled = FALSE;
+		return 0;
 	}
 
 	LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled)
@@ -411,12 +432,6 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		dcassert(getTab());
 		getTab()->removeTab(m_hWnd);
 		if (m_hMenu == WinUtil::g_mainMenu) m_hMenu = NULL;
-
-#ifdef FLYLINKDC_USE_MDI_MAXIMIZED
-		BOOL bMaximized = FALSE;
-		if (::SendMessage(m_hWndMDIClient, WM_MDIGETACTIVE, 0, (LPARAM)&bMaximized) != NULL)
-			SettingsManager::getInstance()->set(SettingsManager::MDI_MAXIMIZED, (bMaximized > 0));
-#endif
 		return 0;
 	}
 

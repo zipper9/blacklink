@@ -65,15 +65,13 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void showFindDialog();
 		void findNext();
 
-	private:
-		void createChatCtrl();
-
 	protected:
 		OMenu* userMenu;
 		OMenu* createUserMenu();
 		void destroyUserMenu();
 		void createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID);
 		void destroyMessageCtrl(bool isShutdown);
+		void createChatCtrl();
 		void setChatDisabled(bool disabled);
 
 		BaseChatFrame() :
@@ -160,11 +158,9 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
 		unsigned ctrlStatusOwnerDraw;
 
-		void createStatusCtrl(HWND hWnd);
-		void destroyStatusCtrl();
+		void initStatusCtrl(HWND hWnd);
 		void setStatusText(int index, const tstring& text);
 		void restoreStatusFromCache();
-		void destroyStatusbar();
 		
 		StatusMessageHistory statusHistory;
 		StringMap ucLineParams;

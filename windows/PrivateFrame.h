@@ -49,6 +49,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		static bool closeUser(const UserPtr& u);
 		static void closeAll();
 		static void closeAllOffline();
+		static void prepareNonMaximized();
 
 		enum
 		{
@@ -103,8 +104,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		LRESULT onCCPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled); // !Decker!
 
-		virtual void onBeforeActiveTab(HWND aWnd) override;
-		virtual void onAfterActiveTab(HWND aWnd) override;
+		virtual void onDeactivate() override;
+		virtual void onActivate() override;
 
 		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
@@ -172,6 +173,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		OnlineUserPtr getSelectedOnlineUser() const;
 		void getSelectedUsers(vector<UserPtr>& v) const {}
 		void openUserLog() { openFrameLog(); }
+		void showActiveFrame();
 
 	private:
 		enum
@@ -207,11 +209,13 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool newMessageSent;
 		bool newMessageReceived;
 		bool remoteChatClosed;
+		bool uiInitialized;
 		uint64_t sendTimeTyping;
 		uint64_t typingTimeout[2];
 		uint64_t lastSentTime;
 		TimerHelper timer;
 
+		void initUI();
 		void updateHubList();
 		void connectCCPM();
 		void updateCCPM(bool connected);
@@ -272,7 +276,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 
 	public:
 		void createMessagePanel();
-		void destroyMessagePanel(bool p_is_destroy);
+		void destroyMessagePanel(bool isShutdown);
 };
 
 #endif // !defined(PRIVATE_FRAME_H)

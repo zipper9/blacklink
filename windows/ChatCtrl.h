@@ -117,7 +117,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		// Chat cache
 		list<Message> chatCache;
 		size_t chatCacheSize;
-		bool disableChatCacheFlag;
+		bool useChatCacheFlag;
 		FastCriticalSection csChatCache;
 
 		bool autoScroll;
@@ -179,7 +179,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 	
 	public:
 		IRichEditOle* getRichEditOle();
-		void disableChatCache() { disableChatCacheFlag = true; }
+		void disableChatCache() { useChatCacheFlag = false; }
 		void restoreChatCache();
 		
 		void goToEnd(bool force);

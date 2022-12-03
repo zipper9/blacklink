@@ -71,9 +71,8 @@ HubFrame::HubFrame(const Settings& cs) :
 	isTabMenuShown(false),
 	showJoins(false),
 	showFavJoins(false),
-	userListInitialized(false),
+	uiInitialized(false),
 	bytesShared(0),
-	activateCounter(0),
 	hubParamUpdated(false),
 	asyncUpdate(0),
 	asyncUpdateSaved(0),
@@ -137,6 +136,13 @@ LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
 
+	createChatCtrl();
+	if (!ctrlChatContainer && ctrlClient.m_hWnd)
+	{
+		ctrlChatContainer = new CContainedWindow(WC_EDIT, this, EDIT_MESSAGE_MAP);
+		ctrlChatContainer->SubclassWindow(ctrlClient.m_hWnd);
+	}
+
 	setHubParam();
 	
 	// TODO - отложить создание контрола...
@@ -184,19 +190,8 @@ LRESULT HubFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	return 0;
 }
 
-void HubFrame::initUserList(const FavoriteManager::WindowInfo& wi)
-{
-	if (userListInitialized) return;
-	FavoriteManager::getInstance()->addListener(this);
-	UserManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
-	userListInitialized = true;
-	ctrlUsers.initialize(wi);
-}
-
 void HubFrame::updateSplitterPosition(int chatUserSplit, bool swapFlag)
 {
-	dcassert(activateCounter == 1);
 	m_nProportionalPos = 0;
 	if (chatUserSplit != -1)
 	{
@@ -214,145 +209,118 @@ void HubFrame::updateSplitterPosition(int chatUserSplit, bool swapFlag)
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 }
 
+void HubFrame::initUI()
+{
+	dcassert(!uiInitialized);
+	if (!ctrlUsers)
+		ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
+
+	if (!m_hWndStatusBar)
+		CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
+	BaseChatFrame::initStatusCtrl(m_hWndStatusBar);
+
+	if (!ctrlSwitchPanels)
+	{
+		ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
+		ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
+		ctrlSwitchPanels.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::HUB_SWITCH, 0));
+		switchPanelsContainer.SubclassWindow(ctrlSwitchPanels.m_hWnd);
+	}
+
+	if (!ctrlShowUsers)
+	{
+		ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+		ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
+		ctrlShowUsers.SetFont(Fonts::g_systemFont);
+		ctrlShowUsers.SetCheck(showUsersStore ? BST_CHECKED : BST_UNCHECKED);
+		showUsersContainer.SubclassWindow(ctrlShowUsers.m_hWnd);
+	}
+
+	if (!ctrlModeIcon)
+		ctrlModeIcon.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
+
+	if (!tooltip)
+	{
+		tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
+		tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
+		tooltip.SetMaxTipWidth(255);
+		tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
+		tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_HELP_TOGGLE_USER_LIST);
+	}
+
+	dcassert(baseClient->getHubUrl() == serverUrl);
+	auto fm = FavoriteManager::getInstance();
+	FavoriteManager::WindowInfo wi;
+	if (!fm->getFavoriteHubWindowInfo(serverUrl, wi))
+	{
+		wi.headerOrder = SETTING(HUB_FRAME_ORDER);
+		wi.headerWidths = SETTING(HUB_FRAME_WIDTHS);
+		wi.headerVisible = SETTING(HUB_FRAME_VISIBLE);
+		wi.headerSort = -1;
+		wi.chatUserSplit = -1;
+		wi.swapPanels = false;
+	}
+
+	const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
+	showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
+	fm->releaseFavoriteHubEntryPtr(fhe);
+
+	showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
+
+	ctrlUsers.initialize(wi);
+
+	showUsers = showUsersStore;
+	ctrlUsers.setShowUsers(showUsers);
+	updateSplitterPosition(wi.chatUserSplit, wi.swapPanels);
+	if (isDHT) ctrlUsers.insertDHTUsers();
+
+	updateModeIcon();
+	restoreStatusFromCache();
+	
+	FavoriteManager::getInstance()->addListener(this);
+	UserManager::getInstance()->addListener(this);
+	SettingsManager::getInstance()->addListener(this);
+	uiInitialized = true;
+}
+
 void HubFrame::createMessagePanel()
 {
-	bool updateFlag = false;
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		if (!ClientManager::isStartup())
-		{
-			++activateCounter;
-			if (!ctrlUsers)
-				ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
-			BaseChatFrame::setChatDisabled(disableChat);
-			BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP);
-
-			tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-			tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
-			dcassert(tooltip.IsWindow());
-			tooltip.SetMaxTipWidth(255);
-
-			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
-
-			ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
-			ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
-			ctrlSwitchPanels.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::HUB_SWITCH, 0));
-			switchPanelsContainer.SubclassWindow(ctrlSwitchPanels.m_hWnd);
-			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
-
-			ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-			ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
-			ctrlShowUsers.SetFont(Fonts::g_systemFont);
-			ctrlShowUsers.SetCheck(showUsersStore ? BST_CHECKED : BST_UNCHECKED);
-
-			showUsersContainer.SubclassWindow(ctrlShowUsers.m_hWnd);
-			tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_HELP_TOGGLE_USER_LIST);
-			ctrlModeIcon.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-
-			dcassert(baseClient->getHubUrl() == serverUrl);
-			auto fm = FavoriteManager::getInstance();
-			FavoriteManager::WindowInfo wi;
-			if (!fm->getFavoriteHubWindowInfo(serverUrl, wi))
-			{
-				wi.headerOrder = SETTING(HUB_FRAME_ORDER);
-				wi.headerWidths = SETTING(HUB_FRAME_WIDTHS);
-				wi.headerVisible = SETTING(HUB_FRAME_VISIBLE);
-				wi.headerSort = -1;
-				wi.chatUserSplit = -1;
-				wi.swapPanels = false;
-			}
-
-			const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
-			if (activateCounter == 1)
-				showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
-			fm->releaseFavoriteHubEntryPtr(fhe);
-
-			showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
-			initUserList(wi);
-			ctrlMessage.SetFocus();
-			if (activateCounter == 1)
-			{
-				showUsers = showUsersStore;
-				ctrlUsers.setShowUsers(showUsers);
-				updateSplitterPosition(wi.chatUserSplit, wi.swapPanels);
-			}
-			if (isDHT) ctrlUsers.insertDHTUsers();
-			updateFlag = true;
-		}
+		BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP);
 		BaseChatFrame::createMessagePanel(false, false);
+		BaseChatFrame::setChatDisabled(disableChat);
 		setCountMessages(0);
-		if (!ctrlChatContainer && ctrlClient.m_hWnd)
-		{
-			ctrlChatContainer = new CContainedWindow(WC_EDIT, this, EDIT_MESSAGE_MAP);
-			ctrlChatContainer->SubclassWindow(ctrlClient.m_hWnd);
-		}
-		if (updateFlag)
-		{
-			updateModeIcon();
-			UpdateLayout(TRUE); // TODO - сконструировать статус отдельным методом
-			restoreStatusFromCache(); // ¬осстанавливать статус нужно после UpdateLayout
-		}
 	}
 }
 
-void HubFrame::destroyMessagePanel(bool p_is_destroy)
+void HubFrame::destroyMessagePanel(bool isShutdown)
 {
-	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
-	if (tooltip)
-		tooltip.DestroyWindow();
-	if (ctrlModeIcon)
-		ctrlModeIcon.DestroyWindow();
-	if (ctrlShowUsers)
-		ctrlShowUsers.DestroyWindow();
-	if (ctrlSwitchPanels)
-		ctrlSwitchPanels.DestroyWindow();
-
-	BaseChatFrame::destroyStatusbar();
+	if (ClientManager::isBeforeShutdown())
+		isShutdown = true;
 	BaseChatFrame::destroyMessagePanel();
-	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
+	BaseChatFrame::destroyMessageCtrl(isShutdown);
 }
 
-void HubFrame::onBeforeActiveTab(HWND aWnd)
+void HubFrame::onDeactivate()
 {
-	dcassert(m_hWnd);
-	if (!ClientManager::isStartup())
-	{
-		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
-		{
-			HubFrame* frame = i->second;
-			if (!frame->isClosedOrShutdown())
-				frame->destroyMessagePanel(false);
-		}
-	}
+	bool update = msgPanel != nullptr;
+	destroyMessagePanel(false);
+	if (update) UpdateLayout();
 }
 
-void HubFrame::onAfterActiveTab(HWND aWnd)
+void HubFrame::onActivate()
 {
 	if (!ClientManager::isBeforeShutdown())
-	{
-		dcassert(m_hWnd);
-		createMessagePanel();
-	}
+		showActiveFrame();
 }
 
-void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
+void HubFrame::showActiveFrame()
 {
-	if (!ClientManager::isBeforeShutdown())
-	{
-		if (!ClientManager::isStartup())
-		{
-			if (ctrlStatus)
-			{
-				//ctrlStatus->RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-				// TODO подобрать более легкую команду. без этой пропадаю иконки в статусе.
-				ctrlShowUsers.Invalidate();
-				ctrlSwitchPanels.Invalidate();
-				ctrlModeIcon.Invalidate();
-			}
-		}
-	}
+	if (!uiInitialized && !ClientManager::isStartup()) initUI();
+	createMessagePanel();
+	UpdateLayout();
+	ctrlMessage.SetFocus();
 }
 
 HubFrame* HubFrame::openHubWindow(const Settings& cs, bool* isNew)
@@ -1215,12 +1183,10 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 
 		CRect rc = rect;
 		rc.bottom -= panelHeight;
-		if (ctrlStatus)
-		{
-			setSplitterPanes();
-			SetSplitterRect(rc);
-		}
-		
+
+		setSplitterPanes();
+		SetSplitterRect(rc);
+
 		if (msgPanel->initialized)
 		{
 			int buttonPanelWidth = msgPanel->getPanelWidth();
@@ -1244,6 +1210,11 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		if (tooltip)
 			tooltip.Activate(TRUE);
 	}
+	else
+	{
+		setSplitterPanes();
+		SetSplitterRect(&rect);
+	}
 	if (showUsers && ctrlUsers)
 		ctrlUsers.updateLayout();
 }
@@ -1253,7 +1224,7 @@ void HubFrame::setSplitterPanes()
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (ctrlUsers && ctrlClient.IsWindow())
+	if (ctrlUsers && ctrlClient)
 	{
 		if (swapPanels && !disableChat)
 			SetSplitterPanes(ctrlUsers.m_hWnd, ctrlClient.m_hWnd, false);
@@ -1348,7 +1319,7 @@ void HubFrame::updateModeIcon()
 
 void HubFrame::storeColumnsInfo()
 {
-	if (!userListInitialized)
+	if (!uiInitialized)
 		return;
 	auto fm = FavoriteManager::getInstance();
 	FavoriteManager::WindowInfo wi;
@@ -1436,7 +1407,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 				}
 			}
 		}
-		if (userListInitialized)
+		if (uiInitialized)
 		{
 			SettingsManager::getInstance()->removeListener(this);
 			UserManager::getInstance()->removeListener(this);
@@ -1934,7 +1905,7 @@ LRESULT HubFrame::onHubFrmCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	bHandled = FALSE;
-	if (activateCounter >= 1)
+	if (uiInitialized)
 	{
 		if (wParam == BST_CHECKED)
 			setShowUsers(true);
@@ -2066,6 +2037,20 @@ void HubFrame::closeAll(size_t threshold)
 				if (threshold == 0 || !client || client->getUserCount() <= threshold)
 					i->second->PostMessage(WM_CLOSE);
 			}
+		}
+	}
+}
+
+void HubFrame::prepareNonMaximized()
+{
+	ASSERT_MAIN_THREAD();
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
+	{
+		HubFrame* frame = i->second;
+		if (!frame->uiInitialized)
+		{
+			frame->initUI();
+			frame->ctrlClient.restoreChatCache();
 		}
 	}
 }
