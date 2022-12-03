@@ -155,8 +155,10 @@ class DatabaseConnection
 #ifdef BL_FEATURE_IP_DATABASE
 		bool loadUserStat(const CID& cid, UserStatItem& stat);
 		void saveUserStat(const CID& cid, UserStatItem& stat);
+		void removeUserStat(const CID& cid);
 		IPStatMap* loadIPStat(const CID& cid);
 		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items);
+		void removeIPStat(const CID& cid);
 		bool loadGlobalRatio(uint64_t values[]);
 #endif
 
@@ -214,9 +216,11 @@ class DatabaseConnection
 		sqlite3_command insertIPStat;
 		sqlite3_command updateIPStat;
 		sqlite3_command selectIPStat;
+		sqlite3_command deleteIPStat;
 		sqlite3_command insertUserStat;
 		sqlite3_command updateUserStat;
 		sqlite3_command selectUserStat;
+		sqlite3_command deleteUserStat;
 		sqlite3_command selectGlobalRatio;
 #endif
 };

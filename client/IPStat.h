@@ -2,6 +2,8 @@
 #define IP_STAT_H_
 
 #include "typedefs.h"
+#include <stdint.h>
+#include <list>
 
 struct IPStatItem
 {
@@ -21,7 +23,7 @@ struct IPStatVecItem
 
 struct IPStatMap
 {
-	std::unordered_map<string, IPStatItem> data;
+	boost::unordered_map<string, IPStatItem> data;
 	uint64_t totalDownloaded = 0;
 	uint64_t totalUploaded = 0;
 };

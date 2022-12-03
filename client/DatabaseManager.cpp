@@ -872,6 +872,20 @@ IPStatMap* DatabaseConnection::loadIPStat(const CID& cid)
 	return ipStat;
 }
 
+void DatabaseConnection::removeIPStat(const CID& cid)
+{
+	try
+	{
+		initQuery(deleteIPStat, "delete from ip_stat where cid=?");
+		deleteIPStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
+		deleteIPStat.executenonquery();
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - removeIPStat: " + e.getError(), e.getErrorCode());
+	}
+}
+
 void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans)
 {
 	string nickList;
@@ -905,6 +919,20 @@ void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat, int ba
 		count = 0;
 	}
 	stat.flags &= ~UserStatItem::FLAG_CHANGED;
+}
+
+void DatabaseConnection::removeUserStat(const CID& cid)
+{
+	try
+	{
+		initQuery(deleteUserStat, "delete from user_db.user_stat where cid=?");
+		deleteUserStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
+		deleteUserStat.executenonquery();
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - removeUserStat: " + e.getError(), e.getErrorCode());
+	}
 }
 
 void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat)

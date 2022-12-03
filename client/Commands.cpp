@@ -360,13 +360,15 @@ enum
 	ACTION_DHT_PUBLISH
 };
 
-static const char* actionsUser[] = { "info", "getlist", "mq", "dldir", nullptr };
+static const char* actionsUser[] = { "info", "getlist", "mq", "dldir", "stat", "rmstat", nullptr };
 enum
 {
 	ACTION_USER_INFO = 1,
 	ACTION_USER_GET_LIST,
 	ACTION_USER_MATCH_QUEUE,
-	ACTION_USER_DL_DIR
+	ACTION_USER_DL_DIR,
+	ACTION_USER_STAT,
+	ACTION_USER_REMOVE_STAT
 };
 
 static const char* actionsQueue[] = { "info", nullptr };
@@ -1049,6 +1051,63 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				return true;
 			}
 			if (!hasCID) cid = ClientManager::makeCid(pc.args[2], hubUrl);
+			if (action == ACTION_USER_STAT || action == ACTION_USER_REMOVE_STAT)
+			{
+#ifdef BL_FEATURE_IP_DATABASE
+				UserStatItem userStat;
+				IPStatMap* ipStat = nullptr;
+				auto db = DatabaseManager::getInstance();
+				auto conn = db->getConnection();
+				if (conn)
+				{
+					if (action == ACTION_USER_REMOVE_STAT)
+					{
+						conn->removeIPStat(cid);
+						conn->removeUserStat(cid);
+					}
+					else
+					{
+						ipStat = conn->loadIPStat(cid);
+						conn->loadUserStat(cid, userStat);
+					}
+					db->putConnection(conn);
+				}
+				res.what = RESULT_LOCAL_TEXT;
+				if (action == ACTION_USER_REMOVE_STAT)
+				{
+					res.text = STRING(COMMAND_DONE);
+					return true;
+				}
+				if (!ipStat && !(userStat.flags & UserStatItem::FLAG_LOADED))
+				{
+					res.text = "No information in DB";
+					return true;
+				}
+				if (userStat.flags & UserStatItem::FLAG_LOADED)
+				{
+					res.text += "Last IP: " + userStat.lastIp + '\n';
+					res.text += "Messages: " + Util::toString(userStat.messageCount) + '\n';
+					for (const string& s : userStat.nickList)
+					{
+						auto pos = s.find('\t');
+						if (pos != string::npos)
+							res.text += "Nick: " + s.substr(0, pos) + ", Hub: " + s.substr(pos + 1) + '\n';
+					}
+				}
+				if (ipStat)
+					for (auto i = ipStat->data.cbegin(); i != ipStat->data.cend(); ++i)
+					{
+						res.text += "IP " + i->first;
+						res.text += ": downloaded=" + Util::toString(i->second.download);
+						res.text += ", uploaded=" + Util::toString(i->second.upload);
+						res.text += '\n';
+					}
+#else
+				res.text = "Feature not available";
+				res.what = RESULT_ERROR_MESSAGE;
+#endif
+				return true;
+			}
 			OnlineUserPtr ou = ClientManager::findOnlineUser(cid, hubUrl, !hubUrl.empty());
 			if (!ou)
 			{
