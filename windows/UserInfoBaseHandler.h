@@ -141,7 +141,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		COMMAND_ID_HANDLER(IDC_SHOW_FAV_USER, onShowFavUser)
 		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemoveAll)
 		COMMAND_ID_HANDLER(IDC_REPORT, onReport)
-		COMMAND_ID_HANDLER(IDC_CONNECT, onConnectFav)
+		COMMAND_ID_HANDLER(IDC_CONNECT, onConnectHub)
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopyUserInfo)
 		COMMAND_ID_HANDLER(IDC_COPY_EXACT_SHARE, onCopyUserInfo)
 		COMMAND_ID_HANDLER(IDC_COPY_APPLICATION, onCopyUserInfo)
@@ -288,9 +288,9 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			return 0;
 		}
 		
-		LRESULT onConnectFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onConnectHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			doAction(&UserInfoBase::connectFav);
+			doAction(&UserInfoBase::connect, selectedHint);
 			return 0;
 		}
 

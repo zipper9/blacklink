@@ -55,7 +55,7 @@ class UserInfoBase
 		void setNormalPM();
 		void ignoreOrUnignoreUserByName();
 		void removeAll();
-		void connectFav();
+		void connect(const string& hubHint);
 		
 		virtual const UserPtr& getUser() const = 0;
 		bool isMe() const;

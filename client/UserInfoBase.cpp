@@ -174,14 +174,10 @@ void UserInfoBase::removeAll()
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
 }
 
-void UserInfoBase::connectFav()
+void UserInfoBase::connect(const string& hubHint)
 {
-	if (getUser())
-	{
-		string url = FavoriteManager::getInstance()->getUserUrl(getUser());
-		if (!url.empty())
-			UserManager::getInstance()->openUserUrl(url, getUser());
-	}
+	if (getUser() && !hubHint.empty())
+		UserManager::getInstance()->openUserUrl(hubHint, getUser());
 }
 
 void UserInfoBase::grantSlotPeriod(const string& hubHint, const uint64_t period)
