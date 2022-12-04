@@ -82,7 +82,6 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 			CRect rc;
 			ctrl.GetClientRect(rc);
 			ctrl.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
-			SET_LIST_COLOR_IN_SETTING(ctrl);
 			WinUtil::setExplorerTheme(ctrl);
 			ctrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 		}

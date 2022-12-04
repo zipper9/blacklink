@@ -20,6 +20,7 @@
 #include "LogPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "BrowseFile.h"
 #include "../client/LogManager.h"
 #include "../client/File.h"
 #include "../client/BusyCounter.h"

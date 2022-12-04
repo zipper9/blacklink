@@ -21,6 +21,7 @@
 #include "../client/CryptoManager.h"
 #include "CertificatesPage.h"
 #include "WinUtil.h"
+#include "BrowseFile.h"
 
 int g_tlsOption = 0;
 

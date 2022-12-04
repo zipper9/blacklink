@@ -4,6 +4,7 @@
 #include "Colors.h"
 #include "ImageLists.h"
 #include "DialogLayout.h"
+#include "BrowseFile.h"
 
 extern SettingsManager *g_settings;
 

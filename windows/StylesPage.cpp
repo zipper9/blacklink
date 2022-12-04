@@ -5,6 +5,7 @@
 #include "DialogLayout.h"
 #include "ThemeUtil.h"
 #include "ColorUtil.h"
+#include "BrowseFile.h"
 #include "../client/File.h"
 
 using DialogLayout::FLAG_TRANSLATE;

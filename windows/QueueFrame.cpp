@@ -27,6 +27,7 @@
 #include "BarShader.h"
 #include "MainFrm.h"
 #include "ExMessageBox.h"
+#include "BrowseFile.h"
 
 #ifdef DEBUG_QUEUE_FRAME
 int QueueFrame::DirItem::itemsCreated;

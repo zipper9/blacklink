@@ -19,6 +19,7 @@
 #include "stdafx.h"
 
 #include "MagnetDlg.h"
+#include "BrowseFile.h"
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/CompatibilityManager.h"

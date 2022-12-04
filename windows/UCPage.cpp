@@ -20,6 +20,7 @@
 #include "UCPage.h"
 #include "CommandDlg.h"
 #include "WinUtil.h"
+#include "wtl_flylinkdc.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -45,7 +46,6 @@ LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlCommands.InsertColumn(1, CTSTRING(SETTINGS_COMMAND), LVCFMT_LEFT, rc.Width() * 2 / 4, 1);
 	ctrlCommands.InsertColumn(2, CTSTRING(HUB), LVCFMT_LEFT, rc.Width() / 4, 2);
 	ctrlCommands.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	WinUtil::setExplorerTheme(ctrlCommands);
 	
 	list<UserCommand> lst = FavoriteManager::getInstance()->getUserCommands();

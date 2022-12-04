@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FavDirDlg.h"
 #include "WinUtil.h"
+#include "BrowseFile.h"
 #include "../client/Util.h"
 #include <boost/algorithm/string.hpp>
 

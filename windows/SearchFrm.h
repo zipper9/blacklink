@@ -29,6 +29,7 @@
 #include "FileStatusColors.h"
 #include "DialogLayout.h"
 #include "StatusLabelCtrl.h"
+#include "wtl_flylinkdc.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"

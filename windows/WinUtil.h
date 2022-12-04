@@ -19,9 +19,6 @@
 #ifndef WIN_UTIL_H
 #define WIN_UTIL_H
 
-#include <functional>
-#include <atlctrls.h>
-
 #include "resource.h"
 #include "../client/Util.h"
 #include "../client/NetworkUtil.h"
@@ -30,7 +27,6 @@
 #include "OMenu.h"
 #include "HIconWrapper.h"
 #include "ImageLists.h"
-#include "wtl_flylinkdc.h"
 
 #define SHOW_POPUP(popup_key, msg, title) \
 do \
@@ -56,311 +52,214 @@ do \
 #define PLAY_SOUND(soundKey) WinUtil::playSound(SOUND_SETTING(soundKey))
 #define PLAY_SOUND_BEEP(soundKey) { if (SOUND_BEEP_BOOLSETTING(soundKey)) WinUtil::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
 
-#ifdef USE_SET_LIST_COLOR_IN_SETTINGS
-#define SET_LIST_COLOR_IN_SETTING(ctrlList) setListViewColors(ctrlList)
-#else
-#define SET_LIST_COLOR_IN_SETTING(ctrlList)
-#endif
-
 class FlatTabCtrl;
 class UserCommand;
 
-class WinUtil
+namespace WinUtil
 {
-	public:
-		enum
-		{
-			MASK_FRAME_TYPE = 0xFF,
-			FRAME_TYPE_MAIN = 1,
-			FRAME_TYPE_HUB,
-			FRAME_TYPE_PM,
-			FRAME_TYPE_SEARCH,
-			FRAME_TYPE_DIRECTORY_LISTING
-		};
+	enum
+	{
+		MASK_FRAME_TYPE = 0xFF,
+		FRAME_TYPE_MAIN = 1,
+		FRAME_TYPE_HUB,
+		FRAME_TYPE_PM,
+		FRAME_TYPE_SEARCH,
+		FRAME_TYPE_DIRECTORY_LISTING
+	};
 
-		struct TextItem
-		{
-			WORD itemID;
-			ResourceManager::Strings translatedString;
-		};
+	struct TextItem
+	{
+		WORD itemID;
+		ResourceManager::Strings translatedString;
+	};
 
-		static uint64_t getNewFrameID(int type);
+	uint64_t getNewFrameID(int type);
 
-		static CMenu g_mainMenu;
-		static OMenu g_copyHubMenu;
+	extern CMenu g_mainMenu;
+	extern OMenu g_copyHubMenu;
 
-		static HWND g_mainWnd;
-		static HWND g_mdiClient;
-		static FlatTabCtrl* g_tabCtrl;
-		static HHOOK g_hook;
-		static bool g_isAppActive;
-		
-		static void init(HWND hWnd);
-		static void uninit();
-		
-		static void escapeMenu(tstring& text);
-		static const tstring& escapeMenu(const tstring& text, tstring& tmp);
+	extern HWND g_mainWnd;
+	extern HWND g_mdiClient;
+	extern FlatTabCtrl* g_tabCtrl;
+	extern HHOOK g_hook;
+	extern bool g_isAppActive;
 
-		static void appendSeparator(HMENU menu);
-		static void appendSeparator(OMenu& menu);
+	void init(HWND hWnd);
+	void uninit();
 
-		static LONG getTextWidth(const tstring& str, HWND hWnd)
-		{
-			LONG sz = 0;
-			if (str.length())
-			{
-				HFONT fnt = (HFONT) SendMessage(hWnd, WM_GETFONT, 0, 0);
-				HDC dc = GetDC(hWnd);
-				if (dc)
-				{
-					HGDIOBJ old = fnt ? SelectObject(dc, fnt) : nullptr;
-					SIZE size;
-					GetTextExtentPoint32(dc, str.c_str(), str.length(), &size);
-					sz = size.cx;
-					if (old) SelectObject(dc, old);
-					ReleaseDC(hWnd, dc);
-				}
-			}
-			return sz;
-		}
+	void escapeMenu(tstring& text);
+	const tstring& escapeMenu(const tstring& text, tstring& tmp);
 
-		static LONG getTextWidth(const tstring& str, HDC dc)
-		{
-			SIZE sz = { 0, 0 };
-			if (str.length())
-				GetTextExtentPoint32(dc, str.c_str(), str.length(), &sz);
-			return sz.cx;
-		}
-		
-		static LONG getTextHeight(HWND wnd, HFONT fnt)
-		{
-			const HDC dc = ::GetDC(wnd);
-			const LONG h = getTextHeight(dc, fnt);
-			const int l_res = ::ReleaseDC(wnd, dc);
-			dcassert(l_res);
-			return h;
-		}
-		
-		static LONG getTextHeight(HDC dc, HFONT fnt)
-		{
-			const HGDIOBJ old = ::SelectObject(dc, fnt);
-			const LONG h = getTextHeight(dc);
-			::SelectObject(dc, old);
-			return h;
-		}
-		
-		static LONG getTextHeight(HDC dc)
-		{
-			TEXTMETRIC tm = {0};
-			const BOOL l_res = ::GetTextMetrics(dc, &tm);
-			dcassert(l_res);
-			return tm.tmHeight;
-		}
+	void appendSeparator(HMENU menu);
+	void appendSeparator(OMenu& menu);
 
-		static int getComboBoxHeight(HWND hwnd, HFONT font);
-		static bool getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy);
-		static bool getDialogUnits(HDC hdc, int& cx, int& cy);
+	int getTextWidth(const tstring& str, HWND hWnd);
+	int getTextWidth(const tstring& str, HDC dc);
+	int getTextHeight(HDC dc);
+	int getTextHeight(HDC dc, HFONT hFont);
+	int getTextHeight(HWND hWnd, HFONT hFont);
 
-		static inline int dialogUnitsToPixelsX(int x, int xdu)
-		{
-			return (x * xdu + 2) / 4;
-		}
+	int getComboBoxHeight(HWND hwnd, HFONT font);
+	bool getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy);
+	bool getDialogUnits(HDC hdc, int& cx, int& cy);
 
-		static inline int dialogUnitsToPixelsY(int y, int ydu)
-		{
-			return (y * ydu + 4) / 8;
-		}
+	inline int dialogUnitsToPixelsX(int x, int xdu)
+	{
+		return (x * xdu + 2) / 4;
+	}
 
-		static void showInputError(HWND hwndCtl, const tstring& text);
+	inline int dialogUnitsToPixelsY(int y, int ydu)
+	{
+		return (y * ydu + 4) / 8;
+	}
 
-		static void setClipboard(const tstring& str);
-		static void setClipboard(const string& str)
-		{
-			setClipboard(Text::toT(str));
-		}
-		
-		static void unlinkStaticMenus(OMenu &menu);
+	void showInputError(HWND hwndCtl, const tstring& text);
 
-	private:
-		dcdrun(static bool g_staticMenuUnlinked;)
+	void setClipboard(const tstring& str);
+	inline void setClipboard(const string& str) { setClipboard(Text::toT(str)); }
 
-	public:
-		static bool browseFile(tstring& target, HWND owner = nullptr, bool save = true, const tstring& initialDir = Util::emptyStringT, const TCHAR* types = nullptr, const TCHAR* defExt = nullptr, const GUID* id = nullptr);
-		static bool browseDirectory(tstring& target, HWND owner = nullptr, const GUID* id = nullptr);
-		
-		// Hash related
-		static void copyMagnet(const TTHValue& /*aHash*/, const string& /*aFile*/, int64_t);
-		
-		static void searchHash(const TTHValue& hash);
-		static void searchFile(const string& file);
-		
-		enum DefinedMagnetAction { MA_DEFAULT, MA_ASK, MA_DOWNLOAD, MA_SEARCH, MA_OPEN };
-		
-		// URL related
-		static void registerHubUrlHandlers();
-		static void registerMagnetHandler();
-		static void registerDclstHandler();
-		static void unregisterHubUrlHandlers();
-		static void unregisterMagnetHandler();
-		static void unregisterDclstHandler();
-		static bool parseDchubUrl(const tstring& aUrl);
-		static bool parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action = MA_DEFAULT);
-		static void openFileList(const tstring& filename, DefinedMagnetAction Action = MA_DEFAULT); // [+] IRainman dclst support
-		static bool hubUrlHandlersRegistered;
-		static bool magnetHandlerRegistered;
-		static bool dclstHandlerRegistered;
-		static int textUnderCursor(POINT p, CEdit& ctrl, tstring& x);
-		static void playSound(const string& soundFile, bool beep = false);
-		static bool openLink(const tstring& url);
-		static void openFile(const tstring& file);
-		static void openFile(const TCHAR* file);
-		static void openLog(const string& dir, const StringMap& params, const tstring& noLogMessage);
-		
-		static void openFolder(const tstring& file);
-		
-		//returns the position where the context menu should be
-		//opened if it was invoked from the keyboard.
-		//aPt is relative to the screen not the control.
-		static void getContextMenuPos(const CListViewCtrl& list, POINT& pt);
-		static void getContextMenuPos(const CTreeViewCtrl& tree, POINT& pt);
-		static void getContextMenuPos(const CEdit& edit, POINT& pt);
-		
-		static bool getUCParams(HWND parent, const UserCommand& cmd, StringMap& sm);
-		
-		/** @return Pair of hubnames as a string and a bool representing the user's online status */
-		static pair<tstring, bool> getHubNames(const CID& cid, const string& hintUrl);
-		static pair<tstring, bool> getHubNames(const UserPtr& u, const string& hintUrl);
-		static pair<tstring, bool> getHubNames(const CID& cid, const string& hintUrl, bool priv);
-		static pair<tstring, bool> getHubNames(const HintedUser& user);
-		static string getHubDisplayName(const string& hunUrl);
-		static int splitTokens(int* result, const string& tokens, int maxItems) noexcept;
-		static int splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue = 100) noexcept;
-		static void saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting order,
-		                            SettingsManager::StrSetting widths, int n, int* indexes, int* sizes) noexcept; // !SMT!-UI todo: disable - this routine does not save column visibility
-		static bool isShift()
-		{
-			return (GetKeyState(VK_SHIFT) & 0x8000) > 0;
-		}
-		static bool isAlt()
-		{
-			return (GetKeyState(VK_MENU) & 0x8000) > 0;
-		}
-		static bool isCtrl()
-		{
-			return (GetKeyState(VK_CONTROL) & 0x8000) > 0;
-		}
-		static bool isCtrlOrAlt()
-		{
-			return isCtrl() || isAlt();
-		}
-		
-		template<class T> static HWND hiddenCreateEx(T& p) noexcept
-		{
-			const HWND active = (HWND)::SendMessage(g_mdiClient, WM_MDIGETACTIVE, 0, 0);
-			CFlyLockWindowUpdate l(g_mdiClient);
-			HWND ret = p.CreateEx(g_mdiClient);
-			if (active && ::IsWindow(active))
-			{
-				::SendMessage(g_mdiClient, WM_MDIACTIVATE, (WPARAM)active, 0);
-			}
-			return ret;
-		}
-		template<class T> static HWND hiddenCreateEx(T* p) noexcept
-		{
-			return hiddenCreateEx(*p);
-		}
-		
-		static void translate(HWND page, const TextItem* textItems)
-		{
-			if (!textItems) return;
-			for (size_t i = 0; textItems[i].itemID != 0; i++)
-				::SetDlgItemText(page, textItems[i].itemID, CTSTRING_I(textItems[i].translatedString));
-		}
-		
-		static bool shutDown(int action);
-		static void activateMDIChild(HWND hWnd);
+	void unlinkStaticMenus(OMenu &menu);
 
-		static string getWMPSpam(HWND playerWnd = NULL);
-		static string getItunesSpam(HWND playerWnd = NULL);
-		static string getMPCSpam();
-		static string getWinampSpam(HWND playerWnd = NULL, int playerType = 0);
-		static string getJASpam();
-		
-		static tstring getNicks(const CID& cid, const string& hintUrl);
-		static tstring getNicks(const UserPtr& u, const string& hintUrl);
-		static tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
-		static tstring getNicks(const HintedUser& user);
-		
-		static bool setExplorerTheme(HWND hWnd);
-		static unsigned getListViewExStyle(bool checkboxes);
-		static unsigned getTreeViewStyle();
+	void copyMagnet(const TTHValue& hash, const string& file, int64_t size);
+
+	void searchHash(const TTHValue& hash);
+	void searchFile(const string& file);
+
+	enum DefinedMagnetAction { MA_DEFAULT, MA_ASK, MA_DOWNLOAD, MA_SEARCH, MA_OPEN };
+
+	bool parseDchubUrl(const tstring& url);
+	bool parseMagnetUri(const tstring& url, DefinedMagnetAction action = MA_DEFAULT);
+
+	void playSound(const string& soundFile, bool beep = false);
+
+	void openFileList(const tstring& filename, DefinedMagnetAction action = MA_DEFAULT);
+	bool openLink(const tstring& url);
+	void openFile(const tstring& file);
+	void openFile(const TCHAR* file);
+	void openLog(const string& dir, const StringMap& params, const tstring& noLogMessage);
+
+	void openFolder(const tstring& file);
+
+	// returns the position where the context menu should be
+	// opened if it was invoked from the keyboard.
+	// pt is relative to the screen not the control.
+	void getContextMenuPos(const CListViewCtrl& list, POINT& pt);
+	void getContextMenuPos(const CTreeViewCtrl& tree, POINT& pt);
+	void getContextMenuPos(const CEdit& edit, POINT& pt);
+
+	bool getUCParams(HWND parent, const UserCommand& cmd, StringMap& sm);
+
+	// return pair of hubnames as a string and a bool representing the user's online status
+	pair<tstring, bool> getHubNames(const CID& cid, const string& hintUrl);
+	pair<tstring, bool> getHubNames(const UserPtr& u, const string& hintUrl);
+	pair<tstring, bool> getHubNames(const CID& cid, const string& hintUrl, bool priv);
+	pair<tstring, bool> getHubNames(const HintedUser& user);
+	string getHubDisplayName(const string& hunUrl);
+	int splitTokens(int* result, const string& tokens, int maxItems) noexcept;
+	int splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue = 100) noexcept;
+	void saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting order,
+	                     SettingsManager::StrSetting widths, int n, int* indexes, int* sizes) noexcept; // !SMT!-UI todo: disable - this routine does not save column visibility
+
+	inline bool isShift() { return (GetKeyState(VK_SHIFT) & 0x8000) != 0; }
+	inline bool isAlt() { return (GetKeyState(VK_MENU) & 0x8000) != 0; }
+	inline bool isCtrl() { return (GetKeyState(VK_CONTROL) & 0x8000) != 0; }
+
+	template<class T> static HWND hiddenCreateEx(T& p) noexcept
+	{
+		const HWND active = (HWND)::SendMessage(g_mdiClient, WM_MDIGETACTIVE, 0, 0);
+		LockWindowUpdate(g_mdiClient);
+		HWND ret = p.CreateEx(g_mdiClient);
+		if (active && ::IsWindow(active))
+			::SendMessage(g_mdiClient, WM_MDIACTIVATE, (WPARAM)active, 0);
+		LockWindowUpdate(NULL);
+		return ret;
+	}
+
+	template<class T> static HWND hiddenCreateEx(T* p) noexcept
+	{
+		return hiddenCreateEx(*p);
+	}
+
+	static void translate(HWND page, const TextItem* textItems)
+	{
+		if (!textItems) return;
+		for (size_t i = 0; textItems[i].itemID != 0; i++)
+			::SetDlgItemText(page, textItems[i].itemID, CTSTRING_I(textItems[i].translatedString));
+	}
+
+	bool shutDown(int action);
+	void activateMDIChild(HWND hWnd);
+
+	tstring getNicks(const CID& cid, const string& hintUrl);
+	tstring getNicks(const UserPtr& u, const string& hintUrl);
+	tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
+	tstring getNicks(const HintedUser& user);
+
+	bool setExplorerTheme(HWND hWnd);
+	unsigned getListViewExStyle(bool checkboxes);
+	unsigned getTreeViewStyle();
 #ifdef IRAINMAN_ENABLE_WHOIS
-		static bool processWhoisMenu(WORD wID, const tstring& ip);
-		static void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
+	bool processWhoisMenu(WORD wID, const tstring& ip);
+	void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
 #endif
-		static void getAdapterList(int af, vector<Util::AdapterInfo>& adapters);
-		static int fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, CComboBox& bindCombo, const string& selected, int options);
-		static int fillAdapterList(int af, CComboBox& bindCombo, const string& selected, int options);
-		static string getSelectedAdapter(const CComboBox& bindCombo);
+	void getAdapterList(int af, vector<Util::AdapterInfo>& adapters);
+	int fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, CComboBox& bindCombo, const string& selected, int options);
+	int fillAdapterList(int af, CComboBox& bindCombo, const string& selected, int options);
+	string getSelectedAdapter(const CComboBox& bindCombo);
 
-		static void fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs);
-		static int getSelectedCharset(const CComboBox& comboBox);
+	void fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs);
+	int getSelectedCharset(const CComboBox& comboBox);
 
-		static void fillTimeValues(CComboBox& comboBox);
+	void fillTimeValues(CComboBox& comboBox);
 
 #ifdef SSA_SHELL_INTEGRATION
-		static tstring getShellExtDllPath();
-		static bool registerShellExt(bool unregister);
+	tstring getShellExtDllPath();
+	bool registerShellExt(bool unregister);
 #endif
-		static bool runElevated(HWND hwnd, const TCHAR* path, const TCHAR* parameters = nullptr, const TCHAR* directory = nullptr, int waitTime = 0);
-		
-		static bool autoRunShortcut(bool create);
-		static bool isAutoRunShortcutExists();
-		static tstring getAutoRunShortcutName();
+	bool runElevated(HWND hwnd, const TCHAR* path, const TCHAR* parameters = nullptr, const TCHAR* directory = nullptr, int waitTime = 0);
 
-		static void getWindowText(HWND hwnd, tstring& text);
-		static tstring getComboBoxItemText(HWND hwnd, int index);
-		
-		static void appendPrioItems(OMenu& menu, int idFirst);
+	bool autoRunShortcut(bool create);
+	bool isAutoRunShortcutExists();
+	tstring getAutoRunShortcutName();
+	bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
 
-		static inline void limitStringLength(tstring& str, size_t maxLen = 40)
+	void getWindowText(HWND hwnd, tstring& text);
+	tstring getComboBoxItemText(HWND hwnd, int index);
+
+	void appendPrioItems(OMenu& menu, int idFirst);
+
+	inline void limitStringLength(tstring& str, size_t maxLen = 40)
+	{
+		dcassert(maxLen > 3);
+		if (str.length() > maxLen)
 		{
-			dcassert(maxLen > 3);	
-			if (str.length() > maxLen)
-			{
-				str.erase(maxLen - 3);
-				str += _T("...");
-			}
+			str.erase(maxLen - 3);
+			str += _T("...");
 		}
+	}
 
-		template<typename T>
-		static bool postSpeakerMsg(HWND hwnd, WPARAM wparam, T* ptr)
-		{
-			if (PostMessage(hwnd, WM_SPEAKER, wparam, reinterpret_cast<LPARAM>(ptr)))
-				return true;
-			delete ptr;
-			return false;
-		}
+	template<typename T>
+	bool postSpeakerMsg(HWND hwnd, WPARAM wparam, T* ptr)
+	{
+		if (PostMessage(hwnd, WM_SPEAKER, wparam, reinterpret_cast<LPARAM>(ptr)))
+			return true;
+		delete ptr;
+		return false;
+	}
 
-		struct FileMaskItem
-		{
-			ResourceManager::Strings stringId;
-			const TCHAR* ext;
-		};
+	struct FileMaskItem
+	{
+		ResourceManager::Strings stringId;
+		const TCHAR* ext;
+	};
 
-		static tstring getFileMaskString(const FileMaskItem* items);
-		static const FileMaskItem fileListsMask[];
-		static const FileMaskItem allFilesMask[];
+	tstring getFileMaskString(const FileMaskItem* items);
 
-	private:
-		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
-		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
+	extern const FileMaskItem fileListsMask[];
+	extern const FileMaskItem allFilesMask[];
 
-		static uint64_t nextFrameId;
-
-	public:
-		static const GUID guidGetTTH;
-		static const GUID guidDcLstFromFolder;
+	extern const GUID guidGetTTH;
+	extern const GUID guidDcLstFromFolder;
 };
 
 class LastDir

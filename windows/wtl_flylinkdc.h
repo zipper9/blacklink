@@ -75,26 +75,4 @@ class CLockRedraw
 		const HWND m_hWnd;
 };
 
-// copy-paste from wtl\atlwinmisc.h
-// (Иначе много предупреждений валится warning C4245: 'argument' : conversion from 'int' to 'UINT_PTR', signed/unsigned mismatch )
-class CFlyLockWindowUpdate
-{
-	public:
-		explicit CFlyLockWindowUpdate(HWND hWnd)
-		{
-			// NOTE: A locked window cannot be moved.
-			//       See also Q270624 for problems with layered windows.
-			ATLASSERT(::IsWindow(hWnd));
-			::LockWindowUpdate(hWnd);
-		}
-		
-		~CFlyLockWindowUpdate()
-		{
-			::LockWindowUpdate(NULL);
-		}
-
-		CFlyLockWindowUpdate(const CFlyLockWindowUpdate&) = delete;
-		CFlyLockWindowUpdate& operator= (const CFlyLockWindowUpdate&) = delete;	
-};
-
 #endif // DCPLUSPLUS_WTL_FLYLINKDC_H

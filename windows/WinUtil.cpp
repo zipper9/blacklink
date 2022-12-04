@@ -50,6 +50,7 @@
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "DirectoryListingFrm.h"
+#include "WinSysHandlers.h"
 
 const WinUtil::FileMaskItem WinUtil::fileListsMask[] =
 {
@@ -66,8 +67,6 @@ const WinUtil::FileMaskItem WinUtil::allFilesMask[] =
 	{ ResourceManager::Strings(),    nullptr   }
 };
 
-uint64_t WinUtil::nextFrameId = 0;
-
 CMenu WinUtil::g_mainMenu;
 OMenu WinUtil::g_copyHubMenu;
 
@@ -76,9 +75,6 @@ HWND WinUtil::g_mainWnd = nullptr;
 HWND WinUtil::g_mdiClient = nullptr;
 FlatTabCtrl* WinUtil::g_tabCtrl = nullptr;
 HHOOK WinUtil::g_hook = nullptr;
-bool WinUtil::hubUrlHandlersRegistered = false;
-bool WinUtil::magnetHandlerRegistered = false;
-bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
 
 const GUID WinUtil::guidGetTTH          = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x96 } };
@@ -86,14 +82,13 @@ const GUID WinUtil::guidDcLstFromFolder = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 
 
 uint64_t WinUtil::getNewFrameID(int type)
 {
+	static uint64_t nextFrameId = 0;
 	uint64_t id = ++nextFrameId;
 	return id << 8 | type;
 }
 
-dcdrun(bool WinUtil::g_staticMenuUnlinked = true;)
 void WinUtil::unlinkStaticMenus(OMenu& menu)
 {
-	dcdrun(g_staticMenuUnlinked = true;)
 	MENUITEMINFO mif = { sizeof MENUITEMINFO };
 	mif.fMask = MIIM_SUBMENU;
 	for (int i = menu.GetMenuItemCount()-1; i >= 0; i--)
@@ -352,220 +347,6 @@ void WinUtil::uninit()
 	UserInfoGuiTraits::uninit();
 }
 
-#ifdef OSVER_WIN_XP
-
-int CALLBACK WinUtil::browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData)
-{
-	switch (uMsg)
-	{
-		case BFFM_INITIALIZED:
-			SendMessage(hwnd, BFFM_SETSELECTION, TRUE, pData);
-			break;
-	}
-	return 0;
-}
-
-bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID*)
-{
-	TCHAR buf[MAX_PATH];
-	BROWSEINFO bi = {0};
-	bi.hwndOwner = owner;
-	bi.pszDisplayName = buf;
-	bi.lpszTitle = CTSTRING(CHOOSE_FOLDER);
-	bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_USENEWUI;
-	bi.lParam = (LPARAM)target.c_str();
-	bi.lpfn = &browseCallbackProc;
-	LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
-	if (!pidl) return false;
-	bool result = false;
-	if (SHGetPathFromIDList(pidl, buf))
-	{
-		target = buf;
-		Util::appendPathSeparator(target);
-		result = true;
-	}
-	CoTaskMemFree(pidl);
-	return result;
-}
-
-bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
-{
-	OPENFILENAME ofn = { 0 }; // common dialog box structure
-	target = Text::toT(Util::validateFileName(Text::fromT(target)));
-	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
-	size_t len = min<size_t>(target.length(), FULL_MAX_PATH-1);
-	memcpy(buf.get(), target.data(), len*sizeof(TCHAR));
-	buf[len] = 0;
-	// Initialize OPENFILENAME
-	ofn.lStructSize = OPENFILENAME_SIZE_VERSION_400;
-	ofn.hwndOwner = owner;
-	ofn.lpstrFile = buf.get();
-	ofn.lpstrFilter = types;
-	ofn.lpstrDefExt = defExt;
-	ofn.nFilterIndex = 1;
-	
-	if (!initialDir.empty())
-	{
-		ofn.lpstrInitialDir = initialDir.c_str();
-	}
-	ofn.nMaxFile = FULL_MAX_PATH;
-	ofn.Flags = (save ? 0 : OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST);
-	
-	// Display the Open dialog box.
-	if ((save ? GetSaveFileName(&ofn) : GetOpenFileName(&ofn)) != FALSE)
-	{
-		target = ofn.lpstrFile;
-		return true;
-	}
-	else
-	{
-		dcdebug("Error WinUtil::browseFile CommDlgExtendedError() = %x\n", CommDlgExtendedError());
-	}
-	return false;
-}
-
-#else
-
-static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTIONS options)
-{
-	FILEOPENDIALOGOPTIONS fos;
-	if (FAILED(fileOpen->GetOptions(&fos))) return false;
-	fos |= options;
-	return SUCCEEDED(fileOpen->SetOptions(fos));
-}
-
-bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID* id)
-{
-	bool result = false;
-	IFileOpenDialog *pFileOpen = nullptr;
-
-	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, 
-		IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
-
-	if (SUCCEEDED(hr))
-	{
-		if (id) pFileOpen->SetClientGuid(*id);
-		if (addFileDialogOptions(pFileOpen, FOS_PICKFOLDERS | FOS_NOCHANGEDIR))
-		{
-			if (!target.empty())
-			{
-				IShellItem* shellItem;
-				hr = SHCreateItemFromParsingName(target.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
-				if (SUCCEEDED(hr) && shellItem)
-				{
-					pFileOpen->SetFolder(shellItem);
-					shellItem->Release();
-				}
-			}
-			pFileOpen->SetTitle(CWSTRING(CHOOSE_FOLDER));
-			hr = pFileOpen->Show(owner);
-			if (SUCCEEDED(hr))
-			{
-				IShellItem *pItem;
-				hr = pFileOpen->GetResult(&pItem);
-				if (SUCCEEDED(hr))
-				{
-					PWSTR pszFilePath;
-					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-					if (SUCCEEDED(hr))
-					{
-						target = pszFilePath;
-						Util::appendPathSeparator(target);
-						CoTaskMemFree(pszFilePath);
-						result = true;
-					}
-					pItem->Release();
-				}
-			}
-		}
-	}
-	if (pFileOpen) pFileOpen->Release();
-	return result;
-}
-
-static void setFolder(IFileOpenDialog* fileOpen, const tstring& path)
-{
-	IShellItem* shellItem;
-	HRESULT hr = SHCreateItemFromParsingName(path.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
-	if (SUCCEEDED(hr) && shellItem)
-	{
-		fileOpen->SetFolder(shellItem);
-		shellItem->Release();
-	}
-}
-
-bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
-{
-	bool result = false;
-	IFileOpenDialog *pFileOpen = nullptr;
-
-	HRESULT hr = CoCreateInstance(
-		save ? CLSID_FileSaveDialog : CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, 
-		save ? IID_IFileSaveDialog : IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
-
-	if (SUCCEEDED(hr))
-	{
-		if (id) pFileOpen->SetClientGuid(*id);
-		if (addFileDialogOptions(pFileOpen, FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR/* | FOS_DONTADDTORECENT*/))
-		{
-			if (types)
-			{
-				vector<COMDLG_FILTERSPEC> filters;
-				while (true)
-				{
-					const WCHAR* name = types;
-					if (!*name) break;
-					const WCHAR* next = wcschr(name, 0);
-					const WCHAR* spec = next + 1;
-					filters.emplace_back(COMDLG_FILTERSPEC{name, spec});
-					next = wcschr(spec, 0);
-					types = next + 1;
-				}
-				pFileOpen->SetFileTypes(filters.size(), filters.data());
-			}
-			if (defExt) pFileOpen->SetDefaultExtension(defExt);
-			if (!initialDir.empty())
-				setFolder(pFileOpen, initialDir);
-			if (!target.empty())
-			{
-				auto pos = target.rfind(PATH_SEPARATOR);
-				if (pos != tstring::npos && initialDir.empty())
-					setFolder(pFileOpen, target.substr(0, pos));
-				if (pos != tstring::npos)
-					target.erase(0, pos + 1);
-				pFileOpen->SetFileName(target.c_str());
-				if (!defExt)
-				{
-					tstring ext = Util::getFileExtWithoutDot(target);
-					if (!ext.empty()) pFileOpen->SetDefaultExtension(ext.c_str());
-				}
-			}
-			hr = pFileOpen->Show(owner);
-			if (SUCCEEDED(hr))
-			{
-				IShellItem *pItem;
-				hr = pFileOpen->GetResult(&pItem);
-				if (SUCCEEDED(hr))
-				{
-					PWSTR pszFilePath;
-					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-					if (SUCCEEDED(hr))
-					{
-						target = pszFilePath;
-						CoTaskMemFree(pszFilePath);
-						result = true;
-					}
-					pItem->Release();
-				}
-			}
-		}
-	}
-	if (pFileOpen) pFileOpen->Release();
-	return result;
-}
-
-#endif
-
 void WinUtil::setClipboard(const tstring& str)
 {
 	if (!::OpenClipboard(g_mainWnd))
@@ -680,12 +461,10 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)
 	return true;
 }
 
-void WinUtil::copyMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
+void WinUtil::copyMagnet(const TTHValue& hash, const string& file, int64_t size)
 {
-	if (!aFile.empty())
-	{
-		setClipboard(Text::toT(Util::getMagnet(aHash, aFile, aSize)));
-	}
+	if (!file.empty())
+		setClipboard(Text::toT(Util::getMagnet(hash, file, size)));
 }
 
 void WinUtil::searchFile(const string& file)
@@ -696,220 +475,6 @@ void WinUtil::searchFile(const string& file)
 void WinUtil::searchHash(const TTHValue& hash)
 {
 	SearchFrame::openWindow(Text::toT(hash.toBase32()), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
-}
-
-static bool regReadString(HKEY key, const TCHAR* name, tstring& value)
-{
-	TCHAR buf[512];
-	DWORD size = sizeof(buf);
-	DWORD type;
-	if (RegQueryValueEx(key, name, nullptr, &type, (BYTE *) buf, &size) != ERROR_SUCCESS ||
-	    (type != REG_SZ && type != REG_EXPAND_SZ))
-	{
-		value.clear();
-		return false;
-	}
-	size /= sizeof(TCHAR);
-	if (size && buf[size-1] == 0) size--;
-	value.assign(buf, size);
-	return true;
-}
-
-static bool regWriteString(HKEY key, const TCHAR* name, const TCHAR* value, DWORD len)
-{
-	return RegSetValueEx(key, name, 0, REG_SZ, (const BYTE *) value, (len + 1) * sizeof(TCHAR)) == ERROR_SUCCESS;
-}
-
-static inline bool regWriteString(HKEY key, const TCHAR* name, const tstring& str)
-{
-	return regWriteString(key, name, str.c_str(), str.length());
-}
-
-static bool registerUrlHandler(const TCHAR* proto, const TCHAR* description)
-{
-	HKEY key = nullptr;
-	tstring value;
-	tstring exePath = Util::getModuleFileName();
-	tstring app = _T('\"') + exePath + _T("\" /magnet \"%1\"");
-	tstring pathProto = _T("SOFTWARE\\Classes\\");
-	pathProto += proto;
-	tstring pathCommand = pathProto + _T("\\Shell\\Open\\Command");
-	
-	if (RegOpenKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
-	{
-		regReadString(key, nullptr, value);
-		RegCloseKey(key);
-	}
-	
-	if (stricmp(app, value) == 0)
-		return true;
-
-	if (RegCreateKeyEx(HKEY_CURRENT_USER, pathProto.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS)
-		return false;
-		
-	bool result = false;
-	do
-	{
-		if (!regWriteString(key, nullptr, description, _tcslen(description))) break;
-		if (!regWriteString(key, _T("URL Protocol"), Util::emptyStringT)) break;
-		RegCloseKey(key);
-		key = nullptr;
-		
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, app)) break;
-		RegCloseKey(key);
-		key = nullptr;
-		
-		tstring pathIcon = pathProto + _T("\\DefaultIcon");
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathIcon.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, exePath)) break;
-		result = true;
-	} while (0);
-
-	if (key) RegCloseKey(key);
-	return result;
-}
-
-void WinUtil::registerHubUrlHandlers()
-{
-	if (registerUrlHandler(_T("dchub"), _T("URL:Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
-	else
-		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "dchub"));
-
-	if (registerUrlHandler(_T("nmdcs"), _T("URL:Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
-	else
-		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "nmdcs"));
-
-	if (registerUrlHandler(_T("adc"), _T("URL:Advanced Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
-	else
-		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "adc"));
-
-	if (registerUrlHandler(_T("adcs"), _T("URL:Advanced Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
-	else
-		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "adcs"));
-}
-
-static void internalDeleteRegistryKey(const tstring& key)
-{
-	tstring path = _T("SOFTWARE\\Classes\\") + key;
-	if (SHDeleteKey(HKEY_CURRENT_USER, path.c_str()) != ERROR_SUCCESS)
-		LogManager::message(STRING_F(ERROR_DELETING_REGISTRY_KEY, Text::fromT(path) % Util::translateError()));
-}
-
-void WinUtil::unregisterHubUrlHandlers()
-{
-	internalDeleteRegistryKey(_T("dchub"));
-	internalDeleteRegistryKey(_T("nmdcs"));
-	internalDeleteRegistryKey(_T("adc"));
-	internalDeleteRegistryKey(_T("adcs"));
-	hubUrlHandlersRegistered = false;
-}
-
-void WinUtil::registerMagnetHandler()
-{
-	if (registerUrlHandler(_T("magnet"), _T("URL:Magnet Link")))
-		magnetHandlerRegistered = true;
-	else
-		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "magnet"));
-}
-
-void WinUtil::unregisterMagnetHandler()
-{
-	internalDeleteRegistryKey(_T("magnet"));
-	magnetHandlerRegistered = false;
-}
-
-static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
-{
-	HKEY key = nullptr;
-	tstring value;
-	tstring exePath = Util::getModuleFileName();
-	tstring app = _T('\"') + exePath + _T("\" /open \"%1\"");
-	tstring pathExt = _T("SOFTWARE\\Classes\\");
-	pathExt += names[0];
-	tstring pathCommand = pathExt + _T("\\Shell\\Open\\Command");
-	
-	if (RegOpenKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
-	{
-		regReadString(key, nullptr, value);
-		RegCloseKey(key);
-	}
-	
-	if (stricmp(app, value) == 0)
-		return true;
-
-	if (RegCreateKeyEx(HKEY_CURRENT_USER, pathExt.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS)
-		return false;
-		
-	bool result = false;
-	do
-	{
-		if (!regWriteString(key, nullptr, description, _tcslen(description))) break;
-		RegCloseKey(key);
-		key = nullptr;
-		
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, app)) break;
-		RegCloseKey(key);
-		key = nullptr;
-		
-		tstring pathIcon = pathExt + _T("\\DefaultIcon");
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathIcon.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, exePath)) break;
-		RegCloseKey(key);
-		key = nullptr;
-
-		int i = 1;
-		DWORD len = _tcslen(names[0]);
-		while (true)
-		{
-			if (!names[i])
-			{
-				result = true;
-				break;
-			}
-			tstring path = _T("SOFTWARE\\Classes\\");
-			path += names[i];
-			if (RegCreateKeyEx(HKEY_CURRENT_USER, path.c_str(), 0, nullptr,
-			    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-			if (!regWriteString(key, nullptr, names[0], len)) break;
-			RegCloseKey(key);
-			key = nullptr;
-			i++;
-		}
-	} while (0);
-
-	if (key) RegCloseKey(key);
-	return result;
-}
-
-static const TCHAR* dcLstNames[] = { _T("DcLst download list"), _T(".dclst"), _T(".dcls"), nullptr };
-
-void WinUtil::registerDclstHandler()
-{
-	if (registerFileHandler(dcLstNames, CTSTRING(DCLST_DESCRIPTION)))
-		dclstHandlerRegistered = true;
-	else
-		LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCLST));
-}
-
-void WinUtil::unregisterDclstHandler()
-{
-	int i = 0;
-	while (dcLstNames[i])
-	{
-		internalDeleteRegistryKey(dcLstNames[i]);
-		i++;
-	}
-	dclstHandlerRegistered = false;
 }
 
 void WinUtil::playSound(const string& soundFile, bool beep /* = false */)
@@ -1128,29 +693,6 @@ void WinUtil::openFileList(const tstring& filename, DefinedMagnetAction Action /
 {
 	const UserPtr u = DirectoryListing::getUserFromFilename(Text::fromT(filename));
 	DirectoryListingFrame::openWindow(filename, Util::emptyStringT, HintedUser(u, Util::emptyString), 0, Util::isDclstFile(Text::fromT(filename)));
-}
-
-int WinUtil::textUnderCursor(POINT p, CEdit& ctrl, tstring& x)
-{
-	const int i = ctrl.CharFromPos(p);
-	const int line = ctrl.LineFromChar(i);
-	const int c = LOWORD(i) - ctrl.LineIndex(line);
-	const int len = ctrl.LineLength(i) + 1;
-	if (len < 3)
-	{
-		return 0;
-	}
-	
-	x.resize(len + 1);
-	x.resize(ctrl.GetLine(line, &x[0], len + 1));
-	
-	string::size_type start = x.find_last_of(_T(" <\t\r\n"), c);
-	if (start == string::npos)
-		start = 0;
-	else
-		start++;
-		
-	return start;
 }
 
 // !SMT!-UI (todo: disable - this routine does not save column visibility)
@@ -1674,6 +1216,57 @@ tstring WinUtil::getAutoRunShortcutName()
 	result += _T(".lnk");
 	
 	return result;
+}
+
+int WinUtil::getTextWidth(const tstring& str, HWND hWnd)
+{
+	int width = 0;
+	if (str.length())
+	{
+		HFONT hFont = (HFONT) SendMessage(hWnd, WM_GETFONT, 0, 0);
+		HDC dc = GetDC(hWnd);
+		if (dc)
+		{
+			HGDIOBJ prevObj = hFont ? SelectObject(dc, hFont) : nullptr;
+			SIZE size;
+			GetTextExtentPoint32(dc, str.c_str(), str.length(), &size);
+			width = size.cx;
+			if (prevObj) SelectObject(dc, prevObj);
+			ReleaseDC(hWnd, dc);
+		}
+	}
+	return width;
+}
+
+int WinUtil::getTextWidth(const tstring& str, HDC dc)
+{
+	SIZE sz = { 0, 0 };
+	if (str.length())
+		GetTextExtentPoint32(dc, str.c_str(), str.length(), &sz);
+	return sz.cx;
+}
+
+int WinUtil::getTextHeight(HDC dc)
+{
+	TEXTMETRIC tm = {};
+	GetTextMetrics(dc, &tm);
+	return tm.tmHeight;
+}
+
+int WinUtil::getTextHeight(HDC dc, HFONT hFont)
+{
+	HGDIOBJ prevObj = SelectObject(dc, hFont);
+	int h = getTextHeight(dc);
+	SelectObject(dc, prevObj);
+	return h;
+}
+
+int WinUtil::getTextHeight(HWND hWnd, HFONT hFont)
+{
+	HDC dc = GetDC(hWnd);
+	int h = getTextHeight(dc, hFont);
+	ReleaseDC(hWnd, dc);
+	return h;
 }
 
 void WinUtil::getWindowText(HWND hwnd, tstring& text)

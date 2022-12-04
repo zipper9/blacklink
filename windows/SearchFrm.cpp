@@ -26,6 +26,7 @@
 #include "BarShader.h"
 #include "ImageLists.h"
 #include "ExMessageBox.h"
+#include "BrowseFile.h"
 
 #include "../client/Client.h"
 #include "../client/QueueManager.h"

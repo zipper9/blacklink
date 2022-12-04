@@ -158,7 +158,6 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	sortShareGroups();
 
 	ctrlDirs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
-	SET_LIST_COLOR_IN_SETTING(ctrlDirs);
 	WinUtil::setExplorerTheme(ctrlDirs);
 	CRect rc;
 	ctrlDirs.GetClientRect(rc);	

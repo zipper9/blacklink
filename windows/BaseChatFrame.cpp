@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "MainFrm.h"
+#include "BrowseFile.h"
 #include "../client/StringTokenizer.h"
 #include <tom.h>
 #include <comdef.h>
@@ -823,7 +824,7 @@ void BaseChatFrame::destroyUserMenu()
 
 bool BaseChatFrame::processEnter()
 {
-	bool insertNewLine = WinUtil::isCtrlOrAlt();
+	bool insertNewLine = WinUtil::isCtrl() || WinUtil::isAlt();
 	if (BOOLSETTING(MULTILINE_CHAT_INPUT) && BOOLSETTING(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))
 		insertNewLine = !insertNewLine;
 	if (insertNewLine)

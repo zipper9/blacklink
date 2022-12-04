@@ -24,6 +24,27 @@
 #include "../client/LogManager.h"
 #include "../client/File.h"
 
+static int textUnderCursor(POINT p, CEdit& ctrl, tstring& x)
+{
+	const int i = ctrl.CharFromPos(p);
+	const int line = ctrl.LineFromChar(i);
+	const int c = LOWORD(i) - ctrl.LineIndex(line);
+	const int len = ctrl.LineLength(i) + 1;
+	if (len < 3)
+		return 0;
+
+	x.resize(len + 1);
+	x.resize(ctrl.GetLine(line, &x[0], len + 1));
+
+	string::size_type start = x.find_last_of(_T(" <\t\r\n"), c);
+	if (start == string::npos)
+		start = 0;
+	else
+		start++;
+
+	return start;
+}
+
 LRESULT NotepadFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -125,7 +146,7 @@ LRESULT NotepadFrame::onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		tstring x;
-		tstring::size_type start = (tstring::size_type)WinUtil::textUnderCursor(pt, ctrlPad, x);
+		tstring::size_type start = (tstring::size_type) textUnderCursor(pt, ctrlPad, x);
 		tstring::size_type end = x.find(_T(' '), start);
 		
 		if (end == string::npos)

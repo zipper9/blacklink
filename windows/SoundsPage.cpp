@@ -21,6 +21,7 @@
 #include "SoundsPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "BrowseFile.h"
 #include "../client/File.h"
 #include <mmsystem.h>
 
@@ -124,7 +125,6 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlSounds.GetClientRect(rc);
 	ctrlSounds.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	WinUtil::setExplorerTheme(ctrlSounds);
-	SET_LIST_COLOR_IN_SETTING(ctrlSounds);
 
 	ctrlSounds.InsertColumn(0, CTSTRING(SETTINGS_SOUNDS), LVCFMT_LEFT, (rc.Width() / 3) * 1, 0);
 	ctrlSounds.InsertColumn(1, CTSTRING(FILENAME), LVCFMT_LEFT, (rc.Width() / 3) * 2, 1);

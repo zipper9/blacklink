@@ -30,7 +30,6 @@ LRESULT DuplicateFilesDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	ctrlList.Attach(GetDlgItem(IDC_LIST1));
 	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	WinUtil::setExplorerTheme(ctrlList);
-	SET_LIST_COLOR_IN_SETTING(ctrlList);
 
 	CRect rc;
 	ctrlList.GetClientRect(rc);

@@ -492,13 +492,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::RecheckNoTree, const string& target) noexcept override;
 		void on(QueueManagerListener::RecheckAlreadyFinished, const string& target) noexcept override;
 		void on(QueueManagerListener::RecheckDone, const string& target) noexcept override;
-		
-#ifdef FLYLINKDC_USE_TORRENT
-		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;
-		void on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& sha1) noexcept override;
-		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& fileName) noexcept override;
-		void on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& sha1, const std::string& savePath) noexcept override;
-#endif
 };
 
 #endif // !defined(QUEUE_FRAME_H)

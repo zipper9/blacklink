@@ -21,6 +21,7 @@
 #include "Resource.h"
 #include "PreviewDlg.h"
 #include "WinUtil.h"
+#include "BrowseFile.h"
 #include <boost/algorithm/string.hpp>
 
 static const WinUtil::TextItem texts[] =

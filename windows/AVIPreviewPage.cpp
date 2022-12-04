@@ -46,7 +46,6 @@ LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlCommands.InsertColumn(3, CTSTRING(SETTINGS_EXTENSIONS), LVCFMT_LEFT, rc.Width() / 5, 3);
 	
 	ctrlCommands.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	WinUtil::setExplorerTheme(ctrlCommands);
 	
 	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();

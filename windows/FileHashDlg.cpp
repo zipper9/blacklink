@@ -6,6 +6,7 @@
 #include "../client/File.h"
 #include "DialogLayout.h"
 #include "WinUtil.h"
+#include "BrowseFile.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"

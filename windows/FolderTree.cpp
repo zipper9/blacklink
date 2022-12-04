@@ -17,6 +17,7 @@ Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@n
 #include "Resource.h"
 #include "LineDlg.h"
 #include "WinUtil.h"
+#include "wtl_flylinkdc.h"
 
 //Pull in the WNet Lib automatically
 #pragma comment(lib, "mpr.lib")

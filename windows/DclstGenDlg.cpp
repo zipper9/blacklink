@@ -22,6 +22,7 @@
 #include "DialogLayout.h"
 #include "ImageLists.h"
 #include "WinUtil.h"
+#include "BrowseFile.h"
 #include "../client/BZUtils.h"
 #include "../client/FilteredFile.h"
 #include "../client/HashUtil.h"

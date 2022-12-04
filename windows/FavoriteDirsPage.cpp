@@ -35,7 +35,6 @@ LRESULT FavoriteDirsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	WinUtil::translate(*this, texts);
 	ctrlDirectories.Attach(GetDlgItem(IDC_FAVORITE_DIRECTORIES));
 	ctrlDirectories.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
 	WinUtil::setExplorerTheme(ctrlDirectories);
 	
 	CRect rc;

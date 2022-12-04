@@ -75,13 +75,15 @@
 #include "../client/SocketPool.h"
 #include "../client/AntiFlood.h"
 #include "../client/IpTest.h"
+#include "../client/CompatibilityManager.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
 #include "LimitEditDlg.h"
 #include "ExMessageBox.h"
 #include "CommandLine.h"
-#include "CompatibilityManager.h"
+#include "BrowseFile.h"
+#include "WinSysHandlers.h"
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 #include "TextFrame.h"
@@ -1132,7 +1134,7 @@ LRESULT MainFrame::onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/
 			bHandled = FALSE;
 			break;
 		case VK_RETURN:
-			if (WinUtil::isShift() || WinUtil::isCtrlOrAlt())
+			if (WinUtil::isShift() || WinUtil::isCtrl() || WinUtil::isAlt())
 			{
 				bHandled = FALSE;
 			}
@@ -1860,7 +1862,7 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 
 void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 {
-	CFlyLockWindowUpdate l(WinUtil::g_mdiClient);
+	::LockWindowUpdate(WinUtil::g_mdiClient);
 	HubFrame* lastFrame = nullptr;
 	HubFrame::Settings cs;
 	for (const FavoriteHubEntry& entry : hubs)
@@ -1896,6 +1898,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 	ClientManager::stopStartup();
 	if (lastFrame)
 		lastFrame->showActiveFrame();
+	::LockWindowUpdate(NULL);
 }
 
 void MainFrame::setTrayIcon(int newIcon)

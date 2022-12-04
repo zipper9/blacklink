@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "DCLSTPage.h"
 #include "WinUtil.h"
+#include "BrowseFile.h"
 #include "../client/SettingsManager.h"
 
 static const WinUtil::TextItem texts[] =

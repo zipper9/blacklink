@@ -21,6 +21,7 @@
 #include "DownloadPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "BrowseFile.h"
 #include "../client/File.h"
 
 using DialogLayout::FLAG_TRANSLATE;

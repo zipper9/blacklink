@@ -20,6 +20,7 @@
 #include "Resource.h"
 #include "SharePage.h"
 #include "LineDlg.h"
+#include "BrowseFile.h"
 #include "../client/Util.h"
 #include "../client/ShareManager.h"
 
@@ -66,7 +67,6 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 
 	ctrlDirectories.Attach(GetDlgItem(IDC_DIRECTORIES));
 	ctrlDirectories.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
 	WinUtil::setExplorerTheme(ctrlDirectories);
 	contDirectories.SubclassWindow(ctrlDirectories);
 

@@ -22,6 +22,7 @@
 #include "Fonts.h"
 #include "MainFrm.h"
 #include "PopupManager.h"
+#include "BrowseFile.h"
 
 static const WinUtil::TextItem texts[] =
 {

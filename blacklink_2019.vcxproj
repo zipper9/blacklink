@@ -770,6 +770,7 @@
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
     <ClCompile Include="windows\BaseHandlers.cpp" />
+    <ClCompile Include="windows\BrowseFile.cpp" />
     <ClCompile Include="windows\CDMDebugFrame.cpp" />
     <ClCompile Include="windows\CertificatesPage.cpp" />
     <ClCompile Include="windows\ChatCtrl.cpp" />
@@ -935,6 +936,7 @@
     <ClCompile Include="windows\WebServerPage.cpp" />
     <ClCompile Include="windows\WindowsPage.cpp" />
     <ClCompile Include="windows\WinFirewall.cpp" />
+    <ClCompile Include="windows\WinSysHandlers.cpp" />
     <ClCompile Include="windows\WinUtil.cpp" />
     <ClCompile Include="windows\WMPlayerRemoteApi.cpp" />
     <ClCompile Include="windows\PublicHubsFrm.cpp" />
@@ -953,6 +955,7 @@
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />
     <ClInclude Include="windows\BaseHandlers.h" />
+    <ClInclude Include="windows\BrowseFile.h" />
     <ClInclude Include="windows\CDMDebugFrame.h" />
     <ClInclude Include="windows\CertificatesPage.h" />
     <ClInclude Include="windows\ChatCtrl.h" />
@@ -1063,6 +1066,7 @@
     <ClInclude Include="windows\UserListWindow.h" />
     <ClInclude Include="windows\UserMessages.h" />
     <ClInclude Include="windows\WinFirewall.h" />
+    <ClInclude Include="windows\WinSysHandlers.h" />
     <ClInclude Include="windows\wmp.h" />
     <ClInclude Include="windows\WMPlayerRemoteApi.h" />
     <ClInclude Include="windows\wtl_flylinkdc.h" />
