@@ -35,6 +35,9 @@ int g_DisableSQLtrace = 0;
 
 static const unsigned BUSY_TIMEOUT = 120000;
 static const unsigned GEOIP_DOWNLOAD_RETRY_TIME = 600000; // 10 minutes
+static const unsigned SAVE_BATCH_TIME = 60000;
+static const size_t IP_STAT_BATCH_SIZE = 200;
+static const size_t USER_STAT_BATCH_SIZE = 200;
 
 static const string fileNameGeoIP = "country_ip_db.mmdb";
 
@@ -792,20 +795,20 @@ void DatabaseConnection::saveP2PGuardData(const vector<P2PGuardData>& data, int 
 }
 
 #ifdef BL_FEATURE_IP_DATABASE
-void DatabaseConnection::saveIPStat(const CID& cid, const vector<IPStatVecItem>& items)
+void DatabaseConnection::saveIPStats(const vector<DBIPStatItem>& items)
 {
-	const int batchSize = 256;
 	try
 	{
 		int count = 0;
 		sqlite3_transaction trans(connection, false);
-		for (const IPStatVecItem& item : items)
-			saveIPStatL(cid, item.ip, item.item, batchSize, count, trans);
+		for (const DBIPStatItem& item : items)
+			for (const IPStatVecItem& ipStat : item.items)
+				saveIPStatL(item.cid, ipStat.ip, ipStat.item, INT_MAX, count, trans);
 		if (count) trans.commit();
 	}
 	catch (const database_error& e)
 	{
-		DatabaseManager::getInstance()->reportError("SQLite - saveIPStat: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - saveIPStats: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -886,7 +889,7 @@ void DatabaseConnection::removeIPStat(const CID& cid)
 	}
 }
 
-void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans)
+void DatabaseConnection::saveUserStat(const CID& cid, const UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans)
 {
 	string nickList;
 	for (const string& nick : stat.nickList)
@@ -918,7 +921,6 @@ void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat, int ba
 		trans.commit();
 		count = 0;
 	}
-	stat.flags &= ~UserStatItem::FLAG_CHANGED;
 }
 
 void DatabaseConnection::removeUserStat(const CID& cid)
@@ -935,17 +937,19 @@ void DatabaseConnection::removeUserStat(const CID& cid)
 	}
 }
 
-void DatabaseConnection::saveUserStat(const CID& cid, UserStatItem& stat)
+void DatabaseConnection::saveUserStats(const vector<DBUserStatItem>& items)
 {
 	try
 	{
 		sqlite3_transaction trans(connection, false);
 		int count = 0;
-		saveUserStat(cid, stat, 1, count, trans);
+		for (const DBUserStatItem& item : items)
+			saveUserStat(item.cid, item.stat, INT_MAX, count, trans);
+		trans.commit();
 	}
 	catch (const database_error& e)
 	{
-		DatabaseManager::getInstance()->reportError("SQLite - saveUserStat: " + e.getError(), e.getErrorCode());
+		DatabaseManager::getInstance()->reportError("SQLite - saveUserStats: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1153,10 +1157,11 @@ DatabaseManager::DatabaseManager() noexcept
 {
 #ifdef BL_FEATURE_IP_DATABASE
 	globalRatio.download = globalRatio.upload = 0;
+	timeIpStatSaved = timeUserStatSaved = 0;
+	timeLoadGlobalRatio = 0;
 #endif
 	journalMode = JOUNRAL_MODE_PERSIST;
 	defThreadId = 0;
-	timeLoadGlobalRatio = 0;
 	deleteOldTransfers = true;
 	errorCallback = nullptr;
 	timeTransfersSaved = 0;
@@ -1517,6 +1522,54 @@ DatabaseManager::GlobalRatio DatabaseManager::getGlobalRatio() const
 	LOCK(csGlobalRatio);
 	return globalRatio;
 }
+
+void DatabaseManager::saveIPStat(const CID& cid, const vector<IPStatVecItem>& items) noexcept
+{
+	SaveIPStatJob* job = nullptr;
+	{
+		LOCK(csIpStat);
+		for (auto& item : ipStatItems)
+			if (item.cid == cid)
+			{
+				item.items = items;
+				return;
+			}
+		ipStatItems.emplace_back(DBIPStatItem{cid, items});
+		if (ipStatItems.size() >= IP_STAT_BATCH_SIZE)
+		{
+			job = new SaveIPStatJob;
+			job->items = std::move(ipStatItems);
+			ipStatItems.clear();
+			timeIpStatSaved = GET_TICK();
+		}
+	}
+	if (job && !backgroundThread.addJob(job))
+		delete job;
+}
+
+void DatabaseManager::saveUserStat(const CID& cid, const UserStatItem& stat) noexcept
+{
+	SaveUserStatJob* job = nullptr;
+	{
+		LOCK(csUserStat);
+		for (auto& item : userStatItems)
+			if (item.cid == cid)
+			{
+				item.stat = stat;
+				return;
+			}
+		userStatItems.emplace_back(DBUserStatItem{cid, stat});
+		if (userStatItems.size() >= USER_STAT_BATCH_SIZE)
+		{
+			job = new SaveUserStatJob;
+			job->items = std::move(userStatItems);
+			userStatItems.clear();
+			timeUserStatSaved = GET_TICK();
+		}
+	}
+	if (job && !backgroundThread.addJob(job))
+		delete job;
+}
 #endif
 
 void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item) noexcept
@@ -1539,46 +1592,98 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 		if (transfers.size() >= maxCount)
 		{
 			job = new SaveTransfersJob;
-			job->transfers = std::move(transfers);
+			job->items = std::move(transfers);
 			transfers.clear();
 			timeTransfersSaved = GET_TICK();
 		}
 	}
-	if (job && !saveTransfersThread.addJob(job))
+	if (job && !backgroundThread.addJob(job))
 		delete job;
 }
 
-void DatabaseManager::savePendingTransfers(uint64_t tick) noexcept
+void DatabaseManager::savePendingData(uint64_t tick) noexcept
 {
-	SaveTransfersJob* job = nullptr;
+	SaveTransfersJob* jobTransfers = nullptr;
 	{
 		LOCK(csTransfers);
-		if (!transfers.empty() && timeTransfersSaved + 60000 <= tick)
+		if (!transfers.empty() && timeTransfersSaved + SAVE_BATCH_TIME <= tick)
 		{
-				job = new SaveTransfersJob;
-				job->transfers = std::move(transfers);
+				jobTransfers = new SaveTransfersJob;
+				jobTransfers->items = std::move(transfers);
 				transfers.clear();
 				timeTransfersSaved = tick;
 		}
 	}
-	if (job && !saveTransfersThread.addJob(job))
-		delete job;
+#ifdef BL_FEATURE_IP_DATABASE
+	SaveIPStatJob* jobIpStat = nullptr;
+	{
+		LOCK(csIpStat);
+		if (!ipStatItems.empty() && timeIpStatSaved + SAVE_BATCH_TIME <= tick)
+		{
+				jobIpStat = new SaveIPStatJob;
+				jobIpStat->items = std::move(ipStatItems);
+				ipStatItems.clear();
+				timeIpStatSaved = tick;
+		}
+	}
+	SaveUserStatJob* jobUserStat = nullptr;
+	{
+		LOCK(csUserStat);
+		if (!userStatItems.empty() && timeUserStatSaved + SAVE_BATCH_TIME <= tick)
+		{
+				jobUserStat = new SaveUserStatJob;
+				jobUserStat->items = std::move(userStatItems);
+				userStatItems.clear();
+				timeUserStatSaved = tick;
+		}
+	}
+#endif
+	if (jobTransfers && !backgroundThread.addJob(jobTransfers))
+		delete jobTransfers;
+#ifdef BL_FEATURE_IP_DATABASE
+	if (jobIpStat && !backgroundThread.addJob(jobIpStat))
+		delete jobIpStat;
+	if (jobUserStat && !backgroundThread.addJob(jobUserStat))
+		delete jobUserStat;
+#endif
 }
 
-void DatabaseManager::flushPendingTransfers() noexcept
+void DatabaseManager::flushPendingData() noexcept
 {
-	vector<DBTransferItem> tmp;
+	vector<DBTransferItem> tmpTransfers;
 	{
 		LOCK(csTransfers);
-		tmp = std::move(transfers);
+		tmpTransfers = std::move(transfers);
 		transfers.clear();
 	}
-	if (!tmp.empty())
+#ifdef BL_FEATURE_IP_DATABASE
+	vector<DBIPStatItem> tmpIpStat;
+	{
+		LOCK(csIpStat);
+		tmpIpStat = std::move(ipStatItems);
+		ipStatItems.clear();
+	}
+	vector<DBUserStatItem> tmpUserStat;
+	{
+		LOCK(csUserStat);
+		tmpUserStat = std::move(userStatItems);
+		userStatItems.clear();
+	}
+#endif
+	if (!tmpTransfers.empty()
+#ifdef BL_FEATURE_IP_DATABASE
+	|| !tmpIpStat.empty() || !tmpUserStat.empty()
+#endif
+	)
 	{
 		auto conn = getConnection();
 		if (conn)
 		{
-			conn->addTransfers(tmp);
+			if (!tmpTransfers.empty()) conn->addTransfers(tmpTransfers);
+#ifdef BL_FEATURE_IP_DATABASE
+			if (!tmpIpStat.empty()) conn->saveIPStats(tmpIpStat);
+			if (!tmpUserStat.empty()) conn->saveUserStats(tmpUserStat);
+#endif
 			putConnection(conn);
 		}
 	}
@@ -1590,22 +1695,46 @@ void DatabaseManager::SaveTransfersJob::run()
 	auto conn = db->getConnection();
 	if (conn)
 	{
-		conn->addTransfers(transfers);
+		conn->addTransfers(items);
 		db->putConnection(conn);
 	}
 }
 
+#ifdef BL_FEATURE_IP_DATABASE
+void DatabaseManager::SaveIPStatJob::run()
+{
+	auto db = DatabaseManager::getInstance();
+	auto conn = db->getConnection();
+	if (conn)
+	{
+		conn->saveIPStats(items);
+		db->putConnection(conn);
+	}
+}
+
+void DatabaseManager::SaveUserStatJob::run()
+{
+	auto db = DatabaseManager::getInstance();
+	auto conn = db->getConnection();
+	if (conn)
+	{
+		conn->saveUserStats(items);
+		db->putConnection(conn);
+	}
+}
+#endif
+
 void DatabaseManager::processTimer(uint64_t tick) noexcept
 {
 	closeIdleConnections(tick);
-	savePendingTransfers(tick);
+	savePendingData(tick);
 }
 
 void DatabaseManager::shutdown()
 {
 	lmdb.close();
-	saveTransfersThread.shutdown(true);
-	flushPendingTransfers();
+	backgroundThread.shutdown(true);
+	flushPendingData();
 	{
 		LOCK(cs);
 		defConn.reset();

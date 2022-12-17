@@ -927,7 +927,6 @@ void HubFrame::processTasks()
 							//client->incMessagesCount();
 							shouldUpdateStats |= ctrlUsers.updateUser(msg->from, 1<<COLUMN_MESSAGES, isDHT || isConnected());
 #endif
-							// msg->from->getUser()->flushRatio();
 						}
 						else
 						{

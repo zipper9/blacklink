@@ -45,7 +45,6 @@ User::User(const CID& cid, const string& nick) : cid(cid),
 
 User::~User()
 {
-	// TODO пока нельзя - вешается flushRatio();
 #ifdef _DEBUG
 	--g_user_counts;
 #endif
@@ -303,13 +302,7 @@ void User::saveUserStat()
 	userStat.flags |= UserStatItem::FLAG_LOADED;
 	cs.unlock();
 
-	auto dm = DatabaseManager::getInstance();
-	auto conn = dm->getConnection();
-	if (conn)
-	{
-		conn->saveUserStat(getCID(), dbStat);
-		dm->putConnection(conn);
-	}
+	DatabaseManager::getInstance()->saveUserStat(getCID(), dbStat);
 }
 
 void User::saveIPStat()
@@ -340,13 +333,7 @@ void User::saveIPStat()
 	}
 	cs.unlock();
 
-	auto dm = DatabaseManager::getInstance();
-	auto conn = dm->getConnection();
-	if (conn)
-	{
-		conn->saveIPStat(getCID(), items);
-		dm->putConnection(conn);
-	}
+	DatabaseManager::getInstance()->saveIPStat(getCID(), items);
 	if (loadUserStat) loadUserStatFromDB();
 }
 

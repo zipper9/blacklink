@@ -487,8 +487,10 @@ string Identity::formatSpeedLimit(const uint32_t limit)
 
 void Identity::getReport(string& report)
 {
+#ifdef BL_FEATURE_IP_DATABASE
 	user->loadIPStat();
 	user->loadUserStat();
+#endif
 	report = " *** User info ***\r\n";
 	const string sid = getSIDString();
 	{

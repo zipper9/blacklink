@@ -126,6 +126,20 @@ struct DBTransferItem
 	FinishedItemPtr item;
 };
 
+#ifdef BL_FEATURE_IP_DATABASE
+struct DBIPStatItem
+{
+	CID cid;
+	vector<IPStatVecItem> items;
+};
+
+struct DBUserStatItem
+{
+	CID cid;
+	UserStatItem stat;
+};
+#endif
+
 class DatabaseConnection
 {
 		friend class DatabaseManager;
@@ -154,10 +168,10 @@ class DatabaseConnection
 		void removeManuallyBlockedIP(Ip4Address ip);
 #ifdef BL_FEATURE_IP_DATABASE
 		bool loadUserStat(const CID& cid, UserStatItem& stat);
-		void saveUserStat(const CID& cid, UserStatItem& stat);
+		void saveUserStats(const vector<DBUserStatItem>& items);
 		void removeUserStat(const CID& cid);
 		IPStatMap* loadIPStat(const CID& cid);
-		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items);
+		void saveIPStats(const vector<DBIPStatItem>& items);
 		void removeIPStat(const CID& cid);
 		bool loadGlobalRatio(uint64_t values[]);
 #endif
@@ -177,7 +191,7 @@ class DatabaseConnection
 #ifdef BL_FEATURE_IP_DATABASE
 		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
 		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
-		void saveUserStat(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
+		void saveUserStat(const CID& cid, const UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
 #endif
 		static int progressHandler(void* ctx);
 
@@ -264,7 +278,6 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		void putHashDatabaseConnection(HashDatabaseConnection* conn) noexcept { lmdb.putConnection(conn); }
 		static void quoteString(string& s) noexcept;
 		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item) noexcept;
-		void savePendingTransfers(uint64_t tick) noexcept;
 		void processTimer(uint64_t tick) noexcept;
 
 	public:
@@ -310,11 +323,14 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 
 		void loadGlobalRatio(bool force = false);
 		GlobalRatio getGlobalRatio() const;
+		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items) noexcept;
+		void saveUserStat(const CID& cid, const UserStatItem& stat) noexcept;
 #endif
 
 	private:
 		bool checkDbPrefix(const string& path, const string& str) noexcept;
-		void flushPendingTransfers() noexcept;
+		void flushPendingData() noexcept;
+		void savePendingData(uint64_t tick) noexcept;
 
 	protected:
 		void on(Completed, uint64_t id, const Http::Response& resp, const Result& data) noexcept override;
@@ -358,21 +374,44 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 
 		struct SaveTransfersJob : public JobExecutor::Job
 		{
-			vector<DBTransferItem> transfers;
+			vector<DBTransferItem> items;
 			void run() override;
 		};
+
+#ifdef BL_FEATURE_IP_DATABASE
+		struct SaveIPStatJob : public JobExecutor::Job
+		{
+			vector<DBIPStatItem> items;
+			void run() override;
+		};
+
+		struct SaveUserStatJob : public JobExecutor::Job
+		{
+			vector<DBUserStatItem> items;
+			void run() override;
+		};
+#endif
 
 		std::atomic_bool deleteOldTransfers;
 		vector<DBTransferItem> transfers;
 		CriticalSection csTransfers;
 		uint64_t timeTransfersSaved;
-		JobExecutor saveTransfersThread;
 
 #ifdef BL_FEATURE_IP_DATABASE
+		vector<DBIPStatItem> ipStatItems;
+		CriticalSection csIpStat;
+		uint64_t timeIpStatSaved;
+
+		vector<DBUserStatItem> userStatItems;
+		CriticalSection csUserStat;
+		uint64_t timeUserStatSaved;
+
 		mutable CriticalSection csGlobalRatio;
 		GlobalRatio globalRatio;
 		uint64_t timeLoadGlobalRatio;
 #endif
+
+		JobExecutor backgroundThread;
 
 		static const size_t TREE_CACHE_SIZE = 300;
 
