@@ -48,9 +48,6 @@ void MessagePanel::destroyPanel()
 {
 	for (int i = 0; i < MAX_BUTTONS; ++i)
 		ctrlButtons[i].DestroyWindow();
-#ifdef FLYLINKDC_USE_BB_SIZE_CODE
-	ctrlSizeSel.DestroyWindow();
-#endif
 	tooltip.DestroyWindow();
 	initialized = false;
 }
@@ -74,22 +71,12 @@ void MessagePanel::initPanel(HWND hWnd)
 	createButton(BUTTON_ITALIC, IconBitmaps::EDITOR_ITALIC, IDC_ITALIC, ResourceManager::BBCODE_PANEL_ITALIC);
 	createButton(BUTTON_UNDERLINE, IconBitmaps::EDITOR_UNDERLINE, IDC_UNDERLINE, ResourceManager::BBCODE_PANEL_UNDERLINE);
 	createButton(BUTTON_STRIKETHROUGH, IconBitmaps::EDITOR_STRIKE, IDC_STRIKE, ResourceManager::BBCODE_PANEL_STRIKE);
+	createButton(BUTTON_LINK, IconBitmaps::EDITOR_LINK, IDC_LINK, ResourceManager::BBCODE_PANEL_LINK);
 	createButton(BUTTON_COLOR, IconBitmaps::EDITOR_COLOR, IDC_COLOR, ResourceManager::BBCODE_PANEL_COLOR);
+	createButton(BUTTON_FIND, IconBitmaps::EDITOR_FIND, IDC_FIND, ResourceManager::BBCODE_PANEL_FIND);
 	createButton(BUTTON_SELECT_HUB, IconBitmaps::HUB_ONLINE, IDC_SELECT_HUB, ResourceManager::SELECT_HUB);
 	createButton(BUTTON_CCPM, IconBitmaps::PADLOCK_OPEN, IDC_CCPM, ResourceManager::CONNECT_CCPM);
 
-#ifdef FLYLINKDC_USE_BB_SIZE_CODE
-	ctrlSizeSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS |
-	                   WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
-	ctrlSizeSel.SetFont(Fonts::g_font);
-	
-	ctrlSizeSel.AddString(L"-2");
-	ctrlSizeSel.AddString(L"-1");
-	ctrlSizeSel.AddString(L"+1");
-	ctrlSizeSel.AddString(L"+2");
-	ctrlSizeSel.SetCurSel(2);
-#endif
-	
 	tooltip.SetMaxTipWidth(200);
 	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
@@ -153,8 +140,9 @@ void MessagePanel::updatePanel(const CRect& rect)
 		if (BOOLSETTING(SHOW_BBCODE_PANEL))
 		{
 			updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
-			for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_COLOR; ++i)
+			for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_LINK; ++i)
 				updateButton(dwp, true, i, rc);
+			updateButton(dwp, BOOLSETTING(SHOW_LINK_BTN), BUTTON_LINK, rc);
 			updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
 		}
 		else
@@ -162,10 +150,8 @@ void MessagePanel::updatePanel(const CRect& rect)
 		{
 			for (int i = BUTTON_TRANSCODE; i <= BUTTON_COLOR; ++i)
 				updateButton(dwp, false, i, rc);
-#ifdef FLYLINKDC_USE_BB_SIZE_CODE
-			ctrlSizeSel.ShowWindow(SW_HIDE);
-#endif
 		}
+		updateButton(dwp, BOOLSETTING(SHOW_FIND_BTN), BUTTON_FIND, rc);
 		updateButton(dwp, showSelectHubButton, BUTTON_SELECT_HUB, rc);
 		updateButton(dwp, showCCPMButton, BUTTON_CCPM, rc);
 	}
@@ -178,24 +164,25 @@ int MessagePanel::getPanelWidth() const
 {
 	int width = 4;
 	if (disableChat) return width;
-	width += BOOLSETTING(SHOW_MULTI_CHAT_BTN) ? BUTTON_WIDTH : 0;
+	int count = 0;
+	if (BOOLSETTING(SHOW_MULTI_CHAT_BTN)) ++count;
 #ifdef IRAINMAN_INCLUDE_SMILE
-	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? BUTTON_WIDTH : 0;
+	if (BOOLSETTING(SHOW_EMOTICONS_BTN)) ++count;
 #endif
-	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? BUTTON_WIDTH : 0;
+	if (BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON)) ++count;
 #ifdef BL_UI_FEATURE_BB_CODES
 	if (BOOLSETTING(SHOW_BBCODE_PANEL))
 	{
-		int count = 4;
+		count += 4;
 		if (BOOLSETTING(SHOW_TRANSCODE_BTN)) ++count;
 		if (BOOLSETTING(FORMAT_BB_CODES_COLORS)) ++count;
-		width += BUTTON_WIDTH * count;
+		if (BOOLSETTING(SHOW_LINK_BTN)) ++count;
 	}
 #endif
-	if (showSelectHubButton)
-		width += BUTTON_WIDTH;
-	if (showCCPMButton)
-		width += BUTTON_WIDTH;
+	if (BOOLSETTING(SHOW_FIND_BTN)) ++count;
+	if (showSelectHubButton) ++count;
+	if (showCCPMButton) ++count;
+	width += BUTTON_WIDTH * count;
 	return width;
 }
 

@@ -738,6 +738,8 @@ static const char* settingTags[] =
 #endif
 	"ShowMultiChatButton",
 	"ShowTranscodeButton",
+	"ShowLinkButton",
+	"ShowFindButton",
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK	
 	"ChatRefferingToNick",
 #endif
@@ -1351,6 +1353,8 @@ void SettingsManager::setDefaults()
 	setDefault(FORMAT_BOT_MESSAGE, TRUE);
 #endif
 	setDefault(SHOW_MULTI_CHAT_BTN, TRUE);
+	setDefault(SHOW_LINK_BTN, TRUE);
+	setDefault(SHOW_FIND_BTN, TRUE);
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 	setDefault(CHAT_REFFERING_TO_NICK, TRUE);
 #endif

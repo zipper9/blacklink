@@ -47,8 +47,10 @@ static const PropPage::ListItem listItems[] =
 #endif
 #ifdef BL_UI_FEATURE_BB_CODES
 	{ SettingsManager::SHOW_BBCODE_PANEL, ResourceManager::SHOW_BBCODE_PANEL },
+	{ SettingsManager::SHOW_LINK_BTN, ResourceManager::SHOW_LINK_BTN },
 #endif
 	{ SettingsManager::SHOW_TRANSCODE_BTN, ResourceManager::SHOW_TRANSCODE_BTN },
+	{ SettingsManager::SHOW_FIND_BTN, ResourceManager::SHOW_FIND_BTN },
 	{ SettingsManager::MULTILINE_CHAT_INPUT, ResourceManager::MULTILINE_CHAT_INPUT },
 	{ SettingsManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, ResourceManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER },
 #ifdef BL_UI_FEATURE_BB_CODES

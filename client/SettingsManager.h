@@ -694,7 +694,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			POPUP_PMS_HUB,
 			POPUP_PMS_BOT,
 			POPUP_PMS_OTHER,
-			
+
 			// Chat frame
 			CHAT_BUFFER_SIZE,
 			CHAT_TIME_STAMPS,
@@ -711,12 +711,14 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 #endif
 			SHOW_MULTI_CHAT_BTN,
 			SHOW_TRANSCODE_BTN,
+			SHOW_LINK_BTN,
+			SHOW_FIND_BTN,
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 			CHAT_REFFERING_TO_NICK,
 #endif
 			IP_IN_CHAT,
 			COUNTRY_IN_CHAT,
-			ISP_IN_CHAT, 
+			ISP_IN_CHAT,
 			STATUS_IN_CHAT,
 			DISPLAY_CHEATS_IN_MAIN_CHAT,
 			USE_CTRL_FOR_LINE_HISTORY,

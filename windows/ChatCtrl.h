@@ -23,6 +23,7 @@
 #include <atlcrack.h>
 #include "../client/typedefs.h"
 #include "../client/Locks.h"
+#include "ChatTextParser.h"
 #include "UserMessages.h"
 #include "resource.h"
 
@@ -133,46 +134,16 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		tstring currentNeedle;
 		DWORD currentFindFlags;
 
+		ChatTextParser textParser;
+
 #ifdef IRAINMAN_INCLUDE_SMILE
 		IStorage* pStorage;
 #endif
 
-#ifdef BL_UI_FEATURE_BB_CODES
-		struct TagItem
-		{
-			int type;
-			tstring::size_type openTagStart;
-			tstring::size_type openTagEnd;
-			tstring::size_type closeTagStart;
-			tstring::size_type closeTagEnd;
-			CHARFORMAT2 fmt;
-		};		
-
-		vector<TagItem> tags;
-#endif
-		
-		struct LinkItem
-		{
-			int type;
-			tstring::size_type start;
-			tstring::size_type end;
-			tstring updatedText;
-			int hiddenTextLen;
-		};
-
-		vector<LinkItem> links;
-
 		void initRichEditOle();
 		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick);
-		void parseText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
-		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);
-#ifdef BL_UI_FEATURE_BB_CODES
-		const CHARFORMAT2* ChatCtrl::getPrevFormat() const;
-		static bool processTag(TagItem& item, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
-#endif
-		static void processLink(const tstring& text, LinkItem& li);
-		void findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
+		void appendText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
 		tstring getUrl(LONG start, LONG end, bool keepSelected);
 		tstring getUrl(const ENLINK* el, bool keepSelected);
 		tstring getUrlHiddenText(LONG end);

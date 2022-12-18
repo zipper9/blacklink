@@ -56,7 +56,9 @@ class MessagePanel
 			BUTTON_ITALIC,
 			BUTTON_UNDERLINE,
 			BUTTON_STRIKETHROUGH,
+			BUTTON_LINK,
 			BUTTON_COLOR,
+			BUTTON_FIND,
 			BUTTON_SELECT_HUB,
 			BUTTON_CCPM,
 			MAX_BUTTONS
@@ -96,9 +98,6 @@ class MessagePanel
 		CButton ctrlButtons[MAX_BUTTONS];
 #ifdef OSVER_WIN_XP
 		ImageButton imageButtons[MAX_BUTTONS];
-#endif
-#ifdef FLYLINKDC_USE_BB_SIZE_CODE
-		CComboBox ctrlSizeSel;
 #endif
 		CButton ctrlTransCodeBtn;
 #ifdef IRAINMAN_INCLUDE_SMILE

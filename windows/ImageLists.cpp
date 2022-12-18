@@ -464,6 +464,8 @@ IconBitmaps::IconBitmaps()
 	init(EDITOR_UNDERLINE,        SOURCE_EDITOR,   6);
 	init(EDITOR_STRIKE,           SOURCE_EDITOR,   7);
 	init(EDITOR_COLOR,            SOURCE_EDITOR,   8);
+	init(EDITOR_LINK,             SOURCE_EDITOR,   9);
+	init(EDITOR_FIND,             SOURCE_EDITOR,   10);
 	init(PM,                      SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
 	init(MAGNET,                  SOURCE_ICON,     IDR_MAGNET);
 	init(DCLST,                   SOURCE_ICON,     IDR_DCLST);

@@ -27,6 +27,75 @@
 #include <comdef.h>
 
 #ifdef BL_UI_FEATURE_BB_CODES
+class DlgInsertLink : public CDialogImpl<DlgInsertLink>
+{
+		CEdit ctrlLinkText;
+		CEdit ctrlDescription;
+
+	public:
+		tstring linkText;
+		tstring description;
+		bool editMode = false;
+
+		enum { IDD = IDD_INSERT_LINK };
+
+		BEGIN_MSG_MAP(DlgInsertLink)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_HANDLER(IDC_LINK_TEXT, EN_CHANGE, onChange)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+};
+
+static const WinUtil::TextItem texts[] =
+{
+	{ IDC_CAPTION_LINK_TEXT,   ResourceManager::INSERT_LINK_URL         },
+	{ IDC_CAPTION_DESCRIPTION, ResourceManager::INSERT_LINK_DESCRIPTION },
+	{ IDOK,                    ResourceManager::OK                      },
+	{ IDCANCEL,                ResourceManager::CANCEL                  },
+	{ 0,                       ResourceManager::Strings()               }
+};
+
+LRESULT DlgInsertLink::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	SetWindowText(editMode ? CTSTRING(INSERT_LINK_EDIT) : CTSTRING(INSERT_LINK_INSERT));
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::EDITOR_LINK, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+	WinUtil::translate(m_hWnd, texts);
+
+	ctrlLinkText.Attach(GetDlgItem(IDC_LINK_TEXT));
+	ctrlLinkText.SetWindowText(linkText.c_str());
+	ctrlDescription.Attach(GetDlgItem(IDC_DESCRIPTION));
+	ctrlDescription.SetWindowText(description.c_str());
+
+	CenterWindow();
+	return TRUE;
+}
+
+LRESULT DlgInsertLink::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (wID == IDOK)
+	{
+		WinUtil::getWindowText(ctrlLinkText, linkText);
+		WinUtil::getWindowText(ctrlDescription, description);
+	}
+	EndDialog(wID);
+	return 0;
+}
+
+LRESULT DlgInsertLink::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	tstring tmp;
+	WinUtil::getWindowText(ctrlLinkText, tmp);
+	GetDlgItem(IDOK).EnableWindow(!tmp.empty());
+	return 0;
+}
+
 static tstring printColor(COLORREF color)
 {
 	TCHAR buf[16];
@@ -52,7 +121,7 @@ void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 {
 #ifdef BL_UI_FEATURE_BB_CODES
 	tstring startTag;
-	tstring  endTag;
+	tstring endTag;
 	switch (wID)
 	{
 		case IDC_BOLD:
@@ -106,7 +175,7 @@ void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 	tstring setString = s.substr(0, startSel);
 	tstring middleString = s.substr(startSel, endSel - startSel);
 	tstring endString = s.substr(endSel, s.length() - endSel);
-	
+
 	if (endSel > startSel) // Has selection
 	{
 		setString += startTag;
@@ -134,6 +203,49 @@ void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 	}
 	ctrlMessage.SetFocus();
 #endif
+}
+
+LRESULT BaseChatFrame::onInsertLink(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+{
+#ifdef BL_UI_FEATURE_BB_CODES
+	int insertPos = 0, endSel = 0;
+	ctrlMessage.GetSel(insertPos, endSel);
+	tstring text;
+	WinUtil::getWindowText(ctrlMessage, text);
+	ChatTextParser textParser;
+	textParser.parseText(text, Colors::g_ChatTextMyOwn, true);
+	DlgInsertLink dlg;
+	for (const auto& tag : textParser.getTags())
+		if (tag.type == ChatTextParser::BBCODE_URL && insertPos >= (int) tag.openTagStart && insertPos <= (int) tag.closeTagEnd)
+		{
+			tag.getUrl(text, dlg.linkText, dlg.description);
+			dlg.editMode = true;
+			insertPos = tag.openTagStart;
+			text.erase(tag.openTagStart, tag.closeTagEnd - tag.openTagStart);
+			break;
+		}
+	if (dlg.DoModal(messagePanelHwnd) != IDOK) return 0;
+	tstring url = _T("[url");
+	if (!dlg.description.empty())
+	{
+		url += _T("=");
+		url += dlg.linkText;
+		url += _T("]");
+		url += dlg.description;
+	}
+	else
+	{
+		url += _T("]");
+		url += dlg.linkText;
+	}
+	url += _T("[/url]");
+	text.insert(insertPos, url);
+	insertPos += url.length();
+	ctrlMessage.SetWindowText(text.c_str());
+	ctrlMessage.SetSel(insertPos, insertPos);
+	ctrlMessage.SetFocus();
+#endif
+	return 0;
 }
 
 static TCHAR transcodeChar(const TCHAR msg)
@@ -395,7 +507,7 @@ LRESULT BaseChatFrame::onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND hW
 	return 0;
 }
 
-LRESULT BaseChatFrame::OnTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT BaseChatFrame::onTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (ctrlMessage)
 		transcodeText(ctrlMessage);

@@ -52,7 +52,9 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		}
 		COMMAND_ID_HANDLER(IDC_SAVE, onSaveToFile)
 		COMMAND_ID_HANDLER(IDC_MESSAGEPANEL, onMultilineChatInputButton)
-		COMMAND_ID_HANDLER(ID_TEXT_TRANSCODE, OnTextTranscode)
+		COMMAND_ID_HANDLER(ID_TEXT_TRANSCODE, onTextTranscode)
+		COMMAND_ID_HANDLER(IDC_LINK, onInsertLink)
+		COMMAND_ID_HANDLER(IDC_FIND, onFindText)
 		COMMAND_RANGE_HANDLER(IDC_BOLD, IDC_STRIKE, onTextStyleSelect)
 		COMMAND_ID_HANDLER(IDC_COLOR, onTextStyleSelect)
 		COMMAND_HANDLER(IDC_CHAT_MESSAGE_EDIT, EN_CHANGE, onChange)
@@ -116,7 +118,8 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInsertLink(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSaveToFile(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -124,6 +127,12 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);;
+
+		LRESULT onFindText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			showFindDialog();
+			return 0;
+		}
 
 		virtual void doDestroyFrame() = 0;
 		virtual bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res);
@@ -161,10 +170,10 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void initStatusCtrl(HWND hWnd);
 		void setStatusText(int index, const tstring& text);
 		void restoreStatusFromCache();
-		
+
 		StatusMessageHistory statusHistory;
 		StringMap ucLineParams;
-		
+
 		unsigned multiChatLines;
 
 		int getInputBoxHeight() const;

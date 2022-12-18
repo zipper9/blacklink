@@ -135,6 +135,7 @@
 #define IDD_DATABASE_PAGE               351
 #define IDD_FILELIST_PAGE               352
 #define IDD_HELP_TEXT                   364
+#define IDD_INSERT_LINK                 365
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_GROUP_TEMPLATES             1002
@@ -869,7 +870,8 @@
 #define IDC_ADLS_HELP                   1868
 #define IDC_PROGRESSBAR_ODC             1869
 #define IDC_PROGRESSBAR_CLASSIC         1870
-#define IDC_LINK_BLOG                   1872
+#define IDC_CAPTION_LINK_TEXT           1871
+#define IDC_LINK_TEXT                   1872
 #define IDC_GENERATE_DCLST              1873
 #define IDC_GENERATE_DCLST_FILE         1874
 #define IDC_PRIORITY_PAUSED             1875
@@ -1194,6 +1196,7 @@
 #define IDC_SETTINGS_COPY_FILE          2303
 #define IDC_SKIP_EXISTING               2304
 #define IDC_CAPTION_COPY_FILE           2305
+#define IDC_LINK                        2306
 #define IDC_MAGNET_PIC                  2315
 #define IDC_PM_PASSWORD_HELP            2316
 #define IDC_PM_PASSWORD_GENERATE        2317

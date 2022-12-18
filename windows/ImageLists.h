@@ -317,6 +317,8 @@ class IconBitmaps
 			EDITOR_UNDERLINE,
 			EDITOR_STRIKE,
 			EDITOR_COLOR,
+			EDITOR_LINK,
+			EDITOR_FIND,
 			PM,
 			MAGNET,
 			DCLST,
