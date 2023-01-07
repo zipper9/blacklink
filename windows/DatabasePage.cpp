@@ -3,6 +3,7 @@
 #include "DialogLayout.h"
 #include "UserMessages.h"
 #include "../client/SettingsManager.h"
+#include "../client/DatabaseManager.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -57,19 +58,35 @@ static const PropPage::ListItem listItems[] =
 	{ 0, ResourceManager::Strings() }
 };
 
+static const ResourceManager::Strings journalModes[] =
+{
+	ResourceManager::SETTINGS_DB_JOURNAL_PERSIST,
+	ResourceManager::SETTINGS_DB_JOURNAL_WAL,
+	ResourceManager::SETTINGS_DB_JOURNAL_MEMORY
+};
+
 LRESULT DatabasePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_LIST1));
 	ctrlJournal.Attach(GetDlgItem(IDC_JOURNAL_MODE));
 	int value = SETTING(SQLITE_JOURNAL_MODE);
-	defaultJournalMode = value != 0;
-	if (value) value--;
-	ctrlJournal.AddString(CTSTRING(SETTINGS_DB_JOURNAL_PERSIST));
-	ctrlJournal.AddString(CTSTRING(SETTINGS_DB_JOURNAL_WAL));
-	ctrlJournal.AddString(CTSTRING(SETTINGS_DB_JOURNAL_MEMORY));
-	ctrlJournal.SetCurSel(value);
-	currentJournalMode = value;
+	if (!value)
+	{
+		defaultJournalMode = true;
+		value = DatabaseManager::DEFAULT_JOURNAL_MODE;
+	}
+	else
+		defaultJournalMode = false;
+	int selIndex = -1;
+	for (int i = 0; i < _countof(journalModes); i++)
+	{
+		ctrlJournal.AddString(CTSTRING_I(journalModes[i]));
+		if (i + 1 == value) selIndex = i;
+	}
+	if (selIndex < 0) selIndex = DatabaseManager::DEFAULT_JOURNAL_MODE - 1;
+	ctrlJournal.SetCurSel(selIndex);
+	currentJournalMode = selIndex;
 	return TRUE;
 }
 
@@ -87,7 +104,7 @@ LRESULT DatabasePage::onSetJournalMode(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 void DatabasePage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_LIST1));
-	int value = ctrlJournal.GetCurSel();
-	if (!(value == 0 && defaultJournalMode)) value++;
+	int value = ctrlJournal.GetCurSel() + 1;
+	if (value == DatabaseManager::DEFAULT_JOURNAL_MODE && defaultJournalMode) value = 0;
 	SET_SETTING(SQLITE_JOURNAL_MODE, value);
 }

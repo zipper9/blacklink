@@ -246,9 +246,10 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 	public:
 		enum
 		{
-			JOUNRAL_MODE_PERSIST = 1,
-			JOUNRAL_MODE_WAL     = 2,
-			JOUNRAL_MODE_MEMORY  = 3
+			JOURNAL_MODE_PERSIST = 1,
+			JOURNAL_MODE_WAL     = 2,
+			JOURNAL_MODE_MEMORY  = 3,
+			DEFAULT_JOURNAL_MODE = JOURNAL_MODE_WAL
 		};
 
 		typedef void (*ErrorCallback)(const string& message,  bool forceExit);

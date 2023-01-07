@@ -201,13 +201,13 @@ void DatabaseConnection::open(const string& prefix, int journalMode)
 	sqlite3_busy_timeout(connection.getdb(), BUSY_TIMEOUT);
 
 	setPragma("page_size=4096");
-	if (journalMode == DatabaseManager::JOUNRAL_MODE_MEMORY)
+	if (journalMode == DatabaseManager::JOURNAL_MODE_MEMORY)
 	{
 		setPragma("journal_mode=MEMORY");
 	}
 	else
 	{
-		if (journalMode == DatabaseManager::JOUNRAL_MODE_WAL)
+		if (journalMode == DatabaseManager::JOURNAL_MODE_WAL)
 			setPragma("journal_mode=WAL");
 		else
 			setPragma("journal_mode=PERSIST");
@@ -1160,7 +1160,7 @@ DatabaseManager::DatabaseManager() noexcept
 	timeIpStatSaved = timeUserStatSaved = 0;
 	timeLoadGlobalRatio = 0;
 #endif
-	journalMode = JOUNRAL_MODE_PERSIST;
+	journalMode = DEFAULT_JOURNAL_MODE;
 	defThreadId = 0;
 	deleteOldTransfers = true;
 	errorCallback = nullptr;
@@ -1355,7 +1355,7 @@ void DatabaseManager::init(ErrorCallback errorCallback, int journalMode)
 	{
 		LOCK(cs);
 		this->errorCallback = errorCallback;
-		if (journalMode >= JOUNRAL_MODE_PERSIST && journalMode <= JOUNRAL_MODE_MEMORY)
+		if (journalMode >= JOURNAL_MODE_PERSIST && journalMode <= JOURNAL_MODE_MEMORY)
 			this->journalMode = journalMode;
 		try
 		{
