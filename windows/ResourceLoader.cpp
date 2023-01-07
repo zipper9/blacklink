@@ -1,7 +1,5 @@
 #include "stdafx.h"
-
 #include "ResourceLoader.h"
-#include "resource.h"
 
 void CImageEx::Destroy() noexcept
 {

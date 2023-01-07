@@ -201,9 +201,11 @@ void HashProgressDlg::updateStats()
 
 	const uint64_t tick = GET_TICK();
 	const int64_t bytesLeft = info.sizeToHash - info.sizeHashed;
-	tstring sizeStr = Util::formatBytesT(bytesLeft);
-	tstring filesStr = Util::toStringT(info.filesLeft);
-	infoState.SetWindowText(TSTRING_F(HASH_INFO_FILES, filesStr % sizeStr).c_str());
+	tstring fileStr = TPLURAL_F(PLURAL_FILES_LEFT, info.filesLeft);
+	fileStr += _T(" (");
+	fileStr += Util::formatBytesT(bytesLeft);
+	fileStr += _T(")");
+	infoState.SetWindowText(fileStr.c_str());
 
 	setProgressMarquee(false);
 	if (paused)

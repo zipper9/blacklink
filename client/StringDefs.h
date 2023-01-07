@@ -468,7 +468,7 @@ enum Strings   // @DontAdd
 	HASH_PROGRESS_STATS, // "Status"
 	HASH_PROGRESS_TEXT, // "Please wait while blacklink indexes your files (they won't be shared until they have been indexed)..."
 	HASH_REFRESH_FILE_LIST, // "Refresh file list"
-	HASH_INFO_FILES, // "%1% file(s) left (%2%)"
+	PLURAL_FILES_LEFT, // "one:%1% file left|other:%1% files left"
 	HEIGHT, // "Height"
 	HIBERNATE, // "Hibernate"
 	HIGH, // "High"
