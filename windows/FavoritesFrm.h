@@ -185,6 +185,7 @@ class FavoriteHubsFrame :
 		void addEntryL(const FavoriteHubEntry* entry, int pos, int groupIndex, time_t now);
 		void handleMove(bool up);
 		TStringList getSortedGroups() const;
+		static int getGroupIndex(const string& group, const TStringList& groups);
 		void fillList();
 		void fillList(const TStringList& groups);
 		void openSelected();

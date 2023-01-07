@@ -188,26 +188,20 @@ LRESULT FavoriteHubsFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 FavoriteHubsFrame::StateKeeper::StateKeeper(ExListViewCtrl& hubs, bool ensureVisible) : hubs(hubs), ensureVisible(ensureVisible)
 {
 	hubs.SetRedraw(FALSE);
-	
-	// in grouped mode, the indexes of each item are completely random, so use entry pointers instead
+
 	int i = -1;
 	while ((i = hubs.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
 		selected.push_back(static_cast<int>(hubs.GetItemData(i)));
-	}
-	
+
 	SCROLLINFO si = { 0 };
 	si.cbSize = sizeof(si);
 	si.fMask = SIF_POS;
 	hubs.GetScrollInfo(SB_VERT, &si);
-	
 	scroll = si.nPos;
 }
 
 FavoriteHubsFrame::StateKeeper::~StateKeeper()
 {
-	// restore visual updating now, otherwise it doesn't always scroll
-	hubs.SetRedraw(TRUE);
 	for (int i : selected)
 	{
 		const auto cnt = hubs.GetItemCount();
@@ -222,6 +216,7 @@ FavoriteHubsFrame::StateKeeper::~StateKeeper()
 			}
 		}
 	}
+	hubs.SetRedraw(TRUE);
 	hubs.Scroll(SIZE{0, scroll});
 }
 
@@ -590,55 +585,68 @@ LRESULT FavoriteHubsFrame::onMoveDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	return 0;
 }
 
+struct FavHubItem
+{
+	FavoriteHubEntry* fhe;
+	int order;
+	int groupIndex;
+
+	bool operator< (const FavHubItem& x) const
+	{
+		if (groupIndex != x.groupIndex) return groupIndex < x.groupIndex;
+		return order < x.order;
+	}
+};
+
 void FavoriteHubsFrame::handleMove(bool up)
 {
 	auto fm = FavoriteManager::getInstance();
 	StateKeeper keeper(ctrlHubs);
-	const std::vector<int>& selected = keeper.getSelection();
+	const vector<int>& selected = keeper.getSelection();
+	if (selected.empty()) return;
 	TStringList groups(getSortedGroups());
 
 	{
 		FavoriteManager::LockInstanceHubs lock(fm, true);
-		FavoriteHubEntryList& fh = lock.getFavoriteHubs();
-		if (fh.size() <= 1) return;
-	
-		if (!up)
-			reverse(fh.begin(), fh.end());
-		FavoriteHubEntryList moved;
-		for (size_t i = 0; i < fh.size(); ++i)
+		FavoriteHubEntryList& l = lock.getFavoriteHubs();
+		if (l.size() <= 1) return;
+
+		bool updated = false;
+		vector<FavHubItem> tmp;
+		size_t size = l.size();
+		tmp.resize(size);
+		for (size_t i = 0; i < size; ++i)
 		{
-			FavoriteHubEntry* fhe = fh[i];
-			if (find(selected.begin(), selected.end(), fhe->getID()) == selected.end())
-				continue;
-			if (find(moved.begin(), moved.end(), fhe) != moved.end())
-				continue;
-			const string& group = fhe->getGroup();
-			for (size_t j = i; ;)
-			{
-				if (j == 0)
-				{
-					// couldn't move within the same group; change group.
-					if (!up)
-						reverse(groups.begin(), groups.end());
-					auto ig = find(groups.begin(), groups.end(), Text::toT(group));
-					if (ig != groups.begin())
-					{
-						fhe->setGroup(Text::fromT(*(--ig)));
-						fh.erase(fh.begin() + i);
-						fh.push_back(fhe);
-						moved.push_back(fhe);
-					}
-					break;
-				}
-				if (fh[--j]->getGroup() == group)
-				{
-					std::swap(fh[i], fh[j]);
-					break;
-				}
-			}
+			tmp[i].fhe = l[i];
+			tmp[i].order = static_cast<int>(i);
+			tmp[i].groupIndex = getGroupIndex(l[i]->getGroup(), groups);
 		}
-		if (!up)
-			reverse(fh.begin(), fh.end());		
+		std::sort(tmp.begin(), tmp.end());
+		if (!up) reverse(tmp.begin(), tmp.end());
+		int limit = -1;
+		int prevGroup = tmp[0].groupIndex;
+		for (size_t i = 0; i < size; ++i)
+		{
+			FavoriteHubEntry* fhe = tmp[i].fhe;
+			if (find(selected.begin(), selected.end(), fhe->getID()) != selected.end())
+			{
+				if (static_cast<int>(i) > limit + 1 && tmp[i].groupIndex == prevGroup)
+				{
+					std::swap(tmp[i].order, tmp[i-1].order);
+					std::swap(tmp[i], tmp[i-1]);
+					updated = true;
+					limit = i - 1;
+				}
+				else
+					limit = i;
+			}
+			prevGroup = tmp[i].groupIndex;
+		}
+
+		if (!updated) return;
+		if (!up) reverse(tmp.begin(), tmp.end());
+		for (size_t i = 0; i < size; ++i)
+			l[tmp[i].order] = tmp[i].fhe;
 	}
 	fm->saveFavorites();	
 	fillList(groups);
@@ -659,7 +667,7 @@ TStringList FavoriteHubsFrame::getSortedGroups() const
 	return groups;
 }
 
-static int getGroupIndex(const string& group, const TStringList& groups)
+int FavoriteHubsFrame::getGroupIndex(const string& group, const TStringList& groups)
 {
 	int index = 0;
 	if (!group.empty())
@@ -693,9 +701,7 @@ void FavoriteHubsFrame::fillList(const TStringList& groups)
 		           ;
 		lg.mask = LVGF_GROUPID | LVGF_HEADER | LVGF_STATE | LVGF_ALIGN;
 		lg.uAlign = LVGA_HEADER_LEFT;
-		
-		// Header-title must be unicode (Convert if necessary)
-		lg.pszHeader = T2W(const_cast<TCHAR*>(groups[i].c_str()));
+		lg.pszHeader = const_cast<TCHAR*>(groups[i].c_str());
 		lg.cchHeader = static_cast<int>(groups[i].length());
 		ctrlHubs.InsertGroup(i, &lg);
 	}
