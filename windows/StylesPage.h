@@ -32,6 +32,8 @@ class StylesPage : public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public PropPage, 
 		int getPageIcon() const { return PROP_PAGE_ICON_COLORS; }
 		void write();
 
+		static bool queryChatColorsChanged();
+
 	private:
 		tstring currentTheme;
 		bool themeModified;

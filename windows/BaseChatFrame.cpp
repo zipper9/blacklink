@@ -213,7 +213,7 @@ LRESULT BaseChatFrame::onInsertLink(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWn
 	tstring text;
 	WinUtil::getWindowText(ctrlMessage, text);
 	ChatTextParser textParser;
-	textParser.parseText(text, Colors::g_ChatTextMyOwn, true);
+	textParser.parseText(text, Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE], true);
 	DlgInsertLink dlg;
 	for (const auto& tag : textParser.getTags())
 		if (tag.type == ChatTextParser::BBCODE_URL && insertPos >= (int) tag.openTagStart && insertPos <= (int) tag.closeTagEnd)
@@ -659,7 +659,7 @@ void BaseChatFrame::sendCommandResult(Commands::Result& res)
 
 		case Commands::RESULT_LOCAL_TEXT:
 			appendMyNick(res.text, thirdPerson);
-			addSystemMessage(Text::toT(res.text), Colors::g_ChatTextSystem);
+			addSystemMessage(Text::toT(res.text), Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 			break;
 
 		case Commands::RESULT_ERROR_MESSAGE:
@@ -701,7 +701,7 @@ LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	return 0;
 }
 
-void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
+void BaseChatFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool history /*= true*/, int textStyle /* = Colors::TEXT_STYLE_SYSTEM_MESSAGE*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
@@ -715,15 +715,15 @@ void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/,
 		statusHistory.addLine(formattedLine);
 
 	if (inChat && BOOLSETTING(STATUS_IN_CHAT))
-		addSystemMessage(line, cf);
+		addSystemMessage(line, textStyle);
 }
 
-void BaseChatFrame::addSystemMessage(const tstring& line, const CHARFORMAT2& cf)
+void BaseChatFrame::addSystemMessage(const tstring& line, int textStyle)
 {
-	addLine(_T("*** ") + line, 0, cf);
+	addLine(_T("*** ") + line, 0, textStyle);
 }
 
-void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
+void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, int textStyle)
 {
 #ifdef _DEBUG
 	if (line.find(_T("&#124")) != tstring::npos)
@@ -733,17 +733,17 @@ void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, const CHARF
 #endif
 	if (showTimestamps)
 	{
-		const ChatCtrl::Message message(nullptr, false, true, _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "), line, cf, false);
+		const ChatCtrl::Message message(nullptr, false, true, _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "), line, textStyle, false);
 		ctrlClient.appendText(message, maxSmiles, true);
 	}
 	else
 	{
-		const ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, line, cf, false);
+		const ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, line, textStyle, false);
 		ctrlClient.appendText(message, maxSmiles, true);
 	}
 }
 
-void BaseChatFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra)
+void BaseChatFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle, string& extra)
 {
 	if (ctrlClient.IsWindow())
 	{
@@ -762,7 +762,7 @@ void BaseChatFrame::addLine(const Identity& from, bool myMessage, bool thirdPers
 		additionalInfo.insert(0, "[");
 		additionalInfo += "] ";
 	}
-	const ChatCtrl::Message message(&from, myMessage, thirdPerson, Text::toT(additionalInfo), line, cf, true);
+	const ChatCtrl::Message message(&from, myMessage, thirdPerson, Text::toT(additionalInfo), line, textStyle, true);
 	ctrlClient.appendText(message, maxSmiles, true);
 }
 
@@ -899,7 +899,7 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	const StringTokenizer<string> st(isUTF8 ? buf.substr(3) : buf, "\r\n");
 	const StringList& lines = st.getTokens();
 	size_t i = lines.size() > (linesCount + 1) ? lines.size() - linesCount : 0;
-	ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, Util::emptyStringT, Colors::g_ChatTextLog, true, false);
+	ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, Util::emptyStringT, Colors::TEXT_STYLE_LOG, true, false);
 	for (; i < lines.size(); ++i)
 	{
 		message.msg = Text::toT(lines[i]);
@@ -1086,7 +1086,21 @@ void BaseChatFrame::findNext()
 
 void BaseChatFrame::searchStringNotFound()
 {
-	addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + ctrlClient.getNeedle(), false, false, Colors::g_ChatTextSystem);
+	addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + ctrlClient.getNeedle(), false, false, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
+}
+
+void BaseChatFrame::themeChanged()
+{
+	ctrlClient.SetBackgroundColor(Colors::g_bgColor);
+	int len = ctrlClient.GetWindowTextLength();
+	if (!len) return;
+	CHARRANGE cr;
+	ctrlClient.GetSel(cr);
+	ctrlClient.SetSel(0, -1);
+	CHARFORMAT2 cf = Colors::charFormat[Colors::TEXT_STYLE_LOG];
+	ctrlClient.SetSelectionCharFormat(cf);
+	ctrlClient.SetSel(cr);
+	addStatus(TSTRING(CHAT_THEME_CHANGED_MSG), true, false);
 }
 
 // Copied from atlfind.h

@@ -444,13 +444,13 @@ void PrivateFrame::readFrameLog()
 	}
 }
 
-void PrivateFrame::addStatus(const tstring& line, bool inChat, bool history, const CHARFORMAT2& cf)
+void PrivateFrame::addStatus(const tstring& line, bool inChat, bool history, int textStyle)
 {
 	if (!created) Create(WinUtil::g_mdiClient);
-	BaseChatFrame::addStatus(line, inChat, history, cf);
+	BaseChatFrame::addStatus(line, inChat, history, textStyle);
 }
 
-void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
+void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, int textStyle /*= Colors::TEXT_STYLE_NORMAL*/)
 {
 	if (!created)
 	{
@@ -461,7 +461,7 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 	}
 
 	string extra;
-	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, cf, extra);
+	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, textStyle, extra);
 
 	if (BOOLSETTING(LOG_PRIVATE_CHAT))
 	{
@@ -764,7 +764,7 @@ void PrivateFrame::connectCCPM()
 	}
 	if (!ConnectionManager::getInstance()->connectCCPM(replyTo))
 	{
-		addSystemMessage(TSTRING(CCPM_FAILURE), Colors::g_ChatTextSystem);
+		addSystemMessage(TSTRING(CCPM_FAILURE), Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		return;
 	}
 	ccpmState = ConnectionManager::CCPM_STATE_CONNECTING;
@@ -779,7 +779,7 @@ void PrivateFrame::updateCCPM(bool connected)
 	{
 		ccpmState = ConnectionManager::CCPM_STATE_CONNECTED;
 		const tstring& text = TSTRING(CCPM_CONNECTED);
-		addSystemMessage(text, Colors::g_ChatTextSystem);
+		addSystemMessage(text, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		addStatus(text, false);
 		if (msgPanel)
 		{
@@ -795,7 +795,7 @@ void PrivateFrame::updateCCPM(bool connected)
 	{
 		ccpmState = ConnectionManager::CCPM_STATE_DISCONNECTED;
 		const tstring& text = TSTRING(CCPM_DISCONNECTED);
-		addSystemMessage(text, Colors::g_ChatTextSystem);
+		addSystemMessage(text, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		addStatus(text, false);
 		if (msgPanel)
 			msgPanel->setCCPMState(MessagePanel::CCPM_STATE_DISCONNECTED);
@@ -1143,6 +1143,13 @@ void PrivateFrame::prepareNonMaximized()
 		if (!frame->uiInitialized)
 			frame->initUI();
 	}
+}
+
+void PrivateFrame::changeTheme()
+{
+	ASSERT_MAIN_THREAD();
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
+		i->second->themeChanged();
 }
 
 void PrivateFrame::on(SettingsManagerListener::Repaint)

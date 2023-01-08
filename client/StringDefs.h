@@ -1423,6 +1423,7 @@ enum Strings   // @DontAdd
 	THEME_DEFAULT_NAME, // "Default theme"
 	THEME_MODIFIED, // " (Modified)"
 	THEME_COPY, // "Copy of %1%"
+	CHAT_THEME_CHANGED_MSG, // "Color theme changed"
 	ASK_SAVE_THEME, // "Current theme was modified.\nWould you like to save your changes?"
 	LOW_USER_COUNT, // "Low user count"
 	TICKS_SPEED_DOWN, // "Top download speed"

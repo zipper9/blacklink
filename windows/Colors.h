@@ -13,20 +13,28 @@ struct Colors
 
 	static bool getColorFromString(const tstring& colorText, COLORREF& color);
 
-	static CHARFORMAT2 g_TextStyleTimestamp;
-	static CHARFORMAT2 g_ChatTextGeneral;
-	static CHARFORMAT2 g_ChatTextOldHistory;
-	static CHARFORMAT2 g_TextStyleMyNick;
-	static CHARFORMAT2 g_ChatTextMyOwn;
-	static CHARFORMAT2 g_ChatTextServer;
-	static CHARFORMAT2 g_ChatTextSystem;
-	static CHARFORMAT2 g_TextStyleFavUsers;
-	static CHARFORMAT2 g_TextStyleFavUsersBan;
-	static CHARFORMAT2 g_TextStyleOPs;
-	static CHARFORMAT2 g_TextStyleOtherUsers;
-	static CHARFORMAT2 g_TextStyleURL;
-	static CHARFORMAT2 g_ChatTextPrivate;
-	static CHARFORMAT2 g_ChatTextLog;
+	enum
+	{
+		TEXT_STYLE_NORMAL,
+		TEXT_STYLE_TIMESTAMP,
+		TEXT_STYLE_MY_MESSAGE,
+		TEXT_STYLE_SERVER_MESSAGE,
+		TEXT_STYLE_SYSTEM_MESSAGE,
+		TEXT_STYLE_MY_NICK,
+		TEXT_STYLE_FAV_USER,
+		TEXT_STYLE_BANNED_USER,
+		TEXT_STYLE_OP,
+		TEXT_STYLE_CHEATING_USER,
+		TEXT_STYLE_OTHER_USER,
+		TEXT_STYLE_URL,
+		TEXT_STYLE_PRIVATE_CHAT,
+		TEXT_STYLE_LOG,
+		MAX_TEXT_STYLES
+	};
+
+	static CHARFORMAT2 charFormat[MAX_TEXT_STYLES];
+
+	static const CHARFORMAT2& getCharFormat(int textStyle);
 
 	static COLORREF g_textColor;
 	static COLORREF g_bgColor;

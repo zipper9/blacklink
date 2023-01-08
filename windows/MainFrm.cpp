@@ -84,6 +84,7 @@
 #include "CommandLine.h"
 #include "BrowseFile.h"
 #include "WinSysHandlers.h"
+#include "StylesPage.h"
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 #include "TextFrame.h"
@@ -1534,13 +1535,13 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		{
 			HubFrame* frame = HubFrame::findFrameByID(data->frameId);
 			if (frame)
-				frame->addSystemMessage(data->text, Colors::g_ChatTextSystem);
+				frame->addSystemMessage(data->text, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		}
 		else if (type == WinUtil::FRAME_TYPE_PM)
 		{
 			PrivateFrame* frame = PrivateFrame::findFrameByID(data->frameId);
 			if (frame)
-				frame->addSystemMessage(data->text, Colors::g_ChatTextSystem);
+				frame->addSystemMessage(data->text, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		}
 		delete data;
 	}
@@ -1782,6 +1783,12 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 
 			ShareManager::getInstance()->refreshShareIfChanged();
 			ClientManager::infoUpdated(true);
+
+			if (StylesPage::queryChatColorsChanged())
+			{
+				HubFrame::changeTheme();
+				PrivateFrame::changeTheme();
+			}
 		}
 	}
 	return 0;

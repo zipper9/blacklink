@@ -63,7 +63,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 	public:
 		void createMessagePanel(bool showSelectHubButton, bool showCCPMButton);
 		void destroyMessagePanel();
-		void addSystemMessage(const tstring& line, const CHARFORMAT2& cf);
+		void addSystemMessage(const tstring& line, int textStyle);
 		void showFindDialog();
 		void findNext();
 
@@ -139,12 +139,13 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 		virtual void onTextEdited() {}
 		virtual bool sendMessage(const string& msg, bool thirdPerson = false) = 0;
-		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
+		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, int textStyle = Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		virtual void readFrameLog() = 0;
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 
-		void addLine(const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		void addLine(const Identity& ou, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, string& extra);
+		void addLine(const tstring& line, unsigned maxSmiles, int textStyle = Colors::TEXT_STYLE_NORMAL);
+		void addLine(const Identity& ou, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle, string& extra);
+		void themeChanged();
 
 		static TCHAR getChatRefferingToNick();
 

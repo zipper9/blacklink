@@ -4,31 +4,33 @@
 #include "../client/SimpleXML.h"
 #include "../client/LogManager.h"
 
-#define RANGE(first, last) { SettingsManager::first, SettingsManager::last }
+#define RANGE(first, last, isChat) { SettingsManager::first, SettingsManager::last, isChat }
 
 static const struct
 {
 	int idFirst;
 	int idLast;
+	bool isChat;
 } themeAttrib[] =
 {
-	RANGE(TEXT_FONT, TEXT_FONT),
-	RANGE(BACKGROUND_COLOR, ERROR_COLOR),
-	RANGE(DOWNLOAD_BAR_COLOR, TABS_BORDER_COLOR),
-	RANGE(TEXT_GENERAL_BACK_COLOR, TEXT_ENEMY_ITALIC),
-	RANGE(RESERVED_SLOT_COLOR, BAD_FILELIST_COLOR),
-	RANGE(PROGRESS_TEXT_COLOR_DOWN, PROGRESSBAR_ODC_BUMPED),
-	RANGE(MENUBAR_TWO_COLORS, MENUBAR_BUMPED),
-	RANGE(BOLD_MSG_AUTHOR, BOLD_MSG_AUTHOR)
+	RANGE(TEXT_FONT, TEXT_FONT, false),
+	RANGE(BACKGROUND_COLOR, ERROR_COLOR, true),
+	RANGE(DOWNLOAD_BAR_COLOR, TABS_BORDER_COLOR, false),
+	RANGE(TEXT_GENERAL_BACK_COLOR, TEXT_ENEMY_ITALIC, true),
+	RANGE(RESERVED_SLOT_COLOR, BAD_FILELIST_COLOR, false),
+	RANGE(PROGRESS_TEXT_COLOR_DOWN, PROGRESSBAR_ODC_BUMPED, false),
+	RANGE(MENUBAR_TWO_COLORS, MENUBAR_BUMPED, false),
+	RANGE(BOLD_MSG_AUTHOR, BOLD_MSG_AUTHOR, false)
 };
 
 #undef RANGE
 
-bool Util::isThemeAttribute(int id)
+int Util::getThemeAttribType(int id)
 {
 	for (int i = 0; i < _countof(themeAttrib); ++i)
-		if (id >= themeAttrib[i].idFirst && id <= themeAttrib[i].idLast) return true;
-	return false;
+		if (id >= themeAttrib[i].idFirst && id <= themeAttrib[i].idLast)
+			return themeAttrib[i].isChat ? ATTRIB_TYPE_CHAT : ATTRIB_TYPE_OTHER;
+	return ATTRIB_TYPE_NONE;
 }
 
 void Util::importDcTheme(const tstring& file, SettingsStore& ss)
@@ -46,7 +48,7 @@ void Util::importDcTheme(const tstring& file, SettingsStore& ss)
 		{
 			const string& name = xml.getChildTag();
 			int id = SettingsManager::getIdByName(name);
-			if (id >= 0 && isThemeAttribute(id))
+			if (id >= 0 && getThemeAttribType(id) != ATTRIB_TYPE_NONE)
 			{
 				if (SettingsManager::isIntSetting(id))
 					ss.setIntValue(id, Util::toInt(xml.getChildData()));

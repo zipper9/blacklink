@@ -160,7 +160,7 @@ LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 		const tstring& portState = TSTRING_I(isFirewalled ? ResourceManager::DHT_PORT_STATE_FIREWALLED : ResourceManager::DHT_PORT_STATE_OPEN);
 		uint16_t port = dht::DHT::getPort();
 		tstring message = TSTRING_F(DHT_STATUS_MESSAGE, connState % Text::toT(ipAddress) % port % portState);
-		addSystemMessage(message, Colors::g_ChatTextSystem);
+		addSystemMessage(message, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 	}
 	else
 		updateWindowTitle();
@@ -717,9 +717,9 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	return 0;
 }
 
-void HubFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
+void HubFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool history /*= true*/, int textStyle /*= Colors::TEXT_STYLE_SYSTEM_MESSAGE*/)
 {
-	BaseChatFrame::addStatus(line, inChat, history, cf);
+	BaseChatFrame::addStatus(line, inChat, history, textStyle);
 	if (BOOLSETTING(LOG_STATUS_MESSAGES))
 	{
 		StringMap params;
@@ -804,7 +804,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 				if (!id.isBotOrHub())
 				{
 					if (showJoins || (showFavJoins && isFavorite))
-						addSystemMessage(TSTRING(JOINS) + _T(' ') + userNick, Colors::g_ChatTextSystem);
+						addSystemMessage(TSTRING(JOINS) + _T(' ') + userNick, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 				}
 				shouldUpdateStats = true;
 			}
@@ -920,7 +920,7 @@ void HubFrame::processTasks()
 						{
 							const Identity& from = msg->from->getIdentity();
 							const bool myMessage = msg->from->getUser()->isMe();
-							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), UINT_MAX, Colors::g_ChatTextGeneral);
+							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), UINT_MAX, Colors::TEXT_STYLE_NORMAL);
 #ifdef BL_FEATURE_IP_DATABASE
 							auto& user = msg->from->getUser();
 							user->incMessageCount();
@@ -930,7 +930,7 @@ void HubFrame::processTasks()
 						}
 						else
 						{
-							BaseChatFrame::addLine(Text::toT(msg->text), UINT_MAX, Colors::g_ChatTextPrivate);
+							BaseChatFrame::addLine(Text::toT(msg->text), UINT_MAX, Colors::TEXT_STYLE_PRIVATE_CHAT);
 						}
 					}
 				}
@@ -951,7 +951,7 @@ void HubFrame::processTasks()
 					if (!ClientManager::isBeforeShutdown())
 					{
 						const StatusTask& status = static_cast<StatusTask&>(*i->second);
-						addStatus(Text::toT(status.str), status.isInChat, true, status.isSystem ? Colors::g_ChatTextSystem : Colors::g_ChatTextServer);
+						addStatus(Text::toT(status.str), status.isInChat, true, status.isSystem ? Colors::TEXT_STYLE_SYSTEM_MESSAGE : Colors::TEXT_STYLE_SERVER_MESSAGE);
 					}
 				}
 				break;
@@ -1021,7 +1021,7 @@ void HubFrame::processTasks()
 					}
 					if (!isPrivateFrameOk)
 					{
-						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + Text::toT(id.getNick()) + _T(": ") + text, 0, Colors::g_ChatTextPrivate);
+						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + Text::toT(id.getNick()) + _T(": ") + text, 0, Colors::TEXT_STYLE_PRIVATE_CHAT);
 					}
 					if (!replyTo.isHub() && !replyTo.isBot())
 					{
@@ -1033,22 +1033,16 @@ void HubFrame::processTasks()
 				case CHEATING_USER:
 				{
 					const StatusTask& task = static_cast<StatusTask&>(*i->second);
-					CHARFORMAT2 cf;
-					memset(&cf, 0, sizeof(CHARFORMAT2));
-					cf.cbSize = sizeof(cf);
-					cf.dwMask = CFM_BACKCOLOR | CFM_COLOR | CFM_BOLD;
-					cf.crBackColor = SETTING(BACKGROUND_COLOR);
-					cf.crTextColor = SETTING(ERROR_COLOR);
 					const tstring msg = Text::toT(task.str);
 					if (msg.length() < 256)
 						SHOW_POPUP(POPUP_ON_CHEATING_USER, msg, TSTRING(CHEATING_USER));
-					BaseChatFrame::addLine(msg, 0, cf);
+					BaseChatFrame::addLine(msg, 0, Colors::TEXT_STYLE_CHEATING_USER);
 				}
 				break;
 				case USER_REPORT:
 				{
 					const StatusTask& task = static_cast<StatusTask&>(*i->second);
-					BaseChatFrame::addLine(Text::toT(task.str), 0, Colors::g_ChatTextSystem);
+					BaseChatFrame::addLine(Text::toT(task.str), 0, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 					if (BOOLSETTING(LOG_MAIN_CHAT))
 					{
 						StringMap params;
@@ -1097,7 +1091,7 @@ void HubFrame::onUserParts(const OnlineUserPtr& ou)
 		}
 
 		if (showJoins || (showFavJoins && isFavorite))
-			addSystemMessage(TSTRING(PARTS) + _T(' ') + userNick, Colors::g_ChatTextSystem);
+			addSystemMessage(TSTRING(PARTS) + _T(' ') + userNick, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 	}
 }
 
@@ -1522,10 +1516,10 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 	return 0;
 }
 
-void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
+void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle /*= Colors::TEXT_STYLE_NORMAL*/)
 {
 	string extra;
-	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxSmiles, cf, extra);
+	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxSmiles, textStyle, extra);
 	if (!ClientManager::isStartup())
 	{
 		SHOW_POPUP(POPUP_ON_CHAT_LINE, line, TSTRING(CHAT_MESSAGE));
@@ -1950,7 +1944,7 @@ void HubFrame::followRedirect()
 	{
 		if (ClientManager::isConnected(redirect))
 		{
-			addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, false, Colors::g_ChatTextServer);
+			addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, false, Colors::TEXT_STYLE_SERVER_MESSAGE);
 			LogManager::message("HubFrame::onFollow " + baseClient->getHubUrl() + " -> " + redirect + " ALREADY CONNECTED", false);
 			return;
 		}
@@ -2052,6 +2046,13 @@ void HubFrame::prepareNonMaximized()
 			frame->ctrlClient.restoreChatCache();
 		}
 	}
+}
+
+void HubFrame::changeTheme()
+{
+	ASSERT_MAIN_THREAD();
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
+		i->second->themeChanged();
 }
 
 void HubFrame::updateAllTitles()
@@ -2513,6 +2514,7 @@ void HubFrame::on(SettingsManagerListener::Repaint)
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
+	ctrlClient.SetBackgroundColor(Colors::g_bgColor);
 	auto& listView = ctrlUsers.getUserList();
 	if (listView)
 	{

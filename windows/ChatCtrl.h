@@ -87,10 +87,10 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 			bool isFavorite;
 			bool isBanned;
 			bool isOp;
-			const CHARFORMAT2 cf;
+			const int textStyle;
 
 			Message(const Identity* id, bool myMessage, bool thirdPerson,
-			        const tstring& extra, const tstring& msg, const CHARFORMAT2& cf,
+			        const tstring& extra, const tstring& msg, int textStyle,
 			        bool useEmoticons, bool removeLineBreaks = true);
 			size_t length() const
 			{
@@ -98,7 +98,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 			}
 		};
 
-		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
+		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos, unsigned addFlags = 0);
 		void appendText(const Message& message, unsigned maxSmiles, bool highlightNick);
 		void adjustTextSize();
 		bool findText();

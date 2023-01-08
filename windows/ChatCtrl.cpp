@@ -83,9 +83,9 @@ static void normalizeLineBreaks(tstring& text)
 	std::replace(text.begin(), text.end(), _T('\r'), _T('\n'));
 }
 
-ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson, const tstring& extra, const tstring& text, const CHARFORMAT2& cf, bool useEmoticons, bool removeLineBreaks /*= true*/) :
+ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson, const tstring& extra, const tstring& text, int textStyle, bool useEmoticons, bool removeLineBreaks /*= true*/) :
 	nick(id ? Text::toT(id->getNick()) : Util::emptyStringT), myMessage(myMessage),
-	isRealUser(id ? !id->isBotOrHub() : false), msg(text), cf(cf),
+	isRealUser(id ? !id->isBotOrHub() : false), msg(text), textStyle(textStyle),
 	thirdPerson(thirdPerson), extra(extra), useEmoticons(useEmoticons)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -144,7 +144,7 @@ void ChatCtrl::restoreChatCache()
 			{
 				LONG selBegin = 0;
 				LONG selEnd = 0;
-				insertAndFormat(oldText, i->cf, selBegin, selEnd);
+				insertAndFormat(oldText, Colors::getCharFormat(i->textStyle), selBegin, selEnd);
 				oldText.clear();
 			}
 			if (flag)
@@ -156,7 +156,7 @@ void ChatCtrl::restoreChatCache()
 #endif
 }
 
-void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos)
+void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos, unsigned addFlags)
 {
 	dcassert(!text.empty());
 	if (!text.empty())
@@ -166,6 +166,7 @@ void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startP
 		ReplaceSel(text.c_str());
 		endPos = GetTextLengthEx(GTL_NUMCHARS);
 		SetSel(startPos, endPos);
+		cf.dwEffects |= addFlags;
 		SetSelectionCharFormat(cf);
 	}
 }
@@ -200,7 +201,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highl
 	// Insert extra info and format with default style
 	if (!message.extra.empty())
 	{
-		insertAndFormat(message.extra, Colors::g_TextStyleTimestamp, selBegin, selEnd);
+		insertAndFormat(message.extra, Colors::charFormat[Colors::TEXT_STYLE_TIMESTAMP], selBegin, selEnd);
 		PARAFORMAT2 pf;
 		memset(&pf, 0, sizeof(PARAFORMAT2));
 		pf.dwMask = PFM_STARTINDENT;
@@ -211,38 +212,25 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highl
 	tstring text = message.msg;
 	if (!message.nick.empty())
 	{
-		const CHARFORMAT2& currentCF =
-		    message.myMessage ? Colors::g_TextStyleMyNick :
-		    message.isFavorite ? (message.isBanned ? Colors::g_TextStyleFavUsersBan : Colors::g_TextStyleFavUsers) :
-		    message.isOp ? Colors::g_TextStyleOPs : Colors::g_TextStyleOtherUsers;
+		const CHARFORMAT2& currentCF = Colors::charFormat[
+		    message.myMessage ? Colors::TEXT_STYLE_MY_NICK :
+		    message.isFavorite ? (message.isBanned ? Colors::TEXT_STYLE_BANNED_USER : Colors::TEXT_STYLE_FAV_USER) :
+		    message.isOp ? Colors::TEXT_STYLE_OP : Colors::TEXT_STYLE_OTHER_USER];
+		const CHARFORMAT2& cf = Colors::getCharFormat(message.textStyle);
 		if (message.thirdPerson)
 		{
 			static const tstring strStar = _T("* ");
-			insertAndFormat(strStar, message.cf, selBegin, selEnd);
-			if (BOOLSETTING(BOLD_MSG_AUTHOR))
-			{
-				CHARFORMAT2 cf = currentCF;
-				cf.dwEffects |= CFE_BOLD;
-				insertAndFormat(message.nick, cf, selBegin, selEnd);
-			}
-			else
-				insertAndFormat(message.nick, currentCF, selBegin, selEnd);
-			insertAndFormat(_T(" "), message.cf, selBegin, selEnd);
+			insertAndFormat(strStar, cf, selBegin, selEnd);
+			insertAndFormat(message.nick, currentCF, selBegin, selEnd, BOOLSETTING(BOLD_MSG_AUTHOR) ? CFE_BOLD : 0);
+			insertAndFormat(_T(" "), cf, selBegin, selEnd);
 		}
 		else
 		{
 			static const tstring strOpen = _T("<");
 			static const tstring strClose = _T("> ");
-			insertAndFormat(strOpen, message.cf, selBegin, selEnd);
-			if (BOOLSETTING(BOLD_MSG_AUTHOR))
-			{
-				CHARFORMAT2 cf = currentCF;
-				cf.dwEffects |= CFE_BOLD;
-				insertAndFormat(message.nick, cf, selBegin, selEnd);
-			}
-			else
-				insertAndFormat(message.nick, currentCF, selBegin, selEnd);
-			insertAndFormat(strClose, message.cf, selBegin, selEnd);
+			insertAndFormat(strOpen, cf, selBegin, selEnd);
+			insertAndFormat(message.nick, currentCF, selBegin, selEnd, BOOLSETTING(BOLD_MSG_AUTHOR) ? CFE_BOLD : 0);
+			insertAndFormat(strClose, cf, selBegin, selEnd);
 		}
 	}
 
@@ -268,7 +256,7 @@ void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsign
 void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick)
 {
 	SetRedraw(FALSE);
-	const auto& cf = message.myMessage ? Colors::g_ChatTextMyOwn : message.cf;
+	const auto& cf = message.myMessage ? Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE] : Colors::getCharFormat(message.textStyle);
 #ifdef BL_UI_FEATURE_BB_CODES
 	const bool formatBBCodes = BOOLSETTING(FORMAT_BB_CODES) && (message.isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE));
 #else
@@ -295,7 +283,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 	for (const auto& li : textParser.getLinks())
 	{
 		if (li.start == tstring::npos || li.end == tstring::npos) continue;
-		auto tmp = Colors::g_TextStyleURL;
+		auto tmp = Colors::charFormat[Colors::TEXT_STYLE_URL];
 		SetSel(startPos + li.start, startPos + li.end - li.hiddenTextLen);
 		SetSelectionCharFormat(tmp);
 		if (li.hiddenTextLen)
@@ -337,7 +325,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 				{
 					IOleObject *pObject = emoticons[imageIndex]->getImageObject(BOOLSETTING(CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
 						pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
-						message.myMessage ? Colors::g_ChatTextMyOwn.crBackColor : Colors::g_ChatTextGeneral.crBackColor,
+						Colors::charFormat[message.myMessage ? Colors::TEXT_STYLE_MY_MESSAGE : Colors::TEXT_STYLE_NORMAL].crBackColor,
 						emoticonText);
 					if (pObject)
 					{
@@ -375,7 +363,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 			    (pos + myNick.length() >= text.length() || nickBoundaryChars.find(text[pos + myNick.length()]) != tstring::npos))
 			{
 				SetSel(startPos + pos, startPos + pos + myNick.length());
-				auto tmp = Colors::g_TextStyleMyNick;
+				auto tmp = Colors::charFormat[Colors::TEXT_STYLE_MY_NICK];
 				SetSelectionCharFormat(tmp);
 				nickFound = true;
 				pos += myNick.length() + 1;

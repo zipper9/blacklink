@@ -180,7 +180,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onActivate() override;
 
 		void UpdateLayout(BOOL resizeBars = TRUE) override;
-		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle = Colors::TEXT_STYLE_NORMAL);
 		void runUserCommand(UserCommand& uc);
 		void followRedirect();
 		void switchPanels();
@@ -195,6 +195,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void closeAll(size_t threshold = 0);
 		static void updateAllTitles();
 		static void prepareNonMaximized();
+		static void changeTheme();
 
 		static HubFrame* findFrameByID(uint64_t id);
 
@@ -394,36 +395,34 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool processFrameCommand(const Commands::ParsedCommand& pc, Commands::Result& res) override;
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
 		bool sendMessage(const string& msg, bool thirdPerson = false) override;
-		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem) override;
+		void addStatus(const tstring& line, bool inChat = true, bool history = true, int textStyle = Colors::TEXT_STYLE_SYSTEM_MESSAGE) override;
 		void readFrameLog() override;
 
 	private:
+		bool uiInitialized;
+		bool showJoins;
+		bool showFavJoins;
+		bool swapPanels;
 		bool hubParamUpdated;
 		int64_t bytesShared;
 		CContainedWindow* ctrlChatContainer;
-		bool showJoins;
-		bool showFavJoins;
+		CButton ctrlSwitchPanels;
+		CContainedWindow switchPanelsContainer;
+		CButton ctrlShowUsers;
+		CContainedWindow showUsersContainer;
+		OMenu tabMenu;
+		bool isTabMenuShown;
+		CStatic ctrlModeIcon;
+		CFlyToolTipCtrl tooltip;
 
 		void updateWindowTitle();
 		void setWindowTitle(const string& text);
 		tstring getHubTitle() const;
 
-		bool uiInitialized;
-
 		void updateSplitterPosition(int chatUserSplit, bool swapPanels);
 		void initUI();
 		void storeColumnsInfo();
-		bool swapPanels;
-		CButton ctrlSwitchPanels;
-		CContainedWindow switchPanelsContainer;
-		CFlyToolTipCtrl tooltip;
-		CButton ctrlShowUsers;
-		CContainedWindow showUsersContainer;
 
-		OMenu tabMenu;
-		bool  isTabMenuShown;
-
-		CStatic ctrlModeIcon;
 		void updateModeIcon();
 
 		void setSplitterPanes();

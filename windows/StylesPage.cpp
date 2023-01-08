@@ -12,6 +12,8 @@ using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;
 
+static bool chatColorsChanged;
+
 static const DialogLayout::Align align1 = { 2, DialogLayout::SIDE_TOP,    U_PX(-1) };
 static const DialogLayout::Align align2 = { 2, DialogLayout::SIDE_BOTTOM, U_PX(-1) };
 
@@ -31,6 +33,7 @@ StylesPage::StylesPage() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TS
 	tabUserList.setCallback(this);
 	tabProgress.setCallback(this);
 	tabOther.setCallback(this);
+	chatColorsChanged = false;
 }
 
 #define ADD_TAB(name, type, text) \
@@ -171,6 +174,7 @@ LRESULT StylesPage::onSelectTheme(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	themes.clear();
 	ctrlTheme.ResetContent();
 	getThemeList();
+	chatColorsChanged = true;
 	return 0;
 }
 
@@ -312,8 +316,11 @@ void StylesPage::setThemeModified()
 
 void StylesPage::settingChanged(int id)
 {
-	if (!themeModified && Util::isThemeAttribute(id))
+	int type = Util::getThemeAttribType(id);
+	if (!themeModified && type != Util::ATTRIB_TYPE_NONE)
 		setThemeModified();
+	if (type == Util::ATTRIB_TYPE_CHAT)
+		chatColorsChanged = true;
 }
 
 void StylesPage::intSettingChanged(int id, int value)
@@ -332,4 +339,11 @@ void StylesPage::intSettingChanged(int id, int value)
 		COLORREF clr = HLS_TRANSFORM(value, 0, -35);
 		tabOther.setColor(4, clr);
 	}
+}
+
+bool StylesPage::queryChatColorsChanged()
+{
+	bool result = false;
+	std::swap(chatColorsChanged, result);
+	return result;
 }

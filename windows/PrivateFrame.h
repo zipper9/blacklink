@@ -50,6 +50,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		static void closeAll();
 		static void closeAllOffline();
 		static void prepareNonMaximized();
+		static void changeTheme();
 
 		enum
 		{
@@ -107,7 +108,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		virtual void onDeactivate() override;
 		virtual void onActivate() override;
 
-		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, int textStyle = Colors::TEXT_STYLE_NORMAL);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void openFrameLog() const
@@ -269,7 +270,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
 		void onTextEdited() override;
 		bool sendMessage(const string& msg, bool thirdPerson = false) override;
-		void addStatus(const tstring& line, bool inChat = true, bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem) override;
+		void addStatus(const tstring& line, bool inChat = true, bool history = true, int textStyle = Colors::TEXT_STYLE_SYSTEM_MESSAGE) override;
 		void readFrameLog() override;
 
 		StringMap getFrameLogParams() const;
