@@ -64,10 +64,15 @@ LRESULT PreviewDlg::onBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, 
 {
 	tstring x;
 	WinUtil::getWindowText(ctrlApplication, x);
-	
-	if (WinUtil::browseFile(x, m_hWnd, false, Util::emptyStringT, _T("Application\0*.exe\0\0")) == IDOK)  // TODO translate
+
+	static const WinUtil::FileMaskItem types[] =
+	{
+		{ ResourceManager::FILEMASK_APPLICATION, _T("*.exe") },
+		{ ResourceManager::Strings(),            nullptr     }
+	};
+	if (WinUtil::browseFile(x, m_hWnd, false, Util::emptyStringT, WinUtil::getFileMaskString(types).c_str()) == IDOK)
 		ctrlApplication.SetWindowText(x.c_str());
-	
+
 	return 0;
 }
 

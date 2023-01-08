@@ -511,6 +511,7 @@ static const char* settingTags[] =
 	"UrlHandler",
 	"MagnetRegister",
 	"DclstRegister",
+	"DetectPreviewApps",
 
 	// Theme
 	"ColorThemeModified",
@@ -1132,6 +1133,7 @@ void SettingsManager::setDefaults()
 		setDefault(REGISTER_MAGNET_HANDLER, TRUE);
 		setDefault(REGISTER_DCLST_HANDLER, TRUE);
 	}
+	setDefault(DETECT_PREVIEW_APPS, TRUE);
 
 	// Colors & text styles
 	setDefault(BACKGROUND_COLOR, RGB(255, 255, 255));

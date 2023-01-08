@@ -28,7 +28,7 @@
 #define IDD_SOUNDS_PAGE                 147
 #define IDD_FAKEDETECT_PAGE             148
 #define IDD_PROGRESSBAR_TAB             149
-#define IDD_AVIPREVIEW_PAGE             150
+#define IDD_PREVIEW_APPS_PAGE           150
 #define IDD_PREVIEW                     151
 #define IDD_TOOLBAR_PAGE                152
 #define IDD_FAVORITE_DIRS_PAGE          153
@@ -134,6 +134,7 @@
 #define IDD_URLS_TAB                    350
 #define IDD_DATABASE_PAGE               351
 #define IDD_FILELIST_PAGE               352
+#define IDD_DETECTED_APPS               353
 #define IDD_HELP_TEXT                   364
 #define IDD_INSERT_LINK                 365
 #define IDC_FILETYPES                   1000
@@ -278,6 +279,7 @@
 #define IDC_CHEVRON                     1143
 #define IDC_OPEN_FILE_LIST              1144
 #define IDC_SEARCH                      1147
+#define IDC_DETECT                      1148
 #define IDC_AUTO_REFRESH                1150
 #define IDC_CLOSE_WINDOW                1151
 #define IDC_FIND                        1152

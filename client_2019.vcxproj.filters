@@ -1020,6 +1020,9 @@
     <ClInclude Include="client\UserManagerListener.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\PreviewApplication.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

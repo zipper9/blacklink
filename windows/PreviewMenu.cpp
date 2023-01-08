@@ -1,16 +1,66 @@
 #include "stdafx.h"
 #include "PreviewMenu.h"
+#include "RegKey.h"
 #include "resource.h"
 #include "../client/FavoriteManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/LogManager.h"
 #include "../client/QueueItem.h"
 #include "../client/ShareManager.h"
+#include "../client/SimpleStringTokenizer.h"
 
 OMenu PreviewMenu::previewMenu;
 int PreviewMenu::previewAppsSize = 0;
 dcdrun(bool PreviewMenu::_debugIsActivated = false;)
 dcdrun(bool PreviewMenu::_debugIsClean = true;)
+
+static const char* extAudio =
+	"mp3;ogg;wav;wma;flac";
+
+static const char* extMedia =
+	"avi;mkv;mp4;mov;wmv;webm;mpg;mpeg;ts;m2ts;mts;"
+	"vob;divx;flv;asf;ogv;3gp;3g2;"
+	"mp3;ogg;wav;wma;flac";
+
+struct KnownApp
+{
+	const TCHAR* name;
+	const TCHAR* exeNames;
+	const char* extensions;
+};
+
+static const KnownApp knownApps[] =
+{
+	{ _T("VLC Media Player"), _T("vlc.exe"), extMedia },
+	{ _T("MPC Home Cinema"), _T("mpc-hc64.exe;mpc-hc.exe"), extMedia },
+	{ _T("Windows Media Player"),  _T("wmplayer.exe"), extMedia },
+	{ _T("Winamp"), _T("winamp.exe"), extAudio }
+};
+
+void PreviewMenu::detectApps(PreviewApplication::List& apps)
+{
+	WinUtil::RegKey parentKey;
+	if (!parentKey.open(HKEY_LOCAL_MACHINE, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths"), KEY_READ)) return;
+	tstring exeNames, exeName, appPath;
+	for (int i = 0; i < _countof(knownApps); ++i)
+	{
+		exeNames = knownApps[i].exeNames;
+		SimpleStringTokenizer<TCHAR> st(exeNames, _T(';'));
+		while (st.getNextToken(exeName))
+		{
+			WinUtil::RegKey key;
+			if (key.open(parentKey.getKey(), exeName.c_str(), KEY_READ) &&
+				key.readString(nullptr, appPath) && !appPath.empty() &&
+				File::isExist(appPath))
+			{
+				apps.push_back(new PreviewApplication(
+					Text::fromT(knownApps[i].name), Text::fromT(appPath),
+					"%[file]", knownApps[i].extensions));
+				break;
+			}
+		}
+	}
+}
 
 void PreviewMenu::setupPreviewMenu(const string& target)
 {

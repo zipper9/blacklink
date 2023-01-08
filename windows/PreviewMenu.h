@@ -4,19 +4,15 @@
 #include "OMenu.h"
 #include "../client/forward.h"
 #include "../client/HashValue.h"
+#include "../client/PreviewApplication.h"
 
 class PreviewMenu
 {
 	public:
 		static const int MAX_PREVIEW_APPS = 100;
-		static void init()
-		{
-			previewMenu.CreatePopupMenu();
-		}
-		static bool isPreviewMenu(const HMENU& handle)
-		{
-			return previewMenu.m_hMenu == handle;
-		}
+		static void init() { previewMenu.CreatePopupMenu(); }
+		static bool isPreviewMenu(HMENU handle) { return previewMenu.m_hMenu == handle; }
+		static void detectApps(PreviewApplication::List& apps);
 
 	protected:
 		static void runPreview(WORD wID, const QueueItemPtr& qi);

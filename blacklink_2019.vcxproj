@@ -766,7 +766,7 @@
     <ClCompile Include="windows\ADLSProperties.cpp" />
     <ClCompile Include="windows\AdvancedPage.cpp" />
     <ClCompile Include="windows\AppearancePage.cpp" />
-    <ClCompile Include="windows\AVIPreviewPage.cpp" />
+    <ClCompile Include="windows\PreviewAppsPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
     <ClCompile Include="windows\BaseHandlers.cpp" />
@@ -884,6 +884,7 @@
     <ClCompile Include="windows\QueuePage.cpp" />
     <ClCompile Include="windows\RangesPage.cpp" />
     <ClCompile Include="windows\RecentsFrm.cpp" />
+    <ClCompile Include="windows\RegKey.cpp" />
     <ClCompile Include="windows\RemoteControlPage.cpp" />
     <ClCompile Include="windows\ResourceLoader.cpp" />
     <ClCompile Include="windows\RichTextLabel.cpp" />
@@ -952,7 +953,7 @@
     <ClInclude Include="windows\ADLSProperties.h" />
     <ClInclude Include="windows\AdvancedPage.h" />
     <ClInclude Include="windows\AppearancePage.h" />
-    <ClInclude Include="windows\AVIPreviewPage.h" />
+    <ClInclude Include="windows\PreviewAppsPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />
     <ClInclude Include="windows\BaseHandlers.h" />
@@ -1043,6 +1044,7 @@
     <ClInclude Include="windows\PublicHubsFrm.h" />
     <ClInclude Include="windows\PublicHubsListDlg.h" />
     <ClInclude Include="windows\QCDCtrlMsgs.h" />
+    <ClInclude Include="windows\RegKey.h" />
     <ClInclude Include="windows\RichTextLabel.h" />
     <ClInclude Include="windows\SearchDlg.h" />
     <ClInclude Include="windows\SearchHistory.h" />

@@ -33,7 +33,7 @@
 #include "SoundsPage.h"
 #include "UCPage.h"
 #include "LimitPage.h"
-#include "AVIPreviewPage.h"
+#include "PreviewAppsPage.h"
 #include "StylesPage.h"
 #include "ToolbarPage.h"
 #include "FavoriteDirsPage.h"
@@ -78,7 +78,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new ProxyPage();
 	pages[n++] = new DownloadPage();
 	pages[n++] = new FavoriteDirsPage();
-	pages[n++] = new AVIPreview();
+	pages[n++] = new PreviewAppsPage();
 	pages[n++] = new QueuePage();
 	pages[n++] = new PriorityPage();
 	pages[n++] = new SharePage();

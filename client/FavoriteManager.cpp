@@ -57,7 +57,7 @@ FavoriteManager::~FavoriteManager()
 
 	for_each(hubs.begin(), hubs.end(), [](auto p) { delete p; });
 	for_each(recentHubs.begin(), recentHubs.end(), [](auto p) { delete p; });
-	for_each(previewApplications.begin(), previewApplications.end(), [](auto p) { delete p; });
+	PreviewApplication::clearList(previewApplications);
 }
 
 void FavoriteManager::shutdown()
@@ -1749,6 +1749,31 @@ PreviewApplication* FavoriteManager::addPreviewApp(const string& name, const str
 		pa = new PreviewApplication(name, application, arguments, extension);
 	previewApplications.push_back(pa);
 	return pa;
+}
+
+void FavoriteManager::addPreviewApps(PreviewApplication::List& apps, bool force)
+{
+	ASSERT_MAIN_THREAD();
+	for (PreviewApplication* app : apps)
+	{
+		bool found = false;
+		for (size_t i = 0; i < previewApplications.size(); ++i)
+			if (stricmp(previewApplications[i]->name, app->name) == 0)
+			{
+				if (force)
+				{
+					delete previewApplications[i];
+					previewApplications[i] = app;
+				}
+				else
+					delete app;
+				found = true;
+				break;
+			}
+		if (!found)
+			previewApplications.push_back(app);
+	}
+	apps.clear();
 }
 
 void FavoriteManager::removePreviewApp(const size_t index)

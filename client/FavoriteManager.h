@@ -27,27 +27,9 @@
 #include "FavoriteManagerListener.h"
 #include "HubEntry.h"
 #include "FavHubGroup.h"
+#include "PreviewApplication.h"
 #include "TimerManager.h"
 #include "RWLock.h"
-
-class PreviewApplication
-{
-	public:
-		typedef vector<PreviewApplication*> List;
-		
-		PreviewApplication() noexcept {}
-		PreviewApplication(const string& n, const string& a, const string& r, const string& e) : name(n), application(a), arguments(r), extension(Text::toLower(e))
-		{
-		}
-
-		PreviewApplication(const PreviewApplication &) = delete;
-		PreviewApplication& operator= (const PreviewApplication &) = delete;
-		
-		string name;
-		string application;
-		string arguments;
-		string extension;
-};
 
 class SimpleXML;
 
@@ -251,6 +233,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		// Preview Apps
 
 		PreviewApplication* addPreviewApp(const string& name, const string& application, const string& arguments, const string& extension);
+		void addPreviewApps(PreviewApplication::List& apps, bool force);
 		void removePreviewApp(const size_t index);
 		const PreviewApplication* getPreviewApp(const size_t index) const;
 		PreviewApplication* getPreviewApp(const size_t index);

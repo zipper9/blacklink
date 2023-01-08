@@ -3,41 +3,15 @@
 #include "LogManager.h"
 #include "../client/ResourceManager.h"
 #include "../client/Util.h"
+#include "RegKey.h"
 
 bool WinUtil::hubUrlHandlersRegistered = false;
 bool WinUtil::magnetHandlerRegistered = false;
 bool WinUtil::dclstHandlerRegistered = false;
 
-static bool regReadString(HKEY key, const TCHAR* name, tstring& value)
-{
-	TCHAR buf[512];
-	DWORD size = sizeof(buf);
-	DWORD type;
-	if (RegQueryValueEx(key, name, nullptr, &type, (BYTE *) buf, &size) != ERROR_SUCCESS ||
-	    (type != REG_SZ && type != REG_EXPAND_SZ))
-	{
-		value.clear();
-		return false;
-	}
-	size /= sizeof(TCHAR);
-	if (size && buf[size-1] == 0) size--;
-	value.assign(buf, size);
-	return true;
-}
-
-static bool regWriteString(HKEY key, const TCHAR* name, const TCHAR* value, DWORD len)
-{
-	return RegSetValueEx(key, name, 0, REG_SZ, (const BYTE *) value, (len + 1) * sizeof(TCHAR)) == ERROR_SUCCESS;
-}
-
-static inline bool regWriteString(HKEY key, const TCHAR* name, const tstring& str)
-{
-	return regWriteString(key, name, str.c_str(), str.length());
-}
-
 static bool registerUrlHandler(const TCHAR* proto, const TCHAR* description)
 {
-	HKEY key = nullptr;
+	WinUtil::RegKey key;
 	tstring value;
 	tstring exePath = Util::getModuleFileName();
 	tstring app = _T('\"') + exePath + _T("\" /magnet \"%1\"");
@@ -45,40 +19,30 @@ static bool registerUrlHandler(const TCHAR* proto, const TCHAR* description)
 	pathProto += proto;
 	tstring pathCommand = pathProto + _T("\\Shell\\Open\\Command");
 
-	if (RegOpenKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
-	{
-		regReadString(key, nullptr, value);
-		RegCloseKey(key);
-	}
+	if (key.open(HKEY_CURRENT_USER, pathCommand.c_str(), KEY_READ))
+		key.readString(nullptr, value);
 
 	if (stricmp(app, value) == 0)
 		return true;
 
-	if (RegCreateKeyEx(HKEY_CURRENT_USER, pathProto.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+	if (!key.create(HKEY_CURRENT_USER, pathProto.c_str(), KEY_WRITE))
 		return false;
 
 	bool result = false;
 	do
 	{
-		if (!regWriteString(key, nullptr, description, _tcslen(description))) break;
-		if (!regWriteString(key, _T("URL Protocol"), Util::emptyStringT)) break;
-		RegCloseKey(key);
-		key = nullptr;
+		if (!key.writeString(nullptr, description, _tcslen(description))) break;
+		if (!key.writeString(_T("URL Protocol"), Util::emptyStringT)) break;
 
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, app)) break;
-		RegCloseKey(key);
-		key = nullptr;
+		if (!key.create(HKEY_CURRENT_USER, pathCommand.c_str(), KEY_WRITE)) break;
+		if (!key.writeString(nullptr, app)) break;
 
 		tstring pathIcon = pathProto + _T("\\DefaultIcon");
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathIcon.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, exePath)) break;
+		if (!key.create(HKEY_CURRENT_USER, pathIcon.c_str(), KEY_WRITE)) break;
+		if (!key.writeString(nullptr, exePath)) break;
 		result = true;
 	} while (0);
 
-	if (key) RegCloseKey(key);
 	return result;
 }
 
@@ -137,7 +101,7 @@ void WinUtil::unregisterMagnetHandler()
 
 static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
 {
-	HKEY key = nullptr;
+	WinUtil::RegKey key;
 	tstring value;
 	tstring exePath = Util::getModuleFileName();
 	tstring app = _T('\"') + exePath + _T("\" /open \"%1\"");
@@ -145,37 +109,26 @@ static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
 	pathExt += names[0];
 	tstring pathCommand = pathExt + _T("\\Shell\\Open\\Command");
 
-	if (RegOpenKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
-	{
-		regReadString(key, nullptr, value);
-		RegCloseKey(key);
-	}
+	if (key.open(HKEY_CURRENT_USER, pathCommand.c_str(), KEY_READ))
+		key.readString(nullptr, value);
 
 	if (stricmp(app, value) == 0)
 		return true;
 
-	if (RegCreateKeyEx(HKEY_CURRENT_USER, pathExt.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+	if (!key.create(HKEY_CURRENT_USER, pathExt.c_str(), KEY_WRITE))
 		return false;
 
 	bool result = false;
 	do
 	{
-		if (!regWriteString(key, nullptr, description, _tcslen(description))) break;
-		RegCloseKey(key);
-		key = nullptr;
+		if (!key.writeString(nullptr, description, _tcslen(description))) break;
 
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, app)) break;
-		RegCloseKey(key);
-		key = nullptr;
+		if (!key.create(HKEY_CURRENT_USER, pathCommand.c_str(), KEY_WRITE)) break;
+		if (!key.writeString(nullptr, app)) break;
 
 		tstring pathIcon = pathExt + _T("\\DefaultIcon");
-		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathIcon.c_str(), 0, nullptr,
-		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-		if (!regWriteString(key, nullptr, exePath)) break;
-		RegCloseKey(key);
-		key = nullptr;
+		if (!key.create(HKEY_CURRENT_USER, pathIcon.c_str(), KEY_WRITE)) break;
+		if (!key.writeString(nullptr, exePath)) break;
 
 		int i = 1;
 		DWORD len = _tcslen(names[0]);
@@ -188,16 +141,12 @@ static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
 			}
 			tstring path = _T("SOFTWARE\\Classes\\");
 			path += names[i];
-			if (RegCreateKeyEx(HKEY_CURRENT_USER, path.c_str(), 0, nullptr,
-			    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
-			if (!regWriteString(key, nullptr, names[0], len)) break;
-			RegCloseKey(key);
-			key = nullptr;
+			if (!key.create(HKEY_CURRENT_USER, path.c_str(), KEY_WRITE)) break;
+			if (!key.writeString(nullptr, names[0], len)) break;
 			i++;
 		}
 	} while (0);
 
-	if (key) RegCloseKey(key);
 	return result;
 }
 

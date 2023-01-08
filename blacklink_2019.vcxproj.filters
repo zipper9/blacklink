@@ -232,7 +232,7 @@
     <ClCompile Include="windows\MessagesChatPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\AVIPreviewPage.cpp">
+    <ClCompile Include="windows\PreviewAppsPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\FakeDetectPage.cpp">
@@ -437,6 +437,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\ChatTextParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\RegKey.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -711,7 +714,7 @@
     <ClInclude Include="windows\MessagesChatPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\AVIPreviewPage.h">
+    <ClInclude Include="windows\PreviewAppsPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\FakeDetectPage.h">
@@ -1012,6 +1015,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\ChatTextParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\RegKey.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

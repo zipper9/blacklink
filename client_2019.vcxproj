@@ -786,6 +786,7 @@
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />
+    <ClInclude Include="client\PreviewApplication.h" />
     <ClInclude Include="client\Random.h" />
     <ClInclude Include="client\RequestCounter.h" />
     <ClInclude Include="client\Resolver.h" />

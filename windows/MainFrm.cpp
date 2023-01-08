@@ -327,7 +327,16 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 			}
 		}
 	}
-	
+
+	if (BOOLSETTING(DETECT_PREVIEW_APPS))
+	{
+		SET_SETTING(DETECT_PREVIEW_APPS, FALSE);
+		PreviewApplication::List appList;
+		PreviewMenu::detectApps(appList);
+		LogManager::message(Util::toString(appList.size()) + " preview app(s) found");
+		FavoriteManager::getInstance()->addPreviewApps(appList, false);
+	}
+
 	QueueManager::getInstance()->addListener(this);
 	WebServerManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);

@@ -485,6 +485,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			REGISTER_URL_HANDLER,
 			REGISTER_MAGNET_HANDLER,
 			REGISTER_DCLST_HANDLER,
+			DETECT_PREVIEW_APPS,
 
 			// Theme
 			COLOR_THEME_MODIFIED,
