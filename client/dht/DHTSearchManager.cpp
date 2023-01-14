@@ -28,6 +28,7 @@
 #include "../SearchManager.h"
 #include "../SearchResult.h"
 #include "../SimpleXML.h"
+#include "../Random.h"
 
 #ifdef DEBUG_DHT_SEARCH
 #include "../LogManager.h"
@@ -120,7 +121,7 @@ namespace dht
 	/*
 	 * Performs value lookup in the network
 	 */
-	unsigned SearchManager::findFile(const string& tth, uint32_t token, void* owner)
+	unsigned SearchManager::findFile(const string& tth, uint32_t token, uint64_t owner)
 	{
 		if (isAlreadySearchingFor(tth))
 			return 0;

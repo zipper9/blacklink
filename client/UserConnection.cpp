@@ -33,6 +33,7 @@
 #include "PortTest.h"
 #include "NmdcHub.h"
 #include "AntiFlood.h"
+#include "Random.h"
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #include "TagCollector.h"

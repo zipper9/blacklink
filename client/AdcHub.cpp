@@ -1233,7 +1233,7 @@ StringList AdcHub::parseSearchExts(int flag)
 	return ret;
 }
 
-void AdcHub::searchToken(const SearchParamToken& sp)
+void AdcHub::searchToken(const SearchParam& sp)
 {
 	{
 		LOCK(csState);

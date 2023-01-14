@@ -58,9 +58,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd);
 		static bool isConnected(const string& hubUrl);
 		static bool getSlots(const CID& cid, uint16_t& slots);
-		static void search(const SearchParamToken& sp);
-		static unsigned multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients);
-		static void cancelSearch(void* owner);
+		static void search(const SearchParam& sp);
+		static unsigned multiSearch(const SearchParam& sp, vector<SearchClientItem>& clients);
+		static void cancelSearch(uint64_t owner);
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);
 		

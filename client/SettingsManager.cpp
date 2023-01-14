@@ -25,6 +25,7 @@
 #include "ShareManager.h"
 #include "SearchManager.h"
 #include "CompatibilityManager.h"
+#include "Random.h"
 #include <boost/algorithm/string.hpp>
 
 #ifndef _WIN32

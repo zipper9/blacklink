@@ -46,7 +46,6 @@
 #define SEARCH_FILTER_MESSAGE_MAP 11
 
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
-	private SearchManagerListener,
 	private ClientManagerListener,
 	private FavoriteManagerListener,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
@@ -258,7 +257,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			return 0;
 		}
 
+		void addSearchResult(const SearchResult& sr);
 		void getSelectedUsers(vector<UserPtr>& v) const;
+
+		static SearchFrame* getFramePtr(uint64_t id);
+		static void releaseFramePtr(SearchFrame* frame);
 
 	private:
 		bool getDownloadDirectory(WORD wID, tstring& dir) const;
@@ -297,9 +300,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		class SearchInfo : public UserInfoBase
 		{
 			public:
-				typedef SearchInfo* Ptr;
-				typedef vector<Ptr> Array;
-				
 				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
 					colMask(0), hits(0), iconIndex(-1)
 				{
@@ -405,6 +405,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			STATUS_LAST
 		};
 
+		const uint64_t id;
 		tstring initialString;
 		int64_t initialSize;
 		SizeModes initialMode;
@@ -513,7 +514,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool hasWaitTime;
 		bool startingSearch;
 		
-		SearchParamToken searchParam;
+		SearchParam searchParam;
 		vector<SearchClientItem> searchClients;
 		bool useDHT;
 		int64_t exactSize;
@@ -538,12 +539,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		StringMap ucLineParams;
 		
 		static const int columnId[];
-		
-		typedef std::map<HWND, SearchFrame*> FrameMap;
-		typedef pair<HWND, SearchFrame*> FramePair;
-		
-		static FrameMap g_search_frames;
-		
+
+		typedef std::map<uint64_t, SearchFrame*> FrameMap;
+
+		static FrameMap activeFrames;
+		static CriticalSection framesLock;
+
 		struct DownloadTarget
 		{
 			enum DefinedTypes
@@ -573,10 +574,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title);
 		static tstring getTargetDirectory(const SearchInfo* si, const tstring& downloadDir);
 
-		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
-		
-		//void on(SearchManagerListener::Searching, SearchQueueItem* aSearch) noexcept override;
-		
 		// ClientManagerListener
 		void on(ClientConnected, const Client* c) noexcept override
 		{

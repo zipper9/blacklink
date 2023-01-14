@@ -28,6 +28,7 @@
 #include "../client/QueueItem.h"
 #include "../client/ThrottleManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/Random.h"
 
 #include "WinUtil.h"
 #include "TransferView.h"

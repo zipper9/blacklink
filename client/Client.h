@@ -85,10 +85,10 @@ class Client : public ClientBase,
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
-		unsigned searchInternal(const SearchParamToken& sp);
-		void cancelSearch(void* aOwner)
+		unsigned searchInternal(const SearchParam& sp);
+		void cancelSearch(uint64_t owner)
 		{
-			searchQueue.cancelSearch(aOwner);
+			searchQueue.cancelSearch(owner);
 		}
 		virtual void password(const string& pwd, bool setPassword) = 0;
 		virtual void info(bool forceUpdate) = 0;
@@ -455,7 +455,7 @@ class Client : public ClientBase,
 		/** Reload details from favmanager or settings */
 		void reloadSettings(bool updateNick);
 
-		virtual void searchToken(const SearchParamToken& sp) = 0;
+		virtual void searchToken(const SearchParam& sp) = 0;
 		virtual void onTimer(uint64_t tick) noexcept {}
 
 		// TimerManagerListener

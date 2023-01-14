@@ -18,9 +18,6 @@
 
 #include "stdinc.h"
 #include "SearchQueue.h"
-#include "QueueManager.h"
-#include "SearchManager.h"
-#include "NmdcHub.h"
 
 static inline bool equals(const Search& lhs, const Search& rhs)
 {
@@ -43,9 +40,9 @@ bool SearchQueue::add(const Search& s)
 		// check dupe
 		if (equals(*i, s))
 		{
-			void* owner = *s.owners.begin();
+			uint64_t owner = *s.owners.begin();
 			i->owners.insert(owner);
-			
+
 			// if previous search was autosearch and current one isn't, it should be readded before autosearches
 			if (!s.isAutoToken() && i->isAutoToken())
 			{
@@ -95,7 +92,7 @@ bool SearchQueue::pop(Search& s, uint64_t now)
 	return true;
 }
 
-uint64_t SearchQueue::getSearchTime(void* owner, uint64_t now) const
+uint64_t SearchQueue::getSearchTime(uint64_t owner, uint64_t now) const
 {
 	if (!owner) return 0;
 
@@ -117,7 +114,7 @@ uint64_t SearchQueue::getSearchTime(void* owner, uint64_t now) const
 	return 0;
 }
 
-bool SearchQueue::cancelSearch(void* owner)
+bool SearchQueue::cancelSearch(uint64_t owner)
 {
 	LOCK(cs);
 	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
@@ -128,9 +125,7 @@ bool SearchQueue::cancelSearch(void* owner)
 		{
 			owners.erase(j);
 			if (owners.empty())
-			{
 				searchQueue.erase(i);
-			}
 			return true;
 		}
 	}

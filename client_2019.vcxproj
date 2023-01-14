@@ -647,6 +647,7 @@
     <ClCompile Include="client\RWLockWinXP.cpp" />
     <ClCompile Include="client\RWLockWrapper.cpp" />
     <ClCompile Include="client\SearchManager.cpp" />
+    <ClCompile Include="client\SearchParam.cpp" />
     <ClCompile Include="client\SearchQueue.cpp" />
     <ClCompile Include="client\SearchResult.cpp" />
     <ClCompile Include="client\ServerSocket.cpp" />

@@ -52,6 +52,10 @@ bool FinishedManager::removeItem(const FinishedItemPtr& item, eType type)
 	if (it != finished[type].end())
 	{
 		finished[type].erase(it);
+		if (finished[type].empty())
+			generationId[type] = 0;
+		else
+			++generationId[type];
 		return true;
 	}
 	return false;
@@ -61,21 +65,25 @@ void FinishedManager::removeAll(eType type)
 {
 	WRITE_LOCK(*cs[type]);
 	finished[type].clear();
+	generationId[type] = 0;
 }
 
 void FinishedManager::addItem(FinishedItemPtr& item, eType type)
 {
 	size_t maxSize = type == e_Download ? SETTING(MAX_FINISHED_DOWNLOADS) : SETTING(MAX_FINISHED_UPLOADS);
 	int64_t maxTempId = 0;
-	WRITE_LOCK(*cs[type]);
-	auto& data = finished[type];
-	item->setTempID(++tempId);
-	data.push_back(item);
-	if (maxSize < 20) maxSize = 20;
-	while (data.size() > maxSize)
 	{
-		maxTempId = data.front()->tempId;
-		data.pop_front();
+		WRITE_LOCK(*cs[type]);
+		auto& data = finished[type];
+		item->setTempID(++tempId);
+		data.push_back(item);
+		if (maxSize < 20) maxSize = 20;
+		while (data.size() > maxSize)
+		{
+			maxTempId = data.front()->tempId;
+			data.pop_front();
+		}
+		++generationId[type];
 	}
 	if (maxTempId)
 		fire(FinishedManagerListener::DroppedItems(), maxTempId);

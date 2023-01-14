@@ -22,6 +22,7 @@
 #include "FavHubProperties.h"
 #include "KnownClients.h"
 #include "DialogLayout.h"
+#include "../client/Random.h"
 #include <boost/algorithm/string/trim.hpp>
 
 using DialogLayout::FLAG_TRANSLATE;

@@ -13,6 +13,7 @@
 #include "HttpClient.h"
 #include "IpTest.h"
 #include "AntiFlood.h"
+#include "Random.h"
 #include "dht/DHT.h"
 #include "dht/DHTSearchManager.h"
 #include "dht/IndexManager.h"
@@ -947,7 +948,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				}
 				TTHValue tth;
 				if (!parseTTH(tth, pc.args[2], res)) return true;
-				dht::DHT::getInstance()->findFile(tth.toBase32(), Util::rand(), nullptr);
+				dht::DHT::getInstance()->findFile(tth.toBase32(), Util::rand(), 0);
 				res.text = "DHT: file search started";
 				res.what = RESULT_LOCAL_TEXT;
 				return true;

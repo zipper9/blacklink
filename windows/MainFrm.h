@@ -40,6 +40,7 @@ struct ParsedCommandLine;
 
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
 	public CMessageFilter, public CIdleHandler, public CSplitterImpl<MainFrame>,
+	private SearchManagerListener,
 	private QueueManagerListener,
 	private WebServerListener,
 	private UserManagerListener,
@@ -663,6 +664,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void on(QueueManagerListener::PartialList, const HintedUser& user, const string& text) noexcept override;
 		void on(QueueManagerListener::FileExistsAction, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, QueueItem::Priority priority) noexcept override;
 		void on(QueueManagerListener::SourceAdded) noexcept override;
+
+		// SearchManagerListener
+		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
 
 		// UserManagerListener
 		void on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hubHint, const tstring& message) noexcept override;

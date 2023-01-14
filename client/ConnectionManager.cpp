@@ -36,6 +36,7 @@
 #include "SimpleStringTokenizer.h"
 #include "HttpClient.h"
 #include "AdcHub.h"
+#include "Random.h"
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #include "TagCollector.h"

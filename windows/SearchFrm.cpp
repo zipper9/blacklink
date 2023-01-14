@@ -41,6 +41,8 @@
 #define USE_DOWNLOAD_DIR
 
 SearchHistory SearchFrame::lastSearches;
+SearchFrame::FrameMap SearchFrame::activeFrames;
+CriticalSection SearchFrame::framesLock;
 
 static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
 
@@ -159,8 +161,6 @@ static const ResourceManager::Strings hubsColumnNames[] =
 	ResourceManager::TIME_TO_WAIT
 };
 
-SearchFrame::FrameMap SearchFrame::g_search_frames;
-
 template<typename C>
 bool isTTH(const std::basic_string<C>& s)
 {
@@ -169,6 +169,7 @@ bool isTTH(const std::basic_string<C>& s)
 }
 
 SearchFrame::SearchFrame() :
+	id(WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_SEARCH)),
 	TimerHelper(m_hWnd),
 	showUIContainer(WC_COMBOBOX, this, SHOWUI_MESSAGE_MAP),
 #ifdef BL_FEATURE_IP_DATABASE
@@ -216,26 +217,43 @@ SearchFrame::~SearchFrame()
 {
 	dcassert(everything.empty());
 	dcassert(closed);
+	searchParam.removeToken();
 	images.Destroy();
 	searchTypesImageList.Destroy();
 }
 
 void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
 {
-	SearchFrame* pChild = new SearchFrame();
-	pChild->setInitial(str, size, mode, type);
-	pChild->Create(WinUtil::g_mdiClient);
-	g_search_frames.insert(FramePair(pChild->m_hWnd, pChild));
+	SearchFrame* frame = new SearchFrame();
+	frame->setInitial(str, size, mode, type);
+	frame->Create(WinUtil::g_mdiClient);
+	framesLock.lock();
+	activeFrames.insert(make_pair(frame->id, frame));
+	framesLock.unlock();
 }
 
 void SearchFrame::closeAll()
 {
-	dcdrun(const auto frameCount = g_search_frames.size());
-	for (auto i = g_search_frames.cbegin(); i != g_search_frames.cend(); ++i)
+	LOCK(framesLock);
+	for (auto& frame : activeFrames)
+		::PostMessage(frame.second->m_hWnd, WM_CLOSE, 0, 0);
+}
+
+SearchFrame* SearchFrame::getFramePtr(uint64_t id)
+{
+	framesLock.lock();
+	auto i = activeFrames.find(id);
+	if (i == activeFrames.end())
 	{
-		::PostMessage(i->first, WM_CLOSE, 0, 0);
+		framesLock.unlock();
+		return nullptr;
 	}
-	dcassert(frameCount == g_search_frames.size());
+	return i->second;
+}
+
+void SearchFrame::releaseFramePtr(SearchFrame* frame)
+{
+	if (frame) framesLock.unlock();
 }
 
 LRESULT SearchFrame::onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -553,7 +571,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	tooltip.SetMaxTipWidth(200);
 	tooltip.Activate(TRUE);
 	onSizeMode();   //Get Mode, and turn ON or OFF controlls Size
-	SearchManager::getInstance()->addListener(this);
 	FavoriteManager::getInstance()->addListener(this);
 	initHubs();
 	treeItemRoot = nullptr;
@@ -603,8 +620,7 @@ LRESULT SearchFrame::onMeasure(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		CustomDrawHelpers::measureComboBox(reinterpret_cast<MEASUREITEMSTRUCT*>(lParam), Fonts::g_systemFont);
 		return TRUE;
 	}
-	HWND hwnd = 0; // ???
-	return OMenu::onMeasureItem(hwnd, uMsg, wParam, lParam, bHandled);
+	return OMenu::onMeasureItem(m_hWnd, uMsg, wParam, lParam, bHandled);
 }
 
 LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -617,8 +633,7 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 	}
 	if (dis->CtlType == ODT_MENU)
 	{
-		HWND hwnd = 0; // ???
-		return OMenu::onDrawItem(hwnd, uMsg, wParam, lParam, bHandled);
+		return OMenu::onDrawItem(m_hWnd, uMsg, wParam, lParam, bHandled);
 	}
 	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == STATUS_PROGRESS)
 	{
@@ -734,9 +749,10 @@ void SearchFrame::onEnter()
 	unsigned scale = 1u << (ctrlSizeMode.GetCurSel() * 10);
 	size *= scale;
 	searchParam.size = size;
-	
+	searchParam.owner = id;
+
 	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
-	
+
 	string filter;
 	string filterExclude;
 	{
@@ -770,6 +786,7 @@ void SearchFrame::onEnter()
 			}
 			++si;
 		}
+		searchParam.removeToken();
 		searchParam.generateToken(false);
 	}
 	
@@ -806,7 +823,7 @@ void SearchFrame::onEnter()
 	SetWindowText((TSTRING(SEARCH) + _T(" - ") + searchTarget).c_str());
 	
 	// stop old search
-	ClientManager::cancelSearch(this);
+	ClientManager::cancelSearch(id);
 	searchParam.extList.clear();
 	// Get ADC searchtype extensions if any is selected
 	try
@@ -835,7 +852,6 @@ void SearchFrame::onEnter()
 		searchParam.filter = filter;
 		searchParam.filterExclude = filterExclude;
 		searchParam.normalizeWhitespace();
-		searchParam.owner = this;
 		if (portStatus == PortTest::STATE_FAILURE || BOOLSETTING(SEARCH_PASSIVE)) // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
 			searchParam.searchMode = SearchParamBase::MODE_PASSIVE;
 		else
@@ -858,24 +874,20 @@ void SearchFrame::removeSelected()
 	}
 }
 
-void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
+void SearchFrame::addSearchResult(const SearchResult& sr)
 {
 	if (isClosedOrShutdown())
 		return;
 	// Check that this is really a relevant search result...
 	{
 		LOCK(csSearch);
-		
 		if (search.empty())
 			return;
-			
-		needUpdateResultCount = true;
+
 		if (sr.getToken() && searchParam.token != sr.getToken())
-		{
-			droppedResults++;
 			return;
-		}
-		
+
+		needUpdateResultCount = true;
 		string ext;
 #if 0
 		bool isExecutable = false;
@@ -1546,8 +1558,9 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		SettingsManager::getInstance()->removeListener(this);
 		ClientManager::getInstance()->removeListener(this);
 		FavoriteManager::getInstance()->removeListener(this);
-		SearchManager::getInstance()->removeListener(this);
-		g_search_frames.erase(m_hWnd);
+		framesLock.lock();
+		activeFrames.erase(id);
+		framesLock.unlock();
 		ctrlResults.deleteAll();
 		ctrlHubs.deleteAll();
 		clearFound();

@@ -43,6 +43,7 @@
 #include "../ConnectivityManager.h"
 #include "../User.h"
 #include "../Tag16.h"
+#include "../Random.h"
 #include "../version.h"
 
 #include <zlib.h>
@@ -452,7 +453,7 @@ namespace dht
 	/*
 	 * Starts TTH search
 	 */
-	unsigned DHT::findFile(const string& tth, uint32_t token, void* owner)
+	unsigned DHT::findFile(const string& tth, uint32_t token, uint64_t owner)
 	{
 		if (!isConnected()) return 0;
 		return SearchManager::getInstance()->findFile(tth, token, owner);

@@ -37,7 +37,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void hubMessage(const string& message, bool thirdPerson = false) override;
 		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) override;
 		void sendUserCmd(const UserCommand& command, const StringMap& params) override;
-		void searchToken(const SearchParamToken& sp) override;
+		void searchToken(const SearchParam& sp) override;
 		void password(const string& pwd, bool setPassword) override;
 		void info(bool forceUpdate) override;
 		void refreshUserList(bool) override;

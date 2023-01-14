@@ -35,9 +35,10 @@
 #include "MappingManager.h"
 #include "CompatibilityManager.h"
 #include "LogManager.h"
-#include "../jsoncpp/include/json/json.h"
+#include "Random.h"
 #include "Tag16.h"
 #include "SocketPool.h"
+#include "../jsoncpp/include/json/json.h"
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
@@ -2143,7 +2144,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	}
 }
 
-void NmdcHub::searchToken(const SearchParamToken& sp)
+void NmdcHub::searchToken(const SearchParam& sp)
 {
 	string myNick;
 	unsigned supportFlags;

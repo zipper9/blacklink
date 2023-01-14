@@ -470,7 +470,7 @@ bool SearchManager::processPortTest(const char* buf, int len, const IpAddress& a
 void SearchManager::searchAuto(const string& tth)
 {
 	dcassert(tth.size() == 39);
-	SearchParamToken sp;
+	SearchParam sp;
 	sp.fileType = FILE_TYPE_TTH;
 	sp.filter = tth;
 	sp.generateToken(true);

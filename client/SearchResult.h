@@ -100,32 +100,14 @@ class SearchResult : public SearchResultCore
 		string getFileName() const;
 		string getFilePath() const;
 		
-		const UserPtr& getUser() const
-		{
-			return user;
-		}
-		HintedUser getHintedUser() const
-		{
-			return HintedUser(getUser(), getHubUrl());
-		}
-		const string& getHubUrl() const
-		{
-			return hubURL;
-		}
-		
-		string getIPAsString() const
-		{
-			return Util::printIpAddress(ip);
-		}
-		const IpAddress& getIP() const
-		{
-			return ip;
-		}
-		uint32_t getToken() const
-		{
-			return token;
-		}
-		
+		const UserPtr& getUser() const { return user; }
+		HintedUser getHintedUser() const { return HintedUser(getUser(), getHubUrl()); }
+		const string& getHubUrl() const { return hubURL; }
+		string getIPAsString() const { return Util::printIpAddress(ip); }
+		const IpAddress& getIP() const { return ip; }
+		uint32_t getToken() const { return token; }
+		bool isAutoToken() const { return (token & 1) == 0; }
+
 		int flags;
 		unsigned freeSlots;
 		unsigned slots;

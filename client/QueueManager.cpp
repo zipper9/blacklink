@@ -37,6 +37,7 @@
 #include "ADLSearch.h"
 #include "ShareManager.h"
 #include "Wildcards.h"
+#include "Random.h"
 
 static const unsigned SAVE_QUEUE_TIME = 300000; // 5 minutes
 static const int64_t MOVER_LIMIT = 10 * 1024 * 1024;
@@ -2753,10 +2754,12 @@ void QueueLoader::endTag(const string& name, const string&)
 // SearchManagerListener
 void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
+	if (sr.getType() != SearchResult::TYPE_FILE || sr.getTTH().isZero()) return;
+
 	bool added = false;
 	bool wantConnection = false;
 	bool downloadFileList = false;
-	
+
 	{
 		QueueItemList matches;
 		fileQueue.findQueueItems(matches, sr.getTTH());

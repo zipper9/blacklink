@@ -35,9 +35,10 @@ class FinishedManager : public Singleton<FinishedManager>,
 			e_Download = 0,
 			e_Upload = 1
 		};
-		const FinishedItemList& lockList(eType type)
+		const FinishedItemList& lockList(eType type, uint64_t* genId = nullptr)
 		{
 			cs[type]->acquireShared();
+			if (genId) *genId = generationId[type];
 			return finished[type];
 		}
 		void unlockList(eType type)
@@ -66,6 +67,7 @@ class FinishedManager : public Singleton<FinishedManager>,
 
 		std::unique_ptr<RWLock> cs[2]; // index = eType
 		FinishedItemList finished[2]; // index = eType
+		uint64_t generationId[2] = { 0, 0 };
 		int64_t tempId;
 };
 

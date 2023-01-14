@@ -93,7 +93,7 @@ namespace dht
 		void checkExpiration(uint64_t aTick);
 
 		/** Starts TTH search, returns time to wait in the queue */
-		unsigned findFile(const string& tth, uint32_t token, void* owner);
+		unsigned findFile(const string& tth, uint32_t token, uint64_t owner);
 
 		/** Sends our info to specified ip:port */
 		void info(Ip4Address ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey);

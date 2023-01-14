@@ -21,8 +21,8 @@
 
 #include "typedefs.h"
 #include "FileTypes.h"
-#include "Random.h"
 #include "CID.h"
+#include "Locks.h"
 
 enum SizeModes
 {
@@ -55,12 +55,7 @@ class SearchParamBase
 		SearchParamBase() : searchMode(MODE_DEFAULT), sizeMode(SIZE_DONTCARE), size(0), fileType(FILE_TYPE_ANY), maxResults(0)
 		{
 		}
-		static void normalizeWhitespace(string& s)
-		{
-			for (string::size_type i = 0; i < s.length(); i++)
-				if (s[i] == '\t' || s[i] == '\n' || s[i] == '\r')
-					s[i] = ' ';
-		}
+		static void normalizeWhitespace(string& s);
 		void normalizeWhitespace()
 		{
 			normalizeWhitespace(filter);
@@ -76,19 +71,30 @@ class NmdcSearchParam : public SearchParamBase
 		CID shareGroup;
 };
 
-class SearchParamToken : public SearchParamBase
+class SearchParam : public SearchParamBase
 {
 	public:
 		uint32_t   token;
-		void*      owner;
+		uint64_t   owner;
 		StringList extList;
 
-		SearchParamToken() : token(0), owner(nullptr) {}
-		void generateToken(bool autoToken)
-		{
-			token = Util::rand();
-			if (autoToken) token &= ~1; else token |= 1;
-		}
+		SearchParam() : token(0), owner(0) {}
+		void removeToken();
+		void generateToken(bool autoToken);
+};
+
+class SearchTokenList
+{
+	private:
+		boost::unordered_map<uint32_t, uint64_t> tokens;
+		mutable CriticalSection lock;
+
+	public:
+		uint64_t getTokenOwner(uint32_t token) const;
+		bool addToken(uint32_t token, uint64_t owner);
+		void removeToken(uint32_t token);
+
+		static SearchTokenList instance;
 };
 
 struct SearchClientItem

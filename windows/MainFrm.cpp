@@ -67,7 +67,7 @@
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"
-#include "../client/Text.h"
+#include "../client/Random.h"
 #include "../client/NmdcHub.h"
 #include "../client/dht/DHT.h"
 #include "../client/DCPlusPlus.h"
@@ -342,7 +342,8 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	UserManager::getInstance()->addListener(this);
 	FinishedManager::getInstance()->addListener(this);
 	FavoriteManager::getInstance()->addListener(this);
-	
+	SearchManager::getInstance()->addListener(this);
+
 	if (SETTING(NICK).empty())
 	{
 		ShowWindow(SW_RESTORE);
@@ -2156,6 +2157,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				transferView.prepareClose();
 
 				WebServerManager::getInstance()->removeListener(this);
+				SearchManager::getInstance()->removeListener(this);
 				FavoriteManager::getInstance()->removeListener(this);
 				FinishedManager::getInstance()->removeListener(this);
 				UserManager::getInstance()->removeListener(this);
@@ -2715,6 +2717,19 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 				WinUtil::openFile(Text::toT(qi->getTarget()));
 			}
 		}
+	}
+}
+
+void MainFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
+{
+	if (sr.isAutoToken()) return;
+	uint64_t id = SearchTokenList::instance.getTokenOwner(sr.getToken());
+	if (!id) return;
+	SearchFrame* frame = SearchFrame::getFramePtr(id);
+	if (frame)
+	{
+		frame->addSearchResult(sr);
+		SearchFrame::releaseFramePtr(frame);
 	}
 }
 

@@ -29,6 +29,7 @@
 #include "Wildcards.h"
 #include "ParamExpander.h"
 #include "Resolver.h"
+#include "Random.h"
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
@@ -609,7 +610,7 @@ bool Client::allowNatTraversal()
 	return BOOLSETTING(ALLOW_NAT_TRAVERSAL) && SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_DIRECT;
 }
 
-unsigned Client::searchInternal(const SearchParamToken& sp)
+unsigned Client::searchInternal(const SearchParam& sp)
 {
 	if (searchQueue.interval)
 	{
@@ -691,7 +692,7 @@ void Client::on(Second, uint64_t tick) noexcept
 		Search s;
 		if (searchQueue.pop(s, tick))
 		{
-			SearchParamToken sp;
+			SearchParam sp;
 			sp.token = s.token;
 			sp.sizeMode = s.sizeMode;
 			sp.fileType = s.fileType;
@@ -700,7 +701,7 @@ void Client::on(Second, uint64_t tick) noexcept
 			sp.filterExclude = std::move(s.filterExclude);
 			sp.searchMode = s.searchMode;
 			sp.extList = std::move(s.extList);
-			sp.owner = nullptr;
+			sp.owner = 0;
 			searchToken(sp);
 		}
 	}

@@ -69,7 +69,7 @@ namespace dht
 		void findNode(const CID& cid);
 
 		/** Performs value lookup in the network, returns time to wait in the queue */
-		unsigned findFile(const string& tth, uint32_t token, void* owner);
+		unsigned findFile(const string& tth, uint32_t token, uint64_t owner);
 
 		/** Performs node lookup to store key/value pair in the network */
 		void findStore(const string& tth, int64_t size, bool partial);

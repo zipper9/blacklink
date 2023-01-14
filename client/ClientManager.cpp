@@ -973,7 +973,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	}
 }
 
-void ClientManager::search(const SearchParamToken& sp)
+void ClientManager::search(const SearchParam& sp)
 {
 	{
 		READ_LOCK(*g_csClients);
@@ -988,7 +988,7 @@ void ClientManager::search(const SearchParamToken& sp)
 		dht::DHT::getInstance()->findFile(sp.filter, sp.token, sp.owner);
 }
 
-unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients)
+unsigned ClientManager::multiSearch(const SearchParam& sp, vector<SearchClientItem>& clients)
 {
 	unsigned maxWaitTime = 0;
 	bool useDHT = false;
@@ -1194,7 +1194,7 @@ bool ClientManager::isActive(int af, int favHubMode)
 	return getConnectivityMode(af, favHubMode) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
 }
 
-void ClientManager::cancelSearch(void* owner)
+void ClientManager::cancelSearch(uint64_t owner)
 {
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)

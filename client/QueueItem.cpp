@@ -24,6 +24,7 @@
 #include "ParamExpander.h"
 #include "ClientManager.h"
 #include "UserConnection.h"
+#include "Random.h"
 
 #ifdef USE_QUEUE_RWLOCK
 std::unique_ptr<RWLock> QueueItem::g_cs = std::unique_ptr<RWLock>(RWLock::create());
