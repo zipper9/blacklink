@@ -112,8 +112,9 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 			// Calculate strip height
 			RECT rcButton = {0};
 			GetWindowRect(FindWindowEx(hWnd, nullptr, _T("BUTTON"), nullptr), &rcButton);
-			int stripHeight = (rcButton.bottom - rcButton.top) + 24;
-				
+			int dpi = GetDeviceCaps(dc, LOGPIXELSY);
+			int stripHeight = rcButton.bottom - rcButton.top + MulDiv(24, dpi, 96);
+
 			// Fill the strip
 			rc.top += (rc.bottom - rc.top) - stripHeight;
 			FillRect(dc, &rc, GetSysColorBrush(COLOR_3DFACE));
@@ -143,12 +144,8 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 
 		case WM_INITDIALOG:
 		{
-			RECT rc = {0};
 			const CheckBoxUserData* ud = static_cast<CheckBoxUserData*>(ExMessageBox::GetUserData());
-			
-			GetClientRect(hWnd, &rc);
-			int clientHeightBefore = rc.bottom - rc.top;
-			
+
 			// Create checkbox (resized and moved later)
 			HWND check = CreateWindow(_T("BUTTON"), ud->text, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_VCENTER | BS_CHECKBOX,
 			                          CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
@@ -171,11 +168,12 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 			GetTextExtentPoint32(hdc, ud->text, _tcslen(ud->text), &size);
 			SelectObject(hdc, hOldFont);
 			ReleaseDC(hWnd, hdc);
-			
+
 			// Checkbox dimensions
 			int checkboxWidth = cxMenuSize + size.cx + 1;
 			int checkboxHeight = cyMenuSize > size.cy ? cyMenuSize : size.cy;
 
+			RECT rc;
 			GetWindowRect(hWnd, &rc);
 			int windowWidthBefore = rc.right - rc.left;
 			int windowHeightBefore = rc.bottom - rc.top;
@@ -186,12 +184,14 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 			const int checkboxSpace = 16;
 
 			int leftButtonPos = windowWidthBefore;
+			int buttonMidY = -1;
 			HWND current = nullptr;
 			while ((current = FindWindowEx(hWnd, current, _T("BUTTON"), nullptr)) != nullptr)
 			{
 				if (current == check) continue;
 				GetWindowRect(current, &rc);
 				ScreenToClient(hWnd, &rc);
+				if (buttonMidY < 0) buttonMidY = (rc.top + rc.bottom) / 2;
 				if (rc.left < leftButtonPos) leftButtonPos = rc.left;
 			}
 
@@ -202,8 +202,7 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 			int windowLeftAfter = windowLeftBefore + (windowWidthBefore - windowWidthAfter) / 2;
 			MoveWindow(hWnd, windowLeftAfter, windowTopBefore, windowWidthAfter, windowHeightBefore, TRUE);
 
-			// Align checkbox with buttons (approximately)
-			int checkboxTop = clientHeightBefore - int(checkboxHeight * 1.70);
+			int checkboxTop = buttonMidY - checkboxHeight / 2;
 			MoveWindow(check, checkboxLeft, checkboxTop, checkboxWidth, checkboxHeight, FALSE);
 				
 			// Go through the buttons and move them
