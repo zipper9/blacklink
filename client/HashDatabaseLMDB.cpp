@@ -12,8 +12,9 @@ static const size_t BASE_ITEM_SIZE = 10;
 
 enum
 {
-	ITEM_TIGER_TREE = 1,
-	ITEM_LOCAL_PATH = 2
+	ITEM_TIGER_TREE   = 1,
+	ITEM_LOCAL_PATH   = 2,
+	ITEM_UPLOAD_COUNT = 3
 };
 
 #if defined(_WIN64) || defined(__LP64__)
@@ -207,11 +208,13 @@ bool HashDatabaseConnection::resizeMap() noexcept
 	return HashDatabaseLMDB::checkError(error);
 }
 
-bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, string *path, size_t *treeSize) noexcept
+bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, uint64_t *fileSize, string *path, size_t *treeSize, uint32_t *uploadCount) noexcept
 {
 	flags = 0;
 	if (path) path->clear();
+	if (fileSize) *fileSize = 0;
 	if (treeSize) *treeSize = 0;
+	if (uploadCount) *uploadCount = 0;
 
 	MDB_dbi dbi;
 	if (!createReadTxn(dbi)) return false;
@@ -234,6 +237,7 @@ bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, strin
 
 	const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
 	flags = loadUnaligned16(ptr);
+	if (fileSize) *fileSize = loadUnaligned64(ptr + 2);
 
 	ItemParser parser(ptr + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
 	int itemType;
@@ -246,11 +250,20 @@ bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, strin
 			if (treeSize)
 				*treeSize = itemSize;
 		}
-		else
-		if (itemType == ITEM_LOCAL_PATH)
+		else if (itemType == ITEM_LOCAL_PATH)
 		{
 			if (path)
 				path->assign(static_cast<const char*>(itemData), itemSize);
+		}
+		else if (itemType == ITEM_UPLOAD_COUNT)
+		{
+			if (uploadCount)
+			{
+				if (itemSize == 2)
+					*uploadCount = loadUnaligned16(itemData);
+				else if (itemSize == 4)
+					*uploadCount = loadUnaligned32(itemData);
+			}
 		}
 	}
 
@@ -301,11 +314,12 @@ bool HashDatabaseConnection::getTigerTree(const void *tth, TigerTree &tree) noex
 	return found;
 }
 
-bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path) noexcept
+bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path, bool incUploadCount) noexcept
 {
 	unsigned setFlags = 0;
-	bool updateFlags = false, updatePath = false;
+	bool updateFlags = false, updatePath = path != nullptr;
 	size_t prevSize = 0;
+	uint32_t uploadCount = 0;
 
 	MDB_txn *txnWrite = nullptr;
 	MDB_dbi dbi;
@@ -320,25 +334,28 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 		const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
 		setFlags = loadUnaligned16(ptr);
 		prevSize = val.mv_size;
-		if (path)
+		if (updatePath || incUploadCount)
 		{
-			updatePath = true;
 			ItemParser parser(ptr + BASE_ITEM_SIZE, prevSize - BASE_ITEM_SIZE);
 			int itemType;
 			size_t itemSize, headerSize;
 			const void *itemData;
 			while (parser.getItem(itemType, itemData, itemSize, headerSize))
 			{
-				if (itemType == ITEM_LOCAL_PATH && itemSize == path->length() && path->compare(0, itemSize, (const char *) itemData, itemSize) == 0)
+				if (itemType == ITEM_LOCAL_PATH)
 				{
-					updatePath = false;
-					break;
+					if (itemSize == path->length() && path->compare(0, itemSize, (const char *) itemData, itemSize) == 0)
+						updatePath = false;
+				}
+				else if (itemType == ITEM_UPLOAD_COUNT)
+				{
+					if (itemSize == 2)
+						uploadCount = loadUnaligned16(itemData);
+					else if (itemSize == 4)
+						uploadCount = loadUnaligned32(itemData);
 				}
 			}
 		}
-	} else
-	{
-		if (path) updatePath = true;
 	}
 
 	if ((setFlags | flags) != setFlags)
@@ -347,22 +364,25 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 		updateFlags = true;
 	}
 
-	if (!updateFlags && !updatePath)
+	if (!updateFlags && !updatePath && !incUploadCount)
 	{
 		mdb_txn_abort(txnWrite);
 		return true;
 	}
 
-	size_t outSize = prevSize ? prevSize : BASE_ITEM_SIZE;
+	size_t bufSize = prevSize ? prevSize : BASE_ITEM_SIZE;
 	if (updatePath)
 	{
-		outSize += path->length() + 2;
-		if (path->length() > 255) outSize++;
+		bufSize += path->length() + 2;
+		if (path->length() > 255) bufSize++;
+	}
+	if (incUploadCount)
+	{
+		++uploadCount;
+		bufSize += uploadCount < 0x10000 ? 4 : 6;
 	}
 
-	buf.resize(outSize);
-	if (prevSize)
-		memcpy(buf.data(), val.mv_data, prevSize);
+	buf.resize(bufSize);
 
 	uint8_t *ptr = buf.data();
 	storeUnaligned16(ptr, setFlags);
@@ -370,12 +390,36 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 	storeUnaligned64(ptr, fileSize);
 	ptr += 8;
 
-	if (updatePath)
+	if (prevSize)
 	{
-		if (prevSize)
-			ptr += prevSize - BASE_ITEM_SIZE;
-		putItem(ptr, ITEM_LOCAL_PATH, path->data(), path->length());
+		ItemParser parser(static_cast<const uint8_t*>(val.mv_data) + BASE_ITEM_SIZE, prevSize - BASE_ITEM_SIZE);
+		int itemType;
+		size_t itemSize, headerSize;
+		const void *itemData;
+		while (parser.getItem(itemType, itemData, itemSize, headerSize))
+		{
+			if ((itemType == ITEM_LOCAL_PATH && updatePath) || (itemType == ITEM_UPLOAD_COUNT && incUploadCount))
+				continue;
+			memcpy(ptr, static_cast<const uint8_t*>(itemData) - headerSize, itemSize + headerSize);
+			ptr += itemSize + headerSize;
+		}
 	}
+
+	if (updatePath)
+		ptr += putItem(ptr, ITEM_LOCAL_PATH, path->data(), path->length());
+	if (incUploadCount)
+	{
+		if (uploadCount < 0x10000)
+		{
+			uint16_t count16 = (uint16_t) uploadCount;
+			ptr += putItem(ptr, ITEM_UPLOAD_COUNT, &count16, sizeof(count16));
+		}
+		else
+			ptr += putItem(ptr, ITEM_UPLOAD_COUNT, &uploadCount, sizeof(uploadCount));
+	}
+
+	size_t outSize = ptr - buf.data();
+	dcassert(outSize <= bufSize);
 
 	val.mv_data = buf.data();
 	val.mv_size = outSize;

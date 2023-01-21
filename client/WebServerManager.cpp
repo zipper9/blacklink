@@ -31,6 +31,7 @@
 #include "StringTokenizer.h"
 #include "SearchResult.h"
 #include "Socket.h"
+#include "Random.h"
 #include <boost/algorithm/string.hpp>
 
 static const string NotFoundHeader = "HTTP/1.0 404 Not Found\r\n";
@@ -1035,13 +1036,13 @@ void WebServerManager::search(string searchStr, int searchType)
 		
 		SearchManager::getInstance()->addListener(this);
 		// TODO: Get ADC searchtype extensions if any is selected
-		SearchParamToken sp;
+		SearchParam sp;
 		sp.filter = searchStr;
 		sp.sizeMode = SIZE_DONTCARE;
 		sp.token = m_search_token;
 		sp.fileType = searchType;
 		sp.size = 0;
-		sp.owner = this;
+		sp.owner = (uint64_t) this;
 		sp.searchMode = SearchParamBase::MODE_DEFAULT;
 		
 		vector<SearchClientItem> searchClients;

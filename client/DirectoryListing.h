@@ -85,16 +85,16 @@ class DirectoryListing
 			public:
 				typedef vector<File*> List;
 				
-				File(Directory* dir, const string& name, int64_t size, const TTHValue& tth, uint32_t hit, int64_t ts, const MediaInfo *media) noexcept :
+				File(Directory* dir, const string& name, int64_t size, const TTHValue& tth, uint32_t uploadCount, int64_t ts, const MediaInfo *media) noexcept :
 					name(name), size(size), parent(dir), tthRoot(tth),
-					hit(hit), ts(ts), userData(nullptr)
+					uploadCount(uploadCount), ts(ts), userData(nullptr)
 				{
 					if (media) this->media = std::make_shared<MediaInfo>(*media);
 				}
 
 				File(const File& rhs) :
 					name(rhs.name), path(rhs.path), size(rhs.size), parent(rhs.parent), tthRoot(rhs.tthRoot),
-					hit(rhs.hit), ts(rhs.ts), media(rhs.media), userData(nullptr)
+					uploadCount(rhs.uploadCount), ts(rhs.ts), media(rhs.media), userData(nullptr)
 				{
 				}
 
@@ -112,7 +112,7 @@ class DirectoryListing
 
 				GETSET(int64_t, size, Size);
 				GETSET(TTHValue, tthRoot, TTH);
-				GETSET(uint32_t, hit, Hit);
+				GETSET(uint32_t, uploadCount, UploadCount);
 				GETSET(int64_t, ts, TS);
 				GETSET(void*, userData, UserData);
 
@@ -149,7 +149,7 @@ class DirectoryListing
 
 				Directory(Directory* parent, const string& name, bool complete)
 					: parent(parent), name(name), complete(complete), userData(nullptr),
-					totalFileCount(0), totalDirCount(0), totalSize(0), maxTS(0), totalHits(0),
+					totalFileCount(0), totalDirCount(0), totalSize(0), maxTS(0), totalUploadCount(0),
 					minBitrate(0xFFFF), maxBitrate(0)
 				{
 				}
@@ -173,7 +173,7 @@ class DirectoryListing
 				size_t getTotalFileCount() const { return totalFileCount; }
 				size_t getTotalFolderCount() const { return totalDirCount; }
 				int64_t getTotalSize() const { return totalSize; }
-				uint32_t getTotalHits() const { return totalHits; }
+				uint32_t getTotalUploadCount() const { return totalUploadCount; }
 				int64_t getMaxTS() const { return maxTS; }
 				uint16_t getMinBirate() const { return minBitrate; }
 				uint16_t getMaxBirate() const { return maxBitrate; }
@@ -192,7 +192,7 @@ class DirectoryListing
 				size_t totalDirCount;
 				int64_t totalSize;
 				int64_t maxTS;
-				uint32_t totalHits;
+				uint32_t totalUploadCount;
 				uint16_t minBitrate;
 				uint16_t maxBitrate;
 

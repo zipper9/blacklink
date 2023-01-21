@@ -1952,7 +1952,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							}
 
 							if (hashDb && !q->getTTH().isZero() && !q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-								hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, q->getSize(), path.empty() ? nullptr : &path);
+								hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, q->getSize(), path.empty() ? nullptr : &path, false);
 
 							if (!ClientManager::isBeforeShutdown())
 							{
@@ -2235,7 +2235,7 @@ bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 		auto hashDb = db->getHashDatabaseConnection();
 		if (hashDb)
 		{
-			hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOAD_CANCELED, q->getSize(), nullptr);
+			hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOAD_CANCELED, q->getSize(), nullptr, false);
 			db->putHashDatabaseConnection(hashDb);
 		}
 	}

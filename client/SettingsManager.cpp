@@ -470,6 +470,7 @@ static const char* settingTags[] =
 	"DbLogFinishedUploads",
 	"EnableLastIP",
 	"EnableRatioUserList",
+	"EnableUploadCounter",
 	"SQLiteJournalMode",
 	"DbFinishedBatch",
 	"GeoIPAutoUpdate",
@@ -1113,6 +1114,7 @@ void SettingsManager::setDefaults()
 	setDefault(DB_LOG_FINISHED_UPLOADS, 365);
 	setDefault(ENABLE_LAST_IP_AND_MESSAGE_COUNTER, TRUE);
 	setDefault(ENABLE_RATIO_USER_LIST, TRUE);
+	setDefault(ENABLE_UPLOAD_COUNTER, TRUE);
 	setDefault(DB_FINISHED_BATCH, 300);
 	setDefault(GEOIP_AUTO_UPDATE, TRUE);
 	setDefault(GEOIP_CHECK_HOURS, 30);

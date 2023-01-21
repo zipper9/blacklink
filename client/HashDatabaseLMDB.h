@@ -14,9 +14,9 @@ class HashDatabaseConnection
 		HashDatabaseConnection(const HashDatabaseConnection&) = delete;
 		HashDatabaseConnection& operator= (const HashDatabaseConnection&) = delete;
 
-		bool getFileInfo(const void *tth, unsigned &flags, string *path, size_t *treeSize) noexcept;
+		bool getFileInfo(const void *tth, unsigned &flags, uint64_t *fileSize, string *path, size_t *treeSize, uint32_t *uploadCount) noexcept;
 		bool getTigerTree(const void *tth, TigerTree &tree) noexcept;
-		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path) noexcept;
+		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path, bool incUploadCount) noexcept;
 		bool putTigerTree(const TigerTree &tree) noexcept;
 
 	private:

@@ -531,11 +531,6 @@ void DatabaseConnection::addTransfer(eTypeTransfer type, const FinishedItemPtr& 
 	int64_t timestamp = posixTimeToLocal(item->getTime());
 	try
 	{
-#if 0
-		string name = Text::toLower(Util::getFileName(item->getTarget()));
-		string path = Text::toLower(Util::getFilePath(item->getTarget()));
-		inc_hitL(path, name);
-#endif
 		initInsertTransferQuery();
 		insertTransfer.bind(1, type);
 		insertTransfer.bind(2, (long long) (timestamp/(60*60*24)));

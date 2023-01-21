@@ -50,7 +50,7 @@ const int DirectoryListingFrame::columnId[] =
 	COLUMN_SIZE,
 	COLUMN_TTH,
 	COLUMN_PATH,
-	COLUMN_HIT,
+	COLUMN_UPLOAD_COUNT,
 	COLUMN_TS,
 	COLUMN_EXACT_SIZE,
 	COLUMN_BITRATE,
@@ -67,7 +67,7 @@ static const int columnSizes[] =
 	85,  // COLUMN_SIZE
 	200, // COLUMN_TTH
 	300, // COLUMN_PATH
-	50,  // COLUMN_HIT
+	50,  // COLUMN_UPLOAD_COUNT
 	120, // COLUMN_TS
 	100, // COLUMN_EXACT_SIZE
 	80,  // COLUMN_BITRATE
@@ -84,7 +84,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::SIZE,
 	ResourceManager::TTH_ROOT,
 	ResourceManager::PATH,
-	ResourceManager::DOWNLOADED,
+	ResourceManager::UPLOAD_COUNT,
 	ResourceManager::ADDED,
 	ResourceManager::EXACT_SIZE,
 	ResourceManager::BITRATE,
@@ -226,7 +226,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	ctrlList.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
-	ctrlList.setColumnFormat(COLUMN_HIT, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(COLUMN_UPLOAD_COUNT, LVCFMT_RIGHT);
 }
 
 DirectoryListingFrame* DirectoryListingFrame::findFrameByID(uint64_t id)
@@ -872,7 +872,7 @@ LRESULT DirectoryListingFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*w
 		    ii->file->getSize() &&
 		    !ii->file->isAnySet(DirectoryListing::FLAG_DOWNLOADED | DirectoryListing::FLAG_SHARED) &&
 		    !ii->file->getTTH().isZero() &&
-		    hashDb->putFileInfo(ii->file->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, ii->file->getSize(), nullptr))
+		    hashDb->putFileInfo(ii->file->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, ii->file->getSize(), nullptr, false))
 		{
 			ii->file->setFlag(DirectoryListing::FLAG_DOWNLOADED);
 			parent = ii->file->getParent();
@@ -2589,8 +2589,8 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 		Util::uriSeparatorsToPathSeparators(columns[COLUMN_PATH]);
 	}
 
-	if (f->getHit())
-		columns[COLUMN_HIT] = Util::toStringT(f->getHit());
+	if (f->getUploadCount())
+		columns[COLUMN_UPLOAD_COUNT] = Util::toStringT(f->getUploadCount());
 	if (f->getTS())
 		columns[COLUMN_TS] = Text::toT(Util::formatDateTime(static_cast<time_t>(f->getTS())));
 	const DirectoryListing::MediaInfo *media = f->getMedia();
@@ -2615,8 +2615,8 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) :
 	columns[COLUMN_FILENAME] = Text::toT(d->getName());
 	columns[COLUMN_EXACT_SIZE] = Util::formatExactSizeT(d->getTotalSize());
 	columns[COLUMN_SIZE] = Util::formatBytesT(d->getTotalSize());
-	auto hits = d->getTotalHits();
-	if (hits) columns[COLUMN_HIT] = Util::toStringT(hits);
+	auto totalUploads = d->getTotalUploadCount();
+	if (totalUploads) columns[COLUMN_UPLOAD_COUNT] = Util::toStringT(totalUploads);
 	auto maxTS = d->getMaxTS();
 	if (maxTS) columns[COLUMN_TS] = Text::toT(Util::formatDateTime(static_cast<time_t>(maxTS)));
 	auto minBitrate = d->getMinBirate(), maxBitrate = d->getMaxBirate();
@@ -2645,8 +2645,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 				case COLUMN_EXACT_SIZE:
 				case COLUMN_SIZE:
 					return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
-				case COLUMN_HIT:
-					return compare(a->dir->getTotalHits(), b->dir->getTotalHits());
+				case COLUMN_UPLOAD_COUNT:
+					return compare(a->dir->getTotalUploadCount(), b->dir->getTotalUploadCount());
 				case COLUMN_TS:
 					return compare(a->dir->getMaxTS(), b->dir->getMaxTS());
 				default:
@@ -2670,8 +2670,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 		case COLUMN_EXACT_SIZE:
 		case COLUMN_SIZE:
 			return compare(a->file->getSize(), b->file->getSize());
-		case COLUMN_HIT:
-			return compare(a->file->getHit(), b->file->getHit());
+		case COLUMN_UPLOAD_COUNT:
+			return compare(a->file->getUploadCount(), b->file->getUploadCount());
 		case COLUMN_TS:
 			return compare(a->file->getTS(), b->file->getTS());
 		case COLUMN_BITRATE:

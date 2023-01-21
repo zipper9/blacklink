@@ -186,6 +186,7 @@ class ListLoader : public SimpleXMLReader::CallBack
 			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
 			list->basePath = "/";
 			scanFlags = 0;
+			useUploadCounter = BOOLSETTING(ENABLE_UPLOAD_COUNTER);
 			if (scanOptions & DirectoryListing::SCAN_OPTION_SHARED)
 				scanFlags |= DatabaseManager::FLAG_SHARED;
 			if (scanOptions & DirectoryListing::SCAN_OPTION_DOWNLOADED)
@@ -225,6 +226,7 @@ class ListLoader : public SimpleXMLReader::CallBack
 
 		bool inListing;
 		bool ownList;
+		bool useUploadCounter;
 		unsigned emptyFileNameCounter;
 		unsigned scanFlags;
 
@@ -371,9 +373,9 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			else if (current->isAnySet(DirectoryListing::FLAG_DIR_TIMESTAMP))
 				shared = current->maxTS;
 
-			uint32_t hit = 0;
+			uint32_t uploadCount = 0;
 			if (valHit)
-				hit = Util::toUInt32(*valHit);
+				uploadCount = Util::toUInt32(*valHit);
 
 			DirectoryListing::MediaInfo tempMedia;
 			DirectoryListing::MediaInfo *media = nullptr;
@@ -408,12 +410,12 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 
 			DirectoryListing::File* f;
 			if (valFilename && isValidName(*valFilename))
-				f = new DirectoryListing::File(current, *valFilename, size, tth, hit, shared, media);
+				f = new DirectoryListing::File(current, *valFilename, size, tth, uploadCount, shared, media);
 			else
-				f = new DirectoryListing::File(current, *valTTH, size, tth, hit, shared, media);
+				f = new DirectoryListing::File(current, *valTTH, size, tth, uploadCount, shared, media);
 			current->files.push_back(f);
 			current->totalSize += size;
-			current->totalHits += hit;
+			current->totalUploadCount += uploadCount;
 			if (shared > current->maxTS) current->maxTS = shared;
 			if (media && media->bitrate)
 			{
@@ -421,50 +423,62 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				if (media->bitrate > current->maxBitrate) current->maxBitrate = media->bitrate;
 			}
 			
-			if (size && !ownList)
+			if (size)
 			{
-				if (QueueManager::fileQueue.isQueued(f->getTTH()))
+				if (!ownList)
 				{
-					f->setFlag(DirectoryListing::FLAG_QUEUED);
-					current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);
-				}
-				string path;
-				if ((scanFlags & DatabaseManager::FLAG_SHARED) && ShareManager::getInstance()->getFileInfo(f->getTTH(), path))
-				{
-					f->setFlag(DirectoryListing::FLAG_SHARED);
-					f->setPath(path);
-					current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
-				}
-				else if (scanFlags & (DatabaseManager::FLAG_DOWNLOADED | DatabaseManager::FLAG_DOWNLOAD_CANCELED))
-				{
-					unsigned flags;
-					if (hashDb && !f->getTTH().isZero())
+					if (QueueManager::fileQueue.isQueued(f->getTTH()))
 					{
-						hashDb->getFileInfo(f->getTTH().data, flags, &path, nullptr);
-						flags &= scanFlags;
+						f->setFlag(DirectoryListing::FLAG_QUEUED);
+						current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);
 					}
-					else
-						flags = 0;
-					if (flags & DatabaseManager::FLAG_SHARED)
+					string path;
+					if ((scanFlags & DatabaseManager::FLAG_SHARED) && ShareManager::getInstance()->getFileInfo(f->getTTH(), path))
 					{
 						f->setFlag(DirectoryListing::FLAG_SHARED);
 						f->setPath(path);
 						current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
-					} else
-					if (flags & DatabaseManager::FLAG_DOWNLOADED)
+					}
+					else if (scanFlags & (DatabaseManager::FLAG_DOWNLOADED | DatabaseManager::FLAG_DOWNLOAD_CANCELED))
 					{
-						f->setFlag(DirectoryListing::FLAG_DOWNLOADED);
-						f->setPath(path);
-						current->setFlag(DirectoryListing::FLAG_HAS_DOWNLOADED);
-					} else
-					if (flags & DatabaseManager::FLAG_DOWNLOAD_CANCELED)
-					{
-						f->setFlag(DirectoryListing::FLAG_CANCELED);
-						current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
-					} else current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
+						unsigned flags;
+						if (hashDb && !f->getTTH().isZero())
+						{
+							hashDb->getFileInfo(f->getTTH().data, flags, nullptr, &path, nullptr, nullptr);
+							flags &= scanFlags;
+						}
+						else
+							flags = 0;
+						if (flags & DatabaseManager::FLAG_SHARED)
+						{
+							f->setFlag(DirectoryListing::FLAG_SHARED);
+							f->setPath(path);
+							current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
+						}
+						else if (flags & DatabaseManager::FLAG_DOWNLOADED)
+						{
+							f->setFlag(DirectoryListing::FLAG_DOWNLOADED);
+							f->setPath(path);
+							current->setFlag(DirectoryListing::FLAG_HAS_DOWNLOADED);
+						}
+						else if (flags & DatabaseManager::FLAG_DOWNLOAD_CANCELED)
+						{
+							f->setFlag(DirectoryListing::FLAG_CANCELED);
+							current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
+						}
+						else
+							current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
+					}
+					else
+						current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
 				}
-				else
-					current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
+				else if (useUploadCounter && hashDb && !f->getTTH().isZero())
+				{
+					unsigned flags;
+					uint32_t uploadCount;
+					hashDb->getFileInfo(f->getTTH().data, flags, nullptr, nullptr, nullptr, &uploadCount);
+					f->setUploadCount(uploadCount);
+				}
 			}
 
 			fileProcessed();
@@ -482,7 +496,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					d = new DirectoryListing::Directory(current, fileName, !incomp);
 				else
 					d = new DirectoryListing::Directory(current, "invalid_folder_name_" + Util::toString(++emptyFileNameCounter), !incomp);
-					
+
 				if (!valDate.empty())
 				{
 					int64_t val = Util::toInt64(valDate);
@@ -864,7 +878,7 @@ void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
 		totalFileCount += dir->totalFileCount;
 		totalDirCount += dir->totalDirCount;
 		totalSize += dir->totalSize;
-		totalHits += dir->totalHits;
+		totalUploadCount += dir->totalUploadCount;
 		if (dir->maxTS > maxTS) maxTS = dir->maxTS;
 		if (dir->minBitrate < minBitrate) minBitrate = dir->minBitrate;
 		if (dir->maxBitrate > maxBitrate) maxBitrate = dir->maxBitrate;
@@ -893,7 +907,7 @@ void DirectoryListing::Directory::updateFiles(Flags::MaskType& updatedFlags)
 		else
 			flags |= DirectoryListing::FLAG_HAS_OTHER;
 		totalSize += file->getSize();
-		totalHits += file->getHit();
+		totalUploadCount += file->getUploadCount();
 		auto shared = file->getTS();
 		if (shared > maxTS) maxTS = shared;
 		const MediaInfo *media = file->getMedia();
@@ -946,7 +960,7 @@ void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 		auto prevTotalDirCount = dir->totalDirCount;
 		auto prevTotalSize = dir->totalSize;
 		auto prevMaxTS = dir->maxTS;
-		auto prevTotalHits = dir->totalHits;
+		auto prevTotalUploadCount = dir->totalUploadCount;
 		auto prevMinBitrate = dir->minBitrate;
 		auto prevMaxBitrate = dir->maxBitrate;
 		
@@ -954,7 +968,7 @@ void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 		dir->totalDirCount = 0;
 		dir->totalSize = 0;
 		dir->maxTS = 0;
-		dir->totalHits = 0;
+		dir->totalUploadCount = 0;
 		dir->minBitrate = 0xFFFF;
 		dir->maxBitrate = 0;
 		
@@ -967,7 +981,7 @@ void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 			dir->totalDirCount != prevTotalDirCount ||
 			dir->totalSize != prevTotalSize ||
 			dir->maxTS != prevMaxTS ||
-			dir->totalHits != prevTotalHits ||
+			dir->totalUploadCount != prevTotalUploadCount ||
 			dir->maxBitrate != prevMaxBitrate ||
 			dir->minBitrate != prevMinBitrate ||
 			dir->getFlags() != flags;
@@ -1124,7 +1138,7 @@ void DirectoryListing::Directory::addFile(DirectoryListing::File *f)
 	files.push_back(f);
 	f->setParent(this);
 	totalSize += f->getSize();
-	totalHits += f->getHit();
+	totalUploadCount += f->getUploadCount();
 	if (f->getTS() > maxTS) maxTS = f->getTS();
 	const MediaInfo *media = f->getMedia();
 	if (media && media->bitrate)

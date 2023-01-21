@@ -753,21 +753,25 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				TTHValue tth;
 				if (!parseTTH(tth, pc.args[2], res)) return true;
 				string path;
+				uint64_t fileSize;
 				size_t treeSize;
+				uint32_t uploadCount;
 				unsigned flags;
 				string tthText = "TTH " + pc.args[2] + ": ";
 				res.text = tthText;
 				auto db = DatabaseManager::getInstance();
 				auto hashDb = db->getHashDatabaseConnection();
-				if (!(hashDb && hashDb->getFileInfo(tth.data, flags, &path, &treeSize)))
+				if (!(hashDb && hashDb->getFileInfo(tth.data, flags, &fileSize, &path, &treeSize, &uploadCount)))
 				{
 					res.text += "not found in database\n";
 				}
 				else
 				{
 					res.text += "found in database, flags=" + Util::toString(flags);
+					res.text += ", fileSize=" + Util::toString(fileSize);
 					if (!path.empty()) { res.text += ", path="; res.text += path; }
 					if (treeSize) { res.text += ", treeSize="; res.text += Util::toString(treeSize); }
+					if (uploadCount) { res.text += ", uploadCount="; res.text += Util::toString(uploadCount); }
 					res.text += '\n';
 				}
 				if (hashDb) db->putHashDatabaseConnection(hashDb);

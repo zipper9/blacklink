@@ -131,9 +131,19 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		                                           u->getFileSize(), u->getRunningAverage(),
 		                                           GET_TIME(), u->getTTH(),
 		                                           ip, u->getActual());
+		DatabaseManager *db = DatabaseManager::getInstance();
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
-			DatabaseManager::getInstance()->addTransfer(e_TransferUpload, item);
+			db->addTransfer(e_TransferUpload, item);
 		addItem(item, e_Upload);
+		if (isFile && BOOLSETTING(ENABLE_UPLOAD_COUNTER))
+		{
+			auto hashDb = db->getHashDatabaseConnection();
+			if (hashDb)
+			{
+				hashDb->putFileInfo(u->getTTH().data, 0, u->getFileSize(), nullptr, true);
+				db->putHashDatabaseConnection(hashDb);
+			}
+		}
 		fire(FinishedManagerListener::AddedUl(), isFile, item);
 	}
 }

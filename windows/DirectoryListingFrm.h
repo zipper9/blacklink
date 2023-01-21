@@ -64,19 +64,19 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		enum
 		{
-			COLUMN_FILENAME    = 0,
-			COLUMN_TYPE        = 1,
-			COLUMN_EXACT_SIZE  = 2,
-			COLUMN_SIZE        = 3,
-			COLUMN_TTH         = 4,
-			COLUMN_PATH        = 5,
-			COLUMN_HIT         = 6,
-			COLUMN_TS          = 7,
-			COLUMN_BITRATE     = 9,
-			COLUMN_MEDIA_XY    = 10,
-			COLUMN_MEDIA_VIDEO = 11,
-			COLUMN_MEDIA_AUDIO = 12,
-			COLUMN_DURATION    = 13,
+			COLUMN_FILENAME     = 0,
+			COLUMN_TYPE         = 1,
+			COLUMN_EXACT_SIZE   = 2,
+			COLUMN_SIZE         = 3,
+			COLUMN_TTH          = 4,
+			COLUMN_PATH         = 5,
+			COLUMN_UPLOAD_COUNT = 6,
+			COLUMN_TS           = 7,
+			COLUMN_BITRATE      = 9,
+			COLUMN_MEDIA_XY     = 10,
+			COLUMN_MEDIA_VIDEO  = 11,
+			COLUMN_MEDIA_AUDIO  = 12,
+			COLUMN_DURATION     = 13,
 			COLUMN_LAST
 		};
 

@@ -51,10 +51,8 @@ static const PropPage::ListItem listItems[] =
 #ifdef BL_FEATURE_IP_DATABASE
 	{ SettingsManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
 #endif
-#if 0
-	{ SettingsManager::FILELIST_INCLUDE_HIT, ResourceManager::ENABLE_HIT_FILE_LIST },
-#endif
 	{ SettingsManager::ENABLE_RATIO_USER_LIST, ResourceManager::ENABLE_RATIO_USER_LIST },
+	{ SettingsManager::ENABLE_UPLOAD_COUNTER, ResourceManager::ENABLE_UPLOAD_COUNTER },
 	{ 0, ResourceManager::Strings() }
 };
 
