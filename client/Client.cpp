@@ -312,7 +312,7 @@ void Client::connect()
 	prevSocket = clientSock;
 	clientSock = nullptr;
 	csState.unlock();
-	
+
 	resetSocket(prevSocket);
 	bytesShared.store(0);
 	setAutoReconnect(true);
@@ -320,6 +320,7 @@ void Client::connect()
 	reloadSettings(true);
 	resetRegistered();
 	resetOp();
+	updateConnectionStatus(ConnectionStatus::CONNECTING);
 
 	bool hasIP6 = ConnectivityManager::getInstance()->hasIP6();
 	csState.lock();
@@ -341,6 +342,7 @@ void Client::connect()
 		state = STATE_DISCONNECTED;
 		csState.unlock();
 		fire(ClientListener::ClientFailed(), this, e.getError());
+		updateConnectionStatus(ConnectionStatus::FAILURE);
 		return;
 	}
 	csState.unlock();
@@ -416,8 +418,6 @@ void Client::onConnected() noexcept
 	}
 	state = STATE_PROTOCOL;
 	csState.unlock();
-	auto fm = FavoriteManager::getInstance();
-	fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::SUCCESS);
 	fire(ClientListener::Connected(), this);
 }
 
@@ -429,8 +429,7 @@ void Client::onFailed(const string& line) noexcept
 	updateActivityL();
 	csState.unlock();
 
-	if (!ClientManager::isBeforeShutdown() && !connected)
-		FavoriteManager::getInstance()->changeConnectionStatus(getHubUrl(), ConnectionStatus::FAILURE);
+	if (!connected) updateConnectionStatus(ConnectionStatus::FAILURE);
 	fire(ClientListener::ClientFailed(), this, line);
 }
 
@@ -1050,4 +1049,12 @@ string Client::getOpChat() const
 {
 	LOCK(csOpChat);
 	return opChat;
+}
+
+void Client::updateConnectionStatus(ConnectionStatus::Status status)
+{
+	if (favoriteId)
+		FavoriteManager::getInstance()->changeConnectionStatus(favoriteId, status);
+	else
+		FavoriteManager::getInstance()->changeConnectionStatus(getHubUrl(), status);
 }

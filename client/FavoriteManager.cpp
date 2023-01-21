@@ -648,19 +648,42 @@ bool FavoriteManager::isPrivateHub(const string& url) const
 	return false;
 }
 
+void FavoriteManager::updateConnectionStatus(FavoriteHubEntry* fhe, ConnectionStatus::Status status, time_t now)
+{
+	auto& cs = fhe->getConnectionStatus();
+	switch (status)
+	{
+		case ConnectionStatus::CONNECTING:
+			cs.lastAttempt = now;
+			break;
+		case ConnectionStatus::SUCCESS:
+			cs.lastSuccess = now;
+		case ConnectionStatus::FAILURE:
+			cs.status = status;
+	}
+}
+
+void FavoriteManager::changeConnectionStatus(int id, ConnectionStatus::Status status)
+{
+	time_t now = GET_TIME();
+	WRITE_LOCK(*csHubs);
+	for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
+	{
+		FavoriteHubEntry* fhe = *i;
+		if (fhe->getID() == id)
+		{
+			updateConnectionStatus(fhe, status, now);
+			break;
+		}
+	}
+}
+
 void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status)
 {
+	time_t now = GET_TIME();
 	WRITE_LOCK(*csHubs);
 	FavoriteHubEntry* fhe = getFavoriteHubByUrlL(hubUrl);
-	if (fhe)
-	{
-		auto& cs = fhe->getConnectionStatus();
-		time_t now = GET_TIME();
-		cs.status = status;
-		cs.lastAttempt = now;
-		if (status == ConnectionStatus::SUCCESS)
-			cs.lastSuccess = now;
-	}
+	if (fhe) updateConnectionStatus(fhe, status, now);
 }
 
 const FavoriteHubEntry* FavoriteManager::getFavoriteHubByUrlL(const string& url) const

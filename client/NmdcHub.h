@@ -26,8 +26,6 @@
 #include "AntiFlood.h"
 
 class ClientManager;
-typedef boost::unordered_map<string, std::pair<std::string, unsigned>>  CFlyUnknownCommand;
-typedef boost::unordered_map<string, std::unordered_map<std::string, unsigned> >  CFlyUnknownCommandArray;
 
 class NmdcHub : public Client, private Flags
 {

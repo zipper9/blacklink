@@ -63,20 +63,22 @@ class Client : public ClientBase,
                protected TimerManagerListener,
                public std::enable_shared_from_this<Client>
 {
-	protected:
-		void fireUserListUpdated(const OnlineUserList& userList);
-		void fireUserUpdated(const OnlineUserPtr& user);
-		void decBytesShared(int64_t bytes);
-		void changeBytesShared(Identity& id, int64_t bytes);
-
+	public:
 		static const int64_t averageFakeFileSize = 1536 * 1024;
 
 	public:
-		virtual ~Client();
-		int64_t getBytesShared() const
+		enum States
 		{
-			return bytesShared.load();
-		}
+			STATE_CONNECTING,    // Waiting for socket to connect
+			STATE_PROTOCOL,      // Protocol setup
+			STATE_IDENTIFY,      // Nick setup
+			STATE_VERIFY,        // Checking password
+			STATE_NORMAL,        // Running
+			STATE_DISCONNECTED,  // Idle
+			STATE_WAIT_PORT_TEST // Waiting for port test to complete
+		} state;
+
+		virtual ~Client();
 
 	public:
 		bool isActive() const;
@@ -117,6 +119,12 @@ class Client : public ClientBase,
 		{
 			LOCK(csState);
 			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
+		}
+
+		int getState() const
+		{
+			LOCK(csState);
+			return state;
 		}
 
 		bool isSecure() const;
@@ -234,6 +242,12 @@ class Client : public ClientBase,
 		}
 
 	protected:
+		void fireUserListUpdated(const OnlineUserList& userList);
+		void fireUserUpdated(const OnlineUserPtr& user);
+		void decBytesShared(int64_t bytes);
+		void changeBytesShared(Identity& id, int64_t bytes);
+		void updateConnectionStatus(ConnectionStatus::Status status);
+
 		bool isPrivateMessageAllowed(const ChatMessage& message, string* response, bool automatic);
 		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
 		void logPM(const ChatMessage& message) const;
@@ -241,21 +255,6 @@ class Client : public ClientBase,
 
 	public:
 		void fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
-
-	private:
-		struct CFlyFloodCommand
-		{
-			std::vector<std::pair<string, int64_t>> m_flood_command;
-			int64_t  m_start_tick;
-			int64_t  m_tick;
-			uint32_t m_count;
-			bool m_is_ban;
-			CFlyFloodCommand() : m_start_tick(0), m_tick(0), m_count(0), m_is_ban(false)
-			{
-			}
-		};
-		typedef boost::unordered_map<string, CFlyFloodCommand> CFlyFloodCommandMap;
-		CFlyFloodCommandMap m_flood_detect;
 
 	protected:
 		OnlineUserPtr myOnlineUser;
@@ -373,6 +372,7 @@ class Client : public ClientBase,
 		bool getHideShare() const { return hideShare; }
 		const CID& getShareGroup() const { return shareGroup; }
 		void getUserCommands(vector<UserCommand>& result) const;
+		int64_t getBytesShared() const { return bytesShared.load(); }
 
 		std::shared_ptr<Client> getClientPtr()
 		{
@@ -414,17 +414,6 @@ class Client : public ClientBase,
 		};
 		
 		static std::atomic<uint32_t> g_counts[COUNT_UNCOUNTED];
-		
-		enum States
-		{
-			STATE_CONNECTING,    // Waiting for socket to connect
-			STATE_PROTOCOL,      // Protocol setup
-			STATE_IDENTIFY,      // Nick setup
-			STATE_VERIFY,        // Checking password
-			STATE_NORMAL,        // Running
-			STATE_DISCONNECTED,  // Idle
-			STATE_WAIT_PORT_TEST // Waiting for port test to complete
-		} state;
 		
 		SearchQueue searchQueue;
 		BufferedSocket* clientSock;

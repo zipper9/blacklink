@@ -143,7 +143,8 @@ class FavoriteHubsFrame :
 		enum
 		{
 			HUB_CONNECTED,
-			HUB_DISCONNECTED
+			HUB_DISCONNECTED,
+			HUB_CONNECTING
 		};
 
 		struct StateKeeper
@@ -174,13 +175,14 @@ class FavoriteHubsFrame :
 		int buttonWidth, buttonHeight, buttonSpace, buttonDeltaWidth;
 		int vertMargin, horizMargin;
 
-		StringSet onlineHubs;
+		boost::unordered_map<string, ConnectionStatus::Status> hubConnStatus;
 		bool noSave;
 
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
 
 		static tstring printConnectionStatus(const ConnectionStatus& cs, time_t curTime);
+		static tstring printConnectionStatusEx(ConnectionStatus::Status hubStatus, const ConnectionStatus& cs, time_t curTime);
 		static tstring printLastConnected(const ConnectionStatus& cs);
 		void addEntryL(const FavoriteHubEntry* entry, int pos, int groupIndex, time_t now);
 		void handleMove(bool up);
@@ -210,9 +212,16 @@ class FavoriteHubsFrame :
 				WinUtil::postSpeakerMsg(m_hWnd, HUB_DISCONNECTED, new string(c->getHubUrl()));
 		}
 
-		bool isOnline(const string& hubUrl) const
+		void on(ClientConnecting, const Client* c) noexcept override
 		{
-			return onlineHubs.find(hubUrl) != onlineHubs.end();
+			if (!ClientManager::isBeforeShutdown())
+				WinUtil::postSpeakerMsg(m_hWnd, HUB_CONNECTING, new string(c->getHubUrl()));
+		}
+
+		ConnectionStatus::Status getHubConnStatus(const string& hubUrl) const noexcept
+		{
+			auto i = hubConnStatus.find(hubUrl);
+			return i != hubConnStatus.end() ? i->second : ConnectionStatus::UNKNOWN;
 		}
 };
 

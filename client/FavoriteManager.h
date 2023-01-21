@@ -142,6 +142,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		const FavoriteHubEntry* getFavoriteHubEntryPtr(const string& server) const noexcept;
 		const FavoriteHubEntry* getFavoriteHubEntryPtr(int id) const noexcept;
 		void releaseFavoriteHubEntryPtr(const FavoriteHubEntry* fhe) const noexcept;
+		void changeConnectionStatus(int id, ConnectionStatus::Status status);
 		void changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status);
 
 		// Favorite hub groups
@@ -301,6 +302,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		string getFavoriteDir(const string& ext) const;
 		const FavoriteHubEntry* getFavoriteHubByUrlL(const string& url) const;
 		FavoriteHubEntry* getFavoriteHubByUrlL(const string& url);
+		static void updateConnectionStatus(FavoriteHubEntry* fhe, ConnectionStatus::Status status, time_t now);
 		
 		// ClientManagerListener
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;

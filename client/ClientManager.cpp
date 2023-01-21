@@ -1043,7 +1043,7 @@ unsigned ClientManager::multiSearch(const SearchParam& sp, vector<SearchClientIt
 	return maxWaitTime;
 }
 
-void ClientManager::getOnlineClients(StringSet& onlineClients)
+void ClientManager::getOnlineClients(StringSet& onlineClients) noexcept
 {
 	READ_LOCK(*g_csClients);
 	onlineClients.clear();
@@ -1052,6 +1052,35 @@ void ClientManager::getOnlineClients(StringSet& onlineClients)
 		Client* c = static_cast<Client*>(i->second.get());
 		if (c->isConnected())
 			onlineClients.insert(c->getHubUrl());
+	}
+}
+
+void ClientManager::getClientStatus(boost::unordered_map<string, ConnectionStatus::Status>& result) noexcept
+{
+	READ_LOCK(*g_csClients);
+	result.clear();
+	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
+	{
+		Client* c = static_cast<Client*>(i->second.get());
+		ConnectionStatus::Status status;
+		switch (c->getState())
+		{
+			case Client::STATE_CONNECTING:
+			case Client::STATE_PROTOCOL:
+			case Client::STATE_IDENTIFY:
+			case Client::STATE_VERIFY:
+			case Client::STATE_WAIT_PORT_TEST:
+				status = ConnectionStatus::CONNECTING;
+				break;
+			case Client::STATE_NORMAL:
+				status = ConnectionStatus::SUCCESS;
+				break;
+			default:
+				status = ConnectionStatus::FAILURE;
+		}
+		auto p = result.insert(make_pair(c->getHubUrl(), status));
+		if (!p.second && status == ConnectionStatus::SUCCESS)
+			p.first->second = status;
 	}
 }
 
@@ -1202,6 +1231,11 @@ void ClientManager::cancelSearch(uint64_t owner)
 		Client* c = static_cast<Client*>(i->second.get());
 		c->cancelSearch(owner);
 	}
+}
+
+void ClientManager::on(Connecting, const Client* c) noexcept
+{
+	fire(ClientManagerListener::ClientConnecting(), c);
 }
 
 void ClientManager::on(Connected, const Client* c) noexcept

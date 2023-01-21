@@ -128,7 +128,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void putOffline(const OnlineUserPtr& ou, bool disconnectFlag = false) noexcept;
 		static void removeOnlineUser(const OnlineUserPtr& ou) noexcept;
 
-		static void getOnlineClients(StringSet& onlineClients);
+		static void getOnlineClients(StringSet& onlineClients) noexcept;
+		static void getClientStatus(boost::unordered_map<string, ConnectionStatus::Status>& result) noexcept;
 
 		static bool searchSpyEnabled;
 
@@ -247,6 +248,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void fireIncomingSearch(int protocol, const string& seeker, const string& hub, const string& filter, ClientManagerListener::SearchReply reply);
 
 		// ClientListener
+		void on(Connecting, const Client* c) noexcept override;
 		void on(Connected, const Client* c) noexcept override;
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
 		void on(UserListUpdated, const ClientBase* c, const OnlineUserList&) noexcept override;

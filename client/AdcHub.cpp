@@ -426,11 +426,12 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		csState.unlock();
 		setAutoReconnect(true);
 		updateCounts(false);
+		updateConnectionStatus(ConnectionStatus::SUCCESS);
 		fireUserUpdated(ou);
-		if (newUser && ou->getIdentity().isOp())
+		if (newUser && id.isOp())
 			fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
-	else if (ou->getIdentity().isHub())
+	else if (id.isHub())
 	{
 		fire(ClientListener::HubUpdated(), this);
 	}

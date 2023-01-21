@@ -30,7 +30,8 @@ struct ConnectionStatus
 	{
 		UNKNOWN = -1,
 		SUCCESS,
-		FAILURE
+		FAILURE,
+		CONNECTING // used by FavoriteManager::changeConnectionStatus
 	};
 
 	ConnectionStatus() : status(UNKNOWN), lastAttempt(0), lastSuccess(0) {}

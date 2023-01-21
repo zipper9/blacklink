@@ -32,8 +32,9 @@ static const WCHAR PASSWORD_CHAR = L'\x25CF';
 static const char PASSWORD_CHAR = '*';
 #endif
 
-static const int IMAGE_ONLINE  = 8;
-static const int IMAGE_OFFLINE = 9;
+static const int IMAGE_ONLINE     = 8;
+static const int IMAGE_OFFLINE    = 9;
+static const int IMAGE_CONNECTING = 34;
 
 int FavoriteHubsFrame::columnIndexes[] =
 {
@@ -152,7 +153,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlManageGroups.SetFont(Fonts::g_systemFont);
 
 	ctrlHubs.SetImageList(g_otherImage.getIconList(), LVSIL_SMALL);
-	ClientManager::getOnlineClients(onlineHubs);
+	ClientManager::getClientStatus(hubConnStatus);
 
 	FavoriteManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
@@ -310,9 +311,9 @@ void FavoriteHubsFrame::addEntryL(const FavoriteHubEntry* entry, int pos, int gr
 	TStringList l;
 	getAttributes(l, entry);
 	const ConnectionStatus& cs = entry->getConnectionStatus();
-	bool online = isOnline(entry->getServer());
+	auto hubStatus = getHubConnStatus(entry->getServer());
 	bool wasConnecting = cs.lastAttempt >= Util::getStartTime();
-	l.push_back(online ? TSTRING(ONLINE) : printConnectionStatus(cs, now));
+	l.push_back(printConnectionStatusEx(hubStatus, cs, now));
 	l.push_back(printLastConnected(cs));
 	
 	const int i = ctrlHubs.insert(pos, l, 0, static_cast<LPARAM>(entry->getID()));
@@ -321,10 +322,17 @@ void FavoriteHubsFrame::addEntryL(const FavoriteHubEntry* entry, int pos, int gr
 	LVITEM lvItem = { 0 };
 	lvItem.mask = LVIF_GROUPID | LVIF_IMAGE;
 	lvItem.iItem = i;
-	if (online)
-		lvItem.iImage = IMAGE_ONLINE;
-	else
-		lvItem.iImage = wasConnecting ? IMAGE_OFFLINE : -1;
+	switch (hubStatus)
+	{
+		case ConnectionStatus::SUCCESS:
+			lvItem.iImage = IMAGE_ONLINE;
+			break;
+		case ConnectionStatus::CONNECTING:
+			lvItem.iImage = IMAGE_CONNECTING;
+			break;
+		default:
+			lvItem.iImage = wasConnecting ? IMAGE_OFFLINE : -1;
+	}
 	lvItem.iGroupId = groupIndex;
 	ctrlHubs.SetItem(&lvItem);
 }
@@ -340,10 +348,29 @@ int FavoriteHubsFrame::findItem(int id) const
 
 LRESULT FavoriteHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	if (wParam == HUB_CONNECTED)
+	if (wParam >= HUB_CONNECTED && wParam <= HUB_CONNECTING)
 	{
 		std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-		onlineHubs.insert(*hub);
+		ConnectionStatus::Status status;
+		tstring statusText;
+		int statusIcon;
+		switch (wParam)
+		{
+			case HUB_CONNECTED:
+				status = ConnectionStatus::SUCCESS;
+				statusText = TSTRING(ONLINE);
+				statusIcon = IMAGE_ONLINE;
+				break;
+			case HUB_CONNECTING:
+				status = ConnectionStatus::CONNECTING;
+				statusText = TSTRING(CONNECTING);
+				statusIcon = IMAGE_CONNECTING;
+				break;
+			default:
+				status = ConnectionStatus::FAILURE;
+				statusIcon = IMAGE_OFFLINE;
+		}
+		hubConnStatus[*hub] = status;
 		auto fm = FavoriteManager::getInstance();
 		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(*hub);
 		if (fhe)
@@ -354,39 +381,19 @@ LRESULT FavoriteHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 			int index = findItem(id);
 			if (index != -1)
 			{
-				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, IMAGE_ONLINE, 0, 0, 0);
-				ctrlHubs.SetItemText(index, COLUMN_CONNECTION_STATUS, CTSTRING(ONLINE));
-				tstring lastConn = printLastConnected(cs);
-				ctrlHubs.SetItemText(index, COLUMN_LAST_CONNECTED, lastConn.c_str());
+				if (statusText.empty()) statusText = printConnectionStatus(cs, GET_TIME());
+				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, statusIcon, 0, 0, 0);
+				ctrlHubs.SetItemText(index, COLUMN_CONNECTION_STATUS, statusText.c_str());
+				if (status == ConnectionStatus::SUCCESS)
+				{
+					tstring lastConn = printLastConnected(cs);
+					ctrlHubs.SetItemText(index, COLUMN_LAST_CONNECTED, lastConn.c_str());
+				}
 				ctrlHubs.Update(index);
 			}
 		}
-		return 0;
 	}
-	
-	if (wParam == HUB_DISCONNECTED)
-	{
-		std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-		onlineHubs.erase(*hub);
-		auto fm = FavoriteManager::getInstance();
-		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(*hub);
-		if (fhe)
-		{
-			int id = fhe->getID();
-			ConnectionStatus cs = fhe->getConnectionStatus();
-			fm->releaseFavoriteHubEntryPtr(fhe);
-			int index = findItem(id);
-			if (index != -1)
-			{
-				ctrlHubs.SetItem(index, 0, LVIF_IMAGE, nullptr, IMAGE_OFFLINE, 0, 0, 0);
-				tstring status = printConnectionStatus(cs, GET_TIME());
-				ctrlHubs.SetItemText(index, COLUMN_CONNECTION_STATUS, status.c_str());
-				ctrlHubs.Update(index);
-			}
-		}
-		return 0;
-	}
-	
+
 	return 0;
 }
 
@@ -414,7 +421,7 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		hubsMenu.CreatePopupMenu();
 		
 		tstring title;
-		bool online = false;
+		ConnectionStatus::Status hubStatus = ConnectionStatus::UNKNOWN;
 		if (selCount == 1)
 		{
 			int index = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
@@ -423,7 +430,7 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			if (fhe)
 			{
 				title = Text::toT(fhe->getName());
-				online = isOnline(fhe->getServer());
+				hubStatus = getHubConnStatus(fhe->getServer());
 				fm->releaseFavoriteHubEntryPtr(fhe);
 			}
 		}
@@ -435,7 +442,7 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		hubsMenu.AppendMenu(MF_STRING, IDC_NEWFAV, CTSTRING(NEW), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
 		hubsMenu.AppendMenu(MF_STRING | (selCount == 1 ? 0 : MFS_DISABLED), IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
 		hubsMenu.AppendMenu(MF_SEPARATOR);
-		if (online)
+		if (hubStatus == ConnectionStatus::SUCCESS || hubStatus == ConnectionStatus::CONNECTING)
 			hubsMenu.AppendMenu(MF_STRING | status, IDC_CONNECT, CTSTRING(OPEN_HUB_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_HUB, 0));
 		else
 			hubsMenu.AppendMenu(MF_STRING | status, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
@@ -878,14 +885,8 @@ LRESULT FavoriteHubsFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 void FavoriteHubsFrame::on(SettingsManagerListener::Repaint)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
-		if (ctrlHubs.isRedraw())
-		{
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-		}
-	}
+	if (ctrlHubs.isRedraw())
+		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 LRESULT FavoriteHubsFrame::onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -924,6 +925,13 @@ tstring FavoriteHubsFrame::printConnectionStatus(const ConnectionStatus& cs, tim
 	return Util::emptyStringT;
 }
 
+tstring FavoriteHubsFrame::printConnectionStatusEx(ConnectionStatus::Status hubStatus, const ConnectionStatus& cs, time_t curTime)
+{
+	if (hubStatus == ConnectionStatus::SUCCESS) return TSTRING(ONLINE);
+	if (hubStatus == ConnectionStatus::CONNECTING) return TSTRING(CONNECTING);
+	return printConnectionStatus(cs, curTime);
+}
+
 tstring FavoriteHubsFrame::printLastConnected(const ConnectionStatus& cs)
 {
 	if (cs.lastSuccess)
@@ -948,8 +956,8 @@ LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam
 		if (fhe)
 		{
 			const auto& cs = fhe->getConnectionStatus();
-			bool online = isOnline(fhe->getServer());
-			tstring status = online ? TSTRING(ONLINE) : printConnectionStatus(cs, now);
+			auto hubStatus = getHubConnStatus(fhe->getServer());
+			tstring status = printConnectionStatusEx(hubStatus, cs, now);
 			tstring lastConn = printLastConnected(cs);
 			fm->releaseFavoriteHubEntryPtr(fhe);
 			ctrlHubs.SetItemText(pos, COLUMN_CONNECTION_STATUS, status.c_str());

@@ -1260,6 +1260,7 @@ void NmdcHub::helloParse(const string& param)
 				state = STATE_NORMAL;
 				connSuccess = true;
 			}
+			updateConnectionStatus(ConnectionStatus::SUCCESS);
 			updateCounts(false);
 			version();
 			getNickList();
