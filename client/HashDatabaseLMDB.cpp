@@ -344,7 +344,7 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 			{
 				if (itemType == ITEM_LOCAL_PATH)
 				{
-					if (itemSize == path->length() && path->compare(0, itemSize, (const char *) itemData, itemSize) == 0)
+					if (path && itemSize == path->length() && path->compare(0, itemSize, (const char *) itemData, itemSize) == 0)
 						updatePath = false;
 				}
 				else if (itemType == ITEM_UPLOAD_COUNT)
