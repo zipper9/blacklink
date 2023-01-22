@@ -666,6 +666,7 @@ static const char* settingTags[] =
 	"ConfirmHubRemoval",
 	"ConfirmHubgroupRemoval",
 	"ConfirmUserRemoval", 
+	"ConfirmFinishedRemoval",
 	"ConfirmShareFromShell",
 	"ConfirmClearSearchHistory",
 	"ConfirmAdlsRemoval",
@@ -1298,6 +1299,7 @@ void SettingsManager::setDefaults()
 	setDefault(CONFIRM_HUB_REMOVAL, TRUE);
 	setDefault(CONFIRM_HUBGROUP_REMOVAL, TRUE);
 	setDefault(CONFIRM_USER_REMOVAL, TRUE);
+	setDefault(CONFIRM_FINISHED_REMOVAL, TRUE);
 	setDefault(CONFIRM_SHARE_FROM_SHELL, TRUE);
 	setDefault(CONFIRM_CLEAR_SEARCH_HISTORY, TRUE);
 	setDefault(CONFIRM_ADLS_REMOVAL, TRUE);

@@ -20,6 +20,10 @@
 #include "Client.h"
 #include "DatabaseManager.h"
 
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
+#include "UserManager.h"
+#endif
+
 #ifdef _DEBUG
 std::atomic_int User::g_user_counts(0);
 #endif

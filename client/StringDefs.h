@@ -1061,6 +1061,7 @@ enum Strings   // @DontAdd
 	SETTINGS_CONFIRM_HUB_REMOVAL, // "Confirm favorite hub removal"
 	SETTINGS_CONFIRM_USER_REMOVAL, // "Confirm favorite user removal"
 	SETTINGS_CONFIRM_ITEM_REMOVAL, // "Confirm item removal in download queue"
+	SETTINGS_CONFIRM_FINISHED_REMOVAL, // "Confirm item removal in finished transfers"
 	SETTINGS_CONFIRM_ADLS_REMOVAL, // "Confirm ADLS rule removal"
 	SETTINGS_CONFIRM_CLEAR_SEARCH_HISTORY, // "Confirm clearing search history"
 	SETTINGS_WAN_IP_MANUAL, // "Manual WAN IP"

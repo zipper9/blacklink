@@ -4,6 +4,7 @@
 #include "ShellContextMenu.h"
 #include "../client/QueueManager.h"
 #include "../client/UploadManager.h"
+#include "ExMessageBox.h"
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 #include "TextFrame.h"
@@ -302,8 +303,15 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 				}
 				{
 					CLockRedraw<true> lockRedraw(ctrlList);
-					for (auto i = items.cbegin(); i != items.cend(); ++i)
-						addFinishedEntry(*i, false);
+					for (auto i = items.begin(); i != items.end(); ++i)
+					{
+						FinishedItemPtr& item = *i;
+						const string& nick = item->getNick();
+						const string& hub = item->getHub();
+						if (!nick.empty() && !hub.empty() && !Util::isAdcHub(hub))
+							item->setCID(ClientManager::makeCid(nick, hub));
+						addFinishedEntry(item, false);
+					}
 				}
 			}
 			ctrlList.resort();
@@ -398,7 +406,7 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 	return updated;
 }
 
-void FinishedFrameBase::appendMenuItems(OMenu& menu, bool fileExists, int& copyMenuPos)
+void FinishedFrameBase::appendMenuItems(OMenu& menu, bool fileExists, const CID& userCid, int& copyMenuPos)
 {
 	if (fileExists)
 	{
@@ -412,9 +420,12 @@ void FinishedFrameBase::appendMenuItems(OMenu& menu, bool fileExists, int& copyM
 		menu.AppendMenu(MF_STRING, IDC_REDOWNLOAD_FILE, CTSTRING(REDOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
 	copyMenuPos = menu.GetMenuItemCount();
 	menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
-	menu.AppendMenu(MF_SEPARATOR);
-	menu.AppendMenu(MF_STRING, IDC_GRANTSLOT, CTSTRING(GRANT_EXTRA_SLOT));
-	menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
+	if (!userCid.isZero())
+	{
+		menu.AppendMenu(MF_SEPARATOR);
+		menu.AppendMenu(MF_STRING, IDC_GRANTSLOT, CTSTRING(GRANT_EXTRA_SLOT));
+		menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
+	}
 	menu.AppendMenu(MF_SEPARATOR);
 	menu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 	menu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL));
@@ -433,12 +444,14 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 		int copyMenuPos;
 		bool shellMenuShown = false;
 		tstring filePath;
+		CID userCid;
 		if (ctrlList.GetSelectedCount() == 1)
 		{
 			int index = ctrlList.GetNextItem(-1, LVNI_SELECTED);
 			const auto itemData = ctrlList.getItemData(index);
 			if (itemData && itemData->entry)
 			{
+				userCid = itemData->entry->getCID();
 				filePath = Text::toT(itemData->entry->getTarget());
 				if (!File::isExist(filePath))
 					filePath.clear();
@@ -453,7 +466,7 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 			ctxMenu.SetOwnerDraw(OMenu::OD_NEVER);
 			ctxMenu.CreatePopupMenu();
 			shellMenu.attachMenu(ctxMenu);
-			appendMenuItems(ctxMenu, true, copyMenuPos);
+			appendMenuItems(ctxMenu, true, userCid, copyMenuPos);
 			ctxMenu.AppendMenu(MF_SEPARATOR);
 			UINT idCommand = shellMenu.showContextMenu(hwnd, pt);
 			ctxMenu.RemoveMenu(copyMenuPos, MF_BYPOSITION);
@@ -466,7 +479,7 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 		{
 			OMenu ctxMenu;
 			ctxMenu.CreatePopupMenu();
-			appendMenuItems(ctxMenu, !filePath.empty(), copyMenuPos);
+			appendMenuItems(ctxMenu, !filePath.empty(), userCid, copyMenuPos);
 			ctxMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, hwnd);
 			ctxMenu.RemoveMenu(copyMenuPos, MF_BYPOSITION);
 		}
@@ -498,67 +511,80 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 	
 LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	switch (wID)
+	if (BOOLSETTING(CONFIRM_FINISHED_REMOVAL))
 	{
-		case IDC_REMOVE:
-		{
-			vector<int64_t> idDC;
-			int i = -1, p = -1;
-			auto fm = FinishedManager::getInstance();
-			while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				const auto ii = ctrlList.getItemData(i);
-				if (!currentTreeItemSelected)
-				{
-					idDC.push_back(ii->entry->getID());
-				}
-				else
-				{
-					totalSpeed -= ii->entry->getAvgSpeed();
-					fm->removeItem(ii->entry, type);
-				}
-				totalBytes -= ii->entry->getSize();
-				totalActual -= ii->entry->getActual();
-				totalCount--;
-				delete ii;
-				ctrlList.DeleteItem(i);
-				p = i;
-			}
-			ctrlList.SelectItem((p < ctrlList.GetItemCount() - 1) ? p : ctrlList.GetItemCount() - 1);
-			auto conn = DatabaseManager::getInstance()->getDefaultConnection();
-			if (conn) conn->deleteTransferHistory(idDC);
-			updateStatus();
-			break;
-		}
-		case IDC_REMOVE_ALL:
-		{
-			CWaitCursor waitCursor;
-			if (!currentTreeItemSelected)
-			{
-				const int count = ctrlList.GetItemCount();
-				vector<int64_t> idDC;
-				idDC.reserve(count);
-				for (int i = 0; i < count; ++i)
-				{
-					const auto ii = ctrlList.getItemData(i);
-					idDC.push_back(ii->entry->getID());
-				}
-				auto conn = DatabaseManager::getInstance()->getDefaultConnection();
-				if (conn) conn->deleteTransferHistory(idDC);
-			}
-			else
-			{
-				FinishedManager::getInstance()->removeAll(type);
-			}
-			ctrlList.deleteAll();
-			totalBytes = 0;
-			totalActual = 0;
-			totalSpeed = 0;
-			totalCount = 0;
-			updateStatus();
-			break;
-		}
+		UINT checkState = BST_UNCHECKED;
+		if (MessageBoxWithCheck(loader.hwnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+			return 0;
+		if (checkState == BST_CHECKED)
+			SET_SETTING(CONFIRM_FINISHED_REMOVAL, FALSE);
 	}
+	vector<int64_t> idDC;
+	int i = -1, p = -1;
+	auto fm = FinishedManager::getInstance();
+	while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
+	{
+		const auto ii = ctrlList.getItemData(i);
+		if (!currentTreeItemSelected)
+		{
+			idDC.push_back(ii->entry->getID());
+		}
+		else
+		{
+			totalSpeed -= ii->entry->getAvgSpeed();
+			fm->removeItem(ii->entry, type);
+		}
+		totalBytes -= ii->entry->getSize();
+		totalActual -= ii->entry->getActual();
+		totalCount--;
+		delete ii;
+		ctrlList.DeleteItem(i);
+		p = i;
+	}
+	int count = ctrlList.GetItemCount();
+	if (count)
+		ctrlList.SelectItem(p < count - 1 ? p : count - 1);
+	else
+		removeTreeItem();
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	if (conn) conn->deleteTransferHistory(idDC);
+	updateStatus();
+	return 0;
+}
+
+LRESULT FinishedFrameBase::onRemoveAll(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (BOOLSETTING(CONFIRM_FINISHED_REMOVAL))
+	{
+		UINT checkState = BST_UNCHECKED;
+		if (MessageBoxWithCheck(loader.hwnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+			return 0;
+		if (checkState == BST_CHECKED)
+			SET_SETTING(CONFIRM_FINISHED_REMOVAL, FALSE);
+	}
+	CWaitCursor waitCursor;
+	if (!currentTreeItemSelected)
+	{
+		const int count = ctrlList.GetItemCount();
+		vector<int64_t> idDC;
+		idDC.reserve(count);
+		for (int i = 0; i < count; ++i)
+		{
+			const auto ii = ctrlList.getItemData(i);
+			idDC.push_back(ii->entry->getID());
+		}
+		auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+		if (conn) conn->deleteTransferHistory(idDC);
+	}
+	else
+		FinishedManager::getInstance()->removeAll(type);
+	ctrlList.deleteAll();
+	removeTreeItem();
+	totalBytes = 0;
+	totalActual = 0;
+	totalSpeed = 0;
+	totalCount = 0;
+	updateStatus();
 	return 0;
 }
 
@@ -700,6 +726,16 @@ void FinishedFrameBase::removeDroppedItems(int64_t maxTempId)
 		totalCount = count;
 		updateStatus();
 	}
+}
+
+void FinishedFrameBase::removeTreeItem()
+{
+	HTREEITEM treeItem = ctrlTree.GetSelectedItem();
+	if (!treeItem) return;
+	DWORD_PTR itemData = ctrlTree.GetItemData(treeItem);
+	if (!itemData) return;
+	const TreeItemData* data = reinterpret_cast<const TreeItemData*>(itemData);
+	if (data->type == HistoryDate) ctrlTree.DeleteItem(treeItem);
 }
 
 int FinishedFrameLoader::run()

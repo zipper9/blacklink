@@ -163,7 +163,8 @@ class FinishedFrameBase
 		void updateList(const FinishedItemList& fl);		
 		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);
 		void removeDroppedItems(int64_t maxTempId);
-		void appendMenuItems(OMenu& menu, bool fileExists, int& copyMenuPos);
+		void appendMenuItems(OMenu& menu, bool fileExists, const CID& userCid, int& copyMenuPos);
+		void removeTreeItem();
 
 		void onCreate(HWND hwnd, int id);
 		bool onSpeaker(WPARAM wParam, LPARAM lParam);
@@ -174,6 +175,7 @@ class FinishedFrameBase
 		LRESULT onTreeItemDeleted(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
@@ -213,7 +215,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVE_TREE_ITEM, onRemoveTreeItem)
-		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemove)
+		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemoveAll)
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
@@ -322,10 +324,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			if (!itemData) return 0;
 			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(itemData);
 			if (data->type == HistoryDate)
-			{
 				SendMessage(WM_COMMAND, IDC_REMOVE_ALL);
-				ctrlTree.DeleteItem(treeItem);
-			}
 			return 0;
 		}
 
@@ -345,11 +344,8 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMLVKEYDOWN* kd = reinterpret_cast<NMLVKEYDOWN*>(pnmh);
-			
 			if (kd->wVKey == VK_DELETE)
-			{
 				PostMessage(WM_COMMAND, IDC_REMOVE);
-			}
 			return 0;
 		}
 		

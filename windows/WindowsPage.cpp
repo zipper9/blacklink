@@ -75,6 +75,7 @@ static const PropPage::ListItem confirmItems[] =
 	{ SettingsManager::CONFIRM_USER_REMOVAL, ResourceManager::SETTINGS_CONFIRM_USER_REMOVAL },
 	{ SettingsManager::CONFIRM_ADLS_REMOVAL, ResourceManager::SETTINGS_CONFIRM_ADLS_REMOVAL },
 	{ SettingsManager::CONFIRM_DELETE, ResourceManager::SETTINGS_CONFIRM_ITEM_REMOVAL },
+	{ SettingsManager::CONFIRM_FINISHED_REMOVAL, ResourceManager::SETTINGS_CONFIRM_FINISHED_REMOVAL },
 	{ SettingsManager::CONFIRM_CLEAR_SEARCH_HISTORY, ResourceManager::SETTINGS_CONFIRM_CLEAR_SEARCH_HISTORY },
 	{ 0, ResourceManager::Strings() }
 };

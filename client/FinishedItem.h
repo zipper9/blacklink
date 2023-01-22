@@ -90,7 +90,7 @@ class FinishedItem
 		GETC(string, nick, Nick);
 		GETC(string, hubs, Hubs);
 		GETC(string, hub, Hub);
-		GETC(CID, cid, CID);
+		GETSET(CID, cid, CID);
 		GETC(int64_t, size, Size);
 		GETC(int64_t, avgSpeed, AvgSpeed);
 		GETC(time_t, time, Time);
