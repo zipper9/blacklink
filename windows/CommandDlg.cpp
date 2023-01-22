@@ -169,7 +169,7 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		if (type && name.empty())
 		{
 			ctrlName.SetFocus();
-			MessageBox(CTSTRING(USER_CMD_NAME_EMPTY), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+			WinUtil::showInputError(ctrlName, TSTRING(USER_CMD_NAME_EMPTY));
 			return 0;
 		}
 
@@ -178,7 +178,7 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		if (type && text.empty())
 		{
 			ctrlCommand.SetFocus();
-			MessageBox(CTSTRING(USER_CMD_TEXT_EMPTY), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+			WinUtil::showInputError(ctrlCommand, TSTRING(USER_CMD_TEXT_EMPTY));
 			return 0;
 		}
 
@@ -189,7 +189,7 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 			if (text.empty())
 			{
 				ctrlNick.SetFocus();
-				MessageBox(CTSTRING(USER_CMD_NICK_EMPTY), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+				WinUtil::showInputError(ctrlNick, TSTRING(USER_CMD_NICK_EMPTY));
 				return 0;
 			}
 		}

@@ -85,6 +85,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 			lastMessageSelPos(0),
 			userMenu(nullptr),
 			disableChat(false),
+			shouldRestoreStatusText(true),
 			ctrlStatusOwnerDraw(0),
 			findDlg(nullptr)
 		{
@@ -162,6 +163,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		CFlyToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl ctrlStatus;
 		bool disableChat;
+		bool shouldRestoreStatusText;
 		uint64_t frameId;
 		CFindReplaceDialog* findDlg;
 

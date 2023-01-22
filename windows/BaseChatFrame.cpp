@@ -415,6 +415,7 @@ void BaseChatFrame::restoreStatusFromCache()
 			ctrlStatus.SetText(i, nullptr, SBT_OWNERDRAW);
 		else
 			ctrlStatus.SetText(i, ctrlStatusCache[i].c_str(), SBT_NOTABPARSING);
+	shouldRestoreStatusText = false;
 }
 
 void BaseChatFrame::checkMultiLine()

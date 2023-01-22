@@ -275,8 +275,7 @@ void HubFrame::initUI()
 	if (isDHT) ctrlUsers.insertDHTUsers();
 
 	updateModeIcon();
-	restoreStatusFromCache();
-	
+
 	FavoriteManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
@@ -749,11 +748,11 @@ void HubFrame::doConnected()
 
 		addStatus(TSTRING(CONNECTED));
 		setDisconnected(false);
-		
+
 		setHubParam();
 		
 		if (client)
-			setStatusText(1, Text::toT(client->getCipherName()));
+			setStatusText(STATUS_CIPHER_SUITE, Text::toT(client->getCipherName()));
 		if (ctrlStatus)
 			UpdateLayout(FALSE);
 
@@ -1168,6 +1167,8 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		sr.right = sr.left + 16;
 		if (ctrlShowUsers)
 			ctrlShowUsers.MoveWindow(sr);
+		if (shouldRestoreStatusText)
+			restoreStatusFromCache();
 	}
 	if (msgPanel)
 	{
@@ -1210,6 +1211,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	}
 	if (showUsers && ctrlUsers)
 		ctrlUsers.updateLayout();
+	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 void HubFrame::setSplitterPanes()
@@ -2748,11 +2750,11 @@ void HubFrame::updateStats()
 		}
 		users += _T(' ');
 		users += TSTRING(HUB_USERS);
-		setStatusText(2, users.c_str());
+		setStatusText(STATUS_USERS, users.c_str());
 		if (!isDHT)
 		{
-			setStatusText(3, Util::formatBytesT(bytesShared));
-			setStatusText(4, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
+			setStatusText(STATUS_SHARED, Util::formatBytesT(bytesShared));
+			setStatusText(STATUS_SIZE_PER_USER, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
 		}
 	}
 }
