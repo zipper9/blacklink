@@ -374,7 +374,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				shared = current->maxTS;
 
 			uint32_t uploadCount = 0;
-			if (valHit)
+			if (valHit && !ownList)
 				uploadCount = Util::toUInt32(*valHit);
 
 			DirectoryListing::MediaInfo tempMedia;
@@ -414,8 +414,6 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			else
 				f = new DirectoryListing::File(current, *valTTH, size, tth, uploadCount, shared, media);
 			current->files.push_back(f);
-			current->totalSize += size;
-			current->totalUploadCount += uploadCount;
 			if (shared > current->maxTS) current->maxTS = shared;
 			if (media && media->bitrate)
 			{
@@ -475,11 +473,13 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				else if (useUploadCounter && hashDb && !f->getTTH().isZero())
 				{
 					unsigned flags;
-					uint32_t uploadCount;
 					hashDb->getFileInfo(f->getTTH().data, flags, nullptr, nullptr, nullptr, &uploadCount);
 					f->setUploadCount(uploadCount);
 				}
 			}
+
+			current->totalSize += size;
+			current->totalUploadCount += uploadCount;
 
 			fileProcessed();
 		}
