@@ -1940,51 +1940,27 @@ void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 void DirectoryListingFrame::runUserCommand(UserCommand& uc)
 {
+	if (!dl->getUser()->isOnline())
+	{
+		ctrlStatus.SetText(STATUS_TEXT, CTSTRING(USER_OFFLINE));
+		return;
+	}
+
+	StringMap ucLineParams;
 	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
 		return;
-
-	StringMap ucParams = ucLineParams;
-
-	boost::unordered_set<UserPtr, User::Hash> nicks;
 
 	int sel = -1;
 	while ((sel = ctrlList.GetNextItem(sel, LVNI_SELECTED)) != -1)
 	{
+		StringMap ucParams = ucLineParams;
 		const ItemInfo* ii = ctrlList.getItemData(sel);
-		if (uc.once())
-		{
-			if (nicks.find(dl->getUser()) != nicks.end())
-				continue;
-			nicks.insert(dl->getUser());
-		}
-		if (!dl->getUser()->isOnline())
-			return;
-		ucParams["fileTR"] = "NONE";
 		if (ii->type == ItemInfo::FILE)
-		{
-			ucParams["type"] = "File";
-			ucParams["fileFN"] = dl->getPath(ii->file) + ii->file->getName();
-			ucParams["fileSI"] = Util::toString(ii->file->getSize());
-			ucParams["fileSIshort"] = Util::formatBytes(ii->file->getSize());
-			ucParams["fileTR"] = ii->file->getTTH().toBase32();
-		}
+			dl->getFileParams(ii->file, ucParams);
 		else
-		{
-			ucParams["type"] = "Directory";
-			ucParams["fileFN"] = dl->getPath(ii->dir) + ii->dir->getName();
-			ucParams["fileSI"] = Util::toString(ii->dir->getTotalSize());
-			ucParams["fileSIshort"] = Util::formatBytes(ii->dir->getTotalSize());
-		}
-
-		// compatibility with 0.674 and earlier
-		ucParams["file"] = ucParams["fileFN"];
-		ucParams["filesize"] = ucParams["fileSI"];
-		ucParams["filesizeshort"] = ucParams["fileSIshort"];
-		ucParams["tth"] = ucParams["fileTR"];
-
-		StringMap tmp = ucParams;
-		const UserPtr tmpPtr = dl->getUser();
-		ClientManager::userCommand(dl->getHintedUser(), uc, tmp, true);
+			dl->getDirectoryParams(ii->dir, ucParams);
+		ClientManager::userCommand(dl->getHintedUser(), uc, ucParams, true);
+		if (uc.once()) break;
 	}
 }
 

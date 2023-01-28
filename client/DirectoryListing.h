@@ -346,6 +346,9 @@ class DirectoryListing
 		bool isAborted() const { return aborted; }
 		bool hasTimestamps() const { return hasTimestampsFlag; }
 
+		void getFileParams(const File* f, StringMap& ucParams) const noexcept;
+		void getDirectoryParams(const Directory* d, StringMap& ucParams) const noexcept;
+
 		GETSET(HintedUser, hintedUser, HintedUser);
 		GETSET(bool, includeSelf, IncludeSelf);
 		GETSET(int, scanOptions, ScanOptions);

@@ -488,8 +488,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		DirectoryListing::TTHToFileMap dupFiles;
 		bool showingDupFiles;
 
-		StringMap ucLineParams;
-
 		struct UserFrame
 		{
 			UserPtr user;

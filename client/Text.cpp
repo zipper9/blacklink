@@ -545,8 +545,10 @@ string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 
 void asciiMakeLower(string& str) noexcept
 {
-	for (string::size_type i = 0; i < str.length(); i++)
-		str[i] = asciiToLower(str[i]);
+	char* s = &str[0];
+	size_t len = str.length();
+	for (size_t i = 0; i < len; i++)
+		s[i] = asciiToLower(s[i]);
 }
 
 void makeLower(wstring& str) noexcept

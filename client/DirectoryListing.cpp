@@ -1632,3 +1632,34 @@ bool DirectoryListing::Directory::match(const DirectoryListing::SearchQuery &sq)
 	}
 	return true;
 }
+
+void DirectoryListing::getFileParams(const File* f, StringMap& ucParams) const noexcept
+{
+	ucParams["type"] = "File";
+	string s = getPath(f) + f->getName();
+	ucParams["fileFN"] = s;
+	ucParams["file"] = s; // Compatibility alias
+	s = Util::toString(f->getSize());
+	ucParams["fileSI"] = s;
+	ucParams["filesize"] = s; // Compatibility alias
+	s = Util::formatBytes(f->getSize());
+	ucParams["fileSIshort"] = s;
+	ucParams["filesizeshort"] = s; // Compatibility alias
+	s = f->getTTH().toBase32();
+	ucParams["fileTR"] = s;
+	ucParams["tth"] = s; // Compatibility alias
+}
+
+void DirectoryListing::getDirectoryParams(const Directory* d, StringMap& ucParams) const noexcept
+{
+	ucParams["type"] = "Directory";
+	string s = getPath(d) + d->getName();
+	ucParams["fileFN"] = s;
+	ucParams["file"] = s; // Compatibility alias
+	s = Util::toString(d->getTotalSize());
+	ucParams["fileSI"] = s;
+	ucParams["filesize"] = s; // Compatibility alias
+	s = Util::formatBytes(d->getTotalSize());
+	ucParams["fileSIshort"] = s;
+	ucParams["filesizeshort"] = s; // Compatibility alias
+}
