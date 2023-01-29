@@ -456,16 +456,16 @@ void WaitingUsersFrame::addFile(const HintedUser& hintedUser, const UploadQueueF
 
 void WaitingUsersFrame::updateStatus()
 {
-	if (ctrlStatus.IsWindow())
+	if (ctrlStatus)
 	{
 		const int cnt = ctrlList.GetItemCount();
 		const int users = ctrlQueued.GetCount() - 1;
 
 		tstring tmp[2];
 		tmp[0] = TPLURAL_F(PLURAL_USERS, users);
-		tmp[0] = TPLURAL_F(PLURAL_ITEMS, cnt);
+		tmp[1] = TPLURAL_F(PLURAL_ITEMS, cnt);
 		bool u = false;
-		
+
 		for (int i = 1; i < 3; i++)
 		{
 			const int w = WinUtil::getTextWidth(tmp[i - 1], ctrlStatus) + STATUS_PART_PADDING;
@@ -476,11 +476,8 @@ void WaitingUsersFrame::updateStatus()
 			}
 			ctrlStatus.SetText(i + 1, tmp[i - 1].c_str());
 		}
-		
-		if (u)
-		{
-			UpdateLayout(TRUE);
-		}
+
+		if (u) UpdateLayout(TRUE);
 		setCountMessages(ctrlList.GetItemCount());
 	}
 }
