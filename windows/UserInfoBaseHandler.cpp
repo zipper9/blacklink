@@ -297,7 +297,8 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 			if (uit->getUser() == user)
 			{
 				int countAdded = 0;
-				for (auto i = uit->waitingFiles.cbegin(); i != uit->waitingFiles.cend(); ++i)
+				const auto& waitingFiles = uit->getWaitingFiles();
+				for (auto i = waitingFiles.cbegin(); i != waitingFiles.cend(); ++i)
 				{
 					if (!hasCaption)
 					{

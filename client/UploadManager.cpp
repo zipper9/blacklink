@@ -50,6 +50,19 @@ std::unique_ptr<RWLock> UploadManager::g_csBans = std::unique_ptr<RWLock>(RWLock
 #endif
 int64_t UploadManager::g_runningAverage;
 
+void WaitingUser::addWaitingFile(const UploadQueueFilePtr& uqi)
+{
+	if (waitingFiles.size() >= MAX_WAITING_FILES) waitingFiles.erase(waitingFiles.begin());
+	waitingFiles.push_back(uqi);
+}
+
+UploadQueueFilePtr WaitingUser::findWaitingFile(const string& file) const
+{
+	for (const UploadQueueFilePtr& item : waitingFiles)
+		if (item->getFile() == file) return item;
+	return UploadQueueFilePtr();
+}
+
 UploadManager::UploadManager() noexcept :
 	extra(0), lastGrant(0), lastFreeSlots(-1),
 	fireballStartTick(0), fileServerCheckTick(0), isFireball(false), isFileServer(false), extraPartial(0)
@@ -1066,13 +1079,13 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 		if (it != slotQueue.end())
 		{
 			it->setToken(source->getConnectionQueueToken());
-			for (auto i = it->waitingFiles.cbegin(); i != it->waitingFiles.cend(); ++i)
-				if ((*i)->getFile() == file)
-				{
-					(*i)->setPos(pos);
-					(*i)->setFlags(flags);
-					return queuePosition;
-				}
+			UploadQueueFilePtr uqfp = it->findWaitingFile(file);
+			if (uqfp)
+			{
+				uqfp->setPos(pos);
+				uqfp->setFlags(flags);
+				return queuePosition;
+			}
 		}
 		uqi.reset(new UploadQueueFile(file, pos, size, flags));
 		if (it == slotQueue.end())
@@ -1081,7 +1094,7 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 			slotQueue.push_back(WaitingUser(hintedUser, source->getConnectionQueueToken(), uqi));
 		}
 		else
-			it->waitingFiles.push_back(uqi);
+			it->addWaitingFile(uqi);
 	}
 	if (g_count_WaitingUsersFrame)
 		fire(UploadManagerListener::QueueAdd(), hintedUser, uqi);
@@ -1092,8 +1105,8 @@ void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (g_count_WaitingUsersFrame)
-		for (const UploadQueueFilePtr& uqi : wu.waitingFiles)
-			fire(UploadManagerListener::QueueItemRemove(), wu.hintedUser, uqi);
+		for (const UploadQueueFilePtr& uqi : wu.getWaitingFiles())
+			fire(UploadManagerListener::QueueItemRemove(), wu.getHintedUser(), uqi);
 }
 
 void UploadManager::clearUserFilesL(const UserPtr& user)
@@ -1207,7 +1220,7 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 	for (const WaitingUser& wu : notifyList)
 	{
 		if (wu.getUser()->isOnline())
-			ClientManager::getInstance()->connect(wu.hintedUser, wu.getToken(), false);
+			ClientManager::getInstance()->connect(wu.getHintedUser(), wu.getToken(), false);
 		if (g_count_WaitingUsersFrame)
 			fire(UploadManagerListener::QueueRemove(), wu.getUser());
 	}

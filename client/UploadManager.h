@@ -66,20 +66,23 @@ class UploadQueueFile
 class WaitingUser
 {
 	public:
+		static const size_t MAX_WAITING_FILES = 50;
+
 		WaitingUser(const HintedUser& hintedUser, const std::string& token, const UploadQueueFilePtr& uqi) : hintedUser(hintedUser), token(token)
 		{
 			waitingFiles.push_back(uqi);
 		}
-		operator const UserPtr&() const
-		{
-			return hintedUser.user;
-		}
-		const UserPtr& getUser() const
-		{
-			return hintedUser.user;
-		}
-		std::vector<UploadQueueFilePtr> waitingFiles;
-		HintedUser hintedUser;
+		operator const UserPtr&() const { return hintedUser.user; }
+		const UserPtr& getUser() const { return hintedUser.user; }
+		const HintedUser& getHintedUser() const { return hintedUser; }
+		void addWaitingFile(const UploadQueueFilePtr& uqi);
+		UploadQueueFilePtr findWaitingFile(const string& file) const;
+		const vector<UploadQueueFilePtr>& getWaitingFiles() const { return waitingFiles; }
+
+	private:
+		vector<UploadQueueFilePtr> waitingFiles;
+		const HintedUser hintedUser;
+
 		GETSET(string, token, Token);
 };
 

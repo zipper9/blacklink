@@ -314,8 +314,8 @@ LRESULT WaitingUsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 void WaitingUsersFrame::loadFiles(const WaitingUser& wu)
 {
-	for (const UploadQueueFilePtr& uqi : wu.waitingFiles)
-		addFile(wu.hintedUser, uqi, false);
+	for (const UploadQueueFilePtr& uqi : wu.getWaitingFiles())
+		addFile(wu.getHintedUser(), uqi, false);
 }
 
 void WaitingUsersFrame::loadAll()
@@ -335,9 +335,11 @@ void WaitingUsersFrame::loadAll()
 		const auto& users = lockedInstance->getUploadQueueL();
 		for (const WaitingUser& wu : users)
 		{
-			tstring text = Text::toT(wu.getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(wu.hintedUser).first;
-			HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(wu.hintedUser)), treeRoot, TVI_LAST);
-			userList.emplace_back(wu.hintedUser, treeItem);
+			tstring text = Text::toT(wu.getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(wu.getHintedUser()).first;
+			HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT,
+				text.c_str(), 0, 0, 0, 0,
+				reinterpret_cast<LPARAM>(new UserItem(wu.getHintedUser())), treeRoot, TVI_LAST);
+			userList.emplace_back(wu.getHintedUser(), treeItem);
 		}
 	}
 	shouldSort = true;
@@ -383,7 +385,7 @@ LRESULT WaitingUsersFrame::onItemChanged(int /*idCtrl*/, LPNMHDR /* pnmh */, BOO
 		UploadManager::LockInstanceQueue lockedInstance;
 		const auto& users = lockedInstance->getUploadQueueL();
 		for (const WaitingUser& wu : users)
-			if (wu.hintedUser.equals(ui->hintedUser))
+			if (wu.getHintedUser().equals(ui->hintedUser))
 			{
 				loadFiles(wu);
 				shouldSort = shouldUpdateStatus = true;
