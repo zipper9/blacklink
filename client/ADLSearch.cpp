@@ -27,10 +27,8 @@
 #include "LogManager.h"
 #include "SimpleStringTokenizer.h"
 #include "ParamExpander.h"
-
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
+#include "FavoriteManager.h"
 #include "ClientManager.h"
-#endif
 
 ADLSearch::ADLSearch() :
 	isCaseSensitive(false),
@@ -41,8 +39,7 @@ ADLSearch::ADLSearch() :
 	minFileSize(-1),
 	maxFileSize(-1),
 	typeFileSize(SizeBytes),
-	isForbidden(false),
-	raw(0)
+	isForbidden(false)
 {
 }
 
@@ -67,7 +64,7 @@ static const string strSourceType("SourceType");
 static const string strDestDirectory("DestDirectory");
 static const string strIsActive("IsActive");
 static const string strIsForbidden("IsForbidden");
-static const string strRaw("Raw");
+static const string strUserCommand("UserCommand");
 static const string strMaxSize("MaxSize");
 static const string strMinSize("MinSize");
 static const string strSizeType("SizeType");
@@ -159,6 +156,11 @@ bool ADLSearchManager::SearchContextItem::prepare(const ADLSearch& search, const
 	isAutoQueue = search.isAutoQueue;
 	isForbidden = search.isForbidden;
 	stringSearches.clear();
+
+	if (!search.userCommand.empty())
+		userCommandId = FavoriteManager::getInstance()->findUserCommand(search.userCommand, UserCommand::CONTEXT_FILELIST);
+	else
+		userCommandId = -1;
 
 	if (search.sourceType == ADLSearch::TTH)
 	{
@@ -294,8 +296,8 @@ void ADLSearchManager::load() noexcept
 							search.isActive = Util::toInt(xml.getChildData()) != 0;
 						else if (tag == strIsForbidden)
 							search.isForbidden = Util::toInt(xml.getChildData()) != 0;
-						else if (tag == strRaw)
-							search.raw = Util::toInt(xml.getChildData());
+						else if (tag == strUserCommand)
+							search.userCommand = xml.getChildData();
 						else if (tag == strMaxSize)
 							search.maxFileSize = Util::toInt64(xml.getChildData());
 						else if (tag == strMinSize)
@@ -343,7 +345,7 @@ void ADLSearchManager::saveL() const noexcept
 			xml.addTag(strDestDirectory, search.destDir);
 			xml.addTag(strIsActive, search.isActive);
 			xml.addTag(strIsForbidden, search.isForbidden);
-			xml.addTag(strRaw, search.raw);
+			if (!search.userCommand.empty()) xml.addTag(strUserCommand, search.userCommand);
 			xml.addTag(strMaxSize, search.maxFileSize);
 			xml.addTag(strMinSize, search.minFileSize);
 			xml.addTag(strSizeType, search.sizeTypeToString(search.typeFileSize));
@@ -416,7 +418,7 @@ void ADLSearchManager::prepare(ADLSearchManager::SearchContext& ctx, DirectoryLi
 	ctx.dl = dl;
 	ctx.user = user;
 	ctx.breakOnFirst = BOOLSETTING(ADLS_BREAK_ON_FIRST);
-	ctx.sentRaw = false;
+	ctx.sentCommands.clear();
 	ctx.wantFullPath = false;
 
 	ctx.destDir.emplace_back(DestDir{ defDestDir, new DirectoryListing::AdlDirectory(Util::emptyString, root, "<<<" + defDestDir + ">>>") });
@@ -563,6 +565,7 @@ bool ADLSearchManager::SearchContext::matchFile(const DirectoryListing::File* fi
 	bool getConnFlag = true;
 	bool result = false;
 	string fullPath;
+	UserCommand uc;
 	for (const auto& item : collection)
 	{
 		if (item.sourceType == ADLSearch::OnlyDirectory) continue;
@@ -585,16 +588,16 @@ bool ADLSearchManager::SearchContext::matchFile(const DirectoryListing::File* fi
 				LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
 			}
 		}
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		if (is->isForbidden && !getSentRaw())
+		if (item.userCommandId != -1 && FavoriteManager::getInstance()->getUserCommand(item.userCommandId, uc))
 		{
-			unique_ptr<char[]> buf(new char[FULL_MAX_PATH]);
-			_snprintf(buf.get(), FULL_MAX_PATH, CSTRING(CHECK_FORBIDDEN), currentFile->getName().c_str());
-
-			ClientManager::setClientStatus(user, buf.get(), is->raw, false);
-			setSentRaw(true);
+			if (!uc.once() || sentCommands.find(item.userCommandId) == sentCommands.end())
+			{
+				StringMap ucParams;
+				dl->getFileParams(file, ucParams);
+				ClientManager::userCommand(dl->getHintedUser(), uc, ucParams, true);
+				if (uc.once()) sentCommands.insert(item.userCommandId);
+			}
 		}
-#endif
 		result = true;
 		if (breakOnFirst) break;
 	}

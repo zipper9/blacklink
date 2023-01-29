@@ -167,11 +167,11 @@ void FavoriteManager::updateUserCommand(const UserCommand& uc)
 	saveFavorites();
 }
 
-int FavoriteManager::findUserCommand(const string& name, const string& hub) const
+int FavoriteManager::findUserCommand(const string& name, int ctx) const
 {
 	READ_LOCK(*csUserCommand);
 	for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
-		if (i->getName() == name && i->getHub() == hub)
+		if (i->getName() == name && (i->getCtx() & ctx) != 0)
 			return i->getId();
 	return -1;
 }

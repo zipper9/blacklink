@@ -962,6 +962,7 @@ enum Strings   // @DontAdd
 	SEGMENTS, // "Segments"
 	SELECT_ALL, // "Select all"
 	SELECT_USER_LIST, // "Select user in list"
+	SEND_COMMAND, // "Send command"
 	SEND_PRIVATE_MESSAGE, // "Send private message"
 	SEND_SLOTGRANT_MSG, // "Send PMs on grant/remove slot"
 	SEND_TO_ALL_USERS, // "Send message to multiple users"

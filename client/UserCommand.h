@@ -20,7 +20,7 @@
 #define DCPLUSPLUS_CLIENT_USER_COMMAND_H
 
 #include "Flags.h"
-#include "Util.h"
+#include "BaseUtil.h"
 #include "noexcept.h"
 
 class UserCommand : public Flags

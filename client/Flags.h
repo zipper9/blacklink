@@ -1,6 +1,8 @@
 #ifndef DCPLUSPLUS_CLIENT_FLAGS_H_
 #define DCPLUSPLUS_CLIENT_FLAGS_H_
 
+#include <stdint.h>
+
 class Flags
 {
 	public:

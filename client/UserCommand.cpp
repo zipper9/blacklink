@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include "UserCommand.h"
 #include "SimpleStringTokenizer.h"
+#include "Util.h"
 
 StringList UserCommand::getDisplayName() const
 {

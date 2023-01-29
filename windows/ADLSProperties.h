@@ -25,7 +25,7 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "../client/typedefs.h"
+#include "../client/UserCommand.h"
 
 class ADLSearch;
 
@@ -50,6 +50,7 @@ class ADLSProperties : public CDialogImpl<ADLSProperties>
 	private:
 		ADLSearch* search;
 		bool autoSwitchToTTH;
+		vector<UserCommand> userCommands;
 
 		CEdit ctrlSearch;
 		CEdit ctrlDestDir;
@@ -62,7 +63,7 @@ class ADLSProperties : public CDialogImpl<ADLSProperties>
 		CButton ctrlFlagFile;
 		CComboBox ctrlSearchType;
 		CComboBox ctrlSizeType;
-		CComboBox ctrlRaw;
+		CComboBox ctrlUserCommand;
 
 		void checkTTH(const tstring& str);
 };

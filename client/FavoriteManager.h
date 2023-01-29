@@ -244,7 +244,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub);
 		bool getUserCommand(int id, UserCommand& uc) const;
-		int findUserCommand(const string& name, const string& hub) const;
+		int findUserCommand(const string& name, int ctx) const;
 		bool moveUserCommand(int id, int delta);
 		void updateUserCommand(const UserCommand& uc);
 		void removeUserCommand(int id);

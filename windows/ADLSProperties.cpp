@@ -65,11 +65,23 @@ LRESULT ADLSProperties::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
 
-	ctrlRaw.Attach(GetDlgItem(IDC_ADLSEARCH_RAW_ACTION));
-	ctrlRaw.AddString(CTSTRING(NO_ACTION));
-	for (int i = SettingsManager::RAW1_TEXT; i <= SettingsManager::RAW5_TEXT; i++)
-		ctrlRaw.AddString(Text::toT(SettingsManager::get((SettingsManager::StrSetting) i)).c_str());
-	ctrlRaw.SetCurSel(search->raw);
+	auto commands = FavoriteManager::getInstance()->getUserCommands();
+	userCommands.clear();
+
+	ctrlUserCommand.Attach(GetDlgItem(IDC_ADLSEARCH_RAW_ACTION));
+	ctrlUserCommand.AddString(_T("---"));
+	int selIndex = 0;
+	int index = 1;
+	for (const UserCommand& uc : commands)
+		if ((uc.isChat() || uc.isRaw()) && (uc.getCtx() & UserCommand::CONTEXT_FILELIST))
+		{
+			userCommands.push_back(uc);
+			tstring name = Text::toT(uc.getName());
+			ctrlUserCommand.AddString(name.c_str());
+			if (search->userCommand == uc.getName()) selIndex = index;
+			index++;
+		}
+	ctrlUserCommand.SetCurSel(selIndex);
 
 	ctrlSearch.Attach(GetDlgItem(IDC_SEARCH_STRING));
 	ctrlDestDir.Attach(GetDlgItem(IDC_DEST_DIR));
@@ -165,8 +177,12 @@ LRESULT ADLSProperties::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 
 		search->sourceType = sourceType;
 		search->typeFileSize = (ADLSearch::SizeType) ctrlSizeType.GetCurSel();
-		search->raw = ctrlRaw.GetCurSel();
 		search->searchString = std::move(searchString);
+		int cmd = ctrlUserCommand.GetCurSel();
+		if (cmd > 0 && cmd - 1 < (int) userCommands.size())
+			search->userCommand = userCommands[cmd-1].getName();
+		else
+			search->userCommand.clear();
 	}
 	EndDialog(wID);
 	return 0;

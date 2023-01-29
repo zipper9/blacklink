@@ -45,7 +45,7 @@ class ADLSearch
 
 		// Forbidden file
 		bool isForbidden;
-		int raw;
+		string userCommand;
 
 		// Auto Queue Results
 		bool isAutoQueue;
@@ -147,6 +147,7 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 			int64_t minFileSize;
 			int64_t maxFileSize;
 			ADLSearch::SizeType typeFileSize;
+			int userCommandId;
 		};
 
 		struct DestDir
@@ -160,11 +161,11 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 			vector<SearchContextItem> collection;
 			vector<DestDir> destDir;
 			bool breakOnFirst = false;
-			bool sentRaw = false;
 			bool wantFullPath = false;
 			DirectoryListing* dl = nullptr;
 			UserPtr user = nullptr;
 			std::atomic_bool* abortFlag = nullptr;
+			boost::unordered_set<int> sentCommands;
 
 			SearchContext() {}
 			~SearchContext();
