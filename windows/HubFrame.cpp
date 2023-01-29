@@ -47,7 +47,6 @@ void HubFrame::Settings::copySettings(const FavoriteHubEntry& entry)
 	server = entry.getServer();
 	name = entry.getName();
 	favoriteId = entry.getID();
-	rawCommands = entry.getRawCommands();
 	windowPosX = entry.getWindowPosX();
 	windowPosY = entry.getWindowSizeY();
 	windowType = entry.getWindowType();
@@ -103,7 +102,6 @@ HubFrame::HubFrame(const Settings& cs) :
 		client = static_cast<Client*>(baseClient.get());
 		client->setName(cs.name);
 		client->setFavoriteId(cs.favoriteId);
-		if (cs.rawCommands) client->setRawCommands(cs.rawCommands);
 		if (cs.encoding && client->getType() == ClientBase::TYPE_NMDC) client->setEncoding(cs.encoding);
 		client->addListener(this);
 		isDHT = false;

@@ -162,7 +162,6 @@ class FavoriteHubTabAdvanced : public CDialogImpl<FavoriteHubTabAdvanced>
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 
-		CEdit ctrlRaw[5];
 		CEdit ctrlOpChat;
 		FavoriteHubEntry* entry;
 };

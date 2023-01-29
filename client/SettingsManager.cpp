@@ -186,13 +186,6 @@ static const char* settingTags[] =
 	"LogFormatCMDDebugTrace",
 	"LogFormatUDPDebugTrace",
 
-	// User configurable commands
-	"RawOneText",
-	"RawTwoText",
-	"RawThreeText",
-	"RawFourText",
-	"RawFiveText",
-
 	// Players formats
 	"WinampFormat", "WMPFormat", "iTunesFormat", "MPCFormat", "JetAudioFormat", "QcdQmpFormat",
 
@@ -926,13 +919,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_TCP_MESSAGES, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_UDP_PACKETS, "[%Y-%m-%d %H:%M:%S] %[message]");
 
-	// User configurable commands
-	setDefault(RAW1_TEXT, "Raw 1");
-	setDefault(RAW2_TEXT, "Raw 2");
-	setDefault(RAW3_TEXT, "Raw 3");
-	setDefault(RAW4_TEXT, "Raw 4");
-	setDefault(RAW5_TEXT, "Raw 5");	
-	
 	// Players formats
 	setDefault(WINAMP_FORMAT, "+me is listening to '%[artist] - %[track] - %[title]' (%[percent] of %[length], %[bitrate], Winamp %[version]) %[magnet]");
 	setDefault(WMP_FORMAT, "+me is listening to '%[title]' (%[bitrate], Windows Media Player %[version]) %[magnet]");

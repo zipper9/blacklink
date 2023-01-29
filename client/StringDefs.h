@@ -877,8 +877,6 @@ enum Strings   // @DontAdd
 	RATIO, // "Ratio"
 	RATIO_MSG_HELP, // "You can use:\r\n\r\n %[ratio]\t up/down ratio\r\n %[up]\t data uploaded\r\n %[down]\t data downloaded"
 	RATIO_MSG_HELP_DESC, // "Ratio message template help"
-	RAW_SET, // "Raw commands"
-	RAW_TEXTS, // "Raw texts (don't enter your raw commands here)"
 	READD_SOURCE, // "Re-add source"
 	REALLY_EXIT, // "Really exit?"
 	REALLY_REMOVE, // "Really remove?"

@@ -1299,22 +1299,6 @@ OnlineUserPtr ClientManager::getOnlineUserL(const UserPtr& p)
 	return i->second;
 }
 
-void ClientManager::sendRawCommand(const OnlineUserPtr& ou, int commandIndex)
-{
-	const ClientBasePtr& cb = ou->getClientBase();
-	if (cb->getType() == ClientBase::TYPE_DHT)
-		return;
-	Client* client = static_cast<Client*>(cb.get());
-	const string rawCommand = client->getRawCommand(commandIndex);
-	if (!rawCommand.empty())
-	{
-		StringMap params;
-		const UserCommand uc = UserCommand(0, 0, 0, 0, "", rawCommand, "", "");
-		getUserCommandParams(ou, uc, params, true);
-		client->sendUserCmd(uc, params);
-	}
-}
-
 #if 0
 void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 {
@@ -1371,7 +1355,9 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 {
 	string report;
 	Client* c = nullptr;
+#if IRAINMAN_ENABLE_AUTO_BAN
 	OnlineUserPtr sendCmd;
+#endif
 	{
 		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
@@ -1397,12 +1383,16 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 #else
 					report = "Connection timeout " + Util::toString(connectionTimeouts) + " times";
 #endif
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
 					sendCmd = ou;
+#endif
 				}
 			}
 		}
 	}
+#if IRAINMAN_ENABLE_AUTO_BAN
 	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_TIMEOUTS));
+#endif
 	cheatMessage(c, report);
 }
 

@@ -960,12 +960,6 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("HeaderVisible", e->getHeaderVisible());
 				xml.addChildAttrib("HeaderSort", e->getHeaderSort());
 				xml.addChildAttrib("HeaderSortAsc", e->getHeaderSortAsc());
-				const string* rawCommands = e->getRawCommands();
-				xml.addChildAttribIfNotEmpty("RawOne", rawCommands[0]);
-				xml.addChildAttribIfNotEmpty("RawTwo", rawCommands[1]);
-				xml.addChildAttribIfNotEmpty("RawThree", rawCommands[2]);
-				xml.addChildAttribIfNotEmpty("RawFour", rawCommands[3]);
-				xml.addChildAttribIfNotEmpty("RawFive", rawCommands[4]);
 				int mode = e->getMode();
 				if (mode)
 					xml.addChildAttrib("Mode", mode);
@@ -1307,11 +1301,6 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setHeaderVisible(xml.getChildAttrib("HeaderVisible", SETTING(HUB_FRAME_VISIBLE)));
 			e->setHeaderSort(xml.getIntChildAttrib("HeaderSort", "-1"));
 			e->setHeaderSortAsc(xml.getBoolChildAttrib("HeaderSortAsc"));
-			e->setRawCommand(xml.getChildAttrib("RawOne"), 0);
-			e->setRawCommand(xml.getChildAttrib("RawTwo"), 1);
-			e->setRawCommand(xml.getChildAttrib("RawThree"), 2);
-			e->setRawCommand(xml.getChildAttrib("RawFour"), 3);
-			e->setRawCommand(xml.getChildAttrib("RawFive"), 4);
 			e->setMode(Util::toInt(xml.getChildAttrib("Mode")));
 			e->setIP(xml.getChildAttribTrim("IP"));
 			e->setOpChat(xml.getChildAttrib("OpChat"));

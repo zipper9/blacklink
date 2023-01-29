@@ -181,8 +181,6 @@ class Client : public ClientBase,
 		
 		static void getCounts(unsigned& normal, unsigned& registered, unsigned& op);
 		void getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op) const;
-		void setRawCommands(const string commands[]);
-		const string& getRawCommand(int command) const;
 		int getSlots() const;
 		int getFreeSlots() const;
 
@@ -261,7 +259,6 @@ class Client : public ClientBase,
 		OnlineUserPtr hubOnlineUser;
 
 		std::atomic_bool userListLoaded;
-		string rawCommands[5];
 
 	public:
 		bool isMe(const OnlineUserPtr& ou) const

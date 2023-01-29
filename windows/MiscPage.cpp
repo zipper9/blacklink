@@ -39,7 +39,6 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_CCPM_TIMEOUT, 0, UNSPEC, UNSPEC, 0, &align1 },
 	{ IDC_CAPTION_MINUTES, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align2 },
 	{ IDC_CAPTION_MAX_UC, FLAG_TRANSLATE, AUTO, UNSPEC, 1 },
-	{ IDC_RAW_TEXTS, FLAG_TRANSLATE, UNSPEC, UNSPEC },
 	{ IDC_MAX_UC, 0, UNSPEC, UNSPEC, 0, &align3 }
 };
 
@@ -50,11 +49,6 @@ static const PropPage::Item items[] =
 	{ IDC_CCPM_AUTO_START, SettingsManager::CCPM_AUTO_START, PropPage::T_BOOL },
 	{ IDC_CCPM_TIMEOUT, SettingsManager::CCPM_IDLE_TIMEOUT, PropPage::T_INT },
 	{ IDC_MAX_UC, SettingsManager::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
-	{ IDC_RAW1_TEXT, SettingsManager::RAW1_TEXT, PropPage::T_STR },
-	{ IDC_RAW2_TEXT, SettingsManager::RAW2_TEXT, PropPage::T_STR },
-	{ IDC_RAW3_TEXT, SettingsManager::RAW3_TEXT, PropPage::T_STR },
-	{ IDC_RAW4_TEXT, SettingsManager::RAW4_TEXT, PropPage::T_STR },
-	{ IDC_RAW5_TEXT, SettingsManager::RAW5_TEXT, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 

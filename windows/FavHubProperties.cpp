@@ -62,7 +62,6 @@ static const WinUtil::TextItem textsOptions[] =
 
 static const WinUtil::TextItem textsAdvanced[] =
 {
-	{ IDC_RAW_COMMANDS,             ResourceManager::RAW_SET                         },
 	{ IDC_CAPTION_OPCHAT,           ResourceManager::OPCHAT                          },
 	{ 0,                            ResourceManager::Strings()                       }
 };
@@ -320,12 +319,6 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		entry->setSuppressChatAndPM(tabOptions.ctrlSuppressMsg.GetCheck() == BST_CHECKED);
 
 		entry->setExclusiveHub(tabCheats.ctrlFakeHubCount.GetCheck() == BST_CHECKED);
-
-		for (int i = 0; i < 5; ++i)
-		{
-			WinUtil::getWindowText(tabAdvanced.ctrlRaw[i], buf);
-			entry->setRawCommand(Text::fromT(buf), i);
-		}
 
 		WinUtil::getWindowText(tabOptions.ctrlIpAddress, buf);
 		entry->setIP(Text::fromT(buf));
@@ -720,19 +713,6 @@ LRESULT FavoriteHubTabAdvanced::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 	WinUtil::translate(*this, textsAdvanced);
-
-	SetDlgItemText(IDC_RAW1, Text::toT(SETTING(RAW1_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW2, Text::toT(SETTING(RAW2_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW3, Text::toT(SETTING(RAW3_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW4, Text::toT(SETTING(RAW4_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW5, Text::toT(SETTING(RAW5_TEXT)).c_str());
-
-	const string* rawCommands = entry->getRawCommands();
-	for (int i = 0; i < 5; ++i)
-	{
-		ctrlRaw[i].Attach(GetDlgItem(IDC_RAW_ONE + i));
-		ctrlRaw[i].SetWindowText(Text::toT(rawCommands[i]).c_str());
-	}
 
 	ctrlOpChat.Attach(GetDlgItem(IDC_OPCHAT));
 	ctrlOpChat.SetWindowText(Text::toT(entry->getOpChat()).c_str());

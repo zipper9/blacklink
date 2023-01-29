@@ -905,19 +905,6 @@ void Client::getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op)
 		normal = 1;
 }
 
-void Client::setRawCommands(const string commands[])
-{
-	for (int i = 0; i < 5; ++i)
-		rawCommands[i] = commands[i];
-}
-
-const string& Client::getRawCommand(int command) const
-{
-	if (command < 0 || command >= 5)
-		return Util::emptyString;
-	return rawCommands[command];
-}
-
 int Client::getSlots() const
 {
 	return fakeSlots < 0 ? UploadManager::getSlots() : fakeSlots;

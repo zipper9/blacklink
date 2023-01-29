@@ -156,13 +156,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FORMAT_TCP_MESSAGES,
 			LOG_FORMAT_UDP_PACKETS,
 
-			// User configurable commands
-			RAW1_TEXT,
-			RAW2_TEXT,
-			RAW3_TEXT,
-			RAW4_TEXT,
-			RAW5_TEXT,
-
 			// Players formats
 			WINAMP_FORMAT, WMP_FORMAT, ITUNES_FORMAT, MPLAYERC_FORMAT, JETAUDIO_FORMAT, QCDQMP_FORMAT,
 

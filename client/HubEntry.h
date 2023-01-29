@@ -201,13 +201,6 @@ class FavoriteHubEntry
 		const ConnectionStatus& getConnectionStatus() const { return connectionStatus; }
 		ConnectionStatus& getConnectionStatus() { return connectionStatus; }
 
-		const string* getRawCommands() const { return rawCommands; }
-		void setRawCommands(const string commands[])
-		{
-			for (int i = 0; i < 5; ++i)
-				rawCommands[i] = commands[i];
-		}
-		void setRawCommand(const string& command, int index) { rawCommands[index] = command; }
 		static double parseSizeString(const string& s, double* origSize = nullptr, int* unit = nullptr)
 		{
 			int u = 0;
@@ -230,7 +223,6 @@ class FavoriteHubEntry
 		}
 
 	private:
-		string rawCommands[5];
 		int id;
 		string nick;
 		ConnectionStatus connectionStatus;

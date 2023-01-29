@@ -241,11 +241,6 @@
 #define IDC_HUBPASS                     1103
 #define IDC_NEWFAV                      1104
 #define IDC_HUBNAME                     1105
-#define IDC_RAW_ONE                     1107
-#define IDC_RAW_TWO                     1108
-#define IDC_RAW_THREE                   1109
-#define IDC_RAW_FOUR                    1110
-#define IDC_RAW_FIVE                    1111
 #define IDC_SIZE_TYPE                   1112
 #define IDC_HUBDESCR                    1113
 #define IDC_HUBADDR                     1114
@@ -723,7 +718,6 @@
 #define IDC_PROT_DESC                   1660
 #define IDC_PLAYER_COMBO                1661
 #define IDC_BAN_STEALTH                 1662
-#define IDC_RAW_TEXTS                   1663
 #define IDC_IP_GET_IP                   1664
 #define IDC_IPTRUST_DATA                1665
 #define IDC_CAPTION_MANUAL_P2P_GUARD    1666
@@ -732,16 +726,6 @@
 #define IDC_MINISLOTCONTROL             1672
 #define IDC_MINISLOT_CONTROL_GROUP      1673
 #define IDC_AUTOBAN_HINT                1674
-#define IDC_RAW1                        1675
-#define IDC_RAW2                        1676
-#define IDC_RAW3                        1677
-#define IDC_RAW4                        1678
-#define IDC_RAW5                        1679
-#define IDC_RAW1_TEXT                   1680
-#define IDC_RAW2_TEXT                   1681
-#define IDC_RAW3_TEXT                   1682
-#define IDC_RAW4_TEXT                   1683
-#define IDC_RAW5_TEXT                   1684
 #define IDC_DCLSTGEN_COPYMAGNET         1685
 #define IDC_ENABLE_WEBSERVER            1686
 #define IDC_CAPTION_PORT_TEST_URL       1687
