@@ -2722,6 +2722,12 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 
 void MainFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
+	if (!sr.getToken())
+	{
+		SearchFrame::broadcastSearchResult(sr);
+		return;
+	}
+
 	if (sr.isAutoToken()) return;
 	uint64_t id = SearchTokenList::instance.getTokenOwner(sr.getToken());
 	if (!id) return;

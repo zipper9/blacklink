@@ -256,6 +256,14 @@ void SearchFrame::releaseFramePtr(SearchFrame* frame)
 	if (frame) framesLock.unlock();
 }
 
+void SearchFrame::broadcastSearchResult(const SearchResult& sr)
+{
+	framesLock.lock();
+	for (auto& frame : activeFrames)
+		frame.second->addSearchResult(sr);
+	framesLock.unlock();
+}
+
 LRESULT SearchFrame::onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))

@@ -262,6 +262,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		static SearchFrame* getFramePtr(uint64_t id);
 		static void releaseFramePtr(SearchFrame* frame);
+		static void broadcastSearchResult(const SearchResult& sr);
 
 	private:
 		bool getDownloadDirectory(WORD wID, tstring& dir) const;
