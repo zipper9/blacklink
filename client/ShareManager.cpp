@@ -105,7 +105,6 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			const string *valFilename = nullptr;
 			const string *valTTH = nullptr;
 			const string *valSize = nullptr;
-			const string *valHit = nullptr;
 			const string *valTS = nullptr;
 			const string *valShared = nullptr;
 
@@ -117,7 +116,6 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				if (attrib == attrName) valFilename = &value; else
 				if (attrib == attrTTH) valTTH = &value; else
 				if (attrib == attrSize) valSize = &value; else
-				if (attrib == attrHit) valHit = &value; else
 				if (attrib == attrTS) valTS = &value; else
 				if (attrib == attrShared) valShared = &value;
 			}
@@ -146,8 +144,7 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				if (val > 0) timeShared = val * (int64_t) TimerManager::TIMESTAMP_UNITS_PER_SEC + 116444736000000000ll;
 			}
 
-			unsigned hit = valHit ? Util::toUInt32(*valHit) : 0;
-			manager.loadSharedFile(current, *valFilename, size, tth, 0, timeShared, hit);
+			manager.loadSharedFile(current, *valFilename, size, tth, 0, timeShared);
 		}
 		else if (name == tagDirectory)
 		{
@@ -194,9 +191,9 @@ string ShareManager::validateVirtual(const string& virt) noexcept
 	return tmp;
 }
 
-void ShareManager::loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared, unsigned hit) noexcept
+void ShareManager::loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared) noexcept
 {
-	SharedFilePtr file = std::make_shared<SharedFile>(filename, tth, size, timestamp, timeShared, getFileTypesFromFileName(filename), hit);
+	SharedFilePtr file = std::make_shared<SharedFile>(filename, tth, size, timestamp, timeShared, getFileTypesFromFileName(filename));
 	current->files.insert(make_pair(file->getLowerName(), file));
 	current->filesTypesMask |= file->getFileTypes();
 	current->totalSize += file->getSize();	
@@ -360,7 +357,8 @@ ShareManager::ShareManager() :
 	scanShareFlags(0), scanAllFlags(0),
 	nextFileID(0), maxSharedFileID(0), maxHashedFileID(0),
 	optionShareHidden(false), optionShareSystem(false), optionShareVirtual(false),
-	optionIncludeHit(false), optionIncludeTimestamp(false),
+	optionIncludeUploadCount(false), optionIncludeTimestamp(false),
+	hashDb(nullptr),
 	tickUpdateList(std::numeric_limits<uint64_t>::max()),
 	tickLastRefresh(0),
 	tickRestoreFileList(std::numeric_limits<uint64_t>::max()),
@@ -404,6 +402,8 @@ ShareManager::~ShareManager()
 	removeOldShareGroupFiles();
 	if (!tempShareDataFile.empty())
 		File::renameFile(Util::getConfigPath() + tempShareDataFile, Util::getConfigPath() + fileShareData);
+	if (hashDb)
+		DatabaseManager::getInstance()->putHashDatabaseConnection(hashDb);
 }
 
 static const uint8_t SHARE_DATA_DIR_START = 1;
@@ -432,8 +432,7 @@ void ShareManager::loadShareData(File& file)
 		ATTRIB_MASK_SIZE        = 0x02,
 		ATTRIB_MASK_TTH         = 0x04,
 		ATTRIB_MASK_TIMESTAMP   = 0x08,
-		ATTRIB_MASK_TIME_SHARED = 0x10,
-		ATTRIB_MASK_HIT         = 0x20
+		ATTRIB_MASK_TIME_SHARED = 0x10
 	};
 
 	BufferedInputStream<false> bs(&file, 256 * 1024);
@@ -444,7 +443,6 @@ void ShareManager::loadShareData(File& file)
 	int64_t fileSize = 0;
 	uint64_t timestamp = 0;
 	uint64_t timeShared = 0;
-	unsigned hit = 0;
 	TTHValue tth;
 	unsigned attribMask = 0;
 	for (;;)
@@ -530,8 +528,7 @@ void ShareManager::loadShareData(File& file)
 					throw ShareLoaderException("Required file attributes are missing");
 				if (!(current->flags & BaseDirItem::FLAG_SHARE_LOST))
 					loadSharedFile(current, name, fileSize, tth, timestamp,
-						(attribMask & ATTRIB_MASK_TIME_SHARED) ? timeShared : 0,
-						(attribMask & ATTRIB_MASK_HIT) ? hit : 0);
+						(attribMask & ATTRIB_MASK_TIME_SHARED) ? timeShared : 0);
 			}
 			mode = MODE_NONE;
 			bs.rewind(size-1);
@@ -576,12 +573,6 @@ void ShareManager::loadShareData(File& file)
 				if (attribSize != 8) { invalidSize = true; break; }
 				timeShared = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_TIME_SHARED;
-				break;
-			case SHARE_DATA_ATTRIB_HIT:
-				if (attribSize != 4) { invalidSize = true; break; }
-				hit = loadUnaligned32(buf);
-				attribMask |= ATTRIB_MASK_HIT;
-				break;
 		}
 		if (invalidSize)
 			throw ShareLoaderException("Invalid size of attribute " + Util::toString(type));
@@ -1117,7 +1108,7 @@ void ShareManager::addFile(const string& path, const TTHValue& root)
 		throw ShareException(STRING(DIRECTORY_NOT_SHARED), path);
 
 	uint64_t currentTime = TimerManager::getFileTime();
-	SharedFilePtr file = std::make_shared<SharedFile>(fileName, root, size, timestamp, currentTime, typesMask, 0);
+	SharedFilePtr file = std::make_shared<SharedFile>(fileName, root, size, timestamp, currentTime, typesMask);
 	if (!dir->files.insert(make_pair(file->getLowerName(), file)).second)
 		throw ShareException(STRING(FILE_ALREADY_SHARED), path);
 
@@ -1783,10 +1774,16 @@ void ShareManager::writeXmlFilesL(const SharedDir* dir, OutputStream& xmlFile, s
 		xmlFile.write(LITERAL("\" TTH=\""));
 		tmp.clear();
 		xmlFile.write(f->getTTH().toBase32(tmp));
-		if (optionIncludeHit && f->hit)
+		if (optionIncludeUploadCount && hashDb)
 		{
-			xmlFile.write(LITERAL("\" HIT=\""));
-			xmlFile.write(Util::toString(f->hit));
+			uint32_t uploadCount;
+			unsigned unusedFlags;
+			hashDb->getFileInfo(f->getTTH().data, unusedFlags, nullptr, nullptr, nullptr, &uploadCount);
+			if (uploadCount)
+			{
+				xmlFile.write(LITERAL("\" HIT=\""));
+				xmlFile.write(Util::toString(uploadCount));
+			}
 		}
 		if (optionIncludeTimestamp && f->timeShared)
 		{
@@ -1852,6 +1849,9 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 		File outFileXml(newXmlName, File::WRITE, File::TRUNCATE | File::CREATE);
 		FilteredOutputStream<FileListFilter, false> newXmlFile(&outFileXml);
 
+		if (optionIncludeUploadCount && !hashDb)
+			hashDb = DatabaseManager::getInstance()->getHashDatabaseConnection();
+
 		newXmlFile.write(SimpleXML::utf8Header);
 		newXmlFile.write(LITERAL("<FileListing Version=\"1\" CID=\""));
 		newXmlFile.write(ClientManager::getMyCID().toBase32());
@@ -1873,6 +1873,12 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 
 		attr[FILE_ATTR_FILES_XML].size = newXmlFile.getFilter().sizeOriginal;
 		attr[FILE_ATTR_FILES_BZ_XML].size = newXmlFile.getFilter().sizeCompressed;
+
+		if (hashDb)
+		{
+			DatabaseManager::getInstance()->putHashDatabaseConnection(hashDb);
+			hashDb = nullptr;
+		}
 
 #if defined DEBUG_FILELIST
 		LogManager::message(origXmlName + " uncompressed size: " + Util::toString(attr[FILE_ATTR_FILES_XML].size), false);
@@ -1918,7 +1924,7 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 	LogManager::message("Generating file list...", false);
 	uint8_t tempBuf[TEMP_BUF_SIZE];
 
-	optionIncludeHit = BOOLSETTING(FILELIST_INCLUDE_HIT);
+	optionIncludeUploadCount = BOOLSETTING(FILELIST_INCLUDE_UPLOAD_COUNT);
 	optionIncludeTimestamp = BOOLSETTING(FILELIST_INCLUDE_TIMESTAMP);
 	
 	const string shareDataFileName = Util::getConfigPath() + fileShareData;
@@ -1999,7 +2005,7 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 	if (dir.empty() || dir[0] != '/' || dir.back() != '/')
 		return nullptr;
 
-	optionIncludeHit = BOOLSETTING(FILELIST_INCLUDE_HIT);
+	optionIncludeUploadCount = BOOLSETTING(FILELIST_INCLUDE_UPLOAD_COUNT);
 	optionIncludeTimestamp = BOOLSETTING(FILELIST_INCLUDE_TIMESTAMP);
 
 	int mode = recurse ? MODE_RECURSIVE_PARTIAL_LIST : MODE_PARTIAL_LIST;

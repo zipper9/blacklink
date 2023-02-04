@@ -326,7 +326,7 @@ static const char* settingTags[] =
 	"FastHash",
 
 	// File lists
-	"EnableHitFileList",
+	"FileListUseUploadCount",
 	"FileListUseTS",
 	"FileListShowShared",
 	"FileListShowDownloaded",
@@ -1023,7 +1023,6 @@ void SettingsManager::setDefaults()
 	setDefault(FAST_HASH, TRUE);
 
 	// File lists
-	setDefault(FILELIST_INCLUDE_HIT, TRUE);
 	setDefault(FILELIST_INCLUDE_TIMESTAMP, TRUE);
 	setDefault(FILELIST_SHOW_SHARED, TRUE);
 	setDefault(FILELIST_SHOW_DOWNLOADED, TRUE);

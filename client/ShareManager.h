@@ -276,7 +276,8 @@ class ShareManager :
 		std::atomic<int64_t> scanProgress[2];
 		vector<FileToHash> filesToHash;
 		bool optionShareHidden, optionShareSystem, optionShareVirtual;
-		mutable bool optionIncludeHit, optionIncludeTimestamp;
+		mutable bool optionIncludeUploadCount, optionIncludeTimestamp;
+		HashDatabaseConnection* hashDb;
 
 #if 0
 		std::atomic_bool stopLoading = false;
@@ -313,7 +314,7 @@ class ShareManager :
 		bool hasShareL(const string& virtualName, const string& realName, bool& foundVirtual) const noexcept;
 		void loadShareList(SimpleXML& xml);
 		void loadShareData(File& file);
-		void loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared, unsigned hit) noexcept;
+		void loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared) noexcept;
 		void loadSharedDir(SharedDir* &current, const string& filename) noexcept;
 		bool addExcludeFolderL(const string& path) noexcept;
 		void addShareGroupL(const string& name, const CID& id, const list<string>& shares, const FileAttr* attr);

@@ -299,7 +299,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			FAST_HASH,
 
 			// File lists
-			FILELIST_INCLUDE_HIT,
+			FILELIST_INCLUDE_UPLOAD_COUNT,
 			FILELIST_INCLUDE_TIMESTAMP,
 			FILELIST_SHOW_SHARED,
 			FILELIST_SHOW_DOWNLOADED,

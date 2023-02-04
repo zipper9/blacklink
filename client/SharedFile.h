@@ -48,15 +48,15 @@ class SharedFile: public BaseDirItem
 		friend class SharedDir;
 	
 	public:		
-		SharedFile(const string& name, const TTHValue& root, int64_t size, uint64_t timestamp, uint64_t timeShared, uint16_t typesMask, unsigned hit) :
-			tth(root), size(size), timestamp(timestamp), timeShared(timeShared), typesMask(typesMask), hit(hit), flags(0)
+		SharedFile(const string& name, const TTHValue& root, int64_t size, uint64_t timestamp, uint64_t timeShared, uint16_t typesMask) :
+			tth(root), size(size), timestamp(timestamp), timeShared(timeShared), typesMask(typesMask), flags(0)
 		{
 			dcassert(name.find('\\') == string::npos);
 			setName(name);
 		}
 
 		SharedFile(const string& name, const string& lowerName, int64_t size, uint64_t timestamp, uint16_t typesMask) :
-			size(size), timestamp(timestamp), timeShared(0), typesMask(typesMask), hit(0), flags(0)
+			size(size), timestamp(timestamp), timeShared(0), typesMask(typesMask), flags(0)
 		{
 			dcassert(name.find('\\') == string::npos);
 			this->name = name;
@@ -72,14 +72,12 @@ class SharedFile: public BaseDirItem
 		uint16_t flags;
 		uint64_t timestamp;
 		uint64_t timeShared;
-		unsigned hit;
 
 	public:
 		uint16_t getFileTypes() const { return typesMask; }
 		bool hasType(int type) const noexcept;
 		const TTHValue& getTTH() const { return tth; }
 		int64_t getSize() const { return size; }
-		void incHit() { ++hit; }
 };
 
 class SharedDir: public BaseDirItem
