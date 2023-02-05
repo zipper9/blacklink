@@ -1447,7 +1447,6 @@ enum Strings   // @DontAdd
 	TRANSFERLISTDBLCLICKACTION, // "Transfer list"
 	TRANSFERRED, // "Transferred"
 	TRANSPARENCY, // "Transparency"
-	TRANSPARENCY_PROPPAGE, // "Settings window transparency"
 	TRUSTED_CERTIFICATES_PATH, // "Trusted certificates path"
 	TTH_INCONSISTENCY, // "TTH Inconsistency"
 	TTH_ROOT, // "TTH"

@@ -531,9 +531,6 @@
     <ClInclude Include="client\ResourceManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="revision.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\SearchManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>

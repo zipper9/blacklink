@@ -112,7 +112,6 @@
 #define IDR_TRANSFER_TREE               326
 #define IDD_FILELIST_SEARCH             328
 #define IDD_HUB_LIST                    330
-#define IDR_TRACKER_IMAGES              331
 #define IDD_FILE_HASH                   332
 #define IDD_SHARE_MISC_PAGE1            333
 #define IDD_SHARE_MISC_PAGE2            334
@@ -648,7 +647,6 @@
 #define IDC_USE_DHT                     1581
 #define IDC_CAPTION_DHT_BOOTSTRAP_URL   1582
 #define IDC_DHT_BOOTSTRAP_URL           1583
-#define IDC_SEP                         1585
 #define IDC_GETIP                       1586
 #define IDC_COPY_WEB_LINK               1587
 #define IDC_IPUPDATE                    1588
@@ -768,8 +766,6 @@
 #define IDC_RAW_COMMANDS                1746
 #define IDC_MESSAGES_BOOLEANS           1747
 #define IDC_SLOTASK                     1749
-#define IDC_DONATE                      1750
-#define IDC_SLOTASK_STR                 1751
 #define IDC_TTH_IN_STREAM               1752
 #define IDC_BTN_EXIT_ON_DONE            1753
 #define IDC_TLS_PRIVATE_KEY_FILE        1754
@@ -1007,8 +1003,6 @@
 #define IDC_EXTRASLOTSSPIN              2101
 #define IDC_EXTRA_DOWN_SLOT             2102
 #define IDC_EXTRA_DOWNLOADS_MAX         2103
-#define IDC_ERROR_COLOR                 2104
-#define IDC_UPTIME                      2105
 #define IDC_CZDC_SLOW_DISCONNECT        2106
 #define IDC_CZDC_I_DOWN_SPEED           2107
 #define IDC_BACK_COLOR                  2108
@@ -1209,7 +1203,6 @@
 #define IDC_SPEED_STATIC                2339
 #define IDC_SAVE_SEARCH                 2344
 #define IDC_ABOUTTAB                    2351
-#define IDC_CONVERT_TTH_HISTORY         2352
 #define IDC_COPY_TAG                    2353
 #define IDC_NETWORK_TEST_PORT_TCP_ICO   2354
 #define IDC_COPY_CID                    2355

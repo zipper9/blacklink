@@ -186,10 +186,6 @@ void NmdcSupports::setStatus(Identity& id, const char statusChar, const char mod
 				else
 				{
 					coef = 0;
-#ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-					// LOCK(g_debugCsUnknownNmdcConnection);
-					// g_debugUnknownNmdcConnection.insert(postfix);
-#endif
 				}
 #undef CHECK_SPEED
 		}
