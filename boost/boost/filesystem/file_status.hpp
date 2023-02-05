@@ -46,10 +46,8 @@ enum file_type
     fifo_file,
     socket_file,
     reparse_file, // Windows: FILE_ATTRIBUTE_REPARSE_POINT that is not a symlink
-    type_unknown, // file does exist, but isn't one of the above types or
+    type_unknown  // file does exist, but isn't one of the above types or
                   // we don't have strong enough permission to find its type
-
-    _detail_directory_symlink // internal use only; never exposed to users
 };
 
 //--------------------------------------------------------------------------------------//
@@ -141,12 +139,12 @@ public:
     //  for VC++, GCC, and probably other compilers, that =default is not used with noexcept
     //  functions. GCC is not even consistent for the same release on different platforms.
 
-    BOOST_CONSTEXPR file_status(const file_status& rhs) BOOST_NOEXCEPT :
+    BOOST_CONSTEXPR file_status(file_status const& rhs) BOOST_NOEXCEPT :
         m_value(rhs.m_value),
         m_perms(rhs.m_perms)
     {
     }
-    BOOST_CXX14_CONSTEXPR file_status& operator=(const file_status& rhs) BOOST_NOEXCEPT
+    BOOST_CXX14_CONSTEXPR file_status& operator=(file_status const& rhs) BOOST_NOEXCEPT
     {
         m_value = rhs.m_value;
         m_perms = rhs.m_perms;
@@ -231,6 +229,7 @@ inline BOOST_CONSTEXPR bool is_other(file_status f) BOOST_NOEXCEPT
 }
 
 #ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+BOOST_FILESYSTEM_DETAIL_DEPRECATED("Use is_regular_file() instead")
 inline bool is_regular(file_status f) BOOST_NOEXCEPT
 {
     return filesystem::is_regular_file(f);
