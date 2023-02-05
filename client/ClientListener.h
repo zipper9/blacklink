@@ -20,6 +20,7 @@ class ClientListener
 		
 		typedef X<0> Connecting;
 		typedef X<1> Connected;
+		typedef X<2> LoggedIn;
 		typedef X<3> UserUpdated;
 		typedef X<4> UserListUpdated;
 		typedef X<5> UserRemoved;
@@ -49,7 +50,7 @@ class ClientListener
 		enum HubInfoCode
 		{
 			HubTopic,
-			LoggedIn
+			OperatorInfo
 		};
 		
 		enum StatusFlags
@@ -60,6 +61,7 @@ class ClientListener
 		
 		virtual void on(Connecting, const Client*) noexcept { }
 		virtual void on(Connected, const Client*) noexcept { }
+		virtual void on(LoggedIn, const Client*) noexcept { }
 		virtual void on(UserUpdated, const OnlineUserPtr&) noexcept { }
 		virtual void on(UserListUpdated, const ClientBase*, const OnlineUserList&) noexcept { }
 		virtual void on(UserRemoved, const ClientBase*, const OnlineUserPtr&) noexcept { }

@@ -734,31 +734,31 @@ void HubFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool histo
 void HubFrame::doConnected()
 {
 	ctrlUsers.clearUserList();
-	if (!ClientManager::isBeforeShutdown())
+	auto fm = FavoriteManager::getInstance();
+	RecentHubEntry* r = fm->getRecentHubEntry(serverUrl);
+	if (r)
 	{
-		auto fm = FavoriteManager::getInstance();
-		RecentHubEntry* r = fm->getRecentHubEntry(serverUrl);
-		if (r)
-		{
-			r->setLastSeen(Util::formatDateTime(time(nullptr)));
-			fm->updateRecent(r);
-		}
-
-		addStatus(TSTRING(CONNECTED));
-		setDisconnected(false);
-
-		setHubParam();
-		
-		if (client)
-			setStatusText(STATUS_CIPHER_SUITE, Text::toT(client->getCipherName()));
-		if (ctrlStatus)
-			UpdateLayout(FALSE);
-
-		SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(baseClient->getHubUrl()), TSTRING(CONNECTED));
-		PLAY_SOUND(SOUND_HUBCON);
-		updateModeIcon();
-		shouldUpdateStats = true;
+		r->setLastSeen(Util::formatDateTime(time(nullptr)));
+		fm->updateRecent(r);
 	}
+
+	addStatus(TSTRING(CONNECTED));
+	setHubParam();
+
+	if (client)
+		setStatusText(STATUS_CIPHER_SUITE, Text::toT(client->getCipherName()));
+	if (ctrlStatus)
+		UpdateLayout(FALSE);
+	shouldUpdateStats = true;
+}
+
+void HubFrame::doLoggedIn()
+{
+	setDisconnected(false);
+	SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(baseClient->getHubUrl()), TSTRING(CONNECTED));
+	PLAY_SOUND(SOUND_HUBCON);
+	updateModeIcon();
+	shouldUpdateStats = true;
 }
 
 void HubFrame::clearTaskAndUserList()
@@ -933,15 +933,14 @@ void HubFrame::processTasks()
 				}
 				break;
 				case CONNECTED:
-				{
 					doConnected();
-				}
-				break;
+					break;
 				case DISCONNECTED:
-				{
 					doDisconnected();
-				}
-				break;
+					break;
+				case LOGGED_IN:
+					doLoggedIn();
+					break;
 				case ADD_STATUS_LINE:
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
@@ -2116,17 +2115,20 @@ void HubFrame::on(Connecting, const Client*) noexcept
 
 void HubFrame::on(ClientListener::Connected, const Client* c) noexcept
 {
-	dcassert(!isClosedOrShutdown());
-	if (isClosedOrShutdown())
-		return;
-	addTask(CONNECTED, nullptr);
+	if (!isClosedOrShutdown())
+		addTask(CONNECTED, nullptr);
+}
+
+void HubFrame::on(ClientListener::LoggedIn, const Client* c) noexcept
+{
+	if (!isClosedOrShutdown())
+		addTask(LOGGED_IN, nullptr);
 }
 
 void HubFrame::on(ClientListener::UserUpdated, const OnlineUserPtr& user) noexcept
 {
-	if (isClosedOrShutdown())
-		return;
-	addTask(UPDATE_USER_JOIN, new OnlineUserTask(user));
+	if (!isClosedOrShutdown())
+		addTask(UPDATE_USER_JOIN, new OnlineUserTask(user));
 }
 
 void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept
@@ -2380,7 +2382,7 @@ void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode co
 {
 	switch (code)
 	{
-		case ClientListener::LoggedIn:
+		case ClientListener::OperatorInfo:
 			addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(YOU_ARE_OP_MSG, baseClient->getHubUrl()), true, false));
 			break;
 

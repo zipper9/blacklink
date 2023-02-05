@@ -222,12 +222,10 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		{
 			if (ou->getIdentity().getSID() != c.getFrom())
 			{
-				// Same CID but different SID not allowed - buggy hub? [!] IRainman: yes - this is a bug in the hub - it must filter the users with the same cid not depending on the sid! This error is typically used to send spam, as it came from himself.
+				// Same CID but different SID not allowed
 				const string message = ou->getIdentity().getNick() + " (" + ou->getIdentity().getSIDString() +
-				                       ") has same CID {" + cidStr + "} as " + c.getNick() + " (" + AdcCommand::fromSID(c.getFrom()) + "), ignoring.";
+					") has same CID {" + cidStr + "} as " + c.getNick() + " (" + AdcCommand::fromSID(c.getFrom()) + "), ignoring.";
 				fire(ClientListener::StatusMessage(), this, message, ClientListener::FLAG_IS_SPAM);
-				
-				//LogManager::ddos_message("Magic spam message filtered on hub: " + getHubUrl() + " detail:" + l_message);
 				return;
 			}
 		}
@@ -338,7 +336,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			case TAG('I', 'D'):
 			{
 				// ignore, already in user.
-				// TODO - хранить отдельно в виде CID ?
 				break;
 			}
 			case TAG('D', 'S'):
@@ -421,6 +418,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	if (isMe(ou))
 	{
 		csState.lock();
+		bool fireLoggedIn = state != STATE_NORMAL;
 		state = STATE_NORMAL;
 		connSuccess = true;
 		csState.unlock();
@@ -428,8 +426,10 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		updateCounts(false);
 		updateConnectionStatus(ConnectionStatus::SUCCESS);
 		fireUserUpdated(ou);
+		if (fireLoggedIn)
+			fire(ClientListener::LoggedIn(), this);
 		if (newUser && id.isOp())
-			fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
+			fire(ClientListener::HubInfoMessage(), ClientListener::OperatorInfo, this, Util::emptyString);
 	}
 	else if (id.isHub())
 	{

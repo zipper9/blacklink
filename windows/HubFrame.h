@@ -341,6 +341,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		// ClientListener
 		void on(ClientListener::Connecting, const Client*) noexcept override;
 		void on(ClientListener::Connected, const Client*) noexcept override;
+		void on(ClientListener::LoggedIn, const Client*) noexcept override;
 		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::UserListUpdated, const ClientBase*, const OnlineUserList&) noexcept override;
 		void on(ClientListener::UserRemoved, const ClientBase*, const OnlineUserPtr&) noexcept override;
@@ -374,6 +375,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void updateUserJoin(const OnlineUserPtr& ou);
 		void doDisconnected();
 		void doConnected();
+		void doLoggedIn();
 		void clearTaskAndUserList();
 
 		bool handleAutoComplete() override;

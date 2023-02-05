@@ -118,7 +118,7 @@ class Client : public ClientBase,
 		bool isReady() const
 		{
 			LOCK(csState);
-			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
+			return state == STATE_NORMAL;
 		}
 
 		int getState() const

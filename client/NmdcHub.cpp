@@ -1676,7 +1676,7 @@ void NmdcHub::onLine(const string& line)
 #endif
 	else if (cmd == "LogedIn")
 	{
-		fire(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
+		fire(ClientListener::HubInfoMessage(), ClientListener::OperatorInfo, this, Util::emptyString);
 	}
 	else if (cmd == "BadNick")
 	{
@@ -1809,6 +1809,7 @@ void NmdcHub::updateMyInfoState(bool isMyInfo)
 	if (isMyInfo && myInfoState == WAITING_FOR_MYINFO)
 	{
 		myInfoState = MYINFO_LIST;
+		fire(ClientListener::LoggedIn(), this);
 	}
 }
 
@@ -2356,6 +2357,7 @@ void NmdcHub::onConnected() noexcept
 		lastNatUser.clear();
 		lastUpdate = pendingUpdate = lastNatUserExpires = 0;
 		lastExtJSONInfo.clear();
+		myInfoState = WAITING_FOR_MYINFO;
 	}
 	if (!natUser.empty())
 		socketPool.removeSocket(natUser);
