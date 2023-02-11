@@ -88,6 +88,9 @@ LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		int count = 0;
 		int x = rc.right - 1;
 		int y = (int)(i->upload * graphHeight / maxValue);
+		int totalWidth = 0;
+		const int screenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		bool visible = true;
 		tmp.clear();
 		tmp.push_back(Point(x, rc.bottom - 1));
 		tmp.push_back(Point(x, rc.bottom - 1 - y));
@@ -96,9 +99,18 @@ LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 			dcassert(i->upload <= maxValue);
 			y = (int)(i->upload * graphHeight / maxValue);
 			x -= i->scroll;
-			tmp.push_back(Point(x, rc.bottom - 1 - y));
+			totalWidth += i->scroll;
+			if (visible) tmp.push_back(Point(x, rc.bottom - 1 - y));
 			count++;
-			if (x < 0) break;
+			if (x < 0)
+			{
+				visible = false;
+				if (totalWidth >= screenWidth)
+				{
+					maxItems = count + 4;
+					break;
+				}
+			}
 		}
 
 		int addPoints = 0;
@@ -135,11 +147,6 @@ LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 		graph->FillPolygon(&downloadsBrush, tmp.data(), tmp.size());
 		graph->DrawLines(&downloadsPen, tmp.data() + 1, tmp.size() - (addPoints + 1));
-
-		if (x < 0)
-			maxItems = count + 1;
-		else if (maxItems)
-			maxItems++;
 	}
 
 	if (showLegend)
