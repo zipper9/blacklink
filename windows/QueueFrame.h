@@ -341,17 +341,11 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 						return qi->getPriority();
 					return QueueItem::Priority();
 				}
-				bool isWaiting() const
+				const TTHValue& getTTH() const
 				{
 					if (qi)
-						return qi->isWaiting();
-					return false;
-				}
-				bool isFinished() const
-				{
-					if (qi)
-						return qi->isFinished();
-					return false;
+						return qi->getTTH();
+					return emptyTTH;
 				}
 				
 				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
@@ -360,6 +354,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				const QueueItemPtr qi;
 				const DirItem* const dir;
 				int iconIndex = -1;
+				static const TTHValue emptyTTH;
 		};
 		
 		struct QueueItemTask : public Task

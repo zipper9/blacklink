@@ -3,6 +3,7 @@
 
 #include "Text.h"
 #include "HashValue.h"
+#include "Util.h"
 
 #ifdef NO_HINTED_USER
 #else
@@ -80,8 +81,18 @@ class FinishedItem
 					return compare(a->getSize(), b->getSize());
 				case COLUMN_NETWORK_TRAFFIC:
 					return compare(a->getActual(), b->getActual());
+				case COLUMN_TTH:
+					return compare(a->getTTH(), b->getTTH());
+				case COLUMN_IP:
+					return compare(a->getIP(), b->getIP());
+				case COLUMN_DONE:
+					return compare(a->getTime(), b->getTime());
 				default:
+#ifdef _WIN32
+					return Util::defaultSort(a->getText(col), b->getText(col));
+#else
 					return stricmp(a->getText(col), b->getText(col));
+#endif
 			}
 		}
 		GETC(string, target, Target);

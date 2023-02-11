@@ -1147,6 +1147,8 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 				return (a->sr.getType() == SearchResult::TYPE_DIRECTORY) ? -1 : 1;
 		case COLUMN_IP:
 			return compare(a->sr.getIP(), b->sr.getIP());
+		case COLUMN_TTH:
+			return compare(a->getText(COLUMN_TTH), b->getText(COLUMN_TTH));
 		default:
 			return Util::defaultSort(a->getText(col), b->getText(col));
 	}

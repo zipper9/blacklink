@@ -21,6 +21,7 @@
 
 #include "TigerHash.h"
 #include "Encoder.h"
+#include "BaseUtil.h"
 
 template<class Hasher>
 struct HashValue
@@ -68,7 +69,7 @@ struct HashValue
 	{
 		// RVO should handle this as efficiently as reinterpret_cast version
 		size_t hvHash;
-		memcpy(&hvHash, data, sizeof(hvHash)); //-V512
+		memcpy(&hvHash, data, sizeof(hvHash));
 		return hvHash;
 	}
 	bool isZero() const
@@ -125,6 +126,12 @@ struct equal_to<HashValue<T>*>
 	}
 };
 
+}
+
+template<>
+inline int compare(const TTHValue& v1, const TTHValue& v2)
+{
+	return memcmp(v1.data, v2.data, TTHValue::BYTES);
 }
 
 #endif // !defined(HASH_VALUE_H)

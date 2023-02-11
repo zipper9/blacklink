@@ -2672,6 +2672,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 		}
 		case COLUMN_DURATION:
 			return compare(a->duration, b->duration);
+		case COLUMN_TTH:
+			return compare(a->columns[COLUMN_TTH], b->columns[COLUMN_TTH]);
 	}
 	return Util::defaultSort(a->columns[col], b->columns[col], false);
 }

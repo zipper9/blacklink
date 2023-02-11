@@ -36,6 +36,8 @@ int QueueFrame::QueueItemInfo::itemsCreated;
 int QueueFrame::QueueItemInfo::itemsRemoved;
 #endif
 
+const TTHValue QueueFrame::QueueItemInfo::emptyTTH;
+
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
 
@@ -253,8 +255,12 @@ int QueueFrame::QueueItemInfo::compareItems(const QueueItemInfo* a, const QueueI
 			return compare(a->getDownloadedBytes(), b->getDownloadedBytes());
 		case COLUMN_ADDED:
 			return compare(a->qi ? a->qi->getAdded() : 0, b->qi ? b->qi->getAdded() : 0);
+		case COLUMN_TTH:
+			return compare(a->getTTH().toBase32(), b->getTTH().toBase32());
+		case COLUMN_SPEED:
+			return compare(a->qi ? a->qi->getAverageSpeed() : 0, b->qi ? b->qi->getAverageSpeed() : 0);
 		default:
-			return lstrcmpi(a->getText(col).c_str(), b->getText(col).c_str());
+			return Util::defaultSort(a->getText(col), b->getText(col));
 	}
 }
 
@@ -292,15 +298,12 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			break;
 		case COLUMN_STATUS:
 		{
-			if (isFinished())
-			{
-				return TSTRING(DOWNLOAD_FINISHED_IDLE);
-			}
 			if (qi)
 			{
+				if (qi->isFinished()) return TSTRING(DOWNLOAD_FINISHED_IDLE);
 				const size_t onlineSources = qi->getLastOnlineCount();
 				const size_t totalSources = qi->getSourcesCount();
-				if (isWaiting())
+				if (qi->isWaiting())
 				{
 					if (onlineSources)
 					{
