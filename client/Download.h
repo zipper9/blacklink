@@ -5,6 +5,7 @@
 #include "Transfer.h"
 #include "Streams.h"
 #include "MerkleTree.h"
+#include "Flags.h"
 
 /**
  * Comes as an argument in the DownloadManagerListener functions.

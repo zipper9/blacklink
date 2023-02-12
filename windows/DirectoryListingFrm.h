@@ -356,8 +356,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		void addToUserList(const UserPtr& user, bool isBrowsing);
 		void removeFromUserList();
-		void getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg);
-		void getDirItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg);
+		void getFileItemColor(DirectoryListing::File::MaskType, COLORREF &fg, COLORREF &bg);
+		void getDirItemColor(DirectoryListing::Directory::MaskType flags, COLORREF &fg, COLORREF &bg);
 		void changeDir(const DirectoryListing::Directory* dir);
 		void showDirContents(const DirectoryListing::Directory *dir, const DirectoryListing::Directory *selSubdir, const DirectoryListing::File *selFile);
 		void selectFile(const DirectoryListing::File *file);

@@ -169,7 +169,7 @@ class QueueItem
 
 		typedef std::set<Segment> SegmentSet;
 
-		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, Flags::MaskType flags,
+		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
 		          time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget);
 
 		QueueItem(const QueueItem &) = delete;
@@ -227,7 +227,7 @@ class QueueItem
 		{
 			return badSources.find(user) != badSources.end();
 		}
-		bool isBadSourceExceptL(const UserPtr& user, Flags::MaskType exceptions) const;
+		bool isBadSourceExceptL(const UserPtr& user, MaskType exceptions) const;
 		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
 		void setOverlapped(const Segment& segment, const bool isOverlapped);
@@ -374,7 +374,7 @@ class QueueItem
 		string tempTarget;
 		
 		SourceIter addSourceL(const UserPtr& user, bool isFirstLoad);
-		void removeSourceL(const UserPtr& user, Flags::MaskType reason);
+		void removeSourceL(const UserPtr& user, MaskType reason);
 
 		friend class QueueManager;
 };

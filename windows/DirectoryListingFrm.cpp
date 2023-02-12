@@ -2275,7 +2275,7 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 	return 0;
 }
 
-void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
+void DirectoryListingFrame::getDirItemColor(DirectoryListing::Directory::MaskType flags, COLORREF &fg, COLORREF &bg)
 {
 	fg = Colors::g_textColor;
 	bg = Colors::g_bgColor;
@@ -2332,7 +2332,7 @@ void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORRE
 		fg = colors.fgInQueue;
 }
 
-void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
+void DirectoryListingFrame::getFileItemColor(DirectoryListing::File::MaskType flags, COLORREF &fg, COLORREF &bg)
 {
 	fg = Colors::g_textColor;
 	bg = Colors::g_bgColor;
@@ -2380,12 +2380,12 @@ LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BO
 			ii->updateIconIndex();
 			if (ii->type == ItemInfo::FILE)
 			{
-				Flags::MaskType flags = ii->file->getFlags();
+				auto flags = ii->file->getFlags();
 				getFileItemColor(flags, plvcd->clrText, plvcd->clrTextBk);
 			}
 			else
 			{
-				Flags::MaskType flags = ii->dir->getFlags();
+				auto flags = ii->dir->getFlags();
 				getDirItemColor(flags, plvcd->clrText, plvcd->clrTextBk);
 			}
 			CustomDrawHelpers::startItemDraw(customDrawState, plvcd);

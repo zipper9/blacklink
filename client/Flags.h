@@ -3,40 +3,48 @@
 
 #include <stdint.h>
 
-class Flags
+template<typename T>
+class BaseFlags
 {
 	public:
-		typedef uint32_t MaskType;
-		
-		Flags() : flags(0) { }
-		explicit Flags(MaskType f) : flags(f) { }
-		bool isSet(MaskType aFlag) const
+		typedef T MaskType;
+
+		BaseFlags() : flags(0) {}
+		explicit BaseFlags(MaskType f) : flags(f) {}
+
+		bool isSet(MaskType flag) const
 		{
-			return (flags & aFlag) == aFlag;
+			return (flags & flag) == flag;
 		}
-		bool isAnySet(MaskType aFlag) const
+
+		bool isAnySet(MaskType flag) const
 		{
-			return (flags & aFlag) != 0;
+			return (flags & flag) != 0;
 		}
-		void setFlag(MaskType aFlag)
+
+		void setFlag(MaskType flag)
 		{
-			flags |= aFlag;
+			flags |= flag;
 		}
-		void unsetFlag(MaskType aFlag)
+
+		void unsetFlag(MaskType flag)
 		{
-			flags &= ~aFlag;
+			flags &= ~flag;
 		}
-		void setFlag(MaskType aFlag, bool aValue)
+
+		void setFlag(MaskType flag, bool value)
 		{
-			if (aValue)
-				setFlag(aFlag);
+			if (value)
+				flags |= flag;
 			else
-				unsetFlag(aFlag);
+				flags &= ~flag;
 		}
-		void setFlags(MaskType aFlags)
+
+		void setFlags(MaskType newFlags)
 		{
-			flags = aFlags;
+			flags = newFlags;
 		}
+
 		MaskType getFlags() const
 		{
 			return flags;
@@ -46,5 +54,6 @@ class Flags
 		MaskType flags;
 };
 
+typedef BaseFlags<uint32_t> Flags;
 
 #endif /* DCPLUSPLUS_CLIENT_FLAGS_H_ */

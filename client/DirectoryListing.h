@@ -80,7 +80,7 @@ class DirectoryListing
 
 		typedef boost::unordered_map<TTHValue, int64_t> TTHMap;
 
-		class File : public Flags
+		class File : public BaseFlags<uint16_t>
 		{
 			public:
 				typedef vector<File*> List;
@@ -139,7 +139,7 @@ class DirectoryListing
 
 		bool spliceTree(DirectoryListing& tree, SpliceTreeResult& sr);
 
-		class Directory : public Flags
+		class Directory : public BaseFlags<uint16_t>
 		{
 			public:
 				typedef vector<Directory*> List;
@@ -196,8 +196,8 @@ class DirectoryListing
 				uint16_t minBitrate;
 				uint16_t maxBitrate;
 
-				void updateSubDirs(Flags::MaskType& updatedFlags);
-				void updateFiles(Flags::MaskType& updatedFlags);
+				void updateSubDirs(MaskType& updatedFlags);
+				void updateFiles(MaskType& updatedFlags);
 				bool updateFlags();
 		
 				friend bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr);

@@ -35,7 +35,7 @@ std::atomic_bool QueueItem::checkTempDir(true);
 
 const string dctmpExtension = ".dctmp";
 
-QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, Flags::MaskType flags,
+QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
                      time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget) :
 	target(target),
 	tempTarget(tempTarget),
@@ -155,12 +155,12 @@ size_t QueueItem::getLastOnlineCount()
 	return cachedOnlineSourceCount;
 }
 
-bool QueueItem::isBadSourceExceptL(const UserPtr& user, Flags::MaskType exceptions) const
+bool QueueItem::isBadSourceExceptL(const UserPtr& user, MaskType exceptions) const
 {
 	const auto i = badSources.find(user);
 	if (i != badSources.end())
 	{
-		return i->second.isAnySet((Flags::MaskType)(exceptions ^ Source::FLAG_MASK));
+		return i->second.isAnySet((MaskType) (exceptions ^ Source::FLAG_MASK));
 	}
 	return false;
 }
@@ -292,7 +292,7 @@ bool QueueItem::isChunkDownloaded(int64_t startPos, int64_t& len) const
 	return false;
 }
 
-void QueueItem::removeSourceL(const UserPtr& user, Flags::MaskType reason)
+void QueueItem::removeSourceL(const UserPtr& user, MaskType reason)
 {
 	SourceIter i = findSourceL(user); // crash - https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=42877 && http://www.flickr.com/photos/96019675@N02/10488126423/
 	if (i != sources.end()) // https://drdump.com/Problem.aspx?ProblemID=129066

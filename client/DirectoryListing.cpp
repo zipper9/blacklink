@@ -600,7 +600,7 @@ void ListLoader::endTag(const string& name, const string&)
 	{
 		if (current)
 		{
-			Flags::MaskType addFlags = 0;
+			uint16_t addFlags = 0;
 			current->updateSubDirs(addFlags);
 			current->setFlags((current->getFlags() & ~DirectoryListing::FLAG_DIR_TIMESTAMP) | addFlags);
 			sortList(current->files);
@@ -612,7 +612,7 @@ void ListLoader::endTag(const string& name, const string&)
 	{
 		if (current)
 		{
-			Flags::MaskType unused = 0;
+			uint16_t unused = 0;
 			current->updateSubDirs(unused);
 			sortList(current->directories);
 		}
@@ -867,9 +867,9 @@ void DirectoryListing::Directory::clearMatches()
 	unsetFlag(FLAG_FOUND | FLAG_HAS_FOUND);
 }
 
-void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
+void DirectoryListing::Directory::updateSubDirs(MaskType& updatedFlags)
 {
-	Flags::MaskType flags = 0;
+	MaskType flags = 0;
 	for (auto i = directories.cbegin(); i != directories.cend(); i++)
 	{
 		const DirectoryListing::Directory *dir = *i;
@@ -888,9 +888,9 @@ void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
 	updatedFlags |= flags;
 }
 
-void DirectoryListing::Directory::updateFiles(Flags::MaskType& updatedFlags)
+void DirectoryListing::Directory::updateFiles(MaskType& updatedFlags)
 {
-	Flags::MaskType flags = 0;
+	MaskType flags = 0;
 	for (auto i = files.cbegin(); i != files.cend(); i++)
 	{
 		const DirectoryListing::File *file = *i;
@@ -922,7 +922,7 @@ void DirectoryListing::Directory::updateFiles(Flags::MaskType& updatedFlags)
 
 bool DirectoryListing::Directory::updateFlags()
 {
-	Flags::MaskType flags = getFlags() & (FLAG_FOUND | FLAG_HAS_FOUND);
+	MaskType flags = getFlags() & (FLAG_FOUND | FLAG_HAS_FOUND);
 	for (auto i = files.cbegin(); i != files.cend(); i++)
 	{
 		const DirectoryListing::File *file = *i;
@@ -1206,7 +1206,7 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 		int &pos = tmp.back();
 		if (pos < 0)
 		{
-			Flags::MaskType dirFlags = 0;
+			uint16_t dirFlags = 0;
 			for (int i = 0; i < (int) current->files.size(); i++)
 			{
 				File *file = current->files[i];
@@ -1563,7 +1563,7 @@ bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) cons
 {
 	if (!size && (sq.flags & SearchQuery::FLAG_SKIP_EMPTY))
 		return false;
-	Flags::MaskType skipFlags = 0;
+	MaskType skipFlags = 0;
 	if (sq.flags & SearchQuery::FLAG_SKIP_OWNED)
 		skipFlags |= FLAG_DOWNLOADED | FLAG_SHARED;
 	if (sq.flags & SearchQuery::FLAG_SKIP_CANCELED)
