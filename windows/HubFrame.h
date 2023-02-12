@@ -28,7 +28,6 @@
 #include "BaseChatFrame.h"
 #include "UserListWindow.h"
 #include "FlatTabCtrl.h"
-#include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
 #include "UCHandler.h"
