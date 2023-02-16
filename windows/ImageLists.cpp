@@ -75,38 +75,33 @@ string FileImage::getVirusIconIndex(const string& aFileName, int& p_icon_index)
 	return x;
 }
 
-int FileImage::getIconIndex(const string& aFileName)
+int FileImage::getIconIndex(const string& fileName)
 {
 	int iconIndex = 0;
-	string x = getVirusIconIndex(aFileName, iconIndex);
+	string x = getVirusIconIndex(fileName, iconIndex);
 	if (iconIndex)
 		return iconIndex;
-	if (BOOLSETTING(USE_SYSTEM_ICONS))
+	if (BOOLSETTING(USE_SYSTEM_ICONS) && !x.empty())
 	{
-		if (!x.empty())
-		{
-			const auto j = m_iconCache.find(x);
-			if (j != m_iconCache.end())
-				return j->second;
-		}
-		x = string("x.") + x;
-		SHFILEINFO fi = { 0 };
-		if (SHGetFileInfo(Text::toT(x).c_str(), FILE_ATTRIBUTE_NORMAL, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES))
+		ASSERT_MAIN_THREAD();
+		auto j = iconCache.find(x);
+		if (j != iconCache.end())
+			return j->second;
+		tstring file = _T("x.") + Text::toT(x);
+		SHFILEINFO fi = {};
+		if (SHGetFileInfo(file.c_str(), FILE_ATTRIBUTE_NORMAL, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES))
 		{
 			images.AddIcon(fi.hIcon);
 			::DestroyIcon(fi.hIcon);
-			m_iconCache[x] = imageCount;
+			iconCache[x] = imageCount;
+#ifdef DEBUG_IMAGE_LISTS
+			LogManager::message("Adding file type '" + x + "' to image list, index = " + Util::toString(imageCount), false);
+#endif
 			return imageCount++;
 		}
-		else
-		{
-			return DIR_FILE;
-		}
-	}
-	else
-	{
 		return DIR_FILE;
 	}
+	return DIR_FILE;
 }
 
 void FileImage::init()

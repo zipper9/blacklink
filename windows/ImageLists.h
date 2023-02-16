@@ -42,7 +42,7 @@ struct FileImage : public BaseImageList
 			DIR_IMAGE_LAST
 		};
 
-		int getIconIndex(const string& aFileName);
+		int getIconIndex(const string& fileName);
 		string getVirusIconIndex(const string& aFileName, int& p_icon_index);
 
 		static bool isBdFolder(const string& nameDir)
@@ -98,7 +98,7 @@ struct FileImage : public BaseImageList
 	
 	private:
 		int imageCount;
-		boost::unordered_map<string, int> m_iconCache;
+		boost::unordered_map<string, int> iconCache;
 };
 
 extern FileImage g_fileImage;
