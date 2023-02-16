@@ -314,7 +314,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		void onUserParts(const OnlineUserPtr& ou);
 		
-		UserInfo* findUserByNick(const tstring& nick);
+		UserInfo* findUserByNick(const tstring& nick) const;
 		
 		void addAsFavorite(AutoConnectType autoConnectType = DONT_CHANGE);
 		void removeFavoriteHub();
@@ -397,6 +397,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool sendMessage(const string& msg, bool thirdPerson = false) override;
 		void addStatus(const tstring& line, bool inChat = true, bool history = true, int textStyle = Colors::TEXT_STYLE_SYSTEM_MESSAGE) override;
 		void readFrameLog() override;
+		bool hasNick(const tstring& nick) const override;
 
 	private:
 		bool uiInitialized;

@@ -401,6 +401,11 @@ void HubFrame::readFrameLog()
 	ctrlClient.goToEnd(true);
 }
 
+bool HubFrame::hasNick(const tstring& nick) const
+{
+	return findUserByNick(nick) != nullptr;
+}
+
 bool HubFrame::sendMessage(const string& msg, bool thirdPerson)
 {
 	if (isDHT)
@@ -524,7 +529,7 @@ bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::
 			return true;
 		case Commands::COMMAND_LAST_NICK:
 			if (!lastUserName.empty())
-				res.text = Text::fromT(lastUserName + getChatRefferingToNick() + _T(' '));
+				res.text = Text::fromT(lastUserName + getNickDelimiter() + _T(' '));
 			if (pc.args.size() >= 2)
 				res.text += pc.args[1];
 			res.what = Commands::RESULT_TEXT;
@@ -2630,7 +2635,7 @@ void HubFrame::addPasswordCommand()
 	}
 }
 
-UserInfo* HubFrame::findUserByNick(const tstring& nick)
+UserInfo* HubFrame::findUserByNick(const tstring& nick) const
 {
 	dcassert(!nick.empty());
 	if (nick.empty())

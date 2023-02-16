@@ -142,13 +142,14 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		virtual bool sendMessage(const string& msg, bool thirdPerson = false) = 0;
 		virtual void addStatus(const tstring& line, bool inChat = true, bool history = true, int textStyle = Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		virtual void readFrameLog() = 0;
+		virtual bool hasNick(const tstring& nick) const { return false; }
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 
 		void addLine(const tstring& line, unsigned maxSmiles, int textStyle = Colors::TEXT_STYLE_NORMAL);
 		void addLine(const Identity& ou, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle, string& extra);
 		void themeChanged();
 
-		static TCHAR getChatRefferingToNick();
+		static TCHAR getNickDelimiter();
 
 		void appendChatCtrlItems(OMenu& menu, bool isOp);
 

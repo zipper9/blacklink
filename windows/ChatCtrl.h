@@ -108,6 +108,8 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void setFindFlags(DWORD flags) { currentFindFlags = flags; }
 		void resetFindPos() { findInit = true; }
 
+		static const tstring nickBoundaryChars;
+
 	protected:
 		bool hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos);
 		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);

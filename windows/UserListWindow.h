@@ -47,7 +47,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		void initialize(const FavoriteManager::WindowInfo& wi);
 		void clearUserList();
 		void insertDHTUsers();
-		UserInfo* findUser(const OnlineUserPtr& user);
+		UserInfo* findUser(const OnlineUserPtr& user) const;
 		bool updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bool isConnected); // returns true if this is a new user
 		void removeUser(const OnlineUserPtr& ou);
 		void ensureVisible(const UserInfo* ui);

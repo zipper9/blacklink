@@ -709,9 +709,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SHOW_TRANSCODE_BTN,
 			SHOW_LINK_BTN,
 			SHOW_FIND_BTN,
-#ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 			CHAT_REFFERING_TO_NICK,
-#endif
 			IP_IN_CHAT,
 			COUNTRY_IN_CHAT,
 			ISP_IN_CHAT,

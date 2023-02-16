@@ -63,9 +63,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::SMILE_SELECT_WND_ANIM_SMILES, ResourceManager::SMILE_SELECT_WND_ANIM_SMILES },
 #endif
 	{ SettingsManager::CHAT_PANEL_SHOW_INFOTIPS, ResourceManager::CHAT_PANEL_SHOW_INFOTIPS },
-#ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 	{ SettingsManager::CHAT_REFFERING_TO_NICK, ResourceManager::CHAT_REFFERING_TO_NICK },
-#endif
 	{ 0, ResourceManager::Strings() }
 };
 

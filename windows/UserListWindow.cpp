@@ -464,7 +464,7 @@ void UserListWindow::setShowUsers(bool flag)
 		removeListViewItems();
 }
 
-UserInfo* UserListWindow::findUser(const OnlineUserPtr& user)
+UserInfo* UserListWindow::findUser(const OnlineUserPtr& user) const
 {
 	READ_LOCK(*csUserMap);
 	auto i = userMap.find(user);

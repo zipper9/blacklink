@@ -433,13 +433,9 @@ void BaseChatFrame::checkMultiLine()
 	}
 }
 
-TCHAR BaseChatFrame::getChatRefferingToNick()
+TCHAR BaseChatFrame::getNickDelimiter()
 {
-#ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 	return BOOLSETTING(CHAT_REFFERING_TO_NICK) ? _T(',') : _T(':');
-#else
-	return _T(',');
-#endif
 }
 
 void BaseChatFrame::clearInputBox()
@@ -842,39 +838,58 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 void BaseChatFrame::appendNickToChat(const tstring& nick)
 {
 	dcassert(ctrlMessage);
-	if (ctrlMessage)
+	if (!ctrlMessage) return;
+
+	tstring text;
+	WinUtil::getWindowText(ctrlMessage, text);
+
+	size_t lastPos = tstring::npos;
+	size_t i = 0;
+	size_t len = text.length();
+	const TCHAR* ts = text.c_str();
+	while (i < len)
 	{
-		tstring sUser(nick);
-		tstring sText;
-		int iSelBegin, iSelEnd;
-		ctrlMessage.GetSel(iSelBegin, iSelEnd);
-		WinUtil::getWindowText(ctrlMessage, sText);
-		
-		if (iSelBegin == 0 && iSelEnd == 0)
+		if (ts[i] == ' ' || ts[i] == '\t' || ts[i] == '\r' || ts[i] == '\n' || ts[i] == '<')
 		{
-			sUser += getChatRefferingToNick();
-			sUser += _T(' ');
-			if (sText.empty())
-			{
-				ctrlMessage.SetWindowText(sUser.c_str());
-				ctrlMessage.SetFocus();
-				int selection = static_cast<int>(sUser.length());
-				ctrlMessage.SetSel(selection, selection);
-			}
+			i++;
+			continue;
+		}
+		size_t j = text.find_first_of(ChatCtrl::nickBoundaryChars, i);
+		if (j == tstring::npos) j = len;
+		if (i < j)
+		{
+			tstring oldNick = text.substr(i, j-i);
+			if (oldNick == nick) return;
+			if (hasNick(oldNick))
+				lastPos = j;
 			else
-			{
-				ctrlMessage.ReplaceSel(sUser.c_str());
-				ctrlMessage.SetFocus();
-			}
+				break;
 		}
-		else
-		{
-			sUser += _T(',');
-			sUser += _T(' ');
-			ctrlMessage.ReplaceSel(sUser.c_str());
-			ctrlMessage.SetFocus();
-		}
+		i = j + 1;
 	}
+	tstring insText = nick;
+	int cursorPos;
+	if (lastPos != tstring::npos)
+	{
+		insText.insert(0, _T(", "));
+		cursorPos = 0;
+		if (ts[lastPos] != ':' && ts[lastPos] != ',')
+			insText += getNickDelimiter();
+		else
+			cursorPos++;
+		text.insert(lastPos, insText);
+		cursorPos += lastPos + insText.length();
+	}
+	else
+	{
+		insText += getNickDelimiter();
+		insText += _T(' ');
+		text.insert(0, insText);
+		cursorPos = insText.length();
+	}
+	ctrlMessage.SetWindowText(text.c_str());
+	ctrlMessage.SetSel(cursorPos, cursorPos);
+	ctrlMessage.SetFocus();
 }
 
 void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)

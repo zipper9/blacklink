@@ -737,9 +737,7 @@ static const char* settingTags[] =
 	"ShowTranscodeButton",
 	"ShowLinkButton",
 	"ShowFindButton",
-#ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK	
 	"ChatRefferingToNick",
-#endif
 	"IpInChat",
 	"CountryInChat",
 	"ISPInChat", 
@@ -1347,9 +1345,7 @@ void SettingsManager::setDefaults()
 	setDefault(SHOW_MULTI_CHAT_BTN, TRUE);
 	setDefault(SHOW_LINK_BTN, TRUE);
 	setDefault(SHOW_FIND_BTN, TRUE);
-#ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 	setDefault(CHAT_REFFERING_TO_NICK, TRUE);
-#endif
 	setDefault(STATUS_IN_CHAT, TRUE);
 	setDefault(DISPLAY_CHEATS_IN_MAIN_CHAT, TRUE);
 	setDefault(USE_CTRL_FOR_LINE_HISTORY, TRUE);
