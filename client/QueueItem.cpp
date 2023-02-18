@@ -960,13 +960,3 @@ void QueueItem::updateBlockSize(uint64_t treeBlockSize)
 		blockSize = treeBlockSize;
 	}
 }
-
-QueueItem::MaskType QueueItem::checkExtension(const string& fileName)
-{
-	// TODO: make it configurable?
-	string fileExt = Util::getFileExt(fileName);
-	Text::asciiMakeLower(fileExt);
-	if (fileExt == ".mov" || fileExt == ".mp4" || fileExt == ".3gp")
-		return QueueItem::FLAG_WANT_END;
-	return 0;
-}

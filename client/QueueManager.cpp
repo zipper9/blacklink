@@ -126,7 +126,8 @@ void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoP
 		p = QueueItem::NORMAL;
 }
 
-QueueItemPtr QueueManager::FileQueue::add(const string& target,
+QueueItemPtr QueueManager::FileQueue::add(QueueManager* qm,
+                                          const string& target,
                                           int64_t targetSize,
                                           QueueItem::MaskType flags,
                                           QueueItem::Priority p,
@@ -140,7 +141,7 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 	updatePriority(p, autoPriority, fileName, targetSize, flags);
 
 	if (!maxSegments) maxSegments = getMaxSegments(targetSize);
-	flags |= QueueItem::checkExtension(fileName);
+	flags |= qm->getFlagsForFileName(fileName);
 
 	auto qi = std::make_shared<QueueItem>(target, targetSize, p, autoPriority, flags, added, root, maxSegments, tempTarget);
 	if (!(flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)) && !tempTarget.empty())
@@ -1017,7 +1018,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 				}
 			}
 
-			q = fileQueue.add(targetPath, size, flags, priority, tempTarget, GET_TIME(), root, 0);
+			q = fileQueue.add(this, targetPath, size, flags, priority, tempTarget, GET_TIME(), root, 0);
 
 			if (q)
 			{
@@ -2179,6 +2180,21 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 	}
 }
 
+QueueItem::MaskType QueueManager::getFlagsForFileName(const string& fileName)
+{
+	const string& pattern = SETTING(WANT_END_FILES);
+	csWantEndFiles.lock();
+	if (pattern != wantEndFilesPattern)
+	{
+		wantEndFilesPattern = pattern;
+		if (!Wildcards::regexFromPatternList(reWantEndFiles, wantEndFilesPattern, true))
+			wantEndFilesPattern.clear();
+	}
+	bool result = std::regex_match(fileName, reWantEndFiles);
+	csWantEndFiles.unlock();
+	return result ? QueueItem::FLAG_WANT_END : 0;
+}
+
 void QueueManager::removeAll()
 {
 	fileQueue.clearAll();
@@ -2677,7 +2693,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			string fileName = Util::getFileName(target);
 			QueueItem::MaskType flags = 0;
 			if (!maxSegments) maxSegments = QueueManager::FileQueue::getMaxSegments(size);
-			flags |= QueueItem::checkExtension(fileName);
+			flags |= qm->getFlagsForFileName(fileName);
 
 			const bool autoPriority = Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1;
 			auto qi = std::make_shared<QueueItem>(target, size, p, autoPriority, flags, added, TTHValue(tthRoot), maxSegments, tempTarget);
@@ -3205,7 +3221,7 @@ struct DummyOutputStream : OutputStream
 	{
 		return n;
 	}
-	size_t flushBuffers(bool aForce) override
+	size_t flushBuffers(bool force) override
 	{
 		return 0;
 	}

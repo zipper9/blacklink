@@ -80,7 +80,10 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  
 			// Uploads
 			COMPRESSED_FILES,
-			
+
+			// Downloads & Queue
+			WANT_END_FILES,
+
 			// Private messages
 			PM_PASSWORD,
 			PM_PASSWORD_HINT,
@@ -305,7 +308,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			FILELIST_SHOW_DOWNLOADED,
 			FILELIST_SHOW_CANCELED,
 
-			// Downloads & Queue
+			// Downloads & Queue (Ints)
 			DOWNLOAD_SLOTS,
 			FILE_SLOTS,
 			EXTRA_DOWNLOAD_SLOTS,

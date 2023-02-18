@@ -52,6 +52,7 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 	"https://dchublists.com/?do=hublist&get=hublist.xml.bz2";
 
 static const char COMPRESSED_FILES_DEFAULT[] = "*.bz2;*.zip;*.rar;*.7z;*.gz;*.mp3;*.ogg;*.flac;*.ape;*.mp4;*.mkv;*.jpg;*.jpeg;*.gif;*.png;*.docx;*.xlsx";
+static const char WANT_END_FILES_DEFAULT[] = "*.mov;*.mp4;*.3gp;*.3g2";
 
 static const int MIN_SPEED_LIMIT = 32;
 
@@ -110,6 +111,9 @@ static const char* settingTags[] =
 
 	// Uploads
 	"CompressedFiles",
+
+	// Downloads & Queue
+	"WantEndFiles",
 
 	// Private messages
 	"Password",
@@ -844,6 +848,9 @@ void SettingsManager::setDefaults()
 
 	// Uploads
 	setDefault(COMPRESSED_FILES, COMPRESSED_FILES_DEFAULT);
+
+	// Downloads & Queue
+	setDefault(WANT_END_FILES, WANT_END_FILES_DEFAULT);
 
 	// Private messages
 	setDefault(PM_PASSWORD, Util::getRandomNick()); // Generate a random PM password

@@ -278,7 +278,6 @@ class QueueItem
 		string getListName() const;
 		const string& getTempTarget();
 		const string& getTempTargetConst() const { return tempTarget; }
-		static MaskType checkExtension(const string& fileName);
 
 	private:
 		MaskType flags;

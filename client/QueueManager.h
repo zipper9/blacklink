@@ -260,6 +260,12 @@ class QueueManager : public Singleton<QueueManager>,
 	private:
 		static uint64_t lastSave;
 
+		std::regex reWantEndFiles;
+		string wantEndFilesPattern;
+		FastCriticalSection csWantEndFiles;
+
+		QueueItem::MaskType getFlagsForFileName(const string& fileName);
+
 	public:
 		/** All queue items by target */
 		class FileQueue
@@ -270,7 +276,7 @@ class QueueManager : public Singleton<QueueManager>,
 			public:
 				FileQueue();
 				bool add(const QueueItemPtr& qi);
-				QueueItemPtr add(const string& target, int64_t size, Flags::MaskType flags,
+				QueueItemPtr add(QueueManager* qm, const string& target, int64_t size, Flags::MaskType flags,
 				                 QueueItem::Priority p, const string& tempTarget, time_t added,
 				                 const TTHValue& root, uint8_t maxSegments);
 				bool getTTH(const string& name, TTHValue& tth) const;
