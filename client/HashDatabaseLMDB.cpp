@@ -5,6 +5,7 @@
 #include "File.h"
 #include "TimerManager.h"
 #include "LogManager.h"
+#include "TigerHash.h"
 #include "unaligned.h"
 
 static const size_t TTH_SIZE = 24;
@@ -580,4 +581,79 @@ void HashDatabaseLMDB::closeIdleConnections(uint64_t tick) noexcept
 		}
 	}
 	v.clear();
+}
+
+bool HashDatabaseConnection::getDBInfo(DbInfo &info, int flags) noexcept
+{
+	info.totalKeysSize = info.totalDataSize = info.totalTreesSize = -1;
+
+	MDB_stat stat;
+	if (mdb_env_stat(env, &stat))
+	{
+		info.numPages = 0;
+		info.numKeys = 0;
+		return false;
+	}
+
+	info.numKeys = stat.ms_entries;
+	info.numPages = stat.ms_branch_pages + stat.ms_leaf_pages + stat.ms_overflow_pages;
+
+	if (!(flags & GET_DB_INFO_DETAILS)) return true;
+
+	MDB_dbi dbi;
+	if (!createReadTxn(dbi)) return false;
+
+	MDB_cursor *cursor = nullptr;
+	if (mdb_cursor_open(txnRead, dbi, &cursor)) return false;
+
+	TigerHash hashKeys, hashValues;
+
+	info.totalKeysSize = 0;
+	info.totalDataSize = 0;
+	info.totalTreesSize = 0;
+
+	MDB_val key, val;
+	if (mdb_cursor_get(cursor, &key, &val, MDB_FIRST) == 0)
+	{
+		do
+		{
+			info.totalKeysSize += key.mv_size;
+			info.totalDataSize += val.mv_size;
+			if (flags & GET_DB_INFO_DIGEST)
+			{
+				hashKeys.update(key.mv_data, key.mv_size);
+				hashValues.update(val.mv_data, val.mv_size);
+			}
+			if (flags & GET_DB_INFO_TREES)
+			{
+				ItemParser parser(static_cast<const uint8_t*>(val.mv_data) + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
+				int itemType;
+				size_t itemSize, headerSize;
+				const void *itemData;
+				while (parser.getItem(itemType, itemData, itemSize, headerSize))
+				{
+					if (itemType == ITEM_TIGER_TREE)
+						info.totalTreesSize += itemSize;
+				}
+			}
+		} while (mdb_cursor_get(cursor, &key, &val, MDB_NEXT) == 0);
+	}
+
+	mdb_cursor_close(cursor);
+	mdb_txn_reset(txnRead);
+
+	if (flags & GET_DB_INFO_DIGEST)
+	{
+		memcpy(info.keysHash, hashKeys.finalize(), TigerHash::BYTES);
+		memcpy(info.dataHash, hashValues.finalize(), TigerHash::BYTES);
+	}
+	else
+	{
+		memset(info.keysHash, 0, sizeof(info.keysHash));
+		memset(info.dataHash, 0, sizeof(info.dataHash));
+	}
+	if (!(flags & GET_DB_INFO_TREES))
+		info.totalTreesSize = -1;
+
+	return true;
 }

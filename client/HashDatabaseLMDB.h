@@ -10,6 +10,24 @@ class HashDatabaseConnection
 		friend class HashDatabaseLMDB;
 
 	public:
+		struct DbInfo
+		{
+			size_t numPages;
+			size_t numKeys;
+			int64_t totalKeysSize;
+			int64_t totalDataSize;
+			int64_t totalTreesSize;
+			uint8_t keysHash[24];
+			uint8_t dataHash[24];
+		};
+
+		enum
+		{
+			GET_DB_INFO_DETAILS = 1,
+			GET_DB_INFO_TREES   = 2,
+			GET_DB_INFO_DIGEST  = 4
+		};
+
 		~HashDatabaseConnection() noexcept;
 		HashDatabaseConnection(const HashDatabaseConnection&) = delete;
 		HashDatabaseConnection& operator= (const HashDatabaseConnection&) = delete;
@@ -18,6 +36,7 @@ class HashDatabaseConnection
 		bool getTigerTree(const void *tth, TigerTree &tree) noexcept;
 		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path, bool incUploadCount) noexcept;
 		bool putTigerTree(const TigerTree &tree) noexcept;
+		bool getDBInfo(DbInfo &info, int flags) noexcept;
 
 	private:
 		bool busy = true;

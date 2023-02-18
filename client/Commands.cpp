@@ -74,7 +74,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_CPU            }, // COMMAND_INFO_CPU
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_STATS          }, // COMMAND_INFO_STATS
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_RATIO          }, // COMMAND_INFO_RATIO
-	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 0,        ResourceManager::CMD_HELP_INFO_DB             }, // COMMAND_INFO_DB
+	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_SPLIT_ARGS, 0, 1,        ResourceManager::CMD_HELP_INFO_DB             }, // COMMAND_INFO_DB
 	{ CTX_SYSTEM | FLAG_GENERAL_CHAT | FLAG_UI,         1, 1,        ResourceManager::CMD_HELP_SEARCH              }, // COMMAND_SEARCH
 	{ CTX_SYSTEM,                                       0, 0,        ResourceManager::CMD_HELP_SHOW_IGNORE_LIST    }, // COMMAND_SHOW_IGNORE_LIST
 	{ CTX_SYSTEM,                                       0, 0,        ResourceManager::CMD_HELP_SHOW_EXTRA_SLOTS    }, // COMMAND_SHOW_EXTRA_SLOTS
@@ -1172,8 +1172,32 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 		}
 		case COMMAND_INFO_DB:
 		{
-			res.text = DatabaseManager::getInstance()->getDBInfo();
 			res.what = RESULT_LOCAL_TEXT;
+			if (pc.args.size() == 2 && pc.args[1] == "lmdb-details")
+			{
+				auto db = DatabaseManager::getInstance();
+				auto hashDb = db->getHashDatabaseConnection();
+				HashDatabaseConnection::DbInfo info;
+				if (hashDb && hashDb->getDBInfo(info, HashDatabaseConnection::GET_DB_INFO_DETAILS | HashDatabaseConnection::GET_DB_INFO_TREES | HashDatabaseConnection::GET_DB_INFO_DIGEST))
+				{
+					res.text = "LMDB information\n";
+					res.text += "Items: " + Util::toString(info.numKeys);
+					res.text += "\nPages: " + Util::toString(info.numPages);
+					res.text += "\nSize of all keys: " + Util::toString(info.totalKeysSize);
+					res.text += "\nSize of all values: " + Util::toString(info.totalDataSize);
+					res.text += "\nSize of all trees: " + Util::toString(info.totalTreesSize);
+					res.text += "\nHash of all keys: " + Encoder::toBase32(info.keysHash, sizeof(info.keysHash));
+					res.text += "\nHash of all values: " + Encoder::toBase32(info.dataHash, sizeof(info.dataHash));
+				}
+				else
+				{
+					res.text = "Unable to get LMDB info";
+					res.what = RESULT_ERROR_MESSAGE;
+				}
+				if (hashDb) db->putHashDatabaseConnection(hashDb);
+			}
+			else
+				res.text = DatabaseManager::getInstance()->getDBInfo();
 			return true;
 		}
 		case COMMAND_IP_UPDATE:
