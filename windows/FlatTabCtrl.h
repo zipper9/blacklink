@@ -384,9 +384,11 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		return 0;
 	}
 
-	LRESULT onCreate(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled)
+	LRESULT onCreate(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM lParam, BOOL &bHandled)
 	{
 		bHandled = FALSE;
+		CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
+		if (cs->lpszName) currentTitle = cs->lpszName;
 		dcassert(getTab());
 		getTab()->addTab(m_hWnd);
 		created = true;
@@ -513,8 +515,17 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		getTab()->setTooltipText(m_hWnd, text);
 	}
 
+	void setWindowTitle(const tstring& text)
+	{
+		if (currentTitle == text) return;
+		currentTitle = text;
+		SetWindowText(currentTitle.c_str());
+		::SendMessage(WinUtil::g_mdiClient, WM_MDIREFRESHMENU, 0, 0);
+	}
+
 	private:
 	bool created;
+	tstring currentTitle;
 
 	protected:
 	bool closed;

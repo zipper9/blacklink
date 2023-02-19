@@ -596,7 +596,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	else
 	{
-		SetWindowText(CTSTRING(SEARCH));
+		setWindowTitle(TSTRING(SEARCH));
 		running = false;
 	}
 	SettingsManager::getInstance()->addListener(this);
@@ -719,7 +719,7 @@ void SearchFrame::onEnter()
 	const int hubCount = ctrlHubs.GetItemCount();
 	if (hubCount <= 1)
 	{
-		SetWindowText(CTSTRING(SEARCH));
+		setWindowTitle(TSTRING(SEARCH));
 		MessageBox(CTSTRING(SEARCH_NO_HUBS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 		return;
 	}
@@ -746,7 +746,7 @@ void SearchFrame::onEnter()
 
 	if (searchClients.empty())
 	{
-		SetWindowText(CTSTRING(SEARCH));
+		setWindowTitle(TSTRING(SEARCH));
 		return;
 	}
 
@@ -801,7 +801,7 @@ void SearchFrame::onEnter()
 	s = Text::toT(filter);
 	if (s.empty())
 	{
-		SetWindowText(CTSTRING(SEARCH));
+		setWindowTitle(TSTRING(SEARCH));
 		return;
 	}
 		
@@ -828,7 +828,7 @@ void SearchFrame::onEnter()
 	running = true;
 	isHash = searchParam.fileType == FILE_TYPE_TTH;
 	
-	SetWindowText((TSTRING(SEARCH) + _T(" - ") + searchTarget).c_str());
+	setWindowTitle(TSTRING(SEARCH) + _T(" - ") + searchTarget);
 	
 	// stop old search
 	ClientManager::cancelSearch(id);
@@ -2953,7 +2953,7 @@ void SearchFrame::updateStatusLine(uint64_t tick)
 		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + searchTarget + _T(" ... ") + Util::toStringT(percent) + _T("%");
 		ctrlStatus.SetText(STATUS_TIME, Util::formatSecondsT((searchEndTime - tick) / 1000).c_str());
 	}
-	SetWindowText(statusLine.c_str());
+	setWindowTitle(statusLine);
 	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);
 }
 

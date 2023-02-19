@@ -97,12 +97,12 @@ LRESULT TextFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		ctrlPad.StreamIn(nFormat, es);
 
 		ctrlPad.EmptyUndoBuffer();
-		SetWindowText(Util::getFileName(file).c_str());
+		setWindowTitle(Util::getFileName(file));
 	}
 	catch (const FileException& e)
 	{
 		tstring errorText = Util::getFileName(file) + _T(": ") + Text::toT(e.getError());
-		SetWindowText(errorText.c_str());
+		setWindowTitle(errorText);
 	}
 
 	bHandled = FALSE;

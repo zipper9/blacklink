@@ -184,7 +184,7 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, c
 		WinUtil::hiddenCreateEx(frame);
 	else
 		frame->Create(WinUtil::g_mdiClient);
-	frame->setWindowTitle();
+	frame->updateWindowTitle();
 	frame->refreshTree(frame->dl->getRoot(), frame->treeRoot, false);
 	frame->loading = false;
 	frame->initStatus();
@@ -239,19 +239,19 @@ DirectoryListingFrame* DirectoryListingFrame::findFrameByID(uint64_t id)
 	return nullptr;
 }
 
-void DirectoryListingFrame::setWindowTitle()
+void DirectoryListingFrame::updateWindowTitle()
 {
 	setWindowTitleTick = 0;
 	if (dclstFlag)
 	{
-		SetWindowText(Text::toT(Util::getFileName(getFileName())).c_str());
+		setWindowTitle(Text::toT(Util::getFileName(getFileName())));
 		return;
 	}
 	const UserPtr& user = dl->getUser();
 	if (!user) return;
 	if (user->getFlags() & User::FAKE)
 	{
-		SetWindowText(Text::toT(user->getLastNick()).c_str());
+		setWindowTitle(Text::toT(user->getLastNick()));
 		return;
 	}
 	const HintedUser &hintedUser = dl->getHintedUser();
@@ -276,7 +276,7 @@ void DirectoryListingFrame::setWindowTitle()
 			text += lastHubName;
 		}
 	}
-	SetWindowText(text.c_str());
+	setWindowTitle(text);
 	if (offline != userOffline)
 	{
 		offline = userOffline;
@@ -603,7 +603,7 @@ void DirectoryListingFrame::updateStatus()
 			UpdateLayout(TRUE);
 
 		listItemChanged = false;
-		setWindowTitle();
+		updateWindowTitle();
 	}
 }
 
@@ -3040,7 +3040,7 @@ LRESULT DirectoryListingFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 		if (listItemChanged)
 			updateStatus();
 		else if (++setWindowTitleTick == 10)
-			setWindowTitle();
+			updateWindowTitle();
 	}
 	return 0;
 }
@@ -3056,10 +3056,10 @@ int ThreadedDirectoryListing::run()
 				dcassert(!filePath.empty());
 				const string filename = Util::getFileName(filePath);
 				const UserPtr& user = window->dl->getUser();
-				window->setWindowTitle();
+				window->updateWindowTitle();
 				window->dl->loadFile(filePath, this, user->isMe());
 				window->addToUserList(user, false);
-				window->setWindowTitle();
+				window->updateWindowTitle();
 				auto adls = ADLSearchManager::getInstance();
 				if (!adls->isEmpty())
 				{

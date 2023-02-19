@@ -417,7 +417,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		CFlyToolTipCtrl tooltip;
 
 		void updateWindowTitle();
-		void setWindowTitle(const string& text);
 		tstring getHubTitle() const;
 
 		void updateSplitterPosition(int chatUserSplit, bool swapPanels);

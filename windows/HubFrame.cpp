@@ -148,7 +148,7 @@ LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	bHandled = FALSE;
 	if (isDHT)
 	{
-		SetWindowText(CTSTRING(DHT_TITLE));
+		setWindowTitle(TSTRING(DHT_TITLE));
 		SetIcon(g_iconBitmaps.getIcon(IconBitmaps::DHT, 0), FALSE);
 		dht::DHT* d = dht::DHT::getInstance();
 		const tstring& connState = TSTRING_I(d->isConnected() ? ResourceManager::DHT_CONN_STATE_YES : ResourceManager::DHT_CONN_STATE_NO);
@@ -1094,12 +1094,6 @@ void HubFrame::onUserParts(const OnlineUserPtr& ou)
 		if (showJoins || (showFavJoins && isFavorite))
 			addSystemMessage(TSTRING(PARTS) + _T(' ') + userNick, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 	}
-}
-
-void HubFrame::setWindowTitle(const string& text)
-{
-	if (!isClosedOrShutdown())
-		SetWindowText(Text::toT(text).c_str());
 }
 
 void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
@@ -2273,7 +2267,7 @@ void HubFrame::updateWindowTitle()
 
 	if (fullHubName != prevHubName)
 	{
-		setWindowTitle(fullHubName);
+		setWindowTitle(Text::toT(fullHubName));
 		if (BOOLSETTING(BOLD_HUB) && !prevHubName.empty())
 			setDirty();
 		prevHubName = std::move(fullHubName);

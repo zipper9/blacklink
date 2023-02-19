@@ -276,7 +276,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			return 0;
 		}
 
-		void setWindowTitle();
+		void updateWindowTitle();
 		StringMap getFrameLogParams() const;
 
 		LRESULT onEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

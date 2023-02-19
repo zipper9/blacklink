@@ -732,7 +732,7 @@ void PrivateFrame::updateHubList()
 	isMultipleHubs = hubList.size() > 1;
 	if (msgPanel)
 		msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
-	SetWindowText(fullUserName.c_str());
+	setWindowTitle(fullUserName);
 }
 
 bool PrivateFrame::selectHub(const string& url)
