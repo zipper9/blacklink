@@ -174,7 +174,7 @@ int BufferedSocket::run()
 {
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	if (doLog)
-		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread started", false);
+		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread 0x" + Util::toHexString(BaseThread::getCurrentThreadId()) + " started", false);
 
 	while (!stopFlag)
 	{

@@ -157,6 +157,7 @@ void SearchManager::start()
 
 void SearchManager::shutdown()
 {
+	bool printMessage = false;
 	stopFlag = true;
 	sendNotif();
 	join();
@@ -166,10 +167,11 @@ void SearchManager::shutdown()
 		{
 			sockets[i]->disconnect();
 			sockets[i].reset();
+			printMessage = true;
 		}
 	}
 	udpPort = 0;
-	LogManager::message("SearchManager: shutdown completed", false);
+	if (printMessage) LogManager::message("SearchManager: shutdown completed", false);
 }
 
 int SearchManager::run()

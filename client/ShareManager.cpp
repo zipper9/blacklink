@@ -1921,6 +1921,7 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 	if (!doingCreateFileList.compare_exchange_strong(prevStatus, true))
 		return false;
 
+	bool error = false;
 	LogManager::message("Generating file list...", false);
 	uint8_t tempBuf[TEMP_BUF_SIZE];
 
@@ -1989,14 +1990,17 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 	}
 	catch (const Exception& e)
 	{
-		LogManager::message("Error creating file list: " + e.getError(), false);
+		LogManager::message("Error creating file list: " + e.getError());
 		// Retry later
 		tickUpdateList = GET_TICK() + 60000;
+		error = true;
 	}		
 
 	deleteTempFiles(shareDataFileName, tempShareDataFile);
 
 	doingCreateFileList.store(false);
+
+	if (!error) LogManager:: message(STRING(FILE_LIST_UPDATED));
 	return true;
 }
 
@@ -2791,6 +2795,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 
 void ShareManager::scanDirs()
 {
+	uint64_t startTick = GET_TICK();
 	LogManager::message(STRING(FILE_LIST_REFRESH_INITIATED));
 
 	optionShareHidden = BOOLSETTING(SHARE_HIDDEN);
@@ -2956,7 +2961,9 @@ void ShareManager::scanDirs()
 	if (scanAllFlags & (SCAN_SHARE_FLAG_ADDED | SCAN_SHARE_FLAG_REMOVED))
 		ClientManager::infoUpdated(true);
 	finishedScanDirs.store(true);
-	LogManager::message(STRING(FILE_LIST_REFRESH_FINISHED));
+
+	uint64_t elapsed = (GET_TICK() - startTick + 999) / 1000;
+	LogManager::message(STRING_F(FILE_LIST_REFRESH_SCANNED, elapsed));
 }
 
 bool ShareManager::refreshShare()
