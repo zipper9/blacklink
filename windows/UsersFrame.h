@@ -161,6 +161,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				static int getStateImageIndex() { return 0; }
 
 				void update(const FavoriteUser& u);
+				bool online() const { return isOnline; }
 
 				const UserPtr& getUser() const { return user; }
 				const string& getHubHint() const { return hubHint; }
@@ -174,6 +175,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				UserPtr user;
 				const string hubHint;
 				time_t lastSeen;
+				bool isOnline;
 		};
 		
 		// FavoriteManagerListener

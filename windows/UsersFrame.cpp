@@ -420,22 +420,12 @@ void UsersFrame::updateUser(const UserPtr& user)
 
 void UsersFrame::updateUser(const int i, ItemInfo* ii, const FavoriteUser& favUser)
 {
-	const auto flags = favUser.user->getFlags();
-	ii->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : formatLastSeenTime(favUser.lastSeen);
-		
-	int imageIndex;
-	if (flags & User::ONLINE)
-		imageIndex = 0;
-	else
-		imageIndex = 2;
-
+	ii->update(favUser);
+	int imageIndex = ii->online() ? 0 : 2;
 	if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
 		imageIndex += 3;
-		
-	ii->update(favUser);
-		
-	ctrlUsers.SetItem(i, 0, LVIF_IMAGE, NULL, imageIndex, 0, 0, NULL);
 
+	ctrlUsers.SetItem(i, 0, LVIF_IMAGE, NULL, imageIndex, 0, 0, NULL);
 	ctrlUsers.updateItem(i);
 	setCountMessages(ctrlUsers.GetItemCount());
 }
@@ -497,7 +487,7 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 {
-	bool isOnline = user->isOnline();
+	isOnline = user->isOnline();
 	lastSeen = u.lastSeen;
 	speedLimit = u.uploadLimit;
 	shareGroup = u.shareGroup;
@@ -534,6 +524,8 @@ int UsersFrame::ItemInfo::compareItems(const UsersFrame::ItemInfo* a, const User
 	switch (col)
 	{
 		case COLUMN_SEEN:
+			if (a->isOnline != b->isOnline)
+				return a->isOnline ? 1 : -1;
 			return compare(a->lastSeen, b->lastSeen);
 		case COLUMN_SLOTS:
 			return compare(a->user->getSlots(), b->user->getSlots());
