@@ -270,7 +270,11 @@ void HubFrame::initUI()
 	showUsers = showUsersStore;
 	ctrlUsers.setShowUsers(showUsers);
 	updateSplitterPosition(wi.chatUserSplit, wi.swapPanels);
-	if (isDHT) ctrlUsers.insertDHTUsers();
+	if (isDHT)
+	{
+		ctrlUsers.insertDHTUsers();
+		updateStats();
+	}
 
 	updateModeIcon();
 
