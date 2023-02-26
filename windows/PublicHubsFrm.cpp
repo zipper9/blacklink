@@ -1053,8 +1053,8 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 				{
 					uint16_t code = getCountryCode(data->getCountryIndex());
 					CustomDrawHelpers::drawCountry(customDrawState, cd, code, country);
+					return CDRF_SKIPDEFAULT;
 				}
-				return CDRF_SKIPDEFAULT;
 			}
 			CDCHandle(cd->nmcd.hdc).SelectFont(column == 0 && data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
 			return CDRF_NEWFONT;
