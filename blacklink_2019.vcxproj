@@ -1163,7 +1163,6 @@
     <Image Include="res\ToolbarHot16.png" />
     <Image Include="res\ToolbarHot24.png" />
     <Image Include="res\torrent.png" />
-    <Image Include="res\Trackers.png" />
     <Image Include="res\Transfers.png" />
     <Image Include="res\TransferTree.png" />
     <Image Include="res\Arrows.png" />

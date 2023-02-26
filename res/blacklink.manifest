@@ -3,7 +3,7 @@
 	<assemblyIdentity 
 		version="0.6.0.0" 
 		processorArchitecture="*" 
-		name="blacklink" 
+		name="BlackLink" 
 		type="win32" /> 
 	<description>The ultimate Direct Connect client.</description> 
 	<dependency> 

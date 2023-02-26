@@ -18,7 +18,7 @@
 #ifndef FLY_VERSION_H
 #define FLY_VERSION_H
 
-#define APPNAME "blacklink"
+#define APPNAME "BlackLink"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 6
