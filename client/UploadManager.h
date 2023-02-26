@@ -88,8 +88,12 @@ class WaitingUser
 
 class UploadManager : private ClientManagerListener, public Speaker<UploadManagerListener>, private TimerManagerListener, public Singleton<UploadManager>
 {
+		friend class Singleton<UploadManager>;
+
 	public:
 		static uint32_t g_count_WaitingUsersFrame;
+		typedef std::list<WaitingUser> SlotQueue;
+
 		/** @return Number of uploads. */
 		size_t getUploadCount() const
 		{
@@ -141,19 +145,10 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 				}
 		};
 		
-		typedef std::list<WaitingUser> SlotQueue;
-		const SlotQueue& getUploadQueueL() const
-		{
-			return slotQueue;
-		}
-		bool getIsFireballStatus() const
-		{
-			return isFireball;
-		}
-		bool getIsFileServerStatus() const
-		{
-			return isFileServer;
-		}
+		const SlotQueue& getUploadQueueL() const { return slotQueue; }
+		uint64_t getSlotQueueIdL() const { return slotQueueId; }
+		bool getIsFireballStatus() const { return isFireball; }
+		bool getIsFileServerStatus() const { return isFileServer; }
 
 		void processGet(UserConnection* source, const string& fileName, int64_t resume) noexcept;
 		void processGetBlock(UserConnection* source, const string& cmd, const string& param) noexcept;
@@ -214,17 +209,14 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		SlotMap notifiedUsers;
 		SlotQueue slotQueue;
 		mutable CriticalSection csQueue;
+		uint64_t slotQueueId;
 
 		std::regex reCompressedFiles;
 		string compressedFilesPattern;
 		FastCriticalSection csCompressedFiles;
-		
+
 		size_t addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size, uint16_t flags);
 		void notifyQueuedUsers(int64_t tick);
-		
-		friend class Singleton<UploadManager>;
-		UploadManager() noexcept;
-		~UploadManager();
 		
 		bool getAutoSlot();
 		void removeConnection(UserConnection* conn);
@@ -263,6 +255,9 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		static BanMap g_lastBans;
 		static std::unique_ptr<RWLock> g_csBans;
 #endif // IRAINMAN_ENABLE_AUTO_BAN
+
+		UploadManager() noexcept;
+		~UploadManager();
 };
 
 #endif // !defined(UPLOAD_MANAGER_H)

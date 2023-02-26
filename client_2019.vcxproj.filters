@@ -379,7 +379,19 @@
     <ClCompile Include="client\SocketPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\WebServerUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\HttpServerConnection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\HttpCookies.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="client\SearchParam.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\JsonFormatter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1021,6 +1033,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\PreviewApplication.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\WebServerUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\HttpCookies.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\HttpServerConnection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\JsonFormatter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

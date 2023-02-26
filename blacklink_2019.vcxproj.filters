@@ -136,9 +136,6 @@
     <ClCompile Include="windows\RecentsFrm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\RemoteControlPage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\SDCPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -595,9 +592,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\RecentsFrm.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\RemoteControlPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\resource.h">

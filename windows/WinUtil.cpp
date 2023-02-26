@@ -927,10 +927,10 @@ tstring WinUtil::getNicks(const HintedUser& user)
 	return getNicks(user.user, user.hint);
 }
 
-void WinUtil::getAdapterList(int af, vector<Util::AdapterInfo>& adapters)
+void WinUtil::getAdapterList(int af, vector<Util::AdapterInfo>& adapters, int options)
 {
 	adapters.clear();
-	Util::getNetworkAdapters(af, adapters);
+	Util::getNetworkAdapters(af, adapters, options);
 	IpAddressEx defaultAdapter;
 	memset(&defaultAdapter, 0, sizeof(defaultAdapter));
 	defaultAdapter.type = af;
@@ -976,13 +976,6 @@ int WinUtil::fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, 
 	}
 	bindCombo.SetCurSel(selIndex);
 	return result;
-}
-
-int WinUtil::fillAdapterList(int af, CComboBox& bindCombo, const string& selected, int options)
-{
-	vector<Util::AdapterInfo> adapters;
-	getAdapterList(af, adapters);
-	return fillAdapterList(af, adapters, bindCombo, selected, options);
 }
 
 string WinUtil::getSelectedAdapter(const CComboBox& bindCombo)

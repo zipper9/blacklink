@@ -321,7 +321,7 @@ void Util::initialize()
 #else
 	paths[PATH_DOWNLOADS] = paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR;
 #endif
-	paths[PATH_WEB_SERVER] = paths[PATH_EXE] + "WEBserver" PATH_SEPARATOR_STR;
+	paths[PATH_WEB_SERVER] = paths[PATH_EXE] + "WebServer" PATH_SEPARATOR_STR;
 
 	paths[PATH_FILE_LISTS] = paths[PATH_USER_LOCAL] + "FileLists" PATH_SEPARATOR_STR;
 	paths[PATH_HUB_LISTS] = paths[PATH_USER_LOCAL] + "HubLists" PATH_SEPARATOR_STR;
@@ -1145,6 +1145,14 @@ string Util::getRandomNick(size_t maxLength /*= 20*/)
 		name.resize(maxLength);
 	
 	return name;
+}
+
+string Util::getRandomPassword()
+{
+	uint8_t data[10];
+	for (size_t i = 0; i < sizeof(data); ++i)
+		data[i] = (uint8_t) Util::rand();
+	return Encoder::toBase32(data, sizeof(data));
 }
 
 string Util::toAdcFile(const string& file)

@@ -449,11 +449,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// Web server (Ints)
 			WEBSERVER,
 			WEBSERVER_PORT,
-			WEBSERVER_SEARCHSIZE,
-			WEBSERVER_SEARCHPAGESIZE,
-			WEBSERVER_ALLOW_CHANGE_DOWNLOAD_DIR,
-			WEBSERVER_ALLOW_UPNP,		
-			
+
 			// Logging (Ints)
 			LOG_DOWNLOADS,
 			LOG_UPLOADS,

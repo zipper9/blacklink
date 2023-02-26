@@ -529,8 +529,10 @@
     <ClCompile Include="client\HashUtil.cpp" />
     <ClCompile Include="client\HttpClient.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
+    <ClCompile Include="client\HttpCookies.cpp" />
     <ClCompile Include="client\HttpHeaders.cpp" />
     <ClCompile Include="client\HttpMessage.cpp" />
+    <ClCompile Include="client\HttpServerConnection.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
     <ClCompile Include="client\inet_compat.cpp" />
     <ClCompile Include="client\Ip4Address.cpp" />
@@ -539,6 +541,7 @@
     <ClCompile Include="client\IPStat.cpp" />
     <ClCompile Include="client\IpTest.cpp" />
     <ClCompile Include="client\JobExecutor.cpp" />
+    <ClCompile Include="client\JsonFormatter.cpp" />
     <ClCompile Include="client\LocationUtil.cpp" />
     <ClCompile Include="client\LogManager.cpp" />
     <ClCompile Include="client\MagnetLink.cpp" />
@@ -687,6 +690,7 @@
     <ClCompile Include="client\UserManager.cpp" />
     <ClCompile Include="client\Util.cpp" />
     <ClCompile Include="client\WebServerManager.cpp" />
+    <ClCompile Include="client\WebServerUtil.cpp" />
     <ClCompile Include="client\zip\zip.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
@@ -754,8 +758,10 @@
     <ClInclude Include="client\HintedUser.h" />
     <ClInclude Include="client\HttpClient.h" />
     <ClInclude Include="client\HttpConnection.h" />
+    <ClInclude Include="client\HttpCookies.h" />
     <ClInclude Include="client\HttpHeaders.h" />
     <ClInclude Include="client\HttpMessage.h" />
+    <ClInclude Include="client\HttpServerConnection.h" />
     <ClInclude Include="client\HublistManager.h" />
     <ClInclude Include="client\HublistManagerListener.h" />
     <ClInclude Include="client\idna\idna.h" />
@@ -771,6 +777,7 @@
     <ClInclude Include="client\IPStat.h" />
     <ClInclude Include="client\IpTest.h" />
     <ClInclude Include="client\JobExecutor.h" />
+    <ClInclude Include="client\JsonFormatter.h" />
     <ClInclude Include="client\LocationUtil.h" />
     <ClInclude Include="client\Locks.h" />
     <ClInclude Include="client\LruCache.h" />
@@ -869,6 +876,7 @@
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\UserManagerListener.h" />
+    <ClInclude Include="client\WebServerUtil.h" />
     <ClInclude Include="client\WinEvent.h" />
     <ClInclude Include="client\zip\miniz.h" />
     <ClInclude Include="client\zip\zip.h" />

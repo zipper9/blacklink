@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "PortTest.h"
 #include "HttpClient.h"
+#include "JsonFormatter.h"
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
@@ -158,84 +159,18 @@ bool PortTest::processInfo(int firstType, int lastType, int port, const string& 
 	return stateChanged;
 }
 
-struct JsonFormatter
-{
-public:
-	JsonFormatter(): indent(0), expectValue(false), wantComma(false)
-	{
-	}
-	
-	const string& getResult() const { return s; }
-
-	void open(char c)
-	{
-		if (expectValue)
-		{
-			s += '\n';
-			expectValue = false;
-		}
-		else if (wantComma) s += ",\n";
-		s.append(indent, '\t');
-		s += c;
-		s += '\n';
-		indent++;
-		wantComma = false;
-	}
-
-	void close(char c)
-	{
-		s += '\n';
-		s.append(--indent, '\t');
-		s += c;
-		wantComma = true;
-	}
-
-	void appendKey(const char* key)
-	{
-		if (wantComma) s += ",\n";
-		s.append(indent, '\t');
-		s += '"';
-		s += key;
-		s += "\" : ";
-		wantComma = false;
-		expectValue = true;
-	}
-
-	void appendStringValue(const string& val)
-	{
-		s += '"';
-		s += val;
-		s += '"';
-		wantComma = true;
-		expectValue = false;
-	}
-
-	void appendIntValue(int val)
-	{
-		s += Util::toString(val);
-		wantComma = true;
-		expectValue = false;
-	}
-
-private:
-	string s;
-	int indent;
-	bool expectValue;
-	bool wantComma;
-};
-
 string PortTest::createBody(const string& pid, const string& cid, int typeMask) const noexcept
 {
 	JsonFormatter f;
 	f.open('{');
 	f.appendKey("CID");
-	f.appendStringValue(cid);
+	f.appendStringValue(cid, false);
 	f.appendKey("Client");
 	f.appendStringValue(userAgent);
 	f.appendKey("Name");
-	f.appendStringValue("Manual");
+	f.appendStringValue("Manual", false);
 	f.appendKey("PID");
-	f.appendStringValue(pid);
+	f.appendStringValue(pid, false);
 	if (typeMask & 1<<PORT_TCP)
 	{
 		f.appendKey("tcp");

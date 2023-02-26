@@ -352,7 +352,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	{
 		try
 		{
-			WebServerManager::getInstance()->Start();
+			WebServerManager::getInstance()->start();
 		}
 		catch (const Exception& e)
 		{
@@ -733,6 +733,7 @@ void MainFrame::onMinute(uint64_t tick)
 	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
 		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
 	ADLSearchManager::getInstance()->saveOnTimer(tick);
+	WebServerManager::getInstance()->removeExpired();
 	LogManager::closeOldFiles(tick);
 }
 
@@ -1710,6 +1711,9 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);
 		bool prevDHT = BOOLSETTING(USE_DHT);
 		bool prevHubUrlInTitle = BOOLSETTING(HUB_URL_IN_TITLE);
+		bool prevWebServer = BOOLSETTING(WEBSERVER);
+		string prevWebServerBind = SETTING(WEBSERVER_BIND_ADDRESS);
+		int prevWebServerPort = SETTING(WEBSERVER_PORT);
 		string prevDownloadDir = SETTING(TEMP_DOWNLOAD_DIRECTORY);
 		COLORREF prevTextColor = Colors::g_textColor;
 		COLORREF prevBgColor = Colors::g_bgColor;
@@ -1731,6 +1735,13 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 					d->start();
 				else
 					d->stop();
+			}
+
+			if (BOOLSETTING(WEBSERVER) != prevWebServer || SETTING(WEBSERVER_BIND_ADDRESS) != prevWebServerBind || SETTING(WEBSERVER_PORT) != prevWebServerPort)
+			{
+				WebServerManager::getInstance()->shutdown();
+				if (BOOLSETTING(WEBSERVER))
+					WebServerManager::getInstance()->start();
 			}
 
 			if (BOOLSETTING(REGISTER_URL_HANDLER) != prevRegisterURLHandler)
@@ -1801,13 +1812,6 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			}
 		}
 	}
-	return 0;
-}
-
-// FIXME
-LRESULT MainFrame::onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	WebServerManager::getInstance()->getServerSocket().incoming();
 	return 0;
 }
 
@@ -2791,11 +2795,6 @@ LRESULT MainFrame::onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	bool popusDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_POPUPS) != FALSE;
 	SET_SETTING(POPUPS_DISABLED, popusDisabled);
 	return 0;
-}
-
-void MainFrame::on(WebServerListener::Setup) noexcept
-{
-	WSAAsyncSelect(WebServerManager::getInstance()->getServerSocket().getSock(), m_hWnd, WEBSERVER_SOCKET_MESSAGE, FD_ACCEPT);
 }
 
 void MainFrame::on(WebServerListener::ShutdownPC, int action) noexcept

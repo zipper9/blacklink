@@ -16,7 +16,12 @@ namespace Util
 		int index;
 	};
 
-	void getNetworkAdapters(int af, std::vector<AdapterInfo>& adapterInfos) noexcept;
+	enum
+	{
+		GNA_ALLOW_LOOPBACK = 1
+	};
+
+	void getNetworkAdapters(int af, std::vector<AdapterInfo>& adapterInfos, int options = 0) noexcept;
 	bool getDeviceAddress(int af, const string& name, IpAddressEx& ip) noexcept;
 	IpAddressEx getDefaultGateway(int af, const std::vector<AdapterInfo>* cachedAdapterInfos = nullptr);
 	IpAddressEx getLocalIp(int af);

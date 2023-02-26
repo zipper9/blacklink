@@ -885,7 +885,6 @@
     <ClCompile Include="windows\RangesPage.cpp" />
     <ClCompile Include="windows\RecentsFrm.cpp" />
     <ClCompile Include="windows\RegKey.cpp" />
-    <ClCompile Include="windows\RemoteControlPage.cpp" />
     <ClCompile Include="windows\ResourceLoader.cpp" />
     <ClCompile Include="windows\RichTextLabel.cpp" />
     <ClCompile Include="windows\SDCPage.cpp" />
@@ -1110,7 +1109,6 @@
     <ClInclude Include="windows\QueuePage.h" />
     <ClInclude Include="windows\RangesPage.h" />
     <ClInclude Include="windows\RecentsFrm.h" />
-    <ClInclude Include="windows\RemoteControlPage.h" />
     <ClInclude Include="windows\resource.h" />
     <ClInclude Include="windows\ResourceLoader.h" />
     <ClInclude Include="windows\SDCPage.h" />

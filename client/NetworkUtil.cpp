@@ -54,7 +54,7 @@ static int getPrefix(const void* data, int size)
 }
 #endif
 
-void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcept
+void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos, int options) noexcept
 {
 	adapterInfos.clear();
 #ifdef _WIN32
@@ -75,7 +75,8 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos) noexcep
 			for (PIP_ADAPTER_ADDRESSES pAdapterInfo = adapterInfo; pAdapterInfo; pAdapterInfo = pAdapterInfo->Next)
 			{
 				// we want only enabled ethernet interfaces
-				if (pAdapterInfo->OperStatus == IfOperStatusUp && pAdapterInfo->IfType != IF_TYPE_SOFTWARE_LOOPBACK)
+				if (pAdapterInfo->OperStatus == IfOperStatusUp &&
+				    ((options & GNA_ALLOW_LOOPBACK) || pAdapterInfo->IfType != IF_TYPE_SOFTWARE_LOOPBACK))
 				{
 					for (PIP_ADAPTER_UNICAST_ADDRESS ua = pAdapterInfo->FirstUnicastAddress; ua; ua = ua->Next)
 					{

@@ -111,6 +111,11 @@ static inline bool isDigit(char c)
 	return c >= '0' && c <= '9';
 }
 
+static inline bool isLetter(char c)
+{
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
 static bool parseVersion(uint8_t version[], const string& s, size_t start, size_t end) noexcept
 {
 	if (start + 8 > end) return false;
@@ -402,10 +407,11 @@ void Http::Response::setResponse(int code) noexcept
 		this->phrase = phrase;
 }
 
+static const char strWeekDay[][4] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static const char strMonth[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
 string Http::printDateTime(time_t t) noexcept
 {
-	static const char strWeekDay[][4] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-	static const char strMonth[][4] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 #ifdef HAVE_TIME_R
 	struct tm bt;
 	struct tm* pt = gmtime_r(&t, &bt);
@@ -418,8 +424,130 @@ string Http::printDateTime(time_t t) noexcept
 	int month = pt->tm_mon;
 	if (month < 0 || month > 11) month = 0;
 	char buf[256];
-	sprintf(buf, "%.3s, %02d %.3s %d %.2d:%.2d:%.2d GMT",
+	int len = sprintf(buf, "%.3s, %02d %.3s %d %.2d:%.2d:%.2d GMT",
 		strWeekDay[weekDay], pt->tm_mday, strMonth[month], pt->tm_year + 1900,
 		pt->tm_hour, pt->tm_min, pt->tm_sec);
-	return buf;
+	return string(buf, len);
+}
+
+static int findMonth(const char* s, size_t len)
+{
+	if (len != 3) return -1;
+	for (int i = 0; i < 12; ++i)
+		if (!memcmp(strMonth[i], s, 3)) return i;
+	return -1;
+}
+
+bool Http::parseDateTime(time_t& t, const char* s, size_t len) noexcept
+{
+	unsigned year = 0;
+	unsigned mday = 0;
+	unsigned month = 0;
+	unsigned value = 0;
+	unsigned digits = 0;
+	unsigned hms[3];
+	int hmsIndex = 0;
+	int wordStart = -1;
+	for (size_t i = 0; i < len; ++i)
+	{
+		if (isDigit(s[i]))
+		{
+			if (++digits > 6) return false;
+			value = value*10 + (s[i] - '0');
+			continue;
+		}
+		if (s[i] == ':')
+		{
+			if (!digits) return false;
+			if (hmsIndex >= 2) return false;
+			hms[hmsIndex++] = value;
+			value = 0;
+			digits = 0;
+			continue;
+		}
+		if (s[i] == ' ')
+		{
+			if (digits)
+			{
+				if (hmsIndex == 2)
+					hms[hmsIndex++] = value;
+				else if (!mday)
+					mday = value;
+				else if (!year && month)
+					year = value;
+				else
+					return false;
+				value = 0;
+				digits = 0;
+			}
+			else if (wordStart != -1)
+			{
+				int fmonth = findMonth(s + wordStart, i - wordStart);
+				if (fmonth != -1)
+				{
+					if (month) return false;
+					month = fmonth + 1;
+				}
+				wordStart = -1;
+			}
+			continue;
+		}
+		if (s[i] == '-')
+		{
+			if (digits)
+			{
+				if (mday) return false;
+				mday = value;
+				value = 0;
+				digits = 0;
+			}
+			else if (wordStart != -1)
+			{
+				if (month) return false;
+				int fmonth = findMonth(s + wordStart, i - wordStart);
+				if (fmonth == -1) return false;
+				month = fmonth + 1;
+				wordStart = -1;
+			}
+			continue;
+		}
+		if (isLetter(s[i]))
+		{
+			if (wordStart == -1) wordStart = i;
+			value = 0;
+			digits = 0;
+			continue;
+		}
+		if (s[i] != ',' && !isWhiteSpace2(s[i])) return false;
+		wordStart = -1;
+		value = 0;
+		digits = 0;
+	}
+	if (digits && !year)
+		year = value;
+	if (!(hmsIndex == 3 && mday && month && year &&
+	    mday < 32 && month < 13 && hms[0] < 24 && hms[1] < 60 && hms[2] <= 60)) return false;
+
+	if (year < 100)
+		year += year < 70 ? 2000 : 1900;
+
+ 	tm arg;
+	memset(&arg, 0, sizeof(arg));
+	arg.tm_year = year - 1900;
+	arg.tm_mon = month - 1;
+	arg.tm_mday = mday;
+	arg.tm_hour = hms[0];
+	arg.tm_min = hms[1];
+	arg.tm_sec = hms[2];
+#ifdef _WIN32
+	t = _mkgmtime(&arg);
+#else
+	t = timegm(&arg);
+#endif
+	return t != (time_t) -1;
+}
+
+bool Http::parseDateTime(time_t& t, const string& s) noexcept
+{
+	return parseDateTime(t, s.c_str(), s.length());
 }

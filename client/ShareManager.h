@@ -124,6 +124,7 @@ class ShareManager :
 		int getState() const noexcept;
 		int64_t getShareListVersion() const noexcept;
 		void getScanProgress(int64_t result[]) const noexcept;
+		uint64_t getLastRefreshTime() const noexcept { return timeLastRefresh; }
 
 		size_t getSharedTTHCount() const noexcept;
 		size_t getTotalSharedFiles() const noexcept { return totalFiles; }
@@ -286,6 +287,7 @@ class ShareManager :
 		std::atomic<uint64_t> tickRefresh;
 		std::atomic<uint64_t> tickRestoreFileList;
 		uint64_t tickLastRefresh;
+		std::atomic<uint64_t> timeLastRefresh;
 		unsigned autoRefreshTime;
 		
 		unsigned tempFileCount;

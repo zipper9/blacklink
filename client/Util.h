@@ -446,6 +446,7 @@ namespace Util
 	string getNewFileName(const string& filename);
 
 	string getRandomNick(size_t maxLength = 20);
+	string getRandomPassword();
 
 	void setLimiter(bool enable);
 

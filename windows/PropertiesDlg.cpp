@@ -48,7 +48,6 @@
 #include "MiscPage.h"
 #include "MessagesPage.h"
 #include "RangesPage.h"
-#include "RemoteControlPage.h"
 #include "WebServerPage.h"
 #include "DCLSTPage.h"
 #include "IntegrationPage.h"
@@ -104,7 +103,6 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new CertificatesPage();
 	pages[n++] = new MiscPage();
 	pages[n++] = new RangesPage();
-	pages[n++] = new RemoteControlPage();
 	pages[n++] = new WebServerPage();
 	pages[n++] = new FileListPage();
 	pages[n++] = new DCLSTPage();
@@ -113,7 +111,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new ShareMiscPage();
 	pages[n++] = new SearchPage();
 	pages[n++] = new DatabasePage();
-	
+
 	for (size_t i = 0; i < n; i++)
 		AddPage(pages[i]->getPSP());
 

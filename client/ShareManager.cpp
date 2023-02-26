@@ -361,6 +361,7 @@ ShareManager::ShareManager() :
 	hashDb(nullptr),
 	tickUpdateList(std::numeric_limits<uint64_t>::max()),
 	tickLastRefresh(0),
+	timeLastRefresh(0),
 	tickRestoreFileList(std::numeric_limits<uint64_t>::max()),
 	tempFileCount(0),
 	hasSkipList(false)
@@ -2972,6 +2973,7 @@ bool ShareManager::refreshShare()
 	if (!doingScanDirs.compare_exchange_strong(prevStatus, true))
 		return false;
 	finishedScanDirs = false;
+	timeLastRefresh = GET_TIME();
 	start(0, "ShareManager");
 	return true;
 }

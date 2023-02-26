@@ -53,7 +53,6 @@ class QueueManager : public Singleton<QueueManager>,
 		};
 
 		/** Add a file to the queue. */
-		void addFromWebServer(const string& target, int64_t size, const TTHValue& root);
 		void add(const string& target, int64_t size, const TTHValue& root, const UserPtr& user,
 		         QueueItem::MaskType flags, QueueItem::Priority priority, bool addBad, bool& getConnFlag);
 		/** Add a user's filelist to the queue. */

@@ -860,23 +860,6 @@ void QueueManager::getDownloadConnection(const UserPtr& user)
 	}
 }
 
-void QueueManager::addFromWebServer(const string& target, int64_t size, const TTHValue& root)
-{
-	const int oldValue = SETTING(TARGET_EXISTS_ACTION);
-	try
-	{
-		SET_SETTING(TARGET_EXISTS_ACTION, SettingsManager::TE_ACTION_RENAME);
-		bool getConnFlag = true;
-		add(target, size, root, HintedUser(), 0, QueueItem::DEFAULT, true, getConnFlag);
-		SET_SETTING(TARGET_EXISTS_ACTION, oldValue);
-	}
-	catch (Exception&)
-	{
-		SET_SETTING(TARGET_EXISTS_ACTION, oldValue);
-		throw;
-	}
-}
-
 void QueueManager::add(const string& target, int64_t size, const TTHValue& root, const UserPtr& user,
                        QueueItem::MaskType flags, QueueItem::Priority priority, bool addBad, bool& getConnFlag)
 {

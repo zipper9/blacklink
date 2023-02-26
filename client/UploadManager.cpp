@@ -65,7 +65,8 @@ UploadQueueFilePtr WaitingUser::findWaitingFile(const string& file) const
 
 UploadManager::UploadManager() noexcept :
 	extra(0), lastGrant(0), lastFreeSlots(-1),
-	fireballStartTick(0), fileServerCheckTick(0), isFireball(false), isFileServer(false), extraPartial(0)
+	fireballStartTick(0), fileServerCheckTick(0), isFireball(false), isFileServer(false), extraPartial(0),
+	slotQueueId(0)
 {
 	csFinishedUploads = std::unique_ptr<RWLock>(RWLock::create());
 	csReservedSlots = std::unique_ptr<RWLock>(RWLock::create());
@@ -1095,6 +1096,7 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 		}
 		else
 			it->addWaitingFile(uqi);
+		++slotQueueId;
 	}
 	if (g_count_WaitingUsersFrame)
 		fire(UploadManagerListener::QueueAdd(), hintedUser, uqi);
@@ -1124,6 +1126,7 @@ void UploadManager::clearUserFilesL(const UserPtr& user)
 			fire(UploadManagerListener::QueueRemove(), user);
 		}
 		slotQueue.erase(it);
+		if (slotQueue.empty()) slotQueueId = 0; else ++slotQueueId;
 	}
 }
 

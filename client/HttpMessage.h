@@ -102,6 +102,8 @@ class Response : public HeaderList
 };
 
 string printDateTime(time_t t) noexcept;
+bool parseDateTime(time_t& t, const char* s, size_t len) noexcept;
+bool parseDateTime(time_t& t, const string& s) noexcept;
 
 }
 

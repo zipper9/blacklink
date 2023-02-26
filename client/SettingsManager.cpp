@@ -477,10 +477,6 @@ static const char* settingTags[] =
 	// Web server (Ints)
 	"WebServer",
 	"WebServerPort",
-	"WebServerSearchSize",
-	"WebServerSearchPageSize",
-	"WebServerAllowChangeDownloadDIR",
-	"WebServerAllowUPnP",
 
 	// Logging (Ints)
 	"LogDownloads",
@@ -883,10 +879,8 @@ void SettingsManager::setDefaults()
 
 	// Web server
 	setDefault(WEBSERVER_BIND_ADDRESS, "0.0.0.0");
-	setDefault(WEBSERVER_USER, "flylinkdcuser");
-	setDefault(WEBSERVER_PASS, Util::getRandomNick());
-	setDefault(WEBSERVER_POWER_USER, "flylinkdcadmin");
-	setDefault(WEBSERVER_POWER_PASS, Util::getRandomNick());
+	setDefault(WEBSERVER_USER, "user");
+	setDefault(WEBSERVER_POWER_USER, "admin");
 
 	// Logging
 	setDefault(LOG_DIRECTORY, Util::getLocalPath() + "Logs" PATH_SEPARATOR_STR);
@@ -895,7 +889,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_MAIN_CHAT, "%Y-%m" PATH_SEPARATOR_STR "%[hubURL].log");
 	setDefault(LOG_FILE_PRIVATE_CHAT, "PM" PATH_SEPARATOR_STR "%Y-%m" PATH_SEPARATOR_STR "%[userNI]-%[hubURL].log");
 	setDefault(LOG_FILE_STATUS, "%Y-%m" PATH_SEPARATOR_STR  "%[hubURL]_status.log");
-	setDefault(LOG_FILE_WEBSERVER, "Webserver.log");
+	setDefault(LOG_FILE_WEBSERVER, "WebServer.log");
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_SQLITE_TRACE, "SQLTrace.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
@@ -912,7 +906,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_MAIN_CHAT, "[%Y-%m-%d %H:%M:%S%[extra]] %[message]");
 	setDefault(LOG_FORMAT_PRIVATE_CHAT, "[%Y-%m-%d %H:%M:%S%[extra]] %[message]");
 	setDefault(LOG_FORMAT_STATUS, "[%Y-%m-%d %H:%M:%S] %[message]");
-	setDefault(LOG_FORMAT_WEBSERVER, "%Y-%m-%d %H:%M:%S %[ip] tried getting %[file]");
+	setDefault(LOG_FORMAT_WEBSERVER, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");
 	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
@@ -1111,10 +1105,6 @@ void SettingsManager::setDefaults()
 	setDefault(GEOIP_CHECK_HOURS, 30);
 	setDefault(USE_CUSTOM_LOCATIONS, TRUE);
 
-	// Web server (Ints)
-	setDefault(WEBSERVER_SEARCHSIZE, 1000);
-	setDefault(WEBSERVER_SEARCHPAGESIZE, 50);
-	
 	// Logging (Ints)
 	setDefault(LOG_MAIN_CHAT, TRUE);
 	setDefault(LOG_PRIVATE_CHAT, TRUE);
@@ -1545,6 +1535,11 @@ void SettingsManager::load(const string& fileName)
 	if (SETTING(DHT_KEY).length() != 39 || CID(SETTING(DHT_KEY)).isZero())
 		set(DHT_KEY, CID::generate().toBase32());
 
+	if (get(WEBSERVER_PASS).empty())
+		set(WEBSERVER_PASS, Util::getRandomPassword());
+	if (get(WEBSERVER_POWER_PASS).empty())
+		set(WEBSERVER_POWER_PASS, Util::getRandomPassword());
+
 	//удалить через несколько релизов
 	if (strstr(get(TEMP_DOWNLOAD_DIRECTORY).c_str(), "%[targetdir]\\") != 0)
 		set(TEMP_DOWNLOAD_DIRECTORY, "");
@@ -1927,16 +1922,6 @@ bool SettingsManager::set(IntSetting key, int value)
 				value = 10;
 				valueAdjusted = true;
 			}
-			break;
-		}
-		case WEBSERVER_SEARCHSIZE:
-		{
-			VERIFY(1, 1000);
-			break;
-		}
-		case WEBSERVER_SEARCHPAGESIZE:
-		{
-			VERIFY(1, 50);
 			break;
 		}
 		case MEDIA_PLAYER:

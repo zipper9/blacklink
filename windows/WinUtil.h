@@ -202,9 +202,8 @@ namespace WinUtil
 	bool processWhoisMenu(WORD wID, const tstring& ip);
 	void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
 #endif
-	void getAdapterList(int af, vector<Util::AdapterInfo>& adapters);
+	void getAdapterList(int af, vector<Util::AdapterInfo>& adapters, int options = 0);
 	int fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, CComboBox& bindCombo, const string& selected, int options);
-	int fillAdapterList(int af, CComboBox& bindCombo, const string& selected, int options);
 	string getSelectedAdapter(const CComboBox& bindCombo);
 
 	void fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs);

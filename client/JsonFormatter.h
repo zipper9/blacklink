@@ -1,0 +1,31 @@
+#ifndef JSON_FORMATTER_H_
+#define JSON_FORMATTER_H_
+
+#include "typedefs.h"
+
+class JsonFormatter
+{
+public:
+	JsonFormatter(): indent(0), expectValue(false), wantComma(false)
+	{
+	}
+
+	const string& getResult() const { return s; }
+	void moveResult(string& res) noexcept { res = std::move(s); s.clear(); }
+
+	void open(char c) noexcept;
+	void close(char c) noexcept;
+	void appendKey(const char* key) noexcept;
+	void appendKey(const string& key) noexcept;
+	void appendStringValue(const string& val, bool escape = true) noexcept;
+	void appendIntValue(int val) noexcept;
+	void appendBoolValue(bool val) noexcept;
+
+private:
+	string s;
+	int indent;
+	bool expectValue;
+	bool wantComma;
+};
+
+#endif // JSON_FORMATTER_H_
