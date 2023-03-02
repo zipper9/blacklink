@@ -38,19 +38,19 @@ void SearchParam::generateToken(bool autoToken)
 
 uint64_t SearchTokenList::getTokenOwner(uint32_t token) const
 {
-	LOCK(lock);
+	LOCK(tokensLock);
 	auto i = tokens.find(token);
 	return i == tokens.end() ? 0 : i->second;
 }
 
 bool SearchTokenList::addToken(uint32_t token, uint64_t owner)
 {
-	LOCK(lock);
+	LOCK(tokensLock);
 	return tokens.insert(make_pair(token, owner)).second;
 }
 
 void SearchTokenList::removeToken(uint32_t token)
 {
-	LOCK(lock);
+	LOCK(tokensLock);
 	tokens.erase(token);
 }

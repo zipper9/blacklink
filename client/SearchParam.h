@@ -87,7 +87,7 @@ class SearchTokenList
 {
 	private:
 		boost::unordered_map<uint32_t, uint64_t> tokens;
-		mutable CriticalSection lock;
+		mutable CriticalSection tokensLock;
 
 	public:
 		uint64_t getTokenOwner(uint32_t token) const;
