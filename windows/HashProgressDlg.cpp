@@ -4,6 +4,7 @@
 #include "DialogLayout.h"
 #include "../client/ShareManager.h"
 #include "../client/HashManager.h"
+#include "../client/TimeUtil.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"

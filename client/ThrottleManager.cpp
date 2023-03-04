@@ -143,8 +143,6 @@ int ThrottleManager::write(Socket* sock, const void* buffer, size_t& len)
 // TimerManagerListener
 void ThrottleManager::on(TimerManagerListener::Second, uint64_t /*aTick*/) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
-		return;
 	if (!BOOLSETTING(THROTTLE_ENABLE))
 	{
 		downLimit = 0;

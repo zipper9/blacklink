@@ -23,23 +23,7 @@
 #include "Util.h"
 #include "SettingsManager.h"
 #include "CID.h"
-
-struct ConnectionStatus
-{
-	enum Status
-	{
-		UNKNOWN = -1,
-		SUCCESS,
-		FAILURE,
-		CONNECTING // used by FavoriteManager::changeConnectionStatus
-	};
-
-	ConnectionStatus() : status(UNKNOWN), lastAttempt(0), lastSuccess(0) {}
-
-	Status status;
-	time_t lastAttempt;
-	time_t lastSuccess;
-};
+#include "ConnectionStatus.h"
 
 class HubEntry
 {

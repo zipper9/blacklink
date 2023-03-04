@@ -9,7 +9,6 @@
 #include "ResourceManager.h"
 #include "Encoder.h"
 #include "SimpleXML.h"
-#include "TimerManager.h"
 #include "SearchManager.h"
 #include "QueueManager.h"
 #include "FinishedManager.h"
@@ -18,6 +17,7 @@
 #include "WebServerUtil.h"
 #include "StringTokenizer.h"
 #include "MagnetLink.h"
+#include "TimeUtil.h"
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
@@ -711,7 +711,7 @@ void WebServerManager::sendTemplate(const RequestInfo& inf, const string& dir, c
 		}
 		if (flags & ST_USE_CACHE)
 		{
-			item.timestamp = TimerManager::getFileTime();
+			item.timestamp = Util::getFileTime();
 			setCacheItem(requestedName, item.data, item.timestamp);
 		}
 	}

@@ -18,9 +18,9 @@
 
 #include "stdinc.h"
 #include "LogManager.h"
+#include "TimeUtil.h"
 #include "SettingsManager.h"
 #include "ParamExpander.h"
-#include "TimerManager.h"
 #include "ClientManager.h"
 
 #ifdef _WIN32

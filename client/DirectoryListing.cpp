@@ -24,6 +24,7 @@
 #include "SimpleStringTokenizer.h"
 #include "SimpleXML.h"
 #include "FilteredFile.h"
+#include "TimeUtil.h"
 #include "BZUtils.h"
 #include "SimpleXMLReader.h"
 #include "User.h"

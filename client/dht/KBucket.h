@@ -25,7 +25,6 @@
 #include "../CID.h"
 #include "../Client.h"
 #include "../MerkleTree.h"
-#include "../TimerManager.h"
 #include "../User.h"
 
 class SimpleXML;

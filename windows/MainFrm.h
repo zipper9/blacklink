@@ -26,6 +26,7 @@
 #include "../client/FinishedManagerListener.h"
 #include "../client/Commands.h"
 #include "../client/CommandCallback.h"
+#include "../client/TimeUtil.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
 #include "StatusMessageHistory.h"
@@ -419,7 +420,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void setShutDown(bool flag)
 		{
 			if (flag)
-				shutdownTime = TimerManager::getTick() / 1000;
+				shutdownTime = Util::getTick() / 1000;
 			shutdownEnabled = flag;
 			setShutdownButton(flag);
 		}

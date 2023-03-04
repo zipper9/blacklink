@@ -24,7 +24,7 @@
 #include "../AdcCommand.h"
 #include "../CID.h"
 #include "../MerkleTree.h"
-#include "../TimerManager.h"
+#include "../TimeUtil.h"
 #include "../SettingsManager.h"
 #include "../LogManager.h"
 #include "../NetworkUtil.h"

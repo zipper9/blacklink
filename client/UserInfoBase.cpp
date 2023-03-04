@@ -9,6 +9,7 @@
 #include "QueueManager.h"
 #include "UploadManager.h"
 #include "UserManager.h"
+#include "ClientManager.h"
 #include "LogManager.h"
 
 void UserInfoBase::matchQueue()

@@ -21,12 +21,14 @@
 
 #include <atomic>
 #include <regex>
+#include "TimerManager.h"
 #include "ClientListener.h"
-#include "DebugManager.h"
 #include "SearchQueue.h"
 #include "OnlineUser.h"
 #include "BufferedSocket.h"
 #include "ChatMessage.h"
+#include "TimeUtil.h"
+#include "ConnectionStatus.h"
 
 class ClientBase
 {

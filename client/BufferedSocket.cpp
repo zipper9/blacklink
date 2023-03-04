@@ -20,6 +20,7 @@
 #include "BufferedSocket.h"
 #include "Resolver.h"
 #include "ThrottleManager.h"
+#include "TimeUtil.h"
 #include "ResourceManager.h"
 #include "Streams.h"
 #include "ZUtils.h"

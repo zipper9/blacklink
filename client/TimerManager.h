@@ -25,10 +25,6 @@
 #include "WaitableEvent.h"
 #include <atomic>
 
-#ifndef _WIN32
-#include <sys/time.h>
-#endif
-
 class TimerManagerListener
 {
 	public:
@@ -37,10 +33,10 @@ class TimerManagerListener
 		{
 			enum { TYPE = I };
 		};
-		
+
 		typedef X<0> Second;
 		typedef X<1> Minute;
-		
+
 		virtual void on(Second, uint64_t) noexcept { }
 		virtual void on(Minute, uint64_t) noexcept { }
 };
@@ -50,22 +46,10 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 	public:
 		void shutdown();
 
-		static time_t getTime()
-		{
-			return time(nullptr);
-		}
-		static uint64_t getTick();
-		static uint64_t getFileTime();
 		void setTicksDisabled(bool disabled)
 		{
 			ticksDisabled.store(disabled);
 		}
-
-#ifdef _WIN32
-		static const uint64_t TIMESTAMP_UNITS_PER_SEC = 10000000;
-#else
-		static const uint64_t TIMESTAMP_UNITS_PER_SEC = 1000000000;
-#endif
 
 	private:
 		friend class Singleton<TimerManager>;
@@ -75,17 +59,8 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 
 		virtual int run() override;
 
-#ifdef _WIN32
-		static const uint64_t frequency;
-#else
-		static const uint64_t frequency = 1000000000ull;
-#endif
-		static const uint64_t startup;
 		WaitableEvent stopEvent;
 		std::atomic_bool ticksDisabled;
 };
-
-#define GET_TICK() TimerManager::getTick()
-#define GET_TIME() TimerManager::getTime()
 
 #endif // DCPLUSPLUS_DCPP_TIMER_MANAGER_H

@@ -680,6 +680,7 @@
     <ClCompile Include="client\ThrottleManager.cpp" />
     <ClCompile Include="client\TigerHash.cpp" />
     <ClCompile Include="client\TimerManager.cpp" />
+    <ClCompile Include="client\TimeUtil.cpp" />
     <ClCompile Include="client\Transfer.cpp" />
     <ClCompile Include="client\Upload.cpp" />
     <ClCompile Include="client\UploadManager.cpp" />
@@ -737,6 +738,7 @@
     <ClInclude Include="client\CommandCallback.h" />
     <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
+    <ClInclude Include="client\ConnectionStatus.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
     <ClInclude Include="client\DatabaseManager.h" />
     <ClInclude Include="client\dcformat.h" />
@@ -872,6 +874,7 @@
     <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\TagCollector.h" />
     <ClInclude Include="client\Thread.h" />
+    <ClInclude Include="client\TimeUtil.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />

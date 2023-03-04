@@ -1,5 +1,5 @@
 /*
-  Blacklink's database manager (c) 2020
+  BlackLink's database manager (c) 2020
   Based on CFlylinkDBManager
  */
 
@@ -13,7 +13,7 @@
 #include "SettingsManager.h"
 #include "LogManager.h"
 #include "FinishedItem.h"
-#include "TimerManager.h"
+#include "TimeUtil.h"
 #include "NetworkUtil.h"
 #include "BusyCounter.h"
 #include "SocketAddr.h"

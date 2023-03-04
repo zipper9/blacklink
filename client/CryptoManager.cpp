@@ -149,8 +149,8 @@ void CryptoManager::sslRandCheck()
 		if (!File::isExist("/dev/urandom"))
 		{
 			// This is questionable, but hopefully we don't end up here
-			time_t time = GET_TIME();
-			RAND_seed(&time, sizeof(time_t));
+			time_t t = time(nullptr);
+			RAND_seed(&t, sizeof(time_t));
 			pid_t pid = getpid();
 			RAND_seed(&pid, sizeof(pid_t));
 			char stackdata[1024];

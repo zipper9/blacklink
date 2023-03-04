@@ -3,7 +3,7 @@
 #include "StrUtil.h"
 #include "Util.h"
 #include "File.h"
-#include "TimerManager.h"
+#include "TimeUtil.h"
 #include "LogManager.h"
 #include "TigerHash.h"
 #include "unaligned.h"

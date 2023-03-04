@@ -1,5 +1,6 @@
 #include "stdinc.h"
 #include "PortTest.h"
+#include "TimeUtil.h"
 #include "HttpClient.h"
 #include "JsonFormatter.h"
 #include "SettingsManager.h"

@@ -17,7 +17,6 @@
  */
 
 #include "stdinc.h"
-#include "TimerManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"

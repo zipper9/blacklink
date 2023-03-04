@@ -19,7 +19,6 @@
 #include "stdinc.h"
 #include "Socket.h"
 #include "Resolver.h"
-#include "TimerManager.h"
 #include "IpGuard.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
@@ -414,31 +413,6 @@ int Socket::read(void* aBuffer, int aBufLen)
 			g_stats.tcp.downloaded += len;
 	}
 	return len;
-}
-
-int Socket::readAll(void* aBuffer, int aBufLen, unsigned timeout)
-{
-	uint8_t* buf = (uint8_t*)aBuffer;
-	int i = 0;
-	while (i < aBufLen)
-	{
-		const int j = read(buf + static_cast<size_t>(i), aBufLen - i); // [!] PVS V104 Implicit conversion of 'i' to memsize type in an arithmetic expression: buf + i socket.cpp 436
-		if (j == 0)
-		{
-			return i;
-		}
-		else if (j == -1)
-		{
-			if (wait(timeout, WAIT_READ) != WAIT_READ)
-			{
-				return i;
-			}
-			continue;
-		}
-		dcassert(j > 0); // [+] IRainman fix.
-		i += j;
-	}
-	return i;
 }
 
 int Socket::write(const void* buffer, int len)

@@ -22,6 +22,7 @@
 #include "DownloadManager.h"
 #include "ConnectionManager.h"
 #include "ShareManager.h"
+#include "ClientManager.h"
 #include "DatabaseManager.h"
 #include "BZUtils.h"
 #include "Upload.h"
@@ -1515,4 +1516,14 @@ void UploadManager::load()
 		}
 	}
 	testSlotTimeout();
+}
+
+int UploadManager::getSlots()
+{
+	return std::max(SETTING(SLOTS), std::max(SETTING(HUB_SLOTS), 0) * Client::getTotalCounts());
+}
+
+int UploadManager::getFreeExtraSlots() const
+{
+	return std::max(SETTING(EXTRA_SLOTS) - getExtra(), 0);
 }

@@ -24,6 +24,7 @@
 #include "ConnectionManager.h"
 #include "LogManager.h"
 #include "DatabaseManager.h"
+#include "TimeUtil.h"
 #include <boost/algorithm/string.hpp>
 
 static const unsigned SAVE_RECENTS_TIME = 3*60000;

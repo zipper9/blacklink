@@ -181,14 +181,6 @@ class Socket
 		 */
 		virtual int read(void* buffer, int bufLen);
 
-		/**
-		 * Reads data until bufLen bytes have been read or an error occurs.
-		 * If the socket is closed, or the timeout is reached, the number of bytes read
-		 * actually read is returned.
-		 * On exception, an unspecified amount of bytes might have already been read.
-		 */
-		int readAll(void* buffer, int bufLen, unsigned timeout = 0);
-
 		virtual int sendPacket(const void* buffer, int bufLen, const IpAddress& ip, uint16_t port) noexcept;
 		int sendPacket(const IpAddress& addr, uint16_t port, const string& data)
 		{

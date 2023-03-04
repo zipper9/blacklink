@@ -22,6 +22,7 @@
 #include "ConnectionManager.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
+#include "TimeUtil.h"
 
 #include "Mapper_MiniUPnPc.h"
 

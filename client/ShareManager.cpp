@@ -35,6 +35,7 @@
 #include "DatabaseManager.h"
 #include "LogManager.h"
 #include "DebugManager.h"
+#include "TimeUtil.h"
 #include "Tag16.h"
 #include "unaligned.h"
 
@@ -141,7 +142,7 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (valTS)
 			{
 				int64_t val = Util::toInt64(*valTS);
-				if (val > 0) timeShared = val * (int64_t) TimerManager::TIMESTAMP_UNITS_PER_SEC + 116444736000000000ll;
+				if (val > 0) timeShared = val * (int64_t) Util::FILETIME_UNITS_PER_SEC + 116444736000000000ll;
 			}
 
 			manager.loadSharedFile(current, *valFilename, size, tth, 0, timeShared);
@@ -1108,7 +1109,7 @@ void ShareManager::addFile(const string& path, const TTHValue& root)
 	if (!findByRealPathL(pathLower, dir, unused))
 		throw ShareException(STRING(DIRECTORY_NOT_SHARED), path);
 
-	uint64_t currentTime = TimerManager::getFileTime();
+	uint64_t currentTime = Util::getFileTime();
 	SharedFilePtr file = std::make_shared<SharedFile>(fileName, root, size, timestamp, currentTime, typesMask);
 	if (!dir->files.insert(make_pair(file->getLowerName(), file)).second)
 		throw ShareException(STRING(FILE_ALREADY_SHARED), path);
@@ -3235,8 +3236,8 @@ void ShareManager::on(FileHashed, int64_t fileID, const SharedFilePtr& file, con
 	WRITE_LOCK(*csShare);
 	file->tth = root;
 	file->flags &= ~BaseDirItem::FLAG_HASH_FILE;
-	
-	file->timeShared = TimerManager::getFileTime();
+
+	file->timeShared = Util::getFileTime();
 
 	SharedFilePtr storedFile;
 	SharedDir* dir;

@@ -26,7 +26,6 @@
 
 #include "../SettingsManager.h"
 #include "../ShareManager.h"
-#include "../TimerManager.h"
 #include "../SearchManager.h"
 #include "../ConnectivityManager.h"
 

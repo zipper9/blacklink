@@ -28,6 +28,7 @@
 #include "ClientManager.h"
 #include "SimpleXML.h"
 #include "LogManager.h"
+#include "TimeUtil.h"
 #include "CompatibilityManager.h"
 #include "idna/idna.h"
 

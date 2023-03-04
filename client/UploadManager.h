@@ -105,23 +105,11 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		
-		static int getSlots()
-		{
-			return (max(SETTING(SLOTS), max(SETTING(HUB_SLOTS), 0) * Client::getTotalCounts()));
-		}
-		
-		/** @return Number of free slots. */
-		static int getFreeSlots()
-		{
-			return max((getSlots() - g_running), 0);
-		}
-		
-		/** @internal */
-		int getFreeExtraSlots() const
-		{
-			return max(SETTING(EXTRA_SLOTS) - getExtra(), 0);
-		}
-		
+		static int getSlots();
+		static int getFreeSlots() { return std::max((getSlots() - g_running), 0); }
+
+		int getFreeExtraSlots() const;
+
 		/** @param user Reserve an upload slot for this user and connect. */
 		void reserveSlot(const HintedUser& hintedUser, uint64_t seconds);
 		void unreserveSlot(const HintedUser& hintedUser);

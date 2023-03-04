@@ -62,7 +62,7 @@ namespace dht
 		/** ClientBase derived functions */
 		const string& getHubUrl() const { return NetworkName; }
 		string getHubName() const { return NetworkName; }
-		string getMyNick() const { return SETTING(NICK); }
+		string getMyNick() const;
 		bool isOp() const { return false; }
 		bool resendMyINFO(bool alwaysSend, bool forcePassive) { return false; }
 		int getType() const { return ClientBase::TYPE_DHT; }

@@ -24,6 +24,7 @@
 #include "ParamExpander.h"
 #include "ClientManager.h"
 #include "UserConnection.h"
+#include "TimeUtil.h"
 #include "Random.h"
 
 #ifdef USE_QUEUE_RWLOCK

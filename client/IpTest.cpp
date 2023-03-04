@@ -1,5 +1,6 @@
 #include "stdinc.h"
 #include "IpTest.h"
+#include "TimeUtil.h"
 #include "HttpClient.h"
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"

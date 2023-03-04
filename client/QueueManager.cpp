@@ -22,8 +22,6 @@
 #include <sys/syslimits.h>
 #endif
 
-#include <boost/range/adaptor/map.hpp>
-#include <boost/range/algorithm/for_each.hpp>
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "ConnectionManager.h"
@@ -31,6 +29,7 @@
 #include "DatabaseManager.h"
 #include "Download.h"
 #include "UploadManager.h"
+#include "DebugManager.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchResult.h"
 #include "SharedFileStream.h"
@@ -55,9 +54,6 @@ QueueManager::UserQueue::RunningMap QueueManager::UserQueue::runningMap;
 std::unique_ptr<RWLock> QueueManager::UserQueue::csRunningMap = std::unique_ptr<RWLock>(RWLock::create());
 #endif
 size_t QueueManager::UserQueue::totalDownloads = 0;
-
-using boost::adaptors::map_values;
-using boost::range::for_each;
 
 QueueManager::FileQueue::FileQueue() :
 #ifdef USE_QUEUE_RWLOCK
@@ -699,7 +695,7 @@ static void getOldFiles(StringList& delList, const string& path, uint64_t curren
 {
 	for (FileFindIter it(path); it != FileFindIter::end; ++it)
 	{
-		if (!days || it->getTimeStamp() + days * 86400ull * TimerManager::TIMESTAMP_UNITS_PER_SEC < currentTime)
+		if (!days || it->getTimeStamp() + days * 86400ull * Util::FILETIME_UNITS_PER_SEC < currentTime)
 			delList.push_back(it->getFileName());
 	}
 }
@@ -709,7 +705,7 @@ void QueueManager::deleteFileLists()
 	unsigned days = SETTING(KEEP_LISTS_DAYS);
 	StringList delList;
 	const string& path = Util::getListPath();
-	uint64_t currentTime = TimerManager::getFileTime();
+	uint64_t currentTime = Util::getFileTime();
 	getOldFiles(delList, path + "*.xml.bz2", currentTime, days);
 	getOldFiles(delList, path + "*.xml", currentTime, days);
 	getOldFiles(delList, path + "*.dctmp", currentTime, 0);

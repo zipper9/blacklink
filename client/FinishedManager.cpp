@@ -24,6 +24,8 @@
 #include "QueueManager.h"
 #include "UploadManager.h"
 #include "LogManager.h"
+#include "SettingsManager.h"
+#include "ClientManager.h"
 #include "DatabaseManager.h"
 
 FinishedManager::FinishedManager()

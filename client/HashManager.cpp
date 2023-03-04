@@ -25,6 +25,7 @@
 #include "ClientManager.h"
 #include "CompatibilityManager.h"
 #include "ShareManager.h"
+#include "TimeUtil.h"
 
 // Return values of fastHash and slowHash
 enum

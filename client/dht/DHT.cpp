@@ -39,8 +39,8 @@
 #include "../UploadManager.h"
 #include "../ThrottleManager.h"
 #include "../FavoriteManager.h"
-#include "../TimerManager.h"
 #include "../ConnectivityManager.h"
+#include "../DebugManager.h"
 #include "../User.h"
 #include "../Tag16.h"
 #include "../Random.h"
@@ -70,6 +70,11 @@ namespace dht
 	DHT::~DHT()
 	{
 		IndexManager::deleteInstance();
+	}
+
+	string DHT::getMyNick() const
+	{
+		return SETTING(NICK);
 	}
 
 	/*

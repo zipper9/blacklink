@@ -31,6 +31,7 @@
 #include "LogManager.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
+#include "DebugManager.h"
 #include "Tag16.h"
 #include "SocketPool.h"
 

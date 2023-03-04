@@ -22,6 +22,7 @@
 #include "Resource.h"
 #include "WinUtil.h"
 #include "Fonts.h"
+#include "../client/TimeUtil.h"
 
 class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 {

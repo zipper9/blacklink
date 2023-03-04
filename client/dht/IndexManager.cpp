@@ -24,7 +24,7 @@
 
 #include "../CID.h"
 #include "../ShareManager.h"
-#include "../TimerManager.h"
+#include "../SimpleXML.h"
 
 namespace dht
 {

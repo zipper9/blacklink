@@ -23,6 +23,7 @@
 #include "DatabaseManager.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
+#include "AdcCommand.h"
 
 SearchResultCore::SearchResultCore(Types type, int64_t size, const string& file, const TTHValue& tth):
 	file(file), size(size), tth(tth), type(type)

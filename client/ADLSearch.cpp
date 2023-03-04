@@ -29,6 +29,7 @@
 #include "ParamExpander.h"
 #include "FavoriteManager.h"
 #include "ClientManager.h"
+#include "TimeUtil.h"
 
 ADLSearch::ADLSearch() :
 	isCaseSensitive(false),

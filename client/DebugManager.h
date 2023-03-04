@@ -1,10 +1,8 @@
-
 #ifndef __DEBUGMANAGER_H
 #define __DEBUGMANAGER_H
 
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 
-#include "TimerManager.h"
 #include "ClientManager.h"
 #include "BaseUtil.h"
 

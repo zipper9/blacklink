@@ -20,6 +20,7 @@
 #include "ClientManager.h"
 #include "Upload.h"
 #include "UserConnection.h"
+#include "TimeUtil.h"
 
 const string Transfer::fileTypeNames[] =
 {

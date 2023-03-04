@@ -24,7 +24,6 @@
 #include "../CID.h"
 #include "../MerkleTree.h"
 #include "../Singleton.h"
-#include "../TimerManager.h"
 #include "../User.h"
 #include "../SearchResult.h"
 #include "../SearchQueue.h"

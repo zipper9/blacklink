@@ -29,6 +29,7 @@
 #include "MappingManager.h"
 #include "ZUtils.h"
 #include "FilteredFile.h"
+#include "ClientManager.h" // FIXME: remove ClientManager::isBeforeShutdown calls
 
 int64_t DownloadManager::g_runningAverage;
 

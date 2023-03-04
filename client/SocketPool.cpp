@@ -3,7 +3,7 @@
 #include "SSLSocket.h"
 #include "CryptoManager.h"
 #include "Random.h"
-#include "TimerManager.h"
+#include "TimeUtil.h"
 
 static const unsigned PORT_RANGE_MIN = 42000;
 static const unsigned PORT_RANGE_MAX = 65535;

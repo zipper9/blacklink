@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "Client.h"
+#include "SettingsManager.h"
 #include "DatabaseManager.h"
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN

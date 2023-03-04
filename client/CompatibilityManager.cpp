@@ -34,6 +34,7 @@
 #include "UploadManager.h"
 #include "CompatibilityManager.h"
 #include "DatabaseManager.h"
+#include "ClientManager.h"
 #include "ShareManager.h"
 
 string CompatibilityManager::g_incopatibleSoftwareList;
@@ -646,7 +647,6 @@ string CompatibilityManager::getStats() // moved from WinUtil
 		Util::formatTime(getSysUptime()).c_str(),
 		Util::formatTime(Util::getUpTime()).c_str());
 	s += buf;
-
 
 	static bool psapiLoaded = false;
 	typedef BOOL (CALLBACK *LPFUNC)(HANDLE Process, PPROCESS_MEMORY_COUNTERS ppsmemCounters, DWORD cb);

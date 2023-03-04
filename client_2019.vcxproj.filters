@@ -394,6 +394,9 @@
     <ClCompile Include="client\JsonFormatter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\TimeUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1045,6 +1048,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\JsonFormatter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\TimeUtil.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\ConnectionStatus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
