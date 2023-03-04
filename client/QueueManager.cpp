@@ -934,17 +934,6 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 	
 	{
 		QueueItemPtr q = fileQueue.findTarget(targetPath);
-		// По TTH искать нельзя
-		// Проблема описана тут http://www.flylinkdc.ru/2014/04/flylinkdc-strongdc-tth.html
-#if 0
-		if (q == nullptr &&
-		        newItem &&
-		        (BOOLSETTING(ENABLE_MULTI_CHUNK) && size > SETTING(MIN_MULTI_CHUNK_SIZE) * 1024 * 1024) // [+] IRainman size in MB.
-		   )
-		{
-			// q = QueueManager::FileQueue::findQueueItem(root);
-		}
-#endif
 		string sharedFilePath;
 		if (!q)
 		{
@@ -1045,7 +1034,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 			// FIXME: flags must be immutable
 			q->flags |= flags; // why ?
 		}
-		if (user && !(user->getFlags() & User::FAKE) && q)
+		if (!(flags & QueueItem::FLAG_COPYING) && user && !(user->getFlags() & User::FAKE) && q)
 		{
 			QueueWLock(*QueueItem::g_cs);
 			wantConnection = addSourceL(q, user, (QueueItem::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
