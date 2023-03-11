@@ -18,10 +18,29 @@ static const uint8_t* filters[FILTER_COUNT] = { f1, f2, f3 };
 static const uint32_t SHADE_COLOR = 0xFFFFB4FF;
 static const uint32_t LOGO_COLOR  = 0xFF000000;
 
+static void blendOpaqueC(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+{
+	unsigned c1 = (color>>16) & 0xFF;
+	unsigned c2 = (color>>8) & 0xFF;
+	unsigned c3 = color & 0xFF;
+	while (count)
+	{
+		uint32_t x = *data;
+		uint8_t m = *mask++;
+		unsigned d1 = (c1*m + (255-m)*((x>>16) & 0xFF))/255;
+		unsigned d2 = (c2*m + (255-m)*((x>>8) & 0xFF))/255;
+		unsigned d3 = (c3*m + (255-m)*(x & 0xFF))/255;
+		*data++ = d1<<16 | d2<<8 | d3;
+		count--;
+	}
+}
+
 #ifdef _M_X64
 #include <immintrin.h>
 #elif defined(_M_IX86)
 #include <xmmintrin.h>
+#elif defined _M_ARM || defined _M_ARM64
+#include <arm_neon.h>
 #endif
 
 #ifdef _M_X64
@@ -256,53 +275,256 @@ static inline bool useEffect()
 	__cpuid(info, 1);
 	return (info[3] & 1<<26) != 0;
 }
-#else
+#elif defined _M_ARM64
 static void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height, const uint8_t* coeff)
 {
+	static const uint8_t mask1[] = { 0, 1, 2, 0xFF, 1, 2, 3, 0xFF };
+	static const uint8_t mask2[] = { 0, 1, 2, 0xFF, 0, 1, 2, 0xFF };
+	uint8x8_t vind = vld1_u8(mask2);
+	uint8x8_t vcoeff1 = vld1_u8(coeff);
+	uint8x8_t vcoeff2 = vld1_u8(coeff + 3);
+	uint8x8_t vcoeff3 = vld1_u8(coeff + 6);
+	vcoeff1 = vtbl1_u8(vcoeff1, vind);
+	vcoeff2 = vtbl1_u8(vcoeff2, vind);
+	vcoeff3 = vtbl1_u8(vcoeff3, vind);
+	vind = vld1_u8(mask1);
+	const uint8_t *sp = src;
+	uint8_t* dp = dest + width + 1;
+	for (int i = height - 2; i; --i)
+	{
+		for (int j = width - 2; j > 0; j -= 2)
+		{
+			uint8x8_t v1 = vld1_u8(sp);
+			v1 = vtbl1_u8(v1, vind);
+			uint8x8_t v2 = vld1_u8(sp + width);
+			uint16x8_t m1 = vmull_u8(v1, vcoeff1);
+			v2 = vtbl1_u8(v2, vind);
+			uint8x8_t v3 = vld1_u8(sp + 2*width);
+			uint16x8_t m2 = vmull_u8(v2, vcoeff2);
+			v3 = vtbl1_u8(v3, vind);
+			uint16x8_t m3 = vmull_u8(v3, vcoeff3);
+			m1 = vaddq_u16(m1, m2);
+			m1 = vaddq_u16(m1, m3);
+			uint16x8_t v4 = vpaddq_u16(m1, m1);
+			v4 = vpaddq_u16(v4, v4);
+			v4 = vshrq_n_u16(v4, 5);
+			uint8x8_t v5 = vqmovn_u16(v4);
+			vst1_lane_u16((uint16_t*) dp, vreinterpret_u16_u8(v5), 0);
+			sp += 2;
+			dp += 2;
+		}
+		sp += 2;
+		dp += 2;
+	}
+	unsigned offset = (height - 1) * width;
+	for (int i = 0; i < width; ++i)
+	{
+		dest[i] = src[i];
+		dest[offset + i] = src[offset + i];
+	}
+	sp = src + width;
+	dp = dest + width;
+	for (int i = 0; i < height - 2; ++i)
+	{
+		dp[0] = sp[0];
+		dp[width-1] = sp[width-1];
+		sp += width;
+		dp += width;
+	}
 }
 
 static void blendOpaque(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
-	unsigned c1 = (color>>16) & 0xFF;
-	unsigned c2 = (color>>8) & 0xFF;
-	unsigned c3 = color & 0xFF;
-	while (count)
+	static const uint8_t index[] = { 0, 0, 0, 0xFF, 1, 1, 1, 0xFF };
+	uint8x8_t vcolor = vreinterpret_u8_u32(vdup_n_u32(color));
+	uint8x8_t v255 = vdup_n_u8(255);
+	uint8x8_t vind = vld1_u8(index);
+	while (count >= 2)
 	{
-		uint32_t x = *data;
-		uint8_t m = *mask++;
-		unsigned d1 = (c1*m + (255-m)*((x>>16) & 0xFF))/255;
-		unsigned d2 = (c2*m + (255-m)*((x>>8) & 0xFF))/255;
-		unsigned d3 = (c3*m + (255-m)*(x & 0xFF))/255;
-		*data++ = d1<<16 | d2<<8 | d3;
-		count--;
+		uint16x4_t v1 = vld1_u16((const uint16_t*) mask);
+		uint8x8_t v2 = vtbl1_u8(vreinterpret_u8_u16(v1), vind);
+		uint8x8_t v4 = vsub_u8(v255, v2);
+		uint16x8_t v3 = vmull_u8(v2, vcolor);
+		uint8x8_t v5 = vreinterpret_u8_u32(vld1_u32(data));
+		v3 = vmlal_u8(v3, v4, v5);
+		uint32x4_t vhi = vmull_high_n_u16(v3, 0x8081);
+		uint32x4_t vlo = vmull_n_u16(vget_low_u16(v3), 0x8081);
+		v3 = vuzp2q_u16(vreinterpretq_u16_u32(vlo), vreinterpretq_u16_u32(vhi));
+		uint8x8_t v7 = vshrn_n_u16(v3, 7);
+		vst1_u32(data, vreinterpret_u32_u8(v7));
+		data += 2;
+		mask += 2;
+		count -= 2;
 	}
 }
 
 static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
 {
-	unsigned c0 = color>>24;
-	if (c0 == 255)
+	if ((color >> 24) == 0xFF)
 	{
 		blendOpaque(data, mask, color, count);
 		return;
 	}
 
-	unsigned c1 = (color>>16) & 0xFF;
-	unsigned c2 = (color>>8) & 0xFF;
-	unsigned c3 = color & 0xFF;
-	while (count)
+	static const uint8_t index[] = { 0, 0, 0, 0xFF, 2, 2, 2, 0xFF };
+	uint8x8_t va = vdup_n_u8(color >> 24);
+	uint8x8_t vcolor = vreinterpret_u8_u32(vdup_n_u32(color));
+	uint8x8_t v255 = vdup_n_u8(255);
+	uint8x8_t vind = vld1_u8(index);
+	while (count >= 2)
 	{
-		uint32_t x = *data;
-		uint8_t m = ((*mask++)*c0)/255;
-		unsigned d1 = (c1*m + (255-m)*((x>>16) & 0xFF))/255;
-		unsigned d2 = (c2*m + (255-m)*((x>>8) & 0xFF))/255;
-		unsigned d3 = (c3*m + (255-m)*(x & 0xFF))/255;
-		*data++ = d1<<16 | d2<<8 | d3;
-		count--;
+		uint16x4_t v1 = vld1_u16((const uint16_t*) mask);
+		uint16x8_t v2 = vmull_u8(vreinterpret_u8_u16(v1), va);
+		uint32x4_t vhi = vmull_high_n_u16(v2, 0x8081);
+		uint32x4_t vlo = vmull_n_u16(vget_low_u16(v2), 0x8081);
+		uint16x8_t v3 = vuzp2q_u16(vreinterpretq_u16_u32(vlo), vreinterpretq_u16_u32(vhi));
+		v1 = vshr_n_u16(vget_low_u16(v3), 7);
+		uint8x8_t v4 = vtbl1_u8(vreinterpret_u8_u16(v1), vind);
+		uint8x8_t v5 = vsub_u8(v255, v4);
+		v3 = vmull_u8(v4, vcolor);
+		uint8x8_t v6 = vreinterpret_u8_u32(vld1_u32(data));
+		v3 = vmlal_u8(v3, v5, v6);
+		vhi = vmull_high_n_u16(v3, 0x8081);
+		vlo = vmull_n_u16(vget_low_u16(v3), 0x8081);
+		v2 = vuzp2q_u16(vreinterpretq_u16_u32(vlo), vreinterpretq_u16_u32(vhi));
+		uint8x8_t v7 = vshrn_n_u16(v2, 7);
+		vst1_u32(data, vreinterpret_u32_u8(v7));
+		data += 2;
+		mask += 2;
+		count -= 2;
 	}
 }
 
 static inline bool useEffect() { return true; }
+#elif defined _M_ARM
+void blendOpaque(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+{
+	static const uint8_t colorMask[] = { 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0 };
+	uint8x8_t vcolor = vreinterpret_u8_u32(vdup_n_u32(color));
+	uint8x8_t vand = vld1_u8(colorMask);
+	uint8x8_t v255 = vdup_n_u8(255);
+	uint16x4_t vdiv = vdup_n_u16(0x8081);
+	uint16x4_t vzr = vdup_n_u16(0);
+	while (count)
+	{
+		uint8x8_t v1 = vand_u8(vld1_dup_u8(mask), vand);
+		uint8x8_t v2 = vsub_u8(v255, v1);
+		uint16x8_t v3 = vmull_u8(v1, vcolor);
+		uint8x8_t v4 = vreinterpret_u8_u32(vld1_dup_u32(data));
+		v3 = vmlal_u8(v3, v4, v2);
+		uint32x4_t v5 = vmull_u16(vget_low_u16(v3), vdiv);
+		uint16x4_t v6 = vshrn_n_u32(v5, 16);
+		v2 = vshrn_n_u16(vcombine_u16(v6, vzr), 7);
+		vst1_lane_u32(data, vreinterpret_u32_u8(v2), 0);
+		data++;
+		mask++;
+		count--;
+	}
+}
+
+void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+{
+	unsigned c0 = color >> 24;
+	if (c0 == 0xFF)
+	{
+		blendOpaque(data, mask, color, count);
+		return;
+	}
+
+	uint8x8_t vcolor = vreinterpret_u8_u32(vdup_n_u32(color));
+	uint8x8_t va = vcreate_u8(c0 | c0<<8 | c0<<16);
+	uint8x8_t v255 = vdup_n_u8(255);
+	uint16x4_t vdiv = vdup_n_u16(0x8081);
+	uint16x4_t vzr = vdup_n_u16(0);
+	while (count)
+	{
+		uint8x8_t v1 = vld1_dup_u8(mask);
+		uint16x8_t v2 = vmull_u8(v1, va);
+		uint32x4_t v3 = vmull_u16(vget_low_u16(v2), vdiv);
+		uint16x4_t v4 = vshrn_n_u32(v3, 16);
+		v1 = vshrn_n_u16(vcombine_u16(v4, vzr), 7);
+		uint8x8_t v5 = vsub_u8(v255, v1);
+		v2 = vmull_u8(v1, vcolor);
+		uint8x8_t v6 = vreinterpret_u8_u32(vld1_dup_u32(data));
+		v2 = vmlal_u8(v2, v5, v6);
+		v3 = vmull_u16(vget_low_u16(v2), vdiv);
+		v4 = vshrn_n_u32(v3, 16);
+		v1 = vshrn_n_u16(vcombine_u16(v4, vzr), 7);
+		vst1_lane_u32(data, vreinterpret_u32_u8(v1), 0);
+		data++;
+		mask++;
+		count--;
+	}
+}
+
+void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height, const uint8_t* coeff)
+{
+	static const uint8_t mask1[] = { 0, 1, 2, 0xFF, 1, 2, 3, 0xFF };
+	static const uint8_t mask2[] = { 0, 1, 2, 0xFF, 0, 1, 2, 0xFF };
+	uint8x8_t vind = vld1_u8(mask2);
+	uint8x8_t vcoeff1 = vld1_u8(coeff);
+	uint8x8_t vcoeff2 = vld1_u8(coeff + 3);
+	uint8x8_t vcoeff3 = vld1_u8(coeff + 6);
+	vcoeff1 = vtbl1_u8(vcoeff1, vind);
+	vcoeff2 = vtbl1_u8(vcoeff2, vind);
+	vcoeff3 = vtbl1_u8(vcoeff3, vind);
+	vind = vld1_u8(mask1);
+	const uint8_t *sp = src;
+	uint8_t* dp = dest + width + 1;
+	for (int i = height - 2; i; --i)
+	{
+		for (int j = width - 2; j > 0; j -= 2)
+		{
+			uint8x8_t v1 = vld1_u8(sp);
+			v1 = vtbl1_u8(v1, vind);
+			uint8x8_t v2 = vld1_u8(sp + width);
+			uint16x8_t m1 = vmull_u8(v1, vcoeff1);
+			v2 = vtbl1_u8(v2, vind);
+			uint8x8_t v3 = vld1_u8(sp + 2*width);
+			uint16x8_t m2 = vmull_u8(v2, vcoeff2);
+			v3 = vtbl1_u8(v3, vind);
+			uint16x8_t m3 = vmull_u8(v3, vcoeff3);
+			m1 = vaddq_u16(m1, m2);
+			m1 = vaddq_u16(m1, m3);
+			uint16x4_t v4 = vpadd_u16(vget_low_u16(m1), vget_high_u16(m1));
+			v4 = vpadd_u16(v4, v4);
+			v4 = vshr_n_u16(v4, 5);
+			uint8x8_t v5 = vqmovn_u16(vcombine_u16(v4, v4));
+			vst1_lane_u16((uint16_t*) dp, vreinterpret_u16_u8(v5), 0);
+			sp += 2;
+			dp += 2;
+		}
+		sp += 2;
+		dp += 2;
+	}
+	unsigned offset = (height - 1) * width;
+	for (int i = 0; i < width; ++i)
+	{
+		dest[i] = src[i];
+		dest[offset + i] = src[offset + i];
+	}
+	sp = src + width;
+	dp = dest + width;
+	for (int i = 0; i < height - 2; ++i)
+	{
+		dp[0] = sp[0];
+		dp[width-1] = sp[width-1];
+		sp += width;
+		dp += width;
+	}
+}
+
+static inline bool useEffect() { return true; }
+#else
+static void applyFilter(const uint8_t* src, uint8_t* dest, int width, int height, const uint8_t* coeff)
+{
+}
+
+static void blend(uint32_t* data, const uint8_t* mask, uint32_t color, unsigned count)
+{
+}
+
+static inline bool useEffect() { return false; }
 #endif
 
 SplashWindow::SplashWindow()
@@ -407,7 +629,10 @@ LRESULT SplashWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		uint32_t* destBuf = static_cast<uint32_t*>(dibBuf[0]);
 		if (!(useDialogBackground && SUCCEEDED(DrawThemeParentBackground(m_hWnd, memDC, nullptr))))
 			memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
-		blend(destBuf, maskBuf[useEffect ? 2 : 0], LOGO_COLOR, WIDTH * HEIGHT);
+		if (useEffect)
+			blend(destBuf, maskBuf[2], LOGO_COLOR, WIDTH * HEIGHT);
+		else
+			blendOpaqueC(destBuf, maskBuf[0], LOGO_COLOR, WIDTH * HEIGHT);
 		if (hasBorder) drawBorder(destBuf);
 	}
 	SelectObject(memDC, dibSect[frameIndex == 0 ? 0 : 1]);
