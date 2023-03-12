@@ -15,6 +15,7 @@ namespace Util
 	inline constexpr uint64_t getHighResFrequency() noexcept { return 1000000000; }
 #endif
 	inline uint64_t getHighResTimestamp() noexcept;
+	int64_t gmtToUnixTime(const tm* t) noexcept;
 
 #ifdef _WIN32
 	static const uint64_t FILETIME_UNITS_PER_SEC = 10000000; // 100ns FILETIME units

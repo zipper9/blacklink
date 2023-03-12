@@ -4,6 +4,7 @@
 #include "Text.h"
 #include "BaseUtil.h"
 #include "StrUtil.h"
+#include "TimeUtil.h"
 #include <boost/algorithm/string/trim.hpp>
 
 struct ResponseCode
@@ -539,12 +540,9 @@ bool Http::parseDateTime(time_t& t, const char* s, size_t len) noexcept
 	arg.tm_hour = hms[0];
 	arg.tm_min = hms[1];
 	arg.tm_sec = hms[2];
-#ifdef _WIN32
-	t = _mkgmtime(&arg);
-#else
-	t = timegm(&arg);
-#endif
-	return t != (time_t) -1;
+	int64_t result = Util::gmtToUnixTime(&arg);
+	t = (time_t) result;
+	return result >= 0;
 }
 
 bool Http::parseDateTime(time_t& t, const string& s) noexcept
