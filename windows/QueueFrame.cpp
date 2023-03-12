@@ -580,7 +580,7 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 		return;
 	}
 
-#ifdef DEBUG_QUEUE_FRAME
+#if defined(DEBUG_QUEUE_FRAME) && defined(DEBUG_QUEUE_FRAME_TREE)
 	LogManager::message("Adding subdir: " + dirname, false);
 #endif
 	
@@ -628,7 +628,7 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 void QueueFrame::splitDir(DirItem* dir, string::size_type pos, DirItem* newParent, bool updateTree)
 {
 	dcassert(pos && pos < dir->name.length()-1 && dir->name[pos] == PATH_SEPARATOR);	
-#ifdef DEBUG_QUEUE_FRAME	
+#if defined(DEBUG_QUEUE_FRAME) && defined(DEBUG_QUEUE_FRAME_TREE)
 	LogManager::message("Split " + dir->name + " at " + Util::toString(pos), false);
 #endif
 
@@ -1122,12 +1122,18 @@ void QueueFrame::processTasks()
 			case ADD_ITEM:
 			{
 				const auto& it = static_cast<QueueItemTask&>(*ti->second);
+#ifdef DEBUG_QUEUE_FRAME
+				LogManager::message("Add item " + it.qi->getTTH().toBase32() + " to " + it.qi->getTarget(), false);
+#endif
 				addQueueItem(it.qi, true, showTree);
 			}
 			break;
 			case REMOVE_ITEM:
 			{
 				const auto& task = static_cast<QueueItemTask&>(*ti->second);
+#ifdef DEBUG_QUEUE_FRAME
+				LogManager::message("Remove item " + task.qi->getTTH().toBase32() + " at " + task.qi->getTarget(), false);
+#endif
 				removeItem(task.qi, nullptr);
 			}
 			break;
@@ -2240,7 +2246,7 @@ void QueueFrame::updateQueue(bool changingState)
 		}
 		currentDir = dir;
 		currentDirPath = getFullPath(dir);
-#ifdef DEBUG_QUEUE_FRAME
+#if defined(DEBUG_QUEUE_FRAME) && defined(DEBUG_QUEUE_FRAME_TREE)
 		LogManager::message("currentDirPath: " + currentDirPath, true);
 #endif
 	}
