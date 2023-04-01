@@ -23,6 +23,7 @@
 #include "ResourceManager.h"
 #include "CryptoManager.h"
 #include "ParamExpander.h"
+#include "TimeUtil.h"
 #include <openssl/err.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
@@ -61,6 +62,24 @@ static inline int SSL_is_server(SSL *s)
 }
 #endif
 
+#ifdef _WIN32
+static long sslReadCallback(BIO *b, int oper, const char *argp, size_t len, int argi, long argl, int ret, size_t *processed) noexcept
+{
+	if (oper == BIO_CB_READ)
+	{
+		char* arg = BIO_get_callback_arg(b);
+		if (arg)
+			reinterpret_cast<SSLSocket*>(arg)->clearPendingRead();
+	}
+	return ret;
+}
+
+void SSLSocket::clearPendingRead() noexcept
+{
+	lastWaitResult &= ~WAIT_READ;
+}
+#endif
+
 bool SSLSocket::waitConnected(unsigned millis)
 {
 	if (!ssl)
@@ -70,13 +89,18 @@ bool SSLSocket::waitConnected(unsigned millis)
 		ssl.reset(SSL_new(ctx));
 		if (!ssl)
 			checkSSL(-1);
-			
+
 		if (!verifyData)
 			SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
 		else
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
 
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
+#ifdef _WIN32
+		BIO* bio = SSL_get_rbio(ssl);
+		BIO_set_callback_ex(bio, sslReadCallback);
+		BIO_set_callback_arg(bio, reinterpret_cast<char*>(this));
+#endif
 		if (!serverName.empty())
 			SSL_set_tlsext_host_name(ssl, serverName.c_str());
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
@@ -121,21 +145,25 @@ bool SSLSocket::waitConnected(unsigned millis)
 				dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, proto);
 			}
 #endif
+#ifdef _WIN32
+			BIO* bio = SSL_get_rbio(ssl);
+			BIO_set_callback_ex(bio, nullptr);
+			BIO_set_callback_arg(bio, nullptr);
+#endif
 			return true;
 		}
-		if (!waitWant(ret, millis))
-		{
-			return false;
-		}
+		uint64_t startTick = Util::getTick();
+		if (!waitWant(ret, millis)) return false;
+		uint64_t waited = Util::getTick() - startTick;
+		if (waited >= millis) return false;
+		millis -= (unsigned) waited;
 	}
 }
 
 uint16_t SSLSocket::accept(const Socket& listeningSocket)
 {
 	auto ret = Socket::accept(listeningSocket);
-	
 	waitAccepted(0);
-	
 	return ret;
 }
 
@@ -155,6 +183,11 @@ bool SSLSocket::waitAccepted(unsigned millis)
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
 
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
+#ifdef _WIN32
+		BIO* bio = SSL_get_rbio(ssl);
+		BIO_set_callback_ex(bio, sslReadCallback);
+		BIO_set_callback_arg(bio, reinterpret_cast<char*>(this));
+#endif
 	}
 
 	if (SSL_is_init_finished(ssl))
@@ -167,12 +200,18 @@ bool SSLSocket::waitAccepted(unsigned millis)
 		{
 			logInfo(true);
 			dcdebug("SSLSocket accepted using %s\n", SSL_get_cipher(ssl));
+#ifdef _WIN32
+			BIO* bio = SSL_get_rbio(ssl);
+			BIO_set_callback_ex(bio, nullptr);
+			BIO_set_callback_arg(bio, nullptr);
+#endif
 			return true;
 		}
-		if (!waitWant(ret, millis))
-		{
-			return false;
-		}
+		uint64_t startTick = Util::getTick();
+		if (!waitWant(ret, millis)) return false;
+		uint64_t waited = Util::getTick() - startTick;
+		if (waited >= millis) return false;
+		millis -= (unsigned) waited;
 	}
 }
 
@@ -199,7 +238,7 @@ int SSLSocket::read(void* buffer, int size)
 	lastWaitResult &= ~WAIT_READ;
 #endif
 	int len = checkSSL(SSL_read(ssl, buffer, size));
-	
+
 	if (len > 0)
 		g_stats.ssl.downloaded += len;
 	return len;

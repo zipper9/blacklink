@@ -79,6 +79,10 @@ class SSLSocket : public Socket
 
 		void setServerName(const string& name) { serverName = name; }
 
+#ifdef _WIN32
+		void clearPendingRead() noexcept;
+#endif
+
 	private:
 		SSL_CTX* ctx;
 		ssl::SSL ssl;
