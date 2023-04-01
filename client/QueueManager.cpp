@@ -863,7 +863,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 	if (user && user->isMe())
 	{
 		dcassert(0);
-		throw QueueException(STRING(NO_DOWNLOADS_FROM_SELF));
+		throw QueueException(QueueException::BAD_USER, STRING(NO_DOWNLOADS_FROM_SELF));
 	}
 	
 	const bool fileList = (flags & QueueItem::FLAG_USER_LIST) != 0;
@@ -1014,19 +1014,12 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 		else
 		{
 			if (q->getSize() != size)
-			{
-				throw QueueException(STRING(FILE_WITH_DIFFERENT_SIZE));
-			}
+				throw QueueException(QueueException::BAD_FILE_SIZE, STRING(FILE_WITH_DIFFERENT_SIZE));
 			if (!(root == q->getTTH()))
-			{
-				throw QueueException(STRING(FILE_WITH_DIFFERENT_TTH));
-			}
-			
+				throw QueueException(QueueException::BAD_FILE_TTH, STRING(FILE_WITH_DIFFERENT_TTH));
 			if (q->isFinished())
-			{
-				throw QueueException(STRING(FILE_ALREADY_FINISHED));
-			}
-			
+				throw QueueException(QueueException::ALREADY_FINISHED, STRING(FILE_ALREADY_FINISHED));
+
 			// FIXME: flags must be immutable
 			q->flags |= flags; // why ?
 		}
@@ -1098,16 +1091,16 @@ string QueueManager::checkTarget(const string& target, const int64_t size, bool 
 {
 #ifdef _WIN32
 	if (target.length() > FULL_MAX_PATH)
-		throw QueueException(STRING(TARGET_FILENAME_TOO_LONG));
+		throw QueueException(QueueException::BAD_FILE_NAME, STRING(TARGET_FILENAME_TOO_LONG));
 	// Check that target starts with a drive or is an UNC path
 	if (!(target.length() > 3 && ((target[1] == ':' && target[2] == '\\') || (target[0] == '\\' && target[1] == '\\'))))
-		throw QueueException(STRING(INVALID_TARGET_FILE));
+		throw QueueException(QueueException::BAD_FILE_NAME, STRING(INVALID_TARGET_FILE));
 #else
 	if (target.length() > PATH_MAX)
-		throw QueueException(STRING(TARGET_FILENAME_TOO_LONG));
+		throw QueueException(QueueException::BAD_FILE_NAME, STRING(TARGET_FILENAME_TOO_LONG));
 	// Check that target contains at least one directory...we don't want headless files...
 	if (!File::isAbsolute(target))
-		throw QueueException(STRING(INVALID_TARGET_FILE));
+		throw QueueException(QueueException::BAD_FILE_NAME, STRING(INVALID_TARGET_FILE));
 #endif
 	
 	const string validatedTarget = validateFileName ? Util::validateFileName(target) : target;
@@ -1157,12 +1150,12 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, Queue
 			{
 				return wantConnection;
 			}
-			throw QueueException(STRING(DUPLICATE_SOURCE) + ": " + Util::getFileName(qi->getTarget()));
+			throw QueueException(QueueException::DUPLICATE_SOURCE, STRING(DUPLICATE_SOURCE) + ": " + Util::getFileName(qi->getTarget()));
 		}
 		dcassert((isFirstLoad && !qi->isBadSourceExceptL(user, addBad)) || !isFirstLoad);
 		if (qi->isBadSourceExceptL(user, addBad))
 		{
-			throw QueueException(STRING(DUPLICATE_SOURCE) +
+			throw QueueException(QueueException::DUPLICATE_SOURCE, STRING(DUPLICATE_SOURCE) +
 			                     " TTH = " + Util::getFileName(qi->getTarget()) +
 			                     " Nick = " + user->getLastNick());
 		}
@@ -1578,7 +1571,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 		const QueueItemPtr qi = fileQueue.findTarget(d->getPath());
 		if (!qi)
 		{
-			throw QueueException(STRING(TARGET_REMOVED));
+			throw QueueException(QueueException::TARGET_REMOVED, STRING(TARGET_REMOVED));
 		}
 		
 		if (d->getOverlapped())
@@ -1589,7 +1582,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 			if (!isFound)
 			{
 				// slow chunk already finished ???
-				throw QueueException(STRING(DOWNLOAD_FINISHED_IDLE));
+				throw QueueException(QueueException::ALREADY_FINISHED, STRING(DOWNLOAD_FINISHED_IDLE));
 			}
 		}
 		
@@ -1601,7 +1594,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 			{
 				// When trying the download the next time, the resume pos will be reset
 				qi->setLastSize(0);
-				throw QueueException(STRING(TARGET_REMOVED));
+				throw QueueException(QueueException::TARGET_REMOVED, STRING(TARGET_REMOVED));
 			}
 		}
 		else
@@ -1636,14 +1629,12 @@ void QueueManager::setFile(const DownloadPtr& d)
 			const auto path = d->getPath();
 			QueueItemPtr qi = fileQueue.findTarget(path);
 			if (!qi)
-			{
-				throw QueueException(STRING(TARGET_REMOVED));
-			}
-			
+				throw QueueException(QueueException::TARGET_REMOVED, STRING(TARGET_REMOVED));
+
 			// set filelist's size
 			qi->setSize(d->getSize());
 		}
-		
+
 		string target = getFileListTempTarget(d);
 		File::ensureDirectory(target);
 		d->setDownloadFile(new File(target, File::WRITE, File::OPEN | File::TRUNCATE | File::CREATE));

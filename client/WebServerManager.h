@@ -5,6 +5,7 @@
 #include "Speaker.h"
 #include "HttpServerConnection.h"
 #include "HttpCookies.h"
+#include "WebServerAuth.h"
 #include "SearchManagerListener.h"
 #include "SearchParam.h"
 #include "Locks.h"
@@ -36,8 +37,8 @@ class WebServerManager :
 	public Singleton<WebServerManager>,
 	public Speaker<WebServerListener>,
 	private HttpServerCallback,
-	private SearchManagerListener
-	//, private SettingsManagerListener
+	private SearchManagerListener,
+	private WebServerAuth
 {
 	friend class Singleton<WebServerManager>;
 
@@ -61,6 +62,7 @@ private:
 		uint64_t id;
 		uint64_t expires;
 		uint32_t userId;
+		unsigned char iv[AC_IV_SIZE];
 
 		static bool updateSortColumn(int& savedColumn, int& column, int maxColumn, bool& reverse);
 
@@ -221,11 +223,8 @@ private:
 	void sendTemplate(const RequestInfo& inf, const string& dir, const string& name, const string& requestName, const string& mimeType, int flags) noexcept;
 	void sendLoginPage(const RequestInfo& inf) noexcept;
 	void handleRequest(const RequestInfo& inf, const UrlInfo& ui) noexcept;
-	void initAuthSecret() noexcept;
-	bool checkAuthCookie(const string& cookie, uint64_t timestamp, uint64_t& contextId) const noexcept;
-	string createAuthCookie(uint64_t expires, uint64_t contextId) const noexcept;
 	uint32_t checkUser(const string& user, const string& password) const noexcept;
-	uint64_t createClientContext(uint32_t userId, uint64_t expires) noexcept;
+	uint64_t createClientContext(uint32_t userId, uint64_t expires, const unsigned char iv[]) noexcept;
 	void removeClientContext(uint64_t id) noexcept;
 	void updateAuthCookie(Http::ServerCookies& cookies, uint64_t clientId, uint64_t curTime) noexcept;
 	void loadColorTheme(int index) noexcept;
@@ -281,7 +280,6 @@ private:
 	boost::unordered_map<string, UrlInfo> urlInfo;
 
 	Server* servers[4] = {};
-	unsigned char authKey[16];
 
 	boost::unordered_map<string, CacheItem> templateCache;
 	std::unique_ptr<RWLock> csTemplateCache;

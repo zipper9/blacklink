@@ -13,6 +13,12 @@ body {
  width: 100%;
  text-align: center;
 }
+
+em {
+ font-weight: inherit;
+ font-style: inherit;
+ color: $em-color;
+}
   
 #login-form {
  border: 1px solid $login-form-border;
@@ -65,7 +71,6 @@ input[type="submit"], input[type="button"]  {
 }
 
 input.button {
- /*background: #51AC74;*/
  background: $button-background;
  -webkit-transition: background-color 500ms ease-in-out;
  -moz-transition:    background-color 500ms ease-in-out;
@@ -73,10 +78,7 @@ input.button {
  transition:         background-color 500ms ease-in-out;
 }
 
-input.button:hover {
- /*background: #C19EE0;*/
- background: $button-hover-background;
-}
+input.button:hover { background: $button-hover-background; }
 
 input.misc-button {
  background: $misc-button-background;
@@ -95,8 +97,6 @@ input.misc-button:hover {
 select { margin-left: 4px; }
 
 div.checkbox {
- /* border: 3px solid black;
- height: 4em; */
  display: table;
  clear: left;
 }
@@ -336,15 +336,6 @@ div.tooltip {
  90%  { transform: translateY(-110%) translateX(-50%); opacity: 1; }
  100% { transform: translateY(-110%) translateX(-50%); opacity: 0; }
 }
-
-/*
-@keyframes infotip {
- 0%   { transform: translateY(-30%);  opacity: 0; }
- 10%  { transform: translateY(-110%); opacity: 1; }
- 90%  { transform: translateY(-110%); opacity: 1; }
- 100% { transform: translateY(-110%); opacity: 0; }
-}
-*/
 
 div.infotip {
  position: absolute;

@@ -7,7 +7,6 @@
 #include "CryptoManager.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
-#include "Encoder.h"
 #include "SimpleXML.h"
 #include "SearchManager.h"
 #include "QueueManager.h"
@@ -18,8 +17,6 @@
 #include "StringTokenizer.h"
 #include "MagnetLink.h"
 #include "TimeUtil.h"
-#include <openssl/evp.h>
-#include <openssl/rand.h>
 
 static const unsigned SESSION_EXPIRE_TIME = 10; // minutes
 
@@ -200,7 +197,6 @@ static uint64_t getIfModified(const Http::Request& req)
 
 WebServerManager::WebServerManager() noexcept : csTemplateCache(RWLock::create())
 {
-	memset(authKey, 0, sizeof(authKey));
 	UrlInfo ui;
 	ui.type = HANDLER_TYPE_PAGE;
 	ui.cf = &WebServerManager::printSearch;
@@ -479,8 +475,10 @@ void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request
 			return;
 		}
 		uint64_t expires = curTime + 60 * SESSION_EXPIRE_TIME;
-		inf.clientId = createClientContext(userId, expires);
-		string auth = createAuthCookie(expires, inf.clientId);
+		unsigned char iv[AC_IV_SIZE];
+		createAuthIV(iv);
+		inf.clientId = createClientContext(userId, expires, iv);
+		string auth = createAuthCookie(expires, inf.clientId, iv);
 		cookies.set("auth", auth, expires, "/", Http::ServerCookies::FLAG_HTTP_ONLY);
 		sendRedirect(inf, "/");
 		if (BOOLSETTING(LOG_WEBSERVER))
@@ -591,14 +589,18 @@ void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request
 
 void WebServerManager::updateAuthCookie(Http::ServerCookies& cookies, uint64_t clientId, uint64_t curTime) noexcept
 {
+	unsigned char iv[AC_IV_SIZE];
 	uint64_t expires = curTime + 60 * SESSION_EXPIRE_TIME;
 	{
 		LOCK(csClients);
 		auto i = clients.find(clientId);
 		if (i == clients.end()) return;
-		i->second.expires = expires;
+		auto& context = i->second;
+		context.expires = expires;
+		updateAuthIV(context.iv);
+		memcpy(iv, context.iv, AC_IV_SIZE);
 	}
-	string auth = createAuthCookie(expires, clientId);
+	string auth = createAuthCookie(expires, clientId, iv);
 	cookies.set("auth", auth, expires, "/", Http::ServerCookies::FLAG_HTTP_ONLY);
 }
 
@@ -884,17 +886,16 @@ void WebServerManager::ClientContext::printSearchTitle(string& os, bool isRunnin
 {
 	string tmp;
 	os += "<h2>";
-	string title;
+	string what = "<em>" + SimpleXML::escape(searchParam.filter, tmp, false) + "</em>";
 	if (isRunning)
 	{
-		title = STRING(SEARCHING_FOR);
-		title += ' ';
-		title += searchParam.filter;
-		title += " ...";
+		os += STRING(SEARCHING_FOR);
+		os += ' ';
+		os += what;
+		os += " ...";
 	}
 	else
-		title = STRING_F(SEARCHED_FOR_FMT, searchParam.filter);
-	os += SimpleXML::escape(title, tmp, false);
+		os += STRING_F(SEARCHED_FOR_FMT, what);
 	os += "</h2>";
 }
 
@@ -1874,6 +1875,7 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 		return;
 	}
 
+	bool error = false;
 	string message;
 	string file = Util::getFileName(sr->getFileName());
 	string dir = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(file), sr->getUser());
@@ -1884,9 +1886,20 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 		bool getConnFlag = true;
 		QueueManager::getInstance()->add(dir + file, sr->getSize(), sr->getTTH(), sr->getHintedUser(), 0, QueueItem::DEFAULT, true, getConnFlag);
 	}
+	catch (QueueException& e)
+	{
+		if (e.getCode() != QueueException::DUPLICATE_SOURCE)
+		{
+			message = e.getError();
+			error = true;
+		}
+		else
+			message = STRING(WEBSERVER_MAGNET_ALREADY_IN_QUEUE);
+	}
 	catch (Exception& e)
 	{
 		message = e.getError();
+		error = true;
 	}
 	delete sr;
 
@@ -1895,7 +1908,7 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 		JsonFormatter f;
 		f.open('{');
 		f.appendKey("success");
-		f.appendBoolValue(message.empty());
+		f.appendBoolValue(!error);
 		f.appendKey("message");
 		if (message.empty())
 			f.appendStringValue(STRING(WEBSERVER_FILE_QUEUED));
@@ -2221,7 +2234,7 @@ uint32_t WebServerManager::checkUser(const string& user, const string& password)
 	return 0;
 }
 
-uint64_t WebServerManager::createClientContext(uint32_t userId, uint64_t expires) noexcept
+uint64_t WebServerManager::createClientContext(uint32_t userId, uint64_t expires, const unsigned char iv[]) noexcept
 {
 	LOCK(csClients);
 	uint64_t id = ++nextClientId;
@@ -2229,6 +2242,7 @@ uint64_t WebServerManager::createClientContext(uint32_t userId, uint64_t expires
 	context.id = id;
 	context.expires = expires;
 	context.userId = userId;
+	memcpy(context.iv, iv, AC_IV_SIZE);
 	return id;
 }
 
@@ -2280,76 +2294,4 @@ void WebServerManager::on(SearchManagerListener::SR, const SearchResult& sr) noe
 	LOCK(csClients);
 	auto i = clients.find(id);
 	if (i != clients.end()) i->second.addSearchResult(sr);
-}
-
-static const size_t AC_IV_SIZE  = 12;
-static const size_t AC_TAG_SIZE = 10;
-
-#pragma pack(1)
-struct AuthCookie
-{
-	uint8_t iv[AC_IV_SIZE];
-	uint64_t contextId;
-	uint64_t expires;
-	uint8_t tag[AC_TAG_SIZE];
-};
-#pragma pack()
-
-static const size_t ENC_DATA_SIZE = sizeof(AuthCookie) - (AC_IV_SIZE + AC_TAG_SIZE);
-
-string WebServerManager::createAuthCookie(uint64_t expires, uint64_t contextId) const noexcept
-{
-	union
-	{
-		AuthCookie ac;
-		unsigned char data[sizeof(AuthCookie)];
-	} u;
-	unsigned char tmp[sizeof(AuthCookie)];
-	RAND_bytes(u.ac.iv, sizeof(u.ac.iv));
-	u.ac.contextId = contextId;
-	u.ac.expires = expires;
-	auto ctx = EVP_CIPHER_CTX_new();
-	EVP_CipherInit_ex(ctx, EVP_aes_128_gcm(), nullptr, authKey, u.ac.iv, 1);
-	int outLen = ENC_DATA_SIZE;
-	EVP_EncryptUpdate(ctx, u.data + AC_IV_SIZE, &outLen, u.data + AC_IV_SIZE, ENC_DATA_SIZE);
-	outLen = sizeof(tmp);
-	EVP_EncryptFinal(ctx, tmp, &outLen);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, AC_TAG_SIZE, u.ac.tag);
-	EVP_CIPHER_CTX_free(ctx);
-	return Encoder::toBase32(u.data, sizeof(AuthCookie));
-}
-
-bool WebServerManager::checkAuthCookie(const string& cookie, uint64_t timestamp, uint64_t& contextId) const noexcept
-{
-	union
-	{
-		AuthCookie ac;
-		unsigned char data[sizeof(AuthCookie)];
-	} u;
-	static const size_t BASE32_SIZE = (sizeof(AuthCookie) * 8 + 4) / 5;
-	if (cookie.length() != BASE32_SIZE) return false;
-	bool error = false;
-	Encoder::fromBase32(cookie.data(), u.data, sizeof(AuthCookie), &error);
-	if (error) return false;
-
-	unsigned char tmp[sizeof(AuthCookie)];
-	auto ctx = EVP_CIPHER_CTX_new();
-	EVP_CipherInit_ex(ctx, EVP_aes_128_gcm(), nullptr, authKey, u.ac.iv, 0);
-	int outLen = ENC_DATA_SIZE;
-	EVP_DecryptUpdate(ctx, u.data + AC_IV_SIZE, &outLen, u.data + AC_IV_SIZE, ENC_DATA_SIZE);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, AC_TAG_SIZE, u.ac.tag);
-	outLen = sizeof(tmp);
-	bool result = false;
-	if (EVP_DecryptFinal(ctx, tmp, &outLen))
-	{
-		contextId = u.ac.contextId;
-		result = timestamp < u.ac.expires;
-	}
-	EVP_CIPHER_CTX_free(ctx);
-	return result;
-}
-
-void WebServerManager::initAuthSecret() noexcept
-{
-	RAND_bytes(authKey, sizeof(authKey));
 }

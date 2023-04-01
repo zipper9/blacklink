@@ -690,6 +690,7 @@
     <ClCompile Include="client\UserInfoBase.cpp" />
     <ClCompile Include="client\UserManager.cpp" />
     <ClCompile Include="client\Util.cpp" />
+    <ClCompile Include="client\WebServerAuth.cpp" />
     <ClCompile Include="client\WebServerManager.cpp" />
     <ClCompile Include="client\WebServerUtil.cpp" />
     <ClCompile Include="client\zip\zip.c">
@@ -879,6 +880,7 @@
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\UserManagerListener.h" />
+    <ClInclude Include="client\WebServerAuth.h" />
     <ClInclude Include="client\WebServerUtil.h" />
     <ClInclude Include="client\WinEvent.h" />
     <ClInclude Include="client\zip\miniz.h" />

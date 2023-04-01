@@ -28,7 +28,26 @@
 #include "JobExecutor.h"
 #include <regex>
 
-STANDARD_EXCEPTION(QueueException);
+class QueueException : public Exception
+{
+	public:
+		enum
+		{
+			BAD_USER = 1,
+			BAD_FILE_NAME,
+			BAD_FILE_SIZE,
+			BAD_FILE_TTH,
+			ALREADY_FINISHED,
+			DUPLICATE_SOURCE,
+			TARGET_REMOVED
+		};
+
+		explicit QueueException(int code, const string& error) : Exception(error), code(code) {}
+		int getCode() const { return code; }
+
+	private:
+		const int code;
+};
 
 class UserConnection;
 class QueueLoader;
