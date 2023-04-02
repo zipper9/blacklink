@@ -584,19 +584,45 @@ void CryptoManager::generateCertificate()
 	}
 }
 
+static bool loadFile(const string& file, int64_t maxSize, ByteVector& data) noexcept
+{
+	try
+	{
+		File f(file, File::READ, File::OPEN);
+		int64_t size = f.getSize();
+		if (size <= 0 || size > maxSize) return false;
+		size_t len = (size_t) size;
+		data.resize(len);
+		size_t requiredLen = len;
+		if (f.read(&data[0], len) != requiredLen) return false;
+	}
+	catch (Exception&)
+	{
+		return false;
+	}
+	return true;
+}
+
 bool CryptoManager::load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept
 {
-	ssl::BIO bioCert(BIO_new(BIO_s_file()));
-	ssl::BIO bioKey(BIO_new(BIO_s_file()));
-
-	if (!bioCert || BIO_read_filename(bioCert, certFile.c_str()) <= 0)
+	static const int64_t maxFileSize = 128 * 1024;
+	ByteVector data;
+	if (!loadFile(certFile, maxFileSize, data))
 		return false;
 
-	if (!bioKey || BIO_read_filename(bioKey, keyFile.c_str()) <= 0)
+	ssl::BIO bioCert(BIO_new_mem_buf(data.data(), data.size()));
+	if (!bioCert)
 		return false;
 
 	cert.reset(PEM_read_bio_X509(bioCert, nullptr, nullptr, nullptr));
 	if (!cert)
+		return false;
+
+	if (!loadFile(keyFile, maxFileSize, data))
+		return false;
+
+	ssl::BIO bioKey(BIO_new_mem_buf(data.data(), data.size()));
+	if (!bioKey)
 		return false;
 
 	pkey.reset(PEM_read_bio_PrivateKey(bioKey, nullptr, nullptr, nullptr));
@@ -627,8 +653,8 @@ void CryptoManager::loadCertificates(bool createOnError) noexcept
 	if (!clientContext || !serverContext)
 		return;
 		
-	const string certFile = Text::utf8ToAcp(SETTING(TLS_CERTIFICATE_FILE));
-	const string keyFile = Text::utf8ToAcp(SETTING(TLS_PRIVATE_KEY_FILE));
+	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
+	const string& keyFile = SETTING(TLS_PRIVATE_KEY_FILE);
 	
 	keyprint.clear();
 	certsLoaded = false;

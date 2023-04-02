@@ -22,7 +22,6 @@
 
 #include "CryptoManager.h"
 #include "Socket.h"
-#include "Singleton.h"
 
 using std::unique_ptr;
 using std::string;
