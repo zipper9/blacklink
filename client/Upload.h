@@ -19,7 +19,7 @@ class Upload : public Transfer, public Flags
 			FLAG_UPLOAD_PARTIAL = 0x10
 		};
 		
-		Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName);
+		Upload(UserConnection* conn, const TTHValue& tth, const string& path, InputStream* is);
 		~Upload();
 		
 		void getParams(StringMap& params) const;
@@ -29,8 +29,11 @@ class Upload : public Transfer, public Flags
 		int64_t getAdjustedActual() const;
 		int64_t getSecondsLeft() const;
 
+		InputStream* getReadStream() const { return readStream; }
+
 	private:
-		GETSET(InputStream*, readStream, ReadStream);
+		InputStream* const readStream;
+
 		GETSET(uint64_t, tickForRemove, TickForRemove);
 		GETSET(int64_t, downloadedBytes, DownloadedBytes);
 };

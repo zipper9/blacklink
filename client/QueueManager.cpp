@@ -1485,7 +1485,7 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	}
 	
 	// Нельзя звать new Download под локом QueueItem::g_cs
-	d = std::make_shared<Download>(source, q, Util::printIpAddress(source->getRemoteIp()), source->getCipherName());
+	d = std::make_shared<Download>(source, q);
 #ifdef DEBUG_TRANSFERS
 	const string& downloadPath = q->getDownloadPath();
 	if (!downloadPath.empty()) d->setDownloadPath(downloadPath);

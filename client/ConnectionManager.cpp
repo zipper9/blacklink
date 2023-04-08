@@ -546,11 +546,6 @@ void ConnectionManager::putConnection(UserConnection* conn)
 		if (i != userConnections.end())
 		{
 			UserConnection* uc = *i;
-			if (uc->upload)
-			{
-				auto is = uc->upload->getReadStream();
-				if (is) is->closeStream();
-			}
 			uc->state = UserConnection::STATE_UNUSED;
 		}
 		if (ccpm && user)

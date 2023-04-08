@@ -345,6 +345,7 @@ void BufferedSocket::writeData()
 				}
 				else
 				{
+					stream->closeStream();
 					stream = nullptr;
 					transmitDone = true;
 					LOCK(cs);

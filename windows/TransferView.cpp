@@ -1411,6 +1411,7 @@ void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser&
 	UpdateInfo* ui = new UpdateInfo(hintedUser, false);
 	ui->setToken(token);
 	ui->setStatusString(Text::toT(reason));
+	ui->setStatus(ItemInfo::STATUS_WAITING);
 	addTask(TRANSFER_UPDATE_TOKEN_ITEM, ui);
 }
 

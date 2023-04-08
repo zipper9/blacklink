@@ -55,7 +55,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		{
 			ADD_FILE,
 			REMOVE_USER,
-			REMOVE_FILE,
 			UPDATE_ITEMS
 		};
 		
@@ -256,7 +255,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		int statusSizes[4];
 
 		void addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser);
-		void removeFile(const UploadQueueFilePtr& uqi);
 		void removeUser(const UserPtr& user);
 
 		void updateStatus();
@@ -293,10 +291,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		void on(UploadManagerListener::QueueRemove, const UserPtr& user) noexcept override
 		{
 			addTask(REMOVE_USER, new UserTask(user));
-		}
-		void on(UploadManagerListener::QueueItemRemove, const HintedUser& hintedUser, const UploadQueueFilePtr& uqi) noexcept override
-		{
-			addTask(REMOVE_FILE, new UploadQueueTask(hintedUser, uqi));
 		}
 		void on(UploadManagerListener::QueueUpdate) noexcept override;
 

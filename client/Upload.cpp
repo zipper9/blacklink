@@ -21,9 +21,9 @@
 #include "Streams.h"
 #include "UserConnection.h"
 
-Upload::Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName):
-	Transfer(conn, path, tth, ip, cipherName),
-	readStream(nullptr),
+Upload::Upload(UserConnection* conn, const TTHValue& tth, const string& path, InputStream* is):
+	Transfer(conn, path, tth),
+	readStream(is),
 	tickForRemove(0),
 	downloadedBytes(-1)
 {

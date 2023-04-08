@@ -78,8 +78,6 @@ bool IpGrant::check(uint32_t addr) const noexcept
 {
 	if (!addr)
 		return false;
-	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
-		return false;
 
 	READ_LOCK(*cs);
 	uint64_t payload;

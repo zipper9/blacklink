@@ -52,7 +52,7 @@ class CountOutputStream : public OutputStream
 			return count;
 		}
 	private:
-		OutputStream* s;
+		OutputStream* const s;
 		int64_t count;
 };
 
@@ -88,7 +88,7 @@ class CalcOutputStream : public OutputStream
 			return filter;
 		}
 	private:
-		OutputStream* s;
+		OutputStream* const s;
 		Filter filter;
 };
 
@@ -114,7 +114,7 @@ class CalcInputStream : public InputStream
 			return filter;
 		}
 	private:
-		InputStream* s;
+		InputStream* const s;
 		Filter filter;
 };
 
@@ -207,7 +207,7 @@ class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Fil
 		}
 
 	private:
-		OutputStream* f;
+		OutputStream* const f;
 		bool flushed;
 
 		using FilteredInOutStream<Filter>::BUF_SIZE;
@@ -267,9 +267,14 @@ class FilteredInputStream : public InputStream, protected FilteredInOutStream<Fi
 
 		int64_t getInputSize() const override { return f->getInputSize(); }
 		int64_t getTotalRead() const override { return totalRead + pos; }
-		
+
+		void closeStream() override
+		{
+			f->closeStream();
+		}
+
 	private:
-		InputStream* f;
+		InputStream* const f;
 		size_t pos;
 		size_t valid;
 		int64_t totalRead;

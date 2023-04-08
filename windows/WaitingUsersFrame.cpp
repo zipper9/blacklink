@@ -402,21 +402,6 @@ LRESULT WaitingUsersFrame::onTreeItemDeleted(int, LPNMHDR pnmh, BOOL&)
 	return 0;
 }
 
-void WaitingUsersFrame::removeFile(const UploadQueueFilePtr& uqi)
-{
-	int count = ctrlList.GetItemCount();
-	for (int i = 0; i < count; i++)
-	{
-		UploadQueueItem* ui = ctrlList.getItemData(i);
-		if (ui->getFile() == uqi)
-		{
-			ctrlList.DeleteItem(i);
-			delete ui;
-			break;
-		}
-	}
-}
-
 void WaitingUsersFrame::addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser)
 {
 	dcassert(uqi != nullptr);
@@ -524,10 +509,6 @@ void WaitingUsersFrame::processTasks()
 	{
 		switch (j->first)
 		{
-			case REMOVE_FILE:
-				removeFile(static_cast<UploadQueueTask&>(*j->second).item);
-				break;
-
 			case REMOVE_USER:
 				removeUser(static_cast<UserTask&>(*j->second).user);
 				break;

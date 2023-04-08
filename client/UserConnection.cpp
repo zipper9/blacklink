@@ -274,28 +274,28 @@ void UserConnection::onDataLine(const string& line) noexcept
 				// Fine, the other fellow want's to send us data...make sure we really want that...
 				if (isSet(FLAG_UPLOAD))
 				{
-					// Huh? Strange...disconnect...
+#ifdef DEBUG_USER_CONNECTION
+					if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+						LogManager::message("UserConnection(" + Util::toString(id) + "): No queued downloads", false);
+#endif
 					ConnectionManager::getInstance()->putConnection(this);
 					return;
 				}
 			}
-			else
+			else if (isSet(FLAG_DOWNLOAD))
 			{
-				if (isSet(FLAG_DOWNLOAD))
+				int number = Util::toInt(numberStr);
+				// Damn, both want to download...the one with the highest number wins...
+				if (getNumber() < number)
 				{
-					int number = Util::toInt(numberStr);
-					// Damn, both want to download...the one with the highest number wins...
-					if (getNumber() < number)
-					{
-						// Damn! We lost!
-						unsetFlag(FLAG_DOWNLOAD);
-						setFlag(FLAG_UPLOAD);
-					}
-					else if (getNumber() == number)
-					{
-						ConnectionManager::getInstance()->putConnection(this);
-						return;
-					}
+					// Damn! We lost!
+					unsetFlag(FLAG_DOWNLOAD);
+					setFlag(FLAG_UPLOAD);
+				}
+				else if (getNumber() == number)
+				{
+					ConnectionManager::getInstance()->putConnection(this);
+					return;
 				}
 			}
 			dcassert(isSet(FLAG_DOWNLOAD) ^ isSet(FLAG_UPLOAD));
@@ -853,7 +853,7 @@ void UserConnection::setDownload(const DownloadPtr& d)
 {
 	dcassert(isSet(FLAG_DOWNLOAD));
 	download = d;
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (d && BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Download " +
 			download->getPath() + " from " + download->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);
@@ -863,7 +863,7 @@ void UserConnection::setUpload(const UploadPtr& u)
 {
 	dcassert(isSet(FLAG_UPLOAD));
 	upload = u;
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (u && BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Upload " +
 			upload->getPath() + " to " + upload->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);

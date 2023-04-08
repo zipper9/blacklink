@@ -30,13 +30,13 @@ const string Transfer::fileTypeNames[] =
 const string Transfer::fileNameFilesXml = "files.xml";
 const string Transfer::fileNameFilesBzXml = "files.xml.bz2";
 
-Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName) :
+Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth) :
 	type(TYPE_FILE),
 	path(path), tth(tth), actual(0), pos(0), userConnection(conn), hintedUser(conn->getHintedUser()), startPos(0),
 	isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
 	startTime(0), lastTick(GET_TICK()),
-	cipherName(cipherName),
-	ip(ip),
+	cipherName(conn->getCipherName()),
+	ip(Util::printIpAddress(conn->getRemoteIp())),
 	fileSize(-1)
 {
 	speed.setStartTick(lastTick);

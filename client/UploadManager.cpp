@@ -301,7 +301,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	return false;
 }
 
-bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, const string& fileName, bool hideShare, const CID& shareGroup, int64_t startPos, int64_t& bytes, bool listRecursive, string& errorText)
+bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, const string& fileName, bool hideShare, const CID& shareGroup, int64_t startPos, int64_t& bytes, bool listRecursive, int& compressionType, string& errorText)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcdebug("Preparing %s %s " I64_FMT " " I64_FMT " %d\n", typeStr.c_str(), fileName.c_str(), startPos, bytes, listRecursive);
@@ -314,10 +314,10 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		source->fileNotAvail("Invalid request");
 		return false;
 	}
-	const auto ipAddr = source->getRemoteIp();
-	const auto cipherName = source->getCipherName();
 	const bool isTypeTree = typeStr == Transfer::fileTypeNames[Transfer::TYPE_TREE];
 	const bool isTypePartialList = typeStr == Transfer::fileTypeNames[Transfer::TYPE_PARTIAL_LIST];
+	int useCompType = compressionType;
+	compressionType = COMPRESSION_DISABLED;
 	InputStream* is = nullptr;
 	int64_t start = 0;
 	int64_t size = 0;
@@ -372,8 +372,13 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				f->setPos(start);
 				is = f;
 				if (start + size < fileSize)
-				{
 					is = new LimitedInputStream<true>(is, size);
+				if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
+					useCompType = COMPRESSION_ENABLED;
+				if (useCompType == COMPRESSION_ENABLED)
+				{
+					is = new FilteredInputStream<ZFilter, true>(is);
+					compressionType = COMPRESSION_ENABLED;
 				}
 			}
 			type = isFileList ? Transfer::TYPE_FULL_LIST : Transfer::TYPE_FILE;
@@ -440,7 +445,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			return false;
 		}
 	}
-	catch (const ShareException&)
+	catch (const ShareException& e)
 	{
 		// Partial file sharing upload
 		if (isTTH)
@@ -470,6 +475,13 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 							is = new LimitedInputStream<true>(f, size);
 						else
 							is = f;
+						if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
+							useCompType = COMPRESSION_ENABLED;
+						if (useCompType == COMPRESSION_ENABLED)
+						{
+							is = new FilteredInputStream<ZFilter, true>(is);
+							compressionType = COMPRESSION_ENABLED;
+						}
 						isPartial = true;
 						type = Transfer::TYPE_FILE;
 						goto ok;
@@ -482,7 +494,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				}
 			}
 		}
-		source->fileNotAvail();
+		source->fileNotAvail(e.getError());
 		return false;
 	}
 	catch (const Exception& e)
@@ -563,6 +575,7 @@ ok:
 			{
 				delete is;
 				errorText = STRING(ALL_UPLOAD_SLOTS_TAKEN);
+				resetUpload(source);
 				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
 				return false;
 			}
@@ -614,20 +627,22 @@ ok:
 			}
 		}
 	}
-	UploadPtr u = std::make_shared<Upload>(source, tth, sourceFile, Util::printIpAddress(ipAddr), cipherName);
-	u->setReadStream(is);
+	UploadPtr u = std::make_shared<Upload>(source, tth, sourceFile, is);
 	u->setSegment(Segment(start, size));
 	source->setUpload(u);
-	
+
 	if (u->getSize() != fileSize)
 		u->setFlag(Upload::FLAG_CHUNKED);
-		
+
 	if (resumed)
 		u->setFlag(Upload::FLAG_RESUMED);
-		
+
 	if (isPartial)
 		u->setFlag(Upload::FLAG_UPLOAD_PARTIAL);
-		
+
+	if (compressionType == COMPRESSION_ENABLED)
+		u->setFlag(Upload::FLAG_ZUPLOAD);
+
 	u->setFileSize(fileSize);
 	u->setType(type);
 	
@@ -650,9 +665,16 @@ ok:
 	return true;
 }
 
-bool UploadManager::isCompressedFile(const Upload* u)
+void UploadManager::resetUpload(UserConnection* source)
 {
-	string name = Util::getFileName(u->getPath());
+	UploadPtr& upload = source->getUpload();
+	if (upload) upload->resetUserConnection();
+	source->setUpload(nullptr);
+}
+
+bool UploadManager::isCompressedFile(const string& target)
+{
+	string name = Util::getFileName(target);
 	const string& pattern = SETTING(COMPRESSED_FILES);
 	csCompressedFiles.lock();
 	if (pattern != compressedFilesPattern)
@@ -666,7 +688,7 @@ bool UploadManager::isCompressedFile(const Upload* u)
 	return result;
 }
 
-bool UploadManager::getAutoSlot()
+bool UploadManager::getAutoSlot() const
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	/** A 0 in settings means disable */
@@ -818,7 +840,8 @@ void UploadManager::processGet(UserConnection* source, const string& fileName, i
 
 	int64_t bytes = -1;
 	string errorText;
-	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fileName), hideShare, shareGroup, resume, bytes, false, errorText))
+	int compressionType = COMPRESSION_DISABLED;
+	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fileName), hideShare, shareGroup, resume, bytes, false, compressionType, errorText))
 	{
 		source->setState(UserConnection::STATE_SEND);
 		source->fileLength(Util::toString(source->getUpload()->getSize()));
@@ -862,38 +885,21 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 	CID shareGroup;
 	getShareGroup(source, hideShare, shareGroup);
 
-	bool zflag;
+	int compressionType;
 	if (cmd[0] != 'U')
 	{
 		int encoding = source->getEncoding();
 		fname = Text::toUtf8(fname, encoding);
-		zflag = cmd[3] == 'Z';
+		compressionType = cmd[3] == 'Z' ? COMPRESSION_ENABLED : COMPRESSION_DISABLED;
 	}
 	else
-		zflag = cmd[4] == 'Z';
+		compressionType = cmd[4] == 'Z' ? COMPRESSION_ENABLED : COMPRESSION_DISABLED;
 		
 	string errorText;
-	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fname), hideShare, shareGroup, startPos, bytes, false, errorText))
+	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fname), hideShare, shareGroup, startPos, bytes, false, compressionType, errorText))
 	{
 		auto u = source->getUpload();
 		dcassert(u != nullptr);
-		
-		if (zflag)
-		{
-			try
-			{
-				u->setReadStream(new FilteredInputStream<ZFilter, true>(u->getReadStream()));
-				u->setFlag(Upload::FLAG_ZUPLOAD);
-			}
-			catch (Exception& e)
-			{
-				const string message = "Error UploadManager::on(GetBlock) path:" + u->getPath() + ", error: " + e.getError();
-				LogManager::message(message);
-				fire(UploadManagerListener::Failed(), u, message);
-				return;
-			}
-		}
-
 		source->sending(Util::toString(u->getSize()));
 
 		u->setStartTime(source->getLastActivity());
@@ -933,7 +939,8 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 	getShareGroup(source, hideShare, shareGroup);
 
 	string errorText;
-	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag("RE", 4), errorText))
+	int compressionType = (SETTING(MAX_COMPRESSION) && c.hasFlag("ZL", 4)) ? COMPRESSION_CHECK_FILE_TYPE : COMPRESSION_DISABLED;
+	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag("RE", 4), compressionType, errorText))
 	{
 		auto u = source->getUpload();
 		dcassert(u != nullptr);
@@ -943,22 +950,8 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 		cmd.addParam(Util::toString(u->getStartPos()));
 		cmd.addParam(Util::toString(u->getSize()));
 		
-		if (SETTING(MAX_COMPRESSION) && c.hasFlag("ZL", 4) && !isCompressedFile(u.get()))
-		{
-			try
-			{
-				u->setReadStream(new FilteredInputStream<ZFilter, true>(u->getReadStream()));
-				u->setFlag(Upload::FLAG_ZUPLOAD);
-				cmd.addParam("ZL1");
-			}
-			catch (Exception& e)
-			{
-				const string message = "Error UploadManager::on(AdcCommand::GET) path:" + u->getPath() + ", error: " + e.getError();
-				LogManager::message(message);
-				fire(UploadManagerListener::Failed(), u, message);
-				return;
-			}
-		}
+		if (compressionType == COMPRESSION_ENABLED)
+			cmd.addParam("ZL1");
 
 		string downloadedBytesStr;
 		if (c.getParam("DB", 4, downloadedBytesStr))
@@ -1030,7 +1023,7 @@ void UploadManager::failed(UserConnection* source, const string& error) noexcept
 		removeUpload(u);
 	}
 	
-	removeConnection(source);
+	removeConnectionSlot(source);
 }
 
 void UploadManager::transmitDone(UserConnection* source) noexcept
@@ -1104,14 +1097,6 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 	return queuePosition;
 }
 
-void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (g_count_WaitingUsersFrame)
-		for (const UploadQueueFilePtr& uqi : wu.getWaitingFiles())
-			fire(UploadManagerListener::QueueItemRemove(), wu.getHintedUser(), uqi);
-}
-
 void UploadManager::clearUserFilesL(const UserPtr& user)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
@@ -1121,7 +1106,6 @@ void UploadManager::clearUserFilesL(const UserPtr& user)
 	});
 	if (it != slotQueue.end())
 	{
-		clearWaitingFilesL(*it);
 		if (g_count_WaitingUsersFrame && !ClientManager::isBeforeShutdown())
 		{
 			fire(UploadManagerListener::QueueRemove(), user);
@@ -1136,7 +1120,7 @@ void UploadManager::addConnection(UserConnection* conn)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (conn->isIpBlocked(false))
 	{
-		removeConnection(conn);
+		removeConnectionSlot(conn);
 		return;
 	}
 	conn->setState(UserConnection::STATE_GET);
@@ -1187,7 +1171,7 @@ void UploadManager::processSlot(UserConnection::SlotTypes slotType, int delta)
 	}
 }
 
-void UploadManager::removeConnection(UserConnection* source)
+void UploadManager::removeConnectionSlot(UserConnection* source)
 {
 	//dcassert(source->getUpload() == nullptr);
 	processSlot(source->getSlotType(), -1);
@@ -1210,7 +1194,6 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 			{
 				// let's keep him in the connectingList until he asks for a file
 				const WaitingUser& wu = slotQueue.front();
-				clearWaitingFilesL(wu);
 				if (wu.getUser()->isOnline())
 				{
 					notifiedUsers[wu.getUser()] = tick;
@@ -1236,12 +1219,6 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		return;
 	UserList disconnects;
 	{
-#ifdef FLYLINKDC_USE_DOS_GUARD
-		{
-			LOCK(csDos);
-			m_dos_map.clear();
-		}
-#endif
 		testSlotTimeout(tick);
 		
 		{

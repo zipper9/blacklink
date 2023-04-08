@@ -34,7 +34,7 @@ class Download : public Transfer, public Flags
 			FLAG_TTH_LIST         = 0x800
 		};
 		
-		Download(UserConnection* conn, const QueueItemPtr& qi, const string& remoteIp, const string& cipherName) noexcept;
+		Download(UserConnection* conn, const QueueItemPtr& qi) noexcept;
 		
 		void getParams(StringMap& params) const;
 		int64_t getSecondsLeft(bool wholeFile = false) const;

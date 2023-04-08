@@ -71,7 +71,7 @@ class Transfer
 		}
 		
 	protected:
-		Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName);
+		Transfer(UserConnection* conn, const string& path, const TTHValue& tth);
 		void getParams(const UserConnection* source, StringMap& params) const;
 
 	public:
