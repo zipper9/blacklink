@@ -2,6 +2,7 @@
 #include "ImageLists.h"
 #include "MainFrm.h"
 #include "ResourceLoader.h"
+#include "RegKey.h"
 #include "resource.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/Tag16.h"
@@ -87,17 +88,24 @@ int FileImage::getIconIndex(const string& fileName)
 		auto j = iconCache.find(x);
 		if (j != iconCache.end())
 			return j->second;
-		tstring file = _T("x.") + Text::toT(x);
-		SHFILEINFO fi = {};
-		if (SHGetFileInfo(file.c_str(), FILE_ATTRIBUTE_NORMAL, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES))
+		tstring ext = Text::toT(x);
+		ext.insert(0, _T("."), 1);
+		WinUtil::RegKey key;
+		if (key.open(HKEY_CLASSES_ROOT, ext.c_str(), KEY_QUERY_VALUE))
 		{
-			images.AddIcon(fi.hIcon);
-			::DestroyIcon(fi.hIcon);
-			iconCache[x] = imageCount;
+			key.close();
+			tstring file = _T("x") + ext;
+			SHFILEINFO fi = {};
+			if (SHGetFileInfo(file.c_str(), FILE_ATTRIBUTE_NORMAL, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES))
+			{
+				images.AddIcon(fi.hIcon);
+				::DestroyIcon(fi.hIcon);
+				iconCache[x] = imageCount;
 #ifdef DEBUG_IMAGE_LISTS
-			LogManager::message("Adding file type '" + x + "' to image list, index = " + Util::toString(imageCount), false);
+				LogManager::message("Adding file type '" + x + "' to image list, index = " + Util::toString(imageCount), false);
 #endif
-			return imageCount++;
+				return imageCount++;
+			}
 		}
 		return DIR_FILE;
 	}
@@ -108,23 +116,6 @@ void FileImage::init()
 {
 #ifdef _DEBUG
 	dcassert(imageCount == -1);
-#endif
-	/** @todo fix this so that the system icon is used for dirs as well (we need
-	to mask it so that incomplete folders appear correct */
-#if 0
-	if (BOOLSETTING(USE_SYSTEM_ICONS))
-	{
-		SHFILEINFO fi = {0};
-		g_fileImages.Create(16, 16, ILC_COLOR32 | ILC_MASK, 16, 16);
-		::SHGetFileInfo(_T("."), FILE_ATTRIBUTE_DIRECTORY, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES);
-		g_fileImages.AddIcon(fi.hIcon);
-		g_fileImages.AddIcon(ic);
-		::DestroyIcon(fi.hIcon);
-	}
-	else
-	{
-		ResourceLoader::LoadImageList(IDR_FOLDERS, fileImages, 16, 16);
-	}
 #endif
 	ResourceLoader::LoadImageList(IDR_FOLDERS, images, 16, 16);
 	imageCount = DIR_IMAGE_LAST;
