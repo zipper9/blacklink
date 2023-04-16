@@ -161,7 +161,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		tstring lastMessage;
 		DWORD lastMessageSelPos;
 		MessagePanel* msgPanel;
-		CFlyToolTipCtrl ctrlLastLinesToolTip;
+		CToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl ctrlStatus;
 		bool disableChat;
 		bool shouldRestoreStatusText;

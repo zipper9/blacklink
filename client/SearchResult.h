@@ -36,8 +36,7 @@ class SearchResultCore
 		enum Types
 		{
 			TYPE_FILE,
-			TYPE_DIRECTORY,
-			TYPE_TORRENT_MAGNET
+			TYPE_DIRECTORY
 		};
 
 		static const uint16_t SLOTS_UNKNOWN = 0xFFFF;
@@ -70,7 +69,6 @@ class SearchResultCore
 	protected:
 		TTHValue tth;
 		string file;
-		string torrentMagnet;
 		int64_t size;
 		uint16_t slots;
 		uint16_t freeSlots;

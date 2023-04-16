@@ -2,6 +2,7 @@
 #define TYPED_TREE_LIST_VIEW_CTRL_H_
 
 #include "TypedListViewCtrl.h"
+#include "LockRedraw.h"
 #include "../client/BusyCounter.h"
 
 // Copyright (C) 2005-2009 Big Muscle, StrongDC++

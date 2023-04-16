@@ -41,29 +41,25 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	if (conn) conn->loadRegistry(values, e_CMDDebugFilterState);
 	showHubCommands = values["showHubCommands"];
 	
-	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
-	ctrlHubCommands.SetButtonStyle(BS_AUTOCHECKBOX, false);
+	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX, 0);
 	ctrlHubCommands.SetFont(Fonts::g_systemFont);
 	ctrlHubCommands.SetCheck(showHubCommands ? BST_CHECKED : BST_UNCHECKED);
 	hubCommandContainer.SubclassWindow(ctrlHubCommands.m_hWnd);
 	
 	showCommands = values["showCommands"];
-	ctrlCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_CLIENT_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
-	ctrlCommands.SetButtonStyle(BS_AUTOCHECKBOX, false);
+	ctrlCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_CLIENT_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX, 0);
 	ctrlCommands.SetFont(Fonts::g_systemFont);
 	ctrlCommands.SetCheck(showCommands ? BST_CHECKED : BST_UNCHECKED);
 	commandContainer.SubclassWindow(ctrlCommands.m_hWnd);
 	
 	showDetection = values["showDetection"];
-	ctrlDetection.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_DETECTION), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
-	ctrlDetection.SetButtonStyle(BS_AUTOCHECKBOX, false);
+	ctrlDetection.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_DETECTION), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX, 0);
 	ctrlDetection.SetFont(Fonts::g_systemFont);
 	ctrlDetection.SetCheck(showDetection ? BST_CHECKED : BST_UNCHECKED);
 	detectionContainer.SubclassWindow(ctrlDetection.m_hWnd);
 	
 	enableFilterIp = values["enableFilterIp"];
-	ctrlFilterIp.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_FILTER), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
-	ctrlFilterIp.SetButtonStyle(BS_AUTOCHECKBOX, false);
+	ctrlFilterIp.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_FILTER), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX, 0);
 	ctrlFilterIp.SetFont(Fonts::g_systemFont);
 	ctrlFilterIp.SetCheck(enableFilterIp ? BST_CHECKED : BST_UNCHECKED);
 	cFilterContainer.SubclassWindow(ctrlFilterIp.m_hWnd);

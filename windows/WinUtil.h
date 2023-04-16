@@ -210,6 +210,7 @@ namespace WinUtil
 	int getSelectedCharset(const CComboBox& comboBox);
 
 	void fillTimeValues(CComboBox& comboBox);
+	void addTool(CToolTipCtrl& ctrl, HWND hWnd, ResourceManager::Strings str);
 
 #ifdef SSA_SHELL_INTEGRATION
 	tstring getShellExtDllPath();

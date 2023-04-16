@@ -299,9 +299,10 @@ void BaseChatFrame::initStatusCtrl(HWND hWnd)
 	}
 	if (!ctrlLastLinesToolTip)
 	{
-		ctrlLastLinesToolTip.Create(ctrlStatus, messagePanelRect, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+		ctrlLastLinesToolTip.Create(ctrlStatus, messagePanelRect, _T("BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
 		ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-		ctrlLastLinesToolTip.AddTool(ctrlStatus);
+		CToolInfo ti(TTF_SUBCLASS, ctrlStatus, 0, nullptr, LPSTR_TEXTCALLBACK);
+		ctrlLastLinesToolTip.AddTool(&ti);
 		ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	}
 }

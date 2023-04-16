@@ -19,7 +19,6 @@
 #ifndef ABOUT_DLG_H
 #define ABOUT_DLG_H
 
-#include "wtl_flylinkdc.h"
 #include "SplashWindow.h"
 #include "RichTextLabel.h"
 #include "WinUtil.h"

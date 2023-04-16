@@ -227,8 +227,7 @@ void HubFrame::initUI()
 
 	if (!ctrlShowUsers)
 	{
-		ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-		ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
+		ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 		ctrlShowUsers.SetFont(Fonts::g_systemFont);
 		ctrlShowUsers.SetCheck(showUsersStore ? BST_CHECKED : BST_UNCHECKED);
 		showUsersContainer.SubclassWindow(ctrlShowUsers.m_hWnd);
@@ -242,8 +241,8 @@ void HubFrame::initUI()
 		tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 		tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
 		tooltip.SetMaxTipWidth(255);
-		tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
-		tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_HELP_TOGGLE_USER_LIST);
+		WinUtil::addTool(tooltip, ctrlSwitchPanels, ResourceManager::CMD_HELP_USER_LIST_LOCATION);
+		WinUtil::addTool(tooltip, ctrlShowUsers, ResourceManager::CMD_HELP_TOGGLE_USER_LIST);
 	}
 
 	dcassert(baseClient->getHubUrl() == serverUrl);
@@ -1286,7 +1285,10 @@ void HubFrame::updateModeIcon()
 		const tstring& s = TSTRING_I(stateText);
 		ctrlModeIcon.SetIcon(g_iconBitmaps.getIcon(icon, 0));
 		if (tooltip)
-			tooltip.AddTool(ctrlModeIcon, CTSTRING_F(DHT_STATE_FMT, s));
+		{
+			CToolInfo ti(TTF_SUBCLASS, ctrlModeIcon, 0, nullptr, const_cast<LPTSTR>(CTSTRING_F(DHT_STATE_FMT, s)));
+			tooltip.AddTool(&ti);
+		}
 		return;
 	}
 	if (client && client->isReady())
@@ -1309,7 +1311,7 @@ void HubFrame::updateModeIcon()
 	}
 	ctrlModeIcon.SetIcon(g_iconBitmaps.getIcon(icon, 0));
 	if (tooltip)
-		tooltip.AddTool(ctrlModeIcon, stateText);
+		WinUtil::addTool(tooltip, ctrlModeIcon, stateText);
 }
 
 void HubFrame::storeColumnsInfo()

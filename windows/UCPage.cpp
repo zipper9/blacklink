@@ -20,7 +20,7 @@
 #include "UCPage.h"
 #include "CommandDlg.h"
 #include "WinUtil.h"
-#include "wtl_flylinkdc.h"
+#include "LockRedraw.h"
 
 static const WinUtil::TextItem texts[] =
 {

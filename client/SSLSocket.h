@@ -23,7 +23,6 @@
 #include "CryptoManager.h"
 #include "Socket.h"
 
-using std::unique_ptr;
 using std::string;
 
 class SSLSocketException : public SocketException
@@ -88,9 +87,9 @@ class SSLSocket : public Socket
 		Socket::Protocol nextProto;
 		mutable bool isTrustedCached;
 		string serverName;
-		
-		unique_ptr<CryptoManager::SSLVerifyData> verifyData;    // application data used by CryptoManager::verify_callback(...)
-		
+
+		std::unique_ptr<CryptoManager::SSLVerifyData> verifyData;    // application data used by CryptoManager::verify_callback(...)
+
 		int checkSSL(int ret);
 		bool waitWant(int ret, unsigned millis);
 		void logInfo(bool isServer) const;

@@ -3,7 +3,7 @@
 #include "Colors.h"
 #include "Fonts.h"
 #include "DialogLayout.h"
-#include "wtl_flylinkdc.h"
+#include "LockRedraw.h"
 
 extern SettingsManager *g_settings;
 

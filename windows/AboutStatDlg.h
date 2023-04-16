@@ -5,7 +5,11 @@
 #ifndef ABOUT_STAT_DLG_H
 #define ABOUT_STAT_DLG_H
 
-#include "wtl_flylinkdc.h"
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atldlgs.h>
+#include <atlcrack.h>
 #include "resource.h"
 #include "TimerHelper.h"
 

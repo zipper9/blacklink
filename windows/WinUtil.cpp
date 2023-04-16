@@ -1071,6 +1071,12 @@ void WinUtil::fillTimeValues(CComboBox& comboBox)
 	}
 }
 
+void WinUtil::addTool(CToolTipCtrl& ctrl, HWND hWnd, ResourceManager::Strings str)
+{
+	CToolInfo ti(TTF_SUBCLASS, hWnd, 0, nullptr, const_cast<LPTSTR>(CTSTRING_I(str)));
+	ATLVERIFY(ctrl.AddTool(&ti));
+}
+
 #ifdef SSA_SHELL_INTEGRATION
 tstring WinUtil::getShellExtDllPath()
 {

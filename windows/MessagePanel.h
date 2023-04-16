@@ -19,7 +19,11 @@
 #ifndef MESSAGE_PANEL_H
 #define MESSAGE_PANEL_H
 
-#include "wtl_flylinkdc.h"
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlctrls.h>
+#include <atlcrack.h>
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "OMenu.h"
@@ -91,7 +95,7 @@ class MessagePanel
 		bool disableChat;
 
 	private:
-		CFlyToolTipCtrl tooltip;
+		CToolTipCtrl tooltip;
 		CEdit& ctrlMessage;
 
 		CButton ctrlShowUsers;

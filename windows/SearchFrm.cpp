@@ -27,6 +27,7 @@
 #include "ImageLists.h"
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
+#include "LockRedraw.h"
 
 #include "../client/Client.h"
 #include "../client/QueueManager.h"
@@ -181,7 +182,7 @@ SearchFrame::SearchFrame() :
 	initialSize(0), initialMode(SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
 	showUI(true), onlyFree(false), isHash(false), droppedResults(0), resultsCount(0),
 	expandSR(false),
-	storeSettings(false), isExactSize(false), exactSize(0), /*searches(0),*/
+	storeSettings(false), isExactSize(false), exactSize(0),
 	autoSwitchToTTH(false),
 	running(false),
 	searchEndTime(0),
@@ -316,7 +317,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlDoSearchSubclass.SubclassWindow(ctrlDoSearch);
 #endif
 	ctrlDoSearch.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0));
-	tooltip.AddTool(ctrlDoSearch, ResourceManager::SEARCH);
+	WinUtil::addTool(tooltip, ctrlDoSearch, ResourceManager::SEARCH);
 
 	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_PURGE);
@@ -325,7 +326,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlPurgeSubclass.SubclassWindow(ctrlPurge);
 #endif
 	ctrlPurge.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::CLEAR, 0));
-	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
+	WinUtil::addTool(tooltip, ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
 
 	ctrlMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_MODE);
@@ -340,41 +341,36 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_HASSTRINGS | CBS_OWNERDRAWFIXED | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILETYPES);
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, searchTypesImageList, 16, 16);
 
-	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_FREESLOTS);
-	ctrlSlots.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_FREESLOTS);
 	ctrlSlots.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSlots.SetWindowText(CTSTRING(ONLY_FREE_SLOTS));
 
-	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
-	ctrlCollapsed.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
 	ctrlCollapsed.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlCollapsed.SetWindowText(CTSTRING(EXPANDED_RESULTS));
 
 #ifdef BL_FEATURE_IP_DATABASE
-	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
-	ctrlStoreIP.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
 	storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 	ctrlStoreIP.SetCheck(storeIP);
 	ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
 #endif
 
-	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
-	ctrlStoreSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
 	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
 		ctrlStoreSettings.SetCheck(BST_CHECKED);
 	ctrlStoreSettings.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlStoreSettings.SetWindowText(CTSTRING(SAVE_SEARCH_SETTINGS_TEXT));
 
-	tooltip.AddTool(ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
+	WinUtil::addTool(tooltip, ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
 	if (BOOLSETTING(ONLY_FREE_SLOTS))
 	{
 		ctrlSlots.SetCheck(BST_CHECKED);
 		onlyFree = true;
 	}
 
-	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_USE_TREE);
-	ctrlUseGroupTreeSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_USE_TREE);
 	if (BOOLSETTING(USE_SEARCH_GROUP_TREE_SETTINGS))
 		ctrlUseGroupTreeSettings.SetCheck(BST_CHECKED);
 	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
@@ -425,12 +421,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlFilterSelContainer.SubclassWindow(ctrlFilterSel.m_hWnd);
 	ctrlFilterSel.SetFont(Fonts::g_systemFont);
 	
-	ctrlShowUI.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP);
-	ctrlShowUI.SetButtonStyle(BS_AUTOCHECKBOX | WS_TABSTOP, false);
+	ctrlShowUI.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX);
 	ctrlShowUI.SetCheck(BST_CHECKED);
 	ctrlShowUI.SetFont(Fonts::g_systemFont);
 	showUIContainer.SubclassWindow(ctrlShowUI.m_hWnd);
-	tooltip.AddTool(ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
+	WinUtil::addTool(tooltip, ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
 
 	searchLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	searchLabel.SetFont(Fonts::g_systemFont, FALSE);
@@ -2433,7 +2428,7 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 				sCopy = sr.getUser()->getLastNick();
 				break;
 			case IDC_COPY_FILENAME:
-				if (sr.getType() == SearchResult::TYPE_FILE || sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
+				if (sr.getType() == SearchResult::TYPE_FILE)
 					sCopy = Util::getFileName(sr.getFile());
 				else
 					sCopy = Util::getLastDir(sr.getFile());

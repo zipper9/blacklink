@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "TypedListViewCtrl.h"
-#include "wtl_flylinkdc.h"
+#include "LockRedraw.h"
 #include "../client/SimpleStringTokenizer.h"
 
 static const int defaultWidth = 100;

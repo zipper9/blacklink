@@ -702,9 +702,6 @@
     <ClInclude Include="windows\UserInfoSimple.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\wtl_flylinkdc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\MessagesChatPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1012,6 +1009,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\RegKey.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\LockRedraw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -91,7 +91,7 @@ void MessagePanel::createButton(int index, int image, int idc, ResourceManager::
 		imageButtons[index].SubclassWindow(ctrlButtons[index]);
 #endif
 	ctrlButtons[index].SetIcon(g_iconBitmaps.getIcon(image, 0));
-	tooltip.AddTool(ctrlButtons[index], caption);
+	WinUtil::addTool(tooltip, ctrlButtons[index], caption);
 }
 
 void MessagePanel::updateButton(HDWP dwp, bool show, int index, CRect& rc)
@@ -206,7 +206,7 @@ void MessagePanel::setCCPMState(int state)
 			default:
 				caption = ResourceManager::CONNECT_CCPM;
 		}
-		tooltip.AddTool(ctrlButtons[BUTTON_CCPM], caption);
+		WinUtil::addTool(tooltip, ctrlButtons[BUTTON_CCPM], caption);
 		ctrlButtons[BUTTON_CCPM].EnableWindow(state != CCPM_STATE_CONNECTING);
 	}
 }

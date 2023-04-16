@@ -3,7 +3,7 @@
 #include "HubFrameTasks.h"
 #include "WinUtil.h"
 #include "Fonts.h"
-#include "wtl_flylinkdc.h"
+#include "LockRedraw.h"
 #include "../client/UserManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"

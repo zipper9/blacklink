@@ -414,7 +414,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		OMenu tabMenu;
 		bool isTabMenuShown;
 		CStatic ctrlModeIcon;
-		CFlyToolTipCtrl tooltip;
+		CToolTipCtrl tooltip;
 
 		void updateWindowTitle();
 		tstring getHubTitle() const;

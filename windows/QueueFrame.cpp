@@ -197,8 +197,7 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	setListViewColors(ctrlQueue);
 	setTreeViewColors(ctrlDirs);
 
-	ctrlShowTree.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlShowTree.SetButtonStyle(BS_AUTOCHECKBOX, false);
+	ctrlShowTree.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 	ctrlShowTree.SetCheck(showTree);
 	ctrlShowTree.SetFont(Fonts::g_systemFont);
 	showTreeContainer.SubclassWindow(ctrlShowTree.m_hWnd);

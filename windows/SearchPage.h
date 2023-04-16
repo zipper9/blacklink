@@ -6,7 +6,6 @@
 #define SEARCH_PAGE_H
 
 #include "PropPage.h"
-#include "wtl_flylinkdc.h"
 
 class SearchPage : public CPropertyPage<IDD_SEARCH_PAGE>, public PropPage
 {

@@ -952,6 +952,7 @@
     <ClInclude Include="windows\ADLSProperties.h" />
     <ClInclude Include="windows\AdvancedPage.h" />
     <ClInclude Include="windows\AppearancePage.h" />
+    <ClInclude Include="windows\LockRedraw.h" />
     <ClInclude Include="windows\PreviewAppsPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />
@@ -1072,7 +1073,6 @@
     <ClInclude Include="windows\WinSysHandlers.h" />
     <ClInclude Include="windows\wmp.h" />
     <ClInclude Include="windows\WMPlayerRemoteApi.h" />
-    <ClInclude Include="windows\wtl_flylinkdc.h" />
     <ClInclude Include="wtl\atlapp.h" />
     <ClInclude Include="wtl\atlcrack.h" />
     <ClInclude Include="wtl\atlctrls.h" />

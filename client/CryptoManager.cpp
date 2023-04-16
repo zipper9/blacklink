@@ -181,15 +181,15 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 				tmp = Util::toString(ClientManager::getNicks(certCID, Util::emptyString, false));
 			line += (!line.empty() ? ", " : "") + tmp;
 		}
-		else
-		{
-			dcassert(0);
-		}
 		
 		tmp = getNameEntryByNID(subject, NID_organizationName);
 		if (!tmp.empty())
-			line += (!line.empty() ? ", " : "") + tmp;
-			
+		{
+			if (!line.empty()) line += ", ";
+			line += tmp;
+		}
+		if (line.empty()) line = "<Empty Name>";
+
 		return str(F_("Certificate verification for %1% failed with error: %2%") % line % message);
 	}
 	

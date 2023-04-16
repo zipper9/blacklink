@@ -546,7 +546,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		StatusMessageHistory statusHistory;
 		CStatusBarCtrl ctrlStatus;
-		CFlyToolTipCtrl ctrlLastLines;
+		CToolTipCtrl ctrlLastLines;
 		int statusSizes[STATUS_PART_LAST];
 		tstring statusText[STATUS_PART_LAST];
 		RECT tabAwayRect;

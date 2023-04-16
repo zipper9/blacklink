@@ -102,14 +102,12 @@ LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
 	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 	
-	ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlIgnoreTTH.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 	ctrlIgnoreTTH.SetFont(Fonts::g_systemFont);
 	ctrlIgnoreTTH.SetCheck(ignoreTTH);
 	ignoreTTHContainer.SubclassWindow(ctrlIgnoreTTH.m_hWnd);
 	
-	ctrlShowNick.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(SETTINGS_SHOW_SEEKERS_IN_SPY_FRAME), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlShowNick.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlShowNick.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(SETTINGS_SHOW_SEEKERS_IN_SPY_FRAME), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 	ctrlShowNick.SetFont(Fonts::g_systemFont);
 	ctrlShowNick.SetCheck(showNick);
 	showNickContainer.SubclassWindow(ctrlShowNick.m_hWnd);
@@ -117,8 +115,7 @@ LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	logFilePath = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "SpyLog.log"));
 	const tstring logToFileCaption = TSTRING(SETTINGS_LOG_FILE_IN_SPY_FRAME) + _T(" (") + logFilePath + _T(")");
 	
-	ctrlLogToFile.Create(ctrlStatus.m_hWnd, rcDefault, logToFileCaption.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlLogToFile.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlLogToFile.Create(ctrlStatus.m_hWnd, rcDefault, logToFileCaption.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 	ctrlLogToFile.SetFont(Fonts::g_systemFont);
 	ctrlLogToFile.SetCheck(logToFile);
 	logToFileContainer.SubclassWindow(ctrlLogToFile.m_hWnd);

@@ -9,7 +9,6 @@
 #include "AboutCmdsDlg.h"
 #include "AboutStatDlg.h"
 #include "ImageLists.h"
-#include "wtl_flylinkdc.h"
 
 class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 {

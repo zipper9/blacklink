@@ -77,11 +77,11 @@ LRESULT MessagesChatPage::onInitDialog_chat(UINT /*uMsg*/, WPARAM /*wParam*/, LP
 	ctrlTooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	ATLASSERT(ctrlTooltip.IsWindow());
 	ctrlSee.Attach(GetDlgItem(IDC_PROTECT_PRIVATE_SAY));
-	ctrlTooltip.AddTool(ctrlSee, ResourceManager::PROTECT_PRIVATE_SAY_TOOLTIP);
+	WinUtil::addTool(ctrlTooltip, ctrlSee, ResourceManager::PROTECT_PRIVATE_SAY_TOOLTIP);
 	ctrlProtect.Attach(GetDlgItem(IDC_PROTECT_PRIVATE));
-	ctrlTooltip.AddTool(ctrlProtect, ResourceManager::PROTECT_PRIVATE_TOOLTIP);
+	WinUtil::addTool(ctrlTooltip, ctrlProtect, ResourceManager::PROTECT_PRIVATE_TOOLTIP);
 	ctrlRnd.Attach(GetDlgItem(IDC_PROTECT_PRIVATE_RND));
-	ctrlTooltip.AddTool(ctrlRnd, ResourceManager::PROTECT_PRIVATE_RND_TOOLTIP);
+	WinUtil::addTool(ctrlTooltip, ctrlRnd, ResourceManager::PROTECT_PRIVATE_RND_TOOLTIP);
 	ctrlTooltip.SetMaxTipWidth(256);
 	ctrlTooltip.Activate(TRUE);
 

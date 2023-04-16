@@ -29,7 +29,6 @@
 #include "FileStatusColors.h"
 #include "DialogLayout.h"
 #include "StatusLabelCtrl.h"
-#include "wtl_flylinkdc.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
@@ -431,7 +430,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		ImageButton ctrlDoSearchSubclass;
 #endif
 
-		CFlyToolTipCtrl tooltip;
+		CToolTipCtrl tooltip;
 		
 #ifdef BL_FEATURE_IP_DATABASE
 		CButton ctrlStoreIP;

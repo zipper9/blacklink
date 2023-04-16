@@ -6,7 +6,6 @@
 #define MESSAGES_CHAT_PAGE_H
 
 #include "PropPage.h"
-#include "wtl_flylinkdc.h"
 
 class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public PropPage
 {
@@ -37,7 +36,7 @@ class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public Pr
 		void write();
 
 	private:
-		CFlyToolTipCtrl ctrlTooltip;
+		CToolTipCtrl ctrlTooltip;
 		CButton ctrlSee;
 		CButton ctrlProtect;
 		CButton ctrlRnd;

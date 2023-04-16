@@ -437,7 +437,8 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	ctrlLastLines.Create(ctrlStatus, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
 	ctrlLastLines.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-	ctrlLastLines.AddTool(ctrlStatus.m_hWnd);
+	CToolInfo ti(TTF_SUBCLASS, ctrlStatus, 0, nullptr, LPSTR_TEXTCALLBACK);
+	ctrlLastLines.AddTool(&ti);
 	ctrlLastLines.SetDelayTime(TTDT_AUTOPOP, 15000);
 	
 	CreateMDIClient();
