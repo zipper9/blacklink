@@ -173,9 +173,12 @@ bool QueueManager::FileQueue::addL(const QueueItemPtr& qi)
 	dcassert(qi->downloads.empty());
 	if (!queue.insert(make_pair(Text::toLower(qi->getTarget()), qi)).second)
 		return false;
-	auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), QueueItemList{qi}));
-	if (!countTTH.second)
-		countTTH.first->second.push_back(qi);
+	if (!qi->getTTH().isZero())
+	{
+		auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), QueueItemList{qi}));
+		if (!countTTH.second)
+			countTTH.first->second.push_back(qi);
+	}
 	++generationId;
 	return true;
 }
@@ -199,23 +202,26 @@ void QueueManager::FileQueue::remove(const QueueItemPtr& qi)
 		else
 			++generationId;
 	}
-	auto i = queueTTH.find(qi->getTTH());
-	dcassert(i != queueTTH.end());
-	if (i != queueTTH.end())
+	if (!qi->getTTH().isZero())
 	{
-		QueueItemList& l = i->second;
-		if (l.size() > 1)
+		auto i = queueTTH.find(qi->getTTH());
+		dcassert(i != queueTTH.end());
+		if (i != queueTTH.end())
 		{
-			auto j = std::find(l.begin(), l.end(), qi);
-			if (j == l.end())
+			QueueItemList& l = i->second;
+			if (l.size() > 1)
 			{
-				dcassert(0);
-				return;
+				auto j = std::find(l.begin(), l.end(), qi);
+				if (j == l.end())
+				{
+					dcassert(0);
+					return;
+				}
+				l.erase(j);
 			}
-			l.erase(j);
+			else
+				queueTTH.erase(i);
 		}
-		else
-			queueTTH.erase(i);
 	}
 }
 
