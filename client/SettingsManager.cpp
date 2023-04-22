@@ -337,13 +337,14 @@ static const char* settingTags[] =
 	"FileListShowCanceled",
 
 	// Downloads & Queue
-	"DownloadSlots", 
+	"DownloadSlots",
 	"FileSlots",
 	"ExtraDownloadSlots",
 	"MaxDownloadSpeed",
 	"BufferSizeForDownloads",
 	"EnableMultiChunk",
 	"MinMultiChunkSize",
+	"MaxChunkSize",
 	"OverlapChunks",
 	"DownConnPerSec",
 	"AutoSearch",
@@ -1814,6 +1815,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MINISLOT_SIZE:
 		{
 			VER_MIN(16);
+			break;
+		}
+		case MAX_CHUNK_SIZE:
+		{
+			VER_MIN_EXCL_ZERO(64*1024);
 			break;
 		}
 #ifdef OSVER_WIN_XP

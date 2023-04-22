@@ -295,8 +295,8 @@ bool QueueItem::isChunkDownloaded(int64_t startPos, int64_t& len) const
 
 void QueueItem::removeSourceL(const UserPtr& user, MaskType reason)
 {
-	SourceIter i = findSourceL(user); // crash - https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=42877 && http://www.flickr.com/photos/96019675@N02/10488126423/
-	if (i != sources.end()) // https://drdump.com/Problem.aspx?ProblemID=129066
+	SourceIter i = findSourceL(user);
+	if (i != sources.end())
 	{
 		i->second.setFlag(reason);
 		badSources.insert(*i);
@@ -626,7 +626,9 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	}
 	
 	// We want smaller blocks at the end of the transfer, squaring gives a nice curve...
-	int64_t targetSize = static_cast<int64_t>(static_cast<double>(wantedSize) * std::max(0.25, (1. - (donePart * donePart))));
+	int64_t targetSize = static_cast<int64_t>(static_cast<double>(wantedSize) * std::max(0.25, 1 - donePart * donePart));
+	int64_t maxChunkSize = SETTING(MAX_CHUNK_SIZE);
+	if (maxChunkSize && targetSize > maxChunkSize) targetSize = maxChunkSize;
 	
 	if (targetSize > blockSize)
 	{

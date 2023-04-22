@@ -314,8 +314,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			EXTRA_DOWNLOAD_SLOTS,
 			MAX_DOWNLOAD_SPEED,
 			BUFFER_SIZE_FOR_DOWNLOADS,
-			ENABLE_MULTI_CHUNK,   // Unused, visible in UI
+			ENABLE_MULTI_CHUNK,
 			MIN_MULTI_CHUNK_SIZE, // Unused, visible in UI
+			MAX_CHUNK_SIZE,
 			OVERLAP_CHUNKS,
 			DOWNCONN_PER_SEC,
 			AUTO_SEARCH,
