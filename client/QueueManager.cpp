@@ -1617,8 +1617,16 @@ void QueueManager::setFile(const DownloadPtr& d)
 			if (f->getFastFileSize() != qi->getSize())
 			{
 				dcassert(fileSize == d->getTigerTree().getFileSize());
-				f->setSize(fileSize);
-				qi->setLastSize(fileSize);
+				try
+				{
+					f->setSize(fileSize);
+					qi->setLastSize(fileSize);
+				}
+				catch (Exception&)
+				{
+					delete f;
+					throw;
+				}
 			}
 		}
 		else
