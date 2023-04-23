@@ -19,6 +19,7 @@
 #include "stdinc.h"
 
 #include "DownloadManager.h"
+#include "SettingsManager.h"
 #include "ConnectionManager.h"
 #include "QueueManager.h"
 #include "Download.h"
@@ -29,7 +30,6 @@
 #include "MappingManager.h"
 #include "ZUtils.h"
 #include "FilteredFile.h"
-#include "ClientManager.h" // FIXME: remove ClientManager::isBeforeShutdown calls
 
 int64_t DownloadManager::g_runningAverage;
 
@@ -62,9 +62,6 @@ size_t DownloadManager::getDownloadCount() const
 
 void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
-		return;
-		
 	typedef vector<pair<std::string, UserPtr> > TargetList;
 	TargetList dropTargets;
 	
@@ -151,37 +148,27 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 void DownloadManager::removeIdleConnection(UserConnection* source)
 {
 	WRITE_LOCK(*csDownloads);
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(source->getUser());
+	auto i = find(idlers.begin(), idlers.end(), source);
+	if (i == idlers.end())
 	{
-		dcassert(source->getUser());
-		auto i = find(idlers.begin(), idlers.end(), source);
-		if (i == idlers.end())
-		{
-			//dcassert(i != idlers.end());
-			return;
-		}
-		idlers.erase(i);
+		//dcassert(i != idlers.end());
+		return;
 	}
-	else
-	{
-		idlers.clear();
-	}
+	idlers.erase(i);
 }
 
 void DownloadManager::checkIdle(const UserPtr& user) const
 {
-	if (!ClientManager::isBeforeShutdown())
+	READ_LOCK(*csDownloads);
+	dcassert(user);
+	for (auto i = idlers.begin(); i != idlers.end(); ++i)
 	{
-		READ_LOCK(*csDownloads);
-		dcassert(user);
-		for (auto i = idlers.begin(); i != idlers.end(); ++i)
+		UserConnection* uc = *i;
+		if (uc->getUser() == user)
 		{
-			UserConnection* uc = *i;
-			if (uc->getUser() == user)
-			{
-				uc->updated();
-				return;
-			}
+			uc->updated();
+			return;
 		}
 	}
 }
@@ -224,15 +211,6 @@ bool DownloadManager::isStartDownload(QueueItem::Priority prio) const
 
 void DownloadManager::checkDownloads(UserConnection* conn)
 {
-	if (ClientManager::isBeforeShutdown())
-	{
-		conn->disconnect();
-#ifdef _DEBUG
-		LogManager::message("DownloadManager::checkDownloads + isShutdown");
-#endif
-		return;
-	}
-	
 	auto qm = QueueManager::getInstance();
 	const QueueItem::Priority prio = QueueManager::hasDownload(conn->getUser());
 	if (!isStartDownload(prio))
@@ -364,10 +342,9 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 		return;
 	}
 	
-	if (d->getType() == Transfer::TYPE_FILE)
+	if (d->getType() == Transfer::TYPE_FILE && d->getTreeValid())
 	{
 		typedef MerkleCheckOutputStream<TigerTree, true> MerkleStream;
-		
 		d->setDownloadFile(new MerkleStream(d->getTigerTree(), d->getDownloadFile(), d->getStartPos()));
 		d->setFlag(Download::FLAG_TTH_CHECK);
 	}
@@ -378,7 +355,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 	if (z)
 	{
 		d->setFlag(Download::FLAG_ZDOWNLOAD);
-		d->setDownloadFile(new FilteredOutputStream<UnZFilter, true> (d->getDownloadFile()));
+		d->setDownloadFile(new FilteredOutputStream<UnZFilter, true>(d->getDownloadFile()));
 	}
 	
 	d->setStartTime(source->getLastActivity());

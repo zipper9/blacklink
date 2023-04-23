@@ -1884,7 +1884,10 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 	{
 		// TODO: handle "Target already exists" error
 		bool getConnFlag = true;
-		QueueManager::getInstance()->add(dir + file, sr->getSize(), sr->getTTH(), sr->getHintedUser(), 0, QueueItem::DEFAULT, true, getConnFlag);
+		QueueManager::QueueItemParams params;
+		params.size = sr->getSize();
+		params.root = &sr->getTTH();
+		QueueManager::getInstance()->add(dir + file, params, sr->getHintedUser(), 0, true, getConnFlag);
 	}
 	catch (QueueException& e)
 	{
@@ -2057,7 +2060,7 @@ void WebServerManager::addMagnet(HandlerResult& res, const RequestInfo& state) n
 		if (ml.parse(magnet))
 		{
 			const char* tthStr = ml.getTTH();
-			string fname = ml.getFileName();
+			const string& fname = ml.getFileName();
 			if (tthStr && !fname.empty() && ml.exactLength > 0)
 			{
 				TTHValue tth(tthStr);
@@ -2072,8 +2075,10 @@ void WebServerManager::addMagnet(HandlerResult& res, const RequestInfo& state) n
 					{
 						bool getConnFlag = true;
 						QueueItem::MaskType flags = isDclst ? (QueueItem::FLAG_DOWNLOAD_CONTENTS | QueueItem::FLAG_DCLST_LIST) : 0;
-						QueueManager::getInstance()->add(fname, ml.exactLength, tth, HintedUser(),
-							flags, QueueItem::DEFAULT, true, getConnFlag);
+						QueueManager::QueueItemParams params;
+						params.size = ml.exactLength;
+						params.root = &tth;
+						QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
 						result = true;
 						messageText = STRING(WEBSERVER_MAGNET_ADDED);
 					}

@@ -71,18 +71,21 @@ class QueueManager : public Singleton<QueueManager>,
 			ERROR_NO_FREE_BLOCK
 		};
 
-		/** Add a file to the queue. */
-		void add(const string& target, int64_t size, const TTHValue& root, const UserPtr& user,
-		         QueueItem::MaskType flags, QueueItem::Priority priority, bool addBad, bool& getConnFlag);
-		/** Add a user's filelist to the queue. */
-		void addList(const UserPtr& user, QueueItem::MaskType flags, const string& initialDir = Util::emptyString);
-		
-		void addCheckUserIP(const UserPtr& user)
+		struct QueueItemParams
 		{
-			bool getConnFlag = true;
-			add(Util::emptyString, -1, TTHValue(), user, QueueItem::FLAG_USER_GET_IP, QueueItem::DEFAULT, true, getConnFlag);
-		}
+			int64_t size = -1;
+			const TTHValue* root = nullptr;
+#ifdef DEBUG_TRANSFERS
+			string sourcePath;
+#endif
+			QueueItem::Priority priority = QueueItem::DEFAULT;
+		};
 
+		// Add a file to the queue
+		void add(const string& target, const QueueItemParams& params, const UserPtr& user, QueueItem::MaskType flags, bool addBad, bool& getConnFlag);
+		// Add a user's filelist to the queue
+		void addList(const UserPtr& user, QueueItem::MaskType flags, const string& initialDir = Util::emptyString);
+		void addCheckUserIP(const UserPtr& user);
 		bool addDclstFile(const string& path);
 		void processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority);
 
@@ -296,7 +299,7 @@ class QueueManager : public Singleton<QueueManager>,
 				bool add(const QueueItemPtr& qi);
 				QueueItemPtr add(QueueManager* qm, const string& target, int64_t size, Flags::MaskType flags,
 				                 QueueItem::Priority p, const string& tempTarget, time_t added,
-				                 const TTHValue& root, uint8_t maxSegments);
+				                 const TTHValue* root, uint8_t maxSegments);
 				bool getTTH(const string& name, TTHValue& tth) const;
 				QueueItemPtr findTarget(const string& target) const;
 				int findQueueItems(QueueItemList& ql, const TTHValue& tth, int maxCount = 0) const;

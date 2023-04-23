@@ -627,11 +627,13 @@ LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 				bool getConnFlag = true;
 				try
 				{
-					qm->add(ii->entry->getTarget(), ii->entry->getSize(), ii->entry->getTTH(), user, 0, QueueItem::DEFAULT, false, getConnFlag);
+					QueueManager::QueueItemParams params;
+					params.size = ii->entry->getSize();
+					params.root = &ii->entry->getTTH();
+					qm->add(ii->entry->getTarget(), params, user, 0, false, getConnFlag);
 				}
 				catch (const Exception& e)
 				{
-					//fix https://drdump.com/Problem.aspx?ProblemID=226879
 					LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
 				}
 			}

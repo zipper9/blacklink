@@ -294,7 +294,7 @@ int64_t SharedFileStream::getFastFileSize()
 void SharedFileStream::setSize(int64_t newSize)
 {
 	LOCK(sfh->cs);
-	sfh->file.setSize(newSize);
+	sfh->file.setSize(newSize); // FIXME: this fails when file is memory mapped
 	sfh->lastFileSize = newSize;
 }
 

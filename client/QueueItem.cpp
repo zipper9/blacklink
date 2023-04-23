@@ -36,6 +36,8 @@ std::atomic_bool QueueItem::checkTempDir(true);
 
 const string dctmpExtension = ".dctmp";
 
+static const uint64_t DEFAULT_BLOCK_SIZE = 64 * 1024;
+
 QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
                      time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget) :
 	target(target),
@@ -49,11 +51,37 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool
 	tthRoot(tth),
 	downloadedBytes(0),
 	doneSegmentsSize(0),
-	lastsize(0),
+	lastSize(0),
 	averageSpeed(0),
 	cachedOnlineSourceCountInvalid(false),
 	cachedOnlineSourceCount(0),
-	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : 64 * 1024),
+	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : DEFAULT_BLOCK_SIZE),
+	removed(false)
+{
+#ifdef FLYLINKDC_USE_DROP_SLOW
+	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
+		flags |= FLAG_AUTODROP;
+#endif
+	this->flags = flags;
+}
+
+QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
+                     time_t added, uint8_t maxSegments, const string& tempTarget) :
+	target(target),
+	tempTarget(tempTarget),
+	maxSegments(std::max(uint8_t(1), maxSegments)),
+	timeFileBegin(0),
+	size(size),
+	priority(priority),
+	added(added),
+	autoPriority(autoPriority),
+	downloadedBytes(0),
+	doneSegmentsSize(0),
+	lastSize(0),
+	averageSpeed(0),
+	cachedOnlineSourceCountInvalid(false),
+	cachedOnlineSourceCount(0),
+	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : DEFAULT_BLOCK_SIZE),
 	removed(false)
 {
 #ifdef FLYLINKDC_USE_DROP_SLOW

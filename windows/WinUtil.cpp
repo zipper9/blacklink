@@ -670,8 +670,11 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* 
 							flags |= QueueItem::FLAG_CLIENT_VIEW;
 						else if (isDclst)
 							flags |= QueueItem::FLAG_DOWNLOAD_CONTENTS;
-						QueueManager::getInstance()->add(fname, magnet.exactLength, TTHValue(fhash), HintedUser(),
-							flags, QueueItem::DEFAULT, true, getConnFlag);
+						TTHValue tth(fhash);
+						QueueManager::QueueItemParams params;
+						params.size = magnet.exactLength;
+						params.root = &tth;
+						QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
 					}
 					catch (const Exception& e)
 					{

@@ -34,6 +34,7 @@
 #include "DuplicateFilesDlg.h"
 #include "Fonts.h"
 #include "BrowseFile.h"
+#include "LineDlg.h"
 
 static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;
@@ -948,7 +949,7 @@ LRESULT DirectoryListingFrame::onDownloadWithPrioTree(WORD, WORD wID, HWND, BOOL
 
 	int prio = wID - IDC_DOWNLOAD_WITH_PRIO_TREE;
 	if (!(prio >= QueueItem::PAUSED && prio < QueueItem::LAST))
-		prio = QueueItem::DEFAULT;
+		prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
 	bool getConnFlag = true;
 
 	try
@@ -1197,6 +1198,31 @@ LRESULT DirectoryListingFrame::onDownloadByPath(WORD, WORD, HWND, BOOL&)
 		}
 		if (parent) DirectoryListing::Directory::updateFlags(parent);
 		redraw();
+	}
+	return 0;
+}
+
+LRESULT DirectoryListingFrame::onDownloadAny(WORD, WORD, HWND, BOOL&)
+{
+	LineDlg dlg;
+	dlg.title = _T("Download file by name");
+	dlg.description = _T("Enter full path (ADC style)");
+	dlg.allowEmpty = false;
+	dlg.icon = IconBitmaps::DOWNLOAD;
+	if (dlg.DoModal() != IDOK) return 0;
+	string path = Text::fromT(dlg.line);
+	try
+	{
+		bool getConnFlag = true;
+		QueueManager::QueueItemParams params;
+		params.sourcePath = path;
+		auto pos = path.rfind(URI_SEPARATOR);
+		if (pos != string::npos) path.erase(0, pos + 1);
+		QueueManager::getInstance()->add(path, params, dl->getUser(), 0, true, getConnFlag);
+	}
+	catch (const Exception& e)
+	{
+		LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
 	}
 	return 0;
 }
@@ -1693,6 +1719,9 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_TO));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
+#ifdef DEBUG_TRANSFERS
+			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_ANY, _T("Download file by name..."));
+#endif
 
 			appendFavTargets(targetDirMenu, IDC_DOWNLOADDIR_TO_FAV);
 			targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIRTO, CTSTRING(BROWSE));

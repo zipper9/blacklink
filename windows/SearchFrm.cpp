@@ -1304,7 +1304,11 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 				tmp += si->getText(COLUMN_FILENAME);
 			const string target = Text::fromT(tmp);
 			bool getConnFlag = true;
-			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask, prio, true, getConnFlag);
+			QueueManager::QueueItemParams params;
+			params.size = si->sr.getSize();
+			params.root = &si->sr.getTTH();
+			params.priority = prio;
+			QueueManager::getInstance()->add(target, params, si->sr.getHintedUser(), mask, true, getConnFlag);
 			si->sr.flags |= SearchResult::FLAG_QUEUED;
 			sf->updateList = true;
 
@@ -1317,7 +1321,9 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 					if (j)
 					{
 						getConnFlag = true;
-						QueueManager::getInstance()->add(target, j->sr.getSize(), j->sr.getTTH(), j->sr.getHintedUser(), mask, prio, true, getConnFlag);
+						params.size = j->sr.getSize();
+						params.root = &j->sr.getTTH();
+						QueueManager::getInstance()->add(target, params, j->sr.getHintedUser(), mask, true, getConnFlag);
 						j->sr.flags |= SearchResult::FLAG_QUEUED;
 						sf->updateList = true;
 					}

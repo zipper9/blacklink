@@ -1259,6 +1259,7 @@
 #define IDC_CAPTION_MAPPER              2425
 #define IDC_LIST1                       2426
 #define IDC_GOTO                        2427
+#define IDC_DOWNLOAD_ANY                2494
 #define IDC_DOWNLOAD_BY_PATH            2495
 #define IDC_DOWNLOADTO_USER             2496
 #define IDC_DOWNLOADTO_IP               2497

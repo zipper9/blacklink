@@ -581,8 +581,10 @@ bool ADLSearchManager::SearchContext::matchFile(const DirectoryListing::File* fi
 		{
 			try
 			{
-				QueueManager::getInstance()->add(file->getName(),
-					file->getSize(), file->getTTH(), user, 0, QueueItem::DEFAULT, true, getConnFlag);
+				QueueManager::QueueItemParams params;
+				params.size = file->getSize();
+				params.root = &file->getTTH();
+				QueueManager::getInstance()->add(file->getName(), params, user, 0, true, getConnFlag);
 			}
 			catch (const Exception& e)
 			{

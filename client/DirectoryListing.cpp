@@ -704,7 +704,11 @@ void DirectoryListing::download(File* file, const string& target, bool view, Que
 	const QueueItem::MaskType flags = (QueueItem::MaskType)(view ? ((isDclst ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
 	try
 	{
-		QueueManager::getInstance()->add(target, file->getSize(), file->getTTH(), getUser(), flags, prio, true, getConnFlag);
+		QueueManager::QueueItemParams params;
+		params.size = file->getSize();
+		params.root = &file->getTTH();
+		params.priority = prio;
+		QueueManager::getInstance()->add(target, params, getUser(), flags, true, getConnFlag);
 		file->setFlag(FLAG_QUEUED);
 		Directory* dir = file->getParent();
 		while (dir->getParent())

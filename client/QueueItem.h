@@ -147,7 +147,7 @@ class QueueItem
 				
 				Source()  {}
 				
-				bool isCandidate(const bool isBadSource) const
+				bool isCandidate(bool isBadSource) const
 				{
 					return isSet(FLAG_PARTIAL) && (isBadSource || !isSet(FLAG_TTH_INCONSISTENCY));
 				}
@@ -171,6 +171,8 @@ class QueueItem
 
 		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
 		          time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget);
+		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
+		          time_t added, uint8_t maxSegments, const string& tempTarget);
 
 		QueueItem(const QueueItem &) = delete;
 		QueueItem& operator= (const QueueItem &) = delete;
@@ -230,7 +232,7 @@ class QueueItem
 		bool isBadSourceExceptL(const UserPtr& user, MaskType exceptions) const;
 		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
-		void setOverlapped(const Segment& segment, const bool isOverlapped);
+		void setOverlapped(const Segment& segment, bool isOverlapped);
 		/**
 		 * Is specified parts needed by this download?
 		 */
@@ -246,10 +248,7 @@ class QueueItem
 		void updateDownloadedBytesAndSpeedL();
 		void addDownload(const DownloadPtr& download);
 		bool removeDownload(const UserPtr& user);
-		size_t getDownloadsSegmentCount() const
-		{
-			return downloads.size();
-		}
+		size_t getDownloadsSegmentCount() const { return downloads.size(); }
 		bool disconnectSlow(const DownloadPtr& d);
 		void disconnectOthers(const DownloadPtr& d);
 		uint8_t calcActiveSegments() const;
@@ -293,18 +292,14 @@ class QueueItem
 		bool isSet(MaskType flag) const { return (flags & flag) == flag; }
 		bool isAnySet(MaskType flag) const { return (flags & flag) != 0; }
 		MaskType getFlags() const { return flags; }
-		
-		const TTHValue& getTTH() const
-		{
-			return tthRoot;
-		}
-		
+
+		const TTHValue& getTTH() const { return tthRoot; }
+		time_t getAdded() const { return added; }
+
 		void updateBlockSize(uint64_t treeBlockSize);
-		uint64_t getBlockSize() const
-		{
-			return blockSize;
-		}
+		uint64_t getBlockSize() const { return blockSize; }
 		
+	private:
 		DownloadList downloads;		
 		mutable FastCriticalSection csDownloads;
 		
@@ -312,14 +307,14 @@ class QueueItem
 		int64_t doneSegmentsSize;
 		int64_t downloadedBytes;				
 		mutable FastCriticalSection csSegments;
-		
+
+	public:
 		void getDoneSegments(vector<Segment>& done) const;
 
 		GETSET(uint64_t, timeFileBegin, TimeFileBegin);
-		GETSET(int64_t, lastsize, LastSize);
-		GETSET(time_t, added, Added);
+		GETSET(int64_t, lastSize, LastSize);
 #ifdef DEBUG_TRANSFERS
-		GETSET(string, downloadPath, DownloadPath);
+		GETSET(string, sourcePath, SourcePath);
 #endif
 		
 	private:
@@ -328,6 +323,7 @@ class QueueItem
 		int64_t size;
 		uint8_t maxSegments;
 		bool autoPriority;
+		const time_t added;
 
 	public:
 		bool getAutoPriority() const { return autoPriority; }

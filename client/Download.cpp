@@ -57,8 +57,9 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 		setFlag(FLAG_USER_GET_IP);
 		
 	const bool isFile = getType() == TYPE_FILE && qi->getSize() != -1;
-	
-	if (!getTTH().isZero() && isFile)
+	const bool hasTTH = !tth.isZero();
+
+	if (isFile && hasTTH)
 	{
 		auto db = DatabaseManager::getInstance();
 		auto hashDb = db->getHashDatabaseConnection();
@@ -87,27 +88,29 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 				{
 					setSegment(qi->getNextSegmentL(tigerTree.getBlockSize(), conn->getChunkSize(), conn->getSpeed(), src.getPartialSource()));
 				}
-				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !src.isSet(QueueItem::Source::FLAG_NO_TREE) && qi->getSize() > MIN_BLOCK_SIZE)
+				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !src.isSet(QueueItem::Source::FLAG_NO_TREE) && qi->getSize() > MIN_BLOCK_SIZE && hasTTH)
 				{
 					// Get the tree unless the file is small (for small files, we'd probably only get the root anyway)
 					setType(TYPE_TREE);
 					tigerTree.setFileSize(qi->getSize());
 					setSegment(Segment(0, -1));
 				}
-				else
+				else if (hasTTH)
 				{
 					// Use the root as tree to get some sort of validation at least...
 					// TODO: use aligned block size ??
-					tigerTree = TigerTree(qi->getSize(), qi->getSize(), getTTH());
+					tigerTree = TigerTree(qi->getSize(), qi->getSize(), tth);
 					setTreeValid(true);
 					setSegment(qi->getNextSegmentL(tigerTree.getBlockSize(), 0, 0, src.getPartialSource()));
 				}
-				
-				if ((getStartPos() + getSize()) != qi->getSize())
+				else
 				{
-					setFlag(FLAG_CHUNKED);
+					setSegment(qi->getNextSegmentL(1, qi->getSize(), 0, src.getPartialSource()));
 				}
-				
+
+				if (getStartPos() + getSize() != qi->getSize())
+					setFlag(FLAG_CHUNKED);
+
 				if (getSegment().getOverlapped())
 				{
 					setFlag(FLAG_OVERLAP);
