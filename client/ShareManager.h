@@ -132,9 +132,8 @@ class ShareManager :
 		bool getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept;
 		bool getShareGroupName(const CID& id, string& name) const noexcept;
 		
-		string getFileByPath(const string& virtualPath, bool hideShare, const CID& shareGroup, int64_t& xmlSize) const;
+		string getFileByPath(const string& virtualPath, bool hideShare, const CID& shareGroup, int64_t& xmlSize, string* errorText) const noexcept;
 		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool hideShare, const CID& shareGroup) const;
-		string getFileByTTH(const TTHValue& tth, bool hideShare, const CID& shareGroup) const;
 		MemoryInputStream* getTreeByTTH(const TTHValue& tth) const noexcept;
 		MemoryInputStream* getTree(const string& virtualFile, const CID& shareGroup) const noexcept;
 		static MemoryInputStream* getTreeFromStore(const TTHValue& tth) noexcept;

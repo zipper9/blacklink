@@ -31,7 +31,6 @@
 #include "HashManager.h"
 #include "Wildcards.h"
 #include "StringTokenizer.h"
-#include "UserConnection.h"
 #include "DatabaseManager.h"
 #include "LogManager.h"
 #include "DebugManager.h"
@@ -1527,10 +1526,14 @@ bool ShareManager::findByRealPath(const string& realPath, TTHValue* outTTH, stri
 	return true;
 }
 
-string ShareManager::getFileByPath(const string& virtualFile, bool hideShare, const CID& shareGroup, int64_t& xmlSize) const
+string ShareManager::getFileByPath(const string& virtualFile, bool hideShare, const CID& shareGroup, int64_t& xmlSize, string* errorText) const noexcept
 {
 	if (virtualFile == "MyList.DcLst")
-		throw ShareException("NMDC-style lists no longer supported, please upgrade your client", virtualFile);
+	{
+		if (errorText)
+			*errorText = "NMDC-style lists no longer supported, please upgrade your client";
+		return Util::emptyString;
+	}
 	if (virtualFile == Transfer::fileNameFilesBzXml || virtualFile == Transfer::fileNameFilesXml)
 	{
 		if (hideShare)
@@ -1552,28 +1555,18 @@ string ShareManager::getFileByPath(const string& virtualFile, bool hideShare, co
 	}
 	{
 		if (hideShare)
-			throw ShareException(UserConnection::FILE_NOT_AVAILABLE, virtualFile);
+			return Util::emptyString;
 		READ_LOCK(*csShare);
 		auto i = shareGroups.find(shareGroup);
 		if (i == shareGroups.end())
-			throw ShareException(UserConnection::FILE_NOT_AVAILABLE, virtualFile);
+			return Util::emptyString;
 		const SharedDir* dir;
 		SharedFilePtr file;
 		if (!parseVirtualPathL(virtualFile, dir, file, i->second))
-			throw ShareException(UserConnection::FILE_NOT_AVAILABLE, virtualFile);
+			return Util::emptyString;
 		const ShareListItem* unused;
 		return getFilePathL(dir, unused) + file->getName();
 	}
-}
-
-string ShareManager::getFileByTTH(const TTHValue& tth, bool hideShare, const CID& shareGroup) const
-{
-	if (hideShare)
-		throw ShareException(UserConnection::FILE_NOT_AVAILABLE, "TTH/" + tth.toBase32());
-	string path;
-	if (!getFilePath(tth, path, shareGroup))
-		throw ShareException(UserConnection::FILE_NOT_AVAILABLE, "TTH/" + tth.toBase32());
-	return path;
 }
 
 MemoryInputStream* ShareManager::getTreeFromStore(const TTHValue& tth) noexcept

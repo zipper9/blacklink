@@ -326,11 +326,11 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	const bool isFileList = fileName == Transfer::fileNameFilesBzXml || fileName == Transfer::fileNameFilesXml;
 	bool isMinislot = isFileList;
 	bool isPartial = false;
-	
+
 	string sourceFile;
 	const bool isTypeFile = typeStr == Transfer::fileTypeNames[Transfer::TYPE_FILE];
 	const bool isTTH  = (isTypeFile || isTypeTree) && fileName.length() == 43 && fileName.compare(0, 4, "TTH/", 4) == 0;
-	Transfer::Type type;
+	Transfer::Type type = Transfer::TYPE_FILE;
 	TTHValue tth;
 	if (isTTH)
 	{
@@ -338,50 +338,111 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	}
 	try
 	{
-		if (isTypeFile && !ClientManager::isBeforeShutdown() && ShareManager::isValidInstance())
+		if (isTypeFile)
 		{
 			int64_t uncompressedXmlSize = 0;
-			sourceFile = isTTH ? 
-				ShareManager::getInstance()->getFileByTTH(tth, hideShare, shareGroup) :
-				ShareManager::getInstance()->getFileByPath(fileName, hideShare, shareGroup, uncompressedXmlSize);
-			if (fileName == Transfer::fileNameFilesXml)
+			string shareManagerError;
+			if (ShareManager::isValidInstance())
 			{
-				File* f = new File(sourceFile, File::READ, File::OPEN);
-				is = new FilteredInputStream<UnBZFilter, true>(f);
-				start = 0;
-				fileSize = size = uncompressedXmlSize;
+				if (isTTH)
+				{
+					if (!hideShare)
+					{
+						ShareManager::getInstance()->getFilePath(tth, sourceFile, shareGroup);
+						// Check partial file
+						if (sourceFile.empty() && QueueManager::isChunkDownloaded(tth, startPos, bytes, sourceFile))
+						{
+							dcassert(!sourceFile.empty());
+							if (!sourceFile.empty())
+							{
+								try
+								{
+									auto f = new SharedFileStream(sourceFile, File::READ, File::OPEN | File::SHARED | File::NO_CACHE_HINT, 0);
+
+									start = startPos;
+									fileSize = f->getFastFileSize();
+									size = bytes == -1 ? fileSize - start : bytes;
+
+									if (size < 0 || size > fileSize || start + size > fileSize)
+									{
+										source->fileNotAvail();
+										delete f;
+										return false;
+									}
+
+									f->setPos(start);
+									if (start + size < fileSize)
+										is = new LimitedInputStream<true>(f, size);
+									else
+										is = f;
+									if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
+									useCompType = COMPRESSION_ENABLED;
+									if (useCompType == COMPRESSION_ENABLED)
+									{
+										is = new FilteredInputStream<ZFilter, true>(is);
+										compressionType = COMPRESSION_ENABLED;
+									}
+									isPartial = true;
+								}
+								catch (const Exception&)
+								{
+									delete is;
+									is = nullptr;
+									sourceFile.clear();
+								}
+							}
+						}
+					}
+				}
+				else
+					sourceFile = ShareManager::getInstance()->getFileByPath(fileName, hideShare, shareGroup, uncompressedXmlSize, &shareManagerError);
 			}
-			else
+			if (sourceFile.empty())
 			{
-				File* f = new File(sourceFile, File::READ, File::OPEN);
-				
-				start = startPos;
-				fileSize = f->getSize();
-				size = bytes == -1 ? fileSize - start : bytes;
-				
-				if (size < 0 || size > fileSize || start + size > fileSize)
-				{
-					source->fileNotAvail();
-					delete f;
-					return false;
-				}
-
-				if (fileSize <= (int64_t)(SETTING(MINISLOT_SIZE)) << 10)
-					isMinislot = true;
-
-				f->setPos(start);
-				is = f;
-				if (start + size < fileSize)
-					is = new LimitedInputStream<true>(is, size);
-				if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
-					useCompType = COMPRESSION_ENABLED;
-				if (useCompType == COMPRESSION_ENABLED)
-				{
-					is = new FilteredInputStream<ZFilter, true>(is);
-					compressionType = COMPRESSION_ENABLED;
-				}
+				source->fileNotAvail(shareManagerError.empty() ? UserConnection::FILE_NOT_AVAILABLE : shareManagerError);
+				return false;
 			}
-			type = isFileList ? Transfer::TYPE_FULL_LIST : Transfer::TYPE_FILE;
+			if (!is)
+			{
+				if (fileName == Transfer::fileNameFilesXml)
+				{
+					File* f = new File(sourceFile, File::READ, File::OPEN);
+					is = new FilteredInputStream<UnBZFilter, true>(f);
+					start = 0;
+					fileSize = size = uncompressedXmlSize;
+				}
+				else
+				{
+					File* f = new File(sourceFile, File::READ, File::OPEN);
+
+					start = startPos;
+					fileSize = f->getSize();
+					size = bytes == -1 ? fileSize - start : bytes;
+
+					if (size < 0 || size > fileSize || start + size > fileSize)
+					{
+						source->fileNotAvail();
+						delete f;
+						return false;
+					}
+
+					if (fileSize <= (int64_t)(SETTING(MINISLOT_SIZE)) << 10)
+						isMinislot = true;
+
+					f->setPos(start);
+					is = f;
+					if (start + size < fileSize)
+						is = new LimitedInputStream<true>(is, size);
+					if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
+						useCompType = COMPRESSION_ENABLED;
+					if (useCompType == COMPRESSION_ENABLED)
+					{
+						is = new FilteredInputStream<ZFilter, true>(is);
+						compressionType = COMPRESSION_ENABLED;
+					}
+				}
+				type = isFileList ? Transfer::TYPE_FULL_LIST : Transfer::TYPE_FILE;
+			}
 		}
 		else if (isTypeTree)
 		{
@@ -390,24 +451,27 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				source->fileNotAvail();
 				return false;
 			}
-			MemoryInputStream* mis;
-			if (isTTH)
+			MemoryInputStream* mis = nullptr;
+			if (ShareManager::isValidInstance())
 			{
-				mis = ShareManager::getInstance()->getTreeByTTH(tth);
-				if (!mis)
+				if (isTTH)
 				{
-					if (QueueManager::fileQueue.isQueued(tth))
-						mis = ShareManager::getTreeFromStore(tth);
+					mis = ShareManager::getInstance()->getTreeByTTH(tth);
+					if (!mis)
+					{
+						if (QueueManager::fileQueue.isQueued(tth))
+							mis = ShareManager::getTreeFromStore(tth);
+					}
 				}
+				else
+					mis = ShareManager::getInstance()->getTree(fileName, shareGroup);
 			}
-			else
-				mis = ShareManager::getInstance()->getTree(fileName, shareGroup);
 			if (!mis)
 			{
 				source->fileNotAvail();
 				return false;
 			}
-			
+
 			sourceFile = fileName;
 			start = 0;
 			fileSize = size = mis->getSize();
@@ -425,13 +489,18 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			}
 #endif
 			// Partial file list
-			MemoryInputStream* mis = ShareManager::getInstance()->generatePartialList(fileName, listRecursive, hideShare, shareGroup);
+			MemoryInputStream* mis = nullptr;
+			if (ShareManager::isValidInstance())
+			{
+				try { mis = ShareManager::getInstance()->generatePartialList(fileName, listRecursive, hideShare, shareGroup); }
+				catch (Exception&) {}
+			}
 			if (!mis)
 			{
 				source->fileNotAvail();
 				return false;
 			}
-			
+
 			sourceFile = fileName;
 			start = 0;
 			fileSize = size = mis->getSize();
@@ -445,66 +514,13 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			return false;
 		}
 	}
-	catch (const ShareException& e)
-	{
-		// Partial file sharing upload
-		if (isTTH)
-		{
-			if (QueueManager::isChunkDownloaded(tth, startPos, bytes, sourceFile))
-			{
-				dcassert(!sourceFile.empty());
-				if (!sourceFile.empty())
-				{
-					try
-					{
-						auto f = new SharedFileStream(sourceFile, File::READ, File::OPEN | File::SHARED | File::NO_CACHE_HINT, 0);
-						
-						start = startPos;
-						fileSize = f->getFastFileSize();
-						size = bytes == -1 ? fileSize - start : bytes;
-						
-						if (size < 0 || size > fileSize || start + size > fileSize)
-						{
-							source->fileNotAvail();
-							delete f;
-							return false;
-						}
-						
-						f->setPos(start);
-						if (start + size < fileSize)
-							is = new LimitedInputStream<true>(f, size);
-						else
-							is = f;
-						if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
-							useCompType = COMPRESSION_ENABLED;
-						if (useCompType == COMPRESSION_ENABLED)
-						{
-							is = new FilteredInputStream<ZFilter, true>(is);
-							compressionType = COMPRESSION_ENABLED;
-						}
-						isPartial = true;
-						type = Transfer::TYPE_FILE;
-						goto ok;
-					}
-					catch (const Exception&)
-					{
-						delete is;
-						is = nullptr;
-					}
-				}
-			}
-		}
-		source->fileNotAvail(e.getError());
-		return false;
-	}
 	catch (const Exception& e)
 	{
 		LogManager::message(STRING(UNABLE_TO_SEND_FILE) + ' ' + sourceFile + ": " + e.getError());
 		source->fileNotAvail();
 		return false;
 	}
-	
-ok:
+
 	auto slotType = source->getSlotType();
 	uint64_t slotTimeout = 0;
 	{
