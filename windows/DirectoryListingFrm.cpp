@@ -58,7 +58,8 @@ const int DirectoryListingFrame::columnId[] =
 	COLUMN_MEDIA_XY,
 	COLUMN_MEDIA_VIDEO,
 	COLUMN_MEDIA_AUDIO,
-	COLUMN_DURATION
+	COLUMN_DURATION,
+	COLUMN_FILES
 };
 
 static const int columnSizes[] =
@@ -75,7 +76,8 @@ static const int columnSizes[] =
 	100, // COLUMN_MEDIA_XY
 	100, // COLUMN_MEDIA_VIDEO
 	100, // COLUMN_MEDIA_AUDIO
-	80   // COLUMN_DURATION
+	80,  // COLUMN_DURATION
+	80   // COLUMN_FILES
 };
 
 static const ResourceManager::Strings columnNames[] =
@@ -92,7 +94,8 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::MEDIA_X_Y,
 	ResourceManager::MEDIA_VIDEO,
 	ResourceManager::MEDIA_AUDIO,
-	ResourceManager::DURATION
+	ResourceManager::DURATION,
+	ResourceManager::FILES
 };
 
 static SearchOptions searchOptions;
@@ -2620,6 +2623,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) :
 	columns[COLUMN_FILENAME] = Text::toT(d->getName());
 	columns[COLUMN_EXACT_SIZE] = Util::formatExactSizeT(d->getTotalSize());
 	columns[COLUMN_SIZE] = Util::formatBytesT(d->getTotalSize());
+	columns[COLUMN_FILES] = Util::toStringT(d->getTotalFileCount());
 	auto totalUploads = d->getTotalUploadCount();
 	if (totalUploads) columns[COLUMN_UPLOAD_COUNT] = Util::toStringT(totalUploads);
 	auto maxTS = d->getMaxTS();
@@ -2654,6 +2658,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 					return compare(a->dir->getTotalUploadCount(), b->dir->getTotalUploadCount());
 				case COLUMN_TS:
 					return compare(a->dir->getMaxTS(), b->dir->getMaxTS());
+				case COLUMN_FILES:
+					return compare(a->dir->getTotalFileCount(), b->dir->getTotalFileCount());
 				default:
 					return Util::defaultSort(a->columns[col], b->columns[col], false);
 			}
@@ -2665,6 +2671,7 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 	switch (col)
 	{
 		case COLUMN_FILENAME:
+		case COLUMN_FILES:
 			return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
 		case COLUMN_TYPE:
 		{
