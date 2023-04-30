@@ -1444,8 +1444,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		for (int i = 0; i < _countof(segCounts); i++)
 		{
 			int count = segCounts[i];
-			const tstring& fmt = TSTRING_I(count == 1 ? ResourceManager::SEGMENTS_1 : ResourceManager::SEGMENTS_N);
-			tstring text = (dcpp_fmt(fmt) % count).str();
+			tstring text = TPLURAL_F(PLURAL_SEGMENTS, count);
 			mii.wID = IDC_SEGMENTONE + count - 1;
 			mii.dwTypeData = const_cast<TCHAR*>(text.c_str());
 			segmentsMenu.InsertMenuItem(i, TRUE, &mii);

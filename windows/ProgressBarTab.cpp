@@ -28,7 +28,7 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_PROGRESS_BUMPED,     FLAG_TRANSLATE, AUTO,   UNSPEC             },
 	{ IDC_PROGRESSBAR_CLASSIC, FLAG_TRANSLATE, AUTO,   UNSPEC             },
 	{ IDC_CAPTION_DEPTH,       FLAG_TRANSLATE, AUTO,   UNSPEC             },
-    { IDC_DEPTH,               0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_DEPTH,               0,              UNSPEC, UNSPEC, 0, &align1 },
 	{ IDC_PROGRESS_OVERRIDE,   FLAG_TRANSLATE, AUTO,   UNSPEC             },
 	{ IDC_PROGRESS_OVERRIDE2,  FLAG_TRANSLATE, AUTO,   UNSPEC             },
 	{ IDC_SET_DL_BACKGROUND,   FLAG_TRANSLATE, UNSPEC, UNSPEC             },
