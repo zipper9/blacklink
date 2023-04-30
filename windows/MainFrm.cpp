@@ -337,6 +337,9 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		FavoriteManager::getInstance()->addPreviewApps(appList, false);
 	}
 
+	if (FavoriteManager::getInstance()->getSearchUrls().empty())
+		addWebSearchUrls();
+
 	QueueManager::getInstance()->addListener(this);
 	WebServerManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
@@ -2276,7 +2279,6 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 				ctrlHashProgress.MoveWindow(&rect);
 			}
 			
-			//tabDHTRect.right -= 2;
 			ctrlStatus.GetRect(STATUS_PART_1, &tabAwayRect);
 			ctrlStatus.GetRect(STATUS_PART_7, &tabDownSpeedRect);
 			ctrlStatus.GetRect(STATUS_PART_8, &tabUpSpeedRect);
@@ -3043,6 +3045,37 @@ void MainFrame::shareFolderFromShell(const tstring& infolder)
 			}
 		}
 	}
+}
+
+struct DefaultSearchUrl
+{
+	const char* name;
+	const char* url;
+	SearchUrl::Type type;
+};
+
+static const DefaultSearchUrl defaultSearchUrls[] =
+{
+	{ "Google",                "https://www.google.com/search?q=%s",  SearchUrl::KEYWORD  },
+	{ "DuckDuckGo",            "https://www.duckduckgo.com/?q=%s",    SearchUrl::KEYWORD  },
+	{ "he.net",                "https://bgp.he.net/dns/%s",           SearchUrl::HOSTNAME },
+	{ "he.net",                "https://bgp.he.net/ip/%s",            SearchUrl::IP4      },
+	{ "he.net",                "https://bgp.he.net/ip/%s",            SearchUrl::IP6      },
+	{ "whatismyipaddress.com", "https://whatismyipaddress.com/ip/%s", SearchUrl::IP4      },
+	{ "whatismyipaddress.com", "https://whatismyipaddress.com/ip/%s", SearchUrl::IP6      }
+};
+
+void MainFrame::addWebSearchUrls()
+{
+	SearchUrl::List data;
+	for (int i = 0; i < _countof(defaultSearchUrls); ++i)
+	{
+		string description = defaultSearchUrls[i].type == SearchUrl::KEYWORD ?
+			STRING_F(WEB_SEARCH_DEFAULT1, defaultSearchUrls[i].name) :
+			STRING_F(WEB_SEARCH_DEFAULT2, defaultSearchUrls[i].name);
+		data.emplace_back(SearchUrl{defaultSearchUrls[i].url, description, defaultSearchUrls[i].type});
+	}
+	FavoriteManager::getInstance()->setSearchUrls(data);
 }
 
 void MainFrame::on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hint, const tstring& message) noexcept

@@ -58,6 +58,7 @@
 #include "GeoIPPage.h"
 #include "FileListPage.h"
 #include "DatabasePage.h"
+#include "SearchUrlsPage.h"
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 #include "FakeDetectPage.h"
@@ -96,6 +97,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new DefaultClickPage();
 	pages[n++] = new LogPage();
 	pages[n++] = new UCPage();
+	pages[n++] = new SearchUrlsPage();
 	pages[n++] = new LimitPage();
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	pages[n++] = new FakeDetect();

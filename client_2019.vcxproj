@@ -807,6 +807,7 @@
     <ClInclude Include="client\RWLockWinXP.h" />
     <ClInclude Include="client\RWLockWrapper.h" />
     <ClInclude Include="client\SearchParam.h" />
+    <ClInclude Include="client\SearchUrl.h" />
     <ClInclude Include="client\SettingsManagerListener.h" />
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />

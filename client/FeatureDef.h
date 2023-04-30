@@ -88,7 +88,6 @@
 #define BL_UI_FEATURE_BB_CODES
 #undef  BL_UI_FEATURE_VIEW_AS_TEXT
 
-#define IRAINMAN_ENABLE_WHOIS
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 //#define IRAINMAN_ENABLE_AUTO_BAN

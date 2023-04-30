@@ -439,6 +439,9 @@
     <ClCompile Include="windows\RegKey.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\SearchUrlsPage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -1012,6 +1015,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\LockRedraw.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\SearchUrlsPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

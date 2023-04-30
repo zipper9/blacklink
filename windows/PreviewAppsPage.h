@@ -37,7 +37,7 @@ class PreviewAppsPage : public CPropertyPage<IDD_PREVIEW_APPS_PAGE>, public Prop
 			ctrlCommands.Detach();
 		}
 
-		BEGIN_MSG_MAP_EX(ColorPage)
+		BEGIN_MSG_MAP_EX(PreviewAppsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_ADD_MENU, onAddMenu)
 		COMMAND_ID_HANDLER(IDC_REMOVE_MENU, onRemoveMenu)

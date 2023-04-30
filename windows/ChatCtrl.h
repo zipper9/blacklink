@@ -49,12 +49,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		NOTIFY_HANDLER(IDC_CLIENT, EN_LINK, onEnLink)
 		COMMAND_ID_HANDLER(IDC_COPY_ACTUAL_LINE, onCopyActualLine)
 		COMMAND_ID_HANDLER(IDC_COPY_URL, onCopyURL)
-#ifdef IRAINMAN_ENABLE_WHOIS
-		COMMAND_ID_HANDLER(IDC_WHOIS_IP, onWhoisIP)
-		COMMAND_ID_HANDLER(IDC_WHOIS_IP2, onWhoisIP)
-		COMMAND_ID_HANDLER(IDC_WHOIS_URL, onWhoisURL)
 		COMMAND_ID_HANDLER(IDC_REPORT_CHAT, onDumpUserInfo)
-#endif
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, onEditCopy)
 		COMMAND_ID_HANDLER(ID_EDIT_SELECT_ALL, onEditSelectAll)
 		COMMAND_ID_HANDLER(ID_EDIT_CLEAR_ALL, onEditClearAll)
@@ -62,11 +57,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		
 		LRESULT onMouseWheel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-#ifdef IRAINMAN_ENABLE_WHOIS
-		LRESULT onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
 		LRESULT onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditSelectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditClearAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -171,6 +162,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		static tstring g_sSelectedIP;
 		static tstring g_sSelectedUserName;
 		static tstring g_sSelectedURL;
+		static string g_sSelectedHostname;
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 	protected:

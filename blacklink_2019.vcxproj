@@ -892,6 +892,7 @@
     <ClCompile Include="windows\SearchFrm.cpp" />
     <ClCompile Include="windows\SearchHistory.cpp" />
     <ClCompile Include="windows\SearchPage.cpp" />
+    <ClCompile Include="windows\SearchUrlsPage.cpp" />
     <ClCompile Include="windows\SettingsStore.cpp" />
     <ClCompile Include="windows\ShareGroupList.cpp" />
     <ClCompile Include="windows\ShareMiscPage.cpp" />
@@ -1049,6 +1050,7 @@
     <ClInclude Include="windows\SearchDlg.h" />
     <ClInclude Include="windows\SearchHistory.h" />
     <ClInclude Include="windows\SearchPage.h" />
+    <ClInclude Include="windows\SearchUrlsPage.h" />
     <ClInclude Include="windows\SettingsStore.h" />
     <ClInclude Include="windows\ShareGroupList.h" />
     <ClInclude Include="windows\ShareMiscPage.h" />

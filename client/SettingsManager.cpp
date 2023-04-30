@@ -1564,8 +1564,9 @@ void SettingsManager::loadOtherSettings()
 		ShareManager::getInstance()->load(xml);
 		auto fm = FavoriteManager::getInstance();
 		fm->loadRecents(xml);
-		fm->loadPreview(xml);
-		
+		fm->loadPreviewApps(xml);
+		fm->loadSearchUrls(xml);
+
 		fire(SettingsManagerListener::Load(), xml);
 		xml.stepOut();
 	}
@@ -2063,7 +2064,8 @@ void SettingsManager::save(const string& fileName)
 		}
 	}
 	xml.stepOut();
-	FavoriteManager::getInstance()->savePreview(xml);
+	FavoriteManager::getInstance()->savePreviewApps(xml);
+	FavoriteManager::getInstance()->saveSearchUrls(xml);
 	ShareManager::getInstance()->saveShareList(xml);
 
 	fire(SettingsManagerListener::Save(), xml);

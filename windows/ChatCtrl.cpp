@@ -42,6 +42,7 @@ tstring ChatCtrl::g_sSelectedText;
 tstring ChatCtrl::g_sSelectedIP;
 tstring ChatCtrl::g_sSelectedUserName;
 tstring ChatCtrl::g_sSelectedURL;
+string ChatCtrl::g_sSelectedHostname;
 
 ChatCtrl::ChatCtrl() : autoScroll(true), useChatCacheFlag(true), chatCacheSize(0),
 	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr),
@@ -854,26 +855,6 @@ LRESULT ChatCtrl::onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 	return 0;
 }
 
-#ifdef IRAINMAN_ENABLE_WHOIS
-LRESULT ChatCtrl::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (!g_sSelectedIP.empty())
-		WinUtil::processWhoisMenu(wID, g_sSelectedIP);
-	return 0;
-}
-
-LRESULT ChatCtrl::onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (!g_sSelectedURL.empty())
-	{
-		Util::ParsedUrl url;
-		Util::decodeUrl(Text::fromT(g_sSelectedURL), url);
-		if (!url.host.empty())
-			WinUtil::openLink(_T("http://bgp.he.net/dns/") + Text::toT(url.host) + _T("#_website"));
-	}
-	return 0;
-}
-
 LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!g_sSelectedIP.empty())
@@ -892,7 +873,6 @@ LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 	}
 	return 0;
 }
-#endif
 
 LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {

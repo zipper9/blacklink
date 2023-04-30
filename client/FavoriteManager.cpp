@@ -1699,7 +1699,7 @@ void FavoriteManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		saveFavorites();
 }
 
-void FavoriteManager::loadPreview(SimpleXML& xml)
+void FavoriteManager::loadPreviewApps(SimpleXML& xml)
 {
 	ASSERT_MAIN_THREAD();
 	xml.resetCurrentChild();
@@ -1715,7 +1715,7 @@ void FavoriteManager::loadPreview(SimpleXML& xml)
 	}
 }
 
-void FavoriteManager::savePreview(SimpleXML& xml) const
+void FavoriteManager::savePreviewApps(SimpleXML& xml) const
 {
 	ASSERT_MAIN_THREAD();
 	xml.addTag("PreviewApps");
@@ -1727,6 +1727,40 @@ void FavoriteManager::savePreview(SimpleXML& xml) const
 		xml.addChildAttrib("Application", item->application);
 		xml.addChildAttrib("Arguments", item->arguments);
 		xml.addChildAttrib("Extension", item->extension);
+	}
+	xml.stepOut();
+}
+
+void FavoriteManager::loadSearchUrls(SimpleXML& xml)
+{
+	ASSERT_MAIN_THREAD();
+	xml.resetCurrentChild();
+	if (xml.findChild("SearchUrls"))
+	{
+		xml.stepIn();
+		while (xml.findChild("SearchUrl"))
+		{
+			const string& description = xml.getChildAttrib("Description");
+			const string& url = xml.getChildAttrib("URL");
+			int type = xml.getIntChildAttrib("Type");
+			if (!description.empty() && !url.empty() && type >= 0 && type <= (int) SearchUrl::MAX_TYPE)
+				searchUrls.emplace_back(SearchUrl{url, description, (SearchUrl::Type) type});
+		}
+		xml.stepOut();
+	}
+}
+
+void FavoriteManager::saveSearchUrls(SimpleXML& xml) const
+{
+	ASSERT_MAIN_THREAD();
+	xml.addTag("SearchUrls");
+	xml.stepIn();
+	for (const auto& item : searchUrls)
+	{
+		xml.addTag("SearchUrl");
+		xml.addChildAttrib("Description", item.description);
+		xml.addChildAttrib("URL", item.url);
+		xml.addChildAttrib("Type", (int) item.type);
 	}
 	xml.stepOut();
 }
@@ -1789,7 +1823,7 @@ void FavoriteManager::addPreviewApps(PreviewApplication::List& apps, bool force)
 	apps.clear();
 }
 
-void FavoriteManager::removePreviewApp(const size_t index)
+void FavoriteManager::removePreviewApp(size_t index)
 {
 	ASSERT_MAIN_THREAD();
 	if (index < previewApplications.size())
@@ -1800,13 +1834,13 @@ void FavoriteManager::removePreviewApp(const size_t index)
 	}
 }
 
-const PreviewApplication* FavoriteManager::getPreviewApp(const size_t index) const
+const PreviewApplication* FavoriteManager::getPreviewApp(size_t index) const
 {
 	ASSERT_MAIN_THREAD();
 	return index < previewApplications.size() ? previewApplications[index] : nullptr;
 }
 
-PreviewApplication* FavoriteManager::getPreviewApp(const size_t index)
+PreviewApplication* FavoriteManager::getPreviewApp(size_t index)
 {
 	ASSERT_MAIN_THREAD();
 	return index < previewApplications.size() ? previewApplications[index] : nullptr;
@@ -1817,4 +1851,10 @@ void FavoriteManager::clearRecents()
 	ASSERT_MAIN_THREAD();
 	recentHubs.clear();
 	recentsDirty = true;
+}
+
+void FavoriteManager::setSearchUrls(const SearchUrl::List& urls)
+{
+	ASSERT_MAIN_THREAD();
+	searchUrls = urls;
 }

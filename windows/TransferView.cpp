@@ -351,13 +351,11 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED);
 			}
 
-#ifdef IRAINMAN_ENABLE_WHOIS
 			if (ii->transferIp.type)
 			{
-				selectedIP = Util::printIpAddressT(ii->transferIp);  // set tstring for 'openlink function'
-				WinUtil::appendWhoisMenu(getServiceSubMenu(), selectedIP, true);
+				selectedIP = Util::printIpAddress(ii->transferIp); // save current IP for performWebSearch
+				appendWebSearchItems(getServiceSubMenu(), ii->transferIp.type == AF_INET6 ? SearchUrl::IP6 : SearchUrl::IP4, true, ResourceManager::WEB_SEARCH_IP);
 			}
-#endif
 
 			activatePreviewItems(transferMenu);
 
@@ -394,15 +392,6 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 	bHandled = FALSE;
 	return FALSE;
 }
-
-#ifdef IRAINMAN_ENABLE_WHOIS
-LRESULT TransferView::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (!selectedIP.empty())
-		WinUtil::processWhoisMenu(wID, selectedIP);
-	return 0;
-}
-#endif // IRAINMAN_ENABLE_WHOIS
 
 void TransferView::openDownloadQueue(const ItemInfo* ii)
 {
@@ -1798,6 +1787,12 @@ LRESULT TransferView::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 			runPreview(wID, target);
 	}
 	
+	return 0;
+}
+
+LRESULT TransferView::onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	performWebSearch(wID, selectedIP);
 	return 0;
 }
 

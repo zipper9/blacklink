@@ -46,6 +46,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	private QueueManagerListener,
 	public UserInfoBaseHandler<TransferView, TRANSFERS_VIEW_TRAITS>,
 	public PreviewBaseHandler,
+	public InternetSearchBaseHandler,
 	public UCHandler<TransferView>,
 	private SettingsManagerListener
 {
@@ -75,10 +76,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
 		MESSAGE_HANDLER(WM_NOTIFYFORMAT, onNotifyFormat)
-#ifdef IRAINMAN_ENABLE_WHOIS
-		COMMAND_ID_HANDLER(IDC_WHOIS_IP, onWhoisIP)
-		COMMAND_ID_HANDLER(IDC_WHOIS_IP2, onWhoisIP)
-#endif
 		COMMAND_ID_HANDLER(IDC_FORCE, onForce)
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchAlternates)
 		COMMAND_ID_HANDLER(IDC_ADD_P2P_GUARD, onAddP2PGuard)
@@ -104,6 +101,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uibBase)
 		CHAIN_COMMANDS(PreviewBaseHandler)
+		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -116,11 +114,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		LRESULT onDisconnectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-#ifdef IRAINMAN_ENABLE_WHOIS
-		LRESULT onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
+
 		void runUserCommand(UserCommand& uc);
 		void prepareClose();
 		LRESULT onCollapseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -202,10 +198,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 	public:
 		void getSelectedUsers(vector<UserPtr>& v) const;
-
-#ifdef IRAINMAN_ENABLE_WHOIS
-		tstring selectedIP;
-#endif
 
 	private:
 		enum Tasks
@@ -541,6 +533,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 		StringMap ucLineParams;
 		bool shouldSort;
+		string selectedIP;
 
 		TaskQueue tasks;
 		TimerHelper timer;

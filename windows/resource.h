@@ -134,6 +134,8 @@
 #define IDD_DETECTED_APPS               353
 #define IDD_HELP_TEXT                   364
 #define IDD_INSERT_LINK                 365
+#define IDD_SEARCH_URL                  366
+#define IDD_SEARCH_URLS_PAGE            367
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_GROUP_TEMPLATES             1002
@@ -197,6 +199,7 @@
 #define IDC_NICK                        1060
 #define IDC_EMAIL                       1061
 #define IDC_DESCRIPTION                 1062
+#define IDC_TYPE                        1063
 #define IDC_USERS                       1064
 #define IDC_CLOSE_ALL_OFFLINE_DIR_LIST  1065
 #define IDC_CONNECTION                  1066
@@ -742,6 +745,9 @@
 #define IDC_B1                          1714
 #define IDC_USE_FAST_HASH               1715
 #define IDC_MAGNET_URL_TEMPLATE         1716
+#define IDC_CAPTION_TYPE                1717
+#define IDC_CAPTION_URL                 1718
+#define IDC_URL                         1719
 #define IDC_DISCONNECTS_T               1722
 #define IDC_TIMEOUT_T                   1725
 #define IDC_CLIENT_ID                   1727
@@ -1041,7 +1047,6 @@
 #define IDC_COPY_DESCRIPTION            2153
 #define IDC_COPY_EMAIL_ADDRESS          2154
 #define IDC_AUTOSCROLL_CHAT             2155
-#define IDC_WHOIS_IP                    2156
 #define IDC_BAN_IP                      2157
 #define IDC_UNBAN_IP                    2158
 #define IDC_CLIENT                      2159
@@ -1186,8 +1191,6 @@
 #define IDC_SEARCH_SIZE                 2327
 #define IDC_SEARCH_MODE                 2328
 #define IDC_SHOW_DUPLICATES             2329
-#define IDC_SEARCH_FILE_IN_GOOGLE       2330
-#define IDC_SEARCH_FILE_IN_YANDEX       2332
 #define IDC_COPY_HUB_URL                2333
 #define IDC_COPY_FULL_MAGNET_LINK       2334
 #define IDC_HUBS_SWITCHPANELS           2335
@@ -1230,8 +1233,6 @@
 #define IDC_REDOWNLOAD_FILE             2396
 #define IDC_ENABLE_P2P_GUARD            2397
 #define IDC_P2P_GUARD_DESC              2398
-#define IDC_WHOIS_IP2                   2399
-#define IDC_WHOIS_URL                   2400
 #define IDC_ADD_P2P_GUARD               2401
 #define IDC_TABS                        2402
 #define IDC_REPORT_CHAT                 2403
@@ -1288,6 +1289,7 @@
 #define IDC_USER_INFO                   7700
 #define IDC_COPY_URL                    7800
 #define IDC_COPY_URL_TREE               7900
+#define IDC_WEB_SEARCH                  8200
 #define ID_SHELLCONTEXTMENU_MIN         28000
 #define ID_SHELLCONTEXTMENU_MAX         29000
 #define ID_VIEW_MEDIA_TOOLBAR           32771

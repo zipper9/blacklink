@@ -42,7 +42,7 @@ class ChatMessage
 		ChatMessage& operator= (const ChatMessage&) = delete;
 
 		bool isPrivate() const { return to && replyTo; }
-		static string formatNick(const string& nick, const bool thirdPerson)
+		static string formatNick(const string& nick, bool thirdPerson)
 		{
 			// let's *not* obey the spec here and add a space after the star. :P
 			return thirdPerson ? "* " + nick + ' ' : '<' + nick + "> ";

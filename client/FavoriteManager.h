@@ -28,6 +28,7 @@
 #include "HubEntry.h"
 #include "FavHubGroup.h"
 #include "PreviewApplication.h"
+#include "SearchUrl.h"
 #include "TimerManager.h"
 #include "RWLock.h"
 
@@ -235,10 +236,15 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		PreviewApplication* addPreviewApp(const string& name, const string& application, const string& arguments, const string& extension);
 		void addPreviewApps(PreviewApplication::List& apps, bool force);
-		void removePreviewApp(const size_t index);
-		const PreviewApplication* getPreviewApp(const size_t index) const;
-		PreviewApplication* getPreviewApp(const size_t index);
+		void removePreviewApp(size_t index);
+		const PreviewApplication* getPreviewApp(size_t index) const;
+		PreviewApplication* getPreviewApp(size_t index);
 		const PreviewApplication::List& getPreviewApps() const { return previewApplications; }
+
+		// Search URLs
+
+		void setSearchUrls(const SearchUrl::List& urls);
+		const SearchUrl::List& getSearchUrls() const { return searchUrls; }
 
 		// User Commands
 
@@ -273,13 +279,14 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		RecentHubEntry::List recentHubs;
 		PreviewApplication::List previewApplications;
-		
+		SearchUrl::List searchUrls;
+
 		FavoriteMap favoriteUsers;
 		mutable std::unique_ptr<RWLock> csUsers;
 
 		FavDirList favoriteDirs;
 		std::unique_ptr<RWLock> csDirs;
-		
+
 		int dontSave; // Used during loading to prevent saving.
 		bool recentsDirty;
 		bool favsDirty;
@@ -288,11 +295,13 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 	public:
 		void shutdown();
-		
+
 		void loadRecents(SimpleXML& xml);
-		void loadPreview(SimpleXML& xml);
-		void savePreview(SimpleXML& xml) const;
-		
+		void loadPreviewApps(SimpleXML& xml);
+		void savePreviewApps(SimpleXML& xml) const;
+		void loadSearchUrls(SimpleXML& xml);
+		void saveSearchUrls(SimpleXML& xml) const;
+
 	private:
 		friend class Singleton<FavoriteManager>;
 		

@@ -198,10 +198,6 @@ namespace WinUtil
 	bool setExplorerTheme(HWND hWnd);
 	unsigned getListViewExStyle(bool checkboxes);
 	unsigned getTreeViewStyle();
-#ifdef IRAINMAN_ENABLE_WHOIS
-	bool processWhoisMenu(WORD wID, const tstring& ip);
-	void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
-#endif
 	void getAdapterList(int af, vector<Util::AdapterInfo>& adapters, int options = 0);
 	int fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, CComboBox& bindCombo, const string& selected, int options);
 	string getSelectedAdapter(const CComboBox& bindCombo);

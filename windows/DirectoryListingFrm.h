@@ -217,15 +217,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
-		LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			const auto ii = ctrlList.getSelectedItem();
-			if (ii && ii->type == ItemInfo::FILE)
-			{
-				searchFileOnInternet(wID, ii->file->getName());
-			}
-			return 0;
-		}
+		LRESULT onPerformWebSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyUrl(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

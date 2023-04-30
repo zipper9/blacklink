@@ -1318,54 +1318,6 @@ unsigned WinUtil::getTreeViewStyle()
 	return TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT;
 }
 
-#ifdef IRAINMAN_ENABLE_WHOIS
-bool WinUtil::processWhoisMenu(WORD wID, const tstring& ip)
-{
-	if (!ip.empty())
-	{
-		tstring link;
-		switch (wID)
-		{
-			case IDC_WHOIS_IP:
-				link = _T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + ip;
-				break;
-			case IDC_WHOIS_IP2:
-				link = _T("http://bgp.he.net/ip/") + ip+ _T("#_whois");
-				break;
-		}
-		if (!link.empty())
-		{
-			WinUtil::openLink(link);
-			return true;
-		}
-	}
-	return false;
-}
-
-void WinUtil::appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubMenu)
-{
-	CMenu subMenu;
-	if (useSubMenu)
-	{
-		subMenu.CreateMenu();
-		menu.AppendMenu(MF_STRING, subMenu, CTSTRING(WHOIS_LOOKUP));
-	}
-
-	tstring text = TSTRING(WHO_IS) + _T(" Ripe.net  ") + ip;
-	if (useSubMenu)
-		subMenu.AppendMenu(MF_STRING, IDC_WHOIS_IP, text.c_str());
-	else
-		menu.AppendMenu(MF_STRING, IDC_WHOIS_IP, text.c_str());
-
-	text = TSTRING(WHO_IS) + _T(" Bgp.He  ") + ip;
-	if (useSubMenu)
-		subMenu.AppendMenu(MF_STRING, IDC_WHOIS_IP2, text.c_str());
-	else
-		menu.AppendMenu(MF_STRING, IDC_WHOIS_IP2, text.c_str());
-	subMenu.Detach();
-}
-#endif
-
 void WinUtil::appendPrioItems(OMenu& menu, int idFirst)
 {
 	static const ResourceManager::Strings names[] =

@@ -373,7 +373,6 @@ IconBitmaps::IconBitmaps()
 	init(SETTINGS,                SOURCE_MAIN,     15);
 	init(NOTEPAD,                 SOURCE_MAIN,     16);
 	init(SHUTDOWN,                SOURCE_MAIN,     18);
-	init(INTERNET,                SOURCE_MAIN,     20);
 	init(DOWNLOADS_DIR,           SOURCE_MAIN,     22);
 	init(REFRESH_SHARE,           SOURCE_MAIN,     23);
 	init(QUICK_CONNECT,           SOURCE_MAIN,     25);
@@ -392,6 +391,7 @@ IconBitmaps::IconBitmaps()
 	init(COMMANDS,                SOURCE_SETTINGS, 25);
 	init(LIMIT,                   SOURCE_SETTINGS, 26);
 	init(WALL,                    SOURCE_SETTINGS, 32);
+	init(WEB_SEARCH,              SOURCE_SETTINGS, 35);
 	init(MESSAGES,                SOURCE_SETTINGS, 39);
 	init(HUB_ONLINE,              SOURCE_HUB,      0);
 	init(HUB_OFFLINE,             SOURCE_HUB,      1);

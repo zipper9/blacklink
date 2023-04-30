@@ -446,12 +446,22 @@ void BaseChatFrame::clearInputBox()
 	multiChatLines = 0;
 }
 
-LRESULT BaseChatFrame::onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT BaseChatFrame::onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!ChatCtrl::g_sSelectedText.empty())
+	string query;
+	switch (getWebSearchType(wID))
 	{
-		searchFileOnInternet(wID, ChatCtrl::g_sSelectedText);
+		case SearchUrl::KEYWORD:
+			query = Text::fromT(ChatCtrl::g_sSelectedText);
+			break;
+		case SearchUrl::HOSTNAME:
+			query = ChatCtrl::g_sSelectedHostname;
+			break;
+		case SearchUrl::IP4:
+		case SearchUrl::IP6:
+			query = Text::fromT(ChatCtrl::g_sSelectedIP);
 	}
+	performWebSearch(wID, query);
 	return 0;
 }
 
@@ -791,11 +801,9 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 	if (!ChatCtrl::g_sSelectedIP.empty())
 	{
 		menu.InsertSeparatorFirst(ChatCtrl::g_sSelectedIP);
-#ifdef IRAINMAN_ENABLE_WHOIS
-		WinUtil::appendWhoisMenu(menu, ChatCtrl::g_sSelectedIP, false);
+		appendWebSearchItems(menu, SearchUrl::IP4, false, ResourceManager::Strings());
 		menu.AppendMenu(MF_STRING, IDC_REPORT_CHAT, CTSTRING(DUMP_USER_INFO));
 		menu.AppendMenu(MF_SEPARATOR);
-#endif
 		if (isOp)
 		{
 			menu.AppendMenu(MF_STRING, IDC_BAN_IP, (_T("!banip ") + ChatCtrl::g_sSelectedIP).c_str());
@@ -806,26 +814,26 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 	
 	menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY_SELECTED_TEXT));
 	menu.AppendMenu(MF_STRING, IDC_COPY_ACTUAL_LINE,  CTSTRING(COPY_LINE));
+	ChatCtrl::g_sSelectedHostname.clear();
 	if (!ChatCtrl::g_sSelectedURL.empty())
 	{
 		menu.AppendMenu(MF_STRING, IDC_COPY_URL, CTSTRING(COPY_LINK));
-		
-#ifdef IRAINMAN_ENABLE_WHOIS
 		if (!Util::isMagnetLink(ChatCtrl::g_sSelectedURL))
 		{
-			menu.AppendMenu(MF_SEPARATOR);
-			menu.AppendMenu(MF_STRING, IDC_WHOIS_URL, (TSTRING(WHO_IS) + _T(" URL: Bgp.He")/* + ChatCtrl::g_sSelectedURL*/).c_str());
+			Util::ParsedUrl url;
+			Util::decodeUrl(Text::fromT(ChatCtrl::g_sSelectedURL), url);
+			if (!url.host.empty())
+			{
+				ChatCtrl::g_sSelectedHostname = std::move(url.host);
+				appendWebSearchItems(menu, SearchUrl::HOSTNAME, false, ResourceManager::Strings());
+			}
 		}
-#endif
 	}
-	
+
 	if (!ChatCtrl::g_sSelectedText.empty())
-	{
-		menu.AppendMenu(MF_SEPARATOR);
-		appendInternetSearchItems(menu);
-	}
+		appendWebSearchItems(menu, SearchUrl::KEYWORD, true, ResourceManager::WEB_SEARCH_KEYWORD);
 	menu.AppendMenu(MF_SEPARATOR);
-	
+
 	menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL), g_iconBitmaps.getBitmap(IconBitmaps::SELECTION, 0));
 	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR), g_iconBitmaps.getBitmap(IconBitmaps::ERASE, 0));
 	menu.AppendMenu(MF_STRING, IDC_SAVE, CTSTRING(SAVE_TO_FILE));

@@ -20,17 +20,18 @@
 #define PROP_PAGE_H
 
 #include <atlcrack.h>
+#include "typedefs.h"
 #include "resource.h"
 #include "PropPageIcons.h"
-
-class SettingsManager;
 #include "../client/ResourceManager.h"
 
-extern SettingsManager *g_settings;
+class SettingsManager;
+extern SettingsManager* g_settings;
+
 class PropPage
 {
 	public:
-		PropPage(const wstring& p_title) : m_title(p_title)
+		PropPage(const tstring& title) : m_title(title)
 		{
 		}
 		virtual ~PropPage()
@@ -38,7 +39,7 @@ class PropPage
 		}
 		
 		virtual PROPSHEETPAGE *getPSP() = 0;
-		virtual int getPageIcon() const { return PROP_PAGE_ICON_EMPTY; }
+		virtual int getPageIcon() const = 0;
 		virtual void write() = 0;
 		virtual void cancel() {}
 		virtual void onHide() {}
@@ -66,7 +67,7 @@ class PropPage
 		static void write(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
 
 	protected:
-		wstring m_title;
+		tstring m_title;
 		void cancel(HWND page);
 		bool getBoolSetting(const ListItem* listItems, HWND list, int setting);
 };

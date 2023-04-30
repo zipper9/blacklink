@@ -653,13 +653,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool getPasswordInternal(INT_PTR& result, HWND hwndParent);
 
 		void shareFolderFromShell(const tstring& folder);
-		
-#if 0
-		// WebServerListener
-		void on(WebServerListener::Setup) noexcept override;
-#endif
+		void addWebSearchUrls();
+
 		void on(WebServerListener::ShutdownPC, int) noexcept override;
-		
+
 		// QueueManagerListener
 		void on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& download) noexcept override;
 		void on(QueueManagerListener::PartialList, const HintedUser& user, const string& text) noexcept override;

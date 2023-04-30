@@ -1239,6 +1239,17 @@ LRESULT DirectoryListingFrame::onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, 
 }
 #endif
 
+LRESULT DirectoryListingFrame::onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	const auto ii = ctrlList.getSelectedItem();
+	if (!ii) return 0;
+	if (ii->type == ItemInfo::FILE)
+		performWebSearch(wID, ii->file->getName());
+	else
+		performWebSearch(wID, ii->dir->getName());
+	return 0;
+}
+
 LRESULT DirectoryListingFrame::onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ItemInfo* ii = ctrlList.getSelectedItem();
@@ -1543,8 +1554,10 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 #endif
 		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 		fileMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
-		int searchIndex = fileMenu.GetMenuItemCount();
-		appendInternetSearchItems(fileMenu);
+
+		int webSearchIndex =
+			appendWebSearchItems(fileMenu, SearchUrl::KEYWORD, true, ResourceManager::WEB_SEARCH_KEYWORD) ?
+			fileMenu.GetMenuItemCount() - 1 : -1;
 
 		OMenu locateMenu;
 		targets.clear();
@@ -1628,8 +1641,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		{
 			bool isDirectory = selCount == 1 && ii->type == ItemInfo::DIRECTORY;
 			fileMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MF_BYCOMMAND | MFS_DISABLED);
-			if (selCount > 1)
-				fileMenu.EnableMenuItem(searchIndex, MF_BYPOSITION | MFS_DISABLED);
+			if (selCount > 1 && webSearchIndex != -1)
+				fileMenu.EnableMenuItem(webSearchIndex, MF_BYPOSITION | MFS_DISABLED);
 			if (!isDirectory)
 				fileMenu.EnableMenuItem(IDC_GENERATE_DCLST_FILE, MF_BYCOMMAND | MFS_DISABLED);
 			if (isDirectory)
