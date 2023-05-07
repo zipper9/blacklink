@@ -863,7 +863,7 @@ void QueueFrame::insertTrees()
 	treeInserted = true;
 }
 
-bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const
+bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, const string& path, DirItem* &dir, bool remove)
 {
 	string::size_type last = path.rfind(PATH_SEPARATOR);
 	if (last == string::npos)
@@ -880,7 +880,7 @@ bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, con
 			if (target.length() == path.length() && !stricmp(target, path))
 			{
 				dir = fileLists;
-				file = i;
+				if (remove) dir->files.erase(i);
 				return true;
 			}
 		}
@@ -914,18 +914,14 @@ bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, con
 		item = nextItem;
 		start = end + 1;
 	}
+	if (last == path.length()-1) return false;
 	dir = item;
-	if (last == path.length()-1)
-	{
-		file = item->files.end();
-		return true;
-	}
 	if (qi)
 	{
 		for (auto i = item->files.begin(); i != item->files.end(); ++i)
 			if ((*i) == qi)
 			{
-				file = i;
+				if (remove) dir->files.erase(i);
 				return true;
 			}
 	}
@@ -936,7 +932,7 @@ bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, con
 			const string& target = (*i)->getTarget();
 			if (target.length() == path.length() && !stricmp(target, path))
 			{
-				file = i;
+				if (remove) dir->files.erase(i);
 				return true;
 			}
 		}
@@ -947,19 +943,17 @@ bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, con
 bool QueueFrame::removeItem(const QueueItemPtr& qi, const string* oldPath)
 {
 	DirItem* dir;
-	list<QueueItemPtr>::iterator file;
 	if (oldPath)
 	{
-		if (!findItem(qi, qi->getFlags(), *oldPath, dir, file)) return false;
+		if (!findItem(qi, qi->getFlags(), *oldPath, dir, true)) return false;
 	}
 	else
 	{
-		if (!findItem(QueueItemPtr(), qi->getFlags(), qi->getTarget(), dir, file)) return false;
+		if (!findItem(QueueItemPtr(), qi->getFlags(), qi->getTarget(), dir, true)) return false;
 	}
 	updateStatus = true;
-	dir->files.erase(file);
 	int64_t size = qi->getSize();
-	if (size < 0 || qi->isUserList()) size = 0; // FIXME: file list size
+	if (size < 0) size = 0;
 	DirItem* item = dir;
 	const DirItem* foundSubdir = nullptr;
 	while (item)
@@ -999,6 +993,50 @@ bool QueueFrame::removeItem(const QueueItemPtr& qi, const string* oldPath)
 		}
 	}
 	removeEmptyDir(dir);
+	return true;
+}
+
+bool QueueFrame::updateItemSize(const QueueItemPtr& qi, int64_t diff)
+{
+	DirItem* dir;
+	if (!findItem(QueueItemPtr(), qi->getFlags(), qi->getTarget(), dir, false)) return false;
+	updateStatus = true;
+	DirItem* item = dir;
+	const DirItem* foundSubdir = nullptr;
+	while (item)
+	{
+		item->totalSize += diff;
+		dcassert(item->totalSize >= 0);
+		DirItem* prev = item;
+		item = item->parent;
+		if (item == currentDir) foundSubdir = prev;
+	}
+	if (dir == currentDir)
+	{
+		int count = ctrlQueue.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			QueueItemInfo* ii = ctrlQueue.getItemData(i);
+			if (ii->getQueueItem() == qi)
+			{
+				ctrlQueue.updateItem(i, COLUMN_SIZE);
+				break;
+			}
+		}
+	}
+	else if (foundSubdir)
+	{
+		int count = ctrlQueue.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			QueueItemInfo* ii = ctrlQueue.getItemData(i);
+			if (ii->getDirItem() == foundSubdir)
+			{
+				ctrlQueue.updateItem(i, COLUMN_SIZE);
+				break;
+			}
+		}
+	}
 	return true;
 }
 
@@ -1069,6 +1107,11 @@ void QueueFrame::on(QueueManagerListener::Tick, const QueueItemList& itemList) n
 {
 	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && !itemList.empty())
 		on(QueueManagerListener::StatusUpdatedList(), itemList);
+}
+
+void QueueFrame::on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept
+{
+	addTask(UPDATE_FILE_SIZE, new UpdateFileSizeTask(qi, diff));
 }
 
 void QueueFrame::on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept
@@ -1174,6 +1217,12 @@ void QueueFrame::processTasks()
 				ctrlStatus.SetText(1, Text::toT(status.str).c_str());
 			}
 			break;
+			case UPDATE_FILE_SIZE:
+			{
+				const auto& task = static_cast<UpdateFileSizeTask&>(*ti->second);
+				updateItemSize(task.qi, task.diff);
+			}
+			break;
 			default:
 				dcassert(0);
 				break;
@@ -1217,11 +1266,7 @@ void QueueFrame::removeSelected()
 		
 		auto qm = QueueManager::getInstance();
 		for (const QueueItemPtr& qi : targets)
-			qm->removeTarget(qi->getTarget(), true);
-#if 0
-		QueueManager::FileQueue::removeArray();
-		QueueManager::getInstance()->fire_remove_batch();
-#endif
+			qm->removeTarget(qi->getTarget());
 	}
 }
 
@@ -1259,7 +1304,7 @@ void QueueFrame::removeSelectedDir()
 
 		auto qm = QueueManager::getInstance();
 		for (const QueueItemPtr& qi : targets)
-			qm->removeTarget(qi->getTarget(), true);
+			qm->removeTarget(qi->getTarget());
 	}
 }
 
@@ -2554,8 +2599,7 @@ LRESULT QueueFrame::onShowQueueItem(UINT, WPARAM wParam, LPARAM lParam, BOOL&)
 		else
 		{
 			DirItem* dir;
-			list<QueueItemPtr>::iterator file;
-			if (findItem(QueueItemPtr(), 0, *target, dir, file))
+			if (findItem(QueueItemPtr(), 0, *target, dir, false))
 				ht = dir->ht;
 		}
 	}

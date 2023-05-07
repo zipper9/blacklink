@@ -1131,7 +1131,7 @@ void QueueManager::processFileExistsQuery(const string& path, int action, const 
 			setPriority(newPath, priority, false);
 			break;
 		case SettingsManager::TE_ACTION_SKIP:
-			removeTarget(path, false);
+			removeTarget(path);
 	}
 }
 
@@ -1194,37 +1194,36 @@ void QueueManager::addDirectory(const string& dir, const UserPtr& user, const st
 {
 	dcassert(flag == QueueItem::FLAG_DIRECTORY_DOWNLOAD || flag == QueueItem::FLAG_MATCH_QUEUE);
 	dcassert(user);
-	if (user)
+	if (!user)
+		return;
+
 	{
+		int matchQueueItems = 0;
+		LOCK(csDirectories);
+		const auto dp = directories.equal_range(user);
+		for (auto i = dp.first; i != dp.second; ++i)
 		{
-			int matchQueueItems = 0;
-			LOCK(csDirectories);
-			const auto dp = directories.equal_range(user);
-			for (auto i = dp.first; i != dp.second; ++i)
+			if (flag == QueueItem::FLAG_MATCH_QUEUE && (i->second.getFlags() & QueueItem::FLAG_MATCH_QUEUE))
 			{
-				if (flag == QueueItem::FLAG_MATCH_QUEUE && (i->second.getFlags() & QueueItem::FLAG_MATCH_QUEUE))
-				{
-					if (++matchQueueItems == MAX_MATCH_QUEUE_ITEMS) return;
-				}
-				if (stricmp(dir, i->second.getName()) == 0)
-				{
-					i->second.addFlags(flag);
-					return;
-				}
+				if (++matchQueueItems == MAX_MATCH_QUEUE_ITEMS) return;
 			}
+			if (stricmp(dir, i->second.getName()) == 0)
+			{
+				i->second.addFlags(flag);
+				return;
+			}
+		}
+		// Unique directory, fine...
+		directories.emplace(make_pair(user, DirectoryItem(user, dir, target, p, flag)));
+	}
 
-			// Unique directory, fine...
-			directories.emplace(make_pair(user, DirectoryItem(user, dir, target, p, flag)));
-		}
-
-		try
-		{
-			addList(user, flag | QueueItem::FLAG_PARTIAL_LIST, dir);
-		}
-		catch (const Exception&)
-		{
-			dcassert(0);
-		}
+	try
+	{
+		addList(user, flag | QueueItem::FLAG_PARTIAL_LIST, dir);
+	}
+	catch (const Exception&)
+	{
+		dcassert(0);
 	}
 }
 
@@ -1406,7 +1405,7 @@ void QueueManager::move(const string& aSource, const string& aTarget) noexcept
 				}
 			}
 		}
-		removeTarget(aSource, false);
+		removeTarget(aSource);
 	}
 }
 
@@ -1607,7 +1606,12 @@ void QueueManager::setFile(const DownloadPtr& d)
 		
 		// open stream for both writing and reading, because UploadManager can request reading from it
 		const int64_t fileSize = d->getTreeValid() ? d->getTigerTree().getFileSize() : d->getSize();
-		if (qi->getSize() == -1) qi->setSize(fileSize);
+		int64_t diffFileSize = 0;
+		if (qi->getSize() == -1)
+		{
+			diffFileSize = fileSize;
+			qi->setSize(fileSize);
+		}
 
 		auto f = new SharedFileStream(target, File::RW, File::OPEN | File::CREATE | File::SHARED | File::NO_CACHE_HINT, fileSize);
 		if (qi->getSize() != qi->getLastSize())
@@ -1633,6 +1637,8 @@ void QueueManager::setFile(const DownloadPtr& d)
 
 		f->setPos(d->getSegment().getStart());
 		d->setDownloadFile(f);
+		if (diffFileSize)
+			fire(QueueManagerListener::FileSizeUpdated(), qi, diffFileSize);
 	}
 	else if (d->getType() == Transfer::TYPE_FULL_LIST)
 	{
@@ -1642,11 +1648,16 @@ void QueueManager::setFile(const DownloadPtr& d)
 			throw QueueException(QueueException::TARGET_REMOVED, STRING(TARGET_REMOVED));
 
 		// set filelist's size
+		int64_t oldSize = qi->getSize();
+		if (oldSize < 0) oldSize = 0;
+		int64_t diffFileSize = d->getSize() - oldSize;
 		qi->setSize(d->getSize());
 
 		string target = getFileListTempTarget(d);
 		File::ensureDirectory(target);
 		d->setDownloadFile(new File(target, File::WRITE, File::OPEN | File::TRUNCATE | File::CREATE));
+		if (diffFileSize)
+			fire(QueueManagerListener::FileSizeUpdated(), qi, diffFileSize);
 	}
 	else if (d->getType() == Transfer::TYPE_PARTIAL_LIST)
 	{
@@ -2175,7 +2186,7 @@ void QueueManager::removeItem(const QueueItemPtr& qi, bool removeFromUserQueue)
 	fire(QueueManagerListener::Removed(), qi);
 }
 
-bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
+bool QueueManager::removeTarget(const string& target)
 {
 #if 0
 	string logMessage = "removeTarget: " + target;
@@ -2300,7 +2311,7 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 	}
 	if (removeCompletely)
 	{
-		removeTarget(target, false);
+		removeTarget(target);
 	}
 }
 
@@ -2346,7 +2357,7 @@ void QueueManager::removeSource(const UserPtr& user, Flags::MaskType reason) noe
 	if (disconnect)
 		ConnectionManager::getInstance()->disconnect(user, true);
 	for (const string& target : targetsToRemove)
-		removeTarget(target, false);
+		removeTarget(target);
 	if (dirty)
 		setDirty();
 }

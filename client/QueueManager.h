@@ -221,9 +221,9 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		/** Move the target location of a queued item. Running items are silently ignored */
 		void move(const string& aSource, const string& target) noexcept;
-		
-		bool removeTarget(const string& target, bool isBatchRemove);
-		
+
+		bool removeTarget(const string& target);
+
 		void removeAll();
 		void removeSource(const string& target, const UserPtr& user, Flags::MaskType reason, bool removeConn = true) noexcept;
 		void removeSource(const UserPtr& user, Flags::MaskType reason) noexcept;
@@ -249,7 +249,7 @@ class QueueManager : public Singleton<QueueManager>,
 		DownloadPtr getDownload(UserConnection* source, Download::ErrorInfo& error) noexcept;
 		// FIXME: remove path parameter, use download->getPath()
 		void putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
-		void setFile(const DownloadPtr& aDownload);
+		void setFile(const DownloadPtr& download);
 		
 		/** @return The highest priority download the user has, PAUSED may also mean no downloads */
 		static QueueItem::Priority hasDownload(const UserPtr& user);

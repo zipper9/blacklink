@@ -88,7 +88,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        ResourceManager::CMD_HELP_PG_INFO             }, // COMMAND_PG_INFO
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, UINT_MAX, 0                                             }, // COMMAND_USER
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_USER_CONNECTIONS
-	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_QUEUE
+	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 2,        0                                             }, // COMMAND_QUEUE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DHT
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_TTH
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_IP_BANS
@@ -372,10 +372,11 @@ enum
 	ACTION_USER_REMOVE_STAT
 };
 
-static const char* actionsQueue[] = { "info", nullptr };
+static const char* actionsQueue[] = { "info", "remove", nullptr };
 enum
 {
-	ACTION_QUEUE_INFO = 1
+	ACTION_QUEUE_INFO = 1,
+	ACTION_QUEUE_REMOVE
 };
 
 static const char* actionsDisable[] = { "partial", nullptr };
@@ -1164,6 +1165,19 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				res.text += "\nDirectories: " + Util::toString(QueueManager::getInstance()->getDirectoryItemCount());
 				res.text += '\n';
 				res.what = RESULT_LOCAL_TEXT;
+				return true;
+			}
+			else if (action == ACTION_QUEUE_REMOVE)
+			{
+				if (pc.args.size() != 3)
+				{
+					res.text = STRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				bool result = QueueManager::getInstance()->removeTarget(pc.args[2]);
+				res.what = RESULT_LOCAL_TEXT;
+				res.text = result ? STRING(COMMAND_DONE) : "No such item";
 				return true;
 			}
 			res.text = STRING(COMMAND_INVALID_ACTION);

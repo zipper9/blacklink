@@ -233,7 +233,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			REMOVE_ITEM,
 			REMOVE_ITEM_OLD_PATH,
 			UPDATE_ITEM,
-			UPDATE_STATUS
+			UPDATE_STATUS,
+			UPDATE_FILE_SIZE
 		};
 		
 		vector<QueueItem::RunningSegment> runningChunks;
@@ -356,16 +357,16 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				int iconIndex = -1;
 				static const TTHValue emptyTTH;
 		};
-		
+
 		struct QueueItemTask : public Task
 		{
-			explicit QueueItemTask(const QueueItemPtr& qi) : qi(qi) { }
+			explicit QueueItemTask(const QueueItemPtr& qi) : qi(qi) {}
 			QueueItemPtr qi;
 		};
-		
+
 		struct TargetTask : public Task
 		{
-				explicit TargetTask(const string& target) : target(target) { }
+				explicit TargetTask(const string& target) : target(target) {}
 				const string target;
 		};
 
@@ -376,12 +377,19 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			const string path;
 		};
 
+		struct UpdateFileSizeTask : public Task
+		{
+			UpdateFileSizeTask(const QueueItemPtr& qi, int64_t diff) : qi(qi), diff(diff) {}
+			QueueItemPtr qi;
+			const int64_t diff;
+		};
+
 		OMenu browseMenu;
 		OMenu removeMenu;
 		OMenu removeAllMenu;
 		OMenu pmMenu;
 		OMenu readdMenu;
-		
+
 		CButton ctrlShowTree;
 		CContainedWindow showTreeContainer;
 		bool showTree;
@@ -420,8 +428,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		static void walkDirItem(const DirItem* dir, std::function<void(const QueueItemPtr&)> func);
 		void deleteDirItem(DirItem* dir);
 		static void deleteTree(DirItem* dir);
-		bool findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const;
+		bool findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, const string& path, DirItem* &dir, bool remove);
 		bool removeItem(const QueueItemPtr& qi, const string* oldPath);
+		bool updateItemSize(const QueueItemPtr& qi, int64_t diff);
 		bool isCurrentDir(const string& target) const;
 		bool isInsideCurrentDir(const string& target, size_t& subdirLen) const;
 		void insertListItem(const QueueItemPtr& qi, const string& dirname, bool sort);
@@ -476,6 +485,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept override;
 		void on(QueueManagerListener::Tick, const QueueItemList& list) noexcept override;
+		void on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
 		void on(SettingsManagerListener::Repaint) override;
 		
 		void onRechecked(const string& target, const string& message);

@@ -1705,7 +1705,7 @@ void WebServerManager::removeQueueItem(HandlerResult& res, const RequestInfo& st
 	}
 	if (qi)
 	{
-		bool result = QueueManager::getInstance()->removeTarget(qi->getTarget(), false);
+		bool result = QueueManager::getInstance()->removeTarget(qi->getTarget());
 		LOCK(csClients);
 		auto i = clients.find(state.clientId);
 		if (i != clients.end())

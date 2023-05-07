@@ -40,6 +40,7 @@ class QueueManagerListener
 		typedef X<4> TargetsUpdated;
 		typedef X<5> StatusUpdated;
 		typedef X<6> PartialList;
+		typedef X<7> FileSizeUpdated;
 		typedef X<8> RecheckStarted;
 		typedef X<9> RecheckNoFile;
 		typedef X<10> RecheckFileTooSmall;
@@ -69,6 +70,7 @@ class QueueManagerListener
 		virtual void on(Tick, const QueueItemList&) noexcept { }
 		virtual void on(StatusUpdatedList, const QueueItemList&) noexcept { }
 		virtual void on(PartialList, const HintedUser&, const string&) noexcept { }
+		virtual void on(FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept { }
 		virtual void on(SourceAdded) noexcept { }
 
 		virtual void on(RecheckStarted, const string&) noexcept { }
