@@ -663,43 +663,33 @@ string DirectoryListing::getPath(const Directory* d) const
 	return dir;
 }
 
-void DirectoryListing::download(Directory* dir, const string& aTarget, QueueItem::Priority prio, bool& getConnFlag)
+void DirectoryListing::download(Directory* dir, const string& target, QueueItem::Priority prio, bool& getConnFlag)
 {
-	string target = (dir == getRoot()) ? aTarget : aTarget + dir->getName() + PATH_SEPARATOR;
+	string dirTarget = target;
+	if (dir != getRoot())
+	{
+		dirTarget += dir->getName();
+		dirTarget += PATH_SEPARATOR;
+	}
 	if (!dir->getComplete())
 	{
 		// folder is not completed (partial list?), so we need to download it first
-		QueueManager::getInstance()->addDirectory(Util::emptyString, hintedUser, target, prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+		QueueManager::getInstance()->addDirectory(getPath(dir), hintedUser, dirTarget, prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 	}
 	else
 	{
 		// First, recurse over the directories
 		const Directory::List& lst = dir->directories;
 		for (auto j = lst.cbegin(); j != lst.cend(); ++j)
-			download(*j, target, prio, getConnFlag);
+			download(*j, dirTarget, prio, getConnFlag);
 
 		// Then add the files
-		const File::List& l = dir->files;
-		for (auto i = l.cbegin(); i != l.cend(); ++i)
-		{
-			File* file = *i;
-			try
-			{
-				download(file, target + file->getName(), false, prio, false, getConnFlag);
-			}
-			catch (const QueueException& e)
-			{
-				LogManager::message("DirectoryListing::download - QueueException:" + e.getError());
-			}
-			catch (const FileException& e)
-			{
-				LogManager::message("DirectoryListing::download - FileException:" + e.getError());
-			}
-		}
+		for (File* file : dir->files)
+			download(file, dirTarget + file->getName(), false, prio, false, getConnFlag);
 	}
 }
 
-void DirectoryListing::download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag)
+void DirectoryListing::download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag) noexcept
 {
 	const QueueItem::MaskType flags = (QueueItem::MaskType)(view ? ((isDclst ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
 	try

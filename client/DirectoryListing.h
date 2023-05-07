@@ -315,7 +315,7 @@ class DirectoryListing
 		void loadXML(InputStream& xml, ProgressNotif *progressNotif, bool ownList);
 		
 		void download(Directory* dir, const string& target, QueueItem::Priority prio, bool& getConnFlag);
-		void download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag);
+		void download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag) noexcept;
 		
 		string getPath(const Directory* d) const;
 		string getPath(const File* f) const
