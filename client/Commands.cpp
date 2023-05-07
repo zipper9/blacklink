@@ -95,6 +95,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_DEBUG_ADD_TREE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_DEBUG_DISABLE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DEBUG_BLOOM
+	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 2,        0                                             }, // COMMAND_DEBUG_MYSHARE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     0, UINT_MAX, 0                                             }, // COMMAND_DEBUG_GDI_INFO
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, UINT_MAX, 0                                             }, // COMMAND_DEBUG_HTTP
 	{ CTX_SYSTEM,                                       0, 0,        0                                             }, // COMMAND_DEBUG_UNKNOWN_TAGS
@@ -163,6 +164,7 @@ static const CommandName names[] =
 	{ "makefilelist",   COMMAND_MAKE_FILE_LIST      },
 	{ "me",             COMMAND_ME                  },
 	{ "mpc",            COMMAND_MEDIA_PLAYER        },
+	{ "myshare",        COMMAND_DEBUG_MYSHARE       },
 	{ "n",              COMMAND_LAST_NICK           },
 	{ "nick",           COMMAND_LAST_NICK           },
 	{ "password",       COMMAND_PASSWORD            },
@@ -390,6 +392,13 @@ enum
 {
 	ACTION_BLOOM_INFO = 1,
 	ACTION_BLOOM_MATCH
+};
+
+static const char* actionsMyShare[] = { "info", "search", nullptr };
+enum
+{
+	ACTION_MYSHARE_INFO = 1,
+	ACTION_MYSHARE_SEARCH
 };
 
 static const char* actionsHttp[] = { "get", "post", nullptr };
@@ -1398,6 +1407,49 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			return true;
 		}
 #endif
+		case COMMAND_DEBUG_MYSHARE:
+		{
+			int action = getAction(pc, actionsMyShare);
+			if (action == ACTION_MYSHARE_INFO)
+			{
+				auto sm = ShareManager::getInstance();
+				res.text = "Total size: " + Util::formatExactSize(sm->getTotalSharedSize()) +
+					", Total files: " + Util::toString(sm->getTotalSharedFiles()) +
+					", TTH map size: " + Util::toString(sm->getSharedTTHCount());;
+				res.what = RESULT_LOCAL_TEXT;
+				return true;
+			}
+			if (action == ACTION_MYSHARE_SEARCH)
+			{
+				if (pc.args.size() != 3)
+				{
+					res.text = STRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				vector<SearchResultCore> results;
+				NmdcSearchParam param;
+				param.maxResults = 50;
+				param.filter = pc.args[2];
+				ShareManager::getInstance()->search(results, param, nullptr);
+				if (!results.empty())
+				{
+					res.text = "Found " + Util::toString(results.size()) + " item(s):\n";
+					for (const auto& item : results)
+					{
+						res.text += item.getFile();
+						res.text += '\n';
+					}
+				}
+				else
+					res.text = "Nothing found";
+				res.what = RESULT_LOCAL_TEXT;
+				return true;
+			}
+			res.text = STRING(COMMAND_INVALID_ACTION);
+			res.what = RESULT_ERROR_MESSAGE;
+			return true;
+		}
 #ifdef TEST_CRASH_HANDLER
 		case COMMAND_DEBUG_DIVIDE:
 		{
