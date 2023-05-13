@@ -33,19 +33,16 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 		BEGIN_MSG_MAP(DefaultClickPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) * this;
-		}
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_MOUSE; }
 		void write();
 
 	protected:
-		CComboBox userListAction, transferListAction, chatAction, favUserListAction, magnetAction;
+		CComboBox userListAction, transferListAction, chatAction, favUserListAction;
+		CComboBox newMagnetAction, oldMagnetAction;
 };
 
 #endif // DEFAULT_CLICK_H

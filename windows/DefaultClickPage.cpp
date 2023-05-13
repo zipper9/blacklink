@@ -17,42 +17,52 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
-
 #include "DefaultClickPage.h"
-#include "WinUtil.h"
+#include "DialogLayout.h"
+#include "../client/SettingsManager.h"
 
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
-static const WinUtil::TextItem texts[] =
+static const DialogLayout::Align align1 = { -1, DialogLayout::SIDE_RIGHT, U_DU(6) };
+
+static const DialogLayout::Item layoutItems[] =
 {
-	{ IDC_DOUBLE_CLICK_ACTION, ResourceManager::DOUBLE_CLICK_ACTION },
-	{ IDC_USERLISTDBLCLICKACTION, ResourceManager::USERLISTDBLCLICKACTION },
-	{ IDC_FAVUSERLISTDBLCLICKACTION, ResourceManager::FAVUSERLISTDBLCLICKACTION },
-	{ IDC_TRANSFERLISTDBLCLICKACTION, ResourceManager::TRANSFERLISTDBLCLICKACTION },
-	{ IDC_CHATDBLCLICKACTION, ResourceManager::CHATDBLCLICKACTION },
-	{ IDC_MAGNETURLCLICKACTION, ResourceManager::MAGNETURLCLICKACTION },
-	{ 0, ResourceManager::Strings() }	
+	{ IDC_DOUBLE_CLICK_ACTION,        FLAG_TRANSLATE, UNSPEC, UNSPEC             },
+	{ IDC_TRANSFERLISTDBLCLICKACTION, FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_CHATDBLCLICKACTION,         FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_USERLISTDBLCLICKACTION,     FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_FAVUSERLISTDBLCLICKACTION,  FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_MAGNETURLCLICKACTION,       FLAG_TRANSLATE, UNSPEC, UNSPEC             },
+	{ IDC_CAPTION_CLICK_NEWMAGNET,    FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_CAPTION_CLICK_OLDMAGNET,    FLAG_TRANSLATE, AUTO,   UNSPEC, 1          },
+	{ IDC_TRANSFERLIST_DBLCLICK,      0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CHAT_DBLCLICK,              0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_USERLIST_DBLCLICK,          0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_FAVUSERLIST_DBLCLICK,       0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CLICK_NEWMAGNET,            0,              UNSPEC, UNSPEC, 0, &align1 },
+	{ IDC_CLICK_OLDMAGNET,            0,              UNSPEC, UNSPEC, 0, &align1 }
 };
 
 LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	WinUtil::translate(*this, texts);
+	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, nullptr);
 
 	userListAction.Attach(GetDlgItem(IDC_USERLIST_DBLCLICK));
 	transferListAction.Attach(GetDlgItem(IDC_TRANSFERLIST_DBLCLICK));
 	chatAction.Attach(GetDlgItem(IDC_CHAT_DBLCLICK));
-	magnetAction.Attach(GetDlgItem(IDC_MAGNETURLLIST_CLICK));
-	
+	newMagnetAction.Attach(GetDlgItem(IDC_CLICK_NEWMAGNET));
+	oldMagnetAction.Attach(GetDlgItem(IDC_CLICK_OLDMAGNET));
+
 	favUserListAction.Attach(GetDlgItem(IDC_FAVUSERLIST_DBLCLICK));
 	favUserListAction.AddString(CTSTRING(GET_FILE_LIST));
 	favUserListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
 	favUserListAction.AddString(CTSTRING(MATCH_QUEUE));
 	favUserListAction.AddString(CTSTRING(EDIT_PROPERTIES));
 	favUserListAction.AddString(CTSTRING(OPEN_USER_LOG));
-	favUserListAction.SetCurSel(SETTING(FAVUSERLIST_DBLCLICK));
-	
+
 	userListAction.AddString(CTSTRING(GET_FILE_LIST));
 	userListAction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
 	userListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
@@ -77,28 +87,44 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	chatAction.AddString(CTSTRING(MATCH_QUEUE));
 	chatAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
 	chatAction.AddString(CTSTRING(ADD_TO_FAVORITES));
-	
+
 	userListAction.SetCurSel(SETTING(USERLIST_DBLCLICK));
 	transferListAction.SetCurSel(SETTING(TRANSFERLIST_DBLCLICK));
 	chatAction.SetCurSel(SETTING(CHAT_DBLCLICK));
-	
-	magnetAction.AddString(CTSTRING(ASK));
-	magnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
-	magnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_DOWNLOAD));
-	magnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_OPEN));
-	
+	favUserListAction.SetCurSel(SETTING(FAVUSERLIST_DBLCLICK));
+
+	newMagnetAction.AddString(CTSTRING(ASK));
+	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
+	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_DOWNLOAD));
+	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_OPEN));
+
+	oldMagnetAction.AddString(CTSTRING(ASK));
+	oldMagnetAction.AddString(CTSTRING(SEARCH_FOR_ALTERNATES));
+	oldMagnetAction.AddString(CTSTRING(OPEN_FILE));
+
 	if (BOOLSETTING(MAGNET_ASK))
 	{
-		magnetAction.SetCurSel(0);
+		newMagnetAction.SetCurSel(0);
 	}
 	else
 	{
 		int index = SETTING(MAGNET_ACTION);
 		if (!(index >= SettingsManager::MAGNET_ACTION_SEARCH && index <= SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN))
 			index = SettingsManager::MAGNET_ACTION_SEARCH;
-		magnetAction.SetCurSel(index + 1);
+		newMagnetAction.SetCurSel(index + 1);
 	}
-	
+
+	if (BOOLSETTING(SHARED_MAGNET_ASK))
+	{
+		oldMagnetAction.SetCurSel(0);
+	}
+	else
+	{
+		int index = SETTING(SHARED_MAGNET_ACTION);
+		index = index == SettingsManager::MAGNET_ACTION_OPEN_EXISTING ? 2 : 1;
+		oldMagnetAction.SetCurSel(index);
+	}
+
 	return TRUE;
 }
 
@@ -109,10 +135,9 @@ void DefaultClickPage::write()
 	g_settings->set(SettingsManager::USERLIST_DBLCLICK, userListAction.GetCurSel());
 	g_settings->set(SettingsManager::TRANSFERLIST_DBLCLICK, transferListAction.GetCurSel());
 	g_settings->set(SettingsManager::CHAT_DBLCLICK, chatAction.GetCurSel());
-	
 	g_settings->set(SettingsManager::FAVUSERLIST_DBLCLICK, favUserListAction.GetCurSel());
-	
-	int index = magnetAction.GetCurSel();
+
+	int index = newMagnetAction.GetCurSel();
 	if (index == 0)
 	{
 		g_settings->set(SettingsManager::MAGNET_ASK, true);
@@ -121,5 +146,17 @@ void DefaultClickPage::write()
 	{
 		g_settings->set(SettingsManager::MAGNET_ASK, false);
 		g_settings->set(SettingsManager::MAGNET_ACTION, index - 1);
-	}	
+	}
+
+	index = oldMagnetAction.GetCurSel();
+	if (index == 0)
+	{
+		g_settings->set(SettingsManager::SHARED_MAGNET_ASK, true);
+	}
+	else
+	{
+		index = index == 1 ? SettingsManager::MAGNET_ACTION_SEARCH : SettingsManager::MAGNET_ACTION_OPEN_EXISTING;
+		g_settings->set(SettingsManager::SHARED_MAGNET_ASK, false);
+		g_settings->set(SettingsManager::SHARED_MAGNET_ACTION, index);
+	}
 }

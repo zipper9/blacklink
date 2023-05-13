@@ -29,11 +29,11 @@ class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 {
 	public:
 		enum { IDD = IDD_MAGNET };
-		
-		ClassicMagnetDlg(const TTHValue& hash, const tstring& fileName, const int64_t fileSize, const int64_t dirSize, bool dclst) :
-			hash(hash), fileName(fileName), fileSize(fileSize), dirSize(dirSize), dclst(dclst), action(WinUtil::MA_DEFAULT)
+
+		ClassicMagnetDlg(const TTHValue& hash, const tstring& fileName, const int64_t fileSize, const int64_t dirSize, int flags) :
+			hash(hash), fileName(fileName), fileSize(fileSize), dirSize(dirSize), flags(flags), action(WinUtil::MA_DEFAULT)
 		{}
-		
+
 		BEGIN_MSG_MAP(ClassicMagnetDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
@@ -43,7 +43,7 @@ class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 		COMMAND_ID_HANDLER(IDC_MAGNET_SEARCH, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_MAGNET_SAVEAS, onSaveAs)
 		END_MSG_MAP();
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -57,7 +57,7 @@ class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 		tstring fileName;
 		const int64_t fileSize;
 		const int64_t dirSize;
-		const bool dclst;
+		const int flags;
 		WinUtil::DefinedMagnetAction action;
 };
 #endif
@@ -65,7 +65,13 @@ class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 namespace MagnetDlg
 {
 
-	WinUtil::DefinedMagnetAction showDialog(HWND hWndParent, const TTHValue& hash, tstring& fileName, int64_t fileSize, int64_t dirSize, bool dclst);
+	enum
+	{
+		FLAG_DCLST = 1,
+		FLAG_ALREADY_SHARED = 2
+	};
+
+	WinUtil::DefinedMagnetAction showDialog(HWND hWndParent, int flags, const TTHValue& hash, tstring& fileName, int64_t fileSize, int64_t dirSize);
 
 }
 

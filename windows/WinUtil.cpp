@@ -594,105 +594,103 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	return true;
 }
 
-static WinUtil::DefinedMagnetAction getMagnetAction(int setting)
+static WinUtil::DefinedMagnetAction getMagnetAction(int setting, bool alreadyShared)
 {
 	switch (setting)
 	{
 		case SettingsManager::MAGNET_ACTION_DOWNLOAD:
-			return WinUtil::MA_DOWNLOAD;
+			return alreadyShared ? WinUtil::MA_ASK : WinUtil::MA_DOWNLOAD;
 		case SettingsManager::MAGNET_ACTION_SEARCH:
 			return WinUtil::MA_SEARCH;
 		case SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN:
-			return WinUtil::MA_OPEN;
+			return alreadyShared ? WinUtil::MA_ASK : WinUtil::MA_OPEN;
+		case SettingsManager::MAGNET_ACTION_OPEN_EXISTING:
+			return alreadyShared ? WinUtil::MA_OPEN : WinUtil::MA_ASK;
 	}
 	return WinUtil::MA_ASK;
 }
 
-bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* = MA_DEFAULT */)
+bool WinUtil::parseMagnetUri(const tstring& text, DefinedMagnetAction action /* = MA_DEFAULT */)
 {
-	if (Util::isMagnetLink(aUrl))
+	if (Util::isMagnetLink(text))
 	{
-#ifdef FLYLINKDC_USE_TORRENT
-		if (Util::isTorrentLink(aUrl))
+		const string url = Text::fromT(text);
+		LogManager::message(STRING(MAGNET_DLG_TITLE) + ": " + url);
+		MagnetLink magnet;
+		const char* fhash;
+		if (!magnet.parse(url) || (fhash = magnet.getTTH()) == nullptr)
 		{
-			DownloadManager::getInstance()->add_torrent_file(_T(""), aUrl);
+			MessageBox(g_mainWnd, CTSTRING(MAGNET_DLG_TEXT_BAD), CTSTRING(MAGNET_DLG_TITLE), MB_OK | MB_ICONEXCLAMATION);
+			return false;
 		}
-		else
-#endif
+		string fname = magnet.getFileName();
+		TTHValue tth(fhash);
+		string localPath;
+		ShareManager::getInstance()->getFileInfo(tth, localPath);
+
+		if (localPath.empty() && !magnet.exactSource.empty())
+			WinUtil::parseDchubUrl(Text::toT(magnet.exactSource));
+
+		const bool isDclst = Util::isDclstFile(fname);
+		if (action == MA_DEFAULT)
 		{
-			const string url = Text::fromT(aUrl);
-			LogManager::message(STRING(MAGNET_DLG_TITLE) + ": " + url);
-			MagnetLink magnet;
-			const char* fhash;
-			if (!magnet.parse(url) || (fhash = magnet.getTTH()) == nullptr)
-			{
-				MessageBox(g_mainWnd, CTSTRING(MAGNET_DLG_TEXT_BAD), CTSTRING(MAGNET_DLG_TITLE), MB_OK | MB_ICONEXCLAMATION);
-				return false;
-			}
-			string fname = magnet.getFileName();
-			if (!magnet.exactSource.empty())
-				WinUtil::parseDchubUrl(Text::toT(magnet.exactSource));
-
-			const bool isDclst = Util::isDclstFile(fname);
-			if (action == MA_DEFAULT)
-			{
-				if (!isDclst)
+			if (!localPath.empty())
+				action = BOOLSETTING(SHARED_MAGNET_ASK) ? MA_ASK : getMagnetAction(SETTING(SHARED_MAGNET_ACTION), true);
+			else if (!isDclst)
+				action = BOOLSETTING(MAGNET_ASK) ? MA_ASK : getMagnetAction(SETTING(MAGNET_ACTION), false);
+			else
+				action = BOOLSETTING(DCLST_ASK) ? MA_ASK : getMagnetAction(SETTING(DCLST_ACTION), false);
+		}
+		if (action == MA_ASK)
+		{
+			tstring filename = Text::toT(fname);
+			int flags = 0;
+			if (isDclst) flags |= MagnetDlg::FLAG_DCLST;
+			if (!localPath.empty()) flags |= MagnetDlg::FLAG_ALREADY_SHARED;
+			action = MagnetDlg::showDialog(g_mainWnd, flags, tth, filename, magnet.exactLength, magnet.dirSize);
+			if (action == WinUtil::MA_DEFAULT) return true;
+			fname = Text::fromT(filename);
+		}
+		switch (action)
+		{
+			case MA_DOWNLOAD:
+			case MA_OPEN:
+				if (!localPath.empty())
 				{
-					if (BOOLSETTING(MAGNET_ASK))
-						action = MA_ASK;
+					if (isDclst)
+						openFileList(Text::toT(localPath));
 					else
-						action = getMagnetAction(SETTING(MAGNET_ACTION));
+						openFile(Text::toT(localPath));
+					break;
 				}
-				else
+				try
 				{
-					if (BOOLSETTING(DCLST_ASK))
-						action = MA_ASK;
-					else
-						action = getMagnetAction(SETTING(DCLST_ACTION));
+					bool getConnFlag = true;
+					QueueItem::MaskType flags = isDclst ? QueueItem::FLAG_DCLST_LIST : 0;
+					if (action == MA_OPEN)
+						flags |= QueueItem::FLAG_CLIENT_VIEW;
+					else if (isDclst)
+						flags |= QueueItem::FLAG_DOWNLOAD_CONTENTS;
+					QueueManager::QueueItemParams params;
+					params.size = magnet.exactLength;
+					params.root = &tth;
+					QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
 				}
-			}
-			if (action == MA_ASK)
-			{
-				tstring filename = Text::toT(fname);
-				action = MagnetDlg::showDialog(g_mainWnd, TTHValue(fhash), filename, magnet.exactLength, magnet.dirSize, isDclst);
-				if (action == WinUtil::MA_DEFAULT) return true;
-				fname = Text::fromT(filename);
-			}
-			switch (action)
-			{
-				case MA_DOWNLOAD:
-				case MA_OPEN:
-					try
-					{
-						bool getConnFlag = true;
-						QueueItem::MaskType flags = isDclst ? QueueItem::FLAG_DCLST_LIST : 0;
-						if (action == MA_OPEN)
-							flags |= QueueItem::FLAG_CLIENT_VIEW;
-						else if (isDclst)
-							flags |= QueueItem::FLAG_DOWNLOAD_CONTENTS;
-						TTHValue tth(fhash);
-						QueueManager::QueueItemParams params;
-						params.size = magnet.exactLength;
-						params.root = &tth;
-						QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
-					}
-					catch (const Exception& e)
-					{
-						LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
-					}
-					break;
-
-				case MA_SEARCH:
-					SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
-					break;
-			}
+				catch (const Exception& e)
+				{
+					LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+				}
+				break;
+			case MA_SEARCH:
+				SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
+				break;
 		}
 		return true;
 	}
 	return false;
 }
 
-void WinUtil::openFileList(const tstring& filename, DefinedMagnetAction Action /* = MA_DEFAULT */)
+void WinUtil::openFileList(const tstring& filename)
 {
 	const UserPtr u = DirectoryListing::getUserFromFilename(Text::fromT(filename));
 	DirectoryListingFrame::openWindow(filename, Util::emptyStringT, HintedUser(u, Util::emptyString), 0, Util::isDclstFile(Text::fromT(filename)));
@@ -883,7 +881,7 @@ bool WinUtil::shutDown(int action)
 			if (hModule)
 			{
 				fnLockWorkStation ptrLockWorkStation = (fnLockWorkStation) GetProcAddress(hModule, "LockWorkStation");
-				if (ptrLockWorkStation) return ptrLockWorkStation();
+				if (ptrLockWorkStation) return ptrLockWorkStation() != FALSE;
 			}
 			return false;
 		}

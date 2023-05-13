@@ -644,6 +644,8 @@ static const char* settingTags[] =
 	"FavUserDblClick",
 	"MagnetAsk",
 	"MagnetAction",
+	"SharedMagnetAsk",
+	"SharedMagnetAction",
 	"DCLSTAsk",
 	"DCLSTAction",
 
@@ -1271,6 +1273,8 @@ void SettingsManager::setDefaults()
 	setDefault(CHAT_DBLCLICK, 1);
 	setDefault(MAGNET_ASK, TRUE);
 	setDefault(MAGNET_ACTION, MAGNET_ACTION_SEARCH);
+	setDefault(SHARED_MAGNET_ASK, TRUE);
+	setDefault(SHARED_MAGNET_ACTION, MAGNET_ACTION_SEARCH);
 	setDefault(DCLST_ASK, TRUE);
 	setDefault(DCLST_ACTION, MAGNET_ACTION_SEARCH);
 

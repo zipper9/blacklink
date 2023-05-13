@@ -132,7 +132,7 @@ namespace WinUtil
 
 	void playSound(const string& soundFile, bool beep = false);
 
-	void openFileList(const tstring& filename, DefinedMagnetAction action = MA_DEFAULT);
+	void openFileList(const tstring& filename);
 	bool openLink(const tstring& url);
 	void openFile(const tstring& file);
 	void openFile(const TCHAR* file);

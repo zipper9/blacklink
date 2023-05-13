@@ -1121,10 +1121,13 @@
 #define IDC_FAVUSERLISTDBLCLICKACTION   2236
 #define IDC_FAVUSERLIST_DBLCLICK        2237
 #define IDC_MAGNETURLCLICKACTION        2238
-#define IDC_MAGNETURLLIST_CLICK         2239
-#define IDC_SPEED_NORMAL                2240
-#define IDC_SPEED_SUPER                 2241
-#define IDC_SPEED_BAN                   2242
+#define IDC_CAPTION_CLICK_NEWMAGNET     2239
+#define IDC_CLICK_NEWMAGNET             2240
+#define IDC_CAPTION_CLICK_OLDMAGNET     2241
+#define IDC_CLICK_OLDMAGNET             2242
+#define IDC_SPEED_NORMAL                2243
+#define IDC_SPEED_SUPER                 2244
+#define IDC_SPEED_BAN                   2245
 #define IDC_SPEED_MANUAL                2249
 #define IDC_UPLOADSPEED_USER            2250
 #define IDC_UPLOADSPEEDSPIN_USER        2251
