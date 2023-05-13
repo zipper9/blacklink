@@ -1190,10 +1190,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 			return columns[COLUMN_HITS];
 		case COLUMN_NICK:
 			if (getUser())
-			{
-				// FIXME
-				columns[COLUMN_NICK] = Text::toT(Util::toString(ClientManager::getNicks(getUser()->getCID(), sr.getHubUrl(), false)));
-			}
+				columns[COLUMN_NICK] = Text::toT(ClientManager::getNick(getUser(), sr.getHubUrl()));
 			break;
 		case COLUMN_TYPE:
 			if (sr.getType() == SearchResult::TYPE_FILE)

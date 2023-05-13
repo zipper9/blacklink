@@ -51,6 +51,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getNicks(const CID& cid, const string& hintUrl, bool priv, bool noBase32 = false);
+		static string getNick(const UserPtr& user, const string& hintUrl);
+		static string getNick(const HintedUser& hintedUser);
 		static string getStringField(const CID& cid, const string& hintUrl, const char* field);
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);

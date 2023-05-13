@@ -1436,8 +1436,8 @@ void TransferView::ItemInfo::updateNicks()
 {
 	if (hintedUser.user)
 	{
-		nicks = WinUtil::getNicks(hintedUser);
-		hubs = WinUtil::getHubNames(hintedUser).first;
+		nicks = Text::toT(ClientManager::getNick(hintedUser));
+		hubs = Text::toT(WinUtil::getHubDisplayName(hintedUser.hint));
 	}
 }
 
@@ -1743,7 +1743,7 @@ void TransferView::onTransferComplete(const Transfer* t, const bool download, co
 		{
 			SHOW_POPUP(POPUP_ON_UPLOAD_FINISHED,
 			           TSTRING(FILE) + _T(": ") + Text::toT(fileName) + _T('\n') +
-			           TSTRING(USER) + _T(": ") + WinUtil::getNicks(t->getHintedUser()), TSTRING(UPLOAD_FINISHED_IDLE));
+			           TSTRING(USER) + _T(": ") + Text::toT(ClientManager::getNick(t->getHintedUser())), TSTRING(UPLOAD_FINISHED_IDLE));
 		}
 		
 		addTask(TRANSFER_UPDATE_ITEM, ui);
@@ -1982,14 +1982,10 @@ void TransferView::UpdateInfo::formatStatusString(int transferFlags, uint64_t st
 
 void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string&, const DownloadPtr& download) noexcept
 {
-
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (qi->isUserList())
-		{
-			return;
-		}
-		
+		if (qi->isUserList()) return;
+
 		const string& token = download->getConnectionQueueToken();
 		dcassert(!token.empty());
 		// update file item

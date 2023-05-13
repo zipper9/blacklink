@@ -346,6 +346,32 @@ StringList ClientManager::getNicks(const HintedUser& user)
 		return StringList();
 }
 
+string ClientManager::getNick(const UserPtr& user, const string& hintUrl)
+{
+	if (user->getFlags() & User::NMDC)
+		return user->getLastNick();
+	string result;
+	if (!hintUrl.empty())
+	{
+		READ_LOCK(*g_csOnlineUsers);
+		const OnlineUserPtr u = findOnlineUserHintL(user->getCID(), hintUrl);
+		if (u)
+			result = u->getIdentity().getNick();
+	}
+	if (result.empty())
+	{
+		result = user->getLastNick();
+		if (result.empty())
+			result = '{' + user->getCID().toBase32() + '}';
+	}
+	return result;
+}
+
+string ClientManager::getNick(const HintedUser& hintedUser)
+{
+	return getNick(hintedUser.user, hintedUser.hint);
+}
+
 StringList ClientManager::getHubNames(const HintedUser& user)
 {
 	dcassert(user.user);
