@@ -1296,6 +1296,8 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 		if (prio == QueueItem::DEFAULT && WinUtil::isShift())
 			prio = QueueItem::HIGHEST;
 			
+		if (si->parent)
+			si = si->parent;
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
 			tstring tmp = tgt;
