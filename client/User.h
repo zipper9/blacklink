@@ -131,22 +131,6 @@ class User final
 		DefinedAutoBanFlags hasAutoBan(const Client *client, bool isFavorite);
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 
-		// TODO
-		struct Hash
-		{
-			size_t operator()(const UserPtr& x) const
-			{
-				size_t cidHash = 0;
-				boost::hash_combine(cidHash, x);
-				return cidHash;
-			}
-		};
-//		bool operator==(const UserPtr & x) const
-//		{
-//			return m_cid == x->m_cid;
-//		}
-//#define ENABLE_DEBUG_LOG_IN_USER_CLASS
-
 		User(const CID& aCID, const string& nick);
 		User(const User&) = delete;
 		User& operator= (const User&) = delete;
@@ -317,19 +301,5 @@ class User final
 		void loadUserStatFromDB();
 #endif
 };
-
-// TODO - для буста это пока не цепляется
-// http://stackoverflow.com/questions/17016175/c-unordered-map-using-a-custom-class-type-as-the-key
-namespace std
-{
-template <>
-struct hash<UserPtr>
-{
-	size_t operator()(const UserPtr & x) const
-	{
-		return ((size_t)(&(*x))) / sizeof(User);
-	}
-};
-}
 
 #endif // !defined(USER_H)

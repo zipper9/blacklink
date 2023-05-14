@@ -162,8 +162,8 @@ class QueueItem
 			int64_t end;
 			int64_t pos;
 		};
-		
-		typedef boost::unordered_map<UserPtr, Source, User::Hash> SourceMap;
+
+		typedef boost::unordered_map<UserPtr, Source> SourceMap;
 		typedef SourceMap::iterator SourceIter;
 		typedef SourceMap::const_iterator SourceConstIter;
 

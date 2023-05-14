@@ -188,7 +188,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		PrivateFrame(const HintedUser& replyTo, const string& myNick);
 
 		bool created; // TODO: fix me please.
-		typedef boost::unordered_map<UserPtr, PrivateFrame*, User::Hash> FrameMap;
+		typedef boost::unordered_map<UserPtr, PrivateFrame*> FrameMap;
 		static FrameMap frames;
 
 		HintedUser replyTo;

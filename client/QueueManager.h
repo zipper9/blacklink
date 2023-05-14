@@ -360,10 +360,10 @@ class QueueManager : public Singleton<QueueManager>,
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
 				static void modifyRunningCount(int count);
 				static size_t getRunningCount();
-				
-				typedef boost::unordered_map<UserPtr, QueueItemList, User::Hash> UserQueueMap; // TODO - set ?
-				typedef boost::unordered_map<UserPtr, QueueItemPtr, User::Hash> RunningMap;
-				
+
+				typedef boost::unordered_map<UserPtr, QueueItemList> UserQueueMap;
+				typedef boost::unordered_map<UserPtr, QueueItemPtr> RunningMap;
+
 			private:
 				/** QueueItems by priority and user (this is where the download order is determined) */
 				static UserQueueMap userQueueMap[QueueItem::LAST];
@@ -411,7 +411,7 @@ class QueueManager : public Singleton<QueueManager>,
 		mutable FastCriticalSection csDirectories;
 
 		/** Directories for downloading or matching the queue */
-		boost::unordered_multimap<UserPtr, DirectoryItem, User::Hash> directories;
+		boost::unordered_multimap<UserPtr, DirectoryItem> directories;
 		/** Recent searches list, to avoid searching for the same thing too often */
 		deque<string> m_recent;
 		/** The queue needs to be saved */

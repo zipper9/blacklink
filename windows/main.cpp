@@ -229,9 +229,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	}
 	
 	shutdown(GuiUninit, NULL/*, true*/);
-#if defined(__PROFILER_ENABLED__)
-	Profiler::dumphtml();
-#endif
 #ifdef IRAINMAN_INCLUDE_GDI_INIT
 	Gdiplus::GdiplusShutdown(g_gdiplusToken);
 #endif

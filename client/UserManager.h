@@ -112,7 +112,7 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 			string password;
 		};
 
-		boost::unordered_map<UserPtr, PMInfo, User::Hash> pmInfo;
+		boost::unordered_map<UserPtr, PMInfo> pmInfo;
 		mutable FastCriticalSection csPM;
 
 		friend class Singleton<UserManager>;

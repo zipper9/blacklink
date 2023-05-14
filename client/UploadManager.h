@@ -195,7 +195,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		
 		int lastFreeSlots; /// amount of free slots at the previous minute
 		
-		typedef boost::unordered_map<UserPtr, uint64_t, User::Hash> SlotMap;
+		typedef boost::unordered_map<UserPtr, uint64_t> SlotMap;
 		
 		SlotMap reservedSlots;
 		mutable std::unique_ptr<RWLock> csReservedSlots;
