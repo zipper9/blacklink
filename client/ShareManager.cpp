@@ -1609,19 +1609,43 @@ MemoryInputStream* ShareManager::getTree(const string& virtualFile, const CID& s
 	return getTreeFromStore(tth);
 }
 
-void ShareManager::getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) const noexcept
+void ShareManager::getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) noexcept
 {
+	HashBloomCacheKey key;
+	key.params[0] = k;
+	key.params[1] = m;
+	key.params[2] = h;
+	csHashBloom.lock();
+	const HashBloomCacheItem* item = hashBloom.get(key);
+	if (item)
+	{
+		v.resize(item->size);
+		memcpy(&v[0], item->data.get(), item->size);
+		csHashBloom.unlock();
+		return;
+	}
+	csHashBloom.unlock();
+
 	dcdebug("Creating bloom filter, k=%u, m=%u, h=%u\n", unsigned(k), unsigned(m), unsigned(h));
 	HashBloom bloom;
 	bloom.reset(k, m, h);
 	{
 		READ_LOCK(*csShare);
 		for (auto i = tthIndex.cbegin(); i != tthIndex.cend(); ++i)
-		{
 			bloom.add(i->first);
-		}
 	}
 	bloom.copy_to(v);
+
+	HashBloomCacheItem newItem;
+	newItem.key = key;
+	newItem.size = v.size();
+	newItem.data.reset(new uint8_t[newItem.size]);
+	memcpy(newItem.data.get(), &v[0], newItem.size);
+
+	csHashBloom.lock();
+	hashBloom.removeOldest(HASH_BLOOM_CACHE_SIZE);
+	hashBloom.add(newItem);
+	csHashBloom.unlock();
 }
 
 void ShareManager::writeShareDataL(const SharedDir* dir, OutputStream* shareDataFile, uint8_t tempBuf[]) const
@@ -2735,10 +2759,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 #ifdef DEBUG_SHARE_MANAGER
 			LogManager::message("New file: " + fullPath, false);
 #endif
-			FileToHash fth;
-			fth.file = newFile;
-			fth.path = fullPath;
-			filesToHash.push_back(fth);
+			filesToHash.emplace_back(FileToHash{newFile, fullPath});
 			scanShareFlags |= SCAN_SHARE_FLAG_ADDED;
 		}
 	}
@@ -2910,6 +2931,9 @@ void ShareManager::scanDirs()
 		{
 			tthIndex = std::move(tthIndexNew);
 			tthIndexNew.clear();
+			csHashBloom.lock();
+			hashBloom.clear();
+			csHashBloom.unlock();
 		}
 		if (scanAllFlags & SCAN_SHARE_FLAG_REBUILD_BLOOM)
 			updateBloomL();

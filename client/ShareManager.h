@@ -66,6 +66,30 @@ struct AdcSearchParam
 	string cacheKey;
 };
 
+struct HashBloomCacheKey
+{
+	uint32_t params[3];
+
+	size_t getHash() const
+	{
+		size_t seed = 0;
+		boost::hash_combine(seed, params);
+		return seed;
+	}
+	bool operator== (const HashBloomCacheKey& x) const
+	{
+		return params[0] == x.params[0] && params[1] == x.params[1] && params[2] == x.params[2];
+	}
+};
+
+namespace boost
+{
+	template<> struct hash<HashBloomCacheKey>
+	{
+		size_t operator()(const HashBloomCacheKey& x) const { return x.getHash(); }
+	};
+}
+
 class ShareManager :
 	public Singleton<ShareManager>,
 	private HashManagerListener,
@@ -151,7 +175,7 @@ class ShareManager :
 		void setHits(size_t value) { hits = value; }
 		size_t getHits() const { return hits; }
 
-		void getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) const noexcept;
+		void getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) noexcept;
 		void load(SimpleXML& xml);
 		void init();
 		static string getEmptyBZXmlFile() { return Util::getConfigPath() + "EmptyFiles.xml.bz2"; }
@@ -306,6 +330,18 @@ class ShareManager :
 		static const size_t SEARCH_CACHE_SIZE = 200;
 		LruCache<CacheItem, string> searchCache;
 		CriticalSection csSearchCache;
+
+		struct HashBloomCacheItem
+		{
+			HashBloomCacheKey key;
+			std::unique_ptr<uint8_t> data;
+			size_t size;
+			HashBloomCacheItem* next;
+		};
+
+		static const size_t HASH_BLOOM_CACHE_SIZE = 50;
+		LruCache<HashBloomCacheItem, HashBloomCacheKey> hashBloom;
+		CriticalSection csHashBloom;
 
 		ShareManager();
 		~ShareManager();

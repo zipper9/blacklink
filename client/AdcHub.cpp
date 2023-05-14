@@ -989,17 +989,17 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 		return;
 	}
 	sm->getHashBloom(v, k, m, h);
-	AdcCommand cmd(AdcCommand::CMD_SND, AdcCommand::TYPE_HUB);
-	cmd.addParam(c.getParam(0));
-	cmd.addParam(c.getParam(1));
-	cmd.addParam(c.getParam(2));
-	cmd.addParam(c.getParam(3));
-	cmd.addParam(c.getParam(4));
-	send(cmd);
-	if (!v.empty())  //[+] http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2282
+	if (v.empty())
 	{
-		send((char*) v.data(), v.size());
+		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_TRANSFER_GENERIC, "Internal error", AdcCommand::TYPE_HUB));
+		return;
 	}
+
+	AdcCommand cmd(AdcCommand::CMD_SND, AdcCommand::TYPE_HUB);
+	for (int i = 0; i < 5; i++)
+		cmd.addParam(c.getParam(i));
+	send(cmd);
+	send((const char*) v.data(), v.size());
 }
 
 void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept

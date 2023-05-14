@@ -31,15 +31,34 @@ class LruCache
 				oldestItem = newItem;
 			newestItem = newItem;
 			if (storedItem) *storedItem = newItem;
-			return true;	
+			return true;
 		}
-		
+
+		bool add(Item& item, Item **storedItem = nullptr)
+		{
+			auto p = items.insert(make_pair(item.key, std::move(item)));
+			if (!p.second)
+			{
+				if (storedItem) *storedItem = &p.first->second;
+				return false;
+			}
+			Item* newItem = &p.first->second;
+			newItem->next = nullptr;
+			if (newestItem)
+				newestItem->next = newItem;
+			else
+				oldestItem = newItem;
+			newestItem = newItem;
+			if (storedItem) *storedItem = newItem;
+			return true;
+		}
+
 		const Item* get(const Key& key) const
 		{
 			auto i = items.find(key);
 			return i != items.cend() ? &i->second : nullptr;
 		}
-		
+
 		Item* get(const Key& key)
 		{
 			auto i = items.find(key);
@@ -56,12 +75,12 @@ class LruCache
 			items.clear();
 			oldestItem = newestItem = nullptr;
 		}
-		
+
 		void removeOldest(size_t sizeThreshold)
 		{
 			while (items.size() >= sizeThreshold && removeOldest());
 		}
-		
+
 		bool removeOldest()
 		{
 			if (!oldestItem) return false;
@@ -118,15 +137,15 @@ class LruCacheEx
 			newItem->prev = newestItem;
 			newestItem = newItem;
 			if (storedItem) *storedItem = newItem;
-			return true;	
+			return true;
 		}
-		
+
 		const Item* get(const Key& key) const
 		{
 			auto i = items.find(key);
 			return i != items.cend() ? &i->second : nullptr;
 		}
-		
+
 		Item* get(const Key& key)
 		{
 			auto i = items.find(key);
@@ -138,12 +157,12 @@ class LruCacheEx
 			items.clear();
 			oldestItem = newestItem = nullptr;
 		}
-		
+
 		void removeOldest(size_t sizeThreshold)
 		{
 			while (items.size() >= sizeThreshold && removeOldest());
 		}
-		
+
 		bool removeOldest()
 		{
 			if (!oldestItem) return false;
