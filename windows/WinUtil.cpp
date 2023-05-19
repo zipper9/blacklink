@@ -675,6 +675,8 @@ bool WinUtil::parseMagnetUri(const tstring& text, DefinedMagnetAction action /* 
 					params.size = magnet.exactLength;
 					params.root = &tth;
 					QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
+					if (BOOLSETTING(SEARCH_MAGNET_SOURCES))
+						SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 				}
 				catch (const Exception& e)
 				{

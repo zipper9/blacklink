@@ -336,6 +336,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SKIP_EXISTING,
 			COPY_EXISTING_MAX_SIZE,
 			USE_MEMORY_MAPPED_FILES,
+			SEARCH_MAGNET_SOURCES,
 
 			// Slow sources auto disconnect
 			ENABLE_AUTO_DISCONNECT,

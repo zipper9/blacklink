@@ -74,6 +74,7 @@ static const PropPage::ListItem optionItems[] =
 #endif
 	{ SettingsManager::OVERLAP_CHUNKS, ResourceManager::OVERLAP_CHUNKS },
 	{ SettingsManager::REPORT_ALTERNATES, ResourceManager::REPORT_ALTERNATES },
+	{ SettingsManager::SEARCH_MAGNET_SOURCES, ResourceManager::SETTINGS_SEARCH_MAGNET_SOURCES },
 	{ 0, ResourceManager::Strings() }
 };
 

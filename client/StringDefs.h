@@ -1277,6 +1277,7 @@ enum Strings   // @DontAdd
 	SETTINGS_USE_CUSTOM_LOCATIONS, // "Use custom locations file"
 	SETTINGS_SHOW_PASSWORDS, // "Show passwords"
 	SETTINGS_HIDE_PASSWORDS, // "Hide passwords"
+	SETTINGS_SEARCH_MAGNET_SOURCES, // "Automatically search for sources when downloading magnets"
 	SETTINGS_RESTART_REQUIRED, // "A restart is required to apply some settings"
 	CONFIRM_SHOW_PASSWORDS, // "Show passwords?"
 	SET_ACTION, // "Set action:"
