@@ -31,39 +31,31 @@
 
 #include "stdinc.h"
 #include "TigerHash.h"
-
 #include "debug.h"
+#include <boost/predef/other/endian.h>
 
-#ifdef BOOST_BIG_ENDIAN
+#if BOOST_ENDIAN_BIG_BYTE
 #define TIGER_BIG_ENDIAN
 #endif
 
-#if defined(_M_X64) || defined(__amd64__) || defined(__x86_64__) || defined(__alpha)
+#if defined(_WIN64) || defined(__LP64__)
 #define TIGER_ARCH64
 #endif
-
-#define PASSES 3
 
 #define t1 (table)
 #define t2 (table+256)
 #define t3 (table+256*2)
 #define t4 (table+256*3)
 
-#define save_abc \
-	aa = a; \
-	bb = b; \
-	cc = c;
-
 #ifdef TIGER_ARCH64
-#define round(a,b,c,x,mul) \
+#define round(a,b,c,x) \
 	c ^= x; \
 	a -= t1[((c)>>(0*8))&0xFF] ^ t2[((c)>>(2*8))&0xFF] ^ \
 	     t3[((c)>>(4*8))&0xFF] ^ t4[((c)>>(6*8))&0xFF] ; \
 	b += t4[((c)>>(1*8))&0xFF] ^ t3[((c)>>(3*8))&0xFF] ^ \
-	     t2[((c)>>(5*8))&0xFF] ^ t1[((c)>>(7*8))&0xFF] ; \
-	b *= mul;
+	     t2[((c)>>(5*8))&0xFF] ^ t1[((c)>>(7*8))&0xFF] ;
 #else
-#define round(a,b,c,x,mul) \
+#define round(a,b,c,x) \
 	c ^= x; \
 	a -= t1[(uint8_t)(c)] ^ \
 	     t2[(uint8_t)(((uint32_t)(c))>>(2*8))] ^ \
@@ -72,19 +64,120 @@
 	b += t4[(uint8_t)(((uint32_t)(c))>>(1*8))] ^ \
 	     t3[(uint8_t)(((uint32_t)(c))>>(3*8))] ^ \
 	     t2[(uint8_t)(((uint32_t)((c)>>(4*8)))>>(1*8))] ^ \
-	     t1[(uint8_t)(((uint32_t)((c)>>(4*8)))>>(3*8))]; \
-	b *= mul;
+	     t1[(uint8_t)(((uint32_t)((c)>>(4*8)))>>(3*8))];
 #endif
 
-#define pass(a,b,c,mul) \
-	round(a,b,c,x0,mul) \
-	round(b,c,a,x1,mul) \
-	round(c,a,b,x2,mul) \
-	round(a,b,c,x3,mul) \
-	round(b,c,a,x4,mul) \
-	round(c,a,b,x5,mul) \
-	round(a,b,c,x6,mul) \
-	round(b,c,a,x7,mul)
+#ifdef TIGER_SLOW_MULT
+#define pass5(a,b,c) \
+	round(a,b,c,x0) \
+	b += b << 2; \
+	round(b,c,a,x1) \
+	c += c << 2; \
+	round(c,a,b,x2) \
+	a += a << 2; \
+	round(a,b,c,x3) \
+	b += b << 2; \
+	round(b,c,a,x4) \
+	c += c << 2; \
+	round(c,a,b,x5) \
+	a += a << 2; \
+	round(a,b,c,x6) \
+	b += b << 2; \
+	round(b,c,a,x7) \
+	c += c << 2;
+
+#define pass7(a,b,c) \
+	round(a,b,c,x0) \
+	b = (b<<3) - b; \
+	round(b,c,a,x1) \
+	c = (c<<3) - c; \
+	round(c,a,b,x2) \
+	a = (a<<3) - a; \
+	round(a,b,c,x3) \
+	b = (b<<3) - b; \
+	round(b,c,a,x4) \
+	c = (c<<3) - c; \
+	round(c,a,b,x5) \
+	a = (a<<3) - a; \
+	round(a,b,c,x6) \
+	b = (b<<3) - b; \
+	round(b,c,a,x7) \
+	c = (c<<3) - c;
+
+#define pass9(a,b,c) \
+	round(a,b,c,x0) \
+	b += b << 3; \
+	round(b,c,a,x1) \
+	c += c << 3; \
+	round(c,a,b,x2) \
+	a += a << 3; \
+	round(a,b,c,x3) \
+	b += b << 3; \
+	round(b,c,a,x4) \
+	c += c << 3; \
+	round(c,a,b,x5) \
+	a += a << 3; \
+	round(a,b,c,x6) \
+	b += b << 3; \
+	round(b,c,a,x7) \
+	c += c << 3;
+
+#else
+
+#define pass5(a,b,c) \
+	round(a,b,c,x0) \
+	b *= 5; \
+	round(b,c,a,x1) \
+	c *= 5; \
+	round(c,a,b,x2) \
+	a *= 5; \
+	round(a,b,c,x3) \
+	b *= 5; \
+	round(b,c,a,x4) \
+	c *= 5; \
+	round(c,a,b,x5) \
+	a *= 5; \
+	round(a,b,c,x6) \
+	b *= 5; \
+	round(b,c,a,x7) \
+	c *= 5;
+
+#define pass7(a,b,c) \
+	round(a,b,c,x0) \
+	b *= 7; \
+	round(b,c,a,x1) \
+	c *= 7; \
+	round(c,a,b,x2) \
+	a *= 7; \
+	round(a,b,c,x3) \
+	b *= 7; \
+	round(b,c,a,x4) \
+	c *= 7; \
+	round(c,a,b,x5) \
+	a *= 7; \
+	round(a,b,c,x6) \
+	b *= 7; \
+	round(b,c,a,x7) \
+	c *= 7;
+
+#define pass9(a,b,c) \
+	round(a,b,c,x0) \
+	b *= 9; \
+	round(b,c,a,x1) \
+	c *= 9; \
+	round(c,a,b,x2) \
+	a *= 9; \
+	round(a,b,c,x3) \
+	b *= 9; \
+	round(b,c,a,x4) \
+	c *= 9; \
+	round(c,a,b,x5) \
+	a *= 9; \
+	round(a,b,c,x6) \
+	b *= 9; \
+	round(b,c,a,x7) \
+	c *= 9;
+#endif
 
 #define key_schedule \
 	x0 -= x7 ^ _ULL(0xA5A5A5A5A5A5A5A5); \
@@ -104,111 +197,81 @@
 	x6 += x5; \
 	x7 -= x6 ^ _ULL(0x0123456789ABCDEF);
 
-#define feedforward \
-	a ^= aa; \
-	b -= bb; \
-	c += cc;
-
-#ifdef TIGER_ARCH64
 #define compress \
-	save_abc \
-	pass(a,b,c,5) \
+	pass5(a,b,c) \
 	key_schedule \
-	pass(c,a,b,7) \
+	pass7(c,a,b) \
 	key_schedule \
-	pass(b,c,a,9) \
-	for(pass_no=3; pass_no<PASSES; ++pass_no) { \
-		key_schedule \
-		pass(a,b,c,9) \
-		tmpa=a; a=c; c=b; b=tmpa;} \
-	feedforward
-#else
-#define compress \
-	save_abc \
-	for(pass_no=0; pass_no<PASSES; ++pass_no) { \
-		if(pass_no != 0) {key_schedule} \
-		pass(a,b,c,(pass_no==0?5:pass_no==1?7:9)); \
-		tmpa=a; a=c; c=b; b=tmpa;} \
-	feedforward
-#endif
+	pass9(b,c,a)
 
 #define tiger_compress_macro(str, state) \
 	{ \
-		register uint64_t a, b, c, tmpa; \
-		register uint64_t aa, bb, cc; \
-		register uint64_t x0, x1, x2, x3, x4, x5, x6, x7; \
-		register int pass_no; \
+		uint64_t a, b, c; \
+		uint64_t x0, x1, x2, x3, x4, x5, x6, x7; \
 		\
-		a = state[0]; \
-		b = state[1]; \
-		c = state[2]; \
+		a = (state)[0]; \
+		b = (state)[1]; \
+		c = (state)[2]; \
 		\
-		x0=str[0]; x1=str[1]; x2=str[2]; x3=str[3]; \
-		x4=str[4]; x5=str[5]; x6=str[6]; x7=str[7]; \
+		x0 = (str)[0]; x1 = (str)[1]; x2 = (str)[2]; x3 = (str)[3]; \
+		x4 = (str)[4]; x5 = (str)[5]; x6 = (str)[6]; x7 = (str)[7]; \
 		\
 		compress; \
 		\
-		state[0] = a; \
-		state[1] = b; \
-		state[2] = c; \
+		(state)[0] ^= a; \
+		(state)[1] = b - (state)[1]; \
+		(state)[2] += c; \
 	}
-
-#if 0
-/* The compress function is a function. Requires smaller cache?    */
-void TigerHash::tigerCompress(const uint64_t *str, uint64_t state[3])
-{
-	tiger_compress_macro(((const uint64_t*)str), ((uint64_t*)state));
-}
-#endif
 
 void TigerHash::update(const void* data, size_t length)
 {
-	size_t tmppos = (uint32_t)(pos & (BLOCK_SIZE - 1));
+	unsigned tmppos = (unsigned) (pos & (BLOCK_SIZE - 1));
 #ifdef TIGER_BIG_ENDIAN
 	uint8_t buf[BLOCK_SIZE];
-	int j;
 #endif
-	const uint8_t* str = (const uint8_t*)data;
+	const uint8_t* str = (const uint8_t*) data;
 	// First empty tmp buffer if possible
-	if (tmppos > 0)
+	if (tmppos)
 	{
-		const size_t n = min(length, BLOCK_SIZE - tmppos);
+		const size_t n = std::min<size_t>(length, BLOCK_SIZE - tmppos);
 		memcpy(tmp + tmppos, str, n);
 		str += n;
 		pos += n;
 		length -= n;
-		
-		if ((tmppos + n) == BLOCK_SIZE)
+
+		if (tmppos + n == BLOCK_SIZE)
 		{
 #ifdef TIGER_BIG_ENDIAN
-			for (j = 0; j < BLOCK_SIZE; j++)
+			for (int j = 0; j < BLOCK_SIZE; j++)
 				buf[j ^ 7] = ((uint8_t*)tmp)[j];
-			tiger_compress_macro(((uint64_t*)buf), res);
+			tiger_compress_macro((uint64_t*) buf, res);
 #else
-			tiger_compress_macro(((uint64_t*)tmp), res);
+			tiger_compress_macro((uint64_t*) tmp, res);
 #endif
+#ifndef NDEBUG
 			tmppos = 0;
+#endif
 		}
 	}
-	
+
 	// So, now either tmp is empty or all data has been consumed...
 	dcassert(length == 0 || tmppos == 0);
-	
+
 	// Process the bulk of data
 	while (length >= BLOCK_SIZE)
 	{
 #ifdef TIGER_BIG_ENDIAN
-		for (j = 0; j < BLOCK_SIZE; j++)
-			buf[j ^ 7] = ((uint8_t*)str)[j];
-		tiger_compress_macro(((uint64_t*)buf), res);
+		for (int j = 0; j < BLOCK_SIZE; j++)
+			buf[j ^ 7] = ((uint8_t*) str)[j];
+		tiger_compress_macro((uint64_t*) buf, res);
 #else
-		tiger_compress_macro(((uint64_t*)str), res); // [5] https://www.box.net/shared/56e20a1bb6bfd4f2433f
+		tiger_compress_macro((uint64_t*) str, res);
 #endif
 		str += BLOCK_SIZE;
 		pos += BLOCK_SIZE;
 		length -= BLOCK_SIZE;
 	}
-	
+
 	// Copy the rest to the tmp buffer
 	memcpy(tmp, str, length);
 	pos += length;
@@ -216,25 +279,25 @@ void TigerHash::update(const void* data, size_t length)
 
 uint8_t* TigerHash::finalize()
 {
-	size_t tmppos = (size_t)(pos & BLOCK_SIZE - 1);
+	unsigned tmppos = (unsigned) (pos & (BLOCK_SIZE - 1));
 #ifdef TIGER_BIG_ENDIAN
 	uint8_t buf[BLOCK_SIZE];
 	int j;
 #endif
 	// Tmp buffer always has at least one pos, otherwise it would have
 	// been processed in update()
-	
+
 	tmp[tmppos++] = 0x01;
-	
-	if (tmppos > (BLOCK_SIZE - sizeof(uint64_t)))
+
+	if (tmppos > BLOCK_SIZE - sizeof(uint64_t))
 	{
 		memset(tmp + tmppos, 0, BLOCK_SIZE - tmppos);
 #ifdef TIGER_BIG_ENDIAN
 		for (j = 0; j < BLOCK_SIZE; j++)
-			buf[j ^ 7] = ((uint8_t*)tmp)[j];
-		tiger_compress_macro(((uint64_t*)buf), res);
+			buf[j ^ 7] = ((uint8_t*) tmp)[j];
+		tiger_compress_macro((uint64_t*) buf, res);
 #else
-		tiger_compress_macro(((uint64_t*)tmp), res);
+		tiger_compress_macro((uint64_t*) tmp, res);
 #endif
 		memset(tmp, 0, BLOCK_SIZE);
 	}
@@ -243,16 +306,16 @@ uint8_t* TigerHash::finalize()
 		memset(tmp + tmppos, 0, BLOCK_SIZE - tmppos - sizeof(uint64_t));
 #ifdef TIGER_BIG_ENDIAN
 		for (j = 0; j < BLOCK_SIZE; j++)
-			buf[j ^ 7] = ((uint8_t*)tmp)[j];
+			buf[j ^ 7] = ((uint8_t*) tmp)[j];
 		memcpy(tmp, buf, BLOCK_SIZE);
 #endif
 	}
-	
-	((uint64_t*)(&(tmp[56])))[0] = pos << 3;
-	tiger_compress_macro(((uint64_t*)tmp), res);
+
+	*(uint64_t*) (tmp + 56) = pos << 3;
+	tiger_compress_macro((uint64_t*) tmp, res);
 #ifdef TIGER_BIG_ENDIAN
 	for (j = 0; j < BYTES; j++)
-		buf[j ^ 7] = ((uint8_t*)res)[j];
+		buf[j ^ 7] = ((uint8_t*) res)[j];
 	memcpy(res, buf, BYTES);
 #endif
 	return getResult();
@@ -773,8 +836,3 @@ const uint64_t TigerHash::table[4 * 256] =
 	_ULL(0xCD56D9430EA8280E)   /* 1020 */,    _ULL(0xC12591D7535F5065)   /* 1021 */,
 	_ULL(0xC83223F1720AEF96)   /* 1022 */,    _ULL(0xC3A0396F7363A51F)   /* 1023 */
 };
-
-/**
- * @file
- * $Id: TigerHash.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

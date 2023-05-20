@@ -30,39 +30,32 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_TIGER_HASH_H
 #define DCPLUSPLUS_DCPP_TIGER_HASH_H
 
 #include "compiler.h"
+
 class TigerHash
 {
 	public:
 		/** Hash size in bytes */
 		static const size_t BITS = 192;
 		static const size_t BYTES = BITS / 8;
-		
+
 		TigerHash() : pos(0)
 		{
 			res[0] = _ULL(0x0123456789ABCDEF);
 			res[1] = _ULL(0xFEDCBA9876543210);
 			res[2] = _ULL(0xF096A5B4C3B2E187);
 		}
-		
-		~TigerHash()
-		{
-		}
-		
+
 		/** Calculates the Tiger hash of the data. */
 		void update(const void* data, size_t len);
 		/** Call once all data has been processed. */
 		uint8_t* finalize();
-		
-		uint8_t* getResult()
-		{
-			return (uint8_t*) res;
-		}
+
+		uint8_t* getResult() { return (uint8_t*) res; }
+
 	private:
 		enum { BLOCK_SIZE = 512 / 8 };
 		/** 512 bit blocks for the compress function */
@@ -73,16 +66,6 @@ class TigerHash
 		uint64_t pos;
 		/** S boxes */
 		static const uint64_t table[];
-		
-#if 0
-		void tigerCompress(const uint64_t* data, uint64_t state[3]);
-#endif
-		
 };
 
-#endif // !defined(TIGER_HASH_H)
-
-/**
- * @file
- * $Id: TigerHash.h 568 2011-07-24 18:28:43Z bigmuscle $
- */
+#endif // DCPLUSPLUS_DCPP_TIGER_HASH_H
