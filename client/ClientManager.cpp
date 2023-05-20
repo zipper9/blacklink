@@ -798,7 +798,7 @@ OnlineUserPtr ClientManager::connect(const HintedUser& user, const string& token
 	return ou;
 }
 
-int ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson, bool automatic)
+int ClientManager::privateMessage(const HintedUser& user, const string& msg, int flags)
 {
 	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 	OnlineUserPtr u;
@@ -809,7 +809,8 @@ int ClientManager::privateMessage(const HintedUser& user, const string& msg, boo
 	if (!u) return PM_NO_USER;
 	auto& cb = u->getClientBase();
 	if (cb->getType() == ClientBase::TYPE_DHT) return PM_DISABLED;
-	if (cb->privateMessage(u, msg, thirdPerson, automatic)) return PM_OK;
+	if ((flags & ClientBase::PM_FLAG_MAIN_CHAT) && !cb->isMcPmSupported()) return PM_DISABLED;
+	if (cb->privateMessage(u, msg, flags)) return PM_OK;
 	return PM_ERROR;
 }
 

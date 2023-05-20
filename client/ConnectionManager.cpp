@@ -1732,22 +1732,22 @@ void ConnectionManager::removeExpiredCCPMToken(const string& token)
 		fire(ConnectionManagerListener::PMChannelDisconnected(), cid);
 }
 
-bool ConnectionManager::sendCCPMMessage(const HintedUser& hintedUser, const string& text, bool thirdPerson, bool automatic)
+bool ConnectionManager::sendCCPMMessage(const HintedUser& hintedUser, const string& text, int flags)
 {
 	OnlineUserPtr ou = ClientManager::findOnlineUser(hintedUser.user->getCID(), hintedUser.hint, false);
 	if (!ou) return false;
-	return sendCCPMMessage(ou, text, thirdPerson, automatic);
+	return sendCCPMMessage(ou, text, flags);
 }
 
-bool ConnectionManager::sendCCPMMessage(const OnlineUserPtr& ou, const string& text, bool thirdPerson, bool automatic)
+bool ConnectionManager::sendCCPMMessage(const OnlineUserPtr& ou, const string& text, int flags)
 {
 	ClientBase* clientBase = ou->getClientBase().get();
 	if (clientBase->getType() != ClientBase::TYPE_ADC) return false;
 	AdcCommand cmd(AdcCommand::CMD_MSG);
 	cmd.addParam(text);
-	if (thirdPerson) cmd.addParam("ME1");
+	if (flags & ClientBase::PM_FLAG_THIRD_PERSON) cmd.addParam("ME1");
 	if (!sendCCPMMessage(ou->getUser()->getCID(), cmd)) return false;
-	static_cast<AdcHub*>(clientBase)->fireOutgoingPM(ou, text, thirdPerson, automatic);
+	static_cast<AdcHub*>(clientBase)->fireOutgoingPM(ou, text, flags);
 	return true;
 }
 

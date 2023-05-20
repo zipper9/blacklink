@@ -279,6 +279,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SEND_QP_PARAM,
 			USE_SALT_PASS,
 			USE_BOT_LIST,
+			USE_MCTO,
 			USE_CCPM,
 			USE_CPMI,
 			CCPM_AUTO_START,

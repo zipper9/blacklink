@@ -547,7 +547,7 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 		OnlineUserPtr replyTo = message->replyTo;
 		processIncomingPM(message, response);
 		if (!response.empty())
-			privateMessage(replyTo, response, true, true);
+			privateMessage(replyTo, response, PM_FLAG_AUTOMATIC | PM_FLAG_THIRD_PERSON);
 	}
 	else
 	if (isChatMessageAllowed(*message, Util::emptyString))
@@ -565,7 +565,7 @@ void AdcHub::processCCPMMessage(const AdcCommand& c, const OnlineUserPtr& ou) no
 	string response;
 	processIncomingPM(message, response);
 	if (!response.empty())
-		ConnectionManager::getInstance()->sendCCPMMessage(ou, response, true, true);
+		ConnectionManager::getInstance()->sendCCPMMessage(ou, response, PM_FLAG_AUTOMATIC | PM_FLAG_THIRD_PERSON);
 }
 
 void AdcHub::handle(AdcCommand::GPA, const AdcCommand& c) noexcept
@@ -1172,7 +1172,7 @@ void AdcHub::hubMessage(const string& message, bool thirdPerson)
 	send(cmd);
 }
 
-bool AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
+bool AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, int flags)
 {
 	{
 		LOCK(csState);
@@ -1181,12 +1181,12 @@ bool AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bo
 
 	AdcCommand cmd(AdcCommand::CMD_MSG, user->getIdentity().getSID(), AdcCommand::TYPE_ECHO);
 	cmd.addParam(message);
-	if (thirdPerson)
+	if (flags & PM_FLAG_THIRD_PERSON)
 		cmd.addParam("ME", "1");
 	cmd.addParam("PM", getMySID());
 	send(cmd);
 
-	fireOutgoingPM(user, message, thirdPerson, automatic);
+	fireOutgoingPM(user, message, flags);
 	return true;
 }
 
@@ -1213,7 +1213,7 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 			{
 				if (i->second->getIdentity().getNick() == to)
 				{
-					privateMessage(i->second, cmd, false, false);
+					privateMessage(i->second, cmd, 0);
 					return;
 				}
 			}

@@ -795,9 +795,9 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
 	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
-	{
-		ClientManager::privateMessage(hintedUser, STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds), true, true);
-	}
+		ClientManager::privateMessage(hintedUser,
+			STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds),
+			ClientBase::PM_FLAG_AUTOMATIC | ClientBase::PM_FLAG_THIRD_PERSON);
 	if (notifyUser)
 		ClientManager::getInstance()->connect(hintedUser, token, false);
 }
@@ -813,9 +813,9 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	save();
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
 	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
-	{
-		ClientManager::privateMessage(hintedUser, STRING(SLOT_REMOVED_MSG), true, true);
-	}
+		ClientManager::privateMessage(hintedUser,
+			STRING(SLOT_REMOVED_MSG),
+			ClientBase::PM_FLAG_AUTOMATIC | ClientBase::PM_FLAG_THIRD_PERSON);
 }
 
 static void getShareGroup(const UserConnection* source, bool& hideShare, CID& shareGroup)

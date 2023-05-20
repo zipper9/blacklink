@@ -35,7 +35,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 
 		int getType() const override { return TYPE_ADC; }
 		void hubMessage(const string& message, bool thirdPerson = false) override;
-		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) override;
+		bool privateMessage(const OnlineUserPtr& user, const string& message, int flags) override;
 		void sendUserCmd(const UserCommand& command, const StringMap& params) override;
 		void searchToken(const SearchParam& sp) override;
 		void password(const string& pwd, bool setPassword) override;
@@ -52,6 +52,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			return AdcCommand::escape(str, false);
 		}
 		bool send(const AdcCommand& cmd) override;
+		bool isMcPmSupported() const override { return false; }
 		void processCCPMMessage(const AdcCommand& cmd, const OnlineUserPtr& ou) noexcept;
 		
 		string getMySID() const

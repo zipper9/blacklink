@@ -39,7 +39,7 @@ class NmdcHub : public Client, private Flags
 
 		int getType() const override { return TYPE_NMDC; }
 		void hubMessage(const string& message, bool thirdPerson = false) override;
-		bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) override;
+		bool privateMessage(const OnlineUserPtr& user, const string& message, int flags) override;
 		void sendUserCmd(const UserCommand& command, const StringMap& params) override;
 		void searchToken(const SearchParam& sp) override;
 		void onTimer(uint64_t tick) noexcept override;
@@ -93,16 +93,17 @@ class NmdcHub : public Client, private Flags
 		friend class ClientManager;
 		enum SupportFlags
 		{
-			SUPPORTS_USERCOMMAND = 0x01,
-			SUPPORTS_NOGETINFO   = 0x02,
-			SUPPORTS_USERIP2     = 0x04,
+			SUPPORTS_USERCOMMAND = 0x001,
+			SUPPORTS_NOGETINFO   = 0x002,
+			SUPPORTS_USERIP2     = 0x004,
 #ifdef FLYLINKDC_USE_EXT_JSON
-			SUPPORTS_EXTJSON2    = 0x08,
+			SUPPORTS_EXTJSON2    = 0x008,
 #endif
-			SUPPORTS_NICKRULE    = 0x10,
-			SUPPORTS_SEARCH_TTHS = 0x20, // $SA and $SP
-			SUPPORTS_SEARCHRULE  = 0x40,
-			SUPPORTS_SALT_PASS   = 0x80
+			SUPPORTS_NICKRULE    = 0x010,
+			SUPPORTS_SEARCH_TTHS = 0x020, // $SA and $SP
+			SUPPORTS_SEARCHRULE  = 0x040,
+			SUPPORTS_SALT_PASS   = 0x080,
+			SUPPORTS_MCTO        = 0x100
 		};
 		
 		enum
@@ -158,8 +159,9 @@ class NmdcHub : public Client, private Flags
 		OnlineUserPtr findUser(const string& nick) const override;
 		void putUser(const string& nick);
 		bool getShareGroup(const string& seeker, CID& shareGroup, bool& hideShare) const;
-		
-		void privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson);
+		bool isMcPmSupported() const override;
+
+		void privateMessage(const string& nick, const string& myNick, const string& message, int flags);
 		void version()
 		{
 			send("$Version 1,0091|");
@@ -195,6 +197,7 @@ class NmdcHub : public Client, private Flags
 		void nickListParse(const string& param);
 		void opListParse(const string& param);
 		void toParse(const string& param);
+		void mcToParse(const string& param);
 		void chatMessageParse(const string& line);
 		void updateFromTag(Identity& id, const string& tag);
 		static int getEncodingFromDomain(const string& domain);

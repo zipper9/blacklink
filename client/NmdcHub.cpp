@@ -189,8 +189,6 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 	if (!ou->getUser()->getCID().isZero())
 	{
 		ClientManager::getInstance()->putOnline(ou, true);
-		//  is_all_my_info_loaded() без true не начинает качать при загрузке
-		//  https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1682
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		UserManager::getInstance()->checkUser(ou);
 #endif
@@ -247,17 +245,9 @@ void NmdcHub::clearUsers()
 		{
 			//i->second->getIdentity().setBytesShared(0);
 			if (!i->second->getUser()->getCID().isZero())
-			{
 				ClientManager::getInstance()->putOffline(i->second);
-			}
 			else
-			{
 				dcassert(0);
-			}
-			// Варианты
-			// - скармливать юзеров массивом
-			// - Держать юзеров в нескольких контейнерах для каждого хаба отдельно
-			// - проработать команду на убивание всей мапы сразу без поиска
 		}
 	}
 }
@@ -1113,6 +1103,10 @@ void NmdcHub::supportsParse(const string& param)
 		{
 			flags |= SUPPORTS_SALT_PASS;
 		}
+		else if (tok == "MCTo")
+		{
+			flags |= SUPPORTS_MCTO;
+		}
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 		else if (!(tok == "NoHello" || tok == "ZPipe0" || tok == "HubTopic" || tok == "HubURL" || tok == "BotList" || tok == "TTHSearch"))
 			collNmdcFeatures.addTag(tok, getHubUrl());
@@ -1214,6 +1208,8 @@ void NmdcHub::lockParse(const string& aLine)
 				feat += " TLS";
 			if (BOOLSETTING(USE_SALT_PASS))
 				feat += " SaltPass";
+			if (BOOLSETTING(USE_MCTO))
+				feat += " MCTo";
 			
 			feat += '|';
 			send(feat);
@@ -1500,7 +1496,38 @@ void NmdcHub::toParse(const string& param)
 	OnlineUserPtr replyTo = message->replyTo;
 	processIncomingPM(message, response);
 	if (!response.empty())
-		privateMessage(replyTo, response, true, true);
+		privateMessage(replyTo, response, PM_FLAG_AUTOMATIC | PM_FLAG_THIRD_PERSON);
+}
+
+void NmdcHub::mcToParse(const string& param)
+{
+	if (param.empty()) return;
+	string::size_type p1 = param.find('$');
+	if (p1 == string::npos) return;
+	string::size_type p2 = p1;
+	if (p2 > 0 && param[p2-1] == ' ') p2--;
+	const string toNick = param.substr(0, p2);
+	if (toNick.empty()) return;
+
+	string::size_type p3 = param.find(' ', ++p1);
+	if (p3 == string::npos) return;
+	const string msgText = param.substr(p3 + 1);
+	if (msgText.empty()) return;
+	const string fromNick = param.substr(p1, p3 - p1);
+	if (fromNick.empty()) return;
+
+	OnlineUserPtr user = findUser(fromNick);
+	if (!user)
+	{
+		user = getUser(fromNick);
+		user->getIdentity().setHub();
+	}
+	unique_ptr<ChatMessage> message(new ChatMessage(unescape(msgText), user, getMyOnlineUser(), user));
+	message->translateMe();
+	string response;
+	processIncomingPM(message, response);
+	if (!response.empty())
+		privateMessage(user, response, PM_FLAG_AUTOMATIC | PM_FLAG_THIRD_PERSON);
 }
 
 void NmdcHub::onLine(const string& line)
@@ -1631,7 +1658,7 @@ void NmdcHub::onLine(const string& line)
 	{
 		botListParse(param);
 	}
-	else if (cmd == "NickList") // TODO - убить
+	else if (cmd == "NickList")
 	{
 		nickListParse(param);
 	}
@@ -1642,6 +1669,10 @@ void NmdcHub::onLine(const string& line)
 	else if (cmd == "To:")
 	{
 		toParse(param);
+	}
+	else if (cmd == "MCTo:")
+	{
+		mcToParse(param);
 	}
 	else if (cmd == "GetPass")
 	{
@@ -2291,23 +2322,32 @@ string NmdcHub::validateMessage(string tmp, bool reverse) noexcept
 	return tmp;
 }
 
-void NmdcHub::privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson)
+void NmdcHub::privateMessage(const string& nick, const string& myNick, const string& message, int flags)
 {
-	string cmd = "$To: ";
-	cmd += fromUtf8(nick);
-	cmd += " From: ";
+	string cmd = (flags & PM_FLAG_MAIN_CHAT) ? "$MCTo: " : "$To: ";
 	string myNickEncoded = fromUtf8(myNick);
-	cmd += myNickEncoded;
-	cmd += " $<";
-	cmd += escape(myNickEncoded);
-	cmd += "> ";
-	if (thirdPerson) cmd += "/me ";
+	cmd += fromUtf8(nick);
+	if (flags & PM_FLAG_MAIN_CHAT)
+	{
+		cmd += " $";
+		cmd += myNickEncoded;
+		cmd += ' ';
+	}
+	else
+	{
+		cmd += " From: ";
+		cmd += myNickEncoded;
+		cmd += " $<";
+		cmd += escape(myNickEncoded);
+		cmd += "> ";
+	}
+	if (flags & PM_FLAG_THIRD_PERSON) cmd += "/me ";
 	cmd += escape(fromUtf8(message));
 	cmd += '|';
 	send(cmd);
 }
 
-bool NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
+bool NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, int flags)
 {
 	string myNick;
 	{
@@ -2316,8 +2356,8 @@ bool NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, b
 		myNick = this->myNick;
 	}
 
-	privateMessage(user->getIdentity().getNick(), myNick, message, thirdPerson);
-	fireOutgoingPM(user, message, thirdPerson, automatic);
+	privateMessage(user->getIdentity().getNick(), myNick, message, flags);
+	fireOutgoingPM(user, message, flags);
 	return true;
 }
 
@@ -2335,7 +2375,7 @@ void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 		if (command.getTo().empty())
 			hubMessage(cmd);
 		else
-			privateMessage(Util::formatParams(command.getTo(), params, false), myNick, cmd, false);
+			privateMessage(Util::formatParams(command.getTo(), params, false), myNick, cmd, 0);
 	}
 	else
 		send(fromUtf8(cmd));
@@ -2542,6 +2582,14 @@ void NmdcHub::onFailed(const string& line) noexcept
 	csState.unlock();
 	if (!natUser.empty())
 		socketPool.removeSocket(natUser);
+}
+
+bool NmdcHub::isMcPmSupported() const
+{
+	csState.lock();
+	int flags = hubSupportFlags;
+	csState.unlock();
+	return (flags & SUPPORTS_MCTO) != 0;
 }
 
 const string& NmdcHub::getLock()

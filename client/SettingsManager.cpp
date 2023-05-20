@@ -307,6 +307,7 @@ static const char* settingTags[] =
 	"SendQPParam",
 	"UseSaltPass",
 	"UseBotList",
+	"UseMCTo",
 	"UseCCPM",
 	"UseCPMI",
 	"CCPMAutoStart",

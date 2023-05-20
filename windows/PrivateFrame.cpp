@@ -384,11 +384,12 @@ bool PrivateFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comman
 
 bool PrivateFrame::sendMessage(const string& msg, bool thirdPerson /*= false*/)
 {
+	int flags = thirdPerson ? ClientBase::PM_FLAG_THIRD_PERSON : 0;
 	if (ccpmState == MessagePanel::CCPM_STATE_CONNECTING)
 		return false;
 	if (ccpmState == MessagePanel::CCPM_STATE_CONNECTED)
 	{
-		bool result = ConnectionManager::getInstance()->sendCCPMMessage(replyTo, msg, thirdPerson, false);
+		bool result = ConnectionManager::getInstance()->sendCCPMMessage(replyTo, msg, flags);
 		if (result)
 		{
 			lastSentTime = GET_TICK();
@@ -400,7 +401,7 @@ bool PrivateFrame::sendMessage(const string& msg, bool thirdPerson /*= false*/)
 		}
 		return result;
 	}
-	int pmRes = ClientManager::privateMessage(replyTo, msg, thirdPerson, false);
+	int pmRes = ClientManager::privateMessage(replyTo, msg, flags);
 	if (pmRes == ClientManager::PM_OK)
 		return true;
 	if (pmRes == ClientManager::PM_DISABLED)

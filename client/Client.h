@@ -40,6 +40,13 @@ class ClientBase
 			TYPE_DHT
 		};
 
+		enum
+		{
+			PM_FLAG_THIRD_PERSON = 1,
+			PM_FLAG_MAIN_CHAT    = 2,
+			PM_FLAG_AUTOMATIC    = 4
+		};
+
 		ClientBase() {}
 		virtual ~ClientBase() {}
 
@@ -53,9 +60,10 @@ class ClientBase
 		virtual string getMyNick() const = 0;
 		virtual bool isOp() const = 0;
 		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
-		virtual bool privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic) = 0;
+		virtual bool privateMessage(const OnlineUserPtr& user, const string& message, int falgs) = 0;
 		virtual int getType() const = 0;
 		virtual void dumpUserInfo(const string& userReport) = 0;
+		virtual bool isMcPmSupported() const = 0;
 };
 
 /** Yes, this should probably be called a Hub */
@@ -86,7 +94,7 @@ class Client : public ClientBase,
 		bool isActive() const;
 		virtual void connect();
 		virtual void disconnect(bool graceless);
-		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
+		virtual void hubMessage(const string& message, bool thirdPerson = false) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
 		unsigned searchInternal(const SearchParam& sp);
@@ -146,7 +154,7 @@ class Client : public ClientBase,
 		
 		virtual void refreshUserList(bool) = 0;
 		virtual void getUserList(OnlineUserList& list) const = 0;
-		virtual OnlineUserPtr findUser(const string& aNick) const = 0;
+		virtual OnlineUserPtr findUser(const string& nick) const = 0;
 		
 		uint16_t getPort() const
 		{
@@ -254,7 +262,7 @@ class Client : public ClientBase,
 		void processIncomingPM(std::unique_ptr<ChatMessage>& message, string& response);
 
 	public:
-		void fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic);
+		void fireOutgoingPM(const OnlineUserPtr& user, const string& message, int flags);
 
 	protected:
 		OnlineUserPtr myOnlineUser;

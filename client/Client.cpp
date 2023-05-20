@@ -867,12 +867,12 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message, string& re
 	}
 }
 
-void Client::fireOutgoingPM(const OnlineUserPtr& user, const string& message, bool thirdPerson, bool automatic)
+void Client::fireOutgoingPM(const OnlineUserPtr& user, const string& message, int flags)
 {
 	const OnlineUserPtr& me = getMyOnlineUser();
 
-	unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, me, user, me, thirdPerson));
-	if (!isPrivateMessageAllowed(*chatMessage, nullptr, automatic))
+	unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, me, user, me, (flags & PM_FLAG_THIRD_PERSON) != 0));
+	if (!isPrivateMessageAllowed(*chatMessage, nullptr, (flags & PM_FLAG_AUTOMATIC) != 0))
 	{
 		logPM(*chatMessage);
 		return;

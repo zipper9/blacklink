@@ -218,8 +218,8 @@ class ConnectionManager :
 		bool connectCCPM(const HintedUser& hintedUser);
 		bool disconnectCCPM(const CID& cid);
 		void getCCPMState(const CID& cid, PMConnState& s) const;
-		bool sendCCPMMessage(const HintedUser& hintedUser, const string& text, bool thirdPerson, bool automatic);
-		bool sendCCPMMessage(const OnlineUserPtr& ou, const string& text, bool thirdPerson, bool automatic);
+		bool sendCCPMMessage(const HintedUser& hintedUser, const string& text, int flags);
+		bool sendCCPMMessage(const OnlineUserPtr& ou, const string& text, int flags);
 		bool sendCCPMMessage(const CID& cid, AdcCommand& cmd);
 
 		void stopServers();

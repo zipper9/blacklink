@@ -67,6 +67,7 @@ namespace dht
 		bool resendMyINFO(bool alwaysSend, bool forcePassive) { return false; }
 		int getType() const { return ClientBase::TYPE_DHT; }
 		void dumpUserInfo(const string& userReport);
+		bool isMcPmSupported() const { return false; }
 
 		/** Starts DHT. */
 		void start();
@@ -102,7 +103,7 @@ namespace dht
 		void connect(const OnlineUserPtr& ou, const string& token, bool forcePassive);
 
 		/** Sends private message to online node */
-		bool privateMessage(const OnlineUserPtr& ou, const string& message, bool thirdPerson, bool automatic);
+		bool privateMessage(const OnlineUserPtr& ou, const string& message, int flags);
 
 		/** Is DHT connected? */
 		bool isConnected() const;

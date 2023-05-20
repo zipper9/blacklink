@@ -576,6 +576,22 @@ bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::
 			}
 			return true;
 		}
+		case Commands::COMMAND_MC_PRIVATE_MESSAGE:
+		{
+			res.what = Commands::RESULT_NO_TEXT;
+			if (!client) return true;
+			const OnlineUserPtr ou = client->findUser(pc.args[1]);
+			if (ou && pc.args.size() >= 3)
+			{
+				int result = ClientManager::privateMessage(HintedUser(ou->getUser(), client->getHubUrl()), pc.args[2], ClientBase::PM_FLAG_MAIN_CHAT);
+				if (result == ClientManager::PM_DISABLED)
+				{
+					res.what = Commands::RESULT_ERROR_MESSAGE;
+					res.text = STRING(COMMAND_MCTO_NOT_SUPPORTED);
+				}
+			}
+			return true;
+		}
 	}
 	return BaseChatFrame::processFrameCommand(pc, res);
 }

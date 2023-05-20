@@ -60,6 +60,7 @@ static const CommandDescription desc[] =
 	{ CTX_HUB | FLAG_UI,                                0, 0,        ResourceManager::CMD_HELP_TOGGLE_USER_LIST    }, // COMMAND_TOGGLE_USER_LIST
 	{ CTX_HUB | FLAG_UI,                                0, 0,        ResourceManager::CMD_HELP_USER_LIST_LOCATION  }, // COMMAND_USER_LIST_LOCATION
 	{ CTX_HUB | FLAG_GET_FIRST_ARG,                     2, 2,        ResourceManager::CMD_HELP_PRIVATE_MESSAGE     }, // COMMAND_PRIVATE_MESSAGE
+	{ CTX_HUB | FLAG_GET_FIRST_ARG,                     2, 2,        ResourceManager::CMD_HELP_MC_PRIVATE_MESSAGE  }, // COMMAND_MC_PRIVATE_MESSAGE
 	{ CTX_HUB | CTX_USER,                               0, 1,        ResourceManager::CMD_HELP_GET_LIST            }, // COMMAND_GET_LIST
 	{ CTX_USER,                                         0, 0,        ResourceManager::CMD_HELP_GRANT_EXTRA_SLOT    }, // COMMAND_GRANT_EXTRA_SLOT
 	{ CTX_USER,                                         0, 0,        ResourceManager::CMD_HELP_UNGRANT_EXTRA_SLOT  }, // COMMAND_UNGRANT_EXTRA_SLOT
@@ -162,6 +163,7 @@ static const CommandName names[] =
 	{ "limit",          COMMAND_LIMIT               },
 	{ "log",            COMMAND_OPEN_LOG            },
 	{ "makefilelist",   COMMAND_MAKE_FILE_LIST      },
+	{ "mcpm",           COMMAND_MC_PRIVATE_MESSAGE  },
 	{ "me",             COMMAND_ME                  },
 	{ "mpc",            COMMAND_MEDIA_PLAYER        },
 	{ "myshare",        COMMAND_DEBUG_MYSHARE       },
