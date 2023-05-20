@@ -1329,7 +1329,7 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 				}
 				catch (const Exception& e)
 				{
-					LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+					LogManager::message(e.getError());
 				}
 				
 			}

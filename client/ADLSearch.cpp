@@ -588,7 +588,7 @@ bool ADLSearchManager::SearchContext::matchFile(const DirectoryListing::File* fi
 			}
 			catch (const Exception& e)
 			{
-				LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+				LogManager::message(e.getError());
 			}
 		}
 		if (item.userCommandId != -1 && FavoriteManager::getInstance()->getUserCommand(item.userCommandId, uc))

@@ -710,7 +710,7 @@ void DirectoryListing::download(File* file, const string& target, bool view, Que
 	}
 	catch (const Exception& e)
 	{
-		LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+		LogManager::message(e.getError());
 	}
 }
 
@@ -1052,7 +1052,7 @@ bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr)
 	SimpleStringTokenizer<char> sl(path, '/');
 	string token;
 	Directory* dir = root;
-	size_t prevPos = sl.getPos();
+	size_t prevPos = 0;
 	while (sl.getNextNonEmptyToken(token))
 	{
 		Directory* nextDir = nullptr;

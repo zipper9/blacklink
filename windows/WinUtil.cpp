@@ -684,7 +684,7 @@ bool WinUtil::parseMagnetUri(const tstring& text, DefinedMagnetAction action /* 
 				}
 				catch (const Exception& e)
 				{
-					LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+					LogManager::message(e.getError());
 				}
 				break;
 			case MA_SEARCH:

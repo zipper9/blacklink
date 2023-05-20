@@ -1225,7 +1225,7 @@ LRESULT DirectoryListingFrame::onDownloadAny(WORD, WORD, HWND, BOOL&)
 	}
 	catch (const Exception& e)
 	{
-		LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+		LogManager::message(e.getError());
 	}
 	return 0;
 }

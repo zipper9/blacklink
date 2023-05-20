@@ -634,7 +634,7 @@ LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 				}
 				catch (const Exception& e)
 				{
-					LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+					LogManager::message(e.getError());
 				}
 			}
 		}
