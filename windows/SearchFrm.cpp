@@ -162,13 +162,6 @@ static const ResourceManager::Strings hubsColumnNames[] =
 	ResourceManager::TIME_TO_WAIT
 };
 
-template<typename C>
-bool isTTH(const std::basic_string<C>& s)
-{
-	if (s.length() != 39) return false;
-	return Encoder::isBase32<C>(s.c_str());
-}
-
 SearchFrame::SearchFrame() :
 	id(WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_SEARCH)),
 	TimerHelper(m_hWnd),
@@ -770,7 +763,7 @@ void SearchFrame::onEnter()
 			}
 			if (searchParam.fileType == FILE_TYPE_TTH)
 			{
-				if (!isTTH(*si))
+				if (!Util::isTigerHashString(*si))
 				{
 					searchParam.fileType = FILE_TYPE_ANY;
 					ctrlFiletype.SetCurSel(0);
@@ -2824,7 +2817,7 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 {
 	tstring searchString;
 	WinUtil::getWindowText(ctrlSearchBox, searchString);
-	if (isTTH(searchString))
+	if (Util::isTigerHashString(searchString))
 	{
 		ctrlFiletype.SetCurSel(FILE_TYPE_TTH);
 		autoSwitchToTTH = true;
@@ -2839,7 +2832,7 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				if (xt != tstring::npos && xt + 18 + 39 <= searchString.size())
 				{
 					searchString = searchString.substr(xt + 18, 39);
-					if (isTTH(searchString))
+					if (Util::isTigerHashString(searchString))
 					{
 						ctrlSearchBox.SetWindowText(searchString.c_str());
 						ctrlFiletype.SetCurSel(FILE_TYPE_TTH);
@@ -2862,7 +2855,7 @@ LRESULT SearchFrame::onEditSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 {
 	int index = ctrlSearchBox.GetCurSel();
 	tstring text = WinUtil::getComboBoxItemText(ctrlSearchBox, index);
-	if (isTTH(text))
+	if (Util::isTigerHashString(text))
 	{
 		ctrlFiletype.SetCurSel(FILE_TYPE_TTH);
 		autoSwitchToTTH = true;

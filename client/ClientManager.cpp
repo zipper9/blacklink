@@ -405,13 +405,11 @@ bool ClientManager::getHubUserCommands(const string& hubUrl, vector<UserCommand>
 	return true;
 }
 
-#if 0
 bool ClientManager::isOnline(const UserPtr& user)
 {
 	READ_LOCK(*g_csOnlineUsers);
 	return g_onlineUsers.find(user->getCID()) != g_onlineUsers.end();
 }
-#endif
 
 OnlineUserPtr ClientManager::findOnlineUserL(const HintedUser& user, bool priv)
 {

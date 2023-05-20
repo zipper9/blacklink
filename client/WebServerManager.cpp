@@ -807,13 +807,6 @@ void WebServerManager::removeCacheItem(const string& name) noexcept
 	if (i != templateCache.end()) templateCache.erase(i);
 }
 
-template<typename C>
-bool isTTH(const std::basic_string<C>& s)
-{
-	if (s.length() != 39) return false;
-	return Encoder::isBase32<C>(s.c_str());
-}
-
 void WebServerManager::ClientContext::startSearch(const string& term, int type, bool onlyFreeSlots) noexcept
 {
 	static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
@@ -831,7 +824,7 @@ void WebServerManager::ClientContext::startSearch(const string& term, int type, 
 		if (token.empty()) continue;
 		if (searchParam.fileType == FILE_TYPE_TTH)
 		{
-			if (!isTTH(token))
+			if (!Util::isTigerHashString(token))
 			{
 				searchError = STRING(INVALID_TTH);
 				break;

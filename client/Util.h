@@ -488,6 +488,15 @@ namespace Util
 		return true;
 	}
 
+	template<typename C> bool isTigerHashString(const std::basic_string<C>& s)
+	{
+		if (s.length() != 39) return false;
+		auto str = s.data();
+		for (size_t i = 0; i < 39; i++)
+			if (!((str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= '2' && str[i] <= '7'))) return false;
+		return true;
+	}
+
 	template<typename string_type> void convertToDos(string_type& s)
 	{
 		typename string_type::size_type i = 0;

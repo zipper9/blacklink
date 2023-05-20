@@ -2087,13 +2087,24 @@ string DirectoryListingFrame::getFileUrl(const string& hubUrl, const string& pat
 	Util::ParsedUrl url;
 	Util::decodeUrl(hubUrl, url);
 	url.path = Util::encodeUriPath(Util::toAdcFile(path));
+	int protocol = Util::getHubProtocol(url.protocol);
 	if (dl->isOwnList())
 	{
-		string myNick = ClientManager::findMyNick(hubUrl);
-		url.user = myNick.empty() ? nick : myNick;
+		if (protocol == Util::HUB_PROTOCOL_ADC || protocol == Util::HUB_PROTOCOL_ADCS)
+			url.user = ClientManager::getMyCID().toBase32();
+		else
+			url.user = ClientManager::findMyNick(hubUrl);
 	}
 	else
-		url.user = nick;
+	{
+		if (protocol == Util::HUB_PROTOCOL_ADC || protocol == Util::HUB_PROTOCOL_ADCS)
+		{
+			const UserPtr& user = dl->getUser();
+			if (user && !user->getCID().isZero() && !(user->getFlags() & User::NMDC))
+				url.user = user->getCID().toBase32();
+		}
+	}
+	if (url.user.empty()) url.user = nick;
 	return Util::formatUrl(url, true);
 }
 

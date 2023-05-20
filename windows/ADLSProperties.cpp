@@ -26,13 +26,6 @@ using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;
 
-template<typename C>
-bool isTTH(const std::basic_string<C>& s)
-{
-	if (s.length() != 39) return false;
-	return Encoder::isBase32<C>(s.c_str());
-}
-
 static const DialogLayout::Align align1 = { 13, DialogLayout::SIDE_RIGHT, U_DU(6) };
 static const DialogLayout::Align align2 = { 10, DialogLayout::SIDE_RIGHT, 0 };
 
@@ -138,7 +131,7 @@ LRESULT ADLSProperties::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 		WinUtil::getWindowText(ctrlSearch, buf);
 		if (sourceType == ADLSearch::TTH)
 		{
-			if (!isTTH(buf))
+			if (!Util::isTigerHashString(buf))
 			{
 				WinUtil::showInputError(ctrlSearch, TSTRING(INVALID_TTH));
 				return 0;
@@ -190,7 +183,7 @@ LRESULT ADLSProperties::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 
 void ADLSProperties::checkTTH(const tstring& str)
 {
-	if (isTTH(str))
+	if (Util::isTigerHashString(str))
 	{
 		ctrlSearchType.SetCurSel(ADLSearch::TTH);
 		autoSwitchToTTH = true;

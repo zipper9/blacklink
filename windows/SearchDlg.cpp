@@ -20,13 +20,6 @@ using DialogLayout::AUTO;
 
 SearchHistory SearchDlg::lastSearches;
 
-template<typename C>
-bool isTTH(const std::basic_string<C>& s)
-{
-	if (s.length() != 39) return false;
-	return Encoder::isBase32<C>(s.c_str());
-}
-
 static const DialogLayout::Item layoutItems[] =
 {
 	{ IDC_CAPTION_SEARCH_STRING, FLAG_TRANSLATE, UNSPEC, UNSPEC },
@@ -136,7 +129,7 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		WinUtil::getWindowText(ctrlText, ts);
 		string text = Text::fromT(ts);
 		int fileType = ctrlFileType.GetCurSel();
-		if (fileType == FILE_TYPE_TTH && !isTTH(text))
+		if (fileType == FILE_TYPE_TTH && !Util::isTigerHashString(text))
 		{
 			COMBOBOXINFO inf = { sizeof(inf) };
 			ctrlText.GetComboBoxInfo(&inf);
@@ -219,7 +212,7 @@ LRESULT SearchDlg::onMeasureItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 
 void SearchDlg::checkTTH(const tstring& str)
 {
-	if (isTTH(str))
+	if (Util::isTigerHashString(str))
 	{
 		ctrlFileType.SetCurSel(FILE_TYPE_TTH);
 		autoSwitchToTTH = true;

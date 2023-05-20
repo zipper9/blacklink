@@ -81,6 +81,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static OnlineUserPtr findOnlineUser(const CID& cid, const string& hintUrl, bool priv);
 		static void findOnlineUsers(const CID& cid, OnlineUserList& res, int clientType);
 		static OnlineUserPtr findDHTNode(const CID& cid);
+		static bool isOnline(const UserPtr& user);
 
 		static string findMyNick(const string& hubUrl);
 

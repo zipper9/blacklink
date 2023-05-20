@@ -545,7 +545,8 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 {
 	Util::ParsedUrl p;
 	Util::decodeUrl(Text::fromT(url), p);
-	if (!Util::getHubProtocol(p.protocol) || p.host.empty() || p.port == 0) return false;
+	int protocol = Util::getHubProtocol(p.protocol);
+	if (!protocol || p.host.empty() || p.port == 0) return false;
 
 	string nick = std::move(p.user);
 	string file = Util::decodeUri(p.path);
@@ -581,8 +582,12 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 		}
 		if (!nick.empty())
 		{
-			const UserPtr user = ClientManager::findLegacyUser(nick, formattedUrl);
-			if (user && !user->isMe())
+			UserPtr user;
+			if ((protocol == Util::HUB_PROTOCOL_ADC || protocol == Util::HUB_PROTOCOL_ADCS) && Util::isTigerHashString(nick))
+				user = ClientManager::findUser(CID(nick));
+			else
+				user = ClientManager::findLegacyUser(nick, formattedUrl);
+			if (user && !user->isMe() && ClientManager::isOnline(user))
 			{
 				try
 				{
