@@ -453,9 +453,9 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	transferView.Create(m_hWnd);
 	toggleTransferView(BOOLSETTING(SHOW_TRANSFERVIEW));
-	
-	tuneTransferSplit();
-	
+
+	initTransfersSplitter();
+
 	UIAddToolBar(ctrlToolbar);
 	UIAddToolBar(ctrlWinampToolbar);
 	UIAddToolBar(ctrlQuickSearchBar);
@@ -585,18 +585,17 @@ void MainFrame::openDefaultWindows()
 			PostMessage(WM_COMMAND, openSettings[i].command);
 }
 
-int MainFrame::tuneTransferSplit()
+void MainFrame::initTransfersSplitter()
 {
 	int splitSize = SETTING(TRANSFER_FRAME_SPLIT);
-	m_nProportionalPos = splitSize;
-	if (m_nProportionalPos < 3000 || m_nProportionalPos > 9400)
+	if (splitSize < 3000 || splitSize > 9400)
 	{
-		m_nProportionalPos = 9100; // TODO - пофиксить
+		splitSize = 9100;
+		SET_SETTING(TRANSFER_FRAME_SPLIT, splitSize);
 	}
-	SET_SETTING(TRANSFER_FRAME_SPLIT, m_nProportionalPos);
 	SetSplitterPanes(m_hWndMDIClient, transferView.m_hWnd);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
-	return m_nProportionalPos;
+	m_nProportionalPos = splitSize;
 }
 
 LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)

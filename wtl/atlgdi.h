@@ -28,7 +28,7 @@
 #endif // _INC_WINDOWSX
 
 // required libraries
-  #pragma comment(lib, "msimg32.lib")
+#pragma comment(lib, "msimg32.lib")
 #if !defined(_ATL_NO_OPENGL)
   #pragma comment(lib, "opengl32.lib")
 #endif
@@ -403,7 +403,7 @@ public:
 		::DPtoLP(hDC1, &ptOrg, 1);
 		POINT pt = { 0, 0 };
 		pt.y = abs(lfHeight) + ptOrg.y;
-		::LPtoDP(hDC1, &pt,1);
+		::LPtoDP(hDC1, &pt, 1);
 		LONG nDeciPoint = ::MulDiv(pt.y, 720, ::GetDeviceCaps(hDC1, LOGPIXELSY));   // 72 points/inch, 10 decipoints/point
 		if(hDC == NULL)
 			::ReleaseDC(NULL, hDC1);
@@ -3250,7 +3250,10 @@ public:
 
 // Constructor/destructor
 	CEnhMetaFileInfo(HENHMETAFILE hEMF) : m_hEMF(hEMF), m_pBits(NULL), m_pDesc(NULL)
-	{ }
+	{
+		memset(&m_header, 0, sizeof(m_header));
+		memset(&m_pfd, 0, sizeof(m_pfd));
+	}
 
 	~CEnhMetaFileInfo()
 	{

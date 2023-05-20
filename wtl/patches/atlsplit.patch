@@ -1,0 +1,21 @@
+diff -Naur wtl.orig/atlsplit.h wtl/atlsplit.h
+--- wtl.orig/atlsplit.h	2023-05-20 16:07:09.865841500 +0200
++++ wtl/atlsplit.h	2023-05-20 16:07:12.880845100 +0200
+@@ -59,7 +59,7 @@
+ class CSplitterImpl
+ {
+ public:
+-	enum { m_nPanesCount = 2, m_nPropMax = INT_MAX, m_cxyStep = 10 };
++	enum { m_nPanesCount = 2, m_nPropMax = 10000, m_cxyStep = 10 };
+ 
+ 	bool m_bVertical;
+ 	HWND m_hWndPane[m_nPanesCount];
+@@ -202,7 +202,7 @@
+ 	int GetSplitterPosPct() const
+ 	{
+ 		int cxyTotal = m_bVertical ? (m_rcSplitter.right - m_rcSplitter.left - m_cxySplitBar - m_cxyBarEdge) : (m_rcSplitter.bottom - m_rcSplitter.top - m_cxySplitBar - m_cxyBarEdge);
+-		return ((cxyTotal > 0) && (m_xySplitterPos >= 0)) ? ::MulDiv(m_xySplitterPos, 100, cxyTotal) : -1;
++		return ((cxyTotal > 0) && (m_xySplitterPos >= 0)) ? (::MulDiv(m_xySplitterPos, m_nPropMax, cxyTotal) / 100) : -1;
+ 	}
+ 
+ 	bool SetSinglePaneMode(int nPane = SPLIT_PANE_NONE)

@@ -636,7 +636,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		void autoConnect(const std::vector<FavoriteHubEntry>& hubs);
 		void openDefaultWindows();
-		int tuneTransferSplit();
+		void initTransfersSplitter();
 		void setAway(bool flag);
 		void setSpeedLimit(bool upload, int minValue, int maxValue);
 		void addStatusMessage(const tstring& msg);
