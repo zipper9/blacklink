@@ -83,11 +83,14 @@ void InternetSearchBaseHandler::performWebSearch(WORD wID, const string& query)
 	if (query.empty() || wID < IDC_WEB_SEARCH) return;
 	size_t pos = wID - IDC_WEB_SEARCH;
 	const auto& data = FavoriteManager::getInstance()->getSearchUrls();
-	if (pos >= data.size()) return;
+	if (pos < data.size()) performWebSearch(data[pos].url, query);
+}
+
+void InternetSearchBaseHandler::performWebSearch(const string& urlTemplate, const string& query)
+{
 	WebSearchParamExpander ex(Util::encodeUriQuery(query));
-	const string& urlTemplate = data[pos].url;
 	string url = Util::formatParams(urlTemplate, &ex, false);
-	if (url != urlTemplate) WinUtil::openFile(Text::toT(url));
+	if (url != urlTemplate) WinUtil::openWebLink(Text::toT(url));
 }
 
 int InternetSearchBaseHandler::getWebSearchType(WORD wID)

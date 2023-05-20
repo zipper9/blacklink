@@ -40,6 +40,7 @@ class InternetSearchBaseHandler
 
 		static int appendWebSearchItems(OMenu& menu, SearchUrl::Type type, bool subMenu, ResourceManager::Strings subMenuTitle);
 		static void performWebSearch(WORD wID, const string& query);
+		static void performWebSearch(const string& urlTemplate, const string& query);
 		static int getWebSearchType(WORD wID);
 };
 

@@ -1883,6 +1883,7 @@ enum Strings   // @DontAdd
 	COMMAND_EMPTY_LIST, // "Empty list"
 	COMMAND_UNKNOWN_LOG_FILE_TYPE, // "Unknown log file type"
 	COMMAND_MCTO_NOT_SUPPORTED, // "MCTo extension not supported"
+	COMMAND_NO_SEARCH_URL, // "No search URL defined"
 	HTTP_REQ_STARTED, // "Started HTTP request %1%"
 	HTTP_REQ_INIT_FAILED, // "Unable to start HTTP request"
 	HTTP_REQ_FAILED, // "HTTP request %1% failed: %2%"

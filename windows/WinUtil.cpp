@@ -511,7 +511,11 @@ bool WinUtil::openLink(const tstring& uri)
 {
 	if (parseMagnetUri(uri) || parseDchubUrl(uri))
 		return true;
+	return openWebLink(uri);
+}
 
+bool WinUtil::openWebLink(const tstring& uri)
+{
 	static const tstring extLinks[] =
 	{
 		_T("http://"),
@@ -1366,8 +1370,11 @@ bool WinUtil::getDialogUnits(HDC hdc, int& cx, int& cy)
 	if (GetTextMetrics(hdc, &tm))
 	{
 		TCHAR ch[52];
-		for (int i = 0; i < 52; i++)
-			ch[i] = i < 26 ? 'a' + i : 'A' + i - 26;
+		for (int i = 0; i < 26; i++)
+		{
+			ch[i] = 'a' + i;
+			ch[26 + i] = 'A' + i;
+		}
 		SIZE size;
 		if (GetTextExtentPoint(hdc, ch, 52, &size))
 		{

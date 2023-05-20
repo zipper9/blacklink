@@ -40,6 +40,15 @@ static void checkPlayerMessage(string& text, Result& res, ResourceManager::Strin
 	res.what = RESULT_TEXT;
 }
 
+static const string& getFirstWebSearchUrl(int type)
+{
+	const auto& urls = FavoriteManager::getInstance()->getSearchUrls();
+	for (const auto& url : urls)
+		if (url.type == type)
+			return url.url;
+	return Util::emptyString;
+}
+
 bool MainFrame::processCommand(const ParsedCommand& pc, Result& res)
 {
 	if (!checkArguments(pc, res.text))
@@ -173,14 +182,21 @@ bool MainFrame::processCommand(const ParsedCommand& pc, Result& res)
 			return true;
 		}
 		case COMMAND_WEB_SEARCH:
-			res.what = RESULT_NO_TEXT;
-			WinUtil::openLink(_T("http://www.google.com/search?q=") + Text::toT(Util::encodeUriQuery(pc.args[1])));
-			return true;
-
 		case COMMAND_WHOIS:
-			res.what = RESULT_NO_TEXT;
-			WinUtil::openLink(_T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + Text::toT(Util::encodeUriQuery(pc.args[1])));
+		{
+			const string& url = getFirstWebSearchUrl(pc.command == COMMAND_WEB_SEARCH ? SearchUrl::KEYWORD : SearchUrl::HOSTNAME);
+			if (url.empty())
+			{
+				res.text = STRING(COMMAND_NO_SEARCH_URL);
+				res.what = RESULT_ERROR_MESSAGE;
+			}
+			else
+			{
+				InternetSearchBaseHandler::performWebSearch(url, pc.args[1]);
+				res.what = RESULT_NO_TEXT;
+			}
 			return true;
+		}
 #ifdef DEBUG_GDI_IMAGE
 		case COMMAND_DEBUG_GDI_INFO:
 			res.what = RESULT_LOCAL_TEXT;
