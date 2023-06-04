@@ -64,7 +64,7 @@ class QueueManagerListener
 #if 0 // FIXME: not used
 		virtual void on(RemovedArray, const std::vector<string>& qiArray) noexcept { }
 #endif
-		virtual void on(Moved, const QueueItemPtr&, const string&) noexcept { }
+		virtual void on(Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept { }
 		virtual void on(TargetsUpdated, const StringList&) noexcept { }
 		virtual void on(StatusUpdated, const QueueItemPtr&) noexcept { }
 		virtual void on(Tick, const QueueItemList&) noexcept { }

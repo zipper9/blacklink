@@ -2704,16 +2704,18 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (qi->isSet(QueueItem::FLAG_CLIENT_VIEW))
+		auto extraFlags = qi->getExtraFlags();
+		if (extraFlags & QueueItem::XFLAG_CLIENT_VIEW)
 		{
-			if (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST))
+			auto flags = qi->getFlags();
+			if (flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST))
 			{
 				// This is a file listing, show it...
-				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), qi->getListName(), dir, download->getRunningAverage(), qi->isSet(QueueItem::FLAG_DCLST_LIST));
+				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), qi->getListName(), dir, download->getRunningAverage(), (flags & QueueItem::FLAG_DCLST_LIST) != 0);
 				WinUtil::postSpeakerMsg(*this, DOWNLOAD_LISTING, dirInfo);
 			}
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
-			else if (qi->isSet(QueueItem::FLAG_TEXT))
+			else if (extraFlags & QueueItem::XFLAG_TEXT_VIEW)
 			{
 				WinUtil::postSpeakerMsg(*this, VIEW_FILE_AND_DELETE, new tstring(Text::toT(qi->getTarget())));
 			}

@@ -272,9 +272,12 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				return Text::toT(dir->name);
 			if (qi)
 			{
-				if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+				if (qi->getFlags() & QueueItem::FLAG_PARTIAL_LIST)
 				{
-					tstring str = Text::toT(qi->getTempTargetConst());
+					qi->lockAttributes();
+					string tempTarget = qi->getTempTargetL();
+					qi->unlockAttributes();
+					tstring str = Text::toT(tempTarget);
 					Util::toNativePathSeparators(str);
 					if (str.empty() || str[0] != _T(PATH_SEPARATOR))
 						str.insert(0, 1, _T(PATH_SEPARATOR));
@@ -288,10 +291,11 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				return TSTRING(DIRECTORY);
 			if (qi)
 			{
-				if (qi->isSet(QueueItem::FLAG_USER_GET_IP))
+				auto flags = qi->getFlags();
+				if (flags & QueueItem::FLAG_USER_GET_IP)
 					return TSTRING(CONNECTION_CHECK);
-				if (qi->isSet(QueueItem::FLAG_USER_LIST))
-					return qi->isSet(QueueItem::FLAG_PARTIAL_LIST) ? TSTRING(PARTIAL_FILE_LIST) : TSTRING(FILE_LIST);
+				if (flags & QueueItem::FLAG_USER_LIST)
+					return (flags & QueueItem::FLAG_PARTIAL_LIST) ? TSTRING(PARTIAL_FILE_LIST) : TSTRING(FILE_LIST);
 				return Text::toT(Util::getFileExtWithoutDot(qi->getTarget()));
 			}
 			break;
@@ -341,7 +345,10 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		case COLUMN_SEGMENTS:
 		{
 			if (!qi) break;
-			return Util::toStringT(qi->getDownloadsSegmentCount()) + _T('/') + Util::toStringT(qi->getMaxSegments());
+			qi->lockAttributes();
+			auto maxSegments = qi->getMaxSegmentsL();
+			qi->unlockAttributes();
+			return Util::toStringT(qi->getDownloadsSegmentCount()) + _T('/') + Util::toStringT(maxSegments);
 		}
 		case COLUMN_SIZE:
 			return getSize() == -1 ? TSTRING(UNKNOWN) : Util::formatBytesT(getSize());
@@ -358,8 +365,14 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		case COLUMN_PRIORITY:
 		{
 			if (!qi) break;
+
+			qi->lockAttributes();
+			auto prio = qi->getPriorityL();
+			auto extraFlags = qi->getExtraFlagsL();
+			qi->unlockAttributes();
+
 			tstring priority;
-			switch (qi->getPriority())
+			switch (prio)
 			{
 				case QueueItem::PAUSED:
 					priority = TSTRING(PAUSED);
@@ -389,7 +402,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 					dcassert(0);
 					break;
 			}
-			if (qi->getAutoPriority())
+			if (extraFlags & QueueItem::XFLAG_AUTO_PRIORITY)
 				priority += _T(" (") + TSTRING(AUTO) + _T(')');
 			return priority;
 		}
@@ -415,10 +428,12 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				return Text::toT(getFullPath(dir));
 			if (qi)
 			{
-				if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+				if (qi->getFlags() & QueueItem::FLAG_PARTIAL_LIST)
 				{
 					string target = qi->getTarget();
-					const string& dirName = qi->getTempTargetConst();
+					qi->lockAttributes();
+					const string dirName = qi->getTempTargetL();
+					qi->unlockAttributes();
 					if (dirName.length() + 1 < target.length())
 					{
 						size_t pos = target.length() - (dirName.length() + 1);
@@ -473,7 +488,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 		case COLUMN_TTH:
 		{
-			if (qi && !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
+			if (qi && !(qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)))
 				return Text::toT(qi->getTTH().toBase32());
 			break;
 		}
@@ -545,9 +560,11 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 {
 	dcassert(!closed);
 	string target = qi->getTarget();
-	if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+	if (qi->getFlags() & QueueItem::FLAG_PARTIAL_LIST)
 	{
-		const string& dirName = qi->getTempTargetConst();
+		qi->lockAttributes();
+		const string dirName = qi->getTempTargetL();
+		qi->unlockAttributes();
 		dcassert(dirName.length() + 1 < target.length());
 		if (dirName.length() + 1 < target.length())
 		{
@@ -1097,10 +1114,10 @@ void QueueFrame::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexc
 		addTask(REMOVE_ITEM, new QueueItemTask(qi));
 }
 
-void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& qi, const string& oldTarget) noexcept
+void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept
 {
-	addTask(REMOVE_ITEM_OLD_PATH, new RemoveQueueItemTask(qi, oldTarget));
-	addTask(ADD_ITEM, new QueueItemTask(qi));
+	addTask(REMOVE_ITEM, new QueueItemTask(qs));
+	addTask(ADD_ITEM, new QueueItemTask(qt));
 }
 
 void QueueFrame::on(QueueManagerListener::Tick, const QueueItemList& itemList) noexcept
@@ -1177,12 +1194,6 @@ void QueueFrame::processTasks()
 				LogManager::message("Remove item " + task.qi->getTTH().toBase32() + " at " + task.qi->getTarget(), false);
 #endif
 				removeItem(task.qi, nullptr);
-			}
-			break;
-			case REMOVE_ITEM_OLD_PATH:
-			{
-				const auto& task = static_cast<RemoveQueueItemTask&>(*ti->second);
-				removeItem(task.qi, &task.path);
 			}
 			break;
 			case UPDATE_ITEM:
@@ -1577,9 +1588,14 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				menuItems = 0;
 				int onlineUsers = 0;
 
+				qi->lockAttributes();
+				auto maxSegments = qi->getMaxSegmentsL();
+				auto extraFlags = qi->getExtraFlagsL();
+				qi->unlockAttributes();
+
 				if (indexSegments != -1)
 				{
-					segmentsMenu.CheckMenuItem(IDC_SEGMENTONE - 1 + qi->getMaxSegments(), MF_CHECKED);
+					segmentsMenu.CheckMenuItem(IDC_SEGMENTONE - 1 + maxSegments, MF_CHECKED);
 				}
 				if (indexPreview != -1)
 				{
@@ -1660,11 +1676,11 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				
 				if (readdItems == 0)
 					singleMenu.EnableMenuItem(indexPM + 1, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
-				
+
 				priorityMenu.CheckMenuItem(ii->getPriority(), MF_BYPOSITION | MF_CHECKED);
-				if (qi->getAutoPriority())
+				if (extraFlags & QueueItem::XFLAG_AUTO_PRIORITY)
 					priorityMenu.CheckMenuItem(IDC_AUTOPRIORITY, MF_BYCOMMAND | MF_CHECKED);
-					
+
 				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);			
 			}
 			else
@@ -1793,7 +1809,7 @@ LRESULT QueueFrame::onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	return 0;
 }
 
-LRESULT QueueFrame::onBrowseList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
@@ -1803,7 +1819,7 @@ LRESULT QueueFrame::onBrowseList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			const UserPtr* s = static_cast<const UserPtr*>(data);
 			try
 			{
-				QueueManager::getInstance()->addList(*s, QueueItem::FLAG_CLIENT_VIEW);
+				QueueManager::getInstance()->addList(*s, 0, QueueItem::XFLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)
 			{
@@ -1921,7 +1937,7 @@ LRESULT QueueFrame::onAutoPriority(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	auto func = [qm, &autoPriority](const QueueItemPtr& qi)
 	{
 		if (autoPriority == -1)
-			autoPriority = qi->getAutoPriority() ? 0 : 1;
+			autoPriority = (qi->getExtraFlags() & QueueItem::XFLAG_AUTO_PRIORITY) ? 0 : 1;
 		qm->setAutoPriority(qi->getTarget(), autoPriority != 0);
 	};
 
@@ -1946,7 +1962,7 @@ LRESULT QueueFrame::onAutoPriority(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 				if (qi)
 				{
 					if (autoPriority == -1)
-						autoPriority = qi->getAutoPriority() ? 0 : 1;
+						autoPriority = (qi->getExtraFlags() & QueueItem::XFLAG_AUTO_PRIORITY) ? 0 : 1;
 					qm->setAutoPriority(qi->getTarget(), autoPriority != 0);
 				}
 			}
@@ -1958,7 +1974,12 @@ LRESULT QueueFrame::onAutoPriority(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 LRESULT QueueFrame::onSegments(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	unsigned segments = max(1, wID - IDC_SEGMENTONE + 1);
-	auto func = [segments](const QueueItemPtr& qi) { qi->setMaxSegments(segments);};
+	auto func = [segments](const QueueItemPtr& qi)
+	{
+		qi->lockAttributes();
+		qi->setMaxSegmentsL(segments);
+		qi->unlockAttributes();
+	};
 	int i = -1;
 	while ((i = ctrlQueue.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -1970,7 +1991,9 @@ LRESULT QueueFrame::onSegments(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 			const QueueItemPtr& qi = ii->getQueueItem();
 			if (qi)
 			{
-				qi->setMaxSegments(segments);
+				qi->lockAttributes();
+				qi->setMaxSegmentsL(segments);
+				qi->unlockAttributes();
 				ctrlQueue.updateItem(ctrlQueue.findItem(ii), COLUMN_SEGMENTS);
 			}
 		}
@@ -2024,7 +2047,9 @@ void QueueFrame::changePriority(bool inc)
 	auto qm = QueueManager::getInstance();
 	auto func = [qm, inc](const QueueItemPtr& qi)
 	{
-		QueueItem::Priority p =	qi->getPriority();
+		qi->lockAttributes();
+		QueueItem::Priority p =	qi->getPriorityL();
+		qi->unlockAttributes();
 		int newPriority = p + (inc ? 1 : -1);
 		if (newPriority < QueueItem::PAUSED || newPriority > QueueItem::HIGHEST) return;
 		qm->setPriority(qi->getTarget(), (QueueItem::Priority) newPriority, true);

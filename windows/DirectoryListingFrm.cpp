@@ -732,7 +732,7 @@ void DirectoryListingFrame::changeDir(const DirectoryListing::Directory* dir)
 			{
 				QueueItem::MaskType flags = QueueItem::FLAG_PARTIAL_LIST;
 				if (WinUtil::isShift()) flags |= QueueItem::FLAG_RECURSIVE_LIST;
-				QueueManager::getInstance()->addList(dl->getHintedUser(), flags, dl->getPath(dir));
+				QueueManager::getInstance()->addList(dl->getHintedUser(), flags, 0, dl->getPath(dir));
 				ctrlStatus.SetText(STATUS_TEXT, CTSTRING(DOWNLOADING_LIST));
 			}
 			catch (const QueueException& e)
@@ -1221,7 +1221,7 @@ LRESULT DirectoryListingFrame::onDownloadAny(WORD, WORD, HWND, BOOL&)
 		params.sourcePath = path;
 		auto pos = path.rfind(URI_SEPARATOR);
 		if (pos != string::npos) path.erase(0, pos + 1);
-		QueueManager::getInstance()->add(path, params, dl->getUser(), 0, true, getConnFlag);
+		QueueManager::getInstance()->add(path, params, dl->getUser(), 0, 0, getConnFlag);
 	}
 	catch (const Exception& e)
 	{

@@ -674,7 +674,7 @@ void DirectoryListing::download(Directory* dir, const string& target, QueueItem:
 	if (!dir->getComplete())
 	{
 		// folder is not completed (partial list?), so we need to download it first
-		QueueManager::getInstance()->addDirectory(getPath(dir), hintedUser, dirTarget, prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+		QueueManager::getInstance()->addDirectory(getPath(dir), hintedUser, dirTarget, prio, QueueManager::DIR_FLAG_DOWNLOAD_DIRECTORY);
 	}
 	else
 	{
@@ -691,14 +691,23 @@ void DirectoryListing::download(Directory* dir, const string& target, QueueItem:
 
 void DirectoryListing::download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag) noexcept
 {
-	const QueueItem::MaskType flags = (QueueItem::MaskType)(view ? ((isDclst ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
+	QueueItem::MaskType flags = 0;
+	QueueItem::MaskType extraFlags = 0;
+	if (view)
+	{
+		extraFlags |= QueueItem::XFLAG_CLIENT_VIEW;
+		if (isDclst)
+			flags |= QueueItem::FLAG_DCLST_LIST;
+		else
+			extraFlags |= QueueItem::XFLAG_TEXT_VIEW;
+	}
 	try
 	{
 		QueueManager::QueueItemParams params;
 		params.size = file->getSize();
 		params.root = &file->getTTH();
 		params.priority = prio;
-		QueueManager::getInstance()->add(target, params, getUser(), flags, true, getConnFlag);
+		QueueManager::getInstance()->add(target, params, getUser(), flags, extraFlags, getConnFlag);
 		file->setFlag(FLAG_QUEUED);
 		Directory* dir = file->getParent();
 		while (dir->getParent())

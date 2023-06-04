@@ -591,7 +591,7 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 			{
 				try
 				{
-					QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW, file);
+					QueueManager::getInstance()->addList(user, 0, QueueItem::XFLAG_CLIENT_VIEW, file);
 				}
 				catch (const Exception&)
 				{
@@ -676,14 +676,15 @@ bool WinUtil::parseMagnetUri(const tstring& text, DefinedMagnetAction action /* 
 				{
 					bool getConnFlag = true;
 					QueueItem::MaskType flags = isDclst ? QueueItem::FLAG_DCLST_LIST : 0;
+					QueueItem::MaskType extraFlags = 0;
 					if (action == MA_OPEN)
-						flags |= QueueItem::FLAG_CLIENT_VIEW;
+						flags |= QueueItem::XFLAG_CLIENT_VIEW;
 					else if (isDclst)
-						flags |= QueueItem::FLAG_DOWNLOAD_CONTENTS;
+						flags |= QueueItem::XFLAG_DOWNLOAD_CONTENTS;
 					QueueManager::QueueItemParams params;
 					params.size = magnet.exactLength;
 					params.root = &tth;
-					QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
+					QueueManager::getInstance()->add(fname, params, HintedUser(), flags, extraFlags, getConnFlag);
 					if (BOOLSETTING(SEARCH_MAGNET_SOURCES))
 						SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 				}

@@ -630,7 +630,8 @@ LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 					QueueManager::QueueItemParams params;
 					params.size = ii->entry->getSize();
 					params.root = &ii->entry->getTTH();
-					qm->add(ii->entry->getTarget(), params, user, 0, false, getConnFlag);
+					params.readdBadSource = false;
+					qm->add(ii->entry->getTarget(), params, user, 0, 0, getConnFlag);
 				}
 				catch (const Exception& e)
 				{
@@ -665,7 +666,7 @@ LRESULT FinishedFrameBase::onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 			{
 				try
 				{
-					QueueManager::getInstance()->addList(HintedUser(u, ii->entry->getHub()), QueueItem::FLAG_CLIENT_VIEW);
+					QueueManager::getInstance()->addList(HintedUser(u, ii->entry->getHub()), 0, QueueItem::XFLAG_CLIENT_VIEW);
 				}
 				catch (const Exception& e)
 				{

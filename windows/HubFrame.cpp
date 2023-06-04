@@ -1492,7 +1492,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 			{
 				try
 				{
-					QueueManager::getInstance()->addList(HintedUser(ui->getUser(), baseClient->getHubUrl()), QueueItem::FLAG_CLIENT_VIEW);
+					QueueManager::getInstance()->addList(HintedUser(ui->getUser(), baseClient->getHubUrl()), 0, QueueItem::XFLAG_CLIENT_VIEW);
 				}
 				catch (const Exception& e)
 				{

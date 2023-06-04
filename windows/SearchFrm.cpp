@@ -1300,7 +1300,7 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 			params.size = si->sr.getSize();
 			params.root = &si->sr.getTTH();
 			params.priority = prio;
-			QueueManager::getInstance()->add(target, params, si->sr.getHintedUser(), mask, true, getConnFlag);
+			QueueManager::getInstance()->add(target, params, si->sr.getHintedUser(), mask, 0, getConnFlag);
 			si->sr.flags |= SearchResult::FLAG_QUEUED;
 			sf->updateList = true;
 
@@ -1330,7 +1330,7 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 		else
 		{
 			tstring targetDir = getTargetDirectory(si, tgt);
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueManager::DIR_FLAG_DOWNLOAD_DIRECTORY);
 		}
 	}
 	catch (const Exception& e)
@@ -1348,11 +1348,11 @@ void SearchFrame::SearchInfo::DownloadWhole::operator()(const SearchInfo* si)
 		tstring targetDir = getTargetDirectory(si, tgt);
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
-			QueueManager::getInstance()->addDirectory(Text::fromT(si->getText(COLUMN_PATH)), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			QueueManager::getInstance()->addDirectory(Text::fromT(si->getText(COLUMN_PATH)), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueManager::DIR_FLAG_DOWNLOAD_DIRECTORY);
 		}
 		else
 		{
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueItem::FLAG_DIRECTORY_DOWNLOAD);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(targetDir), prio, QueueManager::DIR_FLAG_DOWNLOAD_DIRECTORY);
 		}
 	}
 	catch (const Exception&)
@@ -1364,7 +1364,7 @@ void SearchFrame::SearchInfo::getList()
 {
 	try
 	{
-		QueueManager::getInstance()->addList(sr.getHintedUser(), QueueItem::FLAG_CLIENT_VIEW, Text::fromT(getText(COLUMN_PATH)));
+		QueueManager::getInstance()->addList(sr.getHintedUser(), 0, QueueItem::XFLAG_CLIENT_VIEW, Text::fromT(getText(COLUMN_PATH)));
 	}
 	catch (const Exception&)
 	{
@@ -1377,7 +1377,7 @@ void SearchFrame::SearchInfo::browseList()
 {
 	try
 	{
-		QueueManager::getInstance()->addList(sr.getHintedUser(), QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST, Text::fromT(getText(COLUMN_PATH)));
+		QueueManager::getInstance()->addList(sr.getHintedUser(), QueueItem::FLAG_PARTIAL_LIST, QueueItem::XFLAG_CLIENT_VIEW, Text::fromT(getText(COLUMN_PATH)));
 	}
 	catch (const Exception&)
 	{
@@ -1394,8 +1394,11 @@ void SearchFrame::SearchInfo::view()
 		if (sr.getType() == SearchResult::TYPE_FILE)
 		{
 			bool getConnFlag = true;
-			QueueManager::getInstance()->add(Util::getTempPath() + sr.getFileName(), sr.getSize(), sr.getTTH(), sr.getHintedUser(),
-				QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_TEXT, QueueItem::DEFAULT, true, getConnFlag);
+			QueueManager::QueueItemParams params;
+			params.size = sr.getSize();
+			params.root = &sr.getTTH();
+			QueueManager::getInstance()->add(Util::getTempPath() + sr.getFileName(), params, sr.getHintedUser(),
+				0, QueueItem::XFLAG_CLIENT_VIEW | QueueItem::XFLAG_TEXT_VIEW, getConnFlag);
 			sr.flags |= SearchResult::FLAG_QUEUED;
 		}
 	}

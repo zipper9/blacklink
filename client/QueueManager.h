@@ -71,6 +71,15 @@ class QueueManager : public Singleton<QueueManager>,
 			ERROR_NO_FREE_BLOCK
 		};
 
+		enum
+		{
+			DIR_FLAG_DOWNLOAD_DIRECTORY = 1,
+			DIR_FLAG_MATCH_QUEUE        = 2,
+			// internal flags used by processList
+			DIR_FLAG_TEXT               = 4,
+			DIR_FLAG_TTH_LIST           = 8
+		};
+
 		struct QueueItemParams
 		{
 			int64_t size = -1;
@@ -79,12 +88,13 @@ class QueueManager : public Singleton<QueueManager>,
 			string sourcePath;
 #endif
 			QueueItem::Priority priority = QueueItem::DEFAULT;
+			bool readdBadSource = true;
 		};
 
 		// Add a file to the queue
-		void add(const string& target, const QueueItemParams& params, const UserPtr& user, QueueItem::MaskType flags, bool addBad, bool& getConnFlag);
+		void add(const string& target, const QueueItemParams& params, const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, bool& getConnFlag);
 		// Add a user's filelist to the queue
-		void addList(const UserPtr& user, QueueItem::MaskType flags, const string& initialDir = Util::emptyString);
+		void addList(const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, const string& initialDir = Util::emptyString);
 		void addCheckUserIP(const UserPtr& user);
 		bool addDclstFile(const string& path);
 		void processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority);
@@ -191,13 +201,6 @@ class QueueManager : public Singleton<QueueManager>,
 
 		JobExecutor rechecker;
 
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-		class FileListQueue: public BackgroundTaskExecuter<DirectoryListInfoPtr, 15000> // [<-] IRainman fix: moved from MainFrame to core.
-		{
-				void execute(const DirectoryListInfoPtr& list);
-		} m_listQueue;
-#endif
-
 	public:
 		void shutdown();
 
@@ -220,7 +223,7 @@ class QueueManager : public Singleton<QueueManager>,
 		}
 		
 		/** Move the target location of a queued item. Running items are silently ignored */
-		void move(const string& aSource, const string& target) noexcept;
+		void move(const string& source, const string& newTarget) noexcept;
 
 		bool removeTarget(const string& target);
 
@@ -276,7 +279,7 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Sanity check for the target filename */
 		static string checkTarget(const string& target, const int64_t size, bool validateFileName = true);
 		/** Add a source to an existing queue item */
-		bool addSourceL(const QueueItemPtr& qi, const UserPtr& user, Flags::MaskType addBad, bool isFirstLoad = false);
+		bool addSourceL(const QueueItemPtr& qi, const UserPtr& user, QueueItem::MaskType addBad, bool isFirstLoad = false);
 
 	private:
 		static uint64_t lastSave;
@@ -285,7 +288,8 @@ class QueueManager : public Singleton<QueueManager>,
 		string wantEndFilesPattern;
 		FastCriticalSection csWantEndFiles;
 
-		QueueItem::MaskType getFlagsForFileName(const string& fileName);
+		QueueItem::MaskType getFlagsForFileName(const string& fileName) noexcept;
+		QueueItem::MaskType getFlagsForFileNameL(const string& fileName) const noexcept;
 
 	public:
 		/** All queue items by target */
@@ -297,8 +301,9 @@ class QueueManager : public Singleton<QueueManager>,
 			public:
 				FileQueue();
 				bool add(const QueueItemPtr& qi);
-				QueueItemPtr add(QueueManager* qm, const string& target, int64_t size, Flags::MaskType flags,
-				                 QueueItem::Priority p, const string& tempTarget, time_t added,
+				QueueItemPtr add(QueueManager* qm, const string& target, int64_t size,
+				                 QueueItem::MaskType flags, QueueItem::MaskType extraFlags,
+				                 QueueItem::Priority p, const string& tempTarget,
 				                 const TTHValue* root, uint8_t maxSegments);
 				bool getTTH(const string& name, TTHValue& tth) const;
 				QueueItemPtr findTarget(const string& target) const;
@@ -313,7 +318,7 @@ class QueueManager : public Singleton<QueueManager>,
 				bool empty() const { return queue.empty(); }
 				const QueueItem::QIStringMap& getQueueL() const { return queue; }
 				void getRunningFilesL(QueueItemList& runningFiles);
-				void moveTarget(const QueueItemPtr& qi, const string& target);
+				QueueItemPtr moveTarget(QueueItemPtr& qi, const string& target);
 				void remove(const QueueItemPtr& qi);
 				void clearAll();
 
@@ -345,13 +350,16 @@ class QueueManager : public Singleton<QueueManager>,
 			friend class QueueManager;
 
 			public:
-				void addL(const QueueItemPtr& qi);
-				void addL(const QueueItemPtr& qi, const UserPtr& user, bool isFirstLoad);
+				static size_t getRunningCount();
+				void removeRunning(const UserPtr& d);
+
+			private:	
+				void addL(const QueueItemPtr& qi, QueueItem::Priority p);
+				void addL(const QueueItemPtr& qi, QueueItem::Priority prioQueue, const UserPtr& user, bool isFirstLoad);
 				int getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
 				QueueItemPtr getRunning(const UserPtr& user);
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
 				bool removeDownload(const QueueItemPtr& qi, const UserPtr& d);
-				void removeRunning(const UserPtr& d);
 				void removeQueueItemL(const QueueItemPtr& qi, bool removeDownloadFlag);
 				void removeQueueItem(const QueueItemPtr& qi);
 				void removeUserL(const QueueItemPtr& qi, const UserPtr& user, bool removeDownloadFlag);
@@ -359,7 +367,6 @@ class QueueManager : public Singleton<QueueManager>,
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
 				static void modifyRunningCount(int count);
-				static size_t getRunningCount();
 
 				typedef boost::unordered_map<UserPtr, QueueItemList> UserQueueMap;
 				typedef boost::unordered_map<UserPtr, QueueItemPtr> RunningMap;
@@ -395,7 +402,12 @@ class QueueManager : public Singleton<QueueManager>,
 
 				const UserPtr& getUser() const { return user; }
 				int getFlags() const { return flags; }
-				void addFlags(int f) { flags |= f; }
+				void addFlags(int f)
+				{
+					flags |= f;
+					if (flags & DIR_FLAG_DOWNLOAD_DIRECTORY)
+						flags &= ~DIR_FLAG_MATCH_QUEUE;
+				}
 				const string& getName() const { return name; }
 				const string& getTarget() const { return target; }
 				QueueItem::Priority getPriority() const { return priority; }
@@ -424,19 +436,20 @@ class QueueManager : public Singleton<QueueManager>,
 		std::atomic_bool dclstLoaderAbortFlag;
 		std::atomic_bool recheckerAbortFlag;
 
+		static int queueItemFlagsToDirFlags(QueueItem::MaskType extraFlags);
+		static QueueItem::MaskType dirFlagsToQueueItemFlags(int dirFlags);
 		void processList(const string& name, const HintedUser& hintedUser, int flags, const DirectoryItem* dirItem);
 		void deleteFileLists();
-		
-		void moveFile(const string& source, const string& target);
+
+		void moveFile(const string& source, const string& target, int64_t moverLimit);
 		static void keepFileInTempDir(const string& source, const string& target);
-		void moveStuckFile(const QueueItemPtr& qi);
 		void copyFile(const string& source, const string& target, QueueItemPtr& qi);
 		void rechecked(const QueueItemPtr& qi);
-		
+
 		static void setDirty();
-		
+		static void checkAntifragFile(const string& tempTarget, QueueItem::MaskType flags);
 		static string getListPath(const UserPtr& user);
-		
+
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;

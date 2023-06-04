@@ -330,7 +330,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 						const auto& queue = fileQueue.getQueueL();
 						const auto qi = queue.find(target);
 						if (qi != queue.cend())
-							slowDisconnect = qi->second->isAutoDrop();
+							slowDisconnect = (qi->second->getExtraFlags() & QueueItem::XFLAG_AUTODROP) != 0;
 						else
 							slowDisconnect = false;
 					}
@@ -1867,7 +1867,7 @@ LRESULT TransferView::onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 			const auto& queue = fileQueue.getQueueL();
 			const auto qi = queue.find(tmp);
 			if (qi != queue.cend())
-				qi->second->changeAutoDrop();
+				qi->second->toggleExtraFlag(QueueItem::XFLAG_AUTODROP);
 		}
 	}
 	

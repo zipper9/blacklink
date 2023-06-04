@@ -1880,7 +1880,7 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 		QueueManager::QueueItemParams params;
 		params.size = sr->getSize();
 		params.root = &sr->getTTH();
-		QueueManager::getInstance()->add(dir + file, params, sr->getHintedUser(), 0, true, getConnFlag);
+		QueueManager::getInstance()->add(dir + file, params, sr->getHintedUser(), 0, 0, getConnFlag);
 	}
 	catch (QueueException& e)
 	{
@@ -2067,11 +2067,17 @@ void WebServerManager::addMagnet(HandlerResult& res, const RequestInfo& state) n
 					try
 					{
 						bool getConnFlag = true;
-						QueueItem::MaskType flags = isDclst ? (QueueItem::FLAG_DOWNLOAD_CONTENTS | QueueItem::FLAG_DCLST_LIST) : 0;
+						QueueItem::MaskType flags = 0;
+						QueueItem::MaskType extraFlags = 0;
+						if (isDclst)
+						{
+							flags |= QueueItem::FLAG_DCLST_LIST;
+							extraFlags |= QueueItem::XFLAG_DOWNLOAD_CONTENTS;
+						}
 						QueueManager::QueueItemParams params;
 						params.size = ml.exactLength;
 						params.root = &tth;
-						QueueManager::getInstance()->add(fname, params, HintedUser(), flags, true, getConnFlag);
+						QueueManager::getInstance()->add(fname, params, HintedUser(), flags, extraFlags, getConnFlag);
 						result = true;
 						messageText = STRING(WEBSERVER_MAGNET_ADDED);
 					}

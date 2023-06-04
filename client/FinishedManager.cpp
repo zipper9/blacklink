@@ -95,8 +95,8 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		const bool isFile = !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
-		if (isFile || (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
+		const bool isFile = (qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)) == 0;
+		if (isFile || ((qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST)) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 		{
 			HintedUser hintedUser = d->getHintedUser();
 			string hubs = Util::toString(ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString));

@@ -83,7 +83,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onPriority)
 		COMMAND_RANGE_HANDLER(IDC_SEGMENTONE, IDC_SEGMENTTWO_HUNDRED, onSegments)
-		COMMAND_RANGE_HANDLER(IDC_BROWSELIST, IDC_BROWSELIST + menuItems, onBrowseList)
+		COMMAND_RANGE_HANDLER(IDC_BROWSELIST, IDC_BROWSELIST + menuItems, onGetList)
 		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCE, IDC_REMOVE_SOURCE + menuItems, onRemoveSource)
 		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCES, IDC_REMOVE_SOURCES + 1 + menuItems, onRemoveSources)
 		COMMAND_RANGE_HANDLER(IDC_PM, IDC_PM + menuItems, onPM)
@@ -99,7 +99,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 		LRESULT onPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSegments(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRemoveSource(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRemoveSources(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -231,7 +231,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		{
 			ADD_ITEM,
 			REMOVE_ITEM,
-			REMOVE_ITEM_OLD_PATH,
 			UPDATE_ITEM,
 			UPDATE_STATUS,
 			UPDATE_FILE_SIZE
@@ -339,7 +338,12 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				QueueItem::Priority getPriority() const
 				{
 					if (qi)
-						return qi->getPriority();
+					{
+						qi->lockAttributes();
+						auto p = qi->getPriorityL();
+						qi->unlockAttributes();
+						return p;
+					}
 					return QueueItem::Priority();
 				}
 				const TTHValue& getTTH() const
@@ -368,13 +372,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		{
 				explicit TargetTask(const string& target) : target(target) {}
 				const string target;
-		};
-
-		struct RemoveQueueItemTask : public Task
-		{
-			RemoveQueueItemTask(const QueueItemPtr& qi, const string& path) : qi(qi), path(path) {}
-			QueueItemPtr qi;
-			const string path;
 		};
 
 		struct UpdateFileSizeTask : public Task
@@ -476,7 +473,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 #if 0
 		void on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& qiAarray) noexcept override;
 #endif
-		void on(QueueManagerListener::Moved, const QueueItemPtr& qi, const string& oldTarget) noexcept override;
+		void on(QueueManagerListener::Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept override;
 		void on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept override;
 #if 0
 		void on(QueueManagerListener::RemovedArray, const std::vector<string>& qiArray) noexcept override;
@@ -487,9 +484,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::Tick, const QueueItemList& list) noexcept override;
 		void on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
 		void on(SettingsManagerListener::Repaint) override;
-		
+
 		void onRechecked(const string& target, const string& message);
-		
+
 		void on(QueueManagerListener::RecheckStarted, const string& target) noexcept override;
 		void on(QueueManagerListener::RecheckNoFile, const string& target) noexcept override;
 		void on(QueueManagerListener::RecheckFileTooSmall, const string& target) noexcept override;

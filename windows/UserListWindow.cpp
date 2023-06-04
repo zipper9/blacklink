@@ -633,7 +633,7 @@ LRESULT UserListWindow::onEnterUsers(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(HintedUser((ctrlUsers.getItemData(item))->getUser(), hubHint), QueueItem::FLAG_CLIENT_VIEW);
+			QueueManager::getInstance()->addList(HintedUser((ctrlUsers.getItemData(item))->getUser(), hubHint), 0, QueueItem::XFLAG_CLIENT_VIEW);
 		}
 		catch (const Exception& e)
 		{

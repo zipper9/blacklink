@@ -133,8 +133,12 @@ void PreviewMenu::runPreviewCommand(WORD wID, const string& file)
 
 void PreviewMenu::runPreview(WORD wID, const QueueItemPtr& qi)
 {
-	const auto fileName = !qi->getTempTarget().empty() ? qi->getTempTarget() : Util::getFileName(qi->getTarget());
-	runPreviewCommand(wID, fileName);
+	qi->lockAttributes();
+	string path = qi->getTempTargetL();
+	qi->unlockAttributes();
+	if (path.empty())
+		path = qi->getTarget();
+	runPreviewCommand(wID, path);
 }
 
 void PreviewMenu::runPreview(WORD wID, const TTHValue& tth)

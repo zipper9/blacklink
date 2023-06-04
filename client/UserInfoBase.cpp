@@ -18,7 +18,7 @@ void UserInfoBase::matchQueue()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_MATCH_QUEUE);
+			QueueManager::getInstance()->addList(getUser(), 0, QueueItem::XFLAG_MATCH_QUEUE);
 		}
 		catch (const Exception& e)
 		{
@@ -49,7 +49,7 @@ void UserInfoBase::checkList()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_USER_CHECK);
+			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_USER_CHECK, 0);
 		}
 		catch (const Exception& e)
 		{
@@ -71,7 +71,7 @@ void UserInfoBase::getList()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_CLIENT_VIEW);
+			QueueManager::getInstance()->addList(getUser(), 0, QueueItem::XFLAG_CLIENT_VIEW);
 		}
 		catch (const Exception& e)
 		{
@@ -86,7 +86,7 @@ void UserInfoBase::browseList()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST);
+			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_PARTIAL_LIST, QueueItem::XFLAG_CLIENT_VIEW);
 		}
 		catch (const Exception& e)
 		{

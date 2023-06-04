@@ -1280,9 +1280,26 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 		}
 		UploadManager::getInstance()->addConnection(conn);
 		setIP(conn, cqi);
+#ifdef DEBUG_USER_CONNECTION
+		if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+		{
+			const UserPtr& user = conn->getUser();
+			LogManager::message("UserConnection(" + Util::toString(conn->id) +
+				"): Using upload token " + conn->getConnectionQueueToken() + " for user=" +
+				user->getLastNick() + ", CID=" + user->getCID().toBase32(), false);
+		}
+#endif
 	}
 	else
 	{
+#ifdef DEBUG_USER_CONNECTION
+		if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+		{
+			const UserPtr& user = conn->getUser();
+			LogManager::message("UserConnection(" + Util::toString(conn->id) +
+				"): Upload token not found, user=" + user->getLastNick() + ", CID=" + user->getCID().toBase32(), false);
+		}
+#endif
 		putConnection(conn);
 	}
 }

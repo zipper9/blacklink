@@ -23,6 +23,8 @@
 #include "DatabaseManager.h"
 #include "Util.h"
 #include "SettingsManager.h"
+#include "ParamExpander.h"
+#include "Random.h"
 
 Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 	Transfer(conn, item->getTarget(), item->getTTH()),
@@ -35,27 +37,28 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 {
 	runningAverage = conn->getLastDownloadSpeed();
 	setFileSize(qi->getSize());
-	
-	if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+
+	auto queueItemFlags = qi->getFlags();
+	if (queueItemFlags & QueueItem::FLAG_PARTIAL_LIST)
 	{
 		setType(TYPE_PARTIAL_LIST);
-		if (qi->isSet(QueueItem::FLAG_RECURSIVE_LIST))
+		if (queueItemFlags & QueueItem::FLAG_RECURSIVE_LIST)
 			setFlag(FLAG_RECURSIVE_LIST);
-		if (qi->isSet(QueueItem::FLAG_MATCH_QUEUE))
+		if (qi->getExtraFlags() & QueueItem::XFLAG_MATCH_QUEUE)
 			setFlag(FLAG_MATCH_QUEUE);
 	}
-	else if (qi->isSet(QueueItem::FLAG_USER_LIST))
+	else if (queueItemFlags & QueueItem::FLAG_USER_LIST)
 	{
 		setType(TYPE_FULL_LIST);
 	}
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-	if (qi->isSet(QueueItem::FLAG_USER_CHECK))
+	if (queueItemFlags & QueueItem::FLAG_USER_CHECK)
 		setFlag(FLAG_USER_CHECK);
 #endif
-	if (qi->isSet(QueueItem::FLAG_USER_GET_IP))
+	if (queueItemFlags & QueueItem::FLAG_USER_GET_IP)
 		setFlag(FLAG_USER_GET_IP);
-		
+
 	const bool isFile = getType() == TYPE_FILE && qi->getSize() != -1;
 	const bool hasTTH = !tth.isZero();
 
@@ -78,15 +81,18 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 		{
 			const auto& src = it->second;
 			if (src.isSet(QueueItem::Source::FLAG_PARTIAL))
-			{
 				setFlag(FLAG_DOWNLOAD_PARTIAL);
-			}
-			
+
 			if (isFile)
 			{
+				QueueItem::GetSegmentParams gsp;
+				gsp.readSettings();
 				if (treeValid)
 				{
-					setSegment(qi->getNextSegmentL(tigerTree.getBlockSize(), conn->getChunkSize(), conn->getSpeed(), src.getPartialSource()));
+					gsp.blockSize = tigerTree.getBlockSize();
+					gsp.wantedSize = conn->getChunkSize();
+					gsp.lastSpeed = conn->getSpeed();
+					setSegment(qi->getNextSegmentL(gsp, src.partialSource));
 				}
 				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !src.isSet(QueueItem::Source::FLAG_NO_TREE) && qi->getSize() > MIN_BLOCK_SIZE && hasTTH)
 				{
@@ -101,11 +107,17 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 					// TODO: use aligned block size ??
 					tigerTree = TigerTree(qi->getSize(), qi->getSize(), tth);
 					setTreeValid(true);
-					setSegment(qi->getNextSegmentL(tigerTree.getBlockSize(), 0, 0, src.getPartialSource()));
+					gsp.blockSize = tigerTree.getBlockSize();
+					gsp.wantedSize = 0;
+					gsp.lastSpeed = 0;
+					setSegment(qi->getNextSegmentL(gsp, src.partialSource));
 				}
 				else
 				{
-					setSegment(qi->getNextSegmentL(1, qi->getSize(), 0, src.getPartialSource()));
+					gsp.blockSize = 1;
+					gsp.wantedSize = qi->getSize();
+					gsp.lastSpeed = 0;
+					setSegment(qi->getNextSegmentL(gsp, src.partialSource));
 				}
 
 				if (getStartPos() + getSize() != qi->getSize())
@@ -138,7 +150,7 @@ int64_t Download::getDownloadedBytes() const
 void Download::getCommand(AdcCommand& cmd, bool zlib) const
 {
 	cmd.addParam(Transfer::fileTypeNames[getType()]);
-	
+
 	if (getType() == TYPE_PARTIAL_LIST)
 	{
 		cmd.addParam(Util::toAdcFile(getTempTarget()));
@@ -160,7 +172,7 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	//dcassert(getStartPos() >= 0);
 	cmd.addParam(Util::toString(getStartPos()));
 	cmd.addParam(Util::toString(getSize()));
-	
+
 	if (zlib && BOOLSETTING(COMPRESS_TRANSFERS))
 		cmd.addParam("ZL1");
 	if (isSet(FLAG_RECURSIVE_LIST))
@@ -183,7 +195,11 @@ void Download::getParams(StringMap& params) const
 
 string Download::getTempTarget() const
 {
-	return qi->getTempTarget();
+	string s;
+	qi->lockAttributes();
+	s = qi->getTempTargetL();
+	qi->unlockAttributes();
+	return s;
 }
 
 void Download::updateSpeed(uint64_t currentTick)
@@ -213,4 +229,64 @@ int64_t Download::getSecondsLeft(bool wholeFile) const
 string Download::getTargetFileName() const
 {
 	return Util::getFileName(getPath());
+}
+
+string Download::getDownloadTarget() const
+{
+	if (qi->getFlags() & QueueItem::FLAG_USER_LIST)
+		return getPath();
+
+	qi->lockAttributes();
+	string tempTarget = qi->getTempTargetL();
+	qi->unlockAttributes();
+	if (!tempTarget.empty())
+		return tempTarget;
+
+	const TTHValue& tth = qi->getTTH();
+	const string& target = qi->getTarget();
+	const string& tempDirectory = SETTING(TEMP_DOWNLOAD_DIRECTORY);
+	const string targetFileName = Util::getFileName(target);
+	const string tempName = QueueItem::getDCTempName(targetFileName, tempDirectory.empty() ? nullptr : &tth);
+	if (!tempDirectory.empty() && File::getSize(target) == -1)
+	{
+		StringMap sm;
+#ifdef _WIN32
+		if (target.length() >= 3 && target[1] == ':' && target[2] == '\\')
+			sm["targetdrive"] = target.substr(0, 3);
+		else
+			sm["targetdrive"] = Util::getLocalPath().substr(0, 3);
+#endif
+		tempTarget = Util::formatParams(tempDirectory, sm, false) + tempName;
+		if (QueueItem::checkTempDir && !tempTarget.empty())
+		{
+			QueueItem::checkTempDir = false;
+			File::ensureDirectory(tempDirectory);
+			const tstring tempFile = Text::toT(tempTarget) + _T(".test-writable-") + Util::toStringT(Util::rand()) + _T(".tmp");
+			try
+			{
+				{
+					File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
+				}
+				File::deleteFile(tempFile);
+			}
+			catch (const Exception&)
+			{
+				LogManager::message(STRING_F(TEMP_DIR_NOT_WRITABLE, tempDirectory));
+				SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, Util::emptyString);
+			}
+		}
+	}
+
+	if (tempDirectory.empty())
+		tempTarget = target.substr(0, target.length() - targetFileName.length()) + tempName;
+
+	if (!tempTarget.empty())
+	{
+		qi->lockAttributes();
+		qi->setTempTargetL(tempTarget);
+		qi->unlockAttributes();
+		return tempTarget;
+	}
+
+	return getPath();
 }

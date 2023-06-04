@@ -587,7 +587,7 @@ void DownloadManager::processSTA(UserConnection* source, const AdcCommand& cmd) 
 		return;
 	}
 	
-	switch (Util::toInt(err.substr(0, 1)))
+	switch (err[0] - '0')
 	{
 		case AdcCommand::SEV_FATAL:
 			source->disconnect();
@@ -600,7 +600,7 @@ void DownloadManager::processSTA(UserConnection* source, const AdcCommand& cmd) 
 					return;
 				case AdcCommand::ERROR_SLOTS_FULL:
 					string param;
-					cmd.getParam("QP", 0, param);
+					cmd.getParam("QP", 1, param);
 					noSlots(source, param);
 					return;
 			}

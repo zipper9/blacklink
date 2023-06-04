@@ -21,9 +21,8 @@
 #include "LogManager.h"
 #include "Download.h"
 #include "File.h"
-#include "ParamExpander.h"
-#include "ClientManager.h"
 #include "UserConnection.h"
+#include "SettingsManager.h"
 #include "TimeUtil.h"
 #include "Random.h"
 
@@ -38,71 +37,97 @@ const string dctmpExtension = ".dctmp";
 
 static const uint64_t DEFAULT_BLOCK_SIZE = 64 * 1024;
 
-QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
+QueueItem::QueueItem(const string& target, int64_t size, Priority priority, MaskType flags, MaskType extraFlags,
                      time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget) :
 	target(target),
-	tempTarget(tempTarget),
-	maxSegments(std::max(uint8_t(1), maxSegments)),
-	timeFileBegin(0),
 	size(size),
-	priority(priority),
 	added(added),
-	autoPriority(autoPriority),
+	flags(flags),
+	extraFlags(extraFlags),
 	tthRoot(tth),
-	downloadedBytes(0),
+	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : DEFAULT_BLOCK_SIZE),
+	priority(priority),
+	maxSegments(std::max(uint8_t(1), maxSegments)),
 	doneSegmentsSize(0),
+	downloadedBytes(0),
+	timeFileBegin(0),
 	lastSize(0),
 	averageSpeed(0),
 	cachedOnlineSourceCountInvalid(false),
 	cachedOnlineSourceCount(0),
-	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : DEFAULT_BLOCK_SIZE),
-	removed(false)
+	prioQueue(QueueItem::DEFAULT),
+	tempTarget(tempTarget)
 {
-#ifdef FLYLINKDC_USE_DROP_SLOW
-	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
-		flags |= FLAG_AUTODROP;
-#endif
-	this->flags = flags;
 }
 
-QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
+QueueItem::QueueItem(const string& target, int64_t size, Priority priority, MaskType flags, MaskType extraFlags,
                      time_t added, uint8_t maxSegments, const string& tempTarget) :
 	target(target),
-	tempTarget(tempTarget),
-	maxSegments(std::max(uint8_t(1), maxSegments)),
-	timeFileBegin(0),
 	size(size),
-	priority(priority),
 	added(added),
-	autoPriority(autoPriority),
-	downloadedBytes(0),
+	flags(flags),
+	extraFlags(extraFlags),
+	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : DEFAULT_BLOCK_SIZE),
+	priority(priority),
+	maxSegments(std::max(uint8_t(1), maxSegments)),
 	doneSegmentsSize(0),
+	downloadedBytes(0),
+	timeFileBegin(0),
 	lastSize(0),
 	averageSpeed(0),
 	cachedOnlineSourceCountInvalid(false),
 	cachedOnlineSourceCount(0),
-	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : DEFAULT_BLOCK_SIZE),
-	removed(false)
+	prioQueue(QueueItem::DEFAULT),
+	tempTarget(tempTarget)
 {
-#ifdef FLYLINKDC_USE_DROP_SLOW
-	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
-		flags |= FLAG_AUTODROP;
+}
+
+QueueItem::QueueItem(const string& newTarget, QueueItem& src) :
+	target(newTarget),
+	size(src.size),
+	added(src.added),
+	flags(src.flags),
+	extraFlags(src.extraFlags),
+	tthRoot(src.tthRoot),
+	blockSize(src.blockSize),
+	priority(src.priority),
+	maxSegments(src.maxSegments),
+	downloads(std::move(src.downloads)),
+	doneSegments(std::move(src.doneSegments)),
+	doneSegmentsSize(src.doneSegmentsSize),
+	downloadedBytes(src.downloadedBytes),
+	timeFileBegin(src.timeFileBegin),
+	lastSize(src.lastSize),
+#ifdef DEBUG_TRANSFERS
+	sourcePath(std::move(src.sourcePath)),
 #endif
-	this->flags = flags;
+	averageSpeed(src.averageSpeed),
+	cachedOnlineSourceCountInvalid(true),
+	cachedOnlineSourceCount(0),
+	prioQueue(src.prioQueue),
+	sources(std::move(src.sources)),
+	badSources(std::move(src.badSources))
+{
+	if (downloadedBytes)
+		tempTarget = std::move(src.tempTarget);
+	src.downloads.clear();
+	src.doneSegments.clear();
+	src.sources.clear();
+	src.badSources.clear();
 }
 
 int16_t QueueItem::getTransferFlags(int& flags) const
 {
 	flags = TRANSFER_FLAG_DOWNLOAD;
 	int16_t segs = 0;
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto& d = *i;
 		if (d->getStartTime() > 0)
 		{
 			segs++;
-			
+
 			if (d->isSet(Download::FLAG_DOWNLOAD_PARTIAL))
 				flags |= TRANSFER_FLAG_PARTIAL;
 			if (d->isSecure)
@@ -122,9 +147,9 @@ int16_t QueueItem::getTransferFlags(int& flags) const
 	return segs;
 }
 
-QueueItem::Priority QueueItem::calculateAutoPriority() const
+QueueItem::Priority QueueItem::calculateAutoPriorityL() const
 {
-	if (getAutoPriority())
+	if (extraFlags & XFLAG_AUTO_PRIORITY)
 	{
 		QueueItem::Priority p;
 		const int percent = static_cast<int>(getDownloadedBytes() * 10 / getSize());
@@ -153,7 +178,7 @@ QueueItem::Priority QueueItem::calculateAutoPriority() const
 		}
 		return p;
 	}
-	return getPriority();
+	return priority;
 }
 
 string QueueItem::getDCTempName(const string& fileName, const TTHValue* tth)
@@ -194,7 +219,7 @@ bool QueueItem::isBadSourceExceptL(const UserPtr& user, MaskType exceptions) con
 	return false;
 }
 
-bool QueueItem::countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const // [+] FlylinkDC++ opt.
+bool QueueItem::countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const
 {
 	if (sources.size() < maxValue)
 	{
@@ -222,17 +247,10 @@ bool QueueItem::countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const /
 
 void QueueItem::getOnlineUsers(UserList& list) const
 {
-	if (!ClientManager::isBeforeShutdown())
-	{
-		QueueRLock(*QueueItem::g_cs);
-		for (auto i = sources.cbegin(); i != sources.cend(); ++i)
-		{
-			if (i->first->isOnline())
-			{
-				list.push_back(i->first);
-			}
-		}
-	}
+	QueueRLock(*QueueItem::g_cs);
+	for (auto i = sources.cbegin(); i != sources.cend(); ++i)
+		if (i->first->isOnline())
+			list.push_back(i->first);
 }
 
 QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user, bool isFirstLoad)
@@ -265,7 +283,7 @@ void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceList& sourceList, u
 		const auto& sources = isBadSources ? qi->getBadSourcesL() : qi->getSourcesL();
 		for (auto j = sources.cbegin(); j != sources.cend(); ++j)
 		{
-			const auto &ps = j->second.getPartialSource();
+			const auto &ps = j->second.partialSource;
 			if (j->second.isCandidate(isBadSources) && ps->isCandidate(now))
 			{
 				sourceList.emplace(SourceListItem{ps->getNextQueryTime(), qi, j});
@@ -274,7 +292,7 @@ void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceList& sourceList, u
 			}
 		}
 	};
-	
+
 	addToList(false);
 	addToList(true);
 }
@@ -330,6 +348,7 @@ void QueueItem::removeSourceL(const UserPtr& user, MaskType reason)
 		badSources.insert(*i);
 		sources.erase(i);
 		cachedOnlineSourceCountInvalid = true;
+		if (sources.empty()) prioQueue = DEFAULT;
 	}
 #ifdef _DEBUG
 	else
@@ -343,59 +362,12 @@ void QueueItem::removeSourceL(const UserPtr& user, MaskType reason)
 
 string QueueItem::getListName() const
 {
-	dcassert(isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST));
-	if (isSet(QueueItem::FLAG_XML_BZLIST))
+	dcassert(flags & (FLAG_USER_LIST | FLAG_DCLST_LIST));
+	if (getExtraFlags() & XFLAG_XML_BZLIST)
 		return getTarget() + ".xml.bz2";
-	if (isSet(QueueItem::FLAG_DCLST_LIST))
+	if (flags & FLAG_DCLST_LIST)
 		return getTarget();
 	return getTarget() + ".xml";
-}
-
-const string& QueueItem::getTempTarget()
-{
-	if (!isSet(QueueItem::FLAG_USER_LIST) && tempTarget.empty())
-	{
-		const TTHValue& tth = getTTH();
-		const string& tempDirectory = SETTING(TEMP_DOWNLOAD_DIRECTORY);
-		const string targetFileName = Util::getFileName(target);
-		const string tempName = getDCTempName(targetFileName, tempDirectory.empty()? nullptr : &tth);
-		if (!tempDirectory.empty() && File::getSize(getTarget()) == -1)
-		{
-			::StringMap sm;
-#ifdef _WIN32
-			if (target.length() >= 3 && target[1] == ':' && target[2] == '\\')
-				sm["targetdrive"] = target.substr(0, 3);
-			else
-				sm["targetdrive"] = Util::getLocalPath().substr(0, 3);
-#endif
-			setTempTarget(Util::formatParams(tempDirectory, sm, false) + tempName);
-			{
-				if (checkTempDir && !tempTarget.empty())
-				{
-					checkTempDir = false;
-					File::ensureDirectory(tempDirectory);
-					const tstring tempFile = Text::toT(tempTarget) + _T(".test-writable-") + Util::toStringT(Util::rand()) + _T(".tmp");
-					try
-					{
-						{
-							File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
-						}
-						File::deleteFile(tempFile);
-					}
-					catch (const Exception&)
-					{
-						LogManager::message(STRING_F(TEMP_DIR_NOT_WRITABLE, tempDirectory));
-						SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, Util::emptyString);
-					}
-				}
-			}
-		}
-		if (tempDirectory.empty())
-		{
-			setTempTarget(target.substr(0, target.length() - targetFileName.length()) + tempName);
-		}
-	}
-	return tempTarget;
 }
 
 #ifdef _DEBUG
@@ -413,7 +385,7 @@ bool QueueItem::isSourceValid(const QueueItem::Source* sourcePtr)
 
 void QueueItem::addDownload(const DownloadPtr& download)
 {
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	dcassert(download->getUser());
 	//dcassert(downloads.find(p_download->getUser()) == downloads.end());
 	downloads.push_back(download);
@@ -421,7 +393,7 @@ void QueueItem::addDownload(const DownloadPtr& download)
 
 bool QueueItem::removeDownload(const UserPtr& user)
 {
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	for (auto i = downloads.begin(); i != downloads.end(); ++i)
 		if ((*i)->getUser() == user)
 		{
@@ -463,7 +435,7 @@ Segment QueueItem::getNextSegmentForward(const int64_t blockSize, const int64_t 
 			for (auto i = downloads.cbegin(); !overlaps && i != downloads.cend(); ++i)
 				overlaps = block.overlaps((*i)->getSegment());
 		}
-				
+
 		if (!overlaps)
 		{
 			if (!neededParts) return block;
@@ -530,7 +502,7 @@ Segment QueueItem::getNextSegmentBackward(const int64_t blockSize, const int64_t
 			for (auto i = downloads.crbegin(); !overlaps && i != downloads.crend(); ++i)
 				overlaps = (*i)->getSegment().overlaps(block);
 		}
-				
+
 		if (!overlaps)
 		{
 			if (!neededParts) return block;
@@ -566,7 +538,7 @@ Segment QueueItem::getNextSegmentBackward(const int64_t blockSize, const int64_t
 
 bool QueueItem::shouldSearchBackward() const
 {
-	if (!isSet(FLAG_WANT_END) || doneSegments.empty()) return false;
+	if (!(flags & FLAG_WANT_END) || doneSegments.empty()) return false;
 	const Segment& segBegin = *doneSegments.begin();
 	if (segBegin.getStart() != 0 || segBegin.getSize() < 1024*1204) return false;
 	const Segment& segEnd = *doneSegments.rbegin();
@@ -578,29 +550,28 @@ bool QueueItem::shouldSearchBackward() const
 	return true;
 }
 
-Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wantedSize, const int64_t lastSpeed, const PartialSource::Ptr &partialSource) const
+Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSource::Ptr& partialSource) const
 {
+	const int64_t blockSize = gsp.blockSize;
 	if (getSize() == -1 || blockSize == 0)
-	{
 		return Segment(0, -1);
-	}
-	
-	if (!BOOLSETTING(ENABLE_MULTI_CHUNK))
+
+	csAttribs.lock();
+	uint8_t savedMaxSegments = maxSegments;
+	csAttribs.unlock();
+
+	LOCK(csSegments);
+	if (!gsp.enableMultiChunk)
 	{
-		{
-			LOCK(csDownloads);
-			if (!downloads.empty())
-				return Segment(-1, 0);
-		}
-		
+		if (!downloads.empty())
+			return Segment(-1, 0);
+
 		int64_t start = 0;
 		int64_t end = getSize();
-		
+
 		if (!doneSegments.empty())
 		{
-			LOCK(csSegments);
 			const Segment& first = *doneSegments.begin();
-			
 			if (first.getStart() > 0)
 			{
 				end = Util::roundUp(first.getStart(), blockSize);
@@ -608,37 +579,30 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 			else
 			{
 				start = Util::roundDown(first.getEnd(), blockSize);
+				if (doneSegments.size() > 1)
 				{
-					LOCK(csSegments);
-					if (doneSegments.size() > 1)
-					{
-						const Segment& second = *(++doneSegments.begin());
-						end = Util::roundUp(second.getStart(), blockSize);
-					}
+					const Segment& second = *(++doneSegments.begin());
+					end = Util::roundUp(second.getStart(), blockSize);
 				}
 			}
 		}
-		
 		return Segment(start, std::min(getSize(), end) - start);
 	}
+
+	if (downloads.size() >= savedMaxSegments ||
+	    (gsp.dontBeginSegment && static_cast<int64_t>(gsp.dontBeginSegSpeed) * 1024 < getAverageSpeed()))
 	{
-		LOCK(csDownloads);
-		if (downloads.size() >= getMaxSegments() ||
-		    (BOOLSETTING(DONT_BEGIN_SEGMENT) && static_cast<int64_t>(SETTING(DONT_BEGIN_SEGMENT_SPEED) * 1024) < getAverageSpeed()))
-		{
-			// no other segments if we have reached the speed or segment limit
-			return Segment(-1, 0);
-		}
+		// no other segments if we have reached the speed or segment limit
+		return Segment(-1, 0);
 	}
-	
+
 	/* added for PFS */
 	vector<int64_t> posArray;
 	vector<Segment> neededParts;
-	
+
 	if (partialSource && partialSource->getBlockSize() == blockSize)
 	{
 		posArray.reserve(partialSource->getParts().size());
-		
 		// Convert block index to file position
 		for (auto i = partialSource->getParts().cbegin(); i != partialSource->getParts().cend(); ++i)
 		{
@@ -646,78 +610,63 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 			posArray.push_back(min(getSize(), pos));
 		}
 	}
-	
-	double donePart;
-	{
-		LOCK(csSegments);
-		donePart = static_cast<double>(doneSegmentsSize) / getSize();
-	}
-	
-	// We want smaller blocks at the end of the transfer, squaring gives a nice curve...
-	int64_t targetSize = static_cast<int64_t>(static_cast<double>(wantedSize) * std::max(0.25, 1 - donePart * donePart));
-	int64_t maxChunkSize = SETTING(MAX_CHUNK_SIZE);
-	if (maxChunkSize && targetSize > maxChunkSize) targetSize = maxChunkSize;
-	
-	if (targetSize > blockSize)
-	{
-		// Round off to nearest block size
-		targetSize = Util::roundDown(targetSize, blockSize);
-	}
-	else
-	{
-		targetSize = blockSize;
-	}
 
-	{
-		LOCK(csDownloads);
-		{
-			LOCK(csSegments);
-			Segment block = shouldSearchBackward()?
-				getNextSegmentBackward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray) :
-				getNextSegmentForward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray);
-			if (block.getSize()) return block;
-		}
-	} // end lock
-	
+	double donePart = static_cast<double>(doneSegmentsSize) / getSize();
+
+	// We want smaller blocks at the end of the transfer, squaring gives a nice curve...
+	int64_t targetSize = static_cast<int64_t>(static_cast<double>(gsp.wantedSize) * std::max(0.25, 1 - donePart * donePart));
+	if (gsp.maxChunkSize && targetSize > gsp.maxChunkSize)
+		targetSize = gsp.maxChunkSize;
+
+	// Round to nearest block size
+	if (targetSize > blockSize)
+		targetSize = Util::roundDown(targetSize, blockSize);
+	else
+		targetSize = blockSize;
+
+	Segment block = shouldSearchBackward()?
+		getNextSegmentBackward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray) :
+		getNextSegmentForward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray);
+	if (block.getSize()) return block;
+
 	if (!neededParts.empty())
 	{
 		// select random chunk for download
 		dcdebug("Found partial chunks: %d\n", int(neededParts.size()));
-		
+
 		Segment& selected = neededParts[Util::rand(0, static_cast<uint32_t>(neededParts.size()))];
 		selected.setSize(std::min(selected.getSize(), targetSize)); // request only wanted size
 		return selected;
 	}
-	
-	if (partialSource == NULL && BOOLSETTING(OVERLAP_CHUNKS) && lastSpeed > 10 * 1024)
+
+	if (!partialSource && gsp.overlapChunks && gsp.lastSpeed > 10 * 1024)
 	{
 		// overlap slow running chunk
-		
 		const uint64_t currentTick = GET_TICK();
-		LOCK(csDownloads);
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			const auto d = *i;
-			
+
 			// current chunk mustn't be already overlapped
 			if (d->getOverlapped())
 				continue;
-				
+
 			// current chunk must be running at least for 2 seconds
 			if (d->getStartTime() == 0 || currentTick - d->getStartTime() < 2000)
 				continue;
-				
+
 			// current chunk mustn't be finished in next 10 seconds
-			if (d->getSecondsLeft() < 10)
+			int64_t secondsLeft = d->getSecondsLeft();
+			if (secondsLeft < 10)
 				continue;
-				
+
 			// overlap current chunk at last block boundary
 			int64_t pos = d->getPos() - (d->getPos() % blockSize);
 			int64_t size = d->getSize() - pos;
-			
+
 			// new user should finish this chunk more than 2x faster
-			int64_t newChunkLeft = size / lastSpeed;
-			if (2 * newChunkLeft < d->getSecondsLeft())
+			int64_t newChunkLeft = size / gsp.lastSpeed;
+			if (2 * newChunkLeft < secondsLeft)
 			{
 				dcdebug("Overlapping... old user: " I64_FMT " s, new user: " I64_FMT " s\n", d->getSecondsLeft(), newChunkLeft);
 				return Segment(d->getStartPos() + pos, size, true);
@@ -728,10 +677,10 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	return Segment(0, 0);
 }
 
-void QueueItem::setOverlapped(const Segment& segment, const bool isOverlapped)
+void QueueItem::setOverlapped(const Segment& segment, bool isOverlapped)
 {
 	// set overlapped flag to original segment
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		auto d = *i;
@@ -743,15 +692,11 @@ void QueueItem::setOverlapped(const Segment& segment, const bool isOverlapped)
 	}
 }
 
-void QueueItem::updateDownloadedBytesAndSpeedL()
+void QueueItem::updateDownloadedBytesAndSpeed()
 {
 	int64_t totalSpeed = 0;
-	{
-		LOCK(csSegments);
-		downloadedBytes = doneSegmentsSize;
-	}
-	// count running segments
-	LOCK(csDownloads);
+	LOCK(csSegments);
+	downloadedBytes = doneSegmentsSize;
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto d = *i;
@@ -783,7 +728,7 @@ void QueueItem::addSegmentL(const Segment& segment)
 		return;
 	for (auto current = ++doneSegments.cbegin(); current != doneSegments.cend();)
 	{
-		SegmentSet::iterator prev = current;
+		auto prev = current;
 		--prev;
 		const Segment& segCurrent = *current;
 		const Segment& segPrev = *prev;
@@ -792,9 +737,9 @@ void QueueItem::addSegmentL(const Segment& segment)
 			int64_t bigEnd = std::max(segCurrent.getEnd(), segPrev.getEnd());
 			Segment big(segPrev.getStart(), bigEnd - segPrev.getStart());
 			int64_t removedSize = segPrev.getSize() + segCurrent.getSize();
+			doneSegments.erase(current);
 			doneSegments.erase(prev);
-			doneSegments.erase(current++);
-			doneSegments.insert(big);
+			current = ++doneSegments.insert(big).first;
 			doneSegmentsSize -= removedSize;
 			doneSegmentsSize += big.getSize();
 		} else ++current;
@@ -841,13 +786,13 @@ bool QueueItem::isNeededPart(const PartsInfo& theirParts, const PartsInfo& ourPa
 void QueueItem::getParts(PartsInfo& partialInfo, uint64_t blockSize) const
 {
 	dcassert(blockSize);
-	if (blockSize == 0) // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=31115
+	if (blockSize == 0)
 		return;
-		
+
 	LOCK(csSegments);
 	const size_t maxSize = min(doneSegments.size() * 2, (size_t) 510);
 	partialInfo.reserve(maxSize);
-	
+
 	for (auto i = doneSegments.cbegin(); i != doneSegments.cend() && partialInfo.size() < maxSize; ++i)
 	{
 		uint16_t s = (uint16_t)((i->getStart() + blockSize - 1) / blockSize); // round up
@@ -886,47 +831,40 @@ void QueueItem::getChunksVisualisation(vector<RunningSegment>& running, vector<S
 {
 	running.clear();
 	done.clear();
+	LOCK(csSegments);
+	running.reserve(downloads.size());
+	RunningSegment rs;
+	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		LOCK(csDownloads);
-		running.reserve(downloads.size());
-		RunningSegment rs;
-		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
-		{
-			const Segment &segment = (*i)->getSegment();
-			rs.start = segment.getStart();
-			rs.end = segment.getEnd();
-			rs.pos = (*i)->getPos();
-			running.push_back(rs);
-		}
+		const Segment &segment = (*i)->getSegment();
+		rs.start = segment.getStart();
+		rs.end = segment.getEnd();
+		rs.pos = (*i)->getPos();
+		running.push_back(rs);
 	}
-	{
-		LOCK(csSegments);
-		done.reserve(doneSegments.size());
-		for (auto i = doneSegments.cbegin(); i != doneSegments.cend(); ++i)
-			done.push_back(*i);
-	}
+	done.reserve(doneSegments.size());
+	for (auto i = doneSegments.cbegin(); i != doneSegments.cend(); ++i)
+		done.push_back(*i);
 }
 
-uint8_t QueueItem::calcActiveSegments() const
+bool QueueItem::isMultipleSegments() const
 {
-	uint8_t activeSegments = 0;
-	LOCK(csDownloads);
+	int activeSegments = 0;
+	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		if ((*i)->getStartTime() > 0)
-		{
 			activeSegments++;
-		}
 		// more segments won't change anything
 		if (activeSegments > 1)
-			break;
+			return true;
 	}
-	return activeSegments;
+	return false;
 }
 
 UserPtr QueueItem::getFirstUser() const
 {
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	if (!downloads.empty())
 		return downloads.front()->getUser();
 	else
@@ -935,16 +873,14 @@ UserPtr QueueItem::getFirstUser() const
 
 bool QueueItem::isDownloadTree() const
 {
-	LOCK(csDownloads);
-	if (!downloads.empty())
-		return downloads.front()->getType() == Transfer::TYPE_TREE;
-	else
-		return false;
+	LOCK(csSegments);
+	if (downloads.empty()) return false;
+	return downloads.front()->getType() == Transfer::TYPE_TREE;
 }
 
 void QueueItem::getUsers(UserList& users) const
 {
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	users.reserve(downloads.size());
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		users.push_back((*i)->getUser());
@@ -952,7 +888,7 @@ void QueueItem::getUsers(UserList& users) const
 
 void QueueItem::disconnectOthers(const DownloadPtr& download)
 {
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	// Disconnect all possible overlapped downloads
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		if ((*i) != download)
@@ -963,7 +899,7 @@ bool QueueItem::disconnectSlow(const DownloadPtr& download)
 {
 	bool found = false;
 	// ok, we got a fast slot, so it's possible to disconnect original user now
-	LOCK(csDownloads);
+	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto& j = *i;
@@ -972,9 +908,9 @@ bool QueueItem::disconnectSlow(const DownloadPtr& download)
 			// overlapping has no sense if segment is going to finish
 			if (j->getSecondsLeft() < 10)
 				break;
-				
+
 			found = true;
-			
+
 			// disconnect slow chunk
 			j->getUserConnection()->disconnect();
 			break;
@@ -990,4 +926,13 @@ void QueueItem::updateBlockSize(uint64_t treeBlockSize)
 		dcassert(!(treeBlockSize % blockSize));
 		blockSize = treeBlockSize;
 	}
+}
+
+void QueueItem::GetSegmentParams::readSettings()
+{
+	enableMultiChunk = BOOLSETTING(ENABLE_MULTI_CHUNK);
+	dontBeginSegment = BOOLSETTING(DONT_BEGIN_SEGMENT);
+	overlapChunks = BOOLSETTING(OVERLAP_CHUNKS);
+	dontBeginSegSpeed = SETTING(DONT_BEGIN_SEGMENT_SPEED);
+	maxChunkSize = SETTING(MAX_CHUNK_SIZE);
 }

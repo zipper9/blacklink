@@ -47,7 +47,7 @@ class QueueItem
 {
 	public:
 		typedef boost::unordered_map<string, QueueItemPtr> QIStringMap;
-		typedef uint32_t MaskType;
+		typedef uint16_t MaskType;
 
 		static const size_t PFS_MIN_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -65,32 +65,38 @@ class QueueItem
 			LAST
 		};
 
-		enum FileFlags
+		// immutable flags
+		enum
 		{
-			FLAG_NORMAL             = 0x0000, // Normal download, no flags set
 			FLAG_USER_LIST          = 0x0001, // This is a user file listing download
-			FLAG_DIRECTORY_DOWNLOAD = 0x0002, // The file list is downloaded to use for directory download (used with USER_LIST)
-			FLAG_CLIENT_VIEW        = 0x0004, // The file is downloaded to be viewed in the gui
-			FLAG_TEXT               = 0x0008, // Flag to indicate that file should be viewed as a text file
-			FLAG_MATCH_QUEUE        = 0x0010, // Match the queue against this list
-			FLAG_XML_BZLIST         = 0x0020, // The file list downloaded was actually an .xml.bz2 list
-			FLAG_PARTIAL_LIST       = 0x0040, // Only download a part of the file list
+			FLAG_PARTIAL_LIST       = 0x0002, // Request partial file list (used with FLAG_USER_LIST)
+			FLAG_RECURSIVE_LIST     = 0x0004, // Request recursive file list (used with FLAG_PARTIAL_LIST)
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-			FLAG_USER_CHECK         = 0x0080, // Test user's file list for fake share
+			FLAG_USER_CHECK         = 0x0008, // Test user's file list for fake share
 #endif
-			FLAG_AUTODROP           = 0x0100, // Autodrop slow source is enabled for this file
-			FLAG_USER_GET_IP        = 0x0200,
-			FLAG_DCLST_LIST         = 0x0400,
-			FLAG_DOWNLOAD_CONTENTS  = 0x0800,
-			FLAG_RECURSIVE_LIST     = 0x1000,
-			FLAG_WANT_END           = 0x2000,
-			FLAG_COPYING            = 0x4000,
-			FLAG_TTH_LIST           = 0x8000  // Used by QueueManager::processList
+			FLAG_USER_GET_IP        = 0x0010,
+			FLAG_DCLST_LIST         = 0x0020,
+			FLAG_WANT_END           = 0x0040
+		};
+
+		// mutable extraFlags
+		enum
+		{
+			XFLAG_AUTO_PRIORITY     = 0x0001,
+			XFLAG_REMOVED           = 0x0002, // Item was removed from the Queue
+			XFLAG_COPYING           = 0x0004,
+			XFLAG_XML_BZLIST        = 0x0008, // The file list downloaded was actually an .xml.bz2 list (used with FLAG_USER_LIST)
+			XFLAG_DOWNLOAD_DIR      = 0x0010, // The file list is needed for directory download (used with FLAG_USER_LIST)
+			XFLAG_MATCH_QUEUE       = 0x0020, // Match the queue against this list
+			XFLAG_CLIENT_VIEW       = 0x0040, // The file must be opened by the app
+			XFLAG_TEXT_VIEW         = 0x0080, // File should be viewed as a text file (used with XFLAG_CLIENT_VIEW)
+			XFLAG_AUTODROP          = 0x0100, // Slow sources autodrop is enabled for this file
+			XFLAG_DOWNLOAD_CONTENTS = 0x0200
 		};
 
 		bool isUserList() const
 		{
-			return isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
+			return (flags & (FLAG_USER_LIST | FLAG_DCLST_LIST | FLAG_USER_GET_IP)) != 0;
 		}
 
 		typedef std::vector<uint16_t> PartsInfo;
@@ -114,7 +120,7 @@ class QueueItem
 				}
 
 				GETSET(PartsInfo, parts, Parts);
-				GETSET(string, myNick, MyNick);         // for NMDC support only
+				GETSET(string, myNick, MyNick); // for NMDC support only
 				GETSET(string, hubIpPort, HubIpPort);
 				GETSET(IpAddress, ip, Ip);
 				GETSET(uint64_t, nextQueryTime, NextQueryTime);
@@ -122,7 +128,7 @@ class QueueItem
 				GETSET(uint8_t, pendingQueryCount, PendingQueryCount);
 				GETSET(int64_t, blockSize, BlockSize);
 		};
-		
+
 		class Source : public Flags
 		{
 			public:
@@ -144,15 +150,15 @@ class QueueItem
 					            | FLAG_PASSIVE | FLAG_REMOVED | FLAG_BAD_TREE | FLAG_SLOW_SOURCE
 					            | FLAG_NO_TREE | FLAG_TTH_INCONSISTENCY | FLAG_UNTRUSTED
 				};
-				
-				Source()  {}
-				
+
+				Source() {}
+
 				bool isCandidate(bool isBadSource) const
 				{
 					return isSet(FLAG_PARTIAL) && (isBadSource || !isSet(FLAG_TTH_INCONSISTENCY));
 				}
-				
-				GETSET(PartialSource::Ptr, partialSource, PartialSource);
+
+				PartialSource::Ptr partialSource;
 		};
 
 		// used by getChunksVisualisation
@@ -163,16 +169,31 @@ class QueueItem
 			int64_t pos;
 		};
 
+		struct GetSegmentParams
+		{
+			int64_t blockSize;
+			int64_t wantedSize;
+			int64_t lastSpeed;
+			bool enableMultiChunk;
+			bool dontBeginSegment;
+			bool overlapChunks;
+			int dontBeginSegSpeed;
+			int maxChunkSize;
+
+			void readSettings();
+		};
+
 		typedef boost::unordered_map<UserPtr, Source> SourceMap;
 		typedef SourceMap::iterator SourceIter;
 		typedef SourceMap::const_iterator SourceConstIter;
 
-		typedef std::set<Segment> SegmentSet;
+		typedef boost::container::flat_set<Segment> SegmentSet;
 
-		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
+		QueueItem(const string& target, int64_t size, Priority priority, MaskType flags, MaskType extraFlags,
 		          time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget);
-		QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, MaskType flags,
+		QueueItem(const string& target, int64_t size, Priority priority, MaskType flags, MaskType extraFlags,
 		          time_t added, uint8_t maxSegments, const string& tempTarget);
+		QueueItem(const string& newTarget, QueueItem& src);
 
 		QueueItem(const QueueItem &) = delete;
 		QueueItem& operator= (const QueueItem &) = delete;
@@ -190,7 +211,7 @@ class QueueItem
 
 		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const;
 		void getOnlineUsers(UserList& l) const;
-		
+
 #ifdef USE_QUEUE_RWLOCK
 		static std::unique_ptr<RWLock> g_cs;
 #else
@@ -198,14 +219,8 @@ class QueueItem
 #endif
 		static std::atomic_bool checkTempDir;
 
-		const SourceMap& getSourcesL()
-		{
-			return sources;
-		}
-		const SourceMap& getBadSourcesL()
-		{
-			return badSources;
-		}
+		const SourceMap& getSourcesL() { return sources; }
+		const SourceMap& getBadSourcesL() { return badSources; }
 #ifdef _DEBUG
 		bool isSourceValid(const QueueItem::Source* sourcePtr);
 #endif
@@ -233,80 +248,107 @@ class QueueItem
 		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
 		void setOverlapped(const Segment& segment, bool isOverlapped);
-		/**
-		 * Is specified parts needed by this download?
-		 */
+
+		// Are specified parts needed by this download?
 		static bool isNeededPart(const PartsInfo& theirParts, const PartsInfo& ourParts);
-		
-		/**
-		 * Get shared parts info, max 255 parts range pairs
-		 */
+
+		// Get shared parts info, max 255 parts range pairs
 		void getParts(PartsInfo& partialInfo, uint64_t blockSize) const;
-		
+
 		int64_t getDownloadedBytes() const { return downloadedBytes; }
 		void updateDownloadedBytes();
-		void updateDownloadedBytesAndSpeedL();
+		void updateDownloadedBytesAndSpeed();
 		void addDownload(const DownloadPtr& download);
 		bool removeDownload(const UserPtr& user);
 		size_t getDownloadsSegmentCount() const { return downloads.size(); }
 		bool disconnectSlow(const DownloadPtr& d);
 		void disconnectOthers(const DownloadPtr& d);
-		uint8_t calcActiveSegments() const;
+		bool isMultipleSegments() const;
 		bool isDownloadTree() const;
 		UserPtr getFirstUser() const;
 		void getUsers(UserList& users) const;
-		/** Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found */
-		Segment getNextSegmentL(const int64_t blockSize, const int64_t wantedSize, const int64_t lastSpeed, const PartialSource::Ptr &partialSource) const;
-		
+
+		// Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found
+		Segment getNextSegmentL(const GetSegmentParams& gsp, const PartialSource::Ptr &partialSource) const;
+
 		void addSegment(const Segment& segment);
 		void addSegmentL(const Segment& segment);
 		void resetDownloaded();
 		void resetDownloadedL();
-		
+
 		bool isFinished() const;
-		
+
 		bool isRunning() const
 		{
 			return !isWaiting();
 		}
 		bool isWaiting() const
 		{
-			// fix lock - не включать! LOCK(m_fcs_download);
+			LOCK(csSegments);
 			return downloads.empty();
 		}
 		string getListName() const;
-		const string& getTempTarget();
-		const string& getTempTargetConst() const { return tempTarget; }
 
 	private:
-		MaskType flags;
-		std::atomic_bool removed;
+		const string target;
+		int64_t size;
+		const time_t added;
+		mutable FastCriticalSection csAttribs;
+		const MaskType flags;
+		MaskType extraFlags;
 		const TTHValue tthRoot;
 		uint64_t blockSize;
+		Priority priority;
+		uint8_t maxSegments;
 
 		Segment getNextSegmentForward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
 		Segment getNextSegmentBackward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
 		bool shouldSearchBackward() const;
 
 	public:
-		bool isSet(MaskType flag) const { return (flags & flag) == flag; }
-		bool isAnySet(MaskType flag) const { return (flags & flag) != 0; }
 		MaskType getFlags() const { return flags; }
+		MaskType getExtraFlagsL() const { return extraFlags; }
+		void setExtraFlagsL(MaskType flags) { extraFlags = flags; }
+
+		MaskType getExtraFlags() const
+		{
+			LOCK(csAttribs);
+			return extraFlags;
+		}
+
+		void setExtraFlags(MaskType flags)
+		{
+			LOCK(csAttribs);
+			extraFlags = flags;
+		}
+
+		void changeExtraFlags(MaskType value, MaskType mask)
+		{
+			LOCK(csAttribs);
+			extraFlags = (extraFlags & ~mask) | value;
+		}
+
+		void toggleExtraFlag(MaskType flag)
+		{
+			LOCK(csAttribs);
+			extraFlags ^= flag;
+		}
 
 		const TTHValue& getTTH() const { return tthRoot; }
 		time_t getAdded() const { return added; }
 
 		void updateBlockSize(uint64_t treeBlockSize);
 		uint64_t getBlockSize() const { return blockSize; }
-		
+
+		static string getDCTempName(const string& fileName, const TTHValue* tth);
+
 	private:
-		DownloadList downloads;		
-		mutable FastCriticalSection csDownloads;
-		
+		mutable CriticalSection csSegments;
+		DownloadList downloads;
+
 		SegmentSet doneSegments;
 		int64_t doneSegmentsSize;
-		int64_t downloadedBytes;				
-		mutable FastCriticalSection csSegments;
+		int64_t downloadedBytes;
 
 	public:
 		void getDoneSegments(vector<Segment>& done) const;
@@ -316,49 +358,31 @@ class QueueItem
 #ifdef DEBUG_TRANSFERS
 		GETSET(string, sourcePath, SourcePath);
 #endif
-		
-	private:
-		Priority priority;
-		string target;
-		int64_t size;
-		uint8_t maxSegments;
-		bool autoPriority;
-		const time_t added;
 
 	public:
-		bool getAutoPriority() const { return autoPriority; }
-		void setAutoPriority(bool value) { autoPriority = value; }
-		
-		uint8_t getMaxSegments() const { return maxSegments; }
-		void setMaxSegments(uint8_t value) { maxSegments = value; }
-		
+		void lockAttributes() const noexcept { csAttribs.lock(); }
+		void unlockAttributes() const noexcept { csAttribs.unlock(); }
+
+		Priority getPriorityL() const { return priority; }
+		void setPriorityL(Priority value) { priority = value; }
+
+		uint8_t getMaxSegmentsL() const { return maxSegments; }
+		void setMaxSegmentsL(uint8_t value) { maxSegments = value; }
+
 		int64_t getSize() const { return size; }
 		void setSize(int64_t value) { size = value; }
-		
+
+		const string& getTempTargetL() const { return tempTarget; }
+		void setTempTargetL(const string& value) { tempTarget = value; }
+		void setTempTargetL(string&& value) { tempTarget = std::move(value); }
+
 		const string& getTarget() const { return target; }
-		void setTarget(const string& value) { target = value; }
-		
-		Priority getPriority() const { return priority; }
-		void setPriority(Priority value) { priority = value; }
-		
-		void setTempTarget(const string& value) { tempTarget = value; }
-		
+
 		int16_t getTransferFlags(int& flags) const;
-		QueueItem::Priority calculateAutoPriority() const;
-		
-		bool isAutoDrop() const
-		{
-			return (flags & FLAG_AUTODROP) != 0;
-		}
-		
-		void changeAutoDrop()
-		{
-			flags ^= FLAG_AUTODROP;
-		}
+		QueueItem::Priority calculateAutoPriorityL() const;
 
 		int64_t getAverageSpeed() const { return averageSpeed; }
 		size_t getLastOnlineCount();
-		static string getDCTempName(const string& fileName, const TTHValue* tth);
 
 	private:
 		int64_t averageSpeed;
@@ -366,8 +390,9 @@ class QueueItem
 		size_t cachedOnlineSourceCount;
 		SourceMap sources;
 		SourceMap badSources;
+		QueueItem::Priority prioQueue;
 		string tempTarget;
-		
+
 		SourceIter addSourceL(const UserPtr& user, bool isFirstLoad);
 		void removeSourceL(const UserPtr& user, MaskType reason);
 
