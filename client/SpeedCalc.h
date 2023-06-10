@@ -49,12 +49,14 @@ class SpeedCalc
 			return true;
 		}
 
-		int64_t getAverage(int minTime) const
+		int64_t getAverage(int minTime, int minSize) const
 		{
 			if (count < 2) return -1;
 			int64_t time = data[last].tick - data[first].tick;
-			if (time < minTime) return -1;
-			return (data[last].size - data[first].size) * 1000 / time;
+			if (time <= 0) return -1;
+			int64_t size = data[last].size - data[first].size;
+			if (time < minTime && size < minSize) return -1;
+			return size * 1000 / time;
 		}
 };
 

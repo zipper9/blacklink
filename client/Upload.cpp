@@ -46,7 +46,7 @@ void Upload::updateSpeed(uint64_t currentTick)
 	LOCK(csSpeed);
 	setLastTick(currentTick);
 	speed.addSample(actual, currentTick);
-	int64_t avg = speed.getAverage(2000);
+	int64_t avg = speed.getAverage(2000, 64 * 1024);
 	if (avg >= 0)
 	{
 		runningAverage = avg;

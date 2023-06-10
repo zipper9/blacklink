@@ -1918,10 +1918,10 @@ void ConnectionManager::removeUnusedConnections()
 void ConnectionManager::updateAverageSpeed(uint64_t tick)
 {
 	uploadSpeed.addSample(Socket::g_stats.tcp.uploaded + Socket::g_stats.ssl.uploaded, tick);
-	int64_t avg = uploadSpeed.getAverage(3000);
+	int64_t avg = uploadSpeed.getAverage(3000, 64 * 1024);
 	if (avg >= 0) UploadManager::setRunningAverage(avg);
 	downloadSpeed.addSample(Socket::g_stats.tcp.downloaded + Socket::g_stats.ssl.downloaded, tick);
-	avg = downloadSpeed.getAverage(3000);
+	avg = downloadSpeed.getAverage(3000, 64 * 1024);
 	if (avg >= 0) DownloadManager::setRunningAverage(avg);
 }
 
