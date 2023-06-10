@@ -1271,15 +1271,15 @@ static bool compareFinishedItems(const FinishedItem* a, const FinishedItem* b, i
 			return a->getTTH() < b->getTTH();
 		case 4: // TTH
 			res = compare(a->getTTH(), b->getTTH());
-			if (res) return res;
+			if (res) return res < 0;
 			return a->getTime() < b->getTime();
 		case 5: // User
 			res = compare(a->getNick(), b->getNick());
-			if (res) return res;
+			if (res) return res < 0;
 			return a->getTTH() < b->getTTH();
 		case 6: // Hub
 			res = compare(a->getHub(), b->getHub());
-			if (res) return res;
+			if (res) return res < 0;
 			return a->getTTH() < b->getTTH();
 		case 7: // IP
 			res = compare(a->getIP(), b->getIP());
