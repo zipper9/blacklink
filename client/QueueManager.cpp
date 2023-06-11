@@ -408,27 +408,19 @@ bool QueueManager::UserQueue::getQueuedItems(const UserPtr& user, QueueItemList&
 void QueueManager::UserQueue::addL(const QueueItemPtr& qi, QueueItem::Priority p)
 {
 	for (auto i = qi->sources.begin(); i != qi->sources.end(); ++i)
-		addL(qi, p, i->first, false);
+		addL(qi, p, i->first);
 	qi->prioQueue = p;
 }
 
-void QueueManager::UserQueue::addL(const QueueItemPtr& qi, QueueItem::Priority prioQueue, const UserPtr& user, bool isFirstLoad)
+void QueueManager::UserQueue::addL(const QueueItemPtr& qi, QueueItem::Priority prioQueue, const UserPtr& user)
 {
 	dcassert(prioQueue >= 0 && prioQueue < QueueItem::LAST);
 	auto& uq = userQueueMap[prioQueue][user];
 
-	if (!isFirstLoad && (
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-	            qi->isSet(QueueItem::FLAG_USER_CHECK) ||
-#endif
-	            qi->getDownloadedBytes() > 0))
-	{
+	if ((qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)) || qi->getDownloadedBytes() > 0)
 		uq.push_front(qi);
-	}
 	else
-	{
 		uq.push_back(qi);
-	}
 }
 
 bool QueueManager::FileQueue::getTTH(const string& target, TTHValue& tth) const
@@ -857,7 +849,7 @@ void QueueManager::addCheckUserIP(const UserPtr& user)
 	add(Util::emptyString, params, user, QueueItem::FLAG_USER_GET_IP, 0, getConnFlag);
 }
 
-string QueueManager::getListPath(const UserPtr& user)
+string QueueManager::getFileListTarget(const UserPtr& user)
 {
 	dcassert(user);
 	if (user)
@@ -875,8 +867,7 @@ string QueueManager::getListPath(const UserPtr& user)
 			std::replace(nick.begin(), nick.end(), '.', '_');
 			nick += '.';
 		}
-		const string datetime = Util::formatDateTime("%Y%m%d_%H%M.", time(nullptr));
-		return checkTarget(Util::getListPath() + nick + datetime + user->getCID().toBase32(), -1);
+		return checkTarget(Util::getListPath() + nick + user->getCID().toBase32(), -1);
 	}
 	return string();
 }
@@ -904,11 +895,10 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 
 	string targetPath;
 	string tempTarget;
-
 	if (fileList)
 	{
 		dcassert(user);
-		targetPath = getListPath(user);
+		targetPath = getFileListTarget(user);
 		if (flags & QueueItem::FLAG_PARTIAL_LIST)
 		{
 			targetPath += ':';
@@ -919,7 +909,7 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 	else if (testIP)
 	{
 		dcassert(user);
-		targetPath = getListPath(user) + ".check";
+		targetPath = getFileListTarget(user) + ".check";
 		tempTarget = target;
 	}
 	else
@@ -946,107 +936,107 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 	bool wantConnection = false;
 	QueueItem::Priority priority = params.priority;
 
+	QueueItemPtr q = fileQueue.findTarget(targetPath);
+	string sharedFilePath;
+	if (!q)
 	{
-		QueueItemPtr q = fileQueue.findTarget(targetPath);
-		string sharedFilePath;
-		if (!q)
+		int64_t existingFileSize = 0;
+		int64_t existingFileTime = 0;
+		bool waitForUserInput = false;
+		QueueItem::Priority savedPriority = priority;
+		if (newItem)
 		{
-			int64_t existingFileSize = 0;
-			int64_t existingFileTime = 0;
-			bool waitForUserInput = false;
-			QueueItem::Priority savedPriority = priority;
-			if (newItem)
+			FileAttributes attr;
+			bool targetExists = File::getAttributes(targetPath, attr);
+			if (targetExists)
 			{
-				FileAttributes attr;
-				bool targetExists = File::getAttributes(targetPath, attr);
-				if (targetExists)
+				existingFileSize = attr.getSize();
+				existingFileTime = File::timeStampToUnixTime(attr.getTimeStamp());
+				if (existingFileSize == params.size && BOOLSETTING(SKIP_EXISTING))
 				{
-					existingFileSize = attr.getSize();
-					existingFileTime = File::timeStampToUnixTime(attr.getTimeStamp());
-					if (existingFileSize == params.size && BOOLSETTING(SKIP_EXISTING))
-					{
-						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, targetPath));
-						return;
-					}
-					switch (SETTING(TARGET_EXISTS_ACTION))
-					{
-						case SettingsManager::TE_ACTION_ASK:
-							waitForUserInput = true;
-							priority = QueueItem::PAUSED;
-							break;
-						case SettingsManager::TE_ACTION_REPLACE:
-							File::deleteFile(targetPath); // Delete old file.
-							break;
-						case SettingsManager::TE_ACTION_RENAME:
-							targetPath = Util::getNewFileName(targetPath); // Call Util::getNewFileName instead of using CheckTargetDlg's stored name
-							break;
-						case SettingsManager::TE_ACTION_SKIP:
-							return;
-					}
+					LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, targetPath));
+					return;
 				}
-
-				int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
-				if (!waitForUserInput && maxSizeForCopy && params.root &&
-				    ShareManager::getInstance()->getFileInfo(*params.root, sharedFilePath) &&
-				    File::getAttributes(sharedFilePath, attr))
+				switch (SETTING(TARGET_EXISTS_ACTION))
 				{
-					auto sharedFileSize = attr.getSize();
-					if (sharedFileSize == params.size && sharedFileSize <= maxSizeForCopy)
-					{
-						LogManager::message(STRING_F(COPYING_EXISTING_FILE, targetPath));
+					case SettingsManager::TE_ACTION_ASK:
+						waitForUserInput = true;
 						priority = QueueItem::PAUSED;
-						extraFlags |= QueueItem::XFLAG_COPYING;
-					}
+						break;
+					case SettingsManager::TE_ACTION_REPLACE:
+						File::deleteFile(targetPath); // Delete old file.
+						break;
+					case SettingsManager::TE_ACTION_RENAME:
+						targetPath = Util::getNewFileName(targetPath); // Call Util::getNewFileName instead of using CheckTargetDlg's stored name
+						break;
+					case SettingsManager::TE_ACTION_SKIP:
+						return;
 				}
 			}
 
-			q = fileQueue.add(this, targetPath, params.size, flags, extraFlags, priority, tempTarget, params.root, 0);
-
-			if (q)
+			int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
+			if (!waitForUserInput && maxSizeForCopy && params.root &&
+			    ShareManager::getInstance()->getFileInfo(*params.root, sharedFilePath) &&
+			    File::getAttributes(sharedFilePath, attr))
 			{
-#ifdef DEBUG_TRANSFERS
-				if (!params.sourcePath.empty()) q->setSourcePath(params.sourcePath);
-#endif
-				fire(QueueManagerListener::Added(), q);
-				if (extraFlags & QueueItem::XFLAG_COPYING)
+				auto sharedFileSize = attr.getSize();
+				if (sharedFileSize == params.size && sharedFileSize <= maxSizeForCopy)
 				{
-					newItem = false;
-					FileMoverJob* job = new FileMoverJob(*this, FileMoverJob::COPY_QI_FILE, sharedFilePath, targetPath, false, q);
-					if (!fileMover.addJob(job))
-						delete job;
-				}
-				else if (waitForUserInput)
-				{
-					string fileName = Util::getFileName(targetPath);
-					bool autoPriority;
-					fileQueue.updatePriority(savedPriority, autoPriority, fileName, params.size, flags);
-					q->changeExtraFlags(autoPriority ? QueueItem::XFLAG_AUTO_PRIORITY : 0, QueueItem::XFLAG_AUTO_PRIORITY);
-					fire(QueueManagerListener::FileExistsAction(), targetPath, params.size, existingFileSize, existingFileTime, savedPriority);
+					LogManager::message(STRING_F(COPYING_EXISTING_FILE, targetPath));
+					priority = QueueItem::PAUSED;
+					extraFlags |= QueueItem::XFLAG_COPYING;
 				}
 			}
 		}
-		else
-		{
-			if (q->getSize() != params.size)
-				throw QueueException(QueueException::BAD_FILE_SIZE, STRING(FILE_WITH_DIFFERENT_SIZE));
-			if (params.root && !(*params.root == q->getTTH()))
-				throw QueueException(QueueException::BAD_FILE_TTH, STRING(FILE_WITH_DIFFERENT_TTH));
-			if (q->isFinished())
-				throw QueueException(QueueException::ALREADY_FINISHED, STRING(FILE_ALREADY_FINISHED));
 
-			static const QueueItem::MaskType UPDATE_FLAGS_MASK = QueueItem::XFLAG_CLIENT_VIEW | QueueItem::XFLAG_TEXT_VIEW | QueueItem::XFLAG_DOWNLOAD_CONTENTS;
-			q->changeExtraFlags(flags & UPDATE_FLAGS_MASK, UPDATE_FLAGS_MASK);
-		}
-		if (!(extraFlags & QueueItem::XFLAG_COPYING) && user && !(user->getFlags() & User::FAKE) && q)
+		q = fileQueue.add(this, targetPath, params.size, flags, extraFlags, priority, tempTarget, params.root, 0);
+
+		if (q)
 		{
-			QueueWLock(*QueueItem::g_cs);
-			wantConnection = addSourceL(q, user, (QueueItem::MaskType)(params.readdBadSource ? QueueItem::Source::FLAG_MASK : 0));
-			if (priority == QueueItem::PAUSED) wantConnection = false;
+#ifdef DEBUG_TRANSFERS
+			if (!params.sourcePath.empty()) q->setSourcePath(params.sourcePath);
+#endif
+			fire(QueueManagerListener::Added(), q);
+			if (extraFlags & QueueItem::XFLAG_COPYING)
+			{
+				newItem = false;
+				FileMoverJob* job = new FileMoverJob(*this, FileMoverJob::COPY_QI_FILE, sharedFilePath, targetPath, false, q);
+				if (!fileMover.addJob(job))
+					delete job;
+			}
+			else if (waitForUserInput)
+			{
+				string fileName = Util::getFileName(targetPath);
+				bool autoPriority;
+				fileQueue.updatePriority(savedPriority, autoPriority, fileName, params.size, flags);
+				q->changeExtraFlags(autoPriority ? QueueItem::XFLAG_AUTO_PRIORITY : 0, QueueItem::XFLAG_AUTO_PRIORITY);
+				fire(QueueManagerListener::FileExistsAction(), targetPath, params.size, existingFileSize, existingFileTime, savedPriority);
+			}
 		}
-		else
-			wantConnection = false;
-		setDirty();
 	}
+	else
+	{
+		if (q->getFlags() & QueueItem::FLAG_USER_LIST)
+			throw QueueException(QueueException::DUPLICATE_SOURCE, STRING(FILE_LIST_ALREADY_QUEUED));
+		if (q->getSize() != params.size)
+			throw QueueException(QueueException::BAD_FILE_SIZE, STRING(FILE_WITH_DIFFERENT_SIZE));
+		if (params.root && !(*params.root == q->getTTH()))
+			throw QueueException(QueueException::BAD_FILE_TTH, STRING(FILE_WITH_DIFFERENT_TTH));
+		if (q->isFinished())
+			throw QueueException(QueueException::ALREADY_FINISHED, STRING(FILE_ALREADY_FINISHED));
+
+		static const QueueItem::MaskType UPDATE_FLAGS_MASK = QueueItem::XFLAG_CLIENT_VIEW | QueueItem::XFLAG_TEXT_VIEW | QueueItem::XFLAG_DOWNLOAD_CONTENTS;
+		q->changeExtraFlags(flags & UPDATE_FLAGS_MASK, UPDATE_FLAGS_MASK);
+	}
+	if (!(extraFlags & QueueItem::XFLAG_COPYING) && user && !(user->getFlags() & User::FAKE) && q)
+	{
+		QueueWLock(*QueueItem::g_cs);
+		wantConnection = addSourceL(q, user, (QueueItem::MaskType)(params.readdBadSource ? QueueItem::Source::FLAG_MASK : 0));
+		if (priority == QueueItem::PAUSED) wantConnection = false;
+	}
+	else
+		wantConnection = false;
+	setDirty();
 
 	if (getConnFlag)
 	{
@@ -1056,7 +1046,7 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 			getConnFlag = false;
 		}
 
-		// auto search, prevent DEADLOCK
+		// Perform auto search
 		if (newItem && BOOLSETTING(AUTO_SEARCH) && params.root)
 			SearchManager::getInstance()->searchAuto(params.root->toBase32());
 	}
@@ -1147,7 +1137,7 @@ void QueueManager::processFileExistsQuery(const string& path, int action, const 
 }
 
 /** Add a source to an existing queue item */
-bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, QueueItem::MaskType addBad, bool isFirstLoad)
+bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, QueueItem::MaskType addBad)
 {
 	dcassert(user);
 	bool wantConnection;
@@ -1156,17 +1146,13 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, Queue
 		auto p = qi->getPriorityL();
 		qi->unlockAttributes();
 
-		if (isFirstLoad)
-			wantConnection = true;
-		else
-			wantConnection = p != QueueItem::PAUSED && !userQueue.getRunning(user);
+		wantConnection = p != QueueItem::PAUSED && !userQueue.getRunning(user);
 		if (qi->isSourceL(user))
 		{
 			if (qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 				return wantConnection;
 			throw QueueException(QueueException::DUPLICATE_SOURCE, STRING(DUPLICATE_SOURCE) + ": " + Util::getFileName(qi->getTarget()));
 		}
-		dcassert((isFirstLoad && !qi->isBadSourceExceptL(user, addBad)) || !isFirstLoad);
 		if (qi->isBadSourceExceptL(user, addBad))
 		{
 			throw QueueException(QueueException::DUPLICATE_SOURCE, STRING(DUPLICATE_SOURCE) +
@@ -1174,32 +1160,29 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, Queue
 			                     " Nick = " + user->getLastNick());
 		}
 
-		qi->addSourceL(user, isFirstLoad);
+		qi->addSourceL(user);
 		/*if(user.user->isSet(User::PASSIVE) && !ClientManager::isActive(user.hint)) {
 		    qi->removeSource(user, QueueItem::Source::FLAG_PASSIVE);
 		    wantConnection = false;
 		} else */
-		if (!isFirstLoad && qi->isFinished())
+		if (qi->isFinished())
 		{
 			wantConnection = false;
 		}
 		else
 		{
-			if (!isFirstLoad && !(qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)))
+			if (!(qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)))
 			{
 				LOCK(csUpdatedSources);
 				sourceAdded = true;
 			}
 			if (qi->prioQueue == QueueItem::DEFAULT)
 				qi->prioQueue = p;
-			userQueue.addL(qi, qi->prioQueue, user, isFirstLoad);
+			userQueue.addL(qi, qi->prioQueue, user);
 		}
 	}
-	if (!isFirstLoad)
-	{
-		addUpdatedSource(qi);
-		setDirty();
-	}
+	addUpdatedSource(qi);
+	setDirty();
 	return wantConnection;
 }
 
@@ -1492,7 +1475,7 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 			q->lockAttributes();
 			string tempTarget = q->getTempTargetL();
 			q->unlockAttributes();
-			if (!File::isExist(tempTarget)) // FIXME: clear tempTarget
+			if (!File::isExist(tempTarget)) // TODO: clear tempTarget?
 			{
 				// Temp target gone?
 				q->resetDownloaded();
@@ -1559,7 +1542,7 @@ class TreeOutputStream : public OutputStream
 			return len;
 		}
 
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
 			return 0;
 		}
@@ -1584,11 +1567,9 @@ void QueueManager::setFile(const DownloadPtr& d)
 {
 	if (d->getType() == Transfer::TYPE_FILE)
 	{
-		const QueueItemPtr qi = fileQueue.findTarget(d->getPath());
-		if (!qi)
-		{
+		const QueueItemPtr qi = d->getQueueItem();
+		if (qi->getExtraFlags() & QueueItem::XFLAG_REMOVED)
 			throw QueueException(QueueException::TARGET_REMOVED, STRING(TARGET_REMOVED));
-		}
 
 		if (d->getOverlapped())
 		{
@@ -1659,9 +1640,8 @@ void QueueManager::setFile(const DownloadPtr& d)
 	}
 	else if (d->getType() == Transfer::TYPE_FULL_LIST)
 	{
-		const string& path = d->getPath();
-		QueueItemPtr qi = fileQueue.findTarget(path);
-		if (!qi)
+		const QueueItemPtr qi = d->getQueueItem();
+		if (qi->getExtraFlags() & QueueItem::XFLAG_REMOVED)
 			throw QueueException(QueueException::TARGET_REMOVED, STRING(TARGET_REMOVED));
 
 		// set filelist's size
@@ -1780,7 +1760,7 @@ void QueueManager::rechecked(const QueueItemPtr& qi)
 	setDirty();
 }
 
-void QueueManager::putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish) noexcept
+void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportFinish) noexcept
 {
 	UserList getConn;
 	unique_ptr<DirectoryItem> processListDirItem;
@@ -1796,7 +1776,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 	download->resetDownloadFile();
 	if (download->getType() == Transfer::TYPE_PARTIAL_LIST)
 	{
-		QueueItemPtr q = fileQueue.findTarget(path);
+		QueueItemPtr q = fileQueue.findTarget(download->getQueueItem()->getTarget());
 		if (q)
 		{
 			if (!download->getFileListBuffer().empty())
@@ -1849,7 +1829,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 	}
 	else
 	{
-		QueueItemPtr q = fileQueue.findTarget(path);
+		QueueItemPtr q = fileQueue.findTarget(download->getQueueItem()->getTarget());
 		if (q)
 		{
 			if (download->getType() == Transfer::TYPE_FULL_LIST)
@@ -1877,7 +1857,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					auto extraFlags = q->getExtraFlags();
 					if (extraFlags & (QueueItem::XFLAG_DOWNLOAD_DIR | QueueItem::XFLAG_MATCH_QUEUE))
 					{
-						processListFileName = q->getListName();
+						processListFileName = download->getPath() + q->getListExt();
 						processListFlags = queueItemFlagsToDirFlags(extraFlags);
 					}
 					const bool isFile = download->getType() == Transfer::TYPE_FILE;
@@ -1890,7 +1870,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						dir = q->getTempTargetL();
 						q->unlockAttributes();
 						q->addSegment(Segment(0, q->getSize()));
-						string destName = q->getListName();
+						string destName = download->getPath() + q->getListExt();
 						string sourceName = destName + dctmpExtension;
 						File::renameFile(sourceName, destName);
 					}
@@ -1903,6 +1883,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 
 					if (!isFile || isFinishedFile)
 					{
+						const string& path = download->getPath();
 						if (!(q->getFlags() & QueueItem::FLAG_USER_GET_IP))
 						{
 							string tempTarget;
@@ -1964,7 +1945,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					if (q->getFlags() & QueueItem::FLAG_USER_LIST)
 					{
 						// Blah...no use keeping an unfinished file list...
-						File::deleteFile(q->getListName() + dctmpExtension);
+						File::deleteFile(download->getPath() + q->getListExt() + dctmpExtension);
 					}
 					if (download->getType() == Transfer::TYPE_FILE)
 					{
@@ -2023,7 +2004,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 		else if (download->getType() != Transfer::TYPE_TREE && (download->getQueueItem()->getExtraFlags() & QueueItem::XFLAG_REMOVED))
 		{
 			const string tmpTarget = download->getTempTarget();
-			if (!tmpTarget.empty() && tmpTarget != path)
+			if (!tmpTarget.empty() && tmpTarget != download->getPath())
 			{
 				if (File::isExist(tmpTarget))
 				{
@@ -3031,7 +3012,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 				auto p = qi->getPriorityL();
 				qi->unlockAttributes();
 
-				si = qi->addSourceL(user, false);
+				si = qi->addSourceL(user);
 				si->second.setFlag(QueueItem::Source::FLAG_PARTIAL);
 
 				const auto ps = std::make_shared<QueueItem::PartialSource>(partialSource.getMyNick(),
@@ -3040,7 +3021,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 				ps->setNextQueryTime(GET_TICK() + PFS_QUERY_INTERVAL);
 				si->second.partialSource = ps;
 
-				userQueue.addL(qi, p, user, false);
+				userQueue.addL(qi, p, user);
 				dcassert(si != qi->getSourcesL().end());
 				addUpdatedSource(qi);
 				if (BOOLSETTING(LOG_PSR_TRACE))

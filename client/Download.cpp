@@ -27,7 +27,7 @@
 #include "Random.h"
 
 Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
-	Transfer(conn, item->getTarget(), item->getTTH()),
+	Transfer(conn, getTargetPath(item), item->getTTH()),
 	qi(item),
 	downloadFile(nullptr),
 	treeValid(false)
@@ -289,4 +289,19 @@ string Download::getDownloadTarget() const
 	}
 
 	return getPath();
+}
+
+string Download::getTargetPath(const QueueItemPtr& qi)
+{
+	string path = qi->getTarget();
+	if ((qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST)) == QueueItem::FLAG_USER_LIST)
+	{
+		static const size_t TTH_SUFFIX_LEN = 39 + 1;
+		if (path.length() > TTH_SUFFIX_LEN && path[path.length() - TTH_SUFFIX_LEN] == '.')
+		{
+			const string datetime = Util::formatDateTime(".%Y%m%d_%H%M", qi->getAdded());
+			path.insert(path.length() - TTH_SUFFIX_LEN, datetime);
+		}
+	}
+	return path;
 }

@@ -34,6 +34,8 @@ std::unique_ptr<CriticalSection> QueueItem::g_cs = std::unique_ptr<CriticalSecti
 std::atomic_bool QueueItem::checkTempDir(true);
 
 const string dctmpExtension = ".dctmp";
+const string xmlExtension = ".xml";
+const string xmlBz2Extension = ".xml.bz2";
 
 static const uint64_t DEFAULT_BLOCK_SIZE = 64 * 1024;
 
@@ -253,25 +255,18 @@ void QueueItem::getOnlineUsers(UserList& list) const
 			list.push_back(i->first);
 }
 
-QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user, bool isFirstLoad)
+QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user)
 {
 	SourceIter it;
-	if (isFirstLoad)
+	dcassert(!isSourceL(user));
+	SourceIter i = findBadSourceL(user);
+	if (i != badSources.end())
 	{
-		it = sources.insert(std::make_pair(user, Source())).first;
+		it = sources.insert(*i).first;
+		badSources.erase(i->first);
 	}
 	else
-	{
-		dcassert(!isSourceL(user));
-		SourceIter i = findBadSourceL(user);
-		if (i != badSources.end())
-		{
-			it = sources.insert(*i).first;
-			badSources.erase(i->first);
-		}
-		else
-			it = sources.insert(std::make_pair(user, Source())).first;
-	}
+		it = sources.insert(std::make_pair(user, Source())).first;
 	cachedOnlineSourceCountInvalid = true;
 	return it;
 }
@@ -360,14 +355,14 @@ void QueueItem::removeSourceL(const UserPtr& user, MaskType reason)
 #endif
 }
 
-string QueueItem::getListName() const
+const string& QueueItem::getListExt() const
 {
 	dcassert(flags & (FLAG_USER_LIST | FLAG_DCLST_LIST));
 	if (getExtraFlags() & XFLAG_XML_BZLIST)
-		return getTarget() + ".xml.bz2";
+		return xmlBz2Extension;
 	if (flags & FLAG_DCLST_LIST)
-		return getTarget();
-	return getTarget() + ".xml";
+		return Util::emptyString;
+	return xmlExtension;
 }
 
 #ifdef _DEBUG

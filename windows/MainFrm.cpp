@@ -2711,7 +2711,7 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 			if (flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST))
 			{
 				// This is a file listing, show it...
-				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), qi->getListName(), dir, download->getRunningAverage(), (flags & QueueItem::FLAG_DCLST_LIST) != 0);
+				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), download->getPath() + qi->getListExt(), dir, download->getRunningAverage(), (flags & QueueItem::FLAG_DCLST_LIST) != 0);
 				WinUtil::postSpeakerMsg(*this, DOWNLOAD_LISTING, dirInfo);
 			}
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT

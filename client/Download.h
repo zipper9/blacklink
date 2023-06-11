@@ -15,7 +15,6 @@ class AdcCommand;
 class Download : public Transfer, public Flags
 {
 	public:
-
 		enum
 		{
 			FLAG_ZDOWNLOAD        = 0x001,
@@ -90,6 +89,8 @@ class Download : public Transfer, public Flags
 		const QueueItemPtr qi;
 		TigerTree tigerTree;
 		string fileListBuffer;
+
+		static string getTargetPath(const QueueItemPtr& qi);
 
 	public:
 		struct ErrorInfo

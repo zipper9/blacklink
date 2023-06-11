@@ -429,13 +429,13 @@ void DownloadManager::endData(UserConnection* source)
 		
 		if (!(d->getTTH() == tree.getRoot()))
 		{
-			// This tree is for a different file, remove from queue...// [!]PPA TODO подтереть fly_hash_block
+			// This tree is for a different file, remove from queue
 			removeDownload(d);
 			fire(DownloadManagerListener::Failed(), d, STRING(INVALID_TREE));
 			
-			QueueManager::getInstance()->removeSource(d->getPath(), source->getUser(), QueueItem::Source::FLAG_BAD_TREE, false);
-			
-			QueueManager::getInstance()->putDownload(d->getPath(), d, false);
+			auto qm = QueueManager::getInstance();
+			qm->removeSource(d->getPath(), source->getUser(), QueueItem::Source::FLAG_BAD_TREE, false);
+			qm->putDownload(d, false);
 			
 			checkDownloads(source);
 			return;
@@ -473,7 +473,7 @@ void DownloadManager::endData(UserConnection* source)
 		//  fire(DownloadManagerListener::RemoveToken(), l_token);
 		//}
 	}
-	QueueManager::getInstance()->putDownload(d->getPath(), d, true, false);
+	QueueManager::getInstance()->putDownload(d, true, false);
 	checkDownloads(source);
 }
 
@@ -495,7 +495,6 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason,
 	auto d = source->getDownload();
 	if (d)
 	{
-		const std::string path = d->getPath();
 		removeDownload(d);
 		fire(DownloadManagerListener::Failed(), d, reason);
 		
@@ -513,7 +512,7 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason,
 		}
 #endif
 		d->setReason(reason);
-		QueueManager::getInstance()->putDownload(path, d, false);
+		QueueManager::getInstance()->putDownload(d, false);
 	}
 #ifdef _DEBUG
 	LogManager::message("DownloadManager::failDownload reason =" + reason);
@@ -634,10 +633,10 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	}
 #endif
 	
-	QueueManager::getInstance()->removeSource(d->getPath(), source->getUser(), (Flags::MaskType)(d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE), false);
-	
+	auto qm = QueueManager::getInstance();
+	qm->removeSource(d->getPath(), source->getUser(), (Flags::MaskType)(d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE), false);
 	d->setReason(STRING(FILE_NOT_AVAILABLE));
-	QueueManager::getInstance()->putDownload(d->getPath(), d, false);
+	qm->putDownload(d, false);
 	checkDownloads(source);
 }
 
@@ -659,10 +658,8 @@ bool DownloadManager::checkFileDownload(const UserPtr& user) const
 void DownloadManager::checkUserIP(UserConnection* source) noexcept
 {
 	auto d = source->getDownload();
-
 	dcassert(d);
 	removeDownload(d);
-	QueueManager::getInstance()->putDownload(d->getPath(), d, true);
-
+	QueueManager::getInstance()->putDownload(d, true);
 	source->disconnect();
 }

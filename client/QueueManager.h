@@ -250,8 +250,7 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		static bool getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept;
 		DownloadPtr getDownload(UserConnection* source, Download::ErrorInfo& error) noexcept;
-		// FIXME: remove path parameter, use download->getPath()
-		void putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
+		void putDownload(DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& download);
 		
 		/** @return The highest priority download the user has, PAUSED may also mean no downloads */
@@ -279,7 +278,7 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Sanity check for the target filename */
 		static string checkTarget(const string& target, const int64_t size, bool validateFileName = true);
 		/** Add a source to an existing queue item */
-		bool addSourceL(const QueueItemPtr& qi, const UserPtr& user, QueueItem::MaskType addBad, bool isFirstLoad = false);
+		bool addSourceL(const QueueItemPtr& qi, const UserPtr& user, QueueItem::MaskType addBad);
 
 	private:
 		static uint64_t lastSave;
@@ -355,7 +354,7 @@ class QueueManager : public Singleton<QueueManager>,
 
 			private:	
 				void addL(const QueueItemPtr& qi, QueueItem::Priority p);
-				void addL(const QueueItemPtr& qi, QueueItem::Priority prioQueue, const UserPtr& user, bool isFirstLoad);
+				void addL(const QueueItemPtr& qi, QueueItem::Priority prioQueue, const UserPtr& user);
 				int getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
 				QueueItemPtr getRunning(const UserPtr& user);
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
@@ -448,7 +447,7 @@ class QueueManager : public Singleton<QueueManager>,
 
 		static void setDirty();
 		static void checkAntifragFile(const string& tempTarget, QueueItem::MaskType flags);
-		static string getListPath(const UserPtr& user);
+		static string getFileListTarget(const UserPtr& user);
 
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;

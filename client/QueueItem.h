@@ -287,7 +287,7 @@ class QueueItem
 			LOCK(csSegments);
 			return downloads.empty();
 		}
-		string getListName() const;
+		const string& getListExt() const;
 
 	private:
 		const string target;
@@ -393,7 +393,7 @@ class QueueItem
 		QueueItem::Priority prioQueue;
 		string tempTarget;
 
-		SourceIter addSourceL(const UserPtr& user, bool isFirstLoad);
+		SourceIter addSourceL(const UserPtr& user);
 		void removeSourceL(const UserPtr& user, MaskType reason);
 
 		friend class QueueManager;
