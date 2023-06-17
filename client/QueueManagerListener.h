@@ -56,14 +56,10 @@ class QueueManagerListener
 		typedef X<23> SourceAdded;
 
 		virtual void on(Added, const QueueItemPtr&) noexcept { }
-#if 0 // FIXME: not used
-		virtual void on(AddedArray, const std::vector<QueueItemPtr>& qiArray) noexcept { }
-#endif
+		virtual void on(AddedArray, const vector<QueueItemPtr>& data) noexcept { }
 		virtual void on(Finished, const QueueItemPtr&, const string&, const DownloadPtr& download) noexcept { }
 		virtual void on(Removed, const QueueItemPtr&) noexcept { }
-#if 0 // FIXME: not used
-		virtual void on(RemovedArray, const std::vector<string>& qiArray) noexcept { }
-#endif
+		virtual void on(RemovedArray, const vector<QueueItemPtr>& data) noexcept { }
 		virtual void on(Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept { }
 		virtual void on(TargetsUpdated, const StringList&) noexcept { }
 		virtual void on(StatusUpdated, const QueueItemPtr&) noexcept { }

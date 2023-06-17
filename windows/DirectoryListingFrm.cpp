@@ -953,8 +953,9 @@ LRESULT DirectoryListingFrame::onDownloadWithPrioTree(WORD, WORD wID, HWND, BOOL
 	int prio = wID - IDC_DOWNLOAD_WITH_PRIO_TREE;
 	if (!(prio >= QueueItem::PAUSED && prio < QueueItem::LAST))
 		prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
-	bool getConnFlag = true;
 
+	QueueManager::getInstance()->startBatch();
+	bool getConnFlag = true;
 	try
 	{
 		dl->download(dir, Util::getDownloadDir(dl->getUser()), (QueueItem::Priority) prio, getConnFlag);
@@ -963,6 +964,7 @@ LRESULT DirectoryListingFrame::onDownloadWithPrioTree(WORD, WORD wID, HWND, BOOL
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	QueueManager::getInstance()->endBatch();
 	auto parent = dir->getParent();
 	if (parent) DirectoryListing::Directory::updateFlags(parent);
 	redraw();
@@ -980,6 +982,7 @@ LRESULT DirectoryListingFrame::onDownloadDirTo(WORD, WORD, HWND, BOOL&)
 	if (WinUtil::browseDirectory(target, m_hWnd))
 	{
 		LastDir::add(target);
+		QueueManager::getInstance()->startBatch();
 		bool getConnFlag = true;
 		try
 		{
@@ -989,6 +992,7 @@ LRESULT DirectoryListingFrame::onDownloadDirTo(WORD, WORD, HWND, BOOL&)
 		{
 			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 		}
+		QueueManager::getInstance()->endBatch();
 		auto parent = dir->getParent();
 		if (parent) DirectoryListing::Directory::updateFlags(parent);
 		redraw();
@@ -1006,6 +1010,7 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 	const string& useDir = wID == IDC_DOWNLOADDIRTO_USER? downloadDirNick : downloadDirIP;
 	if (useDir.empty()) return 0;
 
+	QueueManager::getInstance()->startBatch();
 	bool getConnFlag = true;
 	try
 	{
@@ -1015,6 +1020,7 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	QueueManager::getInstance()->endBatch();
 	auto parent = dir->getParent();
 	if (parent) DirectoryListing::Directory::updateFlags(parent);
 	redraw();
@@ -1023,11 +1029,14 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 
 void DirectoryListingFrame::downloadSelected(const tstring& target, bool view /* = false */, QueueItem::Priority prio /* = QueueItem::Priority::DEFAULT */)
 {
+	if (view || WinUtil::isShift()) prio = QueueItem::HIGHEST;
 	int i = -1;
 	bool getConnFlag = true;
 	bool redrawFlag = false;
 	auto fm = FavoriteManager::getInstance();
 	DirectoryListing::Directory* parent = nullptr;
+	int selCount = ctrlList.GetSelectedCount();
+	if (selCount > 1) QueueManager::getInstance()->startBatch();
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
@@ -1048,14 +1057,13 @@ void DirectoryListingFrame::downloadSelected(const tstring& target, bool view /*
 					File::deleteFile(path);
 				redrawFlag = true;
 				parent = ii->file->getParent();
-				dl->download(ii->file, Text::fromT(path), view,
-					(WinUtil::isShift() || view) ? QueueItem::HIGHEST : prio, false, getConnFlag);
+				dl->download(ii->file, Text::fromT(path), view, prio, false, getConnFlag);
 			}
 			else if (!view)
 			{
 				redrawFlag = true;
 				parent = ii->dir->getParent();
-				dl->download(ii->dir, Text::fromT(itemTarget), WinUtil::isShift() ? QueueItem::HIGHEST : prio, getConnFlag);
+				dl->download(ii->dir, Text::fromT(itemTarget), prio, getConnFlag);
 			}
 		}
 		catch (const Exception& e)
@@ -1063,6 +1071,7 @@ void DirectoryListingFrame::downloadSelected(const tstring& target, bool view /*
 			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 		}
 	}
+	if (selCount > 1) QueueManager::getInstance()->endBatch();
 	if (redrawFlag)
 	{
 		if (parent) DirectoryListing::Directory::updateFlags(parent);
@@ -1818,6 +1827,8 @@ LRESULT DirectoryListingFrame::onDownloadToLastDirTree(WORD /*wNotifyCode*/, WOR
 
 	DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
 	if (!dir) return 0;
+
+	QueueManager::getInstance()->startBatch();
 	bool getConnFlag = true;
 	try
 	{
@@ -1828,6 +1839,7 @@ LRESULT DirectoryListingFrame::onDownloadToLastDirTree(WORD /*wNotifyCode*/, WOR
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	QueueManager::getInstance()->endBatch();
 	auto parent = dir->getParent();
 	if (parent) DirectoryListing::Directory::updateFlags(parent);
 	redraw();
@@ -1861,6 +1873,8 @@ LRESULT DirectoryListingFrame::onDownloadToFavDirTree(WORD /*wNotifyCode*/, WORD
 
 	DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
 	if (!dir) return 0;
+
+	QueueManager::getInstance()->startBatch();
 	bool getConnFlag = true;
 	try
 	{
@@ -1878,6 +1892,7 @@ LRESULT DirectoryListingFrame::onDownloadToFavDirTree(WORD /*wNotifyCode*/, WORD
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	QueueManager::getInstance()->endBatch();
 	auto parent = dir->getParent();
 	if (parent) DirectoryListing::Directory::updateFlags(parent);
 	redraw();

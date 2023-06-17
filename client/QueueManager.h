@@ -98,6 +98,8 @@ class QueueManager : public Singleton<QueueManager>,
 		void addCheckUserIP(const UserPtr& user);
 		bool addDclstFile(const string& path);
 		void processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority);
+		void startBatch() noexcept;
+		void endBatch() noexcept;
 
 	public:
 		class LockFileQueueShared
@@ -287,6 +289,11 @@ class QueueManager : public Singleton<QueueManager>,
 		string wantEndFilesPattern;
 		FastCriticalSection csWantEndFiles;
 
+		int batchCounter;
+		vector<QueueItemPtr> batchAdd;
+		vector<QueueItemPtr> batchRemove;
+		CriticalSection csBatch;
+
 		QueueItem::MaskType getFlagsForFileName(const string& fileName) noexcept;
 		QueueItem::MaskType getFlagsForFileNameL(const string& fileName) const noexcept;
 
@@ -312,7 +319,7 @@ class QueueManager : public Singleton<QueueManager>,
 				// find some PFS sources to exchange parts info
 				void findPFSSources(QueueItem::SourceList& sl, uint64_t now) const;
 
-				QueueItemPtr findAutoSearch(deque<string>& recent) const;
+				QueueItemPtr findAutoSearch(const deque<string>& recent) const;
 				size_t getSize() const { return queue.size(); }
 				bool empty() const { return queue.empty(); }
 				const QueueItem::QIStringMap& getQueueL() const { return queue; }
@@ -376,10 +383,7 @@ class QueueManager : public Singleton<QueueManager>,
 				/** Currently running downloads, a QueueItem is always either here or in the userQueue */
 				static RunningMap runningMap;
 				/** Last error message to sent to TransferView */
-#define FLYLINKDC_USE_RUNNING_QUEUE_CS
-#ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
 				static std::unique_ptr<RWLock> csRunningMap;
-#endif
 				static size_t totalDownloads;
 		};
 

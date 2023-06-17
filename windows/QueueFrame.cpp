@@ -496,18 +496,15 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 	return Util::emptyStringT;
 }
 
-// FIXME: not used
-#if 0
-void QueueFrame::on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& qiArray) noexcept
-{
-	for (auto i = qiArray.cbegin(); i != qiArray.cend(); ++i)
-		addTask(ADD_ITEM, new QueueItemTask(*i));
-}
-#endif
-
 void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept
 {
 	addTask(ADD_ITEM, new QueueItemTask(qi));
+}
+
+void QueueFrame::on(QueueManagerListener::AddedArray, const vector<QueueItemPtr>& data) noexcept
+{
+	if (!ClientManager::isBeforeShutdown())
+		addTask(ADD_ITEM_ARRAY, new QueueItemArrayTask(data));
 }
 
 void QueueFrame::insertListItem(const QueueItemPtr& qi, const string& dirname, bool sort)
@@ -957,17 +954,10 @@ bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, con
 	return false;
 }
 
-bool QueueFrame::removeItem(const QueueItemPtr& qi, const string* oldPath)
+bool QueueFrame::removeItem(const QueueItemPtr& qi)
 {
 	DirItem* dir;
-	if (oldPath)
-	{
-		if (!findItem(qi, qi->getFlags(), *oldPath, dir, true)) return false;
-	}
-	else
-	{
-		if (!findItem(QueueItemPtr(), qi->getFlags(), qi->getTarget(), dir, true)) return false;
-	}
+	if (!findItem(QueueItemPtr(), qi->getFlags(), qi->getTarget(), dir, true)) return false;
 	updateStatus = true;
 	int64_t size = qi->getSize();
 	if (size < 0) size = 0;
@@ -1100,18 +1090,16 @@ void QueueFrame::addQueueList()
 	ctrlQueue.resort();
 }
 
-#if 0
-void QueueFrame::on(QueueManagerListener::RemovedArray, const std::vector<string>& qiArray) noexcept
-{
-	if (!ClientManager::isBeforeShutdown())
-		addTask(REMOVE_ITEM_ARRAY, new StringArrayTask(qiArray));
-}
-#endif
-
 void QueueFrame::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 		addTask(REMOVE_ITEM, new QueueItemTask(qi));
+}
+
+void QueueFrame::on(QueueManagerListener::RemovedArray, const vector<QueueItemPtr>& data) noexcept
+{
+	if (!ClientManager::isBeforeShutdown())
+		addTask(REMOVE_ITEM_ARRAY, new QueueItemArrayTask(data));
 }
 
 void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept
@@ -1187,13 +1175,44 @@ void QueueFrame::processTasks()
 				addQueueItem(it.qi, true, showTree);
 			}
 			break;
+			case ADD_ITEM_ARRAY:
+			{
+				const auto& task = static_cast<QueueItemArrayTask&>(*ti->second);
+				int prevCount = ctrlQueue.GetItemCount();
+				CLockRedraw<> lockRedraw(ctrlQueue);
+				CLockRedraw<true> lockRedrawDir(ctrlDirs);
+				for (const QueueItemPtr& qi : task.data)
+				{
+#ifdef DEBUG_QUEUE_FRAME
+					LogManager::message("Add item " + qi->getTTH().toBase32() + " to " + qi->getTarget(), false);
+#endif
+					addQueueItem(qi, false, showTree);
+				}
+				if (ctrlQueue.GetItemCount() != prevCount)
+					ctrlQueue.resort();
+			}
+			break;
 			case REMOVE_ITEM:
 			{
 				const auto& task = static_cast<QueueItemTask&>(*ti->second);
 #ifdef DEBUG_QUEUE_FRAME
 				LogManager::message("Remove item " + task.qi->getTTH().toBase32() + " at " + task.qi->getTarget(), false);
 #endif
-				removeItem(task.qi, nullptr);
+				removeItem(task.qi);
+			}
+			break;
+			case REMOVE_ITEM_ARRAY:
+			{
+				const auto& task = static_cast<QueueItemArrayTask&>(*ti->second);
+				CLockRedraw<> lockRedraw(ctrlQueue);
+				CLockRedraw<true> lockRedrawDir(ctrlDirs);
+				for (const QueueItemPtr& qi : task.data)
+				{
+#ifdef DEBUG_QUEUE_FRAME
+					LogManager::message("Remove item " + qi->getTTH().toBase32() + " at " + qi->getTarget(), false);
+#endif
+					removeItem(qi);
+				}
 			}
 			break;
 			case UPDATE_ITEM:
@@ -1276,8 +1295,10 @@ void QueueFrame::removeSelected()
 		}
 		
 		auto qm = QueueManager::getInstance();
+		if (targets.size() > 1) qm->startBatch();
 		for (const QueueItemPtr& qi : targets)
 			qm->removeTarget(qi->getTarget());
+		if (targets.size() > 1) qm->endBatch();
 	}
 }
 
@@ -1314,8 +1335,10 @@ void QueueFrame::removeSelectedDir()
 		walkDirItem(reinterpret_cast<DirItem*>(ctrlDirs.GetItemData(ht)), func);
 
 		auto qm = QueueManager::getInstance();
+		if (targets.size() > 1) qm->startBatch();
 		for (const QueueItemPtr& qi : targets)
 			qm->removeTarget(qi->getTarget());
+		if (targets.size() > 1) qm->endBatch();
 	}
 }
 

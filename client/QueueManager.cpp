@@ -50,9 +50,7 @@ bool QueueManager::dirty = false;
 uint64_t QueueManager::lastSave = 0;
 QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::userQueueMap[QueueItem::LAST];
 QueueManager::UserQueue::RunningMap QueueManager::UserQueue::runningMap;
-#ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
 std::unique_ptr<RWLock> QueueManager::UserQueue::csRunningMap = std::unique_ptr<RWLock>(RWLock::create());
-#endif
 size_t QueueManager::UserQueue::totalDownloads = 0;
 
 QueueManager::FileQueue::FileQueue() :
@@ -277,7 +275,7 @@ QueueItemPtr QueueManager::FileQueue::findQueueItem(const TTHValue& tth) const
 	return nullptr;
 }
 
-static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator& start, const QueueItem::QIStringMap::const_iterator& end, deque<string>& recent, const QueueItem::GetSegmentParams& gsp)
+static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator& start, const QueueItem::QIStringMap::const_iterator& end, const deque<string>& recent, const QueueItem::GetSegmentParams& gsp)
 {
 	QueueItemPtr cand = nullptr;
 
@@ -320,7 +318,7 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 	return cand;
 }
 
-QueueItemPtr QueueManager::FileQueue::findAutoSearch(deque<string>& recent) const
+QueueItemPtr QueueManager::FileQueue::findAutoSearch(const deque<string>& recent) const
 {
 	QueueItem::GetSegmentParams gsp;
 	gsp.readSettings();
@@ -675,8 +673,8 @@ QueueManager::QueueManager() :
 	listMatcherAbortFlag(false),
 	dclstLoaderAbortFlag(false),
 	recheckerAbortFlag(false),
-	sourceAdded(false)
-
+	sourceAdded(false),
+	batchCounter(0)
 {
 	listMatcherRunning.clear();
 
@@ -777,6 +775,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 			params.push_back(param);
 		}
 	}
+	// TODO: improve auto search
 	if (fileQueue.getSize() > 0 && tick >= nextSearch && BOOLSETTING(AUTO_SEARCH))
 	{
 		// We keep 30 recent searches to avoid duplicate searches
@@ -996,7 +995,17 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 #ifdef DEBUG_TRANSFERS
 			if (!params.sourcePath.empty()) q->setSourcePath(params.sourcePath);
 #endif
-			fire(QueueManagerListener::Added(), q);
+			csBatch.lock();
+			if (batchCounter)
+			{
+				batchAdd.push_back(q);
+				csBatch.unlock();
+			}
+			else
+			{
+				csBatch.unlock();
+				fire(QueueManagerListener::Added(), q);
+			}
 			if (extraFlags & QueueItem::XFLAG_COPYING)
 			{
 				newItem = false;
@@ -1400,6 +1409,42 @@ void QueueManager::move(const string& source, const string& newTarget) noexcept
 		}
 		removeTarget(source);
 	}
+}
+
+void QueueManager::startBatch() noexcept
+{
+	csBatch.lock();
+	batchCounter++;
+	csBatch.unlock();
+}
+
+void QueueManager::endBatch() noexcept
+{
+	vector<QueueItemPtr> added, removed;
+	csBatch.lock();
+	if (--batchCounter < 0)
+	{
+		dcassert(batchCounter >= 0);
+		batchCounter = 0;
+	}
+	if (!batchCounter)
+	{
+		if (!batchAdd.empty())
+		{
+			added = std::move(batchAdd);
+			batchAdd.clear();
+		}
+		if (!batchRemove.empty())
+		{
+			removed = std::move(batchRemove);
+			batchRemove.clear();
+		}
+	}
+	csBatch.unlock();
+	if (!added.empty())
+		fire(QueueManagerListener::AddedArray(), added);
+	if (!removed.empty())
+		fire(QueueManagerListener::RemovedArray(), removed);
 }
 
 bool QueueManager::getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept
@@ -2153,7 +2198,17 @@ void QueueManager::removeItem(const QueueItemPtr& qi, bool removeFromUserQueue)
 {
 	if (removeFromUserQueue) userQueue.removeQueueItem(qi);
 	fileQueue.remove(qi);
-	fire(QueueManagerListener::Removed(), qi);
+	csBatch.lock();
+	if (batchCounter)
+	{
+		batchRemove.push_back(qi);
+		csBatch.unlock();
+	}
+	else
+	{
+		csBatch.unlock();
+		fire(QueueManagerListener::Removed(), qi);
+	}
 }
 
 bool QueueManager::removeTarget(const string& target)
