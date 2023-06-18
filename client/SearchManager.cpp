@@ -29,6 +29,7 @@
 #include "ConnectivityManager.h"
 #include "LogManager.h"
 #include "NetworkUtil.h"
+#include "NetworkDevices.h"
 #include "dht/DHT.h"
 
 uint16_t SearchManager::udpPort = 0;
@@ -98,7 +99,7 @@ void SearchManager::listenUDP(int af)
 			if (options & SettingsManager::BIND_OPTION_USE_DEV)
 			{
 				string bindDev = SettingsManager::get(ips.bindDevice);
-				if (!bindDev.empty() && !Util::getDeviceAddress(af, bindDev, bindIp) && (options & SettingsManager::BIND_OPTION_NO_FALLBACK))
+				if (!bindDev.empty() && !networkDevices.getDeviceAddress(af, bindDev, bindIp) && (options & SettingsManager::BIND_OPTION_NO_FALLBACK))
 					throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
 			}
 			if (!bindIp.type)

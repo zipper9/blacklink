@@ -29,6 +29,7 @@
 #include "AutoDetectSocket.h"
 #include "LogManager.h"
 #include "SocketPool.h"
+#include "NetworkDevices.h"
 
 static const size_t INITIAL_CAPACITY = 8 * 1024;
 static const size_t STREAM_BUF_SIZE = 256 * 1024;
@@ -845,7 +846,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 					proxyStage = PROXY_STAGE_NEGOTIATE;
 					createSocksMessage(ci);
 					state = CONNECT_PROXY;
-					
+
 					host = &ci->proxy.host;
 					port = ci->proxy.port;
 				}
@@ -1062,5 +1063,15 @@ void BufferedSocket::getBindAddress(IpAddressEx& ip, int af, const string& s)
 
 void BufferedSocket::getBindAddress(IpAddressEx& ip, int af)
 {
-	getBindAddress(ip, af, af == AF_INET6 ? SETTING(BIND_ADDRESS6) : SETTING(BIND_ADDRESS));
+	static const int USE_DEV_MASK = SettingsManager::BIND_OPTION_USE_DEV | SettingsManager::BIND_OPTION_NO_FALLBACK;
+	int bindOptions = SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);
+	if ((bindOptions & USE_DEV_MASK) == USE_DEV_MASK)
+	{
+		const string& bindDev = SettingsManager::get(ip.type == AF_INET6 ? SettingsManager::BIND_DEVICE6 : SettingsManager::BIND_DEVICE);
+		if (!networkDevices.getDeviceAddress(af, bindDev, ip))
+			throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
+		return;
+	}
+	getBindAddress(ip, af,
+		SettingsManager::get(ip.type == AF_INET6 ? SettingsManager::BIND_ADDRESS6 : SettingsManager::BIND_ADDRESS));
 }

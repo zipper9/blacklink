@@ -400,6 +400,9 @@
     <ClCompile Include="client\WebServerAuth.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\NetworkDevices.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1064,6 +1067,9 @@
     </ClInclude>
     <ClInclude Include="client\SearchUrl.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\NetworkDevices.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

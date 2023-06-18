@@ -634,6 +634,7 @@
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">4100;4102;4127;4244;4267;4456;4457;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">4100;4102;4127;4244;4267;4456;4457;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
+    <ClCompile Include="client\NetworkDevices.cpp" />
     <ClCompile Include="client\NetworkUtil.cpp" />
     <ClCompile Include="client\NmdcHub.cpp" />
     <ClCompile Include="client\IpTrust.cpp" />
@@ -793,6 +794,7 @@
     <ClInclude Include="client\maxminddb\maxminddb.h" />
     <ClInclude Include="client\mdb\lmdb.h" />
     <ClInclude Include="client\mdb\midl.h" />
+    <ClInclude Include="client\NetworkDevices.h" />
     <ClInclude Include="client\NetworkUtil.h" />
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\Path.h" />

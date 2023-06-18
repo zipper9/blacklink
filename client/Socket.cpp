@@ -26,16 +26,7 @@
 
 #ifdef _WIN32
 #include "CompatibilityManager.h"
-#include <iphlpapi.h>
-#pragma comment(lib, "iphlpapi.lib")
 #define SHUT_RDWR SD_BOTH
-#endif
-
-/// @todo remove when MinGW has this
-#ifdef __MINGW32__
-#ifndef EADDRNOTAVAIL
-#define EADDRNOTAVAIL WSAEADDRNOTAVAIL
-#endif
 #endif
 
 #ifdef _DEBUG
@@ -167,10 +158,11 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 
 	if (sock == INVALID_SOCKET)
 	{
+		int error = getLastError();
 		if (doLog)
 			LogManager::message(sockName +
-				": Accept error #" + Util::toString(getLastError()), false);
-		throw SocketException(getLastError());
+				": Accept error #" + Util::toString(error), false);
+		throw SocketException(error);
 	}
 
 	IpAddress remoteIp;
@@ -203,10 +195,9 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	return port;
 }
 
-static inline bool fallbackDisabled(int af)
+static inline int getBindOptions(int af)
 {
-	int options = SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);
-	return (options & SettingsManager::BIND_OPTION_NO_FALLBACK) != 0;
+	return SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);;
 }
 
 uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
@@ -219,36 +210,39 @@ uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 	socklen_t sockAddrSize;
 	toSockAddr(sockAddr, sockAddrSize, addr, port);
 
+	if (addr.type == AF_INET6
 #ifdef OSVER_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
+	    && CompatibilityManager::isOsVistaPlus()
 #endif
-	if (addr.type == AF_INET6)
+	    )
 		setSocketOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
 
 	if (::bind(sock, (sockaddr*) &sockAddr, sockAddrSize) == SOCKET_ERROR)
 	{
+		int error = getLastError();
 		bool anyAddr = isAnyAddr(sockAddr);
-		if (anyAddr || fallbackDisabled(addr.type))
+		if (anyAddr || (getBindOptions(addr.type) & SettingsManager::BIND_OPTION_NO_FALLBACK) != 0)
 		{
 			if (doLog)
 				LogManager::message(sockName +
-					": Error #" + Util::toString(getLastError()) +
+					": Error #" + Util::toString(error) +
 					" binding to " + (anyAddr ? Util::emptyString : Util::printIpAddress(addr, true)) + ":" + Util::toString(port), false);
-			throw SocketException(getLastError());
+			throw SocketException(error);
 		}
 		if (doLog)
 			LogManager::message(sockName +
-				": Error #" + Util::toString(getLastError()) +
+				": Error #" + Util::toString(error) +
 				" binding to " + Util::printIpAddress(addr, true) + ":" + Util::toString(port) + ", retrying with " +
 				string(addr.type == AF_INET6 ? "INADDR6_ANY" : "INADDR_ANY"), false);
 		setAnyAddr(sockAddr);
 		if (::bind(sock, (sockaddr*) &sockAddr, sockAddrSize) == SOCKET_ERROR)
 		{
+			error = getLastError();
 			if (doLog)
 				LogManager::message(sockName +
-					": Error #" + Util::toString(getLastError()) +
+					": Error #" + Util::toString(error) +
 					" binding to :" + Util::toString(port), false);
-			throw SocketException(getLastError());
+			throw SocketException(error);
 		}
 	}
 

@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
 #include "CompatibilityManager.h"
+#pragma comment(lib, "iphlpapi.lib")
 #else
 #include <arpa/inet.h>
 #include <netinet/ip6.h>
@@ -296,18 +297,5 @@ bool Util::isSameNetwork(const IpAddressEx& addr1, const IpAddressEx& addr2, uns
 		uint16_t w2 = ntohs(ip2.data[words]);
 		return (w1 & mask) == (w2 & mask);
 	}
-	return false;
-}
-
-bool Util::getDeviceAddress(int af, const string& name, IpAddressEx& ip) noexcept
-{
-	vector<Util::AdapterInfo> adapters;
-	Util::getNetworkAdapters(af, adapters);
-	for (const auto& ai : adapters)
-		if (ai.name == name)
-		{
-			ip = ai.ip;
-			return true;
-		}
 	return false;
 }

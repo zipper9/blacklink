@@ -32,6 +32,7 @@
 #include "LogManager.h"
 #include "NmdcHub.h"
 #include "NetworkUtil.h"
+#include "NetworkDevices.h"
 #include "SimpleStringTokenizer.h"
 #include "HttpClient.h"
 #include "AdcHub.h"
@@ -418,7 +419,7 @@ void ConnectionManager::startListen(int af, int type)
 			string bindDev = SettingsManager::get(ips.bindDevice);
 			if (!bindDev.empty())
 			{
-				if (Util::getDeviceAddress(af, bindDev, bindIp))
+				if (networkDevices.getDeviceAddress(af, bindDev, bindIp, true))
 				{
 					SettingsManager::set(ips.bindAddress, Util::printIpAddress(bindIp));
 				}
