@@ -1133,6 +1133,7 @@ bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr)
 	{
 		sr.parentUserData = dir->getUserData();
 		sr.firstItem = src;
+		sr.insertParent = true;
 	}
 	return true;
 }
