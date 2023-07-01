@@ -74,7 +74,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	int n = 0;
 	for (int i = -1; i < 0 || g_ToolbarButtons[i].id != 0; i++)
 	{
-		if (g_ToolbarButtons[i].id == -1) continue;
+		if (g_ToolbarButtons[i].id == ID_UNUSED) continue;
 		makeItem(&lvi, i, tmp);
 		lvi.iItem = n++;
 		ctrlCommands.InsertItem(&lvi);
@@ -96,7 +96,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	while (st.getNextToken(token))
 	{
 		int i = Util::toInt(token);
-		if (i == -1 || (i >= 0 && i < g_ToolbarButtonsCount && g_ToolbarButtons[i].id != -1))
+		if (i == -1 || (i >= 0 && i < g_ToolbarButtonsCount && g_ToolbarButtons[i].id != ID_UNUSED))
 		{
 			makeItem(&lvi, i, tmp);
 			lvi.iItem = n++;

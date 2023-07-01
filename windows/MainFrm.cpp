@@ -168,6 +168,7 @@ MainFrame::MainFrame() :
 	stopperThread(nullptr),
 	statusHistory(20),
 	toolbarImageSize(0),
+	fileListVersion(0),
 	visToolbar(TRUE), visWinampBar(TRUE), visQuickSearch(TRUE)
 {
 	m_bUpdateProportionalPos = false;
@@ -292,6 +293,53 @@ void MainFrame::createMainMenu(void)
 #endif
 	
 	SetMenu(NULL);  // remove old menu
+}
+
+void MainFrame::updateFileListMenu()
+{
+	static const int MENU_POS = 2;
+	if (ctrlCmdBar.m_bMenuActive) return; // Don't modify menu when it's visible
+	auto sm = ShareManager::getInstance();
+	int64_t version = sm->getFileListVersion();
+	if (fileListVersion == version) return;
+	fileListVersion = version;
+	vector<ShareManager::ShareGroupInfo> sg;
+	sm->getShareGroups(sg);
+	if (sg.empty() && otherFileLists.empty()) return;
+	otherFileLists.clear();
+	CMenuHandle file(::GetSubMenu(m_hMenu, 0));
+	file.RemoveMenu(MENU_POS, MF_BYPOSITION);
+	if (!sg.empty())
+	{
+		tstring hotkey;
+		tstring title = TSTRING(MENU_OPEN_OWN_LIST);
+		auto pos = title.find('\t');
+		if (pos != tstring::npos)
+		{
+			hotkey = title.substr(pos);
+			title.erase(pos);
+		}
+		CMenuHandle menu;
+		menu.CreateMenu();
+		tstring defaultName = TSTRING(SHARE_GROUP_DEFAULT) + hotkey;
+		menu.AppendMenu(MF_STRING, IDC_OPEN_MY_LIST, defaultName.c_str());
+		int id = IDC_OPEN_MY_LIST;
+		int count = 0;
+		for (const auto& item : sg)
+		{
+			menu.AppendMenu(MF_STRING, ++id, Text::toT(item.name).c_str());
+			otherFileLists.push_back(item.id);
+			if (++count == 50) break;
+		}
+		CMenuItemInfo mi;
+		mi.fMask = MIIM_TYPE | MIIM_SUBMENU;
+		mi.fType = MFT_STRING;
+		mi.dwTypeData = const_cast<TCHAR*>(title.c_str());
+		mi.hSubMenu = menu.m_hMenu;
+		file.InsertMenuItem(MENU_POS, TRUE, &mi);
+	}
+	else
+		file.InsertMenu(MENU_POS, MF_BYPOSITION, IDC_OPEN_MY_LIST, CTSTRING(MENU_OPEN_OWN_LIST));
 }
 
 void MainFrame::createTrayMenu()
@@ -507,11 +555,12 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		}
 	}
 #endif	
-	
+
+	updateFileListMenu();
 	openDefaultWindows();
-	
+
 	ConnectivityManager::getInstance()->setupConnections();
-	
+
 	PostMessage(WM_SPEAKER, PROCESS_COMMAND_LINE);
 	
 	mainIcon = HIconWrapper(IDR_MAINFRAME);
@@ -1302,7 +1351,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		{
 			return 0;
 		}
-		
+
+		updateFileListMenu();
 		TStringList& str = *pstr;
 		if (ctrlStatus.IsWindow())
 		{
@@ -2313,12 +2363,21 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-	if (wID == IDC_OPEN_MY_LIST)
+	if (wID >= IDC_OPEN_MY_LIST && wID <= IDC_OPEN_MY_LIST + 50)
 	{
+		CID cid;
+		if (wID > IDC_OPEN_MY_LIST)
+		{
+			unsigned pos = wID - (IDC_OPEN_MY_LIST + 1);
+			if (pos >= otherFileLists.size()) return 0;
+			cid = otherFileLists[pos];
+		}
+		int64_t unused;
+		string path = ShareManager::getInstance()->getBZXmlFile(cid, unused);
+		if (path.empty()) return 0;
 		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), SETTING(NICK));
 		myUser->setFlag(User::MYSELF);
-		int64_t unused;
-		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile(CID(), unused)),
+		DirectoryListingFrame::openWindow(Text::toT(path),
 			Util::emptyStringT, HintedUser(myUser, Util::emptyString), 0);
 		return 0;
 	}

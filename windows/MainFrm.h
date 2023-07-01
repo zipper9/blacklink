@@ -143,7 +143,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_LIMITER, onLimiter)
 		COMMAND_ID_HANDLER(IDC_OPEN_FILE_LIST, onOpenFileList)
 		COMMAND_ID_HANDLER(IDC_OPEN_TORRENT_FILE, onOpenFileList)
-		COMMAND_ID_HANDLER(IDC_OPEN_MY_LIST, onOpenFileList)
+		COMMAND_RANGE_HANDLER(IDC_OPEN_MY_LIST, IDC_OPEN_MY_LIST + 50, onOpenFileList)
 		COMMAND_ID_HANDLER(IDC_TRAY_SHOW, onAppShow)
 		COMMAND_ID_HANDLER(IDC_TRAY_RESTORE_POS, onSetDefaultPosition)
 		COMMAND_ID_HANDLER(ID_WINDOW_MINIMIZE_ALL, onWindowMinimizeAll)
@@ -577,6 +577,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		CMenu tbMenu;
 		CMenu tabAwayMenu;
 		CMenu winampMenu;
+		vector<CID> otherFileLists;
+		int64_t fileListVersion;
 		
 		// Taskbar
 		UINT messageIdTaskbarCreated;
@@ -648,6 +650,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		void createTrayMenu();
 		void createMainMenu();
+		void updateFileListMenu();
 
 		bool getPassword();
 		bool getPasswordInternal(INT_PTR& result, HWND hwndParent);

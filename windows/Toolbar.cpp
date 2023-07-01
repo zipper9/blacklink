@@ -27,7 +27,7 @@ const ToolbarButton g_ToolbarButtons[] =
 	{ IDC_AWAY,                   true,  ResourceManager::AWAY                        },
 	{ IDC_SHUTDOWN,               true,  ResourceManager::SHUTDOWN                    },
 	{ IDC_LIMITER,                true,  ResourceManager::SETCZDC_ENABLE_LIMITING     },
-	{ -1,                         false, ResourceManager::Strings()                   },
+	{ ID_UNUSED,                  false, ResourceManager::Strings()                   },
 	{ IDC_DISABLE_SOUNDS,         true,  ResourceManager::DISABLE_SOUNDS              },
 	{ IDC_OPEN_DOWNLOADS,         false, ResourceManager::MENU_OPEN_DOWNLOADS_DIR     },
 	{ IDC_REFRESH_FILE_LIST,      false, ResourceManager::MENU_REFRESH_FILE_LIST      },
@@ -35,7 +35,7 @@ const ToolbarButton g_ToolbarButtons[] =
 	{ IDC_QUICK_CONNECT,          false, ResourceManager::MENU_QUICK_CONNECT          },
 	{ IDC_OPEN_FILE_LIST,         false, ResourceManager::MENU_OPEN_FILE_LIST         },
 	{ IDC_RECONNECT_DISCONNECTED, false, ResourceManager::MENU_RECONNECT_DISCONNECTED },
-	{ -1,                         true,  ResourceManager::Strings()                   },
+	{ ID_UNUSED,                  true,  ResourceManager::Strings()                   },
 	{ IDC_DISABLE_POPUPS,         true,  ResourceManager::DISABLE_POPUPS              },
 	{ 0,                          false, ResourceManager::MENU_NOTEPAD                }
 };
@@ -67,12 +67,12 @@ const MenuImage g_MenuImages[] =
 	{ID_APP_EXIT,            38},
 	{IDC_HASH_PROGRESS,      39},
 	{ID_WINDOW_ARRANGE,      40},
-	{-1,                     41},
-	{-1,                     42},
+	{ID_UNUSED,              41},
+	{ID_UNUSED,              42},
 	{IDC_SHUTDOWN,           43},
 	{IDC_DHT,                44},
 	{ID_APP_ABOUT,           45},
-	{-1,                     46},
+	{ID_UNUSED,              46},
 	{IDC_ADD_MAGNET,         47},
 	{0,  0}
 };
@@ -97,7 +97,7 @@ void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const Tool
 				}
 				else
 				{
-					if (buttons[i].id < 0) continue;
+					if (buttons[i].id == ID_UNUSED) continue;
 					tbb.iBitmap = i;
 					tbb.idCommand = buttons[i].id;
 					tbb.fsState = TBSTATE_ENABLED;

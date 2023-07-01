@@ -339,7 +339,7 @@ bool ShareManager::ShareGroup::hasShare(const ShareManager::ShareListItem& share
 
 ShareManager::ShareManager() :
 	csShare(RWLock::create()),
-	shareListVersion(1),
+	shareListVersion(1), fileListVersion(1),
 	totalSize(0),
 	totalFiles(0),
 	fileCounter(0),
@@ -2015,6 +2015,7 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 		error = true;
 	}		
 
+	++fileListVersion;
 	deleteTempFiles(shareDataFileName, tempShareDataFile);
 
 	doingCreateFileList.store(false);

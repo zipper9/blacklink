@@ -158,7 +158,6 @@
 #define IDC_SEARCH_PAUSE                1019
 #define IDC_HUBLIST                     1020
 #define IDC_EMOT                        1021
-#define IDC_OPEN_MY_LIST                1022
 #define IDC_SERVER                      1023
 #define IDC_EXTERNAL_IP                 1024
 #define IDC_TRAY_LIMITER                1025
@@ -1280,6 +1279,7 @@
 #define IDC_EMOMENU                     5500
 #define IDC_COPY                        6000
 #define IDC_LOCATE_FILE_IN_QUEUE        6100
+#define IDC_OPEN_MY_LIST                6200
 #define IDC_SEGMENTONE                  6701
 #define IDC_SEGMENTTWO_HUNDRED          6900
 #define IDC_BROWSELIST                  7000
@@ -1295,6 +1295,7 @@
 #define IDC_WEB_SEARCH                  8200
 #define ID_SHELLCONTEXTMENU_MIN         28000
 #define ID_SHELLCONTEXTMENU_MAX         29000
+#define ID_UNUSED                       32770
 #define ID_VIEW_MEDIA_TOOLBAR           32771
 #define ID_VIEW_QUICK_SEARCH            32772
 #define ID_VIEW_TRANSFER_VIEW           32773
