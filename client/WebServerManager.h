@@ -71,6 +71,7 @@ private:
 		vector<std::unique_ptr<SearchResult>> searchResults;
 		int searchResultsSort = 0;
 		SearchParam searchParam;
+		string searchTerm;
 		uint64_t searchStartTime = 0;
 		uint64_t searchEndTime = 0;
 		bool searchOnlyFreeSlots = false;

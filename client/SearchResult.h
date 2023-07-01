@@ -40,38 +40,21 @@ class SearchResultCore
 		};
 
 		static const uint16_t SLOTS_UNKNOWN = 0xFFFF;
-		
+
 		SearchResultCore(): size(0), type(TYPE_FILE) {}
 		SearchResultCore(Types type, int64_t size, const string& name, const TTHValue& tth);
 		string toSR(const Client& c, unsigned freeSlots, unsigned slots) const;
 		void toRES(AdcCommand& cmd, unsigned freeSlots) const;
-		const string& getFile() const
-		{
-			return file;
-		}
-		void setFile(const string& file)
-		{
-			this->file = file;
-		}
-		int64_t getSize() const
-		{
-			return size;
-		}
-		const TTHValue& getTTH() const
-		{
-			return tth;
-		}
-		Types getType() const
-		{
-			return type;
-		}
+		const string& getFile() const { return file; }
+		void setFile(const string& file) { this->file = file; }
+		int64_t getSize() const { return size; }
+		const TTHValue& getTTH() const { return tth; }
+		Types getType() const { return type; }
 
 	protected:
 		TTHValue tth;
 		string file;
 		int64_t size;
-		uint16_t slots;
-		uint16_t freeSlots;
 		Types type;
 };
 
@@ -94,10 +77,10 @@ class SearchResult : public SearchResultCore
 		SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
 		             int64_t size, const string& file, const string& hubURL,
 					 const IpAddress& ip, const TTHValue& tth, uint32_t token);
-		             
+
 		string getFileName() const;
 		string getFilePath() const;
-		
+
 		const UserPtr& getUser() const { return user; }
 		HintedUser getHintedUser() const { return HintedUser(getUser(), getHubUrl()); }
 		const string& getHubUrl() const { return hubURL; }
@@ -109,7 +92,7 @@ class SearchResult : public SearchResultCore
 		int flags;
 		unsigned freeSlots;
 		unsigned slots;
-		
+
 		void checkTTH(HashDatabaseConnection* hashDb);
 		void loadLocation();
 		void loadP2PGuard();
@@ -117,7 +100,7 @@ class SearchResult : public SearchResultCore
 
 	private:
 		friend class SearchManager;
-		
+
 		const string hubURL;
 		const uint32_t token;
 		const UserPtr user;

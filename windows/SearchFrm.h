@@ -499,25 +499,20 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		OMenu copyMenu;
 		OMenu tabMenu;
 
-		StringList search;
 		StringList targets;
-		StringList wholeTargets;
 		CEdit ctrlFilter;
 		CComboBox ctrlFilterSel;
-		
-		bool isHash;
+
 		bool running;
-		bool isExactSize;
 		bool waitingResults;
 		bool needUpdateResultCount;
 		bool updateList;
 		bool hasWaitTime;
 		bool startingSearch;
-		
+
 		SearchParam searchParam;
 		vector<SearchClientItem> searchClients;
 		bool useDHT;
-		int64_t exactSize;
 		size_t resultsCount;
 		uint64_t searchEndTime;
 		uint64_t searchStartTime;

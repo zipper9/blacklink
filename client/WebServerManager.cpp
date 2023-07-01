@@ -14,7 +14,6 @@
 #include "UploadManager.h"
 #include "ShareManager.h"
 #include "WebServerUtil.h"
-#include "StringTokenizer.h"
 #include "MagnetLink.h"
 #include "TimeUtil.h"
 
@@ -815,41 +814,18 @@ void WebServerManager::ClientContext::startSearch(const string& term, int type, 
 	searchParam.removeToken();
 	searchParam.owner = owner;
 	if (type < 0 || type >= NUMBER_OF_FILE_TYPES) type = FILE_TYPE_ANY;
-	searchParam.fileType = type;
 
-	StringTokenizer<string> st(term, ' ');
-	string filter, filterExclude;
-	for (const string& token : st.getTokens())
-	{
-		if (token.empty()) continue;
-		if (searchParam.fileType == FILE_TYPE_TTH)
-		{
-			if (!Util::isTigerHashString(token))
-			{
-				searchError = STRING(INVALID_TTH);
-				break;
-			}
-		}
-		if (token[0] != '-')
-		{
-			if (!filter.empty()) filter += ' ';
-			filter += token;
-		}
-		else if (token.length() > 1)
-		{
-			if (!filterExclude.empty()) filterExclude += ' ';
-			filterExclude += token.substr(1);
-		}
-	}
+	searchParam.setFilter(term, type);
+	if (type == FILE_TYPE_TTH && searchParam.fileType != FILE_TYPE_TTH)
+		searchError = STRING(INVALID_TTH);
 
 	searchResults.clear();
 	searchStartTime = searchEndTime = 0;
-	if (filter.empty() || !searchError.empty()) return;
+	if (searchParam.filter.empty() || !searchError.empty()) return;
 
 	searchParam.generateToken(false);
-	searchParam.filter = std::move(filter);
-	searchParam.filterExclude = std::move(filterExclude);
-	searchParam.normalizeWhitespace();
+	searchTerm = searchParam.filter;
+	searchParam.prepareFilter();
 
 	searchOnlyFreeSlots = onlyFreeSlots;
 	vector<SearchClientItem> clients;
@@ -865,13 +841,14 @@ void WebServerManager::ClientContext::clearSearchResults() noexcept
 	searchParam.removeToken();
 	searchParam.filter.clear();
 	searchParam.filterExclude.clear();
+	searchTerm.clear();
 	searchStartTime = searchEndTime = 0;
 }
 
 void WebServerManager::ClientContext::addSearchResult(const SearchResult& sr) noexcept
 {
 	if (searchResults.size() >= MAX_SEARCH_RESULTS) return;
-	if (searchOnlyFreeSlots && sr.freeSlots < 1) return;
+	if (!searchParam.matchSearchResult(sr, searchOnlyFreeSlots)) return;
 	searchResults.emplace_back(std::make_unique<SearchResult>(sr));
 }
 
@@ -879,7 +856,7 @@ void WebServerManager::ClientContext::printSearchTitle(string& os, bool isRunnin
 {
 	string tmp;
 	os += "<h2>";
-	string what = "<em>" + SimpleXML::escape(searchParam.filter, tmp, false) + "</em>";
+	string what = "<em>" + SimpleXML::escape(searchTerm, tmp, false) + "</em>";
 	if (isRunning)
 	{
 		os += STRING(SEARCHING_FOR);
@@ -2292,10 +2269,24 @@ string WebServerManager::printClientId(uint64_t id, const HttpServerConnection* 
 
 void WebServerManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
-	uint64_t id = SearchTokenList::instance.getTokenOwner(sr.getToken());
-	if ((id & 0xFF) != FRAME_TYPE_WEB_CLIENT) return;
-	id >>= 8;
-	LOCK(csClients);
-	auto i = clients.find(id);
-	if (i != clients.end()) i->second.addSearchResult(sr);
+	if (sr.getToken())
+	{
+		uint64_t id = SearchTokenList::instance.getTokenOwner(sr.getToken());
+		if ((id & 0xFF) != FRAME_TYPE_WEB_CLIENT) return;
+		id >>= 8;
+		LOCK(csClients);
+		auto i = clients.find(id);
+		if (i != clients.end()) i->second.addSearchResult(sr);
+	}
+	else
+	{
+		uint64_t now = GET_TICK();
+		LOCK(csClients);
+		for (auto& i : clients)
+		{
+			ClientContext& ctx = i.second;
+			if (ctx.searchParam.token && !ctx.searchParam.filter.empty() && now < ctx.searchEndTime)
+				ctx.addSearchResult(sr);
+		}
+	}
 }

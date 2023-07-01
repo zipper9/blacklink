@@ -173,9 +173,9 @@ SearchFrame::SearchFrame() :
 	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
 	colorText(0), colorBackground(0),
 	initialSize(0), initialMode(SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
-	showUI(true), onlyFree(false), isHash(false), droppedResults(0), resultsCount(0),
+	showUI(true), onlyFree(false), droppedResults(0), resultsCount(0),
 	expandSR(false),
-	storeSettings(false), isExactSize(false), exactSize(0),
+	storeSettings(false),
 	autoSwitchToTTH(false),
 	running(false),
 	searchEndTime(0),
@@ -703,7 +703,7 @@ void SearchFrame::onEnter()
 	}
 
 	bool searchingOnDHT = false;
-	searchParam.fileType = ctrlFiletype.GetCurSel();
+	int fileType = ctrlFiletype.GetCurSel();
 	const int hubCount = ctrlHubs.GetItemCount();
 	if (hubCount <= 1)
 	{
@@ -721,7 +721,7 @@ void SearchFrame::onEnter()
 				continue;
 			if (url == dht::NetworkName)
 			{
-				if (searchParam.fileType != FILE_TYPE_TTH)
+				if (fileType != FILE_TYPE_TTH)
 				{
 					ctrlHubs.SetCheckState(i, FALSE);
 					continue;
@@ -747,52 +747,27 @@ void SearchFrame::onEnter()
 	searchParam.size = size;
 	searchParam.owner = id;
 
-	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
-
-	string filter;
-	string filterExclude;
+	running = false;
+	int prevFileType = fileType;
 	{
 		LOCK(csSearch);
-		//strip out terms beginning with -
-		for (auto si = search.cbegin(); si != search.cend();)
-		{
-			if (si->empty())
-			{
-				si = search.erase(si);
-				continue;
-			}
-			if (searchParam.fileType == FILE_TYPE_TTH)
-			{
-				if (!Util::isTigerHashString(*si))
-				{
-					searchParam.fileType = FILE_TYPE_ANY;
-					ctrlFiletype.SetCurSel(0);
-				}
-			}
-			if ((*si)[0] != '-')
-			{
-				if (!filter.empty()) filter += ' ';
-				filter += *si;
-			}
-			else
-			if (si->length() > 1)
-			{
-				if (!filterExclude.empty()) filterExclude += ' ';
-				filterExclude += si->substr(1);
-			}
-			++si;
-		}
+		searchParam.setFilter(Text::fromT(s), fileType);
 		searchParam.removeToken();
 		searchParam.generateToken(false);
+		s = Text::toT(searchParam.filter);
+		searchParam.prepareFilter();
+		fileType = searchParam.fileType;
 	}
-	
-	s = Text::toT(filter);
+
+	if (prevFileType == FILE_TYPE_TTH && fileType == FILE_TYPE_ANY)
+		ctrlFiletype.SetCurSel(0);
+
 	if (s.empty())
 	{
 		setWindowTitle(TSTRING(SEARCH));
 		return;
 	}
-		
+
 	searchTarget = std::move(s);
 	
 	if (searchParam.size == 0)
@@ -803,9 +778,6 @@ void SearchFrame::onEnter()
 	ctrlStatus.SetText(STATUS_COUNT, _T(""));
 	ctrlStatus.SetText(STATUS_DROPPED, _T(""));
 	
-	isExactSize = searchParam.sizeMode == SIZE_EXACT;
-	exactSize = searchParam.size;
-	
 	if (BOOLSETTING(CLEAR_SEARCH))
 	{
 		ctrlSearch.SetWindowText(_T(""));
@@ -814,7 +786,6 @@ void SearchFrame::onEnter()
 	droppedResults = 0;
 	resultsCount = 0;
 	running = true;
-	isHash = searchParam.fileType == FILE_TYPE_TTH;
 	
 	setWindowTitle(TSTRING(SEARCH) + _T(" - ") + searchTarget);
 	
@@ -842,13 +813,9 @@ void SearchFrame::onEnter()
 	
 	{
 		LOCK(csSearch);
-		
 		searchStartTime = GET_TICK();
 		// more 10 seconds for transfering results
-		searchParam.filter = filter;
-		searchParam.filterExclude = filterExclude;
-		searchParam.normalizeWhitespace();
-		if (portStatus == PortTest::STATE_FAILURE || BOOLSETTING(SEARCH_PASSIVE)) // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
+		if (portStatus == PortTest::STATE_FAILURE || BOOLSETTING(SEARCH_PASSIVE))
 			searchParam.searchMode = SearchParamBase::MODE_PASSIVE;
 		else
 			searchParam.searchMode = SearchParamBase::MODE_DEFAULT;
@@ -877,137 +844,19 @@ void SearchFrame::addSearchResult(const SearchResult& sr)
 	// Check that this is really a relevant search result...
 	{
 		LOCK(csSearch);
-		if (search.empty())
+		if (searchParam.filter.empty())
 			return;
 
 		if (sr.getToken() && searchParam.token != sr.getToken())
 			return;
 
 		needUpdateResultCount = true;
-		string ext;
-#if 0
-		bool isExecutable = false;
-#endif
-		if (sr.getType() == SearchResult::TYPE_FILE)
+		if (!searchParam.matchSearchResult(sr, onlyFree))
 		{
-			ext = "x" + Util::getFileExt(sr.getFileName());
-#if 0
-			isExecutable = sr.getSize() && (getFileTypesFromFileName(ext) & 1<<FILE_TYPE_EXECUTABLE) != 0;
-#endif
-		}
-		if (isHash)
-		{
-			if (sr.getType() != SearchResult::TYPE_FILE || TTHValue(search[0]) != sr.getTTH())
-			{
-				droppedResults++;
-				return;
-			}
-		}
-		else
-		{
-#if 0
-			if (m_search_param.fileType != FILE_TYPE_EXECUTABLE && m_search_param.fileType != Search::TYPE_ANY && m_search_param.fileType != FILE_TYPE_DIRECTORY)
-			{
-				if (isExecutable)
-				{
-					const int l_virus_level = 3;
-					CFlyServerJSON::addAntivirusCounter(*aResult, 0, l_virus_level);
-					sr.m_virus_level = l_virus_level;
-					LogManager::virus_message("Search: ignore virus result  (Level 3): TTH = " + sr.getTTH().toBase32() +
-					                          " File: " + sr.getFileName() + +" Size:" + Util::toString(sr.getSize()) +
-					                          " Hub: " + sr.getHubUrl() + " Nick: " + sr.getUser()->getLastNick() + " IP = " + sr.getIPAsString());
-					// http://dchublist.ru/forum/viewtopic.php?p=22426#p22426
-					droppedResults++;
-					return;
-				}
-			}
-#endif			
-#if 0
-			if (isExecutable || ShareManager::checkType(ext, FILE_TYPE_COMPRESSED))
-			{
-				// Level 1
-				size_t l_count = check_antivirus_level(make_pair(sr.getTTH(), sr.getUser()->getLastNick() + " Hub:" + sr.getHubName() + " ( " + sr.getHubUrl() + " ) "), *aResult, 1);
-				if (l_count > CFlyServerConfig::g_unique_files_for_virus_detect && isExecutable) // 100$ Virus - block IP ?
-				{
-					const int l_virus_level = 1;
-					// TODO CFlyServerConfig::addBlockIP(aResult.getIPAsString());
-					if (registerVirusLevel(*aResult, l_virus_level))
-					{
-						CFlyServerJSON::addAntivirusCounter(*aResult, l_count, l_virus_level);
-					}
-				}
-				// TODO - ¬ключить блокировку поисковой выдачи return;
-				// Level 2
-				l_count = check_antivirus_level(make_pair(sr.getTTH(), "."), *aResult, 2);
-				if (l_count)
-				{
-					const int l_virus_level = 2;
-					// TODO - ¬ключить блокировку поисковой выдачи return;
-				}
-			}
-#endif
-			if (sr.getType() != SearchResult::TYPE_DIRECTORY)
-			{
-				static const int localFilter[] =
-				{
-					FILE_TYPE_AUDIO,
-					FILE_TYPE_COMPRESSED,
-					FILE_TYPE_DOCUMENT,
-					FILE_TYPE_EXECUTABLE,
-					FILE_TYPE_IMAGE,
-					FILE_TYPE_VIDEO,
-					FILE_TYPE_CD_DVD,
-					FILE_TYPE_COMICS,
-					FILE_TYPE_EBOOK,
-				};
-				for (auto k = 0; k < _countof(localFilter); ++k)
-				{
-					if (searchParam.fileType == localFilter[k])
-					{
-						if (!(getFileTypesFromFileName(ext) & 1<<localFilter[k]))
-						{
-							droppedResults++;
-							return;
-						}
-						break;
-					}
-				}
-			}
-			// match all here
-			tstring fileName = Text::toT(sr.getFile());
-			Text::makeLower(fileName);
-			for (auto j = search.cbegin(); j != search.cend(); ++j)
-			{
-				if (j->empty()) continue;
-				tstring search = Text::toT(*j);
-				Text::makeLower(search);
-				if (search[0] != '-')
-				{
-					if (fileName.find(search) == tstring::npos)
-					{
-						droppedResults++;
-						return;
-					}
-				}
-				else if (search.length() > 1)
-				{
-					if (fileName.find(search.substr(1)) != tstring::npos)
-					{
-						droppedResults++;
-						return;
-					}
-				}
-			}
+			droppedResults++;
+			return;
 		}
 	}
-	// Reject results without free slots or size
-	if ((onlyFree && sr.freeSlots < 1) || (isExactSize && sr.getSize() != exactSize))
-	{
-		droppedResults++;
-		return;
-	}
-	if (isClosedOrShutdown())
-		return;
 	auto searchInfo = new SearchInfo(sr);
 	{
 		LOCK(csEverything);

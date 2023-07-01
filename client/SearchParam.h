@@ -55,12 +55,6 @@ class SearchParamBase
 		SearchParamBase() : searchMode(MODE_DEFAULT), sizeMode(SIZE_DONTCARE), size(0), fileType(FILE_TYPE_ANY), maxResults(0)
 		{
 		}
-		static void normalizeWhitespace(string& s);
-		void normalizeWhitespace()
-		{
-			normalizeWhitespace(filter);
-			normalizeWhitespace(filterExclude);
-		}
 };
 
 class NmdcSearchParam : public SearchParamBase
@@ -81,6 +75,9 @@ class SearchParam : public SearchParamBase
 		SearchParam() : token(0), owner(0) {}
 		void removeToken();
 		void generateToken(bool autoToken);
+		void prepareFilter();
+		void setFilter(const string& s, int fileType);
+		bool matchSearchResult(const class SearchResult& sr, bool onlyFreeSlots) const;
 };
 
 class SearchTokenList
