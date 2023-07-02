@@ -55,8 +55,7 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, Mask
 	timeFileBegin(0),
 	lastSize(0),
 	averageSpeed(0),
-	cachedOnlineSourceCountInvalid(false),
-	cachedOnlineSourceCount(0),
+	sourcesVersion(0),
 	prioQueue(QueueItem::DEFAULT),
 	tempTarget(tempTarget)
 {
@@ -77,8 +76,7 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, Mask
 	timeFileBegin(0),
 	lastSize(0),
 	averageSpeed(0),
-	cachedOnlineSourceCountInvalid(false),
-	cachedOnlineSourceCount(0),
+	sourcesVersion(0),
 	prioQueue(QueueItem::DEFAULT),
 	tempTarget(tempTarget)
 {
@@ -104,8 +102,7 @@ QueueItem::QueueItem(const string& newTarget, QueueItem& src) :
 	sourcePath(std::move(src.sourcePath)),
 #endif
 	averageSpeed(src.averageSpeed),
-	cachedOnlineSourceCountInvalid(true),
-	cachedOnlineSourceCount(0),
+	sourcesVersion(0),
 	prioQueue(src.prioQueue),
 	sources(std::move(src.sources)),
 	badSources(std::move(src.badSources))
@@ -195,22 +192,6 @@ string QueueItem::getDCTempName(const string& fileName, const TTHValue* tth)
 	return result;
 }
 
-size_t QueueItem::getLastOnlineCount()
-{
-	if (cachedOnlineSourceCountInvalid)
-	{
-		QueueRLock(*QueueItem::g_cs);
-		cachedOnlineSourceCount = 0;
-		for (auto i = sources.cbegin(); i != sources.cend(); ++i)
-		{
-			if (i->first->isOnline())
-				++cachedOnlineSourceCount;
-		}
-		cachedOnlineSourceCountInvalid = false;
-	}
-	return cachedOnlineSourceCount;
-}
-
 bool QueueItem::isBadSourceExceptL(const UserPtr& user, MaskType exceptions) const
 {
 	const auto i = badSources.find(user);
@@ -247,6 +228,15 @@ bool QueueItem::countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const
 	return false;
 }
 
+size_t QueueItem::getOnlineSourceCountL() const
+{
+	size_t count = 0;
+	for (auto i = sources.cbegin(); i != sources.cend(); ++i)
+		if (i->first->isOnline())
+			++count;
+	return count;
+}
+
 void QueueItem::getOnlineUsers(UserList& list) const
 {
 	QueueRLock(*QueueItem::g_cs);
@@ -267,7 +257,7 @@ QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user)
 	}
 	else
 		it = sources.insert(std::make_pair(user, Source())).first;
-	cachedOnlineSourceCountInvalid = true;
+	++sourcesVersion;
 	return it;
 }
 
@@ -342,7 +332,7 @@ void QueueItem::removeSourceL(const UserPtr& user, MaskType reason)
 		i->second.setFlag(reason);
 		badSources.insert(*i);
 		sources.erase(i);
-		cachedOnlineSourceCountInvalid = true;
+		++sourcesVersion;
 		if (sources.empty()) prioQueue = DEFAULT;
 	}
 #ifdef _DEBUG
@@ -364,19 +354,6 @@ const string& QueueItem::getListExt() const
 		return Util::emptyString;
 	return xmlExtension;
 }
-
-#ifdef _DEBUG
-bool QueueItem::isSourceValid(const QueueItem::Source* sourcePtr)
-{
-	QueueRLock(*g_cs);
-	for (auto i = sources.cbegin(); i != sources.cend(); ++i)
-	{
-		if (sourcePtr == &i->second)
-			return true;
-	}
-	return false;
-}
-#endif
 
 void QueueItem::addDownload(const DownloadPtr& download)
 {

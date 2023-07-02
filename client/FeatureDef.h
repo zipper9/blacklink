@@ -75,8 +75,8 @@
 #endif
 
 #define BL_FEATURE_IP_DATABASE
+#define BL_FEATURE_DROP_SLOW_SOURCES
 
-#define FLYLINKDC_USE_DROP_SLOW
 #define FLYLINKDC_USE_STATS_FRAME
 //#define FLYLINKDC_USE_ASK_SLOT // отключаем автопопрошайку
 

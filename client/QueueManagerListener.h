@@ -50,7 +50,7 @@ class QueueManagerListener
 		typedef X<14> RecheckDone;
 		typedef X<15> AddedArray;
 		typedef X<17> FileExistsAction;
-		typedef X<19> Tick;
+		typedef X<19> Tick; // FIXME: Remove this notification (currently used by TransferView)
 		typedef X<20> StatusUpdatedList;
 		typedef X<21> RemovedArray;
 		typedef X<23> SourceAdded;

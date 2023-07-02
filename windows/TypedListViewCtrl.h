@@ -192,6 +192,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 				                        }
 				                }
 				*/
+				onSort();
 				SortItems(&compareFunc, (LPARAM)this);
 			}
 		}
@@ -588,6 +589,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 
 	protected:
 		bool destroyingItems = false;
+
+		virtual void onSort() {}
 
 	private:
 		int sortColumn;

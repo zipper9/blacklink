@@ -163,7 +163,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	segmentedMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY_USER_INFO), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 	segmentedMenu.AppendMenu(MF_SEPARATOR);
 	segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 	segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
 	segmentedMenu.AppendMenu(MF_SEPARATOR);
@@ -294,7 +294,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			transferMenu.AppendMenu(MF_SEPARATOR);
 			transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
 			transferMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 			transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
 			transferMenu.AppendMenu(MF_SEPARATOR);
@@ -310,20 +310,20 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 						ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
 			}
 
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 			segmentedMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
 			transferMenu.CheckMenuItem(IDC_MENU_SLOWDISCONNECT, MF_BYCOMMAND | MF_UNCHECKED);
 #endif
 			if (ii->download)
 			{
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 				transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_ENABLED);
 #endif
 				transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_ENABLED);
 				if (!ii->target.empty())
 				{
 					const string target = Text::fromT(ii->target);
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 					bool slowDisconnect;
 					{
 						QueueManager::LockFileQueueShared fileQueue;
@@ -345,7 +345,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			}
 			else
 			{
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 				transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_DISABLED);
 #endif
 				transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED);

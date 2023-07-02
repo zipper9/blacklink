@@ -135,7 +135,7 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	timeCtrlBegin.SetCurSel(SETTING(BANDWIDTH_LIMIT_START));
 	timeCtrlEnd.SetCurSel(SETTING(BANDWIDTH_LIMIT_END));
 	
-#ifndef FLYLINKDC_USE_DROP_SLOW
+#ifndef BL_FEATURE_DROP_SLOW_SOURCES
 	GetDlgItem(IDC_DISCONNECTING_ENABLE).EnableWindow(FALSE);
 	GetDlgItem(IDC_SEGMENTED_ONLY).EnableWindow(FALSE);
 #endif

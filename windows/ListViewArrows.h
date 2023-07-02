@@ -35,11 +35,8 @@ template<class T>
 class ListViewArrows
 {
 	public:
-		ListViewArrows() { }
-		virtual ~ListViewArrows() { }
-		
 		typedef ListViewArrows<T> thisClass;
-		
+
 		BEGIN_MSG_MAP(thisClass)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)

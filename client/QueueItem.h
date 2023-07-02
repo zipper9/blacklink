@@ -219,15 +219,9 @@ class QueueItem
 #endif
 		static std::atomic_bool checkTempDir;
 
-		const SourceMap& getSourcesL() { return sources; }
-		const SourceMap& getBadSourcesL() { return badSources; }
-#ifdef _DEBUG
-		bool isSourceValid(const QueueItem::Source* sourcePtr);
-#endif
-		size_t getSourcesCount() const
-		{
-			return sources.size();
-		}
+		const SourceMap& getSourcesL() const { return sources; }
+		const SourceMap& getBadSourcesL() const { return badSources; }
+
 		SourceIter findSourceL(const UserPtr& user)
 		{
 			return sources.find(user);
@@ -245,6 +239,9 @@ class QueueItem
 			return badSources.find(user) != badSources.end();
 		}
 		bool isBadSourceExceptL(const UserPtr& user, MaskType exceptions) const;
+		size_t getOnlineSourceCountL() const;
+		uint32_t getSourcesVersion() const { return sourcesVersion.load(); }
+		void updateSourcesVersion() { ++sourcesVersion; }
 		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
 		void setOverlapped(const Segment& segment, bool isOverlapped);
@@ -382,12 +379,10 @@ class QueueItem
 		QueueItem::Priority calculateAutoPriorityL() const;
 
 		int64_t getAverageSpeed() const { return averageSpeed; }
-		size_t getLastOnlineCount();
 
 	private:
 		int64_t averageSpeed;
-		std::atomic_bool cachedOnlineSourceCountInvalid;
-		size_t cachedOnlineSourceCount;
+		std::atomic<uint32_t> sourcesVersion;
 		SourceMap sources;
 		SourceMap badSources;
 		QueueItem::Priority prioQueue;

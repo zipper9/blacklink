@@ -106,7 +106,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 				d->updateSpeed(tick);
 			}
 			const int64_t currentSingleSpeed = d->getRunningAverage();
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 			if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 			{
 				if (d->getType() == Transfer::TYPE_FILE && d->getStartTime() > 0)
@@ -131,7 +131,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					}
 				}
 			}
-#endif // FLYLINKDC_USE_DROP_SLOW
+#endif // BL_FEATURE_DROP_SLOW_SOURCES
 		}
 	}
 	if (!tickList.empty())

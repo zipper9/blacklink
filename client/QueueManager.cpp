@@ -140,7 +140,7 @@ QueueItemPtr QueueManager::FileQueue::add(QueueManager* qm,
 
 	if (autoPriority)
 		extraFlags |= QueueItem::XFLAG_AUTO_PRIORITY;
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 		extraFlags |= QueueItem::XFLAG_AUTODROP;
 #endif
@@ -2724,7 +2724,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 
 			if (Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1)
 				extraFlags |= QueueItem::XFLAG_AUTO_PRIORITY;
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 			if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 				extraFlags |= QueueItem::XFLAG_AUTODROP;
 #endif
@@ -2875,7 +2875,7 @@ void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& user)
 	if (!itemList.empty())
 	{
 		for (auto& qi : itemList)
-			qi->cachedOnlineSourceCountInvalid = true;
+			qi->updateSourcesVersion();
 		fire(QueueManagerListener::StatusUpdatedList(), itemList);
 	}
 	if (hasDown)
@@ -2892,7 +2892,7 @@ void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& us
 	if (!itemList.empty())
 	{
 		for (auto& qi : itemList)
-			qi->cachedOnlineSourceCountInvalid = true;
+			qi->updateSourcesVersion();
 		if (!ClientManager::isBeforeShutdown())
 		{
 			fire(QueueManagerListener::StatusUpdatedList(), itemList);
@@ -2954,7 +2954,7 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		fire(QueueManagerListener::SourceAdded());
 }
 
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 bool QueueManager::dropSource(const DownloadPtr& d)
 {
 	bool multipleSegments;

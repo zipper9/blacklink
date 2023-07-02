@@ -1008,25 +1008,47 @@ void WebServerManager::ClientContext::getQueue() noexcept
 	QueueManager::LockFileQueueShared fileQueue;
 	const auto& li = fileQueue.getQueueL();
 	for (auto j = li.cbegin(); j != li.cend(); ++j)
-		queue.push_back(j->second);
+	{
+		const QueueItemPtr& qi = j->second;
+		uint16_t sourcesCount = (uint16_t) std::min(qi->getSourcesL().size(), (size_t) UINT16_MAX);
+		uint16_t onlineSourcesCount = (uint16_t) std::min(qi->getOnlineSourceCountL(), (size_t) UINT16_MAX);
+		queue.emplace_back(QueueItemEx{ qi, qi->getSourcesVersion(), sourcesCount, onlineSourcesCount });
+	}
 }
 
-static const string& getQueueItemStatus(QueueItem* qi, string& tmp) noexcept
+void WebServerManager::ClientContext::QueueItemEx::updateInfo() noexcept
 {
-	if (qi->isFinished())
+	uint32_t sourcesVersion = qi->getSourcesVersion();
+	if (sourcesVersion == version) return;
+	QueueRLock(*QueueItem::g_cs);
+	sourcesCount = (uint16_t) std::min(qi->getSourcesL().size(), (size_t) UINT16_MAX);
+	onlineSourcesCount = (uint16_t) std::min(qi->getOnlineSourceCountL(), (size_t) UINT16_MAX);
+	version = sourcesVersion;
+}
+
+void WebServerManager::ClientContext::QueueItemEx::updateInfoL() noexcept
+{
+	uint32_t sourcesVersion = qi->getSourcesVersion();
+	if (sourcesVersion == version) return;
+	sourcesCount = (uint16_t) std::min(qi->getSourcesL().size(), (size_t) UINT16_MAX);
+	onlineSourcesCount = (uint16_t) std::min(qi->getOnlineSourceCountL(), (size_t) UINT16_MAX);
+	version = sourcesVersion;
+}
+
+const string& WebServerManager::ClientContext::getQueueItemStatus(const QueueItemEx& inf, string& tmp) noexcept
+{
+	if (inf.qi->isFinished())
 		return STRING(DOWNLOAD_FINISHED_IDLE);
-	const size_t onlineSources = qi->getLastOnlineCount();
-	const size_t totalSources = qi->getSourcesCount();
-	if (qi->isWaiting())
+	if (inf.qi->isWaiting())
 	{
-		if (onlineSources)
+		if (inf.onlineSourcesCount)
 		{
-			if (totalSources == 1)
+			if (inf.sourcesCount == 1)
 				return STRING(WAITING_USER_ONLINE);
-			tmp = STRING_F(WAITING_USERS_ONLINE_FMT, onlineSources % totalSources);
+			tmp = STRING_F(WAITING_USERS_ONLINE_FMT, inf.onlineSourcesCount % inf.sourcesCount);
 			return tmp;
 		}
-		switch (totalSources)
+		switch (inf.sourcesCount)
 		{
 			case 0:
 				return STRING(NO_USERS_TO_DOWNLOAD_FROM);
@@ -1039,12 +1061,12 @@ static const string& getQueueItemStatus(QueueItem* qi, string& tmp) noexcept
 			case 4:
 				return STRING(ALL_4_USERS_OFFLINE);
 		}
-		tmp = STRING_F(ALL_USERS_OFFLINE_FMT, totalSources);
+		tmp = STRING_F(ALL_USERS_OFFLINE_FMT, inf.sourcesCount);
 		return tmp;
 	}
-	if (onlineSources == 1)
+	if (inf.onlineSourcesCount == 1)
 		return STRING(USER_ONLINE);
-	tmp = STRING_F(USERS_ONLINE_FMT, onlineSources % totalSources);
+	tmp = STRING_F(USERS_ONLINE_FMT, inf.onlineSourcesCount % inf.sourcesCount);
 	return tmp;
 }
 
@@ -1064,7 +1086,7 @@ static string getSourceName(const UserPtr& user, bool partial)
 	return res;
 }
 
-static string getSources(QueueItem* qi, string& tmp) noexcept
+static string getSources(const QueueItem* qi, string& tmp) noexcept
 {
 	tmp.clear();
 	{
@@ -1096,12 +1118,14 @@ void WebServerManager::ClientContext::printQueue(string& os, size_t from, size_t
 	string actions[3];
 	for (size_t i = 0; i < count; ++i)
 	{
-		QueueItem* qi = queue[from + i].get();
+		QueueItemEx& inf = queue[from + i];
+		inf.updateInfo();
+		const QueueItem* qi = inf.qi.get();
 		string rowId = "row-" + Util::toString(from+i);
 		string filename = Util::getFileName(qi->getTarget());
 		string path = Util::getFilePath(qi->getTarget());
 		string tthStr;
-		string status = getQueueItemStatus(qi, tmp);
+		string status = getQueueItemStatus(inf, tmp);
 		if (!qi->getTTH().isZero()) tthStr = qi->getTTH().toBase32();
 		string magnet = Util::getMagnet(tthStr, filename, qi->getSize());
 		os += "<tr class='data' id='" + rowId + "' data-magnet='" + SimpleXML::escape(magnet, tmp, true) + "'>";
@@ -1109,7 +1133,7 @@ void WebServerManager::ClientContext::printQueue(string& os, size_t from, size_t
 		WebServerUtil::printTableCell(os, column, ti, filename, true);
 		WebServerUtil::printTableCell(os, column, ti, Util::formatBytes(qi->getSize()), false);
 		WebServerUtil::printTableCell(os, column, ti, path, true);
-		WebServerUtil::printTableCell(os, column, ti, Util::toString(qi->getSourcesCount()), false);
+		WebServerUtil::printTableCell(os, column, ti, Util::toString(inf.sourcesCount), false);
 		WebServerUtil::printTableCell(os, column, ti, tthStr, false);
 		WebServerUtil::printTableCell(os, column, ti, status, true);
 		os += "<td class='r-border w0'>";
@@ -1127,35 +1151,35 @@ void WebServerManager::ClientContext::printQueue(string& os, size_t from, size_t
 	os += "</table>\n";
 }
 
-static bool compareQueueItems(QueueItem* a, QueueItem* b, int column) noexcept
+bool WebServerManager::ClientContext::QueueItemEx::compareQueueItems(const QueueItemEx& a, const QueueItemEx& b, int column) noexcept
 {
 	int res;
 	switch (column)
 	{
 		case 0: // File name
-			res = compare(Util::getFileName(a->getTarget()), Util::getFileName(b->getTarget()));
+			res = compare(Util::getFileName(a.qi->getTarget()), Util::getFileName(b.qi->getTarget()));
 			if (res) return res < 0;
 			// fall through
 		case 2: // Path
-			return a->getTarget() < b->getTarget();
+			return a.qi->getTarget() < b.qi->getTarget();
 		case 1: // Size
-			res = compare(a->getSize(), b->getSize());
+			res = compare(a.qi->getSize(), b.qi->getSize());
 			if (res) return res < 0;
-			return a->getTarget() < b->getTarget();
+			return a.qi->getTarget() < b.qi->getTarget();
 		case 3: // Sources
-			res = compare(a->getSourcesCount(), b->getSourcesCount());
+			res = compare(a.sourcesCount, b.sourcesCount);
 			if (res) return res < 0;
-			return a->getTarget() < b->getTarget();
+			return a.qi->getTarget() < b.qi->getTarget();
 		case 4: // TTH
-			res = compare(a->getTTH(), b->getTTH());
+			res = compare(a.qi->getTTH(), b.qi->getTTH());
 			if (res) return res < 0;
-			return a->getTarget() < b->getTarget();
+			return a.qi->getTarget() < b.qi->getTarget();
 		case 5: // Status
 		{
 			string tmp1, tmp2;
 			res = compare(getQueueItemStatus(a, tmp1), getQueueItemStatus(b, tmp2));
 			if (res) return res < 0;
-			return a->getTarget() < b->getTarget();
+			return a.qi->getTarget() < b.qi->getTarget();
 		}
 	}
 	return false;
@@ -1164,11 +1188,17 @@ static bool compareQueueItems(QueueItem* a, QueueItem* b, int column) noexcept
 void WebServerManager::ClientContext::sortQueue(int sortColumn) noexcept
 {
 	bool reverse;
-	if (!updateSortColumn(queueSort, sortColumn, 5, reverse)) return;
+	if (!updateSortColumn(queueSort, sortColumn, 5, reverse))
+		return;
+	{
+		QueueRLock(*QueueItem::g_cs);
+		for (QueueItemEx& inf : queue)
+			inf.updateInfoL();
+	}
 	std::sort(queue.begin(), queue.end(),
 		[=](const auto& a, const auto& b)
 		{
-			return compareQueueItems(a.get(), b.get(), sortColumn) ^ reverse;
+			return QueueItemEx::compareQueueItems(a, b, sortColumn) ^ reverse;
 		});
 }
 
@@ -1661,9 +1691,9 @@ void WebServerManager::removeQueueItem(HandlerResult& res, const RequestInfo& st
 				if (id)
 				{
 					for (auto j = ctx.queue.begin(); j != ctx.queue.end(); ++j)
-						if (j->get() == (void*) id)
+						if (j->qi.get() == (void*) id)
 						{
-							qi = *j;
+							qi = j->qi;
 							ctx.queue.erase(j);
 							break;
 						}

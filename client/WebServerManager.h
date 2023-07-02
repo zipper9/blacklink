@@ -59,6 +59,18 @@ private:
 	struct ClientContext
 	{
 	public:
+		struct QueueItemEx
+		{
+			QueueItemPtr qi;
+			uint32_t version;
+			uint16_t sourcesCount;
+			uint16_t onlineSourcesCount;
+
+			void updateInfo() noexcept;
+			void updateInfoL() noexcept;
+			static bool compareQueueItems(const QueueItemEx& a, const QueueItemEx& b, int column) noexcept;
+		};
+
 		uint64_t id;
 		uint64_t expires;
 		uint32_t userId;
@@ -85,10 +97,11 @@ private:
 		void sortSearchResults(int sortColumn) noexcept;
 
 		// Queue
-		vector<QueueItemPtr> queue;
+		vector<QueueItemEx> queue;
 		int queueSort = 0;
 		uint64_t queueId = 0;
 
+		static const string& getQueueItemStatus(const QueueItemEx& inf, string& tmp) noexcept;
 		void getQueue() noexcept;
 		void printQueue(string& os, size_t from, size_t count) noexcept;
 		void sortQueue(int sortColumn) noexcept;

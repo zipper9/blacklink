@@ -31,7 +31,7 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
 	qi(item),
 	downloadFile(nullptr),
 	treeValid(false)
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 	, lastNormalSpeed(0)
 #endif
 {

@@ -239,17 +239,6 @@ class QueueManager : public Singleton<QueueManager>,
 		void setAutoPriority(const string& target, bool ap);
 		
 		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
-#ifdef _DEBUG
-		bool isSourceValid(const QueueItemPtr& qi, const QueueItem::Source* source) const
-		{
-			return qi->isSourceValid(source);
-		}
-#endif
-		static void getChunksVisualisation(const QueueItemPtr& qi, vector<QueueItem::RunningSegment>& running, vector<Segment>& done)
-		{
-			qi->getChunksVisualisation(running, done);
-		}
-		
 		static bool getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept;
 		DownloadPtr getDownload(UserConnection* source, Download::ErrorInfo& error) noexcept;
 		void putDownload(DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
@@ -266,7 +255,7 @@ class QueueManager : public Singleton<QueueManager>,
 		static bool handlePartialSearch(const TTHValue& tth, QueueItem::PartsInfo& outPartsInfo, uint64_t& blockSize);
 		bool handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, QueueItem::PartsInfo& outPartialInfo);
 		
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 		bool dropSource(const DownloadPtr& d);
 #endif
 	private:

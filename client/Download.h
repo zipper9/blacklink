@@ -56,7 +56,7 @@ class Download : public Transfer, public Flags
 
 		string getTempTarget() const;
 
-#ifdef FLYLINKDC_USE_DROP_SLOW
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
 		GETSET(uint64_t, lastNormalSpeed, LastNormalSpeed);
 #endif
 		void setDownloadFile(OutputStream* file)

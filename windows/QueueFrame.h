@@ -280,7 +280,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				{
 					DIRECTORY,
 					FILE
-				} const type;		
+				} const type;
 	
 #ifdef DEBUG_QUEUE_FRAME
 				static int itemsCreated;
@@ -290,12 +290,16 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 					++itemsRemoved;
 				}
 #endif
-				
+
 				explicit QueueItemInfo(const QueueItemPtr& qi) : qi(qi), dir(nullptr), type(FILE)
 				{
 #ifdef DEBUG_QUEUE_FRAME
 					++itemsCreated;
 #endif
+					version = qi->getSourcesVersion();
+					QueueRLock(*QueueItem::g_cs);
+					sourcesCount = (uint16_t) std::min(qi->getSourcesL().size(), (size_t) UINT16_MAX);
+					onlineSourcesCount = (uint16_t) std::min(qi->getOnlineSourceCountL(), (size_t) UINT16_MAX);
 				}
 
 				explicit QueueItemInfo(const DirItem* dir) : dir(dir), type(DIRECTORY)
@@ -307,7 +311,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 
 				const tstring getText(int col) const;
 				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col);
-				
+
 				void updateIconIndex();
 				int getImageIndex() const { return iconIndex; }
 				static uint8_t getStateImageIndex()
@@ -354,14 +358,24 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 						return qi->getTTH();
 					return emptyTTH;
 				}
-				
+				bool updateCachedInfo();
+
 				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
 
 			private:
 				const QueueItemPtr qi;
 				const DirItem* const dir;
+				uint32_t version;
+				uint16_t sourcesCount;
+				uint16_t onlineSourcesCount;
 				int iconIndex = -1;
 				static const TTHValue emptyTTH;
+		};
+
+		class QueueListViewCtrl : public TypedListViewCtrl<QueueItemInfo, IDC_QUEUE>
+		{
+			protected:
+				void onSort() override;
 		};
 
 		struct QueueItemTask : public Task
@@ -412,7 +426,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		string currentDirPath;
 		bool treeInserted;
 		
-		TypedListViewCtrl<QueueItemInfo, IDC_QUEUE> ctrlQueue;
+		QueueListViewCtrl ctrlQueue;
 		CTreeViewCtrl ctrlDirs;
 		
 		CStatusBarCtrl ctrlStatus;
@@ -485,7 +499,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept override;
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept override;
-		void on(QueueManagerListener::Tick, const QueueItemList& list) noexcept override;
 		void on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
 		void on(SettingsManagerListener::Repaint) override;
 

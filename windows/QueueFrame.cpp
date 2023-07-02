@@ -304,19 +304,17 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			if (qi)
 			{
 				if (qi->isFinished()) return TSTRING(DOWNLOAD_FINISHED_IDLE);
-				const size_t onlineSources = qi->getLastOnlineCount();
-				const size_t totalSources = qi->getSourcesCount();
 				if (qi->isWaiting())
 				{
-					if (onlineSources)
+					if (onlineSourcesCount)
 					{
-						if (totalSources == 1)
+						if (sourcesCount == 1)
 							return TSTRING(WAITING_USER_ONLINE);
-						return TSTRING_F(WAITING_USERS_ONLINE_FMT, onlineSources % totalSources);
+						return TSTRING_F(WAITING_USERS_ONLINE_FMT, onlineSourcesCount % sourcesCount);
 					}
 					else
 					{
-						switch (totalSources)
+						switch (sourcesCount)
 						{
 							case 0:
 								return TSTRING(NO_USERS_TO_DOWNLOAD_FROM);
@@ -329,15 +327,15 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 							case 4:
 								return TSTRING(ALL_4_USERS_OFFLINE);
 							default:
-								return TSTRING_F(ALL_USERS_OFFLINE_FMT, totalSources);
+								return TSTRING_F(ALL_USERS_OFFLINE_FMT, sourcesCount);
 						}
 					}
 				}
 				else
 				{
-					if (onlineSources == 1)
+					if (onlineSourcesCount == 1)
 						return TSTRING(USER_ONLINE);
-					return TSTRING_F(USERS_ONLINE_FMT, onlineSources % totalSources);
+					return TSTRING_F(USERS_ONLINE_FMT, onlineSourcesCount % sourcesCount);
 				}
 			}
 			break;
@@ -494,6 +492,18 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 	}
 	return Util::emptyStringT;
+}
+
+bool QueueFrame::QueueItemInfo::updateCachedInfo()
+{
+	dcassert(qi);
+	uint32_t sourcesVersion = qi->getSourcesVersion();
+	if (sourcesVersion == version) return false;
+	QueueRLock(*QueueItem::g_cs);
+	sourcesCount = (uint16_t) std::min(qi->getSourcesL().size(), (size_t) UINT16_MAX);
+	onlineSourcesCount = (uint16_t) std::min(qi->getOnlineSourceCountL(), (size_t) UINT16_MAX);
+	version = sourcesVersion;
+	return true;
 }
 
 void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept
@@ -1106,12 +1116,6 @@ void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& qs, const Q
 {
 	addTask(REMOVE_ITEM, new QueueItemTask(qs));
 	addTask(ADD_ITEM, new QueueItemTask(qt));
-}
-
-void QueueFrame::on(QueueManagerListener::Tick, const QueueItemList& itemList) noexcept
-{
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && !itemList.empty())
-		on(QueueManagerListener::StatusUpdatedList(), itemList);
 }
 
 void QueueFrame::on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept
@@ -2332,7 +2336,11 @@ void QueueFrame::updateQueue(bool changingState)
 		}
 		for (const QueueItemPtr& qi : dir->files)
 		{
-			QueueItemInfo* ii = new QueueItemInfo(qi);
+			QueueItemInfo* ii;
+			{
+				QueueRLock(*QueueItem::g_cs);
+				ii = new QueueItemInfo(qi);
+			}
 			ctrlQueue.insertItem(count++, ii, I_IMAGECALLBACK);
 		}
 		currentDir = dir;
@@ -2346,7 +2354,11 @@ void QueueFrame::updateQueue(bool changingState)
 		int count = 0;
 		auto func = [this, &count](const QueueItemPtr& qi)
 		{
-			QueueItemInfo* ii = new QueueItemInfo(qi);
+			QueueItemInfo* ii;
+			{
+				QueueRLock(*QueueItem::g_cs);
+				ii = new QueueItemInfo(qi);
+			}
 			ctrlQueue.insertItem(count++, ii, I_IMAGECALLBACK);
 		};
 		if (fileLists) walkDirItem(fileLists, func);
@@ -2389,7 +2401,7 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				COLORREF colorRunning = SETTING(COLOR_RUNNING);
 				COLORREF colorRunning2 = SETTING(COLOR_RUNNING_COMPLETED);
 				COLORREF colorDownloaded = SETTING(COLOR_DOWNLOADED);
-				QueueManager::getChunksVisualisation(ii->getQueueItem(), runningChunks, doneChunks);
+				ii->getQueueItem()->getChunksVisualisation(runningChunks, doneChunks);
 				for (auto i = runningChunks.cbegin(); i < runningChunks.cend(); ++i)
 				{
 					const QueueItem::RunningSegment& rs = *i;
@@ -2680,9 +2692,37 @@ void QueueFrame::showQueueItem(string& target, bool isList)
 
 void QueueFrame::onTimerInternal()
 {
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && updateStatus)
-		updateQueueStatus();
+	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown())
+	{
+		bool u = false;
+		int first = ctrlQueue.GetTopIndex();
+		int last = std::min(ctrlQueue.GetItemCount(), first + ctrlQueue.GetCountPerPage() + 1);
+		for (int i = first; i < last; ++i)
+		{
+			auto ii = ctrlQueue.getItemData(i);
+			if (!(ii && ii->type == QueueItemInfo::FILE)) continue;
+			if (ii->updateCachedInfo())
+			{
+				ctrlQueue.updateItem(i);
+				u = true;
+			}
+			if (ii->getQueueItem()->isRunning()) u = true;
+		}
+		if (u) ctrlQueue.Invalidate();
+		if (updateStatus) updateQueueStatus();
+	}
 	processTasks();
+}
+
+void QueueFrame::QueueListViewCtrl::onSort()
+{
+	int count = GetItemCount();
+	for (int i = 0; i < count; ++i)
+	{
+		auto ii = getItemData(i);
+		if (ii->type == QueueItemInfo::FILE)
+			ii->updateCachedInfo();
+	}
 }
 
 CFrameWndClassInfo& QueueFrame::GetWndClassInfo()
