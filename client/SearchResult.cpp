@@ -87,13 +87,13 @@ SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsi
 void SearchResult::loadLocation()
 {
 	static const int flags = IPInfo::FLAG_LOCATION | IPInfo::FLAG_COUNTRY;
-	if ((ipInfo.known & flags) != flags)
+	if ((ipInfo.known & flags) != flags && Util::isValidIp(ip))
 		Util::getIpInfo(ip, ipInfo, flags);
 }
 
 void SearchResult::loadP2PGuard()
 {
-	if (!(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
+	if (!(ipInfo.known & IPInfo::FLAG_P2P_GUARD) && Util::isValidIp(ip))
 		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
 }
 

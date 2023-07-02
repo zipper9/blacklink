@@ -153,9 +153,6 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::P2P_GUARD
 };
 
-static const int hubsColumnIds[] = { 0, 1 };
-static const int hubsColumnSizes[] = { 146, 80 };
-
 static const ResourceManager::Strings hubsColumnNames[] = 
 {
 	ResourceManager::HUB,
@@ -201,6 +198,8 @@ SearchFrame::SearchFrame() :
 	ctrlResults.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlResults.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
 	ctrlResults.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
+	static const int hubsColumnIds[] = { 0, 1 };
+	int hubsColumnSizes[] = { 154 - GetSystemMetrics(SM_CXVSCROLL), 82 };
 	ctrlHubs.setColumns(2, hubsColumnIds, hubsColumnNames, hubsColumnSizes);
 	ctrlHubs.enableHeaderMenu = false;
 	ctrlHubs.setSortColumn(0);
@@ -214,6 +213,11 @@ SearchFrame::~SearchFrame()
 	searchParam.removeToken();
 	images.Destroy();
 	searchTypesImageList.Destroy();
+}
+
+bool SearchFrame::isValidFile(const SearchResult& sr)
+{
+	return sr.getType() == SearchResult::TYPE_FILE && sr.getSize() > 0 && !sr.getTTH().isZero();
 }
 
 void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
@@ -496,7 +500,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlResults.setSortFromSettings(SETTING(SEARCH_FRAME_SORT), COLUMN_HITS, false);
 	
 	setListViewColors(ctrlResults);
-	ctrlResults.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
+	ctrlResults.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlResults.setColumnOwnerDraw(COLUMN_LOCATION);
 	ctrlResults.setColumnOwnerDraw(COLUMN_P2P_GUARD);
 
@@ -507,7 +511,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	ctrlHubs.insertColumns(Util::emptyString, Util::emptyString, Util::emptyString);
 	setListViewColors(ctrlHubs);
-	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
+	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE);
 	WinUtil::setExplorerTheme(ctrlHubs);
 
 	for (int i = 0; i < _countof(layoutItems); ++i)
@@ -1377,16 +1381,30 @@ LRESULT SearchFrame::onDownloadWhole(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	const LPNMITEMACTIVATE item = (LPNMITEMACTIVATE)pnmh;
-	
 	if (item->iItem != -1)
 	{
 		CRect rect;
 		ctrlResults.GetItemRect(item->iItem, rect, LVIR_ICON);
-		
+
 		// if double click on state icon, ignore...
 		if (item->ptAction.x < rect.left)
 			return 0;
-			
+
+		if (ctrlResults.GetSelectedCount() == 1)
+		{
+			int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
+			auto si = ctrlResults.getItemData(i);
+			if (si && isValidFile(si->sr))
+			{
+				string realPath;
+				if (ShareManager::getInstance()->getFileInfo(si->sr.getTTH(), realPath))
+				{
+					WinUtil::openFile(Text::toT(realPath));
+					return 0;
+				}
+			}
+		}
+
 		auto fm = FavoriteManager::getInstance();
 		int i = -1;
 		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
@@ -1396,6 +1414,27 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 			{
 				const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()), si->getUser());
 				(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
+			}
+		}
+	}
+	return 0;
+}
+
+LRESULT SearchFrame::onOpenFileOrFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (ctrlResults.GetSelectedCount() == 1)
+	{
+		int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
+		auto si = ctrlResults.getItemData(i);
+		if (si && isValidFile(si->sr))
+		{
+			string realPath;
+			if (ShareManager::getInstance()->getFileInfo(si->sr.getTTH(), realPath))
+			{
+				if (wID == IDC_OPEN_FILE)
+					WinUtil::openFile(Text::toT(realPath));
+				else
+					WinUtil::openFolder(Text::toT(realPath));
 			}
 		}
 	}
@@ -2027,9 +2066,21 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 			clearUserMenu();
 			OMenu resultsMenu;
-			
+
 			resultsMenu.CreatePopupMenu();
-			
+			int defaultItem = IDC_DOWNLOAD_TO_FAV;
+
+			if (sr && isValidFile(*sr))
+			{
+				bool existingFile = ShareManager::getInstance()->isTTHShared(sr->getTTH());
+				if (existingFile)
+				{
+					resultsMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
+					resultsMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
+					resultsMenu.AppendMenu(MF_SEPARATOR);
+					defaultItem = IDC_OPEN_FILE;
+				}
+			}
 			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
@@ -2051,7 +2102,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			appendAndActivateUserItems(resultsMenu, true);
 			resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
-			resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_TO_FAV);
+			resultsMenu.SetMenuDefaultItem(defaultItem);
 
 			// Add target menu
 			dlTargets.clear();

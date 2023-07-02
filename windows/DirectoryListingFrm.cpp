@@ -1538,6 +1538,12 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		bool hasTTH = selCount == 1 && ii->type == ItemInfo::FILE && ii->file->getSize() && !ii->file->getTTH().isZero();
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
 			existingFile = ownList ? true : ShareManager::getInstance()->isTTHShared(ii->file->getTTH());
+		if (existingFile)
+		{
+			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
+			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
+			fileMenu.AppendMenu(MF_SEPARATOR);
+		}
 		if (!ownList)
 		{
 			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
@@ -1545,11 +1551,6 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			if (selCount == 1)
 				fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_BY_PATH, _T("Download by path"));
 #endif
-		}
-		if (existingFile)
-		{
-			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
-			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
 		}
 		if (showingDupFiles && selCount == 1 && ii->type == ItemInfo::FILE && ii->file->isAnySet(DirectoryListing::FLAG_FOUND))
 			fileMenu.AppendMenu(MF_STRING, IDC_SHOW_DUPLICATES, CTSTRING(SHOW_DUPLICATES));
@@ -1725,17 +1726,22 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		targetDirMenu.ClearMenu();
 
-		if (ctrlTree.GetSelectedItem() != treeRoot)
+		HTREEITEM ht = ctrlTree.GetSelectedItem();
+		if (ht != treeRoot)
 		{
 			copyDirMenu.CreatePopupMenu();
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
-			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
-			if (ownList)
-				appendCopyUrlItems(copyDirMenu, IDC_COPY_URL_TREE, ResourceManager::FOLDER_URL);
-			else if (!hubUrl.empty())
+			const DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(ht));
+			if (dir && !dir->getAdls())
 			{
-				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_URL_TREE, CTSTRING(FOLDER_URL));
-				contextMenuHubUrl.push_back(hubUrl);
+				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
+				if (ownList)
+					appendCopyUrlItems(copyDirMenu, IDC_COPY_URL_TREE, ResourceManager::FOLDER_URL);
+				else if (!hubUrl.empty())
+				{
+					copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_URL_TREE, CTSTRING(FOLDER_URL));
+					contextMenuHubUrl.push_back(hubUrl);
+				}
 			}
 		}
 
@@ -2150,7 +2156,14 @@ LRESULT DirectoryListingFrame::onCopyUrl(WORD /*wNotifyCode*/, WORD wID, HWND /*
 		const ItemInfo* ii = ctrlList.getItemData(i);
 		string path;
 		if (ii->type == ItemInfo::FILE)
-			path = dl->getPath(ii->file) + ii->file->getName();
+		{
+			const DirectoryListing::File* file = ii->file;
+			if (file->getParent()->getAdls())
+				path = static_cast<const DirectoryListing::AdlFile*>(file)->getFullPath();
+			else
+				path = dl->getPath(file);
+			path += file->getName();
+		}
 		else if (ii->type == ItemInfo::DIRECTORY)
 			path = dl->getPath(ii->dir);
 		int index = wID - IDC_COPY_URL;

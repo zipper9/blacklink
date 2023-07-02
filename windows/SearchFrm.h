@@ -118,6 +118,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZEMODE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_MODE, onFiletypeChange)
+		COMMAND_ID_HANDLER(IDC_OPEN_FILE, onOpenFileOrFolder)
+		COMMAND_ID_HANDLER(IDC_OPEN_FOLDER, onOpenFileOrFolder)
 		NOTIFY_HANDLER(IDC_TRANSFER_TREE, TVN_SELCHANGED, onSelChangedTree);
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TO_FAV, IDC_DOWNLOAD_TO_FAV + 499, onDownload)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + 499, onDownloadWhole)
@@ -164,10 +166,10 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
 		LRESULT onDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWhole(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onOpenFileOrFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		
@@ -568,6 +570,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void onEnter();
 		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title);
 		static tstring getTargetDirectory(const SearchInfo* si, const tstring& downloadDir);
+		static bool isValidFile(const SearchResult& sr);
 
 		// ClientManagerListener
 		void on(ClientConnected, const Client* c) noexcept override
