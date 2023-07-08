@@ -326,6 +326,7 @@ QueueItemPtr QueueManager::FileQueue::findAutoSearch(const deque<string>& recent
 	gsp.wantedSize = 0;
 	gsp.lastSpeed = 0;
 
+	QueueRLock(*QueueItem::g_cs);
 	{
 		QueueRLock(*csFQ);
 		dcassert(!queue.empty());
@@ -1065,7 +1066,7 @@ void QueueManager::readdAll(const QueueItemPtr& q)
 {
 	QueueItem::SourceMap badSources;
 	{
-		QueueWLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		badSources = q->getBadSourcesL();
 	}
 	for (auto s = badSources.cbegin(); s != badSources.cend(); ++s)
@@ -2303,7 +2304,7 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 	bool removeCompletely = false;
 	do
 	{
-		QueueRLock(*QueueItem::g_cs);
+		QueueWLock(*QueueItem::g_cs);
 		QueueItemPtr q = fileQueue.findTarget(target);
 		if (!q)
 			return;
@@ -3140,22 +3141,23 @@ bool QueueManager::handlePartialSearch(const TTHValue& tth, QueueItem::PartsInfo
 // compare nextQueryTime, get the oldest ones
 void QueueManager::FileQueue::findPFSSources(QueueItem::SourceList& sl, uint64_t now) const
 {
-	QueueRLock(*csFQ);
-	for (auto i = queue.cbegin(); i != queue.cend(); ++i)
+	QueueRLock(*QueueItem::g_cs);
 	{
-		if (ClientManager::isBeforeShutdown())
-			return;
-		const auto q = i->second;
-
-		if (q->getSize() < QueueItem::PFS_MIN_FILE_SIZE || !q->getDownloadedBytes()) continue;
+		QueueRLock(*csFQ);
+		for (auto i = queue.cbegin(); i != queue.cend(); ++i)
+		{
+			if (ClientManager::isBeforeShutdown())
+				return;
+			const auto q = i->second;
+			if (q->getSize() < QueueItem::PFS_MIN_FILE_SIZE || !q->getDownloadedBytes()) continue;
 
 #if 0
-		// don't share when file does not exist
-		if (!File::isExist(q->isFinished() ? q->getTarget() : q->getTempTargetConst()))
-			continue;
+			// don't share when file does not exist
+			if (!File::isExist(q->isFinished() ? q->getTarget() : q->getTempTargetConst()))
+				continue;
 #endif
-
-		QueueItem::getPFSSourcesL(q, sl, now, PFS_SOURCES);
+			QueueItem::getPFSSourcesL(q, sl, now, PFS_SOURCES);
+		}
 	}
 }
 

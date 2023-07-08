@@ -2336,11 +2336,7 @@ void QueueFrame::updateQueue(bool changingState)
 		}
 		for (const QueueItemPtr& qi : dir->files)
 		{
-			QueueItemInfo* ii;
-			{
-				QueueRLock(*QueueItem::g_cs);
-				ii = new QueueItemInfo(qi);
-			}
+			QueueItemInfo* ii = new QueueItemInfo(qi);
 			ctrlQueue.insertItem(count++, ii, I_IMAGECALLBACK);
 		}
 		currentDir = dir;
@@ -2354,11 +2350,7 @@ void QueueFrame::updateQueue(bool changingState)
 		int count = 0;
 		auto func = [this, &count](const QueueItemPtr& qi)
 		{
-			QueueItemInfo* ii;
-			{
-				QueueRLock(*QueueItem::g_cs);
-				ii = new QueueItemInfo(qi);
-			}
+			QueueItemInfo* ii = new QueueItemInfo(qi);
 			ctrlQueue.insertItem(count++, ii, I_IMAGECALLBACK);
 		};
 		if (fileLists) walkDirItem(fileLists, func);

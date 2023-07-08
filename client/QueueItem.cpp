@@ -296,14 +296,10 @@ void QueueItem::resetDownloadedL()
 
 bool QueueItem::isFinished() const
 {
-	if (doneSegments.size() == 1)
-	{
-		LOCK(csSegments);
-		return doneSegments.size() == 1 &&
-			doneSegments.begin()->getStart() == 0 &&
-			doneSegments.begin()->getSize() == getSize();
-	}
-	return false;
+	LOCK(csSegments);
+	return doneSegments.size() == 1 &&
+		doneSegments.begin()->getStart() == 0 &&
+		doneSegments.begin()->getSize() == getSize();
 }
 
 bool QueueItem::isChunkDownloaded(int64_t startPos, int64_t& len) const
