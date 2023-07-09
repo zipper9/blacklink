@@ -230,9 +230,9 @@ LRESULT UsersFrame::onCopy(WORD, WORD wID, HWND, BOOL&)
 	if (i == -1) return 0;
 	int columnId = wID - IDC_COPY;
 	const ItemInfo* ii = ctrlUsers.getItemData(i);
-	tstring data = ii->getText(columnId);
+	const tstring& data = ii->getText(columnId);
 	if (!data.empty())
-		WinUtil::setClipboard(ii->getText(columnId));
+		WinUtil::setClipboard(data);
 	return 0;
 }
 

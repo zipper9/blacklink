@@ -63,6 +63,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		BEGIN_MSG_MAP(WaitingUsersFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
@@ -70,6 +71,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemove)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
+		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_GETDISPINFO, ctrlList.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_COLUMNCLICK, ctrlList.onColumnClick)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, NM_CUSTOMDRAW, onCustomDraw)
@@ -84,11 +86,13 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onTreeItemDeleted(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
+		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		
@@ -246,6 +250,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		CtrlList ctrlList;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		ProgressBar progressBar;
+		OMenu copyMenu;
 
 	private:
 		CTreeViewCtrl ctrlQueued;

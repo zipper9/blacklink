@@ -146,6 +146,17 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	return TRUE;
 }
 
+LRESULT WaitingUsersFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	if (copyMenu)
+	{
+		MenuHelper::removeStaticMenu(copyMenu);
+		copyMenu.DestroyMenu();
+	}
+	bHandled = FALSE;
+	return 0;
+}
+
 LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	timer.destroyTimer();
@@ -257,16 +268,33 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 	if (reinterpret_cast<HWND>(wParam) == ctrlList && ctrlList.GetSelectedCount() == 1)
 	{
 		if (pt.x == -1 && pt.y == -1)
-		{
 			WinUtil::getContextMenuPos(ctrlList, pt);
-		}
-		
+
 		int j = ctrlList.GetNextItem(-1, LVNI_SELECTED);
 		if (j == -1) return FALSE;
 		UploadQueueItem* ui = ctrlList.getItemData(j);
 
+		if (!copyMenu)
+		{
+			copyMenu.CreatePopupMenu();
+			MenuHelper::addStaticMenu(copyMenu);
+			for (int i = 0; i < _countof(columnId); ++i)
+				copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
+		}
+
 		reinitUserMenu(ui->getUser(), ui->getHint());
 		appendAndActivateUserItems(contextMenu);
+		int copyIndex = 3;
+		MENUITEMINFO mii = { sizeof(mii) };
+		mii.fMask = MIIM_STRING | MIIM_SUBMENU;
+		mii.fType = MFT_STRING;
+		mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(COPY));
+		mii.hSubMenu = copyMenu;
+		contextMenu.InsertMenuItem(copyIndex, TRUE, &mii);
+		contextMenu.SetBitmap(copyIndex, TRUE, g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+		mii.fMask = MIIM_FTYPE;
+		mii.fType = MFT_SEPARATOR;
+		contextMenu.InsertMenuItem(copyIndex + 1, TRUE, &mii);
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		MenuHelper::unlinkStaticMenus(contextMenu);
 		return TRUE;
@@ -300,6 +328,18 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		return TRUE;
 	}
 	return FALSE;
+}
+
+LRESULT WaitingUsersFrame::onCopy(WORD, WORD wID, HWND, BOOL&)
+{
+	int i = ctrlList.GetNextItem(-1, LVNI_SELECTED);
+	if (i == -1) return 0;
+	int columnId = wID - IDC_COPY;
+	const UploadQueueItem* ui = ctrlList.getItemData(i);
+	const tstring& data = ui->getText(columnId);
+	if (!data.empty())
+		WinUtil::setClipboard(data);
+	return 0;
 }
 
 LRESULT WaitingUsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
