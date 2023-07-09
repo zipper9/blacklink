@@ -139,6 +139,12 @@ LRESULT UsersFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	dcassert(pLoop);
 	pLoop->RemoveMessageFilter(this);
 
+	if (copyMenu)
+	{
+		MenuHelper::removeStaticMenu(copyMenu);
+		copyMenu.DestroyMenu();
+	}
+
 	bHandled = FALSE;
 	return 0;
 }
@@ -177,6 +183,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			if (!copyMenu)
 			{
 				copyMenu.CreatePopupMenu();
+				MenuHelper::addStaticMenu(copyMenu);
 				for (int i = 0; i < _countof(columnId); ++i)
 					copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i],
 						i == 0 ? CTSTRING(NICK) : CTSTRING_I(columnNames[i]));
@@ -210,7 +217,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		if (defaultCommand)
 			usersMenu.SetMenuDefaultItem(defaultCommand);
 		usersMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		WinUtil::unlinkStaticMenus(usersMenu);
+		MenuHelper::unlinkStaticMenus(usersMenu);
 		return TRUE;
 	}
 	bHandled = FALSE;

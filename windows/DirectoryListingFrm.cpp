@@ -438,19 +438,65 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 
 	ctrlStatus.SetParts(STATUS_LAST, statusSizes);
 
-	targetMenu.CreatePopupMenu();
-	targetDirMenu.CreatePopupMenu();
-	priorityMenu.CreatePopupMenu();
-	priorityDirMenu.CreatePopupMenu();
-
-	WinUtil::appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
-	WinUtil::appendPrioItems(priorityDirMenu, IDC_DOWNLOAD_WITH_PRIO_TREE);
-
 	ctrlTree.EnableWindow(FALSE);
 	SettingsManager::getInstance()->addListener(this);
 	closed = false;
 	bHandled = FALSE;
 	return 1;
+}
+
+void DirectoryListingFrame::createFileMenus()
+{
+	if (!targetMenu)
+	{
+		targetMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(targetMenu);
+	}
+	if (!priorityMenu)
+	{
+		priorityMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(priorityMenu);
+		MenuHelper::appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
+	}
+}
+
+void DirectoryListingFrame::createDirMenus()
+{
+	if (!targetDirMenu)
+	{
+		targetDirMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(targetDirMenu);
+	}
+	if (!priorityDirMenu)
+	{
+		priorityDirMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(priorityDirMenu);
+		MenuHelper::appendPrioItems(priorityDirMenu, IDC_DOWNLOAD_WITH_PRIO_TREE);
+	}
+}
+
+void DirectoryListingFrame::destroyMenus()
+{
+	if (targetMenu)
+	{
+		MenuHelper::removeStaticMenu(targetMenu);
+		targetMenu.DestroyMenu();
+	}
+	if (priorityMenu)
+	{
+		MenuHelper::removeStaticMenu(priorityMenu);
+		priorityMenu.DestroyMenu();
+	}
+	if (targetDirMenu)
+	{
+		MenuHelper::removeStaticMenu(targetDirMenu);
+		targetDirMenu.DestroyMenu();
+	}
+	if (priorityDirMenu)
+	{
+		MenuHelper::removeStaticMenu(priorityDirMenu);
+		priorityDirMenu.DestroyMenu();
+	}
 }
 
 LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -464,6 +510,7 @@ LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 		CloseThemeData(hTheme);
 		hTheme = nullptr;
 	}
+	destroyMenus();
 	bHandled = FALSE;
 	return 0;
 }
@@ -1523,12 +1570,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 
 		if (pt.x == -1 && pt.y == -1)
-		{
 			WinUtil::getContextMenuPos(ctrlList, pt);
-		}
 
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
 
+		createFileMenus();
 		targetMenu.ClearMenu();
 
 		OMenu fileMenu;
@@ -1556,8 +1602,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			fileMenu.AppendMenu(MF_STRING, IDC_SHOW_DUPLICATES, CTSTRING(SHOW_DUPLICATES));
 		if (!ownList)
 		{
-			fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
-			fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
+			fileMenu.AppendMenu(MF_POPUP, targetMenu, CTSTRING(DOWNLOAD_TO));
+			fileMenu.AppendMenu(MF_POPUP, priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 		}
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 		fileMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT), g_iconBitmaps.getBitmap(IconBitmaps::NOTEPAD, 0));
@@ -1569,7 +1615,6 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			appendWebSearchItems(fileMenu, SearchUrl::KEYWORD, true, ResourceManager::WEB_SEARCH_KEYWORD) ?
 			fileMenu.GetMenuItemCount() - 1 : -1;
 
-		OMenu locateMenu;
 		targets.clear();
 		if (hasTTH)
 		{
@@ -1578,11 +1623,12 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			{
 				if (targets.size() > 1)
 				{
-					locateMenu.SetOwnerDraw(OMenu::OD_NEVER);
+					CMenu locateMenu;
 					locateMenu.CreatePopupMenu();
 					for (size_t i = 0; i < targets.size(); ++i)
 						locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + i, Text::toT(targets[i]).c_str());
-					fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
+					fileMenu.AppendMenu(MF_POPUP, locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
+					locateMenu.Detach();
 				}
 				else
 					fileMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE, CTSTRING(LOCATE_FILE_IN_QUEUE));
@@ -1602,7 +1648,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		if (dl->getUser() && !dl->getUser()->getCID().isZero())
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
 
-		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+		fileMenu.AppendMenu(MF_POPUP, copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
@@ -1644,6 +1690,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			if (hintedUser.user)
 				appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(hintedUser.user->getCID(), hintedUser.hint));
 			fileMenu.SetMenuDefaultItem(existingFile ? IDC_OPEN_FILE : IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO);
+			copyMenu.Detach();
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
 		}
@@ -1694,11 +1741,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 			if (hintedUser.user)
 				appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(hintedUser.user->getCID(), hintedUser.hint));
+			copyMenu.Detach();
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
 		}
-		WinUtil::unlinkStaticMenus(fileMenu);
-
+		MenuHelper::unlinkStaticMenus(fileMenu);
 		return TRUE;
 	}
 	if (reinterpret_cast<HWND>(wParam) == ctrlTree && ctrlTree.GetSelectedItem() != NULL)
@@ -1720,11 +1767,12 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		}
 		// Strange, windows doesn't change the selection on right-click... (!)
 
+		createDirMenus();
+		targetDirMenu.ClearMenu();
+
 		CMenu copyDirMenu;
 		OMenu directoryMenu;
 		directoryMenu.CreatePopupMenu();
-
-		targetDirMenu.ClearMenu();
 
 		HTREEITEM ht = ctrlTree.GetSelectedItem();
 		if (ht != treeRoot)
@@ -1748,8 +1796,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		if (!ownList)
 		{
 			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD, 0));
-			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_TO));
-			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
+			directoryMenu.AppendMenu(MF_POPUP, targetDirMenu, CTSTRING(DOWNLOAD_TO));
+			directoryMenu.AppendMenu(MF_POPUP, priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 #ifdef DEBUG_TRANSFERS
 			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_ANY, _T("Download file by name..."));
 #endif
@@ -1764,7 +1812,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			if (copyDirMenu)
 			{
 				directoryMenu.AppendMenu(MF_SEPARATOR);
-				directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+				directoryMenu.AppendMenu(MF_POPUP, copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+				copyDirMenu.Detach();
 			}
 		}
 		else
@@ -1773,13 +1822,14 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			if (copyDirMenu)
 			{
 				directoryMenu.AppendMenu(MF_SEPARATOR);
-				directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+				directoryMenu.AppendMenu(MF_POPUP, copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+				copyDirMenu.Detach();
 			}
 		}
 		if (originalId && findFrameByID(originalId))
 			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL));
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-
+		MenuHelper::unlinkStaticMenus(directoryMenu);
 		return TRUE;
 	}
 
@@ -2254,7 +2304,7 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-	WinUtil::unlinkStaticMenus(tabMenu);
+	MenuHelper::unlinkStaticMenus(tabMenu);
 	return TRUE;
 }
 

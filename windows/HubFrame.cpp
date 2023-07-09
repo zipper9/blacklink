@@ -679,8 +679,8 @@ void HubFrame::createTabMenu()
 		tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT, CTSTRING(MENU_RECONNECT), g_iconBitmaps.getBitmap(IconBitmaps::RECONNECT, 0));
 		if (isConnected())
 			tabMenu.AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT), g_iconBitmaps.getBitmap(IconBitmaps::DISCONNECT, 0));
-		WinUtil::g_copyHubMenu.EnableMenuItem(IDC_COPY_IP, client ? MFS_ENABLED : MFS_GRAYED);
-		tabMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+		MenuHelper::copyHubMenu.EnableMenuItem(IDC_COPY_IP, client ? MFS_ENABLED : MFS_GRAYED);
+		tabMenu.AppendMenu(MF_POPUP, MenuHelper::copyHubMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 		tabMenu.AppendMenu(MF_SEPARATOR);
 	}
 	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED), g_iconBitmaps.getBitmap(IconBitmaps::RESTORE_CONN, 0));
@@ -1589,7 +1589,7 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 		appendUcMenu(tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | WinUtil::g_tabCtrl->getContextMenuAlign(), pt.x, pt.y, m_hWnd);
 	cleanUcMenu(tabMenu);
-	tabMenu.RemoveFirstItem();
+	MenuHelper::unlinkStaticMenus(tabMenu);
 	return TRUE;
 }
 
@@ -1645,12 +1645,12 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 
-		WinUtil::unlinkStaticMenus(*userMenu);
 		cleanUcMenu(*userMenu);
+		MenuHelper::unlinkStaticMenus(*userMenu);
 		userMenu->ClearMenu();
 		return TRUE;
 	}
-	
+
 	if (reinterpret_cast<HWND>(wParam) == ctrlClient)
 	{
 		OMenu* userMenu = createUserMenu();
@@ -1692,8 +1692,8 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 			}
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
-		WinUtil::unlinkStaticMenus(*userMenu);
 		cleanUcMenu(*userMenu);
+		MenuHelper::unlinkStaticMenus(*userMenu);
 		userMenu->ClearMenu();
 		return TRUE;
 	}

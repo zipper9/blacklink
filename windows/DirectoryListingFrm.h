@@ -376,6 +376,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void updateRootItemText();
 		string getFileUrl(const string& hubUrl, const string& path) const;
 		void appendCopyUrlItems(CMenu& menu, int idc, ResourceManager::Strings text);
+		void createFileMenus();
+		void createDirMenus();
+		void destroyMenus();
 
 		class ItemInfo
 		{

@@ -60,14 +60,6 @@ class OMenu final : private CMenu
 			RemoveMenu(0, MF_BYPOSITION);
 		}
 
-		void RemoveFirstItem(int amount)
-		{
-			for (int i = 0; i < amount; ++i)
-			{
-				RemoveMenu(0, MF_BYPOSITION);
-			}
-		}
-
 		BOOL DeleteMenu(UINT nPosition, UINT nFlags)
 		{
 			checkOwnerDrawOnRemove(nPosition, nFlags & MF_BYPOSITION);
@@ -79,15 +71,18 @@ class OMenu final : private CMenu
 			checkOwnerDrawOnRemove(nPosition, nFlags & MF_BYPOSITION);
 			return CMenu::RemoveMenu(nPosition, nFlags);
 		}
-		
+
 		void ClearMenu()
 		{
-			RemoveFirstItem(GetMenuItemCount());
+			for (int i = GetMenuItemCount() - 1; i >= 0; --i)
+				DeleteMenu(i, MF_BYPOSITION);
 		}
 
 		BOOL DestroyMenu()
 		{
-			ClearMenu();
+			int count = GetMenuItemCount();
+			for (int i = 0; i < count; i++)
+				checkOwnerDrawOnRemove(i, MF_BYPOSITION);
 			return CMenu::DestroyMenu();
 		}
 		

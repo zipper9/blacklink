@@ -766,6 +766,7 @@
     <ClCompile Include="windows\ADLSProperties.cpp" />
     <ClCompile Include="windows\AdvancedPage.cpp" />
     <ClCompile Include="windows\AppearancePage.cpp" />
+    <ClCompile Include="windows\MenuHelper.cpp" />
     <ClCompile Include="windows\PreviewAppsPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
@@ -954,6 +955,7 @@
     <ClInclude Include="windows\AdvancedPage.h" />
     <ClInclude Include="windows\AppearancePage.h" />
     <ClInclude Include="windows\LockRedraw.h" />
+    <ClInclude Include="windows\MenuHelper.h" />
     <ClInclude Include="windows\PreviewAppsPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />

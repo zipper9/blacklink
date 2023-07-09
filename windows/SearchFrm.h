@@ -499,7 +499,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		OMenu targetDirMenu;
 		OMenu priorityMenu;
 		OMenu copyMenu;
-		OMenu tabMenu;
+		CMenu tabMenu;
 
 		StringList targets;
 		CEdit ctrlFilter;
@@ -597,7 +597,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void on(UserStatusChanged, const UserPtr& user) noexcept override { onUserUpdated(user); }
 
 		void on(SettingsManagerListener::Repaint) override;
-		
+
+		void createMenus();
+		void destroyMenus();
 		void initHubs();
 		void updateWaitingTime();
 		void onHubAdded(HubInfo* info);

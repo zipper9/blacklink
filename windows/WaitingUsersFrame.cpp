@@ -267,8 +267,8 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 
 		reinitUserMenu(ui->getUser(), ui->getHint());
 		appendAndActivateUserItems(contextMenu);
-		
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		MenuHelper::unlinkStaticMenus(contextMenu);
 		return TRUE;
 	}
 	else if (reinterpret_cast<HWND>(wParam) == ctrlQueued && ctrlQueued.GetSelectedItem() != NULL)
@@ -295,10 +295,8 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 
 		reinitUserMenu(ui->hintedUser.user, ui->hintedUser.hint);
 		appendAndActivateUserItems(contextMenu);
-		
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		
-		WinUtil::unlinkStaticMenus(contextMenu);
+		MenuHelper::unlinkStaticMenus(contextMenu);
 		return TRUE;
 	}
 	return FALSE;

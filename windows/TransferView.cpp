@@ -138,51 +138,80 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
-	
+
 	ctrlTransfers.insertColumns(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS, SettingsManager::TRANSFER_FRAME_VISIBLE);
 	ctrlTransfers.setSortFromSettings(SETTING(TRANSFER_FRAME_SORT));
-	
+
 	setListViewColors(ctrlTransfers);
-	
+
 	ctrlTransfers.SetImageList(g_transferArrowsImage.getIconList(), LVSIL_SMALL);
-	
-	copyMenu.CreatePopupMenu();
-	for (size_t i = 0; i < COLUMN_LAST; ++i)
-	{
-		copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
-	}
-	copyMenu.AppendMenu(MF_SEPARATOR);
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(COPY_TTH));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
-	
-	segmentedMenu.CreatePopupMenu();
-	segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
-	segmentedMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
-	appendPreviewItems(segmentedMenu);
-	segmentedMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY_USER_INFO), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
-	segmentedMenu.AppendMenu(MF_SEPARATOR);
-	segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
-#ifdef BL_FEATURE_DROP_SLOW_SOURCES
-	segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
-#endif
-	segmentedMenu.AppendMenu(MF_SEPARATOR);
-	segmentedMenu.AppendMenu(MF_STRING, IDC_CONNECT_ALL, CTSTRING(CONNECT_ALL));
-	segmentedMenu.AppendMenu(MF_STRING, IDC_DISCONNECT_ALL, CTSTRING(DISCONNECT_ALL));
-	segmentedMenu.AppendMenu(MF_SEPARATOR);
-	segmentedMenu.AppendMenu(MF_STRING, IDC_EXPAND_ALL, CTSTRING(EXPAND_ALL));
-	segmentedMenu.AppendMenu(MF_STRING, IDC_COLLAPSE_ALL, CTSTRING(COLLAPSE_ALL));
-#if 0
-	segmentedMenu.AppendMenu(MF_SEPARATOR);
-	segmentedMenu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_ALL));
-#endif
-	
+
 	ConnectionManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
 	UploadManager::getInstance()->addListener(this);
 	QueueManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	timer.createTimer(TIMER_VAL, 4);
+	return 0;
+}
+
+void TransferView::createMenus()
+{
+	if (!copyMenu)
+	{
+		copyMenu.CreatePopupMenu();
+		for (size_t i = 0; i < COLUMN_LAST; ++i)
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
+		copyMenu.AppendMenu(MF_SEPARATOR);
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(COPY_TTH));
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
+		MenuHelper::addStaticMenu(copyMenu);
+	}
+	if (!segmentedMenu)
+	{
+		segmentedMenu.CreatePopupMenu();
+		segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
+		segmentedMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+		appendPreviewItems(segmentedMenu);
+		segmentedMenu.AppendMenu(MF_POPUP, copyMenu, CTSTRING(COPY_USER_INFO), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+		segmentedMenu.AppendMenu(MF_SEPARATOR);
+		segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE), g_iconBitmaps.getBitmap(IconBitmaps::PAUSE, 0));
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
+		segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
+#endif
+		segmentedMenu.AppendMenu(MF_SEPARATOR);
+		segmentedMenu.AppendMenu(MF_STRING, IDC_CONNECT_ALL, CTSTRING(CONNECT_ALL));
+		segmentedMenu.AppendMenu(MF_STRING, IDC_DISCONNECT_ALL, CTSTRING(DISCONNECT_ALL));
+		segmentedMenu.AppendMenu(MF_SEPARATOR);
+		segmentedMenu.AppendMenu(MF_STRING, IDC_EXPAND_ALL, CTSTRING(EXPAND_ALL));
+		segmentedMenu.AppendMenu(MF_STRING, IDC_COLLAPSE_ALL, CTSTRING(COLLAPSE_ALL));
+#if 0
+		segmentedMenu.AppendMenu(MF_SEPARATOR);
+		segmentedMenu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_ALL));
+#endif
+	}
+}
+
+void TransferView::destroyMenus()
+{
+	if (copyMenu)
+	{
+		MenuHelper::removeStaticMenu(copyMenu);
+		copyMenu.DestroyMenu();
+	}
+	if (segmentedMenu)
+	{
+		MenuHelper::unlinkStaticMenus(segmentedMenu);
+		segmentedMenu.DestroyMenu();
+	}
+}
+
+LRESULT TransferView::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	timer.destroyTimer();
+	ctrlTransfers.deleteAll();
+	destroyMenus();
 	return 0;
 }
 
@@ -228,6 +257,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		
 		if (ctrlTransfers.GetSelectedCount() > 0)
 		{
+			createMenus();
 			int defaultItem = 0;
 			switch (SETTING(TRANSFERLIST_DBLCLICK))
 			{
@@ -289,7 +319,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			if (ii->download)
 				transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
 			appendPreviewItems(transferMenu);
-			transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+			transferMenu.AppendMenu(MF_POPUP, copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 
 			transferMenu.AppendMenu(MF_SEPARATOR);
 			transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
@@ -385,7 +415,8 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				segmentedMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
 
-			WinUtil::unlinkStaticMenus(transferMenu);
+			cleanUcMenu(transferMenu);
+			MenuHelper::unlinkStaticMenus(transferMenu);
 			return TRUE;
 		}
 	}

@@ -154,14 +154,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		}
 		
 		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			timer.destroyTimer();
-			ctrlTransfers.deleteAll();
-			return 0;
-		}
-		
+
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+
 		LRESULT onNotifyFormat(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 #ifdef _UNICODE
@@ -541,6 +536,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void onTimerInternal();
 		void processTasks();
 		void addTask(Tasks s, Task* task);
+		void createMenus();
+		void destroyMenus();
 
 		void on(ConnectionManagerListener::Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
 		void on(ConnectionManagerListener::FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept override;

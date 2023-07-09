@@ -408,6 +408,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		OMenu removeAllMenu;
 		OMenu pmMenu;
 		OMenu readdMenu;
+		OMenu priorityMenu;
+		CMenu segmentsMenu;
+		CMenu copyMenu;
 
 		CButton ctrlShowTree;
 		CContainedWindow showTreeContainer;
@@ -438,6 +441,10 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		TaskQueue tasks;
 		TimerHelper timer;
 		
+		void createMenus();
+		void destroyMenus();
+		static void clearMenu(OMenu& menu, int count);
+		static void clearCheck(HMENU hMenu);
 		void addQueueList();
 		void addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree);
 		void addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree);

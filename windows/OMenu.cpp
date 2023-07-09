@@ -91,15 +91,12 @@ OMenu::OMenu() :
 OMenu::~OMenu()
 {
 	if (::IsMenu(m_hMenu))
-	{
 		DestroyMenu();
-	}
 	else
-	{
-		dcassert(items.empty());
-		for (auto i = items.cbegin(); i != items.cend(); ++i)
-			delete *i;
-	}
+		dcassert(!m_hMenu);
+	dcassert(items.empty());
+	for (auto i = items.cbegin(); i != items.cend(); ++i)
+		delete *i;
 	if (fontNormal) DeleteObject(fontNormal);
 	if (fontBold) DeleteObject(fontBold);
 	if (hTheme) CloseThemeData(hTheme);
@@ -158,8 +155,7 @@ void OMenu::checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition)
 {
 	if (ownerDrawMode == OD_NEVER)
 		return;
-	MENUITEMINFO mii = {0};
-	mii.cbSize = sizeof(MENUITEMINFO);
+	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
 	mii.fMask = MIIM_FTYPE | MIIM_DATA | MIIM_SUBMENU;
 	GetMenuItemInfo(uItem, byPosition, &mii);
 	

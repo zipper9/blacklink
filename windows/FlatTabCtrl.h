@@ -26,6 +26,7 @@
 #include "ShellContextMenu.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
+#include "MenuHelper.h"
 #include "UserMessages.h"
 #include "resource.h"
 
@@ -308,7 +309,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		if (nMenuID != 0)
 			m_hMenu = ::LoadMenu(ATL::_AtlBaseModule.GetResourceInstance(), MAKEINTRESOURCE(nMenuID));
 
-		if (m_hMenu == NULL) m_hMenu = WinUtil::g_mainMenu;
+		if (m_hMenu == NULL) m_hMenu = MenuHelper::mainMenu;
 
 		dwStyle = T::GetWndStyle(dwStyle);
 		dwExStyle = T::GetWndExStyle(dwExStyle);
@@ -433,7 +434,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		bHandled = FALSE;
 		dcassert(getTab());
 		getTab()->removeTab(m_hWnd);
-		if (m_hMenu == WinUtil::g_mainMenu) m_hMenu = NULL;
+		if (m_hMenu == MenuHelper::mainMenu) m_hMenu = NULL;
 		return 0;
 	}
 

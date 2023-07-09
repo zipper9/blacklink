@@ -6,9 +6,11 @@
 #include "ImageLists.h"
 #include "../client/CID.h"
 #include "../client/LogManager.h"
+#include "../client/forward.h"
 
 class UserInfo;
 class UserInfoBase;
+class Identity;
 struct FavUserTraits;
 
 struct UserInfoGuiTraits
@@ -34,17 +36,8 @@ struct UserInfoGuiTraits
 			string hubUrl;
 		};
 
-		static void init(); // only for WinUtil!
-		static void uninit(); // only for WinUtil!
-		static bool isUserInfoMenu(HMENU handle) // only for WinUtil!
-		{
-			return handle == userSummaryMenu.m_hMenu ||
-			       handle == copyUserMenu.m_hMenu ||
-			       handle == grantMenu.m_hMenu ||
-			       handle == speedMenu.m_hMenu ||
-			       handle == privateMenu.m_hMenu ||
-			       handle == favUserMenu.m_hMenu;
-		}
+		static void init();
+		static void uninit();
 
 		enum Options
 		{
@@ -464,13 +457,13 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			if (userSummaryMenu.GetMenuItemCount() > 1)
 			{
 				appendSeparator(menu);
-				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
+				menu.AppendMenu(MF_POPUP, userSummaryMenu, CTSTRING(USER_SUMMARY));
 			}
 		}
 		
 		static void appendFavPrivateMenu(OMenu& menu)
 		{
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(PM_HANDLING), g_iconBitmaps.getBitmap(IconBitmaps::MESSAGES, 0));
+			menu.AppendMenu(MF_POPUP, privateMenu, CTSTRING(PM_HANDLING), g_iconBitmaps.getBitmap(IconBitmaps::MESSAGES, 0));
 		}
 		
 		void activateFavPrivateMenuForSingleUser(OMenu& menu, const FavUserTraits& traits)
@@ -487,7 +480,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		static void appendSpeedLimitMenu(OMenu& menu, int customSpeedVal)
 		{
 			updateSpeedMenuText(customSpeedVal);
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT), g_iconBitmaps.getBitmap(IconBitmaps::LIMIT, 0));
+			menu.AppendMenu(MF_POPUP, speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT), g_iconBitmaps.getBitmap(IconBitmaps::LIMIT, 0));
 		}
 		
 		void activateSpeedLimitMenuForSingleUser(OMenu& menu, const FavUserTraits& traits)
@@ -537,7 +530,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			{
 				favUserMenu.ClearMenu();
 				internal_appendContactListItems(favUserMenu, traits, count);
-				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favUserMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.getBitmap(IconBitmaps::CONTACT_LIST, 0));
+				menu.AppendMenu(MF_POPUP, favUserMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.getBitmap(IconBitmaps::CONTACT_LIST, 0));
 			}
 		}
 
@@ -551,7 +544,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 				int count = copyUserMenu.GetMenuItemCount();
 				for (int i = 1; i < count; i++)
 					copyUserMenu.EnableMenuItem(i, MF_BYPOSITION | flags);
-				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+				menu.AppendMenu(MF_POPUP, copyUserMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 				appendSeparator(menu);
 			}
 		}
@@ -581,7 +574,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 
 		static void appendGrantItems(OMenu& menu)
 		{
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU), g_iconBitmaps.getBitmap(IconBitmaps::UPLOAD_QUEUE, 0));
+			menu.AppendMenu(MF_POPUP, grantMenu, CTSTRING(GRANT_SLOTS_MENU), g_iconBitmaps.getBitmap(IconBitmaps::UPLOAD_QUEUE, 0));
 		}
 		
 		string selectedHint;

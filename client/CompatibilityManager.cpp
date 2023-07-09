@@ -37,6 +37,15 @@
 #include "ClientManager.h"
 #include "ShareManager.h"
 
+#ifndef GR_GDIOBJECTS_PEAK
+#define GR_GDIOBJECTS_PEAK  2
+#endif
+
+#ifndef GR_USEROBJECTS_PEAK
+#define GR_USEROBJECTS_PEAK 4
+#endif
+
+
 string CompatibilityManager::g_incopatibleSoftwareList;
 string CompatibilityManager::g_startupInfo;
 DWORDLONG CompatibilityManager::g_TotalPhysMemory;
@@ -683,12 +692,12 @@ string CompatibilityManager::getStats() // moved from WinUtil
 	}
 
 	snprintf(buf, sizeof(buf),
-		"GDI objects (peak)\t%d (%d)\n"
-		"Handles (peak)\t%d (%d)\n",
+		"Win32 GDI objects (peak)\t%d (%d)\n"
+		"Win32 User objects (peak)\t%d (%d)\n",
 		GetGuiResources(currentProcess, GR_GDIOBJECTS),
-		GetGuiResources(currentProcess, 2 /* GR_GDIOBJECTS_PEAK */),
+		GetGuiResources(currentProcess, GR_GDIOBJECTS_PEAK),
 		GetGuiResources(currentProcess, GR_USEROBJECTS),
-		GetGuiResources(currentProcess, 4 /*GR_USEROBJECTS_PEAK*/));
+		GetGuiResources(currentProcess, GR_USEROBJECTS_PEAK));
 	s += buf;
 
 	s += getNetworkStats();

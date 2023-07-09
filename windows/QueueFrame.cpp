@@ -117,11 +117,7 @@ QueueFrame::QueueFrame() :
 
 QueueFrame::~QueueFrame()
 {
-	browseMenu.ClearMenu();
-	removeMenu.ClearMenu();
-	removeAllMenu.ClearMenu();
-	pmMenu.ClearMenu();
-	readdMenu.ClearMenu();
+	destroyMenus();
 	deleteTree(fileLists);
 	deleteTree(root);
 #ifdef DEBUG_QUEUE_FRAME
@@ -202,18 +198,6 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlShowTree.SetFont(Fonts::g_systemFont);
 	showTreeContainer.SubclassWindow(ctrlShowTree.m_hWnd);
 	
-	browseMenu.CreatePopupMenu();
-	removeMenu.CreatePopupMenu();
-	removeAllMenu.CreatePopupMenu();
-	pmMenu.CreatePopupMenu();
-	readdMenu.CreatePopupMenu();
-	
-	removeMenu.AppendMenu(MF_STRING, IDC_REMOVE_SOURCE, CTSTRING(ALL));
-	removeMenu.AppendMenu(MF_SEPARATOR);
-	
-	readdMenu.AppendMenu(MF_STRING, IDC_READD, CTSTRING(ALL));
-	readdMenu.AppendMenu(MF_SEPARATOR);
-	
 	addQueueList();
 	QueueManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
@@ -226,6 +210,145 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	timer.createTimer(TIMER_VAL);
 	bHandled = FALSE;
 	return 1;
+}
+
+void QueueFrame::clearMenu(OMenu& menu, int count)
+{
+	for (int i = menu.GetMenuItemCount()-1; i >= count; --i)
+		menu.DeleteMenu(i, MF_BYPOSITION);
+}
+
+void QueueFrame::clearCheck(HMENU hMenu)
+{
+	CMenuHandle menu(hMenu);
+	for (int i = menu.GetMenuItemCount()-1; i >= 0; --i)
+		menu.CheckMenuItem(i, MF_BYPOSITION | MF_UNCHECKED);
+}
+
+void QueueFrame::createMenus()
+{
+	if (!browseMenu)
+	{
+		browseMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(browseMenu);
+	}
+	else
+		browseMenu.ClearMenu();
+	if (!removeMenu)
+	{
+		removeMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(removeMenu);
+		removeMenu.AppendMenu(MF_STRING, IDC_REMOVE_SOURCE, CTSTRING(ALL));
+		removeMenu.AppendMenu(MF_SEPARATOR);
+	}
+	else
+		clearMenu(removeMenu, 2);
+	if (!removeAllMenu)
+	{
+		removeAllMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(removeAllMenu);
+	}
+	else
+		removeAllMenu.ClearMenu();
+	if (!pmMenu)
+	{
+		pmMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(pmMenu);
+	}
+	else
+		pmMenu.ClearMenu();
+	if (!readdMenu)
+	{
+		readdMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(readdMenu);
+		readdMenu.AppendMenu(MF_STRING, IDC_READD, CTSTRING(ALL));
+		readdMenu.AppendMenu(MF_SEPARATOR);
+	}
+	else
+		clearMenu(readdMenu, 2);
+	if (!segmentsMenu)
+	{
+		segmentsMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(segmentsMenu);
+		MENUITEMINFO mii = { sizeof(mii) };
+		mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
+		mii.fType = MFT_RADIOCHECK;
+		static const uint8_t segCounts[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 150, 200 };
+		for (int i = 0; i < _countof(segCounts); i++)
+		{
+			int count = segCounts[i];
+			tstring text = TPLURAL_F(PLURAL_SEGMENTS, count);
+			mii.wID = IDC_SEGMENTONE + count - 1;
+			mii.dwTypeData = const_cast<TCHAR*>(text.c_str());
+			segmentsMenu.InsertMenuItem(i, TRUE, &mii);
+		}
+	}
+	else
+		clearCheck(segmentsMenu);
+	if (!priorityMenu)
+	{
+		priorityMenu.SetOwnerDraw(OMenu::OD_NEVER);
+		priorityMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(priorityMenu);
+		MenuHelper::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
+		priorityMenu.AppendMenu(MF_SEPARATOR);
+		priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
+	}
+	else
+		clearCheck(priorityMenu);
+	if (!copyMenu)
+	{
+		copyMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(copyMenu);
+		for (int i = 0; i < _countof(columnId); ++i)
+			if (columnId[i] != COLUMN_PROGRESS)
+				copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
+	}
+}
+
+void QueueFrame::destroyMenus()
+{
+	if (browseMenu)
+	{
+		MenuHelper::removeStaticMenu(browseMenu);
+		browseMenu.DestroyMenu();
+	}
+	if (removeMenu)
+	{
+		MenuHelper::removeStaticMenu(removeMenu);
+		removeMenu.DestroyMenu();
+	}
+	if (removeAllMenu)
+	{
+		MenuHelper::removeStaticMenu(removeAllMenu);
+		removeAllMenu.DestroyMenu();
+	}
+	if (pmMenu)
+	{
+		MenuHelper::removeStaticMenu(pmMenu);
+		pmMenu.DestroyMenu();
+	}
+	if (readdMenu)
+	{
+		MenuHelper::removeStaticMenu(readdMenu);
+		readdMenu.DestroyMenu();
+	}
+	if (segmentsMenu)
+	{
+		MenuHelper::removeStaticMenu(segmentsMenu);
+		segmentsMenu.DestroyMenu();
+	}
+	if (priorityMenu)
+	{
+		MenuHelper::removeStaticMenu(priorityMenu);
+		priorityMenu.DestroyMenu();
+	}
+	if (copyMenu)
+	{
+		MenuHelper::removeStaticMenu(copyMenu);
+		copyMenu.DestroyMenu();
+	}
 }
 
 void QueueFrame::QueueItemInfo::updateIconIndex()
@@ -1501,13 +1624,6 @@ LRESULT QueueFrame::onDoubleClick(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 
 LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	OMenu priorityMenu;
-	priorityMenu.SetOwnerDraw(OMenu::OD_NEVER);
-	priorityMenu.CreatePopupMenu();
-	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
-	priorityMenu.AppendMenu(MF_SEPARATOR);
-	priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
-	
 	if (reinterpret_cast<HWND>(wParam) == ctrlQueue && ctrlQueue.GetSelectedCount() > 0)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
@@ -1516,23 +1632,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		{
 			WinUtil::getContextMenuPos(ctrlQueue, pt);
 		}
-		
-		MENUITEMINFO mii = { sizeof(mii) };
-		mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
-		mii.fType = MFT_RADIOCHECK;
-		
-		CMenu segmentsMenu;
-		segmentsMenu.CreatePopupMenu();
-		static const uint8_t segCounts[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 150, 200 };
-		for (int i = 0; i < _countof(segCounts); i++)
-		{
-			int count = segCounts[i];
-			tstring text = TPLURAL_F(PLURAL_SEGMENTS, count);
-			mii.wID = IDC_SEGMENTONE + count - 1;
-			mii.dwTypeData = const_cast<TCHAR*>(text.c_str());
-			segmentsMenu.InsertMenuItem(i, TRUE, &mii);
-		}
-		
+
 		int selCount = ctrlQueue.GetSelectedCount();
 		if (selCount)
 		{
@@ -1541,39 +1641,13 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			const QueueItemPtr& qi = ii->getQueueItem();
 
 			usingDirMenu = false;
-			while (browseMenu.GetMenuItemCount() > 0)
-			{
-				browseMenu.RemoveMenu(0, MF_BYPOSITION);
-			}
-			while (removeMenu.GetMenuItemCount() > 2)
-			{
-				removeMenu.RemoveMenu(2, MF_BYPOSITION);
-			}
-			while (removeAllMenu.GetMenuItemCount() > 0)
-			{
-				removeAllMenu.RemoveMenu(0, MF_BYPOSITION);
-			}
-			while (pmMenu.GetMenuItemCount() > 0)
-			{
-				pmMenu.RemoveMenu(0, MF_BYPOSITION);
-			}
-			while (readdMenu.GetMenuItemCount() > 2)
-			{
-				readdMenu.RemoveMenu(2, MF_BYPOSITION);
-			}
+			createMenus();
 			clearPreviewMenu();
 			
 			if (selCount == 1 && qi)
 			{
 				bool isFileList = qi->isUserList();
-				
-				CMenu copyMenu;
-				copyMenu.CreatePopupMenu();
-				for (int i = 0; i < _countof(columnId); ++i)
-					if (columnId[i] != COLUMN_PROGRESS)
-						copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
-				copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
-					
+
 				OMenu singleMenu;
 				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				singleMenu.CreatePopupMenu();
@@ -1586,25 +1660,25 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					indexPreview = singleMenu.GetMenuItemCount();
 					appendPreviewItems(singleMenu);
 					indexSegments = indexPreview + 1;
-					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
+					singleMenu.AppendMenu(MF_POPUP, segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
 				}
 				int indexPriority = singleMenu.GetMenuItemCount();
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
+				singleMenu.AppendMenu(MF_POPUP, priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 				if (!isFileList)
 				{
 					indexBrowse = indexPriority + 1;
-					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)browseMenu, CTSTRING(GET_FILE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::FILELIST, 0));
+					singleMenu.AppendMenu(MF_POPUP, browseMenu, CTSTRING(GET_FILE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::FILELIST, 0));
 				}
 				int indexPM = singleMenu.GetMenuItemCount();
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)pmMenu, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)readdMenu, CTSTRING(READD_SOURCE));
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+				singleMenu.AppendMenu(MF_POPUP, pmMenu, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
+				singleMenu.AppendMenu(MF_POPUP, readdMenu, CTSTRING(READD_SOURCE));
+				singleMenu.AppendMenu(MF_POPUP, copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 				singleMenu.AppendMenu(MF_SEPARATOR);
 				singleMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE), g_iconBitmaps.getBitmap(IconBitmaps::MOVE, 0));
 				singleMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME), g_iconBitmaps.getBitmap(IconBitmaps::RENAME, 0));
 				singleMenu.AppendMenu(MF_SEPARATOR);
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)removeMenu, CTSTRING(REMOVE_SOURCE));
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)removeAllMenu, CTSTRING(REMOVE_FROM_ALL));
+				singleMenu.AppendMenu(MF_POPUP, removeMenu, CTSTRING(REMOVE_SOURCE));
+				singleMenu.AppendMenu(MF_POPUP, removeAllMenu, CTSTRING(REMOVE_FROM_ALL));
 				singleMenu.AppendMenu(MF_STRING, IDC_REMOVE_OFFLINE, CTSTRING(REMOVE_OFFLINE));
 				singleMenu.AppendMenu(MF_SEPARATOR);
 				singleMenu.AppendMenu(MF_STRING, IDC_RECHECK, CTSTRING(RECHECK_FILE));
@@ -1631,6 +1705,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					singleMenu.EnableMenuItem(indexPreview, MF_BYPOSITION | (hasPreview ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
 				}
 				{
+					MENUITEMINFO mii = { sizeof(mii) };
 					QueueRLock(*QueueItem::g_cs);
 					const auto& sources = qi->getSourcesL();
 					for (auto i = sources.cbegin(); i != sources.cend(); ++i)
@@ -1709,6 +1784,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					priorityMenu.CheckMenuItem(IDC_AUTOPRIORITY, MF_BYCOMMAND | MF_CHECKED);
 
 				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);			
+				MenuHelper::unlinkStaticMenus(singleMenu);
 			}
 			else
 			{
@@ -1716,8 +1792,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				multiMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				multiMenu.CreatePopupMenu();
 				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
-				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
-				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
+				multiMenu.AppendMenu(MF_POPUP, segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
+				multiMenu.AppendMenu(MF_POPUP, priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 				multiMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE), g_iconBitmaps.getBitmap(IconBitmaps::MOVE, 0));
 				multiMenu.AppendMenu(MF_SEPARATOR);
 				multiMenu.AppendMenu(MF_STRING, IDC_REMOVE_OFFLINE, CTSTRING(REMOVE_OFFLINE));
@@ -1726,6 +1802,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				multiMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 				multiMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				multiMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+				MenuHelper::unlinkStaticMenus(multiMenu);
 			}
 			
 			return TRUE;
@@ -1758,7 +1835,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		
 		OMenu dirMenu;
 		dirMenu.CreatePopupMenu();
-		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
+		dirMenu.AppendMenu(MF_POPUP, priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 		if (dir != fileLists)
 		{
 			dirMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE), g_iconBitmaps.getBitmap(IconBitmaps::MOVE, 0));
@@ -1766,23 +1843,27 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		}
 		dirMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 
-		CMenu copyDirMenu;
 		if (dir != fileLists)
 		{
+			CMenu copyDirMenu;
 			copyDirMenu.CreatePopupMenu();
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
 			copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
 			dirMenu.AppendMenu(MF_SEPARATOR);
-			dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+			dirMenu.AppendMenu(MF_POPUP, copyDirMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
+			copyDirMenu.Detach();
 		}
 
 		OMenu deleteAllMenu;
 		deleteAllMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(deleteAllMenu);
 		deleteAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::EXCLAMATION, 0));
 		dirMenu.AppendMenu(MF_SEPARATOR);
-		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU) deleteAllMenu, CTSTRING(REMOVE_ALL));
+		dirMenu.AppendMenu(MF_POPUP, deleteAllMenu, CTSTRING(REMOVE_ALL));
 
 		dirMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		MenuHelper::unlinkStaticMenus(dirMenu);
+		MenuHelper::removeStaticMenu(deleteAllMenu);
 		
 		return TRUE;
 	}

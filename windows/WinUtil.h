@@ -75,9 +75,6 @@ namespace WinUtil
 
 	uint64_t getNewFrameID(int type);
 
-	extern CMenu g_mainMenu;
-	extern OMenu g_copyHubMenu;
-
 	extern HWND g_mainWnd;
 	extern HWND g_mdiClient;
 	extern FlatTabCtrl* g_tabCtrl;
@@ -117,8 +114,6 @@ namespace WinUtil
 
 	void setClipboard(const tstring& str);
 	inline void setClipboard(const string& str) { setClipboard(Text::toT(str)); }
-
-	void unlinkStaticMenus(OMenu &menu);
 
 	void copyMagnet(const TTHValue& hash, const string& file, int64_t size);
 
@@ -222,8 +217,6 @@ namespace WinUtil
 
 	void getWindowText(HWND hwnd, tstring& text);
 	tstring getComboBoxItemText(HWND hwnd, int index);
-
-	void appendPrioItems(OMenu& menu, int idFirst);
 
 	inline void limitStringLength(tstring& str, size_t maxLen = 40)
 	{

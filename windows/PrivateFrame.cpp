@@ -513,7 +513,7 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 
 	cleanUcMenu(tabMenu);
-	WinUtil::unlinkStaticMenus(tabMenu);
+	MenuHelper::unlinkStaticMenus(tabMenu);
 	return TRUE;
 }
 
@@ -1049,25 +1049,23 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		if (x.substr(start, (replyToRealName.length() + 2)) == (_T('<') + replyToRealName + _T('>')))
 		{
 			if (!replyTo.user->isOnline())
-			{
-				return S_OK;
-			}
+				return 0;
 			OMenu* userMenu = createUserMenu();
 			userMenu->ClearMenu();
 			clearUserMenu();
 			
 			reinitUserMenu(replyTo.user, replyTo.hint);
-			
-			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), replyTo.hint));
-			WinUtil::appendSeparator(*userMenu);
+
 			userMenu->InsertSeparatorFirst(replyToRealName);
 			appendAndActivateUserItems(*userMenu);
-			
+			WinUtil::appendSeparator(*userMenu);
+			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), replyTo.hint));
+			WinUtil::appendSeparator(*userMenu);
 			userMenu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
+
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, cpt.x, cpt.y, m_hWnd);
-			
-			WinUtil::unlinkStaticMenus(*userMenu);
 			cleanUcMenu(*userMenu);
+			MenuHelper::unlinkStaticMenus(*userMenu);
 			bHandled = TRUE;
 		}
 		else
@@ -1079,7 +1077,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			bHandled = TRUE;
 		}
 	}
-	return S_OK;
+	return 0;
 }
 
 LRESULT PrivateFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)

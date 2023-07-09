@@ -442,6 +442,9 @@
     <ClCompile Include="windows\SearchUrlsPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\MenuHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -1018,6 +1021,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SearchUrlsPage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\MenuHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

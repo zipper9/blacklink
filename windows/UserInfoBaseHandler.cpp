@@ -105,10 +105,18 @@ void UserInfoGuiTraits::init()
 	privateMenu.InsertMenuItem(2, TRUE, &mii);
 
 	favUserMenu.CreatePopupMenu();
+
+	MenuHelper::addStaticMenu(grantMenu);
+	MenuHelper::addStaticMenu(copyUserMenu);
+	MenuHelper::addStaticMenu(userSummaryMenu);
+	MenuHelper::addStaticMenu(speedMenu);
+	MenuHelper::addStaticMenu(privateMenu);
+	MenuHelper::addStaticMenu(favUserMenu);
 }
 
 void UserInfoGuiTraits::uninit()
 {
+	// NOTE: no need to call MenuHelper::removeStaticMenu
 	copyUserMenu.DestroyMenu();
 	grantMenu.DestroyMenu();
 	userSummaryMenu.DestroyMenu();

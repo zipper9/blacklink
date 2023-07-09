@@ -204,6 +204,9 @@ MainFrame::~MainFrame()
 #ifdef IRAINMAN_INCLUDE_SMILE
 	EmoticonPack::destroy();
 #endif
+
+	UserInfoGuiTraits::uninit();
+	MenuHelper::uninit();
 	WinUtil::uninit();
 }
 
@@ -251,7 +254,7 @@ void MainFrame::createMainMenu(void)
 	// Loads images and creates command bar window
 	ctrlCmdBar.Create(m_hWnd, rcDefault, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE);
 	ctrlCmdBar.SetImageSize(16, 16);
-	m_hMenu = WinUtil::g_mainMenu;
+	m_hMenu = MenuHelper::mainMenu;
 	
 	ctrlCmdBar.AttachMenu(m_hMenu);
 	
@@ -414,7 +417,10 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	LogManager::g_mainWnd = m_hWnd;
 	LogManager::g_LogMessageID = STATUS_MESSAGE;
 	LogManager::g_isLogSpeakerEnabled = true;
+
 	WinUtil::init(m_hWnd);
+	MenuHelper::createMenus();
+	UserInfoGuiTraits::init();
 	
 	messageIdTaskbarCreated = RegisterWindowMessage(_T("TaskbarCreated"));
 	dcassert(messageIdTaskbarCreated);

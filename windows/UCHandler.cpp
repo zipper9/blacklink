@@ -49,7 +49,7 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		subMenu.InsertSeparatorFirst(TSTRING(USER_COMMANDS));
 		if (!addOpCommands) WinUtil::appendSeparator(menu);
 		subMenuIndex = menu.GetMenuItemCount();
-		menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::COMMANDS, 0));
+		menu.AppendMenu(MF_POPUP, subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::COMMANDS, 0));
 	}
 
 	CMenuHandle cur = useSubMenu ? subMenu.m_hMenu : menu.m_hMenu;
@@ -125,7 +125,7 @@ void UCHandlerBase::cleanUcMenu(OMenu& menu)
 	mii.fMask = MIIM_SUBMENU;
 	while (insertedItems)
 	{
-		menu.GetMenuItemInfo(menuPos, TRUE, &mii);
+		ATLVERIFY(menu.GetMenuItemInfo(menuPos, TRUE, &mii));
 		if (mii.hSubMenu == subMenu || mii.hSubMenu == serviceSubMenu)
 			menu.RemoveMenu(menuPos, MF_BYPOSITION);
 		else

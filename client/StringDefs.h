@@ -1473,7 +1473,6 @@ enum Strings   // @DontAdd
 	UPTIME, // "Uptime:"
 	UP_TRANSFER_COLORS, // "Choose upload bar colors depending on slots"
 	USER, // "User"
-	USERINFO, // "Info User"
 	USERLISTDBLCLICKACTION, // "User list"
 	USERS, // "Users"
 	USERS_ONLINE_FMT, // "Running... (%1% of %2% users online)"
