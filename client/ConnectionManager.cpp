@@ -507,16 +507,11 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
 	}
 #ifdef BL_FEATURE_IP_DATABASE
-	// Вешаемся при активной закачке cqi->getUser()->flushRatio();
+	// cqi->getUser()->flushRatio(); // FIXME
 #endif
 	QueueManager::userQueue.removeRunning(cqi->getUser());
-	const string token = cqi->getConnectionQueueToken();
+	tokenManager.removeToken(cqi->getConnectionQueueToken());
 	cqi.reset();
-	tokenManager.removeToken(token);
-	if (!ClientManager::isBeforeShutdown())
-	{
-		fire(ConnectionManagerListener::RemoveToken(), token);
-	}
 }
 
 UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
@@ -785,30 +780,18 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 				LOCK(csUploads);
 				putCQI_L(cqi);
 			}
-			if (!ClientManager::isBeforeShutdown())
-			{
-				fire(ConnectionManagerListener::Removed(), hintedUser, isDownload, token);
-			}
+			fire(ConnectionManagerListener::RemoveToken(), token);
+			fire(ConnectionManagerListener::Removed(), hintedUser, isDownload, token);
 		}
 		removed.clear();
 	}
 	
 	for (auto j = statusChanged.cbegin(); j != statusChanged.cend(); ++j)
-	{
-		if (!ClientManager::isBeforeShutdown())
-		{
-			fire(ConnectionManagerListener::ConnectionStatusChanged(), j->hintedUser, true, j->token);
-		}
-	}
+		fire(ConnectionManagerListener::ConnectionStatusChanged(), j->hintedUser, true, j->token);
 	statusChanged.clear();
 	// TODO - не звать для тех у кого ошибка загрузки
 	for (auto k = downloadError.cbegin(); k != downloadError.cend(); ++k)
-	{
-		if (!ClientManager::isBeforeShutdown())
-		{
-			fire(ConnectionManagerListener::FailedDownload(), k->hintedUser, k->reason, k->token);
-		}
-	}
+		fire(ConnectionManagerListener::FailedDownload(), k->hintedUser, k->reason, k->token);
 	downloadError.clear();
 	
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
@@ -1575,12 +1558,11 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		HintedUser user;
 		ReasonItem reasonItem;
 		string token;
-		bool doFire = true;
+		bool fireFailedDownload = true;
 		if (source->isSet(UserConnection::FLAG_DOWNLOAD))
 		{
 			WRITE_LOCK(*csDownloads);
 			auto i = find(downloads.begin(), downloads.end(), source->getUser());
-			//dcassert(i != downloads.end());
 			if (i == downloads.end())
 			{
 				dcassert(0);
@@ -1600,6 +1582,7 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		}
 		else if (source->isSet(UserConnection::FLAG_UPLOAD))
 		{
+			string token;
 			{
 				LOCK(csUploads);
 				auto i = find(uploads.begin(), uploads.end(), source->getUser());
@@ -1616,12 +1599,12 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 					putCQI_L(cqi);
 				}
 			}
-			doFire = false;
+			if (!token.empty())
+				fire(ConnectionManagerListener::RemoveToken(), token);
+			fireFailedDownload = false;
 		}
-		if (doFire && !ClientManager::isBeforeShutdown() && reasonItem.hintedUser.user)
-		{
+		if (fireFailedDownload && reasonItem.hintedUser.user)
 			fire(ConnectionManagerListener::FailedDownload(), reasonItem.hintedUser, reasonItem.reason, token);
-		}
 	}
 	putConnection(source);
 }
