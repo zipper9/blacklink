@@ -556,21 +556,6 @@ size_t QueueManager::UserQueue::getRunningCount()
 	return totalDownloads;
 }
 
-void QueueManager::FileQueue::getRunningFilesL(QueueItemList& runningFiles)
-{
-	for (auto i = queue.begin(); i != queue.end(); ++i)
-	{
-		if (ClientManager::isBeforeShutdown())
-			break;
-		QueueItemPtr& q = i->second;
-		if (q->isRunning())
-		{
-			q->updateDownloadedBytesAndSpeed();
-			runningFiles.push_back(q);
-		}
-	}
-}
-
 void QueueManager::UserQueue::removeRunning(const UserPtr& user)
 {
 	WRITE_LOCK(*csRunningMap);
@@ -1448,17 +1433,12 @@ void QueueManager::endBatch() noexcept
 		fire(QueueManagerListener::RemovedArray(), removed);
 }
 
-bool QueueManager::getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept
+QueueItemPtr QueueManager::getQueuedItem(const UserPtr& user) noexcept
 {
 	QueueRLock(*QueueItem::g_cs);
 	QueueItemPtr qi;
-	if (userQueue.getNextL(qi, user) != SUCCESS)
-		return false;
-
-	target = qi->getTarget();
-	size = qi->getSize();
-	flags = qi->getFlags();
-	return true;
+	if (userQueue.getNextL(qi, user) == SUCCESS) return qi;
+	return QueueItemPtr();
 }
 
 uint8_t QueueManager::FileQueue::getMaxSegments(uint64_t filesize)
@@ -2930,15 +2910,6 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	if (ClientManager::isBeforeShutdown())
 		return;
 
-	QueueItemList runningItems;
-	{
-		LockFileQueueShared lock;
-		getRunningFilesL(runningItems);
-	}
-	if (!runningItems.empty())
-	{
-		fire(QueueManagerListener::Tick(), runningItems); // Don't fire when locked
-	}
 	StringList targetList;
 	bool sourceAddedFlag = false;
 	{

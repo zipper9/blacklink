@@ -50,7 +50,6 @@ class QueueManagerListener
 		typedef X<14> RecheckDone;
 		typedef X<15> AddedArray;
 		typedef X<17> FileExistsAction;
-		typedef X<19> Tick; // FIXME: Remove this notification (currently used by TransferView)
 		typedef X<20> StatusUpdatedList;
 		typedef X<21> RemovedArray;
 		typedef X<23> SourceAdded;
@@ -63,7 +62,6 @@ class QueueManagerListener
 		virtual void on(Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept { }
 		virtual void on(TargetsUpdated, const StringList&) noexcept { }
 		virtual void on(StatusUpdated, const QueueItemPtr&) noexcept { }
-		virtual void on(Tick, const QueueItemList&) noexcept { }
 		virtual void on(StatusUpdatedList, const QueueItemList&) noexcept { }
 		virtual void on(PartialList, const HintedUser&, const string&) noexcept { }
 		virtual void on(FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept { }

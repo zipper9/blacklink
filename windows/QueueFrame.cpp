@@ -2787,7 +2787,7 @@ void QueueFrame::onTimerInternal()
 	processTasks();
 }
 
-void QueueFrame::QueueListViewCtrl::onSort()
+void QueueFrame::QueueListViewCtrl::sortItems()
 {
 	int count = GetItemCount();
 	for (int i = 0; i < count; ++i)
@@ -2796,6 +2796,7 @@ void QueueFrame::QueueListViewCtrl::onSort()
 		if (ii->type == QueueItemInfo::FILE)
 			ii->updateCachedInfo();
 	}
+	TypedListViewCtrl<QueueItemInfo, IDC_QUEUE>::sortItems();
 }
 
 CFrameWndClassInfo& QueueFrame::GetWndClassInfo()

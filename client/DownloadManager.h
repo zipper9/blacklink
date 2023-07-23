@@ -28,7 +28,6 @@
  * Singleton. Use its listener interface to update the download list
  * in the user interface.
  */
-typedef std::vector<UserConnection*> UserConnectionList;
 
 class DownloadManager : public Speaker<DownloadManagerListener>,
 	private TimerManagerListener,
@@ -63,8 +62,8 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 
 	private:
 		std::unique_ptr<RWLock> csDownloads;
-		DownloadList downloads;
-		UserConnectionList idlers;
+		std::vector<DownloadPtr> downloads;
+		std::vector<UserConnection*> idlers;
 		void removeIdleConnection(UserConnection* source);
 
 		static int64_t g_runningAverage;

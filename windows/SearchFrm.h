@@ -302,7 +302,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		class SearchInfo : public UserInfoBase
 		{
 			public:
-				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
+				SearchInfo(const SearchResult &sr) : sr(sr), stateFlags(0), parent(nullptr),
 					colMask(0), hits(0), iconIndex(-1)
 				{
 #ifdef BL_FEATURE_IP_DATABASE
@@ -314,6 +314,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				SearchInfo* parent;
 				size_t hits;
 				int iconIndex;
+				uint8_t stateFlags;
 
 				void getList();
 				void browseList();
@@ -349,12 +350,14 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				};
 				
 				const tstring& getText(uint8_t col) const;
-				
+
 				static int compareItems(const SearchInfo* a, const SearchInfo* b, int col);
-				
+
 				int getImageIndex() const;
 				void calcImageIndex();
 				static int getStateImageIndex() { return 0; }
+				uint8_t getStateFlags() const { return stateFlags; }
+				void setStateFlags(uint8_t flags) { stateFlags = flags; }
 
 				SearchInfo* createParent()
 				{

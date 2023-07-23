@@ -27,7 +27,7 @@ class PreviewMenu
 		static int previewAppsSize;
 		static OMenu previewMenu;
 
-		dcdrun(static bool _debugIsClean; static bool _debugIsActivated;)
+		dcdrun(static bool _debugIsClean;)
 };
 
 #endif // PREVIEW_MENU_H_

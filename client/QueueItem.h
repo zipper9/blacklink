@@ -29,8 +29,6 @@
 #include <atomic>
 #include <boost/container/flat_set.hpp>
 
-typedef std::vector<DownloadPtr> DownloadList;
-
 extern const string dctmpExtension;
 
 class QueueManager;
@@ -341,7 +339,7 @@ class QueueItem
 
 	private:
 		mutable CriticalSection csSegments;
-		DownloadList downloads;
+		std::vector<DownloadPtr> downloads;
 
 		SegmentSet doneSegments;
 		int64_t doneSegmentsSize;

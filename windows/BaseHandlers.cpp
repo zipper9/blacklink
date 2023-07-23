@@ -14,9 +14,6 @@ void PreviewBaseHandler::appendPreviewItems(OMenu& menu)
 
 void PreviewBaseHandler::activatePreviewItems(OMenu& menu)
 {
-	dcassert(!_debugIsActivated);
-	dcdrun(_debugIsActivated = true;)
-
 	int count = menu.GetMenuItemCount();
 	MENUITEMINFO mii = { sizeof(mii) };
 	// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason

@@ -11,7 +11,6 @@
 
 OMenu PreviewMenu::previewMenu;
 int PreviewMenu::previewAppsSize = 0;
-dcdrun(bool PreviewMenu::_debugIsActivated = false;)
 dcdrun(bool PreviewMenu::_debugIsClean = true;)
 
 static const char* extAudio =
@@ -157,5 +156,6 @@ void PreviewMenu::runPreview(WORD wID, const string& target)
 void PreviewMenu::clearPreviewMenu()
 {
 	previewMenu.ClearMenu();
-	dcdrun(_debugIsClean = true; _debugIsActivated = false; previewAppsSize = 0;)
+	previewAppsSize = 0;
+	dcdrun(_debugIsClean = true;)
 }

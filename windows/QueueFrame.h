@@ -375,7 +375,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		class QueueListViewCtrl : public TypedListViewCtrl<QueueItemInfo, IDC_QUEUE>
 		{
 			protected:
-				void onSort() override;
+				void sortItems() override;
 		};
 
 		struct QueueItemTask : public Task

@@ -1957,7 +1957,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			if (!si->getText(COLUMN_TTH).empty())
 			{
 				if (itemMatchesSelType(si))
-					ctrlResults.insertGroupedItem(si, expandSR, false, true);
+					ctrlResults.insertGroupedItem(si, expandSR, true);
 			}
 			else
 			{
@@ -2715,7 +2715,7 @@ void SearchFrame::insertStoredResults(HTREEITEM treeItem, int filter, bool doSiz
 			si->collapsed = true;
 			si->hits = 0;
 			if (si->sr.getType() == SearchResult::TYPE_FILE)
-				ctrlResults.insertGroupedItem(si, expandSR, false, true);
+				ctrlResults.insertGroupedItem(si, expandSR, true);
 			else
 				ctrlResults.insertItem(si, I_IMAGECALLBACK);
 		}

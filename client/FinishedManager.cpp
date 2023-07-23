@@ -100,7 +100,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 		{
 			HintedUser hintedUser = d->getHintedUser();
 			string hubs = Util::toString(ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString));
-			auto ip = d->getIP();
+			auto ip = Util::printIpAddress(d->getIP());
 			auto item = std::make_shared<FinishedItem>(qi->getTarget(), hintedUser, hubs,
 			                                           qi->getSize(), d->getRunningAverage(),
 			                                           GET_TIME(), qi->getTTH(),
@@ -128,7 +128,7 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 	{
 		HintedUser hintedUser = u->getHintedUser();
 		string hubs = Util::toString(ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString));
-		auto ip = u->getIP();
+		auto ip = Util::printIpAddress(u->getIP());
 		auto item = std::make_shared<FinishedItem>(u->getPath(), hintedUser, hubs,
 		                                           u->getFileSize(), u->getRunningAverage(),
 		                                           GET_TIME(), u->getTTH(),

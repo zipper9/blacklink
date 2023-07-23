@@ -15,12 +15,11 @@ class TransferData
 {
 	public:
 		TransferData():
-			type(0), actual(0), pos(0), startPos(0), startTime(0),
-			runningAverage(0), secondsLeft(0),/* percent(0),*/
+			type(0), pos(0), startPos(0), startTime(0),
+			runningAverage(0), secondsLeft(0),
 			size(0), fileSize(0), speed(0), transferFlags(0) {}
 
 		uint8_t type;
-		int64_t actual;
 		int64_t pos;
 		int64_t startPos;
 		uint64_t startTime;
@@ -30,7 +29,7 @@ class TransferData
 		int64_t fileSize;
 		int64_t speed;
 		int transferFlags;
-		
+
 		string path;
 		string token;
 		HintedUser hintedUser;
@@ -56,7 +55,15 @@ class TransferData
 		}
 };
 
+class DownloadData : public TransferData
+{
+	public:
+		const QueueItemPtr qi;
+
+		DownloadData(const QueueItemPtr& qi) : qi(qi) {}
+};
+
 typedef std::vector<TransferData> UploadArray;
-typedef std::vector<TransferData> DownloadArray;
+typedef std::vector<DownloadData> DownloadArray;
 
 #endif /*DCPLUSPLUS_DCPP_TRANSFER_DATA_H_*/

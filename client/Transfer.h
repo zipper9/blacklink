@@ -85,7 +85,7 @@ class Transfer
 		UserConnection* getUserConnection() { return userConnection; }
 		void resetUserConnection() { userConnection = nullptr; }
 		const string& getCipherName() const { return cipherName; }
-		const string& getIP() const { return ip; }
+		const IpAddress& getIP() const { return ip; }
 		
 		GETSET(Segment, segment, Segment);
 		GETSET(int64_t, fileSize, FileSize);
@@ -119,7 +119,7 @@ class Transfer
 		UserConnection* userConnection;
 		HintedUser hintedUser;
 		const string cipherName;
-		const string ip;
+		const IpAddress ip;
 };
 
 #endif /*TRANSFER_H_*/

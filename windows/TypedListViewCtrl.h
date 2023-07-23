@@ -180,21 +180,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		void resort()
 		{
 			dcassert(!destroyingItems);
-			if (sortColumn != -1)
-			{
-				/*
-				if(columnList[sortColumn].isOwnerDraw) //TODO - проверить сортировку
-				                {
-				                        const int l_item_count = GetItemCount();
-				                        for(int i=0;i<l_item_count;++i)
-				                        {
-				                          // updateItem(i,sortColumn);
-				                        }
-				                }
-				*/
-				onSort();
-				SortItems(&compareFunc, (LPARAM)this);
-			}
+			if (!destroyingItems && sortColumn != -1)
+				sortItems();
 		}
 
 		int insertItemState(const T* item, int image, int state)
@@ -383,10 +370,9 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			int high = GetItemCount();
 			if (sortColumn == -1 || high == 0)
 				return high;
-				
-			//PROFILE_THREAD_SCOPED()
+
 			high--;
-			
+
 			int low = 0;
 			int mid = 0;
 			T* b = nullptr;
@@ -590,7 +576,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 	protected:
 		bool destroyingItems = false;
 
-		virtual void onSort() {}
+		virtual void sortItems()
+		{
+			SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
+		}
 
 	private:
 		int sortColumn;

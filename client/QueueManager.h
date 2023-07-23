@@ -239,7 +239,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void setAutoPriority(const string& target, bool ap);
 		
 		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
-		static bool getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept;
+		static QueueItemPtr getQueuedItem(const UserPtr& user) noexcept;
 		DownloadPtr getDownload(UserConnection* source, Download::ErrorInfo& error) noexcept;
 		void putDownload(DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& download);
@@ -258,12 +258,6 @@ class QueueManager : public Singleton<QueueManager>,
 #ifdef BL_FEATURE_DROP_SLOW_SOURCES
 		bool dropSource(const DownloadPtr& d);
 #endif
-	private:
-		static void getRunningFilesL(QueueItemList& runningFiles)
-		{
-			fileQueue.getRunningFilesL(runningFiles);
-		}
-
 	public:
 		static bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& target);
 		/** Sanity check for the target filename */
@@ -312,7 +306,6 @@ class QueueManager : public Singleton<QueueManager>,
 				size_t getSize() const { return queue.size(); }
 				bool empty() const { return queue.empty(); }
 				const QueueItem::QIStringMap& getQueueL() const { return queue; }
-				void getRunningFilesL(QueueItemList& runningFiles);
 				QueueItemPtr moveTarget(QueueItemPtr& qi, const string& target);
 				void remove(const QueueItemPtr& qi);
 				void clearAll();

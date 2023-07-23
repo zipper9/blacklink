@@ -61,11 +61,6 @@ int64_t Upload::getAdjustedPos() const
 	return (downloadedBytes == -1 ? getStartPos() : downloadedBytes) + pos;
 }
 
-int64_t Upload::getAdjustedActual() const
-{
-	return (downloadedBytes == -1 ? getStartPos() : downloadedBytes) + actual;
-}
-
 int64_t Upload::getSecondsLeft() const
 {
 	int64_t avg = getRunningAverage();

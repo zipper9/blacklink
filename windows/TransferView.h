@@ -22,7 +22,6 @@
 #include "../client/DownloadManagerListener.h"
 #include "../client/UploadManagerListener.h"
 #include "../client/ConnectionManagerListener.h"
-#include "../client/QueueManagerListener.h"
 #include "../client/forward.h"
 #include "../client/Util.h"
 #include "../client/Download.h"
@@ -43,7 +42,6 @@ static const int TRANSFERS_VIEW_TRAITS = UserInfoGuiTraits::NO_COPY;
 class TransferView : public CWindowImpl<TransferView>, private DownloadManagerListener,
 	private UploadManagerListener,
 	private ConnectionManagerListener,
-	private QueueManagerListener,
 	public UserInfoBaseHandler<TransferView, TRANSFERS_VIEW_TRAITS>,
 	public PreviewBaseHandler,
 	public InternetSearchBaseHandler,
@@ -79,14 +77,14 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		COMMAND_ID_HANDLER(IDC_FORCE, onForce)
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchAlternates)
 		COMMAND_ID_HANDLER(IDC_ADD_P2P_GUARD, onAddP2PGuard)
-		
+
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemoveAll)
 		COMMAND_ID_HANDLER(IDC_DISCONNECT_ALL, onDisconnectAll)
 		COMMAND_ID_HANDLER(IDC_COLLAPSE_ALL, onCollapseAll)
 		COMMAND_ID_HANDLER(IDC_EXPAND_ALL, onExpandAll)
 		COMMAND_ID_HANDLER(IDC_MENU_SLOWDISCONNECT, onSlowDisconnect)
-		
+
 		MESSAGE_HANDLER_HWND(WM_INITMENUPOPUP, OMenu::onInitMenuPopup)
 		MESSAGE_HANDLER_HWND(WM_MEASUREITEM, OMenu::onMeasureItem)
 		MESSAGE_HANDLER_HWND(WM_DRAWITEM, OMenu::onDrawItem)
@@ -97,13 +95,13 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
-		
+
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uibBase)
 		CHAIN_COMMANDS(PreviewBaseHandler)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		END_MSG_MAP()
-		
+
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
@@ -124,13 +122,13 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			collapseAll();
 			return 0;
 		}
-		
+
 		LRESULT onExpandAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			expandAll();
 			return 0;
 		}
-		
+
 		LRESULT onKeyDownTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMLVKEYDOWN* kd = (NMLVKEYDOWN*) pnmh;
@@ -140,19 +138,19 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			}
 			return 0;
 		}
-		
+
 		LRESULT onAddP2PGuard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			ctrlTransfers.forEachSelected(&ItemInfo::disconnectAndBlock);
 			return 0;
 		}
-		
+
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			ctrlTransfers.forEachSelected(&ItemInfo::disconnect);
 			return 0;
 		}
-		
+
 		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -165,7 +163,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			return NFR_ANSI;
 #endif
 		}
-		
+
 		LRESULT onPauseSelectedItem(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			pauseSelectedTransfer();
@@ -184,35 +182,31 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			onTimerInternal();
 			return 0;
 		}
-		
+
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 		{
 			processTasks();
 			return 0;
 		}
-		
+
 	public:
 		void getSelectedUsers(vector<UserPtr>& v) const;
 
 	private:
 		enum Tasks
 		{
-			TRANSFER_ADD_ITEM,
-			TRANSFER_REMOVE_ITEM,
-			TRANSFER_UPDATE_ITEM,
-			TRANSFER_UPDATE_PARENT,
-			TRANSFER_UPDATE_TOKEN_ITEM,
-			TRANSFER_REMOVE_DOWNLOAD_ITEM,
-			TRANSFER_REMOVE_TOKEN_ITEM
+			TRANSFER_ADD_TOKEN,
+			TRANSFER_REMOVE_TOKEN,
+			TRANSFER_UPDATE_TOKEN
 		};
-		
+
 		enum
 		{
 			COLUMN_FIRST,
 			COLUMN_USER = COLUMN_FIRST,
 			COLUMN_HUB,
 			COLUMN_STATUS,
-			COLUMN_TIMELEFT,
+			COLUMN_TIME_LEFT,
 			COLUMN_SPEED,
 			COLUMN_FILE,
 			COLUMN_SIZE,
@@ -228,13 +222,14 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			COLUMN_P2P_GUARD,
 			COLUMN_LAST
 		};
-		
+
 		enum
 		{
 			IMAGE_DOWNLOAD = 0,
 			IMAGE_UPLOAD,
 			IMAGE_SEGMENT
 		};
+
 		struct UpdateInfo;
 
 	public:
@@ -246,10 +241,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #endif
 				enum Status
 				{
-					STATUS_RUNNING,
-					STATUS_WAITING
+					STATUS_WAITING,
+					STATUS_REQUESTING,
+					STATUS_RUNNING
 				};
-				
+
 				ItemInfo();
 				ItemInfo(const UpdateInfo& ui);
 #ifdef _DEBUG
@@ -260,21 +256,21 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #endif
 				const bool download;
 				TTHValue tth;
+				QueueItemPtr qi;
 
+				ItemInfo* parent;
 				bool transferFailed;
-				bool collapsed;
 
+				uint8_t stateFlags;
 				int16_t running;
 				int16_t hits;
 
-				ItemInfo* parent;
 				HintedUser hintedUser;
 				Status status;
 				Transfer::Type type;
 
 				int64_t pos;
 				int64_t size;
-				int64_t actual;
 				int64_t speed;
 				int64_t timeLeft;
 				IpAddress transferIp;
@@ -285,101 +281,95 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				tstring nicks;
 				tstring hubs;
 				string  token;
-				
+
 				mutable IPInfo ipInfo;
-				
+
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 				tstring ratioText;
 #endif
-				
+
 				void update(const UpdateInfo& ui);
 				void updateNicks();
 				const UserPtr& getUser() const
 				{
 					return hintedUser.user;
 				}
-				
+
 				void disconnect();
 				void disconnectAndBlock();
 				void removeAll();
-				
-				// FIXME
+
 				double getProgressPosition() const
 				{
-					return (pos > 0) ? (double) actual / (double) pos : 1.0;
+					return (size > 0) ? (double) pos / (double) size : 1.0;
 				}
 				int64_t getPos() const;
 				const tstring getText(uint8_t col) const;
 				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
-				
+				static int compareTargets(const ItemInfo* a, const ItemInfo* b);
+				static int compareUsers(const ItemInfo* a, const ItemInfo* b);
+
 				uint8_t getImageIndex() const
 				{
 					return static_cast<uint8_t>(download ? (!parent ? IMAGE_DOWNLOAD : IMAGE_SEGMENT) : IMAGE_UPLOAD);
 				}
 				static int getStateImageIndex() { return 0; }
-				ItemInfo* createParent()
-				{
-					dcassert(download);
-					ItemInfo* ii = new ItemInfo;
-					ii->hits = 0;
-					ii->statusString = TSTRING(CONNECTING);
-					ii->target = target;
-					ii->errorStatusString = errorStatusString;
-					ii->tth = tth;
-					return ii;
-				}
-				const tstring& getGroupCond() const
-				{
-					return target;
-				}
+				uint8_t getStateFlags() const { return stateFlags; }
+				void setStateFlags(uint8_t flags) { stateFlags = flags; }
+				ItemInfo* createParent();
+				const tstring& getGroupCond() const { return target; }
+				static tstring formatStatusString(int transferFlags, uint64_t startTime, int64_t pos, int64_t size);
 
 			private:
 				void init();
 		};
-		
+
 	private:
 		struct UpdateInfo : public Task
 		{
 			enum
 			{
-				MASK_POS                 = 0x0001,
-				MASK_SIZE                = 0x0002,
-				MASK_ACTUAL              = 0x0004,
-				MASK_SPEED               = 0x0008,
-				MASK_FILE                = 0x0010,
-				MASK_STATUS              = 0x0020,
-				MASK_TIMELEFT            = 0x0040,
-				MASK_IP                  = 0x0080,
-				MASK_STATUS_STRING       = 0x0100,
-				MASK_SEGMENT             = 0x0200,
-				MASK_CIPHER              = 0x0400,
-				MASK_USER                = 0x0800,
-				MASK_ERROR_STATUS_STRING = 0x2000,
-				MASK_TOKEN               = 0x4000,
-				MASK_TTH                 = 0x8000
+				MASK_QUEUE_ITEM    = 0x0001,
+				MASK_POS           = 0x0002,
+				MASK_SIZE          = 0x0004,
+				MASK_SPEED         = 0x0008,
+				MASK_FILE          = 0x0010,
+				MASK_STATUS        = 0x0020,
+				MASK_TIMELEFT      = 0x0040,
+				MASK_IP            = 0x0080,
+				MASK_STATUS_STRING = 0x0100,
+				MASK_SEGMENTS      = 0x0200,
+				MASK_CIPHER        = 0x0400,
+				MASK_USER          = 0x0800,
+				MASK_ERROR_TEXT    = 0x2000,
+				MASK_TOKEN         = 0x4000,
+				MASK_TTH           = 0x8000
 			};
-			
-			bool operator==(const ItemInfo& ii) const
-			{
-				return  download == ii.download && hintedUser.user == ii.hintedUser.user;
-			}
+
 			UpdateInfo(const HintedUser& user, bool isDownload, bool isTransferFailed = false) :
 				updateMask(0), download(isDownload), hintedUser(user), // fix empty string
 				transferFailed(isTransferFailed),
 				type(Transfer::TYPE_LAST), running(0),
-				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0)
+				status(ItemInfo::STATUS_WAITING), pos(0), size(0), speed(0), timeLeft(0)
 			{
 			}
 			UpdateInfo() :
 				updateMask(0), download(true), transferFailed(false),
 				type(Transfer::TYPE_LAST), running(0),
-				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0)
+				status(ItemInfo::STATUS_WAITING), pos(0), size(0), speed(0), timeLeft(0)
 			{
 			}
-			
+
 			const bool download;
 			const bool transferFailed;
 			uint32_t updateMask;
+
+			QueueItemPtr qi;
+			void setQueueItem(const QueueItemPtr& qi)
+			{
+				this->qi = qi;
+				updateMask |= MASK_QUEUE_ITEM;
+			}
 
 			HintedUser hintedUser;
 			void setHintedUser(const HintedUser& user)
@@ -392,7 +382,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			void setRunning(int16_t running)
 			{
 				this->running = running;
-				updateMask |= MASK_SEGMENT;
+				updateMask |= MASK_SEGMENTS;
 			}
 
 			ItemInfo::Status status;
@@ -414,13 +404,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			{
 				this->size = size;
 				updateMask |= MASK_SIZE;
-			}
-
-			int64_t actual;
-			void setActual(int64_t actual)
-			{
-				this->actual = actual;
-				updateMask |= MASK_ACTUAL;
 			}
 
 			string token;
@@ -446,10 +429,10 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			}
 
 			tstring errorStatusString;
-			void setErrorStatusString(const tstring& str)
+			void setErrorText(const tstring& str)
 			{
 				errorStatusString = str;
-				updateMask |= MASK_ERROR_STATUS_STRING;
+				updateMask |= MASK_ERROR_TEXT;
 			}
 
 			tstring statusString;
@@ -486,32 +469,20 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				updateMask |= MASK_TTH;
 			}
 
-			// !SMT!-IP
-			void setIP(const string& aIP)
+			IpAddress ip;
+			void setIP(const IpAddress& ip)
 			{
-				const auto l_new_value = Text::toT(aIP);
-				if (l_new_value != m_ip)
-				{
-					dcassert(!(!m_ip.empty() && aIP.empty()));
-					m_ip = l_new_value;
-#ifdef FLYLINKDC_USE_DNS
-					dns = Text::toT(Socket::nslookup(aIP));
-#endif
-					updateMask |= MASK_IP;
-				}
+				this->ip = ip;
+				updateMask |= MASK_IP;
 			}
-			tstring m_ip; // TODO - зачем тут tstring?
-
-			void formatStatusString(int transferFlags, uint64_t startTime);
-#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-			string dumpInfo(const UserPtr& user) const;
-#endif
 		};
 
-		void onSpeakerAddItem(const UpdateInfo& ui);
-		void parseQueueItemUpdateInfo(UpdateInfo* ui, const QueueItemPtr& qi);
-		UpdateInfo* createUpdateInfoForAddedEvent(const HintedUser& hintedUser, bool download, const string& token);
-		
+		ItemInfo *addToken(const UpdateInfo& ui);
+		ItemInfo* findItemByToken(const string& token, int& index);
+		ItemInfo* findItemByTarget(const tstring& target);
+		void updateDownload(ItemInfo* ii, int index, int updateMask);
+		UpdateInfo* createUpdateInfoForNewItem(const HintedUser& hintedUser, bool isDownload, const string& token);
+
 		ItemInfoList ctrlTransfers;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 
@@ -572,22 +543,15 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		{
 			onTransferComplete(upload.get(), false, upload->getPath(), true);
 		}
-		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr&) noexcept override;
-		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& list) noexcept override;
-		void on(QueueManagerListener::Tick, const QueueItemList& list) noexcept override;
-		void on(QueueManagerListener::Removed, const QueueItemPtr&) noexcept override;
-		
-		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& download) noexcept override;
-		
+
 		void on(SettingsManagerListener::Repaint) override;
-		
-		void onTransferComplete(const Transfer* t, const bool download, const string& filename, bool failed);
+
+		void onTransferComplete(const Transfer* t, bool download, const string& filename, bool failed);
 		static void starting(UpdateInfo* ui, const Transfer* t);
-		
+
 		void collapseAll();
 		void expandAll();
-		
-		ItemInfo* findItem(const UpdateInfo& ui, int& pos) const;
+
 		void updateItem(int ii, uint32_t updateMask);
 
 		void pauseSelectedTransfer(void);

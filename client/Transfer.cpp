@@ -36,7 +36,7 @@ Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth
 	isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
 	startTime(0), lastTick(GET_TICK()),
 	cipherName(conn->getCipherName()),
-	ip(Util::printIpAddress(conn->getRemoteIp())),
+	ip(conn->getRemoteIp()),
 	fileSize(-1)
 {
 	speed.setStartTick(lastTick);

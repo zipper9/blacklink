@@ -73,13 +73,13 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			auto d = *i;
-			if (d->getPos() > 0) // https://drdump.com/DumpGroup.aspx?DumpGroupID=614035&Login=guest (Wine)
+			if (d->getPos() > 0)
 			{
-				TransferData td;
+				DownloadData td(d->getQueueItem());
 				td.token = d->getConnectionQueueToken();
 				td.hintedUser = d->getHintedUser();
 				td.pos = d->getPos();
-				td.actual = d->getActual();
+				td.startPos = d->getStartPos();
 				td.secondsLeft = d->getSecondsLeft();
 				td.speed = d->getRunningAverage();
 				td.startTime = d->getStartTime();
@@ -449,7 +449,7 @@ void DownloadManager::endData(UserConnection* source)
 		{
 			d->getDownloadFile()->flushBuffers(true);
 		}
-		catch (const Exception& e) //http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2154
+		catch (const Exception& e)
 		{
 			d->resetPos();
 			failDownload(source, e.getError(), true);
@@ -463,17 +463,11 @@ void DownloadManager::endData(UserConnection* source)
 	}
 	
 	removeDownload(d);
-	
-	if (d->getType() != Transfer::TYPE_FILE)
-	{
-		fire(DownloadManagerListener::Complete(), d);
-		//if (d->getUserConnection())
-		//{
-		//  const auto l_token = d->getConnectionQueueToken();
-		//  fire(DownloadManagerListener::RemoveToken(), l_token);
-		//}
-	}
 	QueueManager::getInstance()->putDownload(d, true, false);
+	
+	if (d->getType() != Transfer::TYPE_FILE || d->getQueueItem()->isFinished())
+		fire(DownloadManagerListener::Complete(), d);
+
 	checkDownloads(source);
 }
 

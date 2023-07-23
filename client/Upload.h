@@ -26,7 +26,6 @@ class Upload : public Transfer, public Flags
 		void updateSpeed(uint64_t currentTick);
 		
 		int64_t getAdjustedPos() const;
-		int64_t getAdjustedActual() const;
 		int64_t getSecondsLeft() const;
 
 		InputStream* getReadStream() const { return readStream; }

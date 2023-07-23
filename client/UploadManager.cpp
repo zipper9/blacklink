@@ -99,7 +99,6 @@ void UploadManager::initTransferData(TransferData& td, const Upload* u)
 	td.token = u->getConnectionQueueToken();
 	td.hintedUser = u->getHintedUser();
 	td.pos = u->getAdjustedPos();
-	td.actual = u->getAdjustedActual();
 	td.secondsLeft = u->getSecondsLeft();
 	td.speed = u->getRunningAverage();
 	td.startTime = u->getStartTime();
