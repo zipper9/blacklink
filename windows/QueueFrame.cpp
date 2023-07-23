@@ -2785,7 +2785,17 @@ void QueueFrame::onTimerInternal()
 				ctrlQueue.updateItem(i);
 				u = true;
 			}
-			if (ii->getQueueItem()->isRunning()) u = true;
+			if (ii->getQueueItem()->isRunning())
+			{
+				u = true;
+				ii->flags |= QueueItemInfo::FLAG_RUNNING;
+			}
+			else if (ii->flags & QueueItemInfo::FLAG_RUNNING)
+			{
+				u = true;
+				ii->flags &= ~QueueItemInfo::FLAG_RUNNING;
+				ctrlQueue.updateItem(i, COLUMN_STATUS);
+			}
 		}
 		if (u) ctrlQueue.Invalidate();
 		if (updateStatus) updateQueueStatus();

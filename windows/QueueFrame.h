@@ -281,7 +281,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 					DIRECTORY,
 					FILE
 				} const type;
-	
+
 #ifdef DEBUG_QUEUE_FRAME
 				static int itemsCreated;
 				static int itemsRemoved;
@@ -291,7 +291,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				}
 #endif
 
-				explicit QueueItemInfo(const QueueItemPtr& qi) : qi(qi), dir(nullptr), type(FILE)
+				explicit QueueItemInfo(const QueueItemPtr& qi) : qi(qi), dir(nullptr), type(FILE), flags(0)
 				{
 #ifdef DEBUG_QUEUE_FRAME
 					++itemsCreated;
@@ -302,7 +302,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 					onlineSourcesCount = (uint16_t) std::min(qi->getOnlineSourceCountL(), (size_t) UINT16_MAX);
 				}
 
-				explicit QueueItemInfo(const DirItem* dir) : dir(dir), type(DIRECTORY)
+				explicit QueueItemInfo(const DirItem* dir) : dir(dir), type(DIRECTORY), flags(0)
 				{
 #ifdef DEBUG_QUEUE_FRAME
 					++itemsCreated;
@@ -361,6 +361,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				bool updateCachedInfo();
 
 				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
+
+				static const uint16_t FLAG_RUNNING = 1;
+				uint16_t flags;
 
 			private:
 				const QueueItemPtr qi;
@@ -433,7 +436,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		CTreeViewCtrl ctrlDirs;
 		
 		CStatusBarCtrl ctrlStatus;
-		int statusSizes[6]; // TODO: fix my size.
+		int statusSizes[6];
 		bool updateStatus;
 		
 		static const int columnId[];
