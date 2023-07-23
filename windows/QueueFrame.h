@@ -443,6 +443,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 		void createMenus();
 		void destroyMenus();
+		void initPriorityMenu();
 		static void clearMenu(OMenu& menu, int count);
 		static void clearCheck(HMENU hMenu);
 		void addQueueList();

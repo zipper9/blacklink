@@ -225,6 +225,21 @@ void QueueFrame::clearCheck(HMENU hMenu)
 		menu.CheckMenuItem(i, MF_BYPOSITION | MF_UNCHECKED);
 }
 
+void QueueFrame::initPriorityMenu()
+{
+	if (!priorityMenu)
+	{
+		priorityMenu.SetOwnerDraw(OMenu::OD_NEVER);
+		priorityMenu.CreatePopupMenu();
+		MenuHelper::addStaticMenu(priorityMenu);
+		MenuHelper::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
+		priorityMenu.AppendMenu(MF_SEPARATOR);
+		priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
+	}
+	else
+		clearCheck(priorityMenu);
+}
+
 void QueueFrame::createMenus()
 {
 	if (!browseMenu)
@@ -285,17 +300,6 @@ void QueueFrame::createMenus()
 	}
 	else
 		clearCheck(segmentsMenu);
-	if (!priorityMenu)
-	{
-		priorityMenu.SetOwnerDraw(OMenu::OD_NEVER);
-		priorityMenu.CreatePopupMenu();
-		MenuHelper::addStaticMenu(priorityMenu);
-		MenuHelper::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
-		priorityMenu.AppendMenu(MF_SEPARATOR);
-		priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
-	}
-	else
-		clearCheck(priorityMenu);
 	if (!copyMenu)
 	{
 		copyMenu.CreatePopupMenu();
@@ -305,6 +309,7 @@ void QueueFrame::createMenus()
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
 		copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	}
+	initPriorityMenu();
 }
 
 void QueueFrame::destroyMenus()
@@ -1832,7 +1837,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		const DirItem* dir = reinterpret_cast<DirItem*>(ctrlDirs.GetItemData(ht));
 
 		usingDirMenu = true;
-		
+		initPriorityMenu();
+
 		OMenu dirMenu;
 		dirMenu.CreatePopupMenu();
 		dirMenu.AppendMenu(MF_POPUP, priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
