@@ -78,7 +78,7 @@ class HashDatabaseLMDB
 		std::list<std::unique_ptr<HashDatabaseConnection>> conn;
 		uintptr_t defThreadId = 0;
 
-		static bool checkError(int error) noexcept;
+		static bool checkError(int error, const char* what) noexcept;
 };
 
 #endif /* HASH_DATABASE_LMDB_H */

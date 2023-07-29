@@ -36,13 +36,13 @@ bool HashDatabaseLMDB::open() noexcept
 	if (env) return false;
 
 	int error = mdb_env_create(&env);
-	if (!checkError(error)) return false;
+	if (!checkError(error, "mdb_env_create")) return false;
 
 	string path = getDBPath();
 	path += PATH_SEPARATOR;
 	File::ensureDirectory(path);
 	error = mdb_env_open(env, path.c_str(), 0, 0664);
-	if (!checkError(error))
+	if (!checkError(error, "mdb_env_open"))
 	{
 		mdb_env_close(env);
 		env = nullptr;
@@ -55,7 +55,7 @@ bool HashDatabaseLMDB::open() noexcept
 	if (error || info.me_mapsize < minMapSize)
 	{
 		error = mdb_env_set_mapsize(env, minMapSize);
-		if (!checkError(error))
+		if (!checkError(error, "mdb_env_set_mapsize"))
 		{
 			mdb_env_close(env);
 			env = nullptr;
@@ -81,10 +81,16 @@ void HashDatabaseLMDB::close() noexcept
 	}
 }
 
-bool HashDatabaseLMDB::checkError(int error) noexcept
+bool HashDatabaseLMDB::checkError(int error, const char* what) noexcept
 {
 	if (!error) return true;
 	string errorText = "LMDB error: " + Util::toString(error);
+	if (what)
+	{
+		errorText += " (";
+		errorText += what;
+		errorText += ")";
+	}
 	LogManager::message(errorText);
 	return false;
 }
@@ -158,21 +164,28 @@ HashDatabaseConnection::~HashDatabaseConnection() noexcept
 bool HashDatabaseConnection::createReadTxn(MDB_dbi &dbi) noexcept
 {
 	int error;
+	const char* what;
 	if (!txnRead)
+	{
+		what = "mdb_txn_begin";
 		error = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txnRead);
+	}
 	else
+	{
 		error = mdb_txn_renew(txnRead);
-	if (!HashDatabaseLMDB::checkError(error)) return false;
+		what = "mdb_txn_renew";
+	}
+	if (!HashDatabaseLMDB::checkError(error, what)) return false;
 	error = mdb_dbi_open(txnRead, nullptr, 0, &dbi);
-	return HashDatabaseLMDB::checkError(error);
+	return HashDatabaseLMDB::checkError(error, "mdb_dbi_open");
 }
 
 bool HashDatabaseConnection::createWriteTxn(MDB_dbi &dbi, MDB_txn* &txnWrite) noexcept
 {
 	int error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
-	if (!HashDatabaseLMDB::checkError(error)) return false;
+	if (!HashDatabaseLMDB::checkError(error, "mdb_txn_begin")) return false;
 	error = mdb_dbi_open(txnWrite, nullptr, 0, &dbi);
-	return HashDatabaseLMDB::checkError(error);
+	return HashDatabaseLMDB::checkError(error, "mdb_dbi_open");
 }
 
 bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key, MDB_val &val) noexcept
@@ -187,13 +200,13 @@ bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &
 		}
 		error = mdb_put(txnWrite, dbi, &key, &val, 0);
 	}
-	if (!HashDatabaseLMDB::checkError(error))
+	if (!HashDatabaseLMDB::checkError(error, "mdb_put"))
 	{
 		mdb_txn_abort(txnWrite);
 		return false;
 	}
 	error = mdb_txn_commit(txnWrite);
-	bool result = HashDatabaseLMDB::checkError(error);
+	bool result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit");
 	mdb_dbi_close(env, dbi);
 	return result;
 }
@@ -202,11 +215,11 @@ bool HashDatabaseConnection::resizeMap() noexcept
 {
 	MDB_envinfo info;
 	int error = mdb_env_info(env, &info);
-	if (!HashDatabaseLMDB::checkError(error)) return false;
+	if (!HashDatabaseLMDB::checkError(error, "mdb_env_info")) return false;
 
 	size_t newMapSize = info.me_mapsize << 1;
 	error = mdb_env_set_mapsize(env, newMapSize);
-	return HashDatabaseLMDB::checkError(error);
+	return HashDatabaseLMDB::checkError(error, "mdb_env_set_mapsize");
 }
 
 bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, uint64_t *fileSize, string *path, size_t *treeSize, uint32_t *uploadCount) noexcept
