@@ -38,7 +38,7 @@
 #include "ResourceLoader.h"
 #include "ExMessageBox.h"
 
-static const unsigned TIMER_VAL = 1000;
+static const unsigned TIMER_VAL = 200;
 
 #ifdef _DEBUG
 std::atomic<long> TransferView::ItemInfo::g_count_transfer_item;
@@ -306,7 +306,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				return FALSE;
 			}
 
-			const bool main = !ii->parent && ctrlTransfers.findChildren(ii->getGroupCond()).size() > 1;
+			const bool segmentedDownload = ii->groupInfo && ii->groupInfo->parent == ii;
 
 			clearPreviewMenu();
 			OMenu transferMenu;
@@ -327,7 +327,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #endif
 			transferMenu.AppendMenu(MF_SEPARATOR);
 
-			if (!main && (i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
+			if (!segmentedDownload && (i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
 			{
 				const ItemInfo* ii = ctrlTransfers.getItemData(i);
 				showUserMenu = true;
@@ -390,7 +390,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			copyMenu.EnableMenuItem(IDC_COPY_LINK, flag);
 			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, flag);
 
-			if (!main)
+			if (!segmentedDownload)
 			{
 				OMenu* defItemMenu = &transferMenu;
 				if (defaultItem)
@@ -484,26 +484,23 @@ LRESULT TransferView::onForce(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		ItemInfo* ii = ctrlTransfers.getItemData(i);
-		ctrlTransfers.SetItemText(i, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
-
-		if (ii->parent == nullptr && ii->hits != -1)
+		if (ii->groupInfo && ii->groupInfo->parent == ii)
 		{
-			const vector<ItemInfo*>& children = ctrlTransfers.findChildren(ii->getGroupCond());
-			for (auto j = children.cbegin(); j != children.cend(); ++j)
+			for (ItemInfo* child : ii->groupInfo->children)
 			{
-				ItemInfo* jj = *j;
-
-				int h = ctrlTransfers.findItem(jj);
-				if (h != -1)
-					ctrlTransfers.SetItemText(h, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
-
-				jj->transferFailed = false;
-				ConnectionManager::getInstance()->force(jj->hintedUser);
+				child->transferFailed = false;
+				int pos = ctrlTransfers.findItem(child);
+				if (pos != -1)
+					ctrlTransfers.SetItemText(pos, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
+				ConnectionManager::getInstance()->force(child->hintedUser);
 			}
 		}
 		else
 		{
 			ii->transferFailed = false;
+			int pos = ctrlTransfers.findItem(ii);
+			if (pos != -1)
+				ctrlTransfers.SetItemText(pos, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
 			ConnectionManager::getInstance()->force(ii->hintedUser);
 		}
 	}
@@ -538,7 +535,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			const ItemInfo* ii = reinterpret_cast<const ItemInfo*>(cd->nmcd.lItemlParam);
 			if (!ii) return CDRF_DODEFAULT;
 			CustomDrawHelpers::startItemDraw(customDrawState, cd);
-			customDrawState.indent = ii->parent ? 1 : 0;
+			customDrawState.indent = ii->hasParent() ? 1 : 0;
 			return CDRF_NOTIFYSUBITEMDRAW;
 		}
 
@@ -592,7 +589,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					}
 #endif
 					ctrlTransfers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, &rc);
-					int barIndex = ii->download ? (!ii->parent ? 0 : 1) : 2;
+					int barIndex = ii->download ? (ii->hasParent() ? 1 : 0) : 2;
 					int iconIndex = -1;
 
 					// Real rc, the original one.
@@ -718,8 +715,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 			return 0;
 
 		ItemInfo* i = ctrlTransfers.getItemData(item->iItem);
-		const vector<ItemInfo*>& children = ctrlTransfers.findChildren(i->getGroupCond());
-		bool isUser = i->parent != nullptr || children.size() <= 1;
+		bool isUser = !(i->groupInfo && i->groupInfo->parent == i);
 		switch (SETTING(TRANSFERLIST_DBLCLICK))
 		{
 			case 0:
@@ -768,12 +764,13 @@ TransferView::ItemInfo* TransferView::addToken(const UpdateInfo& ui)
 	ii->update(ui);
 	if (ii->download)
 	{
-		int pos = ctrlTransfers.insertGroupedItem(ii, false, true);
-		if (ii->parent)
+		int pos = ctrlTransfers.insertGroupedItem(ii, false, false);
+		ItemInfo* parent = ii->groupInfo->parent;
+		if (parent)
 		{
-			pos = ctrlTransfers.findItem(ii->parent);
+			pos = ctrlTransfers.findItem(parent);
 			dcassert(pos != -1);
-			updateDownload(ii->parent, pos, ui.updateMask & UpdateInfo::MASK_FILE);
+			updateDownload(parent, pos, ui.updateMask & UpdateInfo::MASK_FILE);
 		}
 		else
 			updateDownload(ii, pos, ui.updateMask & UpdateInfo::MASK_FILE);
@@ -844,7 +841,7 @@ void TransferView::processTasks()
 				{
 					if (ui.download)
 					{
-						ItemInfo* parent = ii->parent;
+						ItemInfo* parent = ii->groupInfo ? ii->groupInfo->parent : nullptr;
 						bool changeParent = (ui.updateMask & UpdateInfo::MASK_FILE) && ui.target != ii->target;
 						if (changeParent)
 						{
@@ -857,10 +854,11 @@ void TransferView::processTasks()
 						if (changeParent)
 						{
 							ii->target = ui.target;
+							ii->qi = ui.qi;
 							ui.updateMask ^= UpdateInfo::MASK_FILE;
-							ctrlTransfers.insertGroupedItem(ii, false, true);
+							ctrlTransfers.insertGroupedItem(ii, false, false);
 							ii->update(ui);
-							parent = ii->parent;
+							parent = ii->groupInfo->parent;
 							if (parent) updateDownload(parent, -1, UpdateInfo::MASK_FILE);
 						}
 						else
@@ -1000,6 +998,7 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	if (ui.updateMask & UpdateInfo::MASK_TTH)
 	{
 		tth = ui.tth;
+		ItemInfo* parent = groupInfo ? groupInfo->parent : nullptr;
 		if (parent) parent->tth = tth;
 	}
 	if ((ui.updateMask & UpdateInfo::MASK_QUEUE_ITEM) && qi.get() != ui.qi.get())
@@ -1587,9 +1586,9 @@ void TransferView::collapseAll()
 	const auto& parents = ctrlTransfers.getParents();
 	for (auto i = parents.cbegin(); i != parents.cend(); ++i)
 	{
-		ItemInfo* l = i->second.parent;
-		if (l->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED)
-			ctrlTransfers.Collapse(l, ctrlTransfers.findItem(l));
+		ItemInfo* parent = i->second->parent;
+		if (parent && (parent->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
+			ctrlTransfers.Collapse(parent, ctrlTransfers.findItem(parent));
 	}
 }
 
@@ -1598,9 +1597,9 @@ void TransferView::expandAll()
 	const auto& parents = ctrlTransfers.getParents();
 	for (auto i = parents.cbegin(); i != parents.cend(); ++i)
 	{
-		ItemInfo* l = i->second.parent;
-		if (!(l->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
-			ctrlTransfers.Expand(l, ctrlTransfers.findItem(l));
+		ItemInfo* parent = i->second->parent;
+		if (parent && !(parent->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
+			ctrlTransfers.Expand(parent, ctrlTransfers.findItem(parent));
 	}
 }
 
@@ -1609,22 +1608,14 @@ LRESULT TransferView::onDisconnectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	int i = -1;
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		const ItemInfo* ii = ctrlTransfers.getItemData(i);
-
-		const vector<ItemInfo*>& children = ctrlTransfers.findChildren(ii->getGroupCond());
-		for (auto j = children.cbegin(); j != children.cend(); ++j)
+		ItemInfo* ii = ctrlTransfers.getItemData(i);
+		if (ii->groupInfo && ii->groupInfo->parent == ii)
 		{
-			ItemInfo* jj = *j;
-			jj->disconnect();
-
-			int h = ctrlTransfers.findItem(jj);
-			if (h != -1)
-			{
-				ctrlTransfers.SetItemText(h, COLUMN_STATUS, CTSTRING(DISCONNECTED));
-			}
+			for (ItemInfo* child : ii->groupInfo->children)
+				child->disconnect();
 		}
-
-		ctrlTransfers.SetItemText(i, COLUMN_STATUS, CTSTRING(DISCONNECTED));
+		else
+			ii->disconnect();
 	}
 	return 0;
 }
@@ -1901,9 +1892,9 @@ TransferView::ItemInfo* TransferView::findItemByToken(const string& token, int& 
 	for (int i = 0; i < count; i++)
 	{
 		ItemInfo* ii = ctrlTransfers.getItemData(i);
-		if (ii->download && !(ii->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
+		if (ii->groupInfo && !(ii->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
 		{
-			const auto& children = ctrlTransfers.findChildren(ii->getGroupCond());
+			const auto& children = ii->groupInfo->children;
 			for (ItemInfo* ii : children)
 				if (ii->token == token) return ii;
 		}
@@ -1918,7 +1909,7 @@ TransferView::ItemInfo* TransferView::findItemByTarget(const tstring& target)
 	for (int i = 0; i < count; i++)
 	{
 		ItemInfo* ii = ctrlTransfers.getItemData(i);
-		if (!ii->parent && ii->target == target)
+		if (!ii->hasParent() && ii->target == target)
 			return ii;
 	}
 	return nullptr;
@@ -1946,7 +1937,6 @@ void TransferView::ItemInfo::init()
 	size = 0;
 	speed = 0;
 	timeLeft = 0;
-	parent = nullptr;
 	hits = -1;
 	running = 0;
 	type = Transfer::TYPE_FILE;

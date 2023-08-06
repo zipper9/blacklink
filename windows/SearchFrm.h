@@ -53,7 +53,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	public CMessageFilter
 {
 		class SearchInfo;
-		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue> SearchInfoList;
+		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue, false> SearchInfoList;
 
 	public:
 		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, SizeModes mode = SIZE_ATLEAST, int type = FILE_TYPE_ANY);
@@ -302,7 +302,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		class SearchInfo : public UserInfoBase
 		{
 			public:
-				SearchInfo(const SearchResult &sr) : sr(sr), stateFlags(0), parent(nullptr),
+				SearchInfo(const SearchResult &sr) : sr(sr), stateFlags(0),
 					colMask(0), hits(0), iconIndex(-1)
 				{
 #ifdef BL_FEATURE_IP_DATABASE
@@ -310,11 +310,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 				}
 				const UserPtr& getUser() const override { return sr.getUser(); }
-				bool collapsed;
-				SearchInfo* parent;
-				size_t hits;
 				int iconIndex;
+
+				int hits;
 				uint8_t stateFlags;
+				SearchInfoList::GroupInfoPtr groupInfo;
 
 				void getList();
 				void browseList();
@@ -359,20 +359,17 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				uint8_t getStateFlags() const { return stateFlags; }
 				void setStateFlags(uint8_t flags) { stateFlags = flags; }
 
-				SearchInfo* createParent()
-				{
-					return this;
-				}
+				SearchInfo* createParent() { return nullptr; }
+				SearchInfo* getParent() { return groupInfo ? groupInfo->parent : nullptr; }
+				bool hasParent() const { return groupInfo && groupInfo->parent && groupInfo->parent != this; }
+
 				SearchResult sr;
 				mutable tstring columns[COLUMN_LAST];
 				mutable uint32_t colMask;
 #ifdef BL_FEATURE_IP_DATABASE
 				bool ipUpdated;
 #endif
-				const TTHValue& getGroupCond() const
-				{
-					return sr.getTTH();
-				}
+				const TTHValue& getGroupCond() const { return sr.getTTH(); }
 		};
 
 		struct HubInfo

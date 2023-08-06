@@ -1070,7 +1070,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 				columns[COLUMN_FILENAME] = Text::toT(sr.getFileName());
 			break;
 		case COLUMN_HITS:
-			columns[COLUMN_HITS] = hits == 0 ? Util::emptyStringT : Util::toStringT(hits + 1) + _T(' ') + TSTRING(USERS);
+			columns[COLUMN_HITS] = hits < 0 ? Util::emptyStringT : Util::toStringT(hits + 1) + _T(' ') + TSTRING(USERS);
 			return columns[COLUMN_HITS];
 		case COLUMN_NICK:
 			if (getUser())
@@ -1177,8 +1177,8 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 		if (prio == QueueItem::DEFAULT && WinUtil::isShift())
 			prio = QueueItem::HIGHEST;
 			
-		if (si->parent)
-			si = si->parent;
+		SearchInfo* parent = si->getParent();
+		if (parent) si = parent;
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
 			tstring tmp = tgt;
@@ -1195,27 +1195,29 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 			si->sr.flags |= SearchResult::FLAG_QUEUED;
 			sf->updateList = true;
 
-			const auto children = sf->ctrlResults.findChildren(si->getGroupCond());
-			for (auto i = children.cbegin(); i != children.cend(); ++i)
+			if (si->groupInfo)
 			{
-				SearchInfo* j = *i;
-				try
+				const auto& children = si->groupInfo->children;
+				for (auto i = children.cbegin(); i != children.cend(); ++i)
 				{
-					if (j)
+					SearchInfo* j = *i;
+					try
 					{
-						getConnFlag = true;
-						params.size = j->sr.getSize();
-						params.root = &j->sr.getTTH();
-						QueueManager::getInstance()->add(target, params, j->sr.getHintedUser(), mask, true, getConnFlag);
-						j->sr.flags |= SearchResult::FLAG_QUEUED;
-						sf->updateList = true;
+						if (j)
+						{
+							getConnFlag = true;
+							params.size = j->sr.getSize();
+							params.root = &j->sr.getTTH();
+							QueueManager::getInstance()->add(target, params, j->sr.getHintedUser(), mask, true, getConnFlag);
+							j->sr.flags |= SearchResult::FLAG_QUEUED;
+							sf->updateList = true;
+						}
+					}
+					catch (const Exception& e)
+					{
+						LogManager::message(e.getError());
 					}
 				}
-				catch (const Exception& e)
-				{
-					LogManager::message(e.getError());
-				}
-				
 			}
 		}
 		else
@@ -1837,36 +1839,33 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 	if (isSkipSearchResult(si))
 		return;
 	const SearchResult& sr = si->sr;
-	SearchInfoList::ParentPair* pp = nullptr;
 	const auto user = sr.getUser();
 	const IpAddress& ip = sr.getIP();
 	if (ip.type)
 		user->setIP(ip);
 	// Check previous search results for dupes
-	if (!si->getText(COLUMN_TTH).empty())
+	const auto& parents = ctrlResults.getParents();
+	if (!sr.getTTH().isZero())
 	{
-		pp = ctrlResults.findParentPair(sr.getTTH());
-		if (pp)
+		auto it = parents.find(sr.getTTH());
+		if (it != parents.end())
 		{
-			if (pp->parent && // fix https://drdump.com/DumpGroup.aspx?DumpGroupID=1052556
-			    user->getCID() == pp->parent->getUser()->getCID() && sr.getFile() == pp->parent->sr.getFile())
+			const auto& gi = it->second;
+			if (gi->parent &&
+			    user->getCID() == gi->parent->getUser()->getCID() && sr.getFile() == gi->parent->sr.getFile())
 			{
 				removeSearchInfo(si);
 				return;
 			}
-			for (auto k = pp->children.cbegin(); k != pp->children.cend(); ++k)
-			{
-				if (user->getCID() == (*k)->getUser()->getCID())
+			for (const SearchInfo* item : gi->children)
+				if (user->getCID() == item->getUser()->getCID() && sr.getFile() == item->sr.getFile())
 				{
-					if (sr.getFile() == (*k)->sr.getFile())
-					{
-						removeSearchInfo(si);
-						return;
-					}
+					removeSearchInfo(si);
+					return;
 				}
-			}
 		}
 	}
+#if 0
 	else
 	{
 		for (auto s = ctrlResults.getParents().cbegin(); s != ctrlResults.getParents().cend(); ++s)
@@ -1883,6 +1882,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			}
 		}
 	}
+#endif
 	if (running)
 	{
 		resultsCount++;
@@ -2473,7 +2473,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					}
 				}
 #endif
-				customDrawState.indent = si->parent ? 1 : 0;
+				customDrawState.indent = si->hasParent() ? 1 : 0;
 			}
 			CustomDrawHelpers::startItemDraw(customDrawState, cd);
 			if (customDrawState.flags & CustomDrawHelpers::FLAG_SELECTED)
@@ -2711,9 +2711,8 @@ void SearchFrame::insertStoredResults(HTREEITEM treeItem, int filter, bool doSiz
 	for (SearchInfo* si : data)
 		if (matchFilter(si, filter, doSizeCompare, mode, size))
 		{
-			si->parent = nullptr;
-			si->collapsed = true;
-			si->hits = 0;
+			si->groupInfo.reset();
+			si->hits = -1;
 			if (si->sr.getType() == SearchResult::TYPE_FILE)
 				ctrlResults.insertGroupedItem(si, expandSR, true);
 			else

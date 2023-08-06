@@ -58,7 +58,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		typedef UCHandler<TransferView> ucBase;
 
 		class ItemInfo;
-		typedef TypedTreeListViewCtrl<ItemInfo, IDC_TRANSFERS, tstring> ItemInfoList;
+		typedef TypedTreeListViewCtrl<ItemInfo, IDC_TRANSFERS, tstring, true> ItemInfoList;
 
 		BEGIN_MSG_MAP(TransferView)
 		NOTIFY_HANDLER(IDC_TRANSFERS, LVN_GETDISPINFO, ctrlTransfers.onGetDispInfo)
@@ -258,12 +258,13 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				TTHValue tth;
 				QueueItemPtr qi;
 
-				ItemInfo* parent;
 				bool transferFailed;
 
 				uint8_t stateFlags;
-				int16_t running;
 				int16_t hits;
+				ItemInfoList::GroupInfoPtr groupInfo;
+
+				int16_t running;
 
 				HintedUser hintedUser;
 				Status status;
@@ -311,13 +312,15 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 				uint8_t getImageIndex() const
 				{
-					return static_cast<uint8_t>(download ? (!parent ? IMAGE_DOWNLOAD : IMAGE_SEGMENT) : IMAGE_UPLOAD);
+					if (download) return hasParent() ? IMAGE_SEGMENT : IMAGE_DOWNLOAD;
+					return IMAGE_UPLOAD;
 				}
 				static int getStateImageIndex() { return 0; }
 				uint8_t getStateFlags() const { return stateFlags; }
 				void setStateFlags(uint8_t flags) { stateFlags = flags; }
 				ItemInfo* createParent();
 				const tstring& getGroupCond() const { return target; }
+				bool hasParent() const { return groupInfo && groupInfo->parent && groupInfo->parent != this; }
 				static tstring formatStatusString(int transferFlags, uint64_t startTime, int64_t pos, int64_t size);
 
 			private:
