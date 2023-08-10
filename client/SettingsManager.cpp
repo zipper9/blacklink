@@ -779,6 +779,9 @@ static const char* settingTags[] =
 	"ShowSeekersInSpyFrame",
 	"LogSeekersInSpyFrame",
 	
+	// Transfers
+	"TransfersOnlyActiveUploads",
+
 	// Settings dialog
 	"RememberSettingsPage",
 	"SettingsPage",

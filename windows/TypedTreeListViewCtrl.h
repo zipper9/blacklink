@@ -222,25 +222,6 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			return insertItemInternal(i, item, image);
 		}
 
-		void removeParent(T* parent)
-		{
-			dcassert(!destroyingItems);
-			BusyCounter<bool> busy(destroyingItems);
-			ParentPair* pp = findParentPair(parent->getGroupCond());
-			if (pp)
-			{
-				for (auto i = pp->children.cbegin(); i != pp->children.cend(); ++i)
-				{
-					deleteItem(*i);
-					if (ownsItemData)
-						delete *i;
-				}
-				pp->children.clear();
-				parents.erase(parent->getGroupCond());
-			}
-			deleteItem(parent);
-		}
-
 		void removeGroupedItem(T* item, bool removeFromMemory = true)
 		{
 			bool resortFlag = false;

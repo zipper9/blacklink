@@ -750,6 +750,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SHOW_SEEKERS_IN_SPY_FRAME,
 			LOG_SEEKERS_IN_SPY_FRAME,
 
+			// Transfers
+			TRANSFERS_ONLY_ACTIVE_UPLOADS,
+
 			// Settings dialog
 			REMEMBER_SETTINGS_PAGE,
 			SETTINGS_PAGE,

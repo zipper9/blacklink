@@ -113,7 +113,7 @@ string UserInfoBaseHandlerTraitsUser<UserPtr>::getNick(const UserPtr& user)
 	return user->getLastNick();
 }
 
-TransferView::TransferView() : timer(m_hWnd), shouldSort(false)
+TransferView::TransferView() : timer(m_hWnd), shouldSort(false), onlyActiveUploads(false)
 {
 	ctrlTransfers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlTransfers.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
@@ -145,6 +145,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	setListViewColors(ctrlTransfers);
 
 	ctrlTransfers.SetImageList(g_transferArrowsImage.getIconList(), LVSIL_SMALL);
+	onlyActiveUploads = BOOLSETTING(TRANSFERS_ONLY_ACTIVE_UPLOADS);
 
 	ConnectionManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
@@ -392,6 +393,10 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 
 			if (!segmentedDownload)
 			{
+				transferMenu.AppendMenu(MF_SEPARATOR);
+				transferMenu.AppendMenu(MF_STRING, IDC_TRANSFERS_ONLY_ACTIVE_UPLOADS, CTSTRING(SHOW_ONLY_ACTIVE_UPLOADS));
+				if (onlyActiveUploads)
+					transferMenu.CheckMenuItem(IDC_TRANSFERS_ONLY_ACTIVE_UPLOADS, MF_BYCOMMAND | MF_CHECKED);
 				OMenu* defItemMenu = &transferMenu;
 				if (defaultItem)
 				{
@@ -760,6 +765,8 @@ TransferView::ItemInfo* TransferView::addToken(const UpdateInfo& ui)
 #endif
 		return nullptr;
 	}
+	if (onlyActiveUploads && !ui.download && ui.status != ItemInfo::STATUS_RUNNING)
+		return nullptr;
 	ItemInfo* ii = new ItemInfo(ui);
 	ii->update(ui);
 	if (ii->download)
@@ -1138,18 +1145,18 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 			status += " [P2PGuard.ini]";
 		ui->setErrorText(Text::toT(status + " [" + reason + "]"));
 	}
-	else
 #endif
-	{
-		ui->setErrorText(Text::toT(reason));
-	}
-
 	ui->setStatus(ItemInfo::STATUS_WAITING);
 	addTask(TRANSFER_UPDATE_TOKEN, ui);
 }
 
 void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept
 {
+	if (onlyActiveUploads)
+	{
+		addTask(TRANSFER_REMOVE_TOKEN, new StringTask(token));
+		return;
+	}
 	UpdateInfo* ui = new UpdateInfo(hintedUser, false);
 	ui->setToken(token);
 	ui->setStatusString(Text::toT(reason));
@@ -1212,7 +1219,7 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 		case COLUMN_STATUS:
 		{
 			if (status != STATUS_RUNNING && !errorStatusString.empty())
-				return statusString + _T(" [") + errorStatusString  + _T("]");
+				return errorStatusString;
 			return statusString;
 		}
 		case COLUMN_TIME_LEFT:
@@ -1637,18 +1644,34 @@ LRESULT TransferView::onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 				qi->second->toggleExtraFlag(QueueItem::XFLAG_AUTODROP);
 		}
 	}
+	return 0;
+}
 
+LRESULT TransferView::onOnlyActiveUploads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	onlyActiveUploads = !onlyActiveUploads;
+	SET_SETTING(TRANSFERS_ONLY_ACTIVE_UPLOADS, onlyActiveUploads);
+	if (onlyActiveUploads)
+	{
+		int count = ctrlTransfers.GetItemCount();
+		for (int i = count - 1; i >= 0; i--)
+		{
+			const ItemInfo* ii = ctrlTransfers.getItemData(i);
+			if (!ii->download && ii->status != ItemInfo::STATUS_RUNNING)
+			{
+				ctrlTransfers.DeleteItem(i);
+				delete ii;
+			}
+		}
+	}
 	return 0;
 }
 
 void TransferView::on(SettingsManagerListener::Repaint)
 {
-	if (!ClientManager::isBeforeShutdown())
-	{
-		initProgressBars(true);
-		if (ctrlTransfers.isRedraw())
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-	}
+	initProgressBars(true);
+	if (ctrlTransfers.isRedraw())
+		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 void TransferView::updateDownload(ItemInfo* ii, int index, int updateMask)
@@ -1951,7 +1974,6 @@ TransferView::ItemInfo* TransferView::ItemInfo::createParent()
 	ii->hits = 0;
 	ii->statusString = TSTRING(CONNECTING);
 	ii->target = target;
-	ii->errorStatusString = errorStatusString;
 	ii->tth = tth;
 	ii->qi = qi;
 	return ii;

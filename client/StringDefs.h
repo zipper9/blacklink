@@ -1844,6 +1844,7 @@ enum Strings   // @DontAdd
 	IPV6_NOT_DETECTED, // "IPv6 support is not detected on this system.\nPlease check your settings."
 	NETWORK_DEVICE_NOT_FOUND, // "Network device %1% not found"
 	SHOW_LEGEND, // "Show legend"
+	SHOW_ONLY_ACTIVE_UPLOADS, // "Show only active uploads"
 	MAGNET_LINKS_NOT_FOUND, // "Magnet links not found"
 	SELECT_HUB, // "Select hub"
 	CONNECT_CCPM, // "Establish direct PM channel"

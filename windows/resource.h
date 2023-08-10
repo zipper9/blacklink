@@ -158,6 +158,7 @@
 #define IDC_SEARCH_PAUSE                1019
 #define IDC_HUBLIST                     1020
 #define IDC_EMOT                        1021
+#define IDC_TRANSFERS_ONLY_ACTIVE_UPLOADS 1022
 #define IDC_SERVER                      1023
 #define IDC_EXTERNAL_IP                 1024
 #define IDC_TRAY_LIMITER                1025
