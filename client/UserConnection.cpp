@@ -90,10 +90,6 @@ UserConnection::~UserConnection()
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Deleted, p=" +
 			Util::toHexString(this) + " sock=" + Util::toHexString(socket), false);
 #endif
-	if (download)
-		download->resetUserConnection();
-	if (upload)
-		upload->resetUserConnection();
 	if (socket)
 	{
 		socket->disconnect(true);
@@ -150,11 +146,11 @@ bool UserConnection::isIpBlocked(bool isDownload)
 
 void UserConnection::failed(const string& line) noexcept
 {
-	ConnectionManager::getInstance()->failed(this, line, false);
 	if (isSet(FLAG_ASSOCIATED | FLAG_UPLOAD))
 		UploadManager::getInstance()->failed(this, line);
 	if (isSet(FLAG_ASSOCIATED | FLAG_DOWNLOAD))
 		DownloadManager::getInstance()->fail(this, line);
+	ConnectionManager::getInstance()->failed(this, line, false);
 }
 
 void UserConnection::protocolError(const string& error) noexcept

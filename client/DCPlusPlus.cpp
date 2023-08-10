@@ -176,11 +176,13 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 	SettingsManager::getInstance()->save();
 	ConnectionManager::getInstance()->shutdown();
 
-	preparingCoreToShutdown(); // Зовем тут второй раз т.к. вероятно при автообновлении оно не зовется.
+	preparingCoreToShutdown();
 
 #ifdef FLYLINKDC_USE_DNS
 	Socket::dnsCache.waitShutdown(); // !SMT!-IP
 #endif
+	DownloadManager::getInstance()->clearDownloads();
+	UploadManager::getInstance()->clearUploads();
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 	BufferedSocket::waitShutdown();
 #ifdef DEBUG_SHUTDOWN

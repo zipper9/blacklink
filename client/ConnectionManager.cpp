@@ -514,19 +514,26 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	cqi.reset();
 }
 
-UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
+UserConnectionPtr ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
 {
 	dcassert(!shuttingDown);
-	UserConnection* uc = new UserConnection;
+	UserConnectionPtr uc = std::make_shared<UserConnection>();
 	{
 		WRITE_LOCK(*csConnections);
-		userConnections.insert(uc);
+		userConnections.insert(make_pair(uc.get(), uc));
 	}
 	if (nmdc)
 		uc->setFlag(UserConnection::FLAG_NMDC);
 	if (secure)
 		uc->setFlag(UserConnection::FLAG_SECURE);
 	return uc;
+}
+
+UserConnectionPtr ConnectionManager::findConnection(const UserConnection* conn) const noexcept
+{
+	WRITE_LOCK(*csConnections);
+	auto i = userConnections.find(conn);
+	return i == userConnections.end() ? UserConnectionPtr() : i->second;
 }
 
 void ConnectionManager::putConnection(UserConnection* conn)
@@ -541,7 +548,9 @@ void ConnectionManager::putConnection(UserConnection* conn)
 		auto i = userConnections.find(conn);
 		if (i != userConnections.end())
 		{
-			UserConnection* uc = *i;
+			UserConnectionPtr& uc = i->second;
+			uc->download.reset();
+			uc->upload.reset();
 			uc->state = UserConnection::STATE_UNUSED;
 		}
 		if (ccpm && user)
@@ -555,18 +564,15 @@ void ConnectionManager::putConnection(UserConnection* conn)
 		DETECTION_DEBUG("[ConnectionManager][putConnection] " + conn->getHintedUser().toString());
 }
 
-void ConnectionManager::deleteConnection(UserConnection* conn)
+void ConnectionManager::deleteConnection(UserConnectionPtr& conn)
 {
 	if (CMD_DEBUG_ENABLED()) 
 		DETECTION_DEBUG("[ConnectionManager][deleteConnection] " + conn->getHintedUser().toString());
 	{
 		WRITE_LOCK(*csConnections);
-		auto i = userConnections.find(conn);
+		auto i = userConnections.find(conn.get());
 		if (i != userConnections.end())
-		{
-			delete *i;
 			userConnections.erase(i);
-		}
 	}
 }
 
@@ -830,10 +836,9 @@ void ConnectionManager::checkConnections(uint64_t tick)
 	WRITE_LOCK(*csConnections);
 	for (auto j = userConnections.cbegin(); j != userConnections.cend();)
 	{
-		UserConnection* uc = *j;
+		UserConnection* uc = j->second.get();
 		if (uc->state == UserConnection::STATE_UNUSED)
 		{
-			delete uc;
 			userConnections.erase(j++);
 			continue;
 		}
@@ -977,7 +982,7 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 		}
 		return;
 	}
-	UserConnection* uc = getConnection(false, type == SERVER_TYPE_SSL);
+	UserConnection* uc = getConnection(false, type == SERVER_TYPE_SSL).get();
 	uc->setFlag(UserConnection::FLAG_INCOMING);
 	uc->setState(UserConnection::STATE_SUPNICK);
 	uc->updateLastActivity();
@@ -1009,7 +1014,8 @@ void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, uin
 	if (shuttingDown)
 		return;
 
-	UserConnection* uc = getConnection(true, secure);
+	UserConnectionPtr ucPtr = getConnection(true, secure);
+	UserConnection* uc = ucPtr.get();
 	uc->setUserConnectionToken(myNick);
 	uc->setHubUrl(hubUrl);
 	uc->setEncoding(encoding);
@@ -1021,7 +1027,7 @@ void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, uin
 	}
 	catch (const Exception&)
 	{
-		deleteConnection(uc);
+		deleteConnection(ucPtr);
 	}
 }
 
@@ -1057,7 +1063,8 @@ void ConnectionManager::adcConnect(const OnlineUser& user, int af, uint16_t port
 		if (!ip.type) return;
 	}
 
-	UserConnection* uc = getConnection(false, secure);
+	UserConnectionPtr ucPtr = getConnection(false, secure);
+	UserConnection* uc = ucPtr.get();
 	uc->setUserConnectionToken(token);
 	uc->setEncoding(Text::CHARSET_UTF8);
 	uc->setState(UserConnection::STATE_CONNECT);
@@ -1074,7 +1081,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, int af, uint16_t port
 	}
 	catch (const Exception&)
 	{
-		deleteConnection(uc);
+		deleteConnection(ucPtr);
 	}
 }
 
@@ -1100,7 +1107,7 @@ void ConnectionManager::stopServer(int af) noexcept
 void ConnectionManager::processMyNick(UserConnection* source, const string& nick) noexcept
 {
 	dcassert(!nick.empty());
-	dcdebug("ConnectionManager::onMyNick %p, %s\n", (void*)source, nick.c_str());
+	dcdebug("ConnectionManager::onMyNick %p, %s\n", (void*) source, nick.c_str());
 	dcassert(!source->getUser());
 
 	string hubUrl;
@@ -1614,7 +1621,7 @@ void ConnectionManager::disconnect(const UserPtr& user)
 	READ_LOCK(*csConnections);
 	for (auto i = userConnections.cbegin(); i != userConnections.cend(); ++i)
 	{
-		UserConnection* uc = *i;
+		UserConnection* uc = i->second.get();
 		if (uc->getUser() == user)
 		{
 			uc->disconnect(true);
@@ -1629,7 +1636,7 @@ void ConnectionManager::disconnect(const UserPtr& user, bool isDownload)
 	READ_LOCK(*csConnections);
 	for (auto i = userConnections.cbegin(); i != userConnections.cend(); ++i)
 	{
-		UserConnection* uc = *i;
+		UserConnection* uc = i->second.get();
 		dcassert(uc);
 		if (uc->getUser() == user && uc->isSet((Flags::MaskType)(isDownload ? UserConnection::FLAG_DOWNLOAD : UserConnection::FLAG_UPLOAD)))
 		{
@@ -1792,7 +1799,7 @@ void ConnectionManager::shutdown()
 		READ_LOCK(*csConnections);
 		for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
 		{
-			(*j)->disconnect(true);
+			j->second->disconnect(true);
 		}
 	}
 
@@ -1853,7 +1860,6 @@ void ConnectionManager::shutdown()
 			}
 		}
 		{
-			//READ_LOCK(*csUploads);
 			LOCK(csUploads);
 			for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 			{
@@ -1873,14 +1879,14 @@ void ConnectionManager::setUploadLimit(const UserPtr& user, int lim)
 	auto i = userConnections.begin();
 	while (i != userConnections.end())
 	{
-		if ((*i)->state == UserConnection::STATE_UNUSED)
+		UserConnection* uc = i->second.get();
+		if (uc->state == UserConnection::STATE_UNUSED)
 		{
-			delete *i;
-			userConnections.erase(i++);
+			i = userConnections.erase(i);
 			continue;
 		}
-		if ((*i)->isSet(UserConnection::FLAG_UPLOAD) && (*i)->getUser() == user)
-			(*i)->setUploadLimit(lim);
+		if (uc->isSet(UserConnection::FLAG_UPLOAD) && uc->getUser() == user)
+			uc->setUploadLimit(lim);
 		i++;
 	}
 }
@@ -1891,11 +1897,11 @@ void ConnectionManager::removeUnusedConnections()
 	auto i = userConnections.begin();
 	while (i != userConnections.end())
 	{
-		if ((*i)->state == UserConnection::STATE_UNUSED)
-		{
-			delete *i;
-			userConnections.erase(i++);
-		} else i++;
+		UserConnection* uc = i->second.get();
+		if (uc->state == UserConnection::STATE_UNUSED)
+			i = userConnections.erase(i);
+		else
+			i++;
 	}
 }
 
@@ -1916,7 +1922,7 @@ string ConnectionManager::getUserConnectionInfo() const
 	for (auto i = userConnections.cbegin(); i != userConnections.cend(); i++)
 	{
 		if (!info.empty()) info += '\n';
-		info += (*i)->getDescription();
+		info += i->second->getDescription();
 	}
 	return info;
 }
@@ -1980,7 +1986,7 @@ void ConnectionManager::dumpUserConnections()
 {
 	READ_LOCK(*csConnections);
 	for (auto i = userConnections.cbegin(); i != userConnections.cend(); i++)
-		(*i)->dumpInfo();
+		i->second->dumpInfo();
 }
 #endif
 

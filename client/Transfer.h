@@ -25,8 +25,6 @@
 #include "HashValue.h"
 #include "SpeedCalc.h"
 
-class UserConnection;
-
 class Transfer
 {
 	public:
@@ -71,8 +69,8 @@ class Transfer
 		}
 		
 	protected:
-		Transfer(UserConnection* conn, const string& path, const TTHValue& tth);
-		void getParams(const UserConnection* source, StringMap& params) const;
+		Transfer(const UserConnectionPtr& conn, const string& path, const TTHValue& tth);
+		void getParams(StringMap& params) const;
 
 	public:
 		UserPtr& getUser() { return hintedUser.user; }
@@ -81,12 +79,11 @@ class Transfer
 		const string& getPath() const { return path; }
 		const TTHValue& getTTH() const { return tth; }
 		const string& getConnectionQueueToken() const;
-		const UserConnection* getUserConnection() const { return userConnection; }
-		UserConnection* getUserConnection() { return userConnection; }
-		void resetUserConnection() { userConnection = nullptr; }
-		const string& getCipherName() const { return cipherName; }
+		string getCipherName() const;
+		const UserConnectionPtr& getUserConnection() const { return userConnection; }
+		UserConnectionPtr getUserConnection() { return userConnection; }
 		const IpAddress& getIP() const { return ip; }
-		
+
 		GETSET(Segment, segment, Segment);
 		GETSET(int64_t, fileSize, FileSize);
 		GETSET(Type, type, Type);
@@ -116,9 +113,8 @@ class Transfer
 		int64_t startPos;
 		/** Actual speed */
 		int64_t runningAverage;
-		UserConnection* userConnection;
+		const UserConnectionPtr userConnection;
 		HintedUser hintedUser;
-		const string cipherName;
 		const IpAddress ip;
 };
 

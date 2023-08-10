@@ -30,6 +30,8 @@
 #include "TimeUtil.h"
 #include "ConnectionStatus.h"
 
+class UserCommand;
+
 class ClientBase
 {
 	public:

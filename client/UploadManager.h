@@ -100,7 +100,8 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 			// READ_LOCK(*g_csUploadsDelay);
 			return uploads.size();
 		}
-		
+		void clearUploads() noexcept;
+
 		static int getRunningCount() { return g_running; }
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
@@ -186,7 +187,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		static int64_t g_runningAverage;
 		uint64_t fireballStartTick;
 		uint64_t fileServerCheckTick;
-		
+
 		UploadList uploads;
 		UploadList finishedUploads;
 		std::unique_ptr<RWLock> csFinishedUploads;
@@ -230,7 +231,6 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		bool isCompressedFile(const string& target);
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);
-		static void resetUpload(UserConnection* source);
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		struct banmsg_t

@@ -113,6 +113,11 @@ class UserConnection :
 			PFS_SLOT = 4
 		};
 
+		UserConnection() noexcept;
+		UserConnection(const UserConnection &) = delete;
+		UserConnection& operator= (const UserConnection&) = delete;
+		virtual ~UserConnection();
+
 		int16_t getNumber() const { return number; }
 #ifdef DEBUG_USER_CONNECTION
 		void dumpInfo() const;
@@ -324,12 +329,6 @@ class UserConnection :
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 		string unknownFeatures;
 #endif
-		
-		// We only want ConnectionManager to create this...
-		UserConnection() noexcept;
-		UserConnection(const UserConnection &) = delete;
-		UserConnection& operator= (const UserConnection&) = delete;
-		virtual ~UserConnection();
 
 		bool checkState(int state, const string& command) const noexcept;
 		bool checkState(int state, const AdcCommand& command) const noexcept;

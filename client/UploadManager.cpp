@@ -313,6 +313,8 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		source->fileNotAvail("Invalid request");
 		return false;
 	}
+	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
+	if (!ucPtr) return false;
 	const bool isTypeTree = typeStr == Transfer::fileTypeNames[Transfer::TYPE_TREE];
 	const bool isTypePartialList = typeStr == Transfer::fileTypeNames[Transfer::TYPE_PARTIAL_LIST];
 	int useCompType = compressionType;
@@ -590,7 +592,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			{
 				delete is;
 				errorText = STRING(ALL_UPLOAD_SLOTS_TAKEN);
-				resetUpload(source);
+				source->setUpload(nullptr);
 				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
 				return false;
 			}
@@ -627,7 +629,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 		{
 			auto up = *i;
-			if (source == up->getUserConnection())
+			if (source == up->getUserConnection().get())
 			{
 				finishedUploads.erase(i);
 				if (sourceFile != up->getPath())
@@ -642,7 +644,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			}
 		}
 	}
-	UploadPtr u = std::make_shared<Upload>(source, tth, sourceFile, is);
+	UploadPtr u = std::make_shared<Upload>(ucPtr, tth, sourceFile, is);
 	u->setSegment(Segment(start, size));
 	source->setUpload(u);
 
@@ -678,13 +680,6 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	}
 	
 	return true;
-}
-
-void UploadManager::resetUpload(UserConnection* source)
-{
-	UploadPtr& upload = source->getUpload();
-	if (upload) upload->resetUserConnection();
-	source->setUpload(nullptr);
 }
 
 bool UploadManager::isCompressedFile(const string& target)
@@ -977,7 +972,7 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 		}
 
 		source->send(cmd);
-		
+
 		u->setStartTime(source->getLastActivity());
 		source->setState(UserConnection::STATE_RUNNING);
 		source->transmitFile(u->getReadStream());
@@ -1128,6 +1123,13 @@ void UploadManager::clearUserFilesL(const UserPtr& user)
 		slotQueue.erase(it);
 		if (slotQueue.empty()) slotQueueId = 0; else ++slotQueueId;
 	}
+}
+
+void UploadManager::clearUploads() noexcept
+{
+	WRITE_LOCK(*csFinishedUploads);
+	uploads.clear();
+	finishedUploads.clear();
 }
 
 void UploadManager::addConnection(UserConnection* conn)

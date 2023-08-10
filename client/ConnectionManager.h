@@ -238,6 +238,7 @@ class ConnectionManager :
 		string getExpectedInfo() const;
 		string getTokenInfo() const;
 
+		UserConnectionPtr findConnection(const UserConnection* conn) const noexcept;
 		void putConnection(UserConnection* conn);
 		void processMyNick(UserConnection* source, const string& nick) noexcept;
 		void processKey(UserConnection* source) noexcept;
@@ -281,7 +282,7 @@ class ConnectionManager :
 		};
 
 		// All active connections
-		boost::unordered_set<UserConnection*> userConnections;
+		boost::unordered_map<const UserConnection*, UserConnectionPtr> userConnections;
 		mutable std::unique_ptr<RWLock> csConnections;
 
 		// All ConnectionQueueItems
@@ -338,8 +339,8 @@ class ConnectionManager :
 		~ConnectionManager();
 
 		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi);
-		UserConnection* getConnection(bool nmdc, bool secure) noexcept;
-		void deleteConnection(UserConnection* conn);
+		UserConnectionPtr getConnection(bool nmdc, bool secure) noexcept;
+		void deleteConnection(UserConnectionPtr& conn);
 		void connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci);
 		void removeExpectedToken(const string& token);
 

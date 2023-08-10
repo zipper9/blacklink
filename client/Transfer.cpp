@@ -30,12 +30,11 @@ const string Transfer::fileTypeNames[] =
 const string Transfer::fileNameFilesXml = "files.xml";
 const string Transfer::fileNameFilesBzXml = "files.xml.bz2";
 
-Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth) :
+Transfer::Transfer(const UserConnectionPtr& conn, const string& path, const TTHValue& tth) :
 	type(TYPE_FILE),
 	path(path), tth(tth), actual(0), pos(0), userConnection(conn), hintedUser(conn->getHintedUser()), startPos(0),
 	isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
 	startTime(0), lastTick(GET_TICK()),
-	cipherName(conn->getCipherName()),
 	ip(conn->getRemoteIp()),
 	fileSize(-1)
 {
@@ -44,11 +43,17 @@ Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth
 
 const string& Transfer::getConnectionQueueToken() const
 {
-	return userConnection ? userConnection->getConnectionQueueToken() : Util::emptyString;
+	return userConnection->getConnectionQueueToken();
 }
 
-void Transfer::getParams(const UserConnection* source, StringMap& params) const
+string Transfer::getCipherName() const
 {
+	return userConnection->getCipherName();
+}
+
+void Transfer::getParams(StringMap& params) const
+{
+	const UserConnection* source = userConnection.get();
 	const string& hint = source->getHintedUser().hint;
 	const UserPtr& user = source->getUser();
 	dcassert(user);
@@ -104,7 +109,7 @@ void Transfer::setStartTime(uint64_t tick)
 
 uint64_t Transfer::getLastActivity() const
 {
-	return userConnection ? userConnection->getLastActivity() : 0;
+	return userConnection->getLastActivity();
 }
 
 int64_t Transfer::getRunningAverage() const

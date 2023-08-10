@@ -57,7 +57,7 @@ typedef std::shared_ptr<User> UserPtr;
 typedef std::vector<UserPtr> UserList;
 typedef std::unordered_set<UserPtr> UserSet;
 
-class UserCommand;
 class UserConnection;
+typedef std::shared_ptr<UserConnection> UserConnectionPtr;
 
 #endif /*DCPLUSPLUS_CLIENT_FORWARD_H_*/

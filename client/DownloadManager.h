@@ -45,7 +45,8 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		
-		size_t getDownloadCount() const;
+		size_t getDownloadCount() const noexcept;
+		void clearDownloads() noexcept;
 		
 		bool isStartDownload(QueueItem::Priority prio) const;
 		bool checkFileDownload(const UserPtr& user) const;

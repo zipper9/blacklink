@@ -26,7 +26,7 @@
 #include "ParamExpander.h"
 #include "Random.h"
 
-Download::Download(UserConnection* conn, const QueueItemPtr& item) noexcept :
+Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noexcept :
 	Transfer(conn, getTargetPath(item), item->getTTH()),
 	qi(item),
 	downloadFile(nullptr),
@@ -189,7 +189,7 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 
 void Download::getParams(StringMap& params) const
 {
-	Transfer::getParams(getUserConnection(), params);
+	Transfer::getParams(params);
 	params["target"] = getPath();
 }
 

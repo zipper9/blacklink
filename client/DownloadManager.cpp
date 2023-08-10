@@ -54,10 +54,16 @@ DownloadManager::~DownloadManager()
 	}
 }
 
-size_t DownloadManager::getDownloadCount() const
+size_t DownloadManager::getDownloadCount() const noexcept
 {
 	READ_LOCK(*csDownloads);
 	return downloads.size();
+}
+
+void DownloadManager::clearDownloads() noexcept
+{
+	WRITE_LOCK(*csDownloads);
+	downloads.clear();
 }
 
 void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
@@ -540,12 +546,9 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 		WRITE_LOCK(*csDownloads);
 		if (!downloads.empty())
 		{
-			//dcassert(find(downloads.begin(), downloads.end(), d) != downloads.end());
-			auto l_end = remove(downloads.begin(), downloads.end(), d);
-			if (l_end != downloads.end())
-			{
-				downloads.erase(l_end, downloads.end());
-			}
+			auto i = remove(downloads.begin(), downloads.end(), d);
+			if (i != downloads.end())
+				downloads.erase(i, downloads.end());
 		}
 	}
 }

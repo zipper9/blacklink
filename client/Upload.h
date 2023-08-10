@@ -19,7 +19,7 @@ class Upload : public Transfer, public Flags
 			FLAG_UPLOAD_PARTIAL = 0x10
 		};
 		
-		Upload(UserConnection* conn, const TTHValue& tth, const string& path, InputStream* is);
+		Upload(const UserConnectionPtr& conn, const TTHValue& tth, const string& path, InputStream* is);
 		~Upload();
 		
 		void getParams(StringMap& params) const;

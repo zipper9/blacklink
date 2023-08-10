@@ -21,7 +21,7 @@
 #include "Streams.h"
 #include "UserConnection.h"
 
-Upload::Upload(UserConnection* conn, const TTHValue& tth, const string& path, InputStream* is):
+Upload::Upload(const UserConnectionPtr& conn, const TTHValue& tth, const string& path, InputStream* is):
 	Transfer(conn, path, tth),
 	readStream(is),
 	tickForRemove(0),
@@ -37,7 +37,7 @@ Upload::~Upload()
 
 void Upload::getParams(StringMap& params) const
 {
-	Transfer::getParams(getUserConnection(), params);
+	Transfer::getParams(params);
 	params["source"] = getPath();
 }
 

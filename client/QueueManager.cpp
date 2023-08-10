@@ -1468,6 +1468,8 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
 	QueueItemPtr q;
 	DownloadPtr d;
+	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
+	if (!ucPtr) return d;
 	{
 		QueueWLock(*QueueItem::g_cs);
 		errorInfo.error = userQueue.getNextL(q, u, QueueItem::LOWEST, source->getChunkSize(), source->getSpeed(), true);
@@ -1510,7 +1512,7 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	}
 
 	// NOTE: Download's constructor locks QueueItem::g_cs
-	d = std::make_shared<Download>(source, q);
+	d = std::make_shared<Download>(ucPtr, q);
 #ifdef DEBUG_TRANSFERS
 	const string& sourcePath = q->getSourcePath();
 	if (!sourcePath.empty()) d->setDownloadPath(sourcePath);
