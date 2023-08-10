@@ -11,7 +11,6 @@
 
 OMenu PreviewMenu::previewMenu;
 int PreviewMenu::previewAppsSize = 0;
-dcdrun(bool PreviewMenu::_debugIsClean = true;)
 
 static const char* extAudio =
 	"mp3;ogg;wav;wma;flac";
@@ -157,5 +156,4 @@ void PreviewMenu::clearPreviewMenu()
 {
 	previewMenu.ClearMenu();
 	previewAppsSize = 0;
-	dcdrun(_debugIsClean = true;)
 }

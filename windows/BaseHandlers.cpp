@@ -6,9 +6,6 @@
 
 void PreviewBaseHandler::appendPreviewItems(OMenu& menu)
 {
-	dcassert(_debugIsClean);
-	dcdrun(_debugIsClean = false;)
-
 	menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU) previewMenu, CTSTRING(PREVIEW_MENU), g_iconBitmaps.getBitmap(IconBitmaps::PREVIEW, 0));
 }
 
