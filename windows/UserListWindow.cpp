@@ -115,10 +115,6 @@ static const ResourceManager::Strings columnNames[] =
 
 enum Mask
 {
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	IS_AUTOBAN          = 0x0003,
-	IS_AUTOBAN_ON       = 0x0001,
-#endif
 	IS_FAVORITE         = 0x0003 << 2,
 	IS_FAVORITE_ON      = 0x0001 << 2,
 	IS_BAN              = 0x0003 << 4,
@@ -828,31 +824,6 @@ void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& fl
 	const UserPtr& user = onlineUser->getUser();
 	auto statusFlags = onlineUser->getIdentity().getStatus();
 	bg = Colors::g_bgColor;
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	if (SETTING(ENABLE_AUTO_BAN))
-	{
-		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
-		{
-			bool isFav = false;
-			Client* client = nullptr;
-			auto cb = onlineUser->getClientBase();
-			if (cb->getType() != ClientBase::TYPE_DHT)
-				client = static_cast<Client*>(cb.get());
-			if (user->hasAutoBan(client, isFav) != User::BAN_NONE)
-				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
-			else
-				flags = (flags & ~IS_AUTOBAN);
-			if (isFav)
-				flags = (flags & ~IS_FAVORITE) | IS_FAVORITE_ON;
-			else
-				flags = (flags & ~IS_FAVORITE);
-		}
-		if (flags & IS_AUTOBAN)
-		{
-			bg = SETTING(BAN_COLOR);
-		}
-	}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 	if (isOp)
 	{

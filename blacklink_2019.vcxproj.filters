@@ -232,9 +232,6 @@
     <ClCompile Include="windows\PreviewAppsPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\FakeDetectPage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\PopupsPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -712,9 +709,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\PreviewAppsPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\FakeDetectPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\PopupsPage.h">

@@ -137,7 +137,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool searchSpyEnabled;
 
 	private:
-		static void cheatMessage(Client* client, const string& report);
 		static void getUserCommandParams(const OnlineUserPtr& ou, const UserCommand& uc, StringMap& params, bool compatibility);
 
 		static OnlineUserPtr findOnlineUserL(const HintedUser& user, bool priv);
@@ -155,10 +154,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static const CID& getMyCID();
 		static const CID& getMyPID();
 		static void setMyPID(const string& pid);
-		
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		static void fileListDisconnected(const UserPtr& p);
-#endif
+
 		static void connectionTimeout(const UserPtr& p);
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 		static void checkCheating(const UserPtr& p, DirectoryListing* dl);

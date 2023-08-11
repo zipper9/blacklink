@@ -60,10 +60,6 @@
 #include "DatabasePage.h"
 #include "SearchUrlsPage.h"
 
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-#include "FakeDetectPage.h"
-#endif
-
 PropertiesDlg* PropertiesDlg::instance = nullptr;
 
 PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent)
@@ -99,9 +95,6 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new UCPage();
 	pages[n++] = new SearchUrlsPage();
 	pages[n++] = new LimitPage();
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	pages[n++] = new FakeDetect();
-#endif
 	pages[n++] = new CertificatesPage();
 	pages[n++] = new MiscPage();
 	pages[n++] = new RangesPage();

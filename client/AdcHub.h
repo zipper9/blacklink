@@ -54,21 +54,10 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		bool send(const AdcCommand& cmd) override;
 		bool isMcPmSupported() const override { return false; }
 		void processCCPMMessage(const AdcCommand& cmd, const OnlineUserPtr& ou) noexcept;
-		
-		string getMySID() const
-		{
-			return AdcCommand::fromSID(sid);
-		}
-		
+
+		string getMySID() const { return AdcCommand::fromSID(sid); }
 		static const vector<StringList>& getSearchExts() { return searchExts; }
 		static StringList parseSearchExts(int flag);
-		
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		bool slotsReported() const
-		{
-			return true;
-		}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 
 	private:
 		friend class ClientManager;

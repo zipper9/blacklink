@@ -21,10 +21,6 @@
 #include "SettingsManager.h"
 #include "DatabaseManager.h"
 
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-#include "UserManager.h"
-#endif
-
 #ifdef _DEBUG
 std::atomic_int User::g_user_counts(0);
 #endif
@@ -396,45 +392,3 @@ void User::addNick(const string& nick, const string& hub)
 		flags |= SAVE_USER_STAT;
 #endif
 }
-
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-User::DefinedAutoBanFlags User::hasAutoBan(const Client *client, bool isFavorite)
-{
-	// Check exclusion first
-	bool forceAllow = BOOLSETTING(DONT_BAN_FAVS) && isFavorite;
-	if (!forceAllow)
-	{
-		const string nick = getLastNick();
-		forceAllow = !nick.empty() && UserManager::getInstance()->isInProtectedUserList(nick);
-	}
-	int ban = BAN_NONE;
-	if (!forceAllow)
-	{
-		const int limit = getLimit();
-		const int slots = getSlots();
-			
-		const int settingBanSlotMax = SETTING(AUTOBAN_SLOTS_MAX);
-		const int settingBanSlotMin = SETTING(AUTOBAN_SLOTS_MIN);
-		const int settingLimit = SETTING(AUTOBAN_LIMIT);
-		const int settingShare = SETTING(AUTOBAN_SHARE);
-			
-		if (settingBanSlotMin && slots < settingBanSlotMin)
-		{
-			bool slotsReported = client ? client->slotsReported() : !(getFlags() & NMDC);
-			if (slots || slotsReported)
-				ban |= BAN_BY_MIN_SLOT;
-		}
-				
-		if (settingBanSlotMax && slots > settingBanSlotMax)
-			ban |= BAN_BY_MAX_SLOT;
-				
-		if (settingShare && static_cast<int>(getBytesShared() / uint64_t(1024 * 1024 * 1024)) < settingShare)
-			ban |= BAN_BY_SHARE;
-				
-		// Skip users with limitation turned off
-		if (settingLimit && limit && limit < settingLimit)
-			ban |= BAN_BY_LIMIT;
-	}
-	return static_cast<DefinedAutoBanFlags>(ban);
-}
-#endif // IRAINMAN_ENABLE_AUTO_BAN

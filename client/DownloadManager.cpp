@@ -497,20 +497,6 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason,
 	{
 		removeDownload(d);
 		fire(DownloadManagerListener::Failed(), d, reason);
-		
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		if (d->isSet(Download::FLAG_USER_CHECK))
-		{
-			if (reason == STRING(DISCONNECTED))
-			{
-				ClientManager::fileListDisconnected(source->getUser());
-			}
-			else
-			{
-				ClientManager::setClientStatus(source->getUser(), reason, -1, false);
-			}
-		}
-#endif
 		d->setReason(reason);
 		QueueManager::getInstance()->putDownload(d, false);
 	}

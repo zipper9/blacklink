@@ -158,10 +158,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		
 		void load();
 		void save();
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		static bool isBanReply(const UserPtr& user);
-#endif // IRAINMAN_ENABLE_AUTO_BAN
-		
+
 		uint64_t getReservedSlotTick(const UserPtr& user) const;
 
 		struct ReservedSlotInfo
@@ -231,25 +228,6 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		bool isCompressedFile(const string& target);
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);
-
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		struct banmsg_t
-		{
-			uint32_t tick;
-			int slots, share, limit, min_slots, max_slots, min_share, min_limit;
-			bool same(const banmsg_t& a) const
-			{
-				return ((slots ^ a.slots) | (share ^ a.share) | (limit ^ a.limit) |
-				        (min_slots ^ a.min_slots) |
-				        (max_slots ^ a.max_slots) |
-				        (min_share ^ a.min_share) | (min_limit ^ a.min_limit)) == 0;
-			}
-		};
-		typedef boost::unordered_map<string, banmsg_t> BanMap;
-		bool handleBan(UserConnection* aSource/*, bool forceBan, bool noChecks*/);
-		static BanMap g_lastBans;
-		static std::unique_ptr<RWLock> g_csBans;
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 
 		UploadManager() noexcept;
 		~UploadManager();

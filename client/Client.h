@@ -404,10 +404,6 @@ class Client : public ClientBase,
 		void setClientId(bool overrideId, const string& name, const string& version);
 		const string& getClientName() const { return clientName; }
 		const string& getClientVersion() const { return clientVersion; }
-		
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		virtual bool slotsReported() const = 0;
-#endif
 
 		friend class ClientManager;
 		friend class User;

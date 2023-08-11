@@ -120,9 +120,6 @@ static const char* settingTags[] =
 	"PasswordHint",
 	"PasswordOkHint",
 
-	// Auto ban
-	"DontBanPattern",
-	
 	// Auto priority
 	"AutoPriorityPatterns",
 
@@ -144,7 +141,6 @@ static const char* settingTags[] =
 	// Message templates
 	"DefaultAwayMessage",
 	"SecondaryAwayMsg",
-	"BanMessage",
 	"SlotAskMessage",
 	"RatioTemplate",
 	"WebMagnetTemplate",
@@ -403,27 +399,6 @@ static const char* settingTags[] =
 	"PerUserUploadLimit",
 
 	// Auto ban (Ints)
-	"EnableAutoBan",
-	"AutoBanFakeShare",
-	"AutoBanDisconnects",
-	"AutoBanTimeouts",
-	"AutoBanSlotsMin",
-	"AutoBanSlotsMax",
-	"AutoBanShare",
-	"AutoBanLimit",
-	"AutoBanMsgPeriod",
-	"AutoBanStealth",
-	"AutoBanSendPM",
-	"AutoBanCmdDisconnects",
-	"AutoBanCmdTimeouts",
-	"AutoBanCmdFakeShare",
-	"AutoBanFLLenMismatch",
-	"AutoBanFLTooSmall",
-	"AutoBanFLUnavailable",
-	"DontBanFavs",
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-	"DontBanOp",
-#endif
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 	"CheckNewUsers",
 #endif
@@ -880,7 +855,6 @@ void SettingsManager::setDefaults()
 
 	// Message templates
 	setDefault(DEFAULT_AWAY_MESSAGE, STRING(DEFAULT_AWAY_MESSAGE));
-	setDefault(BAN_MESSAGE, STRING(SETTINGS_BAN_MESSAGE));
 	setDefault(ASK_SLOT_MESSAGE, STRING(ASK_SLOT_TEMPLATE));
 	setDefault(RATIO_MESSAGE, "/me ratio: %[ratio] (Uploaded: %[up] | Downloaded: %[down])");
 	setDefault(WMLINK_TEMPLATE, "<a href=\"%[magnet]\" title=\"%[name]\" target=\"_blank\">%[name] (%[size])</a>");
@@ -1069,17 +1043,11 @@ void SettingsManager::setDefaults()
 	setDefault(PROTECT_PRIVATE_RND, 1);
 	setDefault(PM_LOG_LINES, 50);
 	setDefault(LOG_IF_SUPPRESS_PMS, TRUE);
-	
+
 	// Max finished items
 	setDefault(MAX_FINISHED_DOWNLOADS, 1000);
 	setDefault(MAX_FINISHED_UPLOADS, 1000);
-	
-	// Auto ban (Ints)
-	setDefault(AUTOBAN_FAKE_SHARE_PERCENT, 20);
-	setDefault(AUTOBAN_MAX_DISCONNECTS, 5);
-	setDefault(AUTOBAN_MAX_TIMEOUTS, 10);
-	setDefault(AUTOBAN_MSG_PERIOD, 60);
-	
+
 	// Auto priority (Ints)
 	setDefault(AUTO_PRIORITY_USE_PATTERNS, TRUE);
 	setDefault(AUTO_PRIORITY_PATTERNS_PRIO, QueueItem::HIGHER);
@@ -1681,9 +1649,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			strSettings[key - STR_FIRST] = trimmedValue;
 			break;
 		}
-		case DONT_BAN_PATTERN:
-			REPLACE_SPACES();
-			break;
 		case AUTO_PRIORITY_PATTERNS:
 			REPLACE_SPACES();
 			break;
@@ -1771,33 +1736,6 @@ bool SettingsManager::set(IntSetting key, int value)
 	VER_MIN(min);\
 	VER_MAX(max)
 
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		case AUTOBAN_SHARE:
-		{
-			//[!] IRainman when you run a second copy of the application
-			// should not create two copies ShareManager
-			const int maxBanShare = 20;
-			//const auto l_share = ShareManager::getShareSize();
-			//maxBanShare = min(maxBanShare, static_cast<int>(ShareManager::getShareSize() / static_cast<int64_t>(1024 * 1024 * 1024)));
-			VERIFY(0, maxBanShare);
-			break;
-		}
-		case AUTOBAN_LIMIT:
-		{
-			VERIFY(0, 50);
-			break;
-		}
-		case AUTOBAN_SLOTS_MIN:
-		{
-			VERIFY(0, 5);
-			break;
-		}
-		case AUTOBAN_SLOTS_MAX:
-		{
-			VER_MIN_EXCL_ZERO(10);
-			break;
-		}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 		case AUTO_SEARCH_LIMIT:
 		{
 			VER_MIN(1);

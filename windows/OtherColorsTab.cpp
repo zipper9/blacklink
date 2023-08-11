@@ -56,10 +56,6 @@ static ColorSettings colors[] =
 	{ ResourceManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, SettingsManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, 0 },
 	{ ResourceManager::TABS_UPDATED_BACKGROUND_COLOR,        SettingsManager::TABS_UPDATED_BACKGROUND_COLOR,        0 },
 	{ ResourceManager::TABS_BORDER_COLOR,                    SettingsManager::TABS_BORDER_COLOR,                    0 },
-#if 0
-	// Not used
-	{ ResourceManager::BAN_COLOR_DLG,              SettingsManager::BAN_COLOR,                0 },
-#endif
 	// File status
 	{ ResourceManager::COLOR_SHARED,               SettingsManager::FILE_SHARED_COLOR,        0 },
 	{ ResourceManager::COLOR_DOWNLOADED,           SettingsManager::FILE_DOWNLOADED_COLOR,    0 },

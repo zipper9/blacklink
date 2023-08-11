@@ -78,11 +78,6 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		void clearIgnoreList();
 		void fireReservedSlotChanged(const UserPtr& user) noexcept;
 
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		void reloadProtectedUsers() noexcept;
-		bool isInProtectedUserList(const string& userName) const noexcept;
-#endif
-
 	private:
 		void loadIgnoreList();
 		void saveIgnoreList();
@@ -117,12 +112,6 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 
 		friend class Singleton<UserManager>;
 		UserManager();
-
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		bool hasProtectedUsers;
-		std::regex reProtectedUsers;
-		std::unique_ptr<RWLock> csProtectedUsers;
-#endif
 };
 
 #endif // !defined(DCPLUSPLUS_DCPP_USER_MANAGER_H)

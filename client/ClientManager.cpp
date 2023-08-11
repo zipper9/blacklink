@@ -1172,16 +1172,9 @@ void ClientManager::usersCleanup()
 	while (i != g_users.end() && !isBeforeShutdown())
 	{
 		if (i->second.unique())
-		{
-#ifdef _DEBUG
-			//LogManager::message("g_users.erase(i++); - Nick = " + i->second->getLastNick());
-#endif
 			g_users.erase(i++);
-		}
 		else
-		{
 			++i;
-		}
 	}
 }
 
@@ -1335,90 +1328,24 @@ void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 		i->second->getIdentity().setStringParam("LL", listLen);
 	}
 }
-#endif
 
 void ClientManager::cheatMessage(Client* client, const string& report)
 {
 	if (client && !report.empty() && BOOLSETTING(DISPLAY_CHEATS_IN_MAIN_CHAT))
 		client->cheatMessage(report);
 }
-
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-void ClientManager::fileListDisconnected(const UserPtr& p)
-{
-	string report;
-	Client* c = nullptr;
-	OnlineUserPtr sendCmd;
-	{
-		READ_LOCK(*g_csOnlineUsers);
-		const auto i = g_onlineUsers.find(p->getCID());
-		if (i != g_onlineUsers.end())
-		{
-			OnlineUserPtr ou = i->second;
-			auto& id = ou->getIdentity();
-			
-			auto fileListDisconnects = id.incFileListDisconnects(); // 8 бит не мало?
-			
-			int maxDisconnects = SETTING(AUTOBAN_MAX_DISCONNECTS);
-			if (maxDisconnects == 0)
-				return;
-				
-			if (fileListDisconnects == maxDisconnects)
-			{
-				c = &ou->getClient();
-				report = id.setCheat(ou->getClientBase(), "Disconnected file list " + Util::toString(fileListDisconnects) + " times", false);
-				sendCmd = ou;
-			}
-		}
-	}
-	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_DISCONNECTS));
-	cheatMessage(c, report);
-}
-#endif // IRAINMAN_INCLUDE_USER_CHECK
+#endif
 
 void ClientManager::connectionTimeout(const UserPtr& p)
 {
-	string report;
-	Client* c = nullptr;
-#if IRAINMAN_ENABLE_AUTO_BAN
-	OnlineUserPtr sendCmd;
-#endif
+	READ_LOCK(*g_csOnlineUsers);
+	const auto i = g_onlineUsers.find(p->getCID());
+	if (i != g_onlineUsers.end())
 	{
-		READ_LOCK(*g_csOnlineUsers);
-		const auto i = g_onlineUsers.find(p->getCID());
-		if (i != g_onlineUsers.end())
-		{
-			OnlineUserPtr ou = i->second;
-			auto& id = ou->getIdentity();
-			
-			auto connectionTimeouts = id.incConnectionTimeouts(); // 8 бит не мало?
-			
-			int maxTimeouts = SETTING(AUTOBAN_MAX_TIMEOUTS);
-			if (maxTimeouts == 0)
-				return;
-				
-			if (connectionTimeouts == maxTimeouts)
-			{
-				const ClientBasePtr& cb = ou->getClientBase();
-				if (cb->getType() != ClientBase::TYPE_DHT)
-				{
-					c = static_cast<Client*>(cb.get());
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-					report = id.setCheat(ou->getClientBase(), "Connection timeout " + Util::toString(connectionTimeouts) + " times", false);
-#else
-					report = "Connection timeout " + Util::toString(connectionTimeouts) + " times";
-#endif
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-					sendCmd = ou;
-#endif
-				}
-			}
-		}
+		OnlineUserPtr ou = i->second;
+		auto& id = ou->getIdentity();
+		id.incConnectionTimeouts();
 	}
-#if IRAINMAN_ENABLE_AUTO_BAN
-	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_TIMEOUTS));
-#endif
-	cheatMessage(c, report);
 }
 
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
@@ -1475,8 +1402,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 		
 		client = &(ou->getClient());
 	}
-	if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_FAKESHARE));
-	//client->updatedMyINFO(ou); // тут тоже не нужна нотификация всем подписчикам
+	//if (sendCmd) sendRawCommand(sendCmd, SETTING(AUTOBAN_CMD_FAKESHARE));
 	cheatMessage(client, report);
 }
 #endif // FLYLINKDC_USE_DETECT_CHEATING

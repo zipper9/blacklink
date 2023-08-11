@@ -77,9 +77,6 @@ NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, boo
 	Client(hubURL, address, port, '|', secure, Socket::PROTO_NMDC),
 	hubSupportFlags(0),
 	lastModeChar(0),
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	hubSupportsSlots(false),
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 	lastUpdate(0),
 	lastNatUserExpires(0),
 	myInfoState(WAITING_FOR_MYINFO),
@@ -277,10 +274,6 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 		{
 			const uint16_t slots = Util::toInt(tok.c_str() + 2);
 			id.setSlots(slots);
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-			if (slots > 0)
-				hubSupportsSlots = true;
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 		}
 		else if (tok.compare(0, 2, "M:", 2) == 0)
 		{

@@ -118,18 +118,6 @@ class User final
 			USER_STAT_LOADED = 1 << USER_STAT_LOADED_BIT,
 			SAVE_USER_STAT = 1 << SAVE_USER_STAT_BIT
 		};
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		enum DefinedAutoBanFlags
-		{
-			BAN_NONE          = 0x00,
-			BAN_BY_MIN_SLOT   = 0x01,
-			BAN_BY_MAX_SLOT   = 0x02,
-			BAN_BY_SHARE      = 0x04,
-			BAN_BY_LIMIT      = 0x08
-		};
-		
-		DefinedAutoBanFlags hasAutoBan(const Client *client, bool isFavorite);
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 
 		User(const CID& aCID, const string& nick);
 		User(const User&) = delete;

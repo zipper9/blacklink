@@ -720,11 +720,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 {
 	if (isMe(message.replyTo))
 	{
-		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser(), automatic)
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        || UploadManager::isBanReply(message.to->getUser())
-#endif
-		   )
+		if (!UserManager::getInstance()->checkOutgoingPM(message.to->getUser(), automatic))
 			return false;
 		return true;
 	}
@@ -742,10 +738,6 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 		return false;
 	if (BOOLSETTING(SUPPRESS_PMS))
 	{
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		if (UploadManager::isBanReply(message.replyTo->getUser()))
-			return false;
-#endif
 		FavoriteUser::MaskType flags;
 		int uploadLimit;
 		bool isFav = FavoriteManager::getInstance()->getFavUserParam(message.replyTo->getUser(), flags, uploadLimit);
@@ -799,11 +791,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	}
 	else
 	{
-		if ((pmFlags & FavoriteUser::FLAG_IGNORE_PRIVATE)
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        || UploadManager::isBanReply(message.replyTo->getUser())
-#endif
-		   )
+		if ((pmFlags & FavoriteUser::FLAG_IGNORE_PRIVATE))
 			return false;
 		return true;
 	}

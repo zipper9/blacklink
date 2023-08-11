@@ -130,9 +130,6 @@ class NmdcHub : public Client, private Flags
 		uint64_t lastNatUserExpires;
 		unsigned hubSupportFlags;
 		char lastModeChar; // last Mode MyINFO
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		bool hubSupportsSlots;
-#endif
 
 		HubRequestCounters reqSearch;
 		HubRequestCounters reqConnectToMe;
@@ -207,10 +204,6 @@ class NmdcHub : public Client, private Flags
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;
 		void onFailed(const string&) noexcept override;
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	public:
-		bool slotsReported() const { return hubSupportsSlots; }
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 };
 
 #endif // DCPLUSPLUS_DCPP_NMDC_HUB_H

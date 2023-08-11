@@ -45,10 +45,6 @@ bool disablePartialListUploads = false;
 
 uint32_t UploadManager::g_count_WaitingUsersFrame = 0;
 int UploadManager::g_running = 0;
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-UploadManager::BanMap UploadManager::g_lastBans;
-std::unique_ptr<RWLock> UploadManager::g_csBans = std::unique_ptr<RWLock>(RWLock::create());
-#endif
 int64_t UploadManager::g_runningAverage;
 
 void WaitingUser::addWaitingFile(const UploadQueueFilePtr& uqi)
@@ -118,154 +114,6 @@ void UploadManager::initTransferData(TransferData& td, const Upload* u)
 	if (u->isSet(Upload::FLAG_CHUNKED))
 		td.transferFlags |= TRANSFER_FLAG_CHUNKED;
 }
-
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noChecks*/)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	const UserPtr& user = source->getUser();
-	if (!user->isOnline()) // if not online, cheat (connection without hub)
-	{
-		source->disconnect();
-		return true;
-	}
-	bool isBanned = false;
-	const bool isFavorite = FavoriteManager::getInstance()->isFavoriteUser(user, isBanned);
-	const auto banType = user->hasAutoBan(nullptr, isFavorite);
-	bool banByRules = banType != User::BAN_NONE;
-	if (banByRules)
-	{
-		auto fm = FavoriteManager::getInstance();
-		const FavoriteHubEntry* hub = fm->getFavoriteHubEntryPtr(source->getHubUrl());
-		if (hub && hub->getExclChecks())
-			banByRules = false;
-		fm->releaseFavoriteHubEntryPtr(hub);
-	}
-	if (/*!forceBan &&*/ (/*noChecks ||*/ !banByRules)) return false;
-	
-	banmsg_t msg;
-	msg.share = (int)(user->getBytesShared() / (1024 * 1024 * 1024));
-	msg.slots = user->getSlots();
-	msg.limit = user->getLimit();
-	msg.min_share = SETTING(AUTOBAN_SHARE);
-	msg.min_slots = SETTING(AUTOBAN_SLOTS_MIN);
-	msg.max_slots = SETTING(AUTOBAN_SLOTS_MAX);
-	msg.min_limit = SETTING(AUTOBAN_LIMIT);
-	
-	/*
-	[-] brain-ripper
-	follow rules are ignored!
-	comments saved only for history
-	//2) "автобан" по шаре максимум ограничить размером "своя шара" (но не более 20 гиг)
-	//3) "автобан" по слотам максимум ограничить размером "сколько слотов у меня"/2 (но не более 15 слотов)
-	//4) "автобан" по лимиттеру максимум ограничить размером "лимиттер у меня"/2 (но не выше 60 кб/сек)
-	*/
-	
-	// BAN for Slots:[1/5] Share:[17/200]Gb Limit:[30/50]kb/s Msg: share more files, please!
-	string banstr;
-	//if (!forceBan)
-	//{
-	/*
-	if (msg.slots < msg.min_slots)
-	    banstr = banstr + " Slots < "  + Util::toString(msg.min_slots);
-	if (msg.slots > msg.max_slots)
-	    banstr = banstr + " Slots > " + Util::toString(msg.max_slots);
-	if (msg.share < msg.min_share)
-	    banstr = banstr + " Share < " + Util::toString(msg.min_share) + " Gb";
-	if (msg.limit && msg.limit < msg.min_limit)
-	    banstr = banstr + " Limit < " + Util::toString(msg.min_limit) + " kb/s";
-	banstr = banstr + " Msg: " + SETTING(BAN_MESSAGE);
-	*/
-	banstr = "BAN for";
-	
-	if (banType & User::BAN_BY_MIN_SLOT)
-		banstr += " Slots < "  + Util::toString(msg.min_slots);
-	if (banType & User::BAN_BY_MAX_SLOT)
-		banstr += " Slots > "  + Util::toString(msg.max_slots);
-	if (banType & User::BAN_BY_SHARE)
-		banstr += " Share < "  + Util::toString(msg.min_share) + " Gb";
-	if (banType & User::BAN_BY_LIMIT)
-		banstr += " Limit < "  + Util::toString(msg.min_limit) + " kB/s";
-		
-	banstr += " Msg: " + SETTING(BAN_MESSAGE);
-	//}
-	//else
-	//{
-	//  banstr = "BAN forever";
-	//}
-#ifdef _DEBUG
-	{
-		auto logline = banstr + " Log autoban:";
-		
-		if (banType & User::BAN_BY_MIN_SLOT)
-			logline += " Slots:[" + Util::toString(user->getSlots()) + '/' + Util::toString(msg.min_slots) + '/' + Util::toString(msg.max_slots) + ']';
-		if (banType & User::BAN_BY_SHARE)
-			logline += " Share:[" + Util::toString(int(user->getBytesShared() / (1024 * 1024 * 1024))) + '/' + Util::toString(msg.min_share) + "]Gb";
-		if (banType & User::BAN_BY_LIMIT)
-			logline += " Limit:[" + Util::toString(user->getLimit()) + '/' + Util::toString(msg.min_limit) + "]kb/s";
-			
-		logline += " Msg: " + SETTING(BAN_MESSAGE);
-		
-		LogManager::message("User:" + user->getLastNick() + ' ' + logline); //[+]PPA
-	}
-#endif
-	// old const bool sendStatus = source->isSet(UserConnection::FLAG_SUPPORTS_BANMSG);
-	
-	if (!BOOLSETTING(AUTOBAN_STEALTH))
-	{
-		source->error(banstr);
-		
-		if (BOOLSETTING(AUTOBAN_SEND_PM))
-		{
-			msg.tick = TimerManager::getTick();
-			const auto pmMsgPeriod = SETTING(AUTOBAN_MSG_PERIOD);
-			const auto key = user->getCID().toBase32();
-			bool sendPm;
-			{
-				WRITE_LOCK(*g_csBans);
-				auto t = g_lastBans.find(key);
-				if (t == g_lastBans.end()) // new banned user
-				{
-					g_lastBans[key] = msg;
-					sendPm = pmMsgPeriod != 0;
-				}
-				else if (!t->second.same(msg)) // new ban message
-				{
-					t->second = msg;
-					sendPm = pmMsgPeriod != 0;
-				}
-				else if (pmMsgPeriod && (uint32_t)(msg.tick - t->second.tick) >= (uint32_t)pmMsgPeriod * 60 * 1000) // [!] IRainman fix: "Repeat PM period (0 - disable PM), min"
-				{
-					t->second.tick = msg.tick;
-					sendPm = true;
-				}
-				else
-				{
-					sendPm = false;
-				}
-			}
-			if (sendPm)
-				ClientManager::privateMessage(source->getHintedUser(), banstr, false, true);
-		}
-	}
-	return true;
-}
-
-bool UploadManager::isBanReply(const UserPtr& user)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	const auto key = user->getCID().toBase32();
-	{
-		READ_LOCK(*g_csBans);
-		const auto t = g_lastBans.find(key);
-		if (t != g_lastBans.end())
-		{
-			return (TimerManager::getTick() - t->second.tick) < 2000;
-		}
-	}
-	return false;
-}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 
 bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 {
@@ -538,17 +386,6 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	if (slotType == UserConnection::RESSLOT && !hasReserved)
 		slotType = UserConnection::NOSLOT;
 	const bool isFavGrant = FavoriteManager::getInstance()->hasAutoGrantSlot(source->getUser());
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	if (!isFavGrant && !hasReserved && !isFileList && SETTING(ENABLE_AUTO_BAN) && handleBan(source))
-	{
-		delete is;
-		addFailedUpload(source, sourceFile, startPos, size, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0);
-		source->disconnect();
-		errorText = STRING(USER_BANNED);
-		return false;
-	}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
-	
 	if ((slotType != UserConnection::STDSLOT && slotType != UserConnection::RESSLOT) || hasReserved)
 	{
 		bool hasFreeSlot = getFreeSlots() > 0;

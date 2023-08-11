@@ -89,9 +89,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PM_PASSWORD_HINT,
 			PM_PASSWORD_OK_HINT,
 
-			// Auto ban
-			DONT_BAN_PATTERN,
-
 			// Auto priority
 			AUTO_PRIORITY_PATTERNS,
 
@@ -113,7 +110,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// Message templates
 			DEFAULT_AWAY_MESSAGE, 
 			SECONDARY_AWAY_MESSAGE,
-			BAN_MESSAGE,
 			ASK_SLOT_MESSAGE, // Unused
 			RATIO_MESSAGE,
 			WMLINK_TEMPLATE,
@@ -375,27 +371,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PER_USER_UPLOAD_SPEED_LIMIT,
 			
 			// Auto ban (Ints)
-			ENABLE_AUTO_BAN,
-			AUTOBAN_FAKE_SHARE_PERCENT,
-			AUTOBAN_MAX_DISCONNECTS,
-			AUTOBAN_MAX_TIMEOUTS,
-			AUTOBAN_SLOTS_MIN,
-			AUTOBAN_SLOTS_MAX,
-			AUTOBAN_SHARE,
-			AUTOBAN_LIMIT,
-			AUTOBAN_MSG_PERIOD,
-			AUTOBAN_STEALTH,
-			AUTOBAN_SEND_PM,
-			AUTOBAN_CMD_DISCONNECTS,
-			AUTOBAN_CMD_TIMEOUTS,
-			AUTOBAN_CMD_FAKESHARE,
-			AUTOBAN_FL_LEN_MISMATCH, // Unused, visible in UI
-			AUTOBAN_FL_TOO_SMALL,    // Unused, visible in UI
-			AUTOBAN_FL_UNAVAILABLE,
-			DONT_BAN_FAVS,
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-			DONT_BAN_OP,
-#endif
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			CHECK_NEW_USERS,
 #endif

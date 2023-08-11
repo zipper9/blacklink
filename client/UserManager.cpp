@@ -32,15 +32,8 @@ static bool ignoreListLoaded;
 UserManager::UserManager()
 {
 	csIgnoreList = std::unique_ptr<RWLock>(RWLock::create());
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	csProtectedUsers = std::unique_ptr<RWLock>(RWLock::create());
-	hasProtectedUsers = false;
-#endif
 	ignoreListEmpty = true;
 	loadIgnoreList();
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	reloadProtectedUsers();
-#endif
 }
 
 void UserManager::setPMOpen(const UserPtr& user, bool flag)
@@ -380,29 +373,10 @@ void UserManager::saveIgnoreList()
 	}
 }
 
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-void UserManager::reloadProtectedUsers() noexcept
-{
-	std::regex re;
-	bool result = Wildcards::regexFromPatternList(re, SETTING(DONT_BAN_PATTERN), true);
-	WRITE_LOCK(*csProtectedUsers);
-	reProtectedUsers = std::move(re);
-	hasProtectedUsers = result;
-}
-#endif
-
 void UserManager::openUserUrl(const string& url, const UserPtr& user) noexcept
 {
 	fire(UserManagerListener::OpenHub(), url, user);
 }
-
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-bool UserManager::isInProtectedUserList(const string& userName) const noexcept
-{
-	READ_LOCK(*csProtectedUsers);
-	return hasProtectedUsers && std::regex_match(userName, reProtectedUsers);
-}
-#endif
 
 void UserManager::fireReservedSlotChanged(const UserPtr& user) noexcept
 {

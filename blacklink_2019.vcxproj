@@ -808,7 +808,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="windows\FakeDetectPage.cpp" />
     <ClCompile Include="windows\FavDirDlg.cpp" />
     <ClCompile Include="windows\FavHubGroupsDlg.cpp" />
     <ClCompile Include="windows\FavHubProperties.cpp" />
@@ -987,7 +986,6 @@
     <ClInclude Include="windows\ExListViewCtrl.h" />
     <ClInclude Include="windows\ExMessageBox.h" />
     <ClInclude Include="windows\ExtendedTrace.h" />
-    <ClInclude Include="windows\FakeDetectPage.h" />
     <ClInclude Include="windows\FavDirDlg.h" />
     <ClInclude Include="windows\FavHubGroupsDlg.h" />
     <ClInclude Include="windows\FavHubProperties.h" />

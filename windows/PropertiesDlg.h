@@ -48,7 +48,7 @@ class PropertiesDlg : public TreePropertySheet
 		virtual int getItemImage(int page) const override;
 		virtual void pageChanged(int oldPage, int newPage) override;
 
-		static const size_t numPages = 38;
+		static const size_t numPages = 37;
 		PropPage *pages[numPages];
 
 	private:
