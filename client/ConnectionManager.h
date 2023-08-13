@@ -235,6 +235,8 @@ class ConnectionManager :
 		string getUserConnectionInfo() const;
 		string getExpectedInfo() const;
 		string getTokenInfo() const;
+		ConnectionQueueItemPtr getDownloadCQI(const string& token) const noexcept;
+		ConnectionQueueItemPtr getUploadCQI(const string& token) const noexcept;
 
 		UserConnectionPtr findConnection(const UserConnection* conn) const noexcept;
 		void putConnection(UserConnection* conn);

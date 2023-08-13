@@ -222,6 +222,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			COLUMN_SHARE,
 			COLUMN_SLOTS,
 			COLUMN_P2P_GUARD,
+			COLUMN_DEBUG_INFO,
 			COLUMN_LAST
 		};
 

@@ -474,6 +474,14 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 				}
 		}
 
+		bool isColumnVisible(int id) const
+		{
+			for (auto& c : columns.columnList)
+				if (c.id == id)
+					return c.isVisible;
+			return false;
+		}
+
 		void insertColumns(const string& order, const string& widths, const string& visible)
 		{
 			columns.insertColumns(*this, order, widths, visible);

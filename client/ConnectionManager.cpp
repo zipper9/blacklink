@@ -498,6 +498,20 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	cqi.reset();
 }
 
+ConnectionQueueItemPtr ConnectionManager::getDownloadCQI(const string& token) const noexcept
+{
+	READ_LOCK(*csDownloads);
+	auto i = std::find(downloads.begin(), downloads.end(), token);
+	return i == downloads.end() ? nullptr : *i;
+}
+
+ConnectionQueueItemPtr ConnectionManager::getUploadCQI(const string& token) const noexcept
+{
+	LOCK(csUploads);
+	auto i = std::find(uploads.begin(), uploads.end(), token);
+	return i == uploads.end() ? nullptr : *i;
+}
+
 UserConnectionPtr ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
 {
 	dcassert(!shuttingDown);

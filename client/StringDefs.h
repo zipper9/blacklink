@@ -1723,6 +1723,7 @@ enum Strings   // @DontAdd
 	INSERT_LINK_DESCRIPTION, // "Description (optional)"
 	INSERT_LINK_INSERT, // "Insert link"
 	INSERT_LINK_EDIT, // "Edit link"
+	DEBUG_INFO, // "Debug info"
 	FILEMASK_ALL, // "All files"
 	FILEMASK_FILE_LISTS, // "All supported file lists"
 	FILEMASK_XML_BZ2, // "Compressed XML file lists"

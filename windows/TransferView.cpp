@@ -62,7 +62,8 @@ const int TransferView::columnId[] =
 	COLUMN_RATIO,
 #endif
 	COLUMN_SHARE,
-	COLUMN_SLOTS
+	COLUMN_SLOTS,
+	COLUMN_DEBUG_INFO
 };
 
 static const int columnSizes[] =
@@ -78,12 +79,13 @@ static const int columnSizes[] =
 	100, // COLUMN_IP
 	120, // COLUMN_LOCATION
 	140, // COLUMN_P2P_GUARD
-	100, // COLUMN_CIPHER
+	90,  // COLUMN_CIPHER
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 	50,  // COLUMN_RATIO
 #endif
 	85,  // COLUMN_SHARE
-	75   // COLUMN_SLOTS
+	75,  // COLUMN_SLOTS
+	80   // COLUMN_DEBU_INFO
 };
 
 static const ResourceManager::Strings columnNames[] =
@@ -104,7 +106,8 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::RATIO,
 #endif
 	ResourceManager::SHARED,
-	ResourceManager::SLOTS
+	ResourceManager::SLOTS,
+	ResourceManager::DEBUG_INFO
 };
 
 template<>
@@ -1240,8 +1243,7 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 			return ratioText;
 #endif
 		case COLUMN_CIPHER:
-			if (token.empty()) return cipher;
-			return cipher + _T(" [Token: ") + Text::toT(token) + _T("]");
+			return cipher;
 		case COLUMN_SHARE:
 			return hintedUser.user ? Util::formatBytesT(hintedUser.user->getBytesShared()) : Util::emptyStringT;
 		case COLUMN_SLOTS:
@@ -1252,6 +1254,20 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 		{
 			const string& description = Util::getDescription(ipInfo);
 			return description.empty() ? Util::emptyStringT : Text::toT(description);
+		}
+		case COLUMN_DEBUG_INFO:
+		{
+			if (token.empty()) return Util::emptyStringT;
+			string info = "T: " + token;
+			auto cm = ConnectionManager::getInstance();
+			ConnectionQueueItemPtr cqi = download ? cm->getDownloadCQI(token) : cm->getUploadCQI(token);
+			if (cqi)
+			{
+				info += ", S: " + Util::toString((int) cqi->getState());
+				int errors = cqi->getErrors();
+				if (errors) info += ", E: " + Util::toString(errors);
+			}
+			return Text::toT(info);
 		}
 		default:
 			return Util::emptyStringT;
@@ -1350,6 +1366,10 @@ int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, u
 		}
 		case COLUMN_IP:
 			res = compare(a->transferIp, b->transferIp);
+			if (res) return res;
+			break;
+		case COLUMN_DEBUG_INFO:
+			res = compare(a->token, b->token);
 			if (res) return res;
 			break;
 		default:
@@ -1860,6 +1880,16 @@ void TransferView::onTimerInternal()
 {
 	shouldSort = true;
 	processTasks();
+	if (ctrlTransfers.isColumnVisible(COLUMN_DEBUG_INFO))
+	{
+		int count = ctrlTransfers.GetItemCount();
+		for (int i = 0; i < count; i++)
+		{
+			const ItemInfo* ii = ctrlTransfers.getItemData(i);
+			if (!ii->groupInfo || ii->groupInfo->parent != ii)
+				ctrlTransfers.updateItem(i, COLUMN_DEBUG_INFO);
+		}
+	}
 }
 
 void TransferView::getSelectedUsers(vector<UserPtr>& v) const
