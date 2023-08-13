@@ -28,8 +28,6 @@
 #include "HintedUser.h"
 #include <atomic>
 
-#define USING_IDLERS_IN_CONNECTION_MANAGER
-
 class TokenManager
 {
 	public:
@@ -70,7 +68,7 @@ class ConnectionQueueItem
 			NO_DOWNLOAD_SLOTS,          // Not needed right now
 			ACTIVE                      // In one up/downmanager
 		};
-		
+
 		ConnectionQueueItem(const HintedUser& hintedUser, bool download, const string& token) :
 			token(token), lastAttempt(0),
 			errors(0), state(WAITING), download(download), hintedUser(hintedUser)
@@ -89,7 +87,7 @@ class ConnectionQueueItem
 		const UserPtr& getUser() const { return hintedUser.user; }
 		const HintedUser& getHintedUser() const { return hintedUser; }
 		void setHubHint(const string& hubUrl) { hintedUser.hint = hubUrl; }
-		
+
 	private:
 		const string token;
 		HintedUser hintedUser;
@@ -307,10 +305,6 @@ class ConnectionManager :
 	private:
 		static const int SERVER_SECURE = 1;
 		static const int SERVER_V6     = 2;
-
-#ifdef USING_IDLERS_IN_CONNECTION_MANAGER
-		UserList checkIdle;
-#endif
 
 		StringList nmdcFeatures;
 		StringList adcFeatures;

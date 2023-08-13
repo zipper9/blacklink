@@ -35,6 +35,11 @@ class Upload : public Transfer, public Flags
 
 		GETSET(uint64_t, tickForRemove, TickForRemove);
 		GETSET(int64_t, downloadedBytes, DownloadedBytes);
+
+#ifdef DEBUG_SHUTDOWN
+	public:
+		static std::atomic<int> countCreated, countDeleted;
+#endif
 };
 
 typedef std::shared_ptr<Upload> UploadPtr;

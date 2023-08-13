@@ -26,6 +26,10 @@
 #include "ParamExpander.h"
 #include "Random.h"
 
+#ifdef DEBUG_SHUTDOWN
+std::atomic<int> Download::countCreated(0), Download::countDeleted(0);
+#endif
+
 Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noexcept :
 	Transfer(conn, getTargetPath(item), item->getTTH()),
 	qi(item),
@@ -35,6 +39,9 @@ Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noex
 	, lastNormalSpeed(0)
 #endif
 {
+#ifdef DEBUG_SHUTDOWN
+	++countCreated;
+#endif
 	runningAverage = conn->getLastDownloadSpeed();
 	setFileSize(qi->getSize());
 
@@ -139,6 +146,9 @@ Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noex
 
 Download::~Download()
 {
+#ifdef DEBUG_SHUTDOWN
+	++countDeleted;
+#endif
 	dcassert(downloadFile == nullptr);
 }
 

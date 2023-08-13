@@ -100,6 +100,10 @@ class Download : public Transfer, public Flags
 			string target;
 			int64_t size;
 		};
+
+#ifdef DEBUG_SHUTDOWN
+		static std::atomic<int> countCreated, countDeleted;
+#endif
 };
 
 typedef std::shared_ptr<Download> DownloadPtr;

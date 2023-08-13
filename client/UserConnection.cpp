@@ -701,11 +701,6 @@ void UserConnection::onTransmitDone() noexcept
 	UploadManager::getInstance()->transmitDone(this);
 }
 
-void UserConnection::onUpdated() noexcept
-{
-	DownloadManager::getInstance()->processUpdatedConnection(this);
-}
-
 void UserConnection::onFailed(const string& line) noexcept
 {
 	if (state != STATE_UNUSED)

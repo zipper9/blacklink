@@ -51,7 +51,6 @@ uint64_t QueueManager::lastSave = 0;
 QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::userQueueMap[QueueItem::LAST];
 QueueManager::UserQueue::RunningMap QueueManager::UserQueue::runningMap;
 std::unique_ptr<RWLock> QueueManager::UserQueue::csRunningMap = std::unique_ptr<RWLock>(RWLock::create());
-size_t QueueManager::UserQueue::totalDownloads = 0;
 
 QueueManager::FileQueue::FileQueue() :
 #ifdef USE_QUEUE_RWLOCK
@@ -196,13 +195,15 @@ bool QueueManager::FileQueue::addL(const QueueItemPtr& qi)
 
 void QueueManager::FileQueue::remove(const QueueItemPtr& qi)
 {
-	size_t nrDownloads = qi->downloads.size();
-	if (nrDownloads)
 	{
-		// shouldn't be needed
-		dcassert(0);
-		userQueue.modifyRunningCount(-(int) nrDownloads);
+		LOCK(qi->csSegments);
+		if (!qi->downloads.empty())
+		{
+			dcassert(0);
+			qi->downloads.clear();
+		}
 	}
+
 	QueueWLock(*csFQ);
 	auto j = queue.find(Text::toLower(qi->getTarget()));
 	if (j != queue.end())
@@ -531,48 +532,30 @@ void QueueManager::UserQueue::addDownload(const QueueItemPtr& qi, const Download
 {
 	qi->addDownload(d);
 	// Only one download per user...
-	{
-		WRITE_LOCK(*csRunningMap);
-		QueueItemPtr& dest = runningMap[d->getUser()];
-		if (dest)
-		{
-			totalDownloads--;
-			dcassert(0);
-		}
-		dest = qi;
-		totalDownloads++;
-	}
-}
-
-void QueueManager::UserQueue::modifyRunningCount(int count)
-{
 	WRITE_LOCK(*csRunningMap);
-	totalDownloads += count;
+	runningMap[d->getUser()] = qi;
 }
 
 size_t QueueManager::UserQueue::getRunningCount()
 {
 	READ_LOCK(*csRunningMap);
-	return totalDownloads;
+	return runningMap.size();
 }
 
 void QueueManager::UserQueue::removeRunning(const UserPtr& user)
 {
 	WRITE_LOCK(*csRunningMap);
+	dcdebug("removeRunning: %s\n", user->getLastNick().c_str());
 	runningMap.erase(user);
 }
 
-bool QueueManager::UserQueue::removeDownload(const QueueItemPtr& qi, const UserPtr& user)
+void QueueManager::UserQueue::removeDownload(const QueueItemPtr& qi, const UserPtr& user)
 {
-	bool result = qi->removeDownload(user);
+	qi->removeDownload(user);
 	WRITE_LOCK(*csRunningMap);
-	runningMap.erase(user);
-	if (result)
-	{
-		dcassert(totalDownloads > 0);
-		totalDownloads--;
-	}
-	return result;
+	auto i = runningMap.find(user);
+	if (i != runningMap.end() && i->second == qi)
+		runningMap.erase(i);
 }
 
 void QueueManager::UserQueue::setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p)
@@ -610,7 +593,7 @@ bool QueueManager::UserQueue::isInQueue(const QueueItemPtr& qi) const
 	QueueRLock(*QueueItem::g_cs);
 	if (qi->prioQueue < 0 || qi->prioQueue >= QueueItem::LAST)
 	{
-		dcassert(0);
+		dcassert(qi->prioQueue == QueueItem::DEFAULT);
 		return false;
 	}
 	auto& ulm = userQueueMap[qi->prioQueue];
@@ -631,7 +614,7 @@ void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr&
 		return;
 	}
 
-	if (removeDownloadFlag && qi == getRunning(user))
+	if (removeDownloadFlag)
 		removeDownload(qi, user);
 
 	auto& ulm = userQueueMap[qi->prioQueue];
@@ -1462,14 +1445,20 @@ void QueueManager::getTargets(const TTHValue& tth, StringList& sl, int maxCount)
 	}
 }
 
-DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInfo& errorInfo) noexcept
+DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& errorInfo) noexcept
 {
+	DownloadPtr d;
+	UserConnection* source = ucPtr.get();
 	const UserPtr u = source->getUser();
+	if (!u)
+	{
+		errorInfo.error = ERROR_INVALID_CONNECTION;
+		return d;
+	}
+
 	dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
 	QueueItemPtr q;
-	DownloadPtr d;
-	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
-	if (!ucPtr) return d;
+
 	{
 		QueueWLock(*QueueItem::g_cs);
 		errorInfo.error = userQueue.getNextL(q, u, QueueItem::LOWEST, source->getChunkSize(), source->getSpeed(), true);
@@ -2881,7 +2870,9 @@ void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& us
 			fire(QueueManagerListener::StatusUpdatedList(), itemList);
 		}
 	}
+#if 0
 	userQueue.removeRunning(user);
+#endif
 }
 
 bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& target)

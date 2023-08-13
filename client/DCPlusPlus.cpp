@@ -183,6 +183,10 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #endif
 	DownloadManager::getInstance()->clearDownloads();
 	UploadManager::getInstance()->clearUploads();
+#ifdef DEBUG_SHUTDOWN
+	LogManager::message("Uploads:   created=" + Util::toString(Upload::countCreated) + ", deleted=" + Util::toString(Upload::countDeleted), false);
+	LogManager::message("Downloads: created=" + Util::toString(Download::countCreated) + ", deleted=" + Util::toString(Download::countDeleted), false);
+#endif
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 	BufferedSocket::waitShutdown();
 #ifdef DEBUG_SHUTDOWN

@@ -135,7 +135,7 @@ void ClientManager::shutdown()
 #endif
 }
 
-void ClientManager::before_shutdown()
+void ClientManager::beforeShutdown()
 {
 	dcassert(!isBeforeShutdown());
 	::g_isBeforeShutdown = true;
@@ -778,20 +778,15 @@ void ClientManager::resendMyInfo()
 OnlineUserPtr ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive)
 {
 	dcassert(!token.empty());
-	dcassert(!isBeforeShutdown());
-	OnlineUserPtr ou;
-	if (!isBeforeShutdown())
+	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
+
+	READ_LOCK(*g_csOnlineUsers);
+	OnlineUserPtr ou = findOnlineUserL(user, priv);
+	if (ou)
 	{
-		const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
-		
-		READ_LOCK(*g_csOnlineUsers);
-		ou = findOnlineUserL(user, priv);
-		if (ou)
-		{
-			if (forcePassive)
-				ou->getClientBase()->resendMyINFO(false, true);
-			ou->getClientBase()->connect(ou, token, forcePassive);
-		}
+		if (forcePassive)
+			ou->getClientBase()->resendMyINFO(false, true);
+		ou->getClientBase()->connect(ou, token, forcePassive);
 	}
 	return ou;
 }
@@ -919,27 +914,19 @@ bool ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid, const IpAddr
 void ClientManager::infoUpdated(Client* client)
 {
 	if (!client) return;
-	if (!ClientManager::isBeforeShutdown())
-	{
-		READ_LOCK(*g_csClients);
-		if (client->isConnected())
-			client->info(false);
-	}
+	READ_LOCK(*g_csClients);
+	if (client->isConnected())
+		client->info(false);
 }
 
 void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 {
-	if (ClientManager::isBeforeShutdown())
-		return;
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		Client* c = static_cast<Client*>(i->second.get());
-		if (!ClientManager::isBeforeShutdown())
-		{
-			if (c->isConnected())
-				c->info(forceUpdate);
-		}
+		if (c->isConnected())
+			c->info(forceUpdate);
 	}
 }
 
@@ -1169,7 +1156,7 @@ void ClientManager::usersCleanup()
 {
 	WRITE_LOCK(*g_csUsers);
 	auto i = g_users.begin();
-	while (i != g_users.end() && !isBeforeShutdown())
+	while (i != g_users.end())
 	{
 		if (i->second.unique())
 			g_users.erase(i++);
@@ -1268,16 +1255,12 @@ void ClientManager::on(UserUpdated, const OnlineUserPtr& ou) noexcept
 
 void ClientManager::on(UserListUpdated, const ClientBase* client, const OnlineUserList& l) noexcept
 {
-	dcassert(!isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	for (auto i = l.cbegin(); i != l.cend(); ++i)
 	{
-		for (auto i = l.cbegin(); i != l.cend(); ++i)
-		{
-			updateNick(*i); // TODO проверить что меняется именно ник - иначе не звать. или разбить UsersUpdated на UsersUpdated + UsersUpdatedNick
+		updateNick(*i); // TODO проверить что меняется именно ник - иначе не звать. или разбить UsersUpdated на UsersUpdated + UsersUpdatedNick
 #ifdef _DEBUG
-			//      LogManager::message("ClientManager::on(UsersUpdated nick = " + (*i)->getUser()->getLastNick());
+		//      LogManager::message("ClientManager::on(UsersUpdated nick = " + (*i)->getUser()->getLastNick());
 #endif
-		}
 	}
 }
 
@@ -1293,16 +1276,12 @@ void ClientManager::updateNick(const OnlineUserPtr& ou)
 
 void ClientManager::on(HubUpdated, const Client* c) noexcept
 {
-	dcassert(!isBeforeShutdown());
 	fire(ClientManagerListener::ClientUpdated(), c);
 }
 
 void ClientManager::on(ClientFailed, const Client* client, const string&) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
-	{
-		fire(ClientManagerListener::ClientDisconnected(), client);
-	}
+	fire(ClientManagerListener::ClientDisconnected(), client);
 }
 
 OnlineUserPtr ClientManager::getOnlineUserL(const UserPtr& p)

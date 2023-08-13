@@ -68,7 +68,8 @@ class QueueManager : public Singleton<QueueManager>,
 			ERROR_NO_NEEDED_PART,
 			ERROR_FILE_SLOTS_TAKEN,
 			ERROR_DOWNLOAD_SLOTS_TAKEN,
-			ERROR_NO_FREE_BLOCK
+			ERROR_NO_FREE_BLOCK,
+			ERROR_INVALID_CONNECTION
 		};
 
 		enum
@@ -240,7 +241,7 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
 		static QueueItemPtr getQueuedItem(const UserPtr& user) noexcept;
-		DownloadPtr getDownload(UserConnection* source, Download::ErrorInfo& error) noexcept;
+		DownloadPtr getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& error) noexcept;
 		void putDownload(DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& download);
 		
@@ -347,14 +348,13 @@ class QueueManager : public Singleton<QueueManager>,
 				int getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
 				QueueItemPtr getRunning(const UserPtr& user);
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
-				bool removeDownload(const QueueItemPtr& qi, const UserPtr& d);
+				void removeDownload(const QueueItemPtr& qi, const UserPtr& d);
 				void removeQueueItemL(const QueueItemPtr& qi, bool removeDownloadFlag);
 				void removeQueueItem(const QueueItemPtr& qi);
 				void removeUserL(const QueueItemPtr& qi, const UserPtr& user, bool removeDownloadFlag);
 				bool isInQueue(const QueueItemPtr& qi) const;
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
-				static void modifyRunningCount(int count);
 
 				typedef boost::unordered_map<UserPtr, QueueItemList> UserQueueMap;
 				typedef boost::unordered_map<UserPtr, QueueItemPtr> RunningMap;
@@ -366,7 +366,6 @@ class QueueManager : public Singleton<QueueManager>,
 				static RunningMap runningMap;
 				/** Last error message to sent to TransferView */
 				static std::unique_ptr<RWLock> csRunningMap;
-				static size_t totalDownloads;
 		};
 
 		/** QueueItems by user */

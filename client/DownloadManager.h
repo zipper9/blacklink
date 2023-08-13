@@ -35,12 +35,11 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 {
 	public:
 		/** @internal */
-		void addConnection(UserConnection* p_conn);
-		void checkIdle(const UserPtr& user) const;
-		
+		void addConnection(UserConnectionPtr& conn);
+
 		/** @internal */
 		void abortDownload(const string& target);
-		
+
 		/** @return Running average download speed in Bytes/s */
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
@@ -48,11 +47,11 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		size_t getDownloadCount() const noexcept;
 		void clearDownloads() noexcept;
 		
-		bool isStartDownload(QueueItem::Priority prio) const;
+		bool isStartDownload(QueueItem::Priority prio) const noexcept;
 		bool checkFileDownload(const UserPtr& user) const;
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
-		void processUpdatedConnection(UserConnection* source) noexcept;
+		void checkDownloads(const UserConnectionPtr& conn, bool quickCheck = false) noexcept;
 		void checkUserIP(UserConnection* source) noexcept;
 		void fileNotAvailable(UserConnection* source);
 		void noSlots(UserConnection* source, const string& param = Util::emptyString) noexcept;
@@ -64,8 +63,6 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 	private:
 		std::unique_ptr<RWLock> csDownloads;
 		std::vector<DownloadPtr> downloads;
-		std::vector<UserConnection*> idlers;
-		void removeIdleConnection(UserConnection* source);
 
 		static int64_t g_runningAverage;
 
@@ -77,7 +74,6 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		DownloadManager();
 		~DownloadManager();
 
-		void checkDownloads(UserConnection* conn);
 		void startData(UserConnection* source, int64_t start, int64_t newSize, bool z);
 		void endData(UserConnection* source);
 

@@ -458,38 +458,22 @@ void ConnectionManager::startListen(int af, int type)
 void ConnectionManager::getDownloadConnection(const UserPtr& user)
 {
 	dcassert(user);
-	dcassert(!ClientManager::isBeforeShutdown());
 	ConnectionQueueItemPtr cqi;
-	if (!ClientManager::isBeforeShutdown())
 	{
+		WRITE_LOCK(*csDownloads);
+		const auto i = find(downloads.begin(), downloads.end(), user);
+		if (i == downloads.end())
 		{
-			WRITE_LOCK(*csDownloads);
-			const auto i = find(downloads.begin(), downloads.end(), user);
-			if (i == downloads.end())
-			{
-				auto cqi = std::make_shared<ConnectionQueueItem>(HintedUser(user, Util::emptyString), true,
-					tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
-				downloads.insert(cqi);
-				if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
-			}
-#ifdef USING_IDLERS_IN_CONNECTION_MANAGER
-			else
-			{
-				if (find(checkIdle.begin(), checkIdle.end(), user) == checkIdle.end())
-				{
-					checkIdle.push_back(user); // TODO - Ëîê?
-				}
-			}
-#endif
+			auto cqi = std::make_shared<ConnectionQueueItem>(HintedUser(user, Util::emptyString), true,
+				tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
+			downloads.insert(cqi);
+			if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
 		}
-		if (cqi && !ClientManager::isBeforeShutdown())
-		{
-			fire(ConnectionManagerListener::Added(), HintedUser(user, Util::emptyString), true, cqi->getConnectionQueueToken());
-			return;
-		}
-#ifndef USING_IDLERS_IN_CONNECTION_MANAGER
-		DownloadManager::checkIdle(user);
-#endif
+	}
+	if (cqi)
+	{
+		fire(ConnectionManagerListener::Added(), HintedUser(user, Util::emptyString), true, cqi->getConnectionQueueToken());
+		return;
 	}
 }
 
@@ -684,9 +668,6 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	updateAverageSpeed(tick);
 	flushUpdatedUsers();
 	std::vector<ConnectionQueueItemPtr> removed;
-#ifdef USING_IDLERS_IN_CONNECTION_MANAGER
-	UserList idleList;
-#endif
 	unsigned maxAttempts = SETTING(DOWNCONN_PER_SEC);
 	if (!maxAttempts) maxAttempts = UINT_MAX;
 	std::vector<TokenItem> statusChanged;
@@ -694,10 +675,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	{
 		READ_LOCK(*csDownloads);
 		unsigned attempts = 0;
-#ifdef USING_IDLERS_IN_CONNECTION_MANAGER
-		idleList.swap(checkIdle);
-#endif
-		for (auto i = downloads.cbegin(); i != downloads.cend() && !ClientManager::isBeforeShutdown(); ++i)
+		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			const auto cqi = *i;
 			if (cqi->getState() != ConnectionQueueItem::ACTIVE)
@@ -799,13 +777,6 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	for (auto k = downloadError.cbegin(); k != downloadError.cend(); ++k)
 		fire(ConnectionManagerListener::FailedDownload(), k->hintedUser, k->reason, k->token);
 	downloadError.clear();
-	
-#ifdef USING_IDLERS_IN_CONNECTION_MANAGER
-	for (auto i = idleList.cbegin(); i != idleList.cend(); ++i)
-	{
-		DownloadManager::getInstance()->checkIdle(*i);
-	}
-#endif
 
 	if (tick > timeRemoveExpired)
 	{
@@ -860,9 +831,11 @@ void ConnectionManager::checkConnections(uint64_t tick)
 				}
 			}
 			else if (uc->getState() == UserConnection::STATE_TRY_AGAIN && lastActivity + UC_RETRY_TIME * 1000 < tick)
-				uc->updated();
+				DownloadManager::getInstance()->checkDownloads(j->second, true);
 			else if (lastActivity + UC_IDLE_TIME * 1000 < tick)
 				uc->disconnect(true);
+			else if (uc->getState() == UserConnection::STATE_IDLE)
+				DownloadManager::getInstance()->checkDownloads(j->second, true);
 		}
 		++j;
 	}
@@ -1226,13 +1199,17 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 	
 	if (isActive)
 	{
-		DownloadManager::getInstance()->addConnection(conn);
-		setIP(conn, cqi);
+		UserConnectionPtr ucPtr = findConnection(conn);
+		if (ucPtr)
+		{
+			DownloadManager::getInstance()->addConnection(ucPtr);
+			setIP(conn, cqi);
+		}
+		else
+			isActive = false;
 	}
-	else
-	{
+	if (!isActive)
 		putConnection(conn);
-	}
 }
 
 void ConnectionManager::addUploadConnection(UserConnection* conn)

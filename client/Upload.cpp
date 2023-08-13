@@ -21,17 +21,27 @@
 #include "Streams.h"
 #include "UserConnection.h"
 
+#ifdef DEBUG_SHUTDOWN
+std::atomic<int> Upload::countCreated(0), Upload::countDeleted(0);
+#endif
+
 Upload::Upload(const UserConnectionPtr& conn, const TTHValue& tth, const string& path, InputStream* is):
 	Transfer(conn, path, tth),
 	readStream(is),
 	tickForRemove(0),
 	downloadedBytes(-1)
 {
+#ifdef DEBUG_SHUTDOWN
+	++countCreated;
+#endif
 	runningAverage = conn->getLastUploadSpeed();
 }
 
 Upload::~Upload()
 {
+#ifdef DEBUG_SHUTDOWN
+	++countDeleted;
+#endif
 	delete readStream;
 }
 

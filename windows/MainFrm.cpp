@@ -2210,7 +2210,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			{
 				storeWindowsPos();
 					
-				ClientManager::before_shutdown();
+				ClientManager::beforeShutdown();
 				LogManager::g_mainWnd = nullptr;
 				closing = true;
 				destroyTimer();

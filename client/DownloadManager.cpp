@@ -151,36 +151,9 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	}
 }
 
-void DownloadManager::removeIdleConnection(UserConnection* source)
+void DownloadManager::addConnection(UserConnectionPtr& ucPtr)
 {
-	WRITE_LOCK(*csDownloads);
-	dcassert(source->getUser());
-	auto i = find(idlers.begin(), idlers.end(), source);
-	if (i == idlers.end())
-	{
-		//dcassert(i != idlers.end());
-		return;
-	}
-	idlers.erase(i);
-}
-
-void DownloadManager::checkIdle(const UserPtr& user) const
-{
-	READ_LOCK(*csDownloads);
-	dcassert(user);
-	for (auto i = idlers.begin(); i != idlers.end(); ++i)
-	{
-		UserConnection* uc = *i;
-		if (uc->getUser() == user)
-		{
-			uc->updated();
-			return;
-		}
-	}
-}
-
-void DownloadManager::addConnection(UserConnection* conn)
-{
+	UserConnection* conn = ucPtr.get();
 	if (!conn->isSet(UserConnection::FLAG_SUPPORTS_TTHF) || !conn->isSet(UserConnection::FLAG_SUPPORTS_ADCGET))
 	{
 		// Can't download from these...
@@ -196,10 +169,10 @@ void DownloadManager::addConnection(UserConnection* conn)
 		conn->disconnect();
 		return;
 	}
-	checkDownloads(conn);
+	checkDownloads(ucPtr);
 }
 
-bool DownloadManager::isStartDownload(QueueItem::Priority prio) const
+bool DownloadManager::isStartDownload(QueueItem::Priority prio) const noexcept
 {
 	const size_t downloadCount = getDownloadCount();
 	const size_t slots = SETTING(DOWNLOAD_SLOTS);
@@ -215,10 +188,12 @@ bool DownloadManager::isStartDownload(QueueItem::Priority prio) const
 	return true;
 }
 
-void DownloadManager::checkDownloads(UserConnection* conn)
+void DownloadManager::checkDownloads(const UserConnectionPtr& ucPtr, bool quickCheck) noexcept
 {
-	auto qm = QueueManager::getInstance();
+	UserConnection* conn = ucPtr.get();
 	const QueueItem::Priority prio = QueueManager::hasDownload(conn->getUser());
+	if (quickCheck && prio == QueueItem::PAUSED)
+		return;
 	if (!isStartDownload(prio))
 	{
 		conn->disconnect();
@@ -226,19 +201,13 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 	}
 
 	Download::ErrorInfo errorInfo;
-	auto d = qm->getDownload(conn, errorInfo);
+	auto d = QueueManager::getInstance()->getDownload(ucPtr, errorInfo);
 
 	if (!d)
 	{
-		if (errorInfo.error != QueueManager::SUCCESS)
-		{
-			fire(DownloadManagerListener::Status(), conn, errorInfo);
-		}
-		
 		conn->setState(UserConnection::STATE_IDLE);
-		WRITE_LOCK(*csDownloads);
-		dcassert(conn->getUser());
-		idlers.push_back(conn);
+		if (errorInfo.error != QueueManager::SUCCESS)
+			fire(DownloadManagerListener::Status(), conn, errorInfo);
 		return;
 	}
 	
@@ -443,7 +412,8 @@ void DownloadManager::endData(UserConnection* source)
 			qm->removeSource(d->getPath(), source->getUser(), QueueItem::Source::FLAG_BAD_TREE, false);
 			qm->putDownload(d, false);
 			
-			checkDownloads(source);
+			UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
+			if (ucPtr) checkDownloads(ucPtr);
 			return;
 		}
 		d->setTreeValid(true);
@@ -467,14 +437,15 @@ void DownloadManager::endData(UserConnection* source)
 		
 		dcdebug("Download finished: %s, size " I64_FMT ", pos: " I64_FMT "\n", d->getPath().c_str(), d->getSize(), d->getPos());
 	}
-	
+
 	removeDownload(d);
 	QueueManager::getInstance()->putDownload(d, true, false);
-	
+
 	if (d->getType() != Transfer::TYPE_FILE || d->getQueueItem()->isFinished())
 		fire(DownloadManagerListener::Complete(), d);
 
-	checkDownloads(source);
+	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
+	if (ucPtr) checkDownloads(ucPtr);
 }
 
 void DownloadManager::noSlots(UserConnection* source, const string& param) noexcept
@@ -486,7 +457,6 @@ void DownloadManager::noSlots(UserConnection* source, const string& param) noexc
 
 void DownloadManager::fail(UserConnection* source, const string& error) noexcept
 {
-	removeIdleConnection(source);
 	failDownload(source, error, true);
 }
 
@@ -594,12 +564,6 @@ void DownloadManager::processSTA(UserConnection* source, const AdcCommand& cmd) 
 	source->disconnect();
 }
 
-void DownloadManager::processUpdatedConnection(UserConnection* source) noexcept
-{
-	removeIdleConnection(source);
-	checkDownloads(source);
-}
-
 void DownloadManager::fileNotAvailable(UserConnection* source)
 {
 	auto d = source->getDownload();
@@ -620,7 +584,8 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	qm->removeSource(d->getPath(), source->getUser(), (Flags::MaskType)(d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE), false);
 	d->setReason(STRING(FILE_NOT_AVAILABLE));
 	qm->putDownload(d, false);
-	checkDownloads(source);
+	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
+	checkDownloads(ucPtr);
 }
 
 bool DownloadManager::checkFileDownload(const UserPtr& user) const

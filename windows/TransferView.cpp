@@ -780,7 +780,7 @@ TransferView::ItemInfo* TransferView::addToken(const UpdateInfo& ui)
 			updateDownload(parent, pos, ui.updateMask & UpdateInfo::MASK_FILE);
 		}
 		else
-			updateDownload(ii, pos, ui.updateMask & UpdateInfo::MASK_FILE);
+			updateDownload(ii, pos, ui.updateMask);
 	}
 	else
 		ctrlTransfers.insertItem(ii, IMAGE_UPLOAD);
@@ -884,7 +884,7 @@ void TransferView::processTasks()
 										updateItem(index, ui.updateMask);
 								}
 								else
-									updateDownload(ii, index, ui.updateMask & UpdateInfo::MASK_FILE);
+									updateDownload(ii, index, ui.updateMask);
 							}
 							else if (parent)
 							{
@@ -1394,8 +1394,7 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& downlo
 	ui->setSize(download->getSize());
 	ui->setTarget(download->getPath());
 	ui->setType(download->getType());
-	const auto token = download->getConnectionQueueToken();
-	ui->setToken(token);
+	ui->setToken(download->getConnectionQueueToken());
 
 	tstring tmpReason = Text::toT(reason);
 	if (download->isSet(Download::FLAG_SLOWUSER))
