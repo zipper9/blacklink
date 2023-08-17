@@ -348,7 +348,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 				if (comp == 0)
 					return mid;
 
-				if (!isAscending())
+				if (!isAscending() && abs(comp) != 2)
 					comp = -comp;
 
 				if (comp < 0)
@@ -358,7 +358,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			}
 
 			comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
-			if (!isAscending())
+			if (!isAscending() && abs(comp) != 2)
 				comp = -comp;
 			if (comp > 0)
 				mid++;
