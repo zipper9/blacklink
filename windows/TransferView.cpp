@@ -1288,8 +1288,7 @@ int TransferView::ItemInfo::compareUsers(const ItemInfo* a, const ItemInfo* b)
 {
 	if (a->hits != -1 && b->hits != -1) return compareTargets(a, b);
 	int res = compare(a->hits, b->hits);
-	if (a->hits == -1 || b->hits == -1) return -res;
-	if (res) return res;
+	if (a->hits != -1 || b->hits != -1) return -res;
 	res = compare(a->nicks, b->nicks);
 	if (res) return res;
 	if (a->download != b->download) return a->download ? -1 : 1;
