@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
@@ -25,17 +24,14 @@
 #include "../client/DownloadManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
-#include "../client/QueueItem.h"
 #include "../client/ThrottleManager.h"
 #include "../client/DatabaseManager.h"
 #include "../client/Random.h"
 
-#include "WinUtil.h"
 #include "TransferView.h"
 #include "MainFrm.h"
 #include "QueueFrame.h"
 #include "WaitingUsersFrame.h"
-#include "ResourceLoader.h"
 #include "ExMessageBox.h"
 
 static const unsigned TIMER_VAL = 200;
@@ -85,7 +81,7 @@ static const int columnSizes[] =
 #endif
 	85,  // COLUMN_SHARE
 	75,  // COLUMN_SLOTS
-	80   // COLUMN_DEBU_INFO
+	80   // COLUMN_DEBUG_INFO
 };
 
 static const ResourceManager::Strings columnNames[] =
@@ -310,7 +306,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				return FALSE;
 			}
 
-			const bool segmentedDownload = ii->groupInfo && ii->groupInfo->parent == ii;
+			const bool segmentedDownload = ii->isParent();
 
 			clearPreviewMenu();
 			OMenu transferMenu;
@@ -492,25 +488,13 @@ LRESULT TransferView::onForce(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		ItemInfo* ii = ctrlTransfers.getItemData(i);
-		if (ii->groupInfo && ii->groupInfo->parent == ii)
+		if (ii->isParent())
 		{
 			for (ItemInfo* child : ii->groupInfo->children)
-			{
-				child->transferFailed = false;
-				int pos = ctrlTransfers.findItem(child);
-				if (pos != -1)
-					ctrlTransfers.SetItemText(pos, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
-				ConnectionManager::getInstance()->force(child->hintedUser);
-			}
+				child->force();
 		}
 		else
-		{
-			ii->transferFailed = false;
-			int pos = ctrlTransfers.findItem(ii);
-			if (pos != -1)
-				ctrlTransfers.SetItemText(pos, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
-			ConnectionManager::getInstance()->force(ii->hintedUser);
-		}
+			ii->force();
 	}
 	return 0;
 }
@@ -519,6 +503,17 @@ void TransferView::ItemInfo::removeAll()
 {
 	if (hits <= 1)
 		QueueManager::getInstance()->removeSource(hintedUser, QueueItem::Source::FLAG_REMOVED);
+}
+
+void TransferView::ItemInfo::force()
+{
+	if (isParent() || !download) return;
+	transferFailed = false;
+#if 0
+	statusString = TSTRING(CONNECTING_FORCED);
+	ctrlTransfers.updateItem(this);
+#endif
+	ConnectionManager::getInstance()->force(hintedUser);
 }
 
 static inline int getProportionalWidth(int width, int64_t pos, int64_t size)
@@ -723,7 +718,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 			return 0;
 
 		ItemInfo* i = ctrlTransfers.getItemData(item->iItem);
-		bool isUser = !(i->groupInfo && i->groupInfo->parent == i);
+		bool isUser = !i->isParent();
 		switch (SETTING(TRANSFERLIST_DBLCLICK))
 		{
 			case 0:
@@ -741,13 +736,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 				if (isUser) i->addFav();
 				break;
 			case 5:
-				if (isUser)
-				{
-					i->statusString = TSTRING(CONNECTING_FORCED);
-					ctrlTransfers.updateItem(i);
-					// FIXME
-					ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false);
-				}
+				if (isUser) i->force();
 				break;
 			case 6:
 				if (isUser) i->browseList();
@@ -1150,6 +1139,7 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 	}
 #endif
 	ui->setStatus(ItemInfo::STATUS_WAITING);
+	ui->setSpeed(0);
 	addTask(TRANSFER_UPDATE_TOKEN, ui);
 }
 
@@ -1163,6 +1153,7 @@ void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser&
 	UpdateInfo* ui = new UpdateInfo(hintedUser, false);
 	ui->setToken(token);
 	ui->setStatusString(Text::toT(reason));
+	ui->setSpeed(0);
 	ui->setStatus(ItemInfo::STATUS_WAITING);
 	addTask(TRANSFER_UPDATE_TOKEN, ui);
 }
@@ -1383,7 +1374,7 @@ void TransferView::starting(UpdateInfo* ui, const Transfer* t)
 {
 	ui->setTarget(t->getPath());
 	ui->setType(t->getType());
-	ui->setCipher(Text::toT(t->getCipherName()));
+	ui->setCipher(Text::toT(t->getUserConnection()->getCipherName()));
 	const string& token = t->getConnectionQueueToken();
 	ui->setToken(token);
 	ui->setIP(t->getIP());
@@ -1426,6 +1417,7 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& downlo
 	}
 
 	ui->setStatusString(tmpReason);
+	ui->setSpeed(0);
 
 	SHOW_POPUPF(POPUP_ON_DOWNLOAD_FAILED,
 	            TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target) + _T('\n') +
@@ -1634,7 +1626,7 @@ LRESULT TransferView::onDisconnectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		ItemInfo* ii = ctrlTransfers.getItemData(i);
-		if (ii->groupInfo && ii->groupInfo->parent == ii)
+		if (ii->isParent())
 		{
 			for (ItemInfo* child : ii->groupInfo->children)
 				child->disconnect();
@@ -1731,6 +1723,8 @@ void TransferView::updateDownload(ItemInfo* ii, int index, int updateMask)
 	}
 	if (segs > 0)
 	{
+		if (ii->isParent())
+			transferFlags &= ~(TRANSFER_FLAG_PARTIAL | TRANSFER_FLAG_SECURE | TRANSFER_FLAG_TRUSTED);
 		ii->status = ItemInfo::STATUS_RUNNING;
 		qi->updateDownloadedBytesAndSpeed();
 		int64_t totalSpeed = qi->getAverageSpeed();

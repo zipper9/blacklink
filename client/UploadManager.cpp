@@ -466,7 +466,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 		{
 			auto up = *i;
-			if (source == up->getUserConnection().get())
+			if (source == up->getUserConnection())
 			{
 				finishedUploads.erase(i);
 				if (sourceFile != up->getPath())
@@ -1252,7 +1252,7 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 			auto u = *i;
 			if (u->getPath() == fileName)
 			{
-				u->getUserConnection()->disconnect(true);
+				u->disconnect(true);
 				nowait = false;
 			}
 		}

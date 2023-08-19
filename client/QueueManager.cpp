@@ -2953,7 +2953,7 @@ bool QueueManager::dropSource(const DownloadPtr& d)
 			d->setFlag(Download::FLAG_SLOWUSER);
 			if (d->getRunningAverage() < SETTING(AUTO_DISCONNECT_REMOVE_SPEED) * 1024)
 				return true;
-			d->getUserConnection()->disconnect();
+			d->disconnect();
 		}
 	}
 

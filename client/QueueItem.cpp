@@ -860,7 +860,7 @@ void QueueItem::disconnectOthers(const DownloadPtr& download)
 	// Disconnect all possible overlapped downloads
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		if ((*i) != download)
-			(*i)->getUserConnection()->disconnect();
+			(*i)->disconnect();
 }
 
 bool QueueItem::disconnectSlow(const DownloadPtr& download)
@@ -880,7 +880,7 @@ bool QueueItem::disconnectSlow(const DownloadPtr& download)
 			found = true;
 
 			// disconnect slow chunk
-			j->getUserConnection()->disconnect();
+			j->disconnect();
 			break;
 		}
 	}

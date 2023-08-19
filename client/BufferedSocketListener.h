@@ -30,7 +30,8 @@ class BufferedSocketListener
 		virtual void onConnected() noexcept {}
 		virtual void onDataLine(const string&) noexcept {}
 		virtual void onData(const uint8_t*, size_t) {}
-		virtual void onBytesSent(size_t fileBytes, size_t socketBytes) {}
+		virtual void onBytesLoaded(size_t bytes) {}
+		virtual void onBytesSent(size_t bytes) {}
 		virtual void onModeChange() noexcept {}
 		virtual void onTransmitDone() noexcept {}
 		virtual void onFailed(const string&) noexcept {}

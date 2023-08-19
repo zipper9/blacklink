@@ -27,15 +27,15 @@
 #include "../client/Download.h"
 #include "../client/Upload.h"
 #include "../client/TaskQueue.h"
+#include "../client/UserInfoBase.h"
 
-#include "OMenu.h"
-#include "UCHandler.h"
 #include "TypedTreeListViewCtrl.h"
-#include "SearchFrm.h"
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
-#include "BaseHandlers.h"
 #include "BarShader.h"
+#include "UserInfoBaseHandler.h"
+#include "UCHandler.h"
+#include "BaseHandlers.h"
 
 static const int TRANSFERS_VIEW_TRAITS = UserInfoGuiTraits::NO_COPY;
 
@@ -302,6 +302,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				void disconnect();
 				void disconnectAndBlock();
 				void removeAll();
+				void force();
 
 				double getProgressPosition() const
 				{
@@ -324,6 +325,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				ItemInfo* createParent();
 				const tstring& getGroupCond() const { return target; }
 				bool hasParent() const { return groupInfo && groupInfo->parent && groupInfo->parent != this; }
+				bool isParent() const { return groupInfo && groupInfo->parent == this; }
 				static tstring formatStatusString(int transferFlags, uint64_t startTime, int64_t pos, int64_t size);
 
 			private:

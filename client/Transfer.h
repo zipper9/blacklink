@@ -79,10 +79,9 @@ class Transfer
 		const string& getPath() const { return path; }
 		const TTHValue& getTTH() const { return tth; }
 		const string& getConnectionQueueToken() const;
-		string getCipherName() const;
-		const UserConnectionPtr& getUserConnection() const { return userConnection; }
-		UserConnectionPtr getUserConnection() { return userConnection; }
+		const UserConnection* getUserConnection() const { return userConnection.get(); }
 		const IpAddress& getIP() const { return ip; }
+		void disconnect(bool graceless = false);
 
 		GETSET(Segment, segment, Segment);
 		GETSET(int64_t, fileSize, FileSize);

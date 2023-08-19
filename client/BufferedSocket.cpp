@@ -341,7 +341,7 @@ void BufferedSocket::writeData()
 				size_t actual = stream->read(sb.buf + sb.writePtr, readSize);
 				if (actual)
 				{
-					if (listener) listener->onBytesSent(actual, 0);
+					if (listener) listener->onBytesLoaded(actual);
 					sb.writePtr += actual;
 				}
 				else
@@ -370,7 +370,7 @@ void BufferedSocket::writeData()
 				if (result)
 				{
 					sb.readPtr += result;
-					if (listener) listener->onBytesSent(0, result);
+					if (listener) listener->onBytesSent(result);
 				}
 				if (stopFlag) return;
 			}

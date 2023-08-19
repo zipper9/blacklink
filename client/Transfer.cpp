@@ -46,9 +46,9 @@ const string& Transfer::getConnectionQueueToken() const
 	return userConnection->getConnectionQueueToken();
 }
 
-string Transfer::getCipherName() const
+void Transfer::disconnect(bool graceless)
 {
-	return userConnection->getCipherName();
+	userConnection->disconnect(graceless);
 }
 
 void Transfer::getParams(StringMap& params) const
@@ -62,7 +62,6 @@ void Transfer::getParams(StringMap& params) const
 		const string nick = user->getLastNick();
 		params["userCID"] = user->getCID().toBase32();
 		params["userNI"] = !nick.empty() ? nick : Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString, false));
-		IpAddress ip = source->getRemoteIp();
 		switch (ip.type)
 		{
 			case AF_INET:

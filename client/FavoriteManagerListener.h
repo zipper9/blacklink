@@ -23,6 +23,7 @@
 #include "noexcept.h"
 
 class RecentHubEntry;
+class FavoriteUser;
 
 class FavoriteManagerListener
 {

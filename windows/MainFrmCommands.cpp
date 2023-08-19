@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "MainFrm.h"
-#include "WinUtil.h"
+#include "SearchFrm.h"
 #include "Players.h"
 
 #ifdef DEBUG_GDI_IMAGE

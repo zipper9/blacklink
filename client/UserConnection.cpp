@@ -677,18 +677,19 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 	DownloadManager::getInstance()->onData(this, data, len);
 }
 
-void UserConnection::onBytesSent(size_t bytes, size_t actual)
+void UserConnection::onBytesSent(size_t bytes)
 {
 	updateLastActivity();
 #ifdef BL_FEATURE_IP_DATABASE
-	if (actual)
+	if (bytes)
 	{
 		getUser()->loadIPStat();
-		getUser()->addBytesUploaded(getSocket()->getIp(), actual);
+		getUser()->addBytesUploaded(getSocket()->getIp(), bytes);
 	}
 #endif
 	dcassert(getState() == UserConnection::STATE_RUNNING);
-	getUpload()->addPos(bytes, actual);
+	UploadPtr& upload = getUpload();
+	if (upload) upload->addPos(bytes, bytes);
 }
 
 void UserConnection::onModeChange() noexcept

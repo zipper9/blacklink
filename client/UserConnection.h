@@ -349,7 +349,7 @@ class UserConnection :
 		void onModeChange() noexcept override;
 		void onTransmitDone() noexcept override;
 		void onFailed(const string&) noexcept override;
-		void onBytesSent(size_t bytes, size_t actual) override;
+		void onBytesSent(size_t bytes) override;
 		void onData(const uint8_t* data, size_t len) override;
 		void onUpgradedToSSL() noexcept override;
 };

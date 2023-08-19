@@ -18,7 +18,6 @@
 
 #include "stdafx.h"
 
-#include "resource.h"
 #include "UsersFrame.h"
 #include "MainFrm.h"
 #include "FavUserDlg.h"
@@ -29,6 +28,7 @@
 #include "ExMessageBox.h"
 #include "../client/Util.h"
 #include "../client/UserManager.h"
+#include "../client/ShareManager.h"
 #include "../client/dht/DHT.h"
 #include <algorithm>
 
