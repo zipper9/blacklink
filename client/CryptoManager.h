@@ -70,11 +70,9 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		enum TLSTmpKeys
 		{
-			KEY_FIRST = 0,
-			KEY_DH_2048 = KEY_FIRST,
+			KEY_DH_2048,
 			KEY_DH_4096,
-			KEY_RSA_2048,
-			KEY_LAST
+			NUM_KEYS
 		};
 
 		enum SSLContext
@@ -93,12 +91,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		static const ByteVector& getKeyprint() noexcept;
 		
 		static bool TLSOk() noexcept;
-		
-		static int verify_callback(int preverifyOk, X509_STORE_CTX *ctx);
-		static DH* tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength);
-		static RSA* tmp_rsa_cb(SSL* /*ssl*/, int /*is_export*/, int keylength);
-		static void locking_function(int mode, int n, const char *file, int line);
-		
+
 		static int idxVerifyData;
 		
 	private:
@@ -112,14 +105,19 @@ class CryptoManager : public Singleton<CryptoManager>
 
 		bool load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept;
 		void sslRandCheck();
-		
+
 		static int getKeyLength(TLSTmpKeys key);
 		static DH* getTmpDH(int keyLen);
-		static RSA* getTmpRSA(int keyLen);
-		
-		static bool certsLoaded;
-		
+		static DH* getTempDHCallback(SSL* /*ssl*/, int /*is_export*/, int keylength);
+		static int verifyCallback(int preverifyOk, X509_STORE_CTX *ctx);
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+		static void lockFunc(int mode, int n, const char *file, int line);
 		static CriticalSection* cs;
+#endif
+
+		static bool certsLoaded;
+
 		static char idxVerifyDataName[];
 		static SSLVerifyData trustedKeyprint;
 		
@@ -129,7 +127,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		static string getNameEntryByNID(X509_NAME* name, int nid) noexcept;
 
 	public:
-		static ByteVector X509_digest_internal(::X509* x509, const ::EVP_MD* md);
+		static void getX509Digest(ByteVector& out, const X509* x509, const EVP_MD* md) noexcept;
 };
 
 #endif // !defined(CRYPTO_MANAGER_H)

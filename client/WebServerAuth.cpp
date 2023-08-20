@@ -43,7 +43,7 @@ string WebServerAuth::createAuthCookie(uint64_t expires, uint64_t contextId, con
 	EVP_EncryptUpdate(ctx, u.data + AC_IV_SIZE, &outLen, u.data + AC_IV_SIZE, ENC_DATA_SIZE);
 	outLen = sizeof(tmp);
 	EVP_EncryptFinal(ctx, tmp, &outLen);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, AC_TAG_SIZE, u.ac.tag);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AC_TAG_SIZE, u.ac.tag);
 	EVP_CIPHER_CTX_free(ctx);
 	return Encoder::toBase32(u.data, sizeof(AuthCookie));
 }
@@ -66,7 +66,7 @@ bool WebServerAuth::checkAuthCookie(const string& cookie, uint64_t timestamp, ui
 	EVP_CipherInit_ex(ctx, EVP_aes_128_gcm(), nullptr, authKey, u.ac.iv, 0);
 	int outLen = ENC_DATA_SIZE;
 	EVP_DecryptUpdate(ctx, u.data + AC_IV_SIZE, &outLen, u.data + AC_IV_SIZE, ENC_DATA_SIZE);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, AC_TAG_SIZE, u.ac.tag);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, AC_TAG_SIZE, u.ac.tag);
 	outLen = sizeof(tmp);
 	bool result = false;
 	if (EVP_DecryptFinal(ctx, tmp, &outLen))

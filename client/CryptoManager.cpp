@@ -31,9 +31,8 @@
 
 #include "SSLSocket.h"
 
-static void* tmpKeysMap[CryptoManager::KEY_LAST] = { nullptr, nullptr, nullptr };
+static void* tmpKeysMap[CryptoManager::NUM_KEYS] = { nullptr, nullptr };
 
-CriticalSection* CryptoManager::cs = nullptr;
 int CryptoManager::idxVerifyData = 0;
 char CryptoManager::idxVerifyDataName[] = "VerifyData";
 CryptoManager::SSLVerifyData CryptoManager::trustedKeyprint = { false, "trusted_keyp" };
@@ -41,6 +40,7 @@ bool CryptoManager::certsLoaded = false;
 ByteVector CryptoManager::keyprint;
 static CriticalSection g_cs;
 
+// Cipher suites for TLS <= 1.2
 static const char cipherSuites[] =
 	"ECDHE-ECDSA-AES128-GCM-SHA256:"
 	"ECDHE-RSA-AES128-GCM-SHA256:"
@@ -65,12 +65,16 @@ static const char cipherSuites[] =
 	
 CryptoManager::CryptoManager()
 {
-	const auto l_count_cs = CRYPTO_num_locks();
-	cs = new CriticalSection[l_count_cs];
-	CRYPTO_set_locking_callback(locking_function);
-	
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+	int n = CRYPTO_num_locks();
+	cs = new CriticalSection[n];
+	CRYPTO_set_locking_callback(lockFunc);
+
 	SSL_library_init();
 	SSL_load_error_strings();
+#else
+	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, nullptr);
+#endif
 
 	clientContext.reset(SSL_CTX_new(SSLv23_client_method()));
 	serverContext.reset(SSL_CTX_new(SSLv23_server_method()));
@@ -83,12 +87,8 @@ CryptoManager::CryptoManager()
 		sslRandCheck();
 		
 		// Init temp data for DH keys
-		for (int i = KEY_FIRST; i != KEY_RSA_2048; ++i)
+		for (int i = 0; i < NUM_KEYS; ++i)
 			tmpKeysMap[i] = getTmpDH(getKeyLength(static_cast<TLSTmpKeys>(i)));
-
-		// and same for RSA keys
-		for (int i = KEY_RSA_2048; i != KEY_LAST; ++i)
-			tmpKeysMap[i] = getTmpRSA(getKeyLength(static_cast<TLSTmpKeys>(i)));
 		
 		SSL_CTX_set_options(clientContext, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
 		SSL_CTX_set_cipher_list(clientContext, cipherSuites);
@@ -110,35 +110,30 @@ CryptoManager::CryptoManager()
 			EC_KEY_free(tmp_ecdh);
 		}
 		
-		SSL_CTX_set_tmp_dh_callback(serverContext, CryptoManager::tmp_dh_cb);
-		SSL_CTX_set_tmp_rsa_callback(serverContext, CryptoManager::tmp_rsa_cb);
+		SSL_CTX_set_tmp_dh_callback(serverContext, CryptoManager::getTempDHCallback);
 
-		SSL_CTX_set_verify(clientContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-		SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+		SSL_CTX_set_verify(clientContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback);
+		SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback);
 	}
 }
 
 CryptoManager::~CryptoManager()
 {
-	/* thread-local cleanup */
-	ERR_remove_thread_state(nullptr);
-
 	clientContext.reset();
 	serverContext.reset();
 
-	for (int i = KEY_FIRST; i != KEY_RSA_2048; ++i)
+	for (int i = 0; i < NUM_KEYS; ++i)
 		if (tmpKeysMap[i]) DH_free(static_cast<DH*>(tmpKeysMap[i]));
 
-	for (int i = KEY_RSA_2048; i != KEY_LAST; ++i)
-		if (tmpKeysMap[i]) RSA_free(static_cast<RSA*>(tmpKeysMap[i]));
-
-	// FIXME: all these macros are no-ops
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+	ERR_remove_thread_state(nullptr);
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
-	
+
 	CRYPTO_set_locking_callback(nullptr);
 	delete[] cs;
+#endif
 }
 
 void CryptoManager::sslRandCheck()
@@ -196,7 +191,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 	return Util::emptyString;
 }
 
-int CryptoManager::verify_callback(int preverifyOk, X509_STORE_CTX *ctx)
+int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 {
 	int err = X509_STORE_CTX_get_error(ctx);
 	SSL* ssl = (SSL*)X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
@@ -231,8 +226,9 @@ int CryptoManager::verify_callback(int preverifyOk, X509_STORE_CTX *ctx)
 		else if (keyp.compare(0, 7, "SHA256/") != 0)
 			return allowUntrusted ? 1 : 0;
 			
-		ByteVector kp = X509_digest_internal(cert, EVP_sha256());
-		string expected_keyp = "SHA256/" + Encoder::toBase32(&kp[0], kp.size());
+		ByteVector kp;
+		getX509Digest(kp, cert, EVP_sha256());
+		string expected_keyp = "SHA256/" + Encoder::toBase32(kp.data(), kp.size());
 		
 		// Do a full string comparison to avoid potential false positives caused by invalid inputs
 		if (keyp.compare(expected_keyp) == 0)
@@ -337,7 +333,6 @@ int CryptoManager::getKeyLength(TLSTmpKeys key)
 	switch (key)
 	{
 		case KEY_DH_2048:
-		case KEY_RSA_2048:
 			return 2048;
 		case KEY_DH_4096:
 			return 4096;
@@ -461,25 +456,6 @@ DH* CryptoManager::getTmpDH(int keyLen)
 	}
 	
 	return tmpDH;
-}
-
-RSA* CryptoManager::getTmpRSA(int keyLen)
-{
-	if (keyLen < 2048)
-		return nullptr;
-		
-	RSA* tmpRSA = RSA_new();
-	BIGNUM* bn = BN_new();
-	
-	if (!bn || !BN_set_word(bn, RSA_F4) || !RSA_generate_key_ex(tmpRSA, keyLen, bn, nullptr))
-	{
-		if (bn) BN_free(bn);
-		RSA_free(tmpRSA);
-		return nullptr;
-	}
-	
-	BN_free(bn);
-	return tmpRSA;
 }
 
 bool CryptoManager::TLSOk() noexcept
@@ -723,8 +699,8 @@ void CryptoManager::loadCertificates(bool createOnError) noexcept
 			LogManager::message("Failed to load trusted certificate from " + i);
 		}
 	}
-	
-	keyprint = X509_digest_internal(cert, EVP_sha256());
+
+	getX509Digest(keyprint, cert, EVP_sha256());
 	certsLoaded = true;
 }
 
@@ -770,19 +746,19 @@ SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted)
 
 SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto)
 {
-    return new SSLSocket(clientContext, proto, allowUntrusted, expKP);
+	return new SSLSocket(clientContext, proto, allowUntrusted, expKP);
 }
 
 SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted)
 {
-    return new SSLSocket(serverContext, Socket::PROTO_DEFAULT, allowUntrusted, Util::emptyString);
+	return new SSLSocket(serverContext, Socket::PROTO_DEFAULT, allowUntrusted, Util::emptyString);
 }
 
-DH* CryptoManager::tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)
+DH* CryptoManager::getTempDHCallback(SSL* /*ssl*/, int /*is_export*/, int keylength)
 {
 	if (keylength < 2048)
 		return static_cast<DH*>(tmpKeysMap[KEY_DH_2048]);
-		
+
 	void* tmpDH = nullptr;
 	switch (keylength)
 	{
@@ -793,47 +769,28 @@ DH* CryptoManager::tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)
 			tmpDH = tmpKeysMap[KEY_DH_4096];
 			break;
 	}
-	
+
 	return static_cast<DH*>(tmpDH ? tmpDH : tmpKeysMap[KEY_DH_2048]);
 }
 
-RSA* CryptoManager::tmp_rsa_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)
-{
-	if (keylength < 2048)
-		return static_cast<RSA*>(tmpKeysMap[KEY_RSA_2048]);
-		
-	void* tmpRSA = nullptr;
-	switch (keylength)
-	{
-		case 2048:
-			tmpRSA = tmpKeysMap[KEY_RSA_2048];
-			break;
-	}
-	
-	return static_cast<RSA*>(tmpRSA ? tmpRSA : tmpKeysMap[KEY_RSA_2048]);
-}
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+CriticalSection* CryptoManager::cs = nullptr;
 
-void CryptoManager::locking_function(int mode, int n, const char* /*file*/, int /*line*/)
+void CryptoManager::lockFunc(int mode, int n, const char* /*file*/, int /*line*/)
 {
 	if (mode & CRYPTO_LOCK)
-	{
 		cs[n].lock();
-	}
 	else
-	{
 		cs[n].unlock();
-	}
 }
+#endif
 
-ByteVector CryptoManager::X509_digest_internal(::X509* x509, const ::EVP_MD* md)
+void CryptoManager::getX509Digest(ByteVector& out, const X509* x509, const EVP_MD* md) noexcept
 {
-	unsigned int n;
-	unsigned char buf[EVP_MAX_MD_SIZE];
-	
-	if (!X509_digest(x509, md, buf, &n))
-	{
-		return ByteVector(); // Throw instead?
-	}
-	
-	return ByteVector(buf, buf + n);
+	unsigned n;
+	out.resize(EVP_MAX_MD_SIZE);
+	if (!X509_digest(x509, md, out.data(), &n))
+		out.clear();
+	else
+		out.resize(n);
 }

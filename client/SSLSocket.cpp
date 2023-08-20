@@ -370,9 +370,10 @@ ByteVector SSLSocket::getKeyprint() const noexcept
 	
 	if (!x509)
 		return ByteVector();
-		
-	ByteVector res = CryptoManager::X509_digest_internal(x509, EVP_sha256());
-	
+
+	ByteVector res;
+	CryptoManager::getX509Digest(res, x509, EVP_sha256());
+
 	X509_free(x509);
 	return res;
 }
@@ -464,7 +465,8 @@ void SSLSocket::logInfo(bool isServer) const
 				X509* cert = SSL_get_peer_certificate(ssl);
 				if (cert)
 				{
-					ByteVector digest = CryptoManager::X509_digest_internal(cert, EVP_sha256());
+					ByteVector digest;
+					CryptoManager::getX509Digest(digest, cert, EVP_sha256());
 					StringMap m;
 					m["IP"] = m["ip"] = Util::printIpAddress(getIp());
 					m["KP"] = m["kp"] = Encoder::toBase32(digest.data(), digest.size());
@@ -472,7 +474,7 @@ void SSLSocket::logInfo(bool isServer) const
 					expandedPath += Util::validateFileName(Util::formatParams(path, m, true));
 					if (!File::isExist(expandedPath))
 					{
-					    unsigned char *data = nullptr;
+						unsigned char *data = nullptr;
 						int size = ASN1_item_i2d((ASN1_VALUE*) cert, &data, ASN1_ITEM_rptr(X509));
 						if (size)
 						{
