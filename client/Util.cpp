@@ -139,7 +139,7 @@ void Util::initProfileConfig()
 	const char* home = getenv("HOME");
 	if (!home) home = "/tmp";
 	paths[PATH_USER_CONFIG] = home;
-	paths[PATH_USER_CONFIG] += PATH_SEPARATOR_STR "." APPNAME PATH_SEPARATOR_STR;
+	paths[PATH_USER_CONFIG] += PATH_SEPARATOR_STR "." APPNAME_LC PATH_SEPARATOR_STR;
 #endif
 }
 

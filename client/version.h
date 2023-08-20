@@ -15,10 +15,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-#ifndef FLY_VERSION_H
-#define FLY_VERSION_H
+#ifndef VERSION_H_
+#define VERSION_H_
 
-#define APPNAME "BlackLink"
+#define APPNAME    "BlackLink"
+#define APPNAME_LC "blacklink"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 7
@@ -33,6 +34,6 @@
 
 #define DCVERSIONSTRING "0.785"
 
-#endif // FLY_VERSION_H
+#endif // VERSION_H_
 
 /* Update the .rc file as well... */
