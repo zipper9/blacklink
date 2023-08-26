@@ -224,8 +224,8 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 										is = new LimitedInputStream<true>(f, size);
 									else
 										is = f;
-									if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
-									useCompType = COMPRESSION_ENABLED;
+									if (useCompType == COMPRESSION_CHECK_FILE_TYPE && !isCompressedFile(sourceFile))
+										useCompType = COMPRESSION_ENABLED;
 									if (useCompType == COMPRESSION_ENABLED)
 									{
 										is = new FilteredInputStream<ZFilter, true>(is);
@@ -282,7 +282,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 					is = f;
 					if (start + size < fileSize)
 						is = new LimitedInputStream<true>(is, size);
-					if (useCompType == COMPRESSION_CHECK_FILE_TYPE && isCompressedFile(sourceFile))
+					if (useCompType == COMPRESSION_CHECK_FILE_TYPE && !isCompressedFile(sourceFile))
 						useCompType = COMPRESSION_ENABLED;
 					if (useCompType == COMPRESSION_ENABLED)
 					{
