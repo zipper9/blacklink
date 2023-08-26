@@ -42,6 +42,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		BEGIN_MSG_MAP(thisClass)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onLButton)
+		MESSAGE_HANDLER(WM_KEYDOWN, onKeyDown)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP();
 
@@ -81,6 +82,42 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			}
 
 			bHandled = FALSE;
+			return 0;
+		}
+
+		LRESULT onKeyDown(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+		{
+			bHandled = FALSE;
+			int mode = 0;
+			if (GetKeyState(VK_CONTROL) >= 0)
+				switch (wParam)
+				{
+					case VK_SUBTRACT:
+						mode = -1;
+						break;
+					case VK_ADD:
+						mode = 1;
+						break;
+				}
+			if (!mode)
+				return 0;
+			int pos = GetNextItem(-1, LVNI_FOCUSED);
+			if (pos < 0)
+				return 0;
+			auto ii = getItemData(pos);
+			if (!ii || !ii->groupInfo || ii->groupInfo->parent != ii)
+				return 0;
+			if (mode == 1)
+			{
+				if (!(ii->getStateFlags() & STATE_FLAG_EXPANDED))
+					Expand(ii, pos);
+			}
+			else
+			{
+				if (ii->getStateFlags() & STATE_FLAG_EXPANDED)
+					Collapse(ii, pos);
+			}
+			bHandled = TRUE;
 			return 0;
 		}
 
