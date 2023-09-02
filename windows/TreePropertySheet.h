@@ -50,7 +50,6 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		MESSAGE_HANDLER(WM_COMMAND, baseClass::OnCommand)
 		MESSAGE_HANDLER(WMU_USER_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WMU_RESTART_REQUIRED, onRestartRequired)
-		MESSAGE_HANDLER(WM_NOTIFYFORMAT, onNotifyFormat)
 		NOTIFY_HANDLER(IDC_PAGE, TVN_SELCHANGED, onSelChanged)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(TAB_MESSAGE_MAP)
@@ -63,14 +62,6 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		LRESULT onSetCurSel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		
 		LRESULT onSelChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT onNotifyFormat(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-#ifdef _UNICODE
-			return NFR_UNICODE;
-#else
-			return NFR_ANSI;
-#endif
-		}
 		LRESULT onRestartRequired(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			showStatusText();

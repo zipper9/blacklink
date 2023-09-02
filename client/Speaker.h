@@ -25,10 +25,6 @@
 #include <vector>
 #include <algorithm>
 
-#ifdef _DEBUG
-extern volatile bool g_isBeforeShutdown;
-#endif
-
 template<typename Listener>
 class Speaker
 {
@@ -53,7 +49,6 @@ class Speaker
 
 		void addListener(Listener* listener) noexcept
 		{
-			dcassert(!g_isBeforeShutdown);
 			LOCK(cs);
 			if (std::find(listeners.begin(), listeners.end(), listener) == listeners.end())
 				listeners.push_back(listener);

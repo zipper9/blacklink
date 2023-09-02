@@ -45,7 +45,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		}
 		COMMAND_ID_HANDLER(IDC_SAVE, onSaveToFile)
 		COMMAND_ID_HANDLER(IDC_MESSAGEPANEL, onMultilineChatInputButton)
-		COMMAND_ID_HANDLER(ID_TEXT_TRANSCODE, onTextTranscode)
+		COMMAND_ID_HANDLER(IDC_TRANSCODE, onTextTranscode)
 		COMMAND_ID_HANDLER(IDC_LINK, onInsertLink)
 		COMMAND_ID_HANDLER(IDC_FIND, onFindText)
 		COMMAND_RANGE_HANDLER(IDC_BOLD, IDC_STRIKE, onTextStyleSelect)
