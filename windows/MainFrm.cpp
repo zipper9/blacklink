@@ -67,6 +67,7 @@
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"
+#include "../client/CryptoManager.h"
 #include "../client/Random.h"
 #include "../client/NmdcHub.h"
 #include "../client/dht/DHT.h"
@@ -792,6 +793,7 @@ void MainFrame::onMinute(uint64_t tick)
 		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
 	ADLSearchManager::getInstance()->saveOnTimer(tick);
 	WebServerManager::getInstance()->removeExpired();
+	CryptoManager::getInstance()->checkExpiredCert();
 	LogManager::closeOldFiles(tick);
 }
 

@@ -495,7 +495,7 @@ namespace dht
 			cmd.addParam("US", Util::toString((long)(Util::toDouble(SETTING(UPLOAD_SPEED))*1024*1024/8)));
 
 		string su;
-		if (CryptoManager::TLSOk())
+		if (CryptoManager::getInstance()->isInitialized())
 			su = AdcSupports::ADCS_FEATURE;
 
 		// TCP status according to global status

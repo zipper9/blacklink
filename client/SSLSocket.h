@@ -49,12 +49,13 @@ class SSLSocket : public Socket
 		SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP) noexcept;
 		/** Creates an SSL socket without any verification */
 		SSLSocket(CryptoManager::SSLContext context) noexcept;
-		
+
 		virtual ~SSLSocket()
 		{
 			disconnect();
+			SSL_CTX_free(ctx);
 		}
-		
+
 		virtual uint16_t accept(const Socket& listeningSocket) override;
 		virtual void connect(const IpAddressEx& ip, uint16_t port, const string& host) override;
 		virtual int read(void* buffer, int bufLen) override;

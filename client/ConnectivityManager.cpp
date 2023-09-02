@@ -119,7 +119,7 @@ unsigned ConnectivityManager::testPorts()
 			int portUDP = SETTING(UDP_PORT);
 			g_portTest.setPort(PortTest::PORT_UDP, portUDP);
 			int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
-			if (CryptoManager::TLSOk())
+			if (CryptoManager::getInstance()->isInitialized())
 			{
 				int portTLS = SETTING(TLS_PORT);
 				g_portTest.setPort(PortTest::PORT_TLS, portTLS);
@@ -431,7 +431,7 @@ void ConnectivityManager::listenTCP(int af)
 	auto cm = ConnectionManager::getInstance();
 	cm->stopServer(af);
 
-	bool useTLS = CryptoManager::TLSOk();
+	bool useTLS = CryptoManager::getInstance()->isInitialized();
 	int type = (useTLS && fixedPort && SETTING(TLS_PORT) == SETTING(TCP_PORT)) ?
 		ConnectionManager::SERVER_TYPE_AUTO_DETECT : ConnectionManager::SERVER_TYPE_TCP;
 	for (int i = 0; i < 2; ++i)

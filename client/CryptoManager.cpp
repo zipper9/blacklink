@@ -27,17 +27,13 @@
 #include <openssl/bn.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
-#include <bzlib.h>
 
 #include "SSLSocket.h"
 
 static void* tmpKeysMap[CryptoManager::NUM_KEYS] = { nullptr, nullptr };
 
 int CryptoManager::idxVerifyData = 0;
-char CryptoManager::idxVerifyDataName[] = "VerifyData";
 CryptoManager::SSLVerifyData CryptoManager::trustedKeyprint = { false, "trusted_keyp" };
-bool CryptoManager::certsLoaded = false;
-ByteVector CryptoManager::keyprint;
 static CriticalSection g_cs;
 
 // Cipher suites for TLS <= 1.2
@@ -62,9 +58,13 @@ static const char cipherSuites[] =
 	"AES128-SHA256:"
 	"AES256-SHA256:"
 	"AES128-SHA";
-	
+
+static const int64_t EXPIRED_CERT_TIME_DIFF = 3600; // seconds
+
 CryptoManager::CryptoManager()
 {
+	keyPairInitialized = false;
+	endTime = 0;
 #if OPENSSL_VERSION_NUMBER < 0x10100000
 	int n = CRYPTO_num_locks();
 	cs = new CriticalSection[n];
@@ -76,52 +76,18 @@ CryptoManager::CryptoManager()
 	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, nullptr);
 #endif
 
-	clientContext.reset(SSL_CTX_new(SSLv23_client_method()));
-	serverContext.reset(SSL_CTX_new(SSLv23_server_method()));
+	sslRandCheck();
+	idxVerifyData = SSL_get_ex_new_index(0, "VerifyData", nullptr, nullptr, nullptr);
 
-	idxVerifyData = SSL_get_ex_new_index(0, idxVerifyDataName, nullptr, nullptr, nullptr);
-	
-	if (clientContext && serverContext)
-	{
-		// Check that openssl rng has been seeded with enough data
-		sslRandCheck();
-		
-		// Init temp data for DH keys
-		for (int i = 0; i < NUM_KEYS; ++i)
-			tmpKeysMap[i] = getTmpDH(getKeyLength(static_cast<TLSTmpKeys>(i)));
-		
-		SSL_CTX_set_options(clientContext, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-		SSL_CTX_set_cipher_list(clientContext, cipherSuites);
-#if 0 // Don't set curves list, just use the defaults
-		SSL_CTX_set1_curves_list(clientContext, "P-256");
-#endif
+	// Init temp data for DH keys
+	for (int i = 0; i < NUM_KEYS; ++i)
+		tmpKeysMap[i] = getTmpDH(getKeyLength(static_cast<TLSTmpKeys>(i)));
 
-		SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-		SSL_CTX_set_cipher_list(serverContext, cipherSuites);
-#if 0
-		SSL_CTX_set1_curves_list(serverContext, "P-256");
-#endif
-
-		EC_KEY* tmp_ecdh;
-		if ((tmp_ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) != nullptr)
-		{
-			SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_ECDH_USE);
-			SSL_CTX_set_tmp_ecdh(serverContext, tmp_ecdh);
-			EC_KEY_free(tmp_ecdh);
-		}
-		
-		SSL_CTX_set_tmp_dh_callback(serverContext, CryptoManager::getTempDHCallback);
-
-		SSL_CTX_set_verify(clientContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback);
-		SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback);
-	}
+	context[SSL_UNAUTH_CLIENT] = createContext(false);
 }
 
 CryptoManager::~CryptoManager()
 {
-	clientContext.reset();
-	serverContext.reset();
-
 	for (int i = 0; i < NUM_KEYS; ++i)
 		if (tmpKeysMap[i]) DH_free(static_cast<DH*>(tmpKeysMap[i]));
 
@@ -136,7 +102,7 @@ CryptoManager::~CryptoManager()
 #endif
 }
 
-void CryptoManager::sslRandCheck()
+void CryptoManager::sslRandCheck() noexcept
 {
 	if (!RAND_status())
 	{
@@ -157,6 +123,37 @@ void CryptoManager::sslRandCheck()
 	}
 }
 
+ssl::SSL_CTX CryptoManager::createContext(bool isServer) noexcept
+{
+	auto ctxPtr = ssl::SSL_CTX(SSL_CTX_new(isServer ? SSLv23_server_method() : SSLv23_client_method()));
+	if (ctxPtr)
+	{
+		SSL_CTX* ctx = ctxPtr.get();
+		unsigned long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;
+		if (isServer) options |= SSL_OP_SINGLE_DH_USE;
+		SSL_CTX_set_options(ctx, options);
+		SSL_CTX_set_cipher_list(ctx, cipherSuites);
+#if 0 // Don't set curves list, just use the defaults
+		SSL_CTX_set1_curves_list(ctx, "P-256");
+#endif
+
+		if (isServer)
+		{
+			EC_KEY* ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+			if (ec)
+			{
+				SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
+				SSL_CTX_set_tmp_ecdh(ctx, ec);
+				EC_KEY_free(ec);
+			}
+			SSL_CTX_set_tmp_dh_callback(ctx, getTempDHCallback);
+		}
+
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback);
+	}
+	return ctxPtr;
+}
+
 string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 {
 	LOCK(g_cs);
@@ -165,7 +162,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 	{
 		X509_NAME* subject = X509_get_subject_name(cert);
 		string tmp, line;
-		
+
 		tmp = getNameEntryByNID(subject, NID_commonName);
 		if (!tmp.empty())
 		{
@@ -176,7 +173,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 				tmp = Util::toString(ClientManager::getNicks(certCID, Util::emptyString, false));
 			line += (!line.empty() ? ", " : "") + tmp;
 		}
-		
+
 		tmp = getNameEntryByNID(subject, NID_organizationName);
 		if (!tmp.empty())
 		{
@@ -187,7 +184,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 
 		return str(F_("Certificate verification for %1% failed with error: %2%") % line % message);
 	}
-	
+
 	return Util::emptyString;
 }
 
@@ -196,22 +193,22 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 	int err = X509_STORE_CTX_get_error(ctx);
 	SSL* ssl = (SSL*)X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
 	SSLVerifyData* verifyData = (SSLVerifyData*)SSL_get_ex_data(ssl, CryptoManager::idxVerifyData);
-	
+
 	// This happens only when KeyPrint has been pinned and we are not skipping errors due to incomplete chains
 	// we can fail here f.ex. if the certificate has expired but is still pinned with KeyPrint
 	if (!verifyData || SSL_get_shutdown(ssl) != 0)
 		return preverifyOk;
-		
+
 	bool allowUntrusted = verifyData->first;
 	string keyp = verifyData->second;
 	string error = Util::emptyString;
-	
+
 	if (!keyp.empty())
 	{
 		X509* cert = X509_STORE_CTX_get_current_cert(ctx);
 		if (!cert)
 			return 0;
-			
+
 		if (keyp.compare(0, 12, "trusted_keyp") == 0)
 		{
 			// Possible follow up errors, after verification of a partial chain
@@ -220,22 +217,22 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 				X509_STORE_CTX_set_error(ctx, X509_V_OK);
 				return 1;
 			}
-			
+
 			return preverifyOk;
 		}
 		else if (keyp.compare(0, 7, "SHA256/") != 0)
 			return allowUntrusted ? 1 : 0;
-			
+
 		ByteVector kp;
 		getX509Digest(kp, cert, EVP_sha256());
 		string expected_keyp = "SHA256/" + Encoder::toBase32(kp.data(), kp.size());
-		
+
 		// Do a full string comparison to avoid potential false positives caused by invalid inputs
 		if (keyp.compare(expected_keyp) == 0)
 		{
 			// KeyPrint validated, we can get rid of it (to avoid unnecessary passes)
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, nullptr);
-			
+
 			if (err != X509_V_OK)
 			{
 #if OPENSSL_VERSION_NUMBER >= 0x1000200fL
@@ -250,32 +247,32 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 				{
 					// We are fine, but can't leave mark on the stack
 					ERR_pop_to_mark();
-					
+
 					// After the store has been updated, perform a *complete* recheck of the peer certificate, the existing context can be in mid recursion, so hands off!
 					X509_STORE_CTX* vrfy_ctx = X509_STORE_CTX_new();
-					
+
 					if (vrfy_ctx && X509_STORE_CTX_init(vrfy_ctx, store, cert, X509_STORE_CTX_get_chain(ctx)))
 					{
 						// Welcome to recursion hell... it should at most be 2n, where n is the number of certificates in the chain
 						X509_STORE_CTX_set_ex_data(vrfy_ctx, SSL_get_ex_data_X509_STORE_CTX_idx(), ssl);
 						X509_STORE_CTX_set_verify_cb(vrfy_ctx, SSL_get_verify_callback(ssl));
-						
+
 						int verify_result = X509_verify_cert(vrfy_ctx);
 						if (verify_result >= 0)
 						{
 							err = X509_STORE_CTX_get_error(vrfy_ctx);
-							
+
 							// Watch out for weird library errors that might not set the context error code
 							if (err == X509_V_OK && verify_result == 0)
 								err = X509_V_ERR_UNSPECIFIED;
 						}
 					}
-					
+
 					X509_STORE_CTX_set_error(ctx, err); // Set the current cert error to the context being verified.
 					if (vrfy_ctx) X509_STORE_CTX_free(vrfy_ctx);
 				}
 				else ERR_pop_to_mark();
-				
+
 				// KeyPrint was not root certificate or we don't have the issuer certificate, the best we can do is trust the pinned KeyPrint
 				if (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN || err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY || err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)
 				{
@@ -285,10 +282,10 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 					return 1;
 				}
 			}
-			
+
 			if (err == X509_V_OK)
 				return 1;
-				
+
 			// We are still here, something went wrong, complain below...
 			preverifyOk = 0;
 		}
@@ -296,7 +293,7 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 		{
 			if (X509_STORE_CTX_get_error_depth(ctx) > 0)
 				return 1;
-				
+
 			// TODO: How to get this into HubFrame?
 			preverifyOk = 0;
 			err = X509_V_ERR_APPLICATION_VERIFICATION;
@@ -305,26 +302,26 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 #else
 			error = str(F_("Supplied KeyPrint %1% did not match %2%.") % keyp % expected_keyp);
 #endif
-			
+
 			X509_STORE_CTX_set_error(ctx, err);
 		}
 	}
-	
+
 	// We let untrusted certificates through unconditionally, when allowed, but we like to complain regardless
 	if (!preverifyOk)
 	{
 		if (error.empty())
 			error = X509_verify_cert_error_string(err);
-			
+
 		auto fullError = formatError(ctx, error);
 		if (!fullError.empty() && (!keyp.empty() || !allowUntrusted))
 			LogManager::message(fullError);
 	}
-	
+
 	// Don't allow untrusted connections on keyprint mismatch
 	if (allowUntrusted && err != X509_V_ERR_APPLICATION_VERIFICATION)
 		return 1;
-		
+
 	return preverifyOk;
 }
 
@@ -357,10 +354,10 @@ DH* CryptoManager::getTmpDH(int keyLen)
 {
 	if (keyLen < 2048)
 		return nullptr;
-		
+
 	DH* tmpDH = DH_new();
 	if (!tmpDH) return nullptr;
-	
+
 	static const unsigned char dh_g[] =	{ 0x02 };
 
 	// From RFC 3526; checked via http://wiki.openssl.org/index.php/Diffie-Hellman_parameters#Validating_Parameters
@@ -396,7 +393,7 @@ DH* CryptoManager::getTmpDH(int keyLen)
 			DH_set0_pqg(tmpDH, BN_bin2bn(dh2048_p, sizeof(dh2048_p), 0), nullptr, BN_bin2bn(dh_g, sizeof(dh_g), 0));
 			break;
 		}
-		
+
 		case 4096:
 		{
 			static const unsigned char dh4096_p[] =
@@ -454,13 +451,15 @@ DH* CryptoManager::getTmpDH(int keyLen)
 			return nullptr;
 
 	}
-	
+
 	return tmpDH;
 }
 
-bool CryptoManager::TLSOk() noexcept
+bool CryptoManager::isInitialized() const noexcept
 {
-	return BOOLSETTING(USE_TLS) && certsLoaded && !keyprint.empty();
+	if (!BOOLSETTING(USE_TLS)) return false;
+	LOCK(contextLock);
+	return keyPairInitialized && !certFingerprint.empty();
 }
 
 #ifdef _WIN32
@@ -474,91 +473,6 @@ static inline FILE* create_utf8(const string& s)
 	return fopen(s.c_str(), "w");
 }
 #endif
-
-void CryptoManager::generateCertificate()
-{
-	// Generate certificate using OpenSSL
-	if (SETTING(TLS_PRIVATE_KEY_FILE).empty())
-	{
-		throw CryptoException("No private key file chosen");
-	}
-	if (SETTING(TLS_CERTIFICATE_FILE).empty())
-	{
-		throw CryptoException("No certificate file chosen");
-	}
-	
-	ssl::BIGNUM bn(BN_new());
-	ssl::RSA rsa(RSA_new());
-	ssl::EVP_PKEY pkey(EVP_PKEY_new());
-	ssl::X509_NAME nm(X509_NAME_new());
-	ssl::X509 x509ss(X509_new());
-	ssl::ASN1_INTEGER serial(ASN1_INTEGER_new());
-	
-	if (!bn || !rsa || !pkey || !serial || !nm || !x509ss)
-	{
-		throw CryptoException("Error creating objects for cert generation");
-	}
-	
-	int days = 90;
-	int keylength = 2048;
-	
-#define CHECK(n) if (!(n)) { throw CryptoException(#n); }
-	
-	// Generate key pair
-	CHECK((BN_set_word(bn, RSA_F4)))
-	CHECK((RSA_generate_key_ex(rsa, keylength, bn, nullptr)))
-	CHECK((EVP_PKEY_set1_RSA(pkey, rsa)))
-	
-	// Add common name (use cid)
-	string name = ClientManager::getInstance()->getMyCID().toBase32();
-	CHECK((X509_NAME_add_entry_by_NID(nm, NID_commonName, MBSTRING_ASC, (unsigned char *) name.c_str(), name.length(), -1, 0)))
-	
-	// Add an organisation
-	static const char *org = "DCPlusPlus (OSS/SelfSigned)";
-	CHECK((X509_NAME_add_entry_by_NID(nm, NID_organizationName, MBSTRING_ASC, (unsigned char *) org, strlen(org), -1, 0)))
-	
-	// Generate unique serial
-	CHECK((BN_pseudo_rand(bn, 64, 0, 0)))
-	CHECK((BN_to_ASN1_INTEGER(bn, serial)))
-	
-	// Prepare self-signed cert
-	CHECK((X509_set_version(x509ss, 0x02)))
-	CHECK((X509_set_serialNumber(x509ss, serial)))
-	CHECK((X509_set_issuer_name(x509ss, nm)))
-	CHECK((X509_set_subject_name(x509ss, nm)))
-	CHECK((X509_gmtime_adj(X509_get_notBefore(x509ss), 0)))
-	CHECK((X509_gmtime_adj(X509_get_notAfter(x509ss), (long)60 * 60 * 24 * days)))
-	CHECK((X509_set_pubkey(x509ss, pkey)))
-	
-	// Sign using own private key
-	CHECK((X509_sign(x509ss, pkey, EVP_sha256())))
-	
-#undef CHECK
-
-	const string& privateKeyFile = SETTING(TLS_PRIVATE_KEY_FILE);
-	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
-	
-	// Write the key and cert
-	{
-		File::ensureDirectory(privateKeyFile);
-		FILE* f = create_utf8(privateKeyFile);
-		if (!f)
-			throw CryptoException(STRING_F(ERROR_CREATING_FILE, privateKeyFile));
-		PEM_write_RSAPrivateKey(f, rsa, nullptr, nullptr, 0, nullptr, nullptr);
-		fclose(f);
-	}
-	{
-		File::ensureDirectory(certFile);
-		FILE* f = create_utf8(certFile);
-		if (!f)
-		{
-			File::deleteFile(privateKeyFile);
-			throw CryptoException(STRING_F(ERROR_CREATING_FILE, certFile));
-		}
-		PEM_write_X509(f, x509ss);
-		fclose(f);
-	}
-}
 
 static bool loadFile(const string& file, int64_t maxSize, ByteVector& data) noexcept
 {
@@ -579,7 +493,22 @@ static bool loadFile(const string& file, int64_t maxSize, ByteVector& data) noex
 	return true;
 }
 
-bool CryptoManager::load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept
+int64_t CryptoManager::getX509EndTime(const X509* cert) noexcept
+{
+	const ASN1_TIME* t = X509_get_notAfter(cert);
+	if (!t)
+		return 0;
+	int days = 0, seconds = 0;
+	ASN1_TIME* t0 = ASN1_TIME_new();
+	ASN1_TIME_set(t0, 0);
+	int64_t result = 0;
+	if (ASN1_TIME_diff(&days, &seconds, t0, t))
+		result = (int64_t) days * 86400 + seconds;
+	ASN1_TIME_free(t0);
+	return result;
+}
+
+bool CryptoManager::loadKeyPair(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept
 {
 	static const int64_t maxFileSize = 128 * 1024;
 	ByteVector data;
@@ -608,43 +537,103 @@ bool CryptoManager::load(const string& certFile, const string& keyFile, ssl::X50
 	const ASN1_INTEGER* sn = X509_get_serialNumber(cert);
 	if (!ASN1_INTEGER_get(sn))
 		return false;
-	
+
 	X509_NAME* name = X509_get_subject_name(cert);
 	if (!name)
 		return false;
-	
+
 	const string cn = getNameEntryByNID(name, NID_commonName);
 	if (cn.empty() || cn != ClientManager::getInstance()->getMyCID().toBase32())
 		return false;
-	
-	const ASN1_TIME* t = X509_get_notAfter(cert);
-	if (t && X509_cmp_current_time(t) < 0)
-		return false;
 
-	return true;
+	int64_t currentTime = (int64_t) time(nullptr);
+	int64_t endTime = getX509EndTime(cert);
+	return endTime - currentTime >= EXPIRED_CERT_TIME_DIFF;
 }
 
-void CryptoManager::loadCertificates(bool createOnError) noexcept
+void CryptoManager::createKeyPair(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey)
 {
-	if (!clientContext || !serverContext)
-		return;
-		
+	cert.reset(X509_new());
+	pkey.reset(EVP_PKEY_new());
+
+	ssl::BIGNUM bn(BN_new());
+	ssl::RSA rsa(RSA_new());
+	ssl::X509_NAME nm(X509_NAME_new());
+	ssl::ASN1_INTEGER serial(ASN1_INTEGER_new());
+
+	if (!cert || !pkey || !bn || !rsa || !serial || !nm)
+		throw CryptoException("Error creating objects for cert generation");
+
+	long days = 90;
+	int keylength = 2048;
+
+#define CHECK(n) if (!(n)) { throw CryptoException(#n); }
+
+	// Generate key pair
+	CHECK((BN_set_word(bn, RSA_F4)))
+	CHECK((RSA_generate_key_ex(rsa, keylength, bn, nullptr)))
+	CHECK((EVP_PKEY_set1_RSA(pkey, rsa)))
+
+	// Add common name (use cid)
+	string name = ClientManager::getInstance()->getMyCID().toBase32();
+	CHECK((X509_NAME_add_entry_by_NID(nm, NID_commonName, MBSTRING_ASC, (unsigned char *) name.c_str(), name.length(), -1, 0)))
+
+	// Add an organisation
+	static const char *org = "DCPlusPlus (OSS/SelfSigned)";
+	CHECK((X509_NAME_add_entry_by_NID(nm, NID_organizationName, MBSTRING_ASC, (unsigned char *) org, strlen(org), -1, 0)))
+
+	// Generate unique serial
+	CHECK((BN_pseudo_rand(bn, 64, 0, 0)))
+	CHECK((BN_to_ASN1_INTEGER(bn, serial)))
+
+	// Prepare self-signed cert
+	CHECK((X509_set_version(cert, 0x02)))
+	CHECK((X509_set_serialNumber(cert, serial)))
+	CHECK((X509_set_issuer_name(cert, nm)))
+	CHECK((X509_set_subject_name(cert, nm)))
+	CHECK((X509_gmtime_adj(X509_get_notBefore(cert), 0)))
+	CHECK((X509_gmtime_adj(X509_get_notAfter(cert), 60 * 60 * 24 * days)))
+	CHECK((X509_set_pubkey(cert, pkey)))
+
+	// Sign using own private key
+	CHECK((X509_sign(cert, pkey, EVP_sha256())))
+
+#undef CHECK
+
+	// Write the key and cert
+	{
+		File::ensureDirectory(keyFile);
+		FILE* f = create_utf8(keyFile);
+		if (!f)
+			throw CryptoException(STRING_F(ERROR_CREATING_FILE, keyFile));
+		PEM_write_RSAPrivateKey(f, rsa, nullptr, nullptr, 0, nullptr, nullptr);
+		fclose(f);
+	}
+	{
+		File::ensureDirectory(certFile);
+		FILE* f = create_utf8(certFile);
+		if (!f)
+		{
+			File::deleteFile(keyFile);
+			throw CryptoException(STRING_F(ERROR_CREATING_FILE, certFile));
+		}
+		PEM_write_X509(f, cert);
+		fclose(f);
+	}
+}
+
+bool CryptoManager::loadOrCreateKeyPair(ssl::X509& cert, ssl::EVP_PKEY& pkey, bool createOnError) noexcept
+{
 	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
 	const string& keyFile = SETTING(TLS_PRIVATE_KEY_FILE);
-	
-	keyprint.clear();
-	certsLoaded = false;
-	
+
 	if (certFile.empty() || keyFile.empty())
 	{
 		LogManager::message(STRING(NO_CERTIFICATE_FILE_SET));
-		return;
+		return false;
 	}
-	
-	ssl::X509 cert;
-	ssl::EVP_PKEY pkey;
 
-	if (!load(certFile, keyFile, cert, pkey))
+	if (!loadKeyPair(certFile, keyFile, cert, pkey))
 	{
 		if (!createOnError)
 		{
@@ -652,56 +641,121 @@ void CryptoManager::loadCertificates(bool createOnError) noexcept
 				LogManager::message(STRING(FAILED_TO_LOAD_CERTIFICATE));
 			else if (!pkey)
 				LogManager::message(STRING(FAILED_TO_LOAD_PRIVATE_KEY));
-			return;
+			return false;
 		}
-		cert.reset();
-		pkey.reset();
-
-		// Try to generate them...
 		try
 		{
-			generateCertificate();
+			createKeyPair(certFile, keyFile, cert, pkey);
 			LogManager::message(STRING(CERTIFICATE_GENERATED));
 		}
 		catch (const CryptoException& e)
 		{
 			LogManager::message(STRING(CERTIFICATE_GENERATION_FAILED) + " " + e.getError());
-			return;
+			return false;
 		}
-		load(certFile, keyFile, cert, pkey);
+	}
+	return true;
+}
+
+void CryptoManager::generateNewKeyPair()
+{
+	const string& keyFile = SETTING(TLS_PRIVATE_KEY_FILE);
+	if (keyFile.empty())
+		throw CryptoException("No private key file chosen");
+
+	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
+	if (certFile.empty())
+		throw CryptoException("No certificate file chosen");
+
+	ssl::X509 cert;
+	ssl::EVP_PKEY pkey;
+	createKeyPair(certFile, keyFile, cert, pkey);
+
+	StringList files = loadTrustedList();
+
+	ssl::SSL_CTX newContext[2];
+	for (int i = 0; i < 2; i++)
+	{
+		newContext[i] = createContext(i == SSL_SERVER);
+		if (!newContext[i] ||
+			SSL_CTX_use_certificate(newContext[i].get(), cert) != SSL_SUCCESS ||
+			SSL_CTX_use_PrivateKey(newContext[i].get(), pkey) != SSL_SUCCESS)
+			throw CryptoException("Failed to initialize SSL context");
+		loadVerifyLocations(newContext[i], files);
 	}
 
-	if (!cert ||
-	    SSL_CTX_use_certificate(serverContext, cert) != SSL_SUCCESS ||
-	    SSL_CTX_use_certificate(clientContext, cert) != SSL_SUCCESS)
+	ByteVector digest;
+	getX509Digest(digest, cert, EVP_sha256());
+	int64_t endTime = getX509EndTime(cert);
+
+	LOCK(contextLock);
+	for (int i = 0; i < 2; i++)
+		context[i] = std::move(newContext[i]);
+	certFingerprint = digest;
+	this->endTime = endTime;
+	keyPairInitialized = true;
+}
+
+bool CryptoManager::initializeKeyPair() noexcept
+{
+	ssl::X509 cert;
+	ssl::EVP_PKEY pkey;
+
+	if (!loadOrCreateKeyPair(cert, pkey, true))
 	{
-		LogManager::message(STRING(FAILED_TO_LOAD_CERTIFICATE));
-		return;
+		LOCK(contextLock);
+		keyPairInitialized = false;
+		return false;
 	}
 
-	if (!pkey ||
-	    SSL_CTX_use_PrivateKey(serverContext, pkey) != SSL_SUCCESS ||
-	    SSL_CTX_use_PrivateKey(clientContext, pkey) != SSL_SUCCESS)
-	{
-		LogManager::message(STRING(FAILED_TO_LOAD_PRIVATE_KEY));
-		return;
-	}
+	StringList files = loadTrustedList();
 
-	auto certs = File::findFiles(SETTING(TLS_TRUSTED_CERTIFICATES_PATH), "*.pem");
-	auto certs2 = File::findFiles(SETTING(TLS_TRUSTED_CERTIFICATES_PATH), "*.crt");
-	certs.insert(certs.end(), certs2.begin(), certs2.end());
-	
-	for (auto& i : certs)
+	ssl::SSL_CTX newContext[2];
+	for (int i = 0; i < 2; i++)
 	{
-		if (SSL_CTX_load_verify_locations(clientContext, i.c_str(), nullptr) != SSL_SUCCESS ||
-		    SSL_CTX_load_verify_locations(serverContext, i.c_str(), nullptr) != SSL_SUCCESS)
+		newContext[i] = createContext(i == SSL_SERVER);
+		if (!newContext[i] ||
+			SSL_CTX_use_certificate(newContext[i].get(), cert) != SSL_SUCCESS ||
+			SSL_CTX_use_PrivateKey(newContext[i].get(), pkey) != SSL_SUCCESS)
 		{
-			LogManager::message("Failed to load trusted certificate from " + i);
+			LogManager::message("Failed to initialize SSL context");
+			LOCK(contextLock);
+			keyPairInitialized = false;
+			return false;
 		}
+		loadVerifyLocations(newContext[i], files);
 	}
 
-	getX509Digest(keyprint, cert, EVP_sha256());
-	certsLoaded = true;
+	ByteVector digest;
+	getX509Digest(digest, cert, EVP_sha256());
+	int64_t endTime = getX509EndTime(cert);
+
+	LOCK(contextLock);
+	for (int i = 0; i < 2; i++)
+		context[i] = std::move(newContext[i]);
+	certFingerprint = digest;
+	this->endTime = endTime;
+	keyPairInitialized = true;
+	return true;
+}
+
+StringList CryptoManager::loadTrustedList() noexcept
+{
+	const string& path = SETTING(TLS_TRUSTED_CERTIFICATES_PATH);
+	if (path.empty()) return StringList();
+	StringList certs = File::findFiles(path, "*.pem", true);
+	StringList certs2 = File::findFiles(path, "*.crt", true);
+	certs.insert(certs.end(), certs2.begin(), certs2.end());
+	return certs;
+}
+
+void CryptoManager::loadVerifyLocations(ssl::SSL_CTX& ctx, const StringList& files) noexcept
+{
+	for (const string& file : files)
+	{
+		if (SSL_CTX_load_verify_locations(ctx.get(), file.c_str(), nullptr) != SSL_SUCCESS)
+			LogManager::message("Failed to load trusted certificate from " + file);
+	}
 }
 
 string CryptoManager::getNameEntryByNID(X509_NAME* name, int nid) noexcept
@@ -709,49 +763,47 @@ string CryptoManager::getNameEntryByNID(X509_NAME* name, int nid) noexcept
 	int i = X509_NAME_get_index_by_NID(name, nid, -1);
 	if (i == -1)
 		return Util::emptyString;
-	
+
 	X509_NAME_ENTRY* entry = X509_NAME_get_entry(name, i);
 	ASN1_STRING* str = X509_NAME_ENTRY_get_data(entry);
 	if (!str)
 		return Util::emptyString;
-	
+
 	unsigned char* buf = 0;
 	i = ASN1_STRING_to_UTF8(&buf, str);
 	if (i < 0)
 		return Util::emptyString;
-	
+
 	std::string out((char*)buf, i);
 	OPENSSL_free(buf);
-	
+
 	return out;
 }
 
-const ByteVector& CryptoManager::getKeyprint() noexcept
+void CryptoManager::getCertFingerprint(ByteVector& fp) const noexcept
 {
-	return keyprint;
+	LOCK(contextLock);
+	fp = certFingerprint;
 }
 
-SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted)
+SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted) const noexcept
 {
-	switch (wanted)
-	{
-		case SSL_CLIENT:
-			return clientContext;
-		case SSL_SERVER:
-			return serverContext;
-		default:
-			return nullptr;
-	}
+	LOCK(contextLock);
+	SSL_CTX* ctx = context[wanted].get();
+	if (ctx) SSL_CTX_up_ref(ctx);
+	return ctx;
 }
 
-SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto)
+SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto) noexcept
 {
-	return new SSLSocket(clientContext, proto, allowUntrusted, expKP);
+	SSL_CTX* ctx = getSSLContext(SSL_CLIENT);
+	return ctx ? new SSLSocket(ctx, proto, allowUntrusted, expKP) : nullptr;
 }
 
-SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted)
+SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted) noexcept
 {
-	return new SSLSocket(serverContext, Socket::PROTO_DEFAULT, allowUntrusted, Util::emptyString);
+	SSL_CTX* ctx = getSSLContext(SSL_SERVER);
+	return ctx ? new SSLSocket(ctx, Socket::PROTO_DEFAULT, allowUntrusted, Util::emptyString) : nullptr;
 }
 
 DH* CryptoManager::getTempDHCallback(SSL* /*ssl*/, int /*is_export*/, int keylength)
@@ -793,4 +845,16 @@ void CryptoManager::getX509Digest(ByteVector& out, const X509* x509, const EVP_M
 		out.clear();
 	else
 		out.resize(n);
+}
+
+void CryptoManager::checkExpiredCert() noexcept
+{
+	int64_t currentTime = time(nullptr);
+	{
+		LOCK(contextLock);
+		if (!endTime || endTime - currentTime >= EXPIRED_CERT_TIME_DIFF)
+			return;
+	}
+	try { generateNewKeyPair(); }
+	catch (Exception) {}
 }

@@ -118,14 +118,13 @@ LRESULT CertificatesPage::onGenerateCerts(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 {
 	try
 	{
-		CryptoManager::getInstance()->generateCertificate();
+		CryptoManager::getInstance()->generateNewKeyPair();
 	}
 	catch (const CryptoException& e)
 	{
 		MessageBox(Text::toT(e.getError()).c_str(), CTSTRING(ERROR_GENERATING_CERTIFICATE), MB_OK | MB_ICONERROR);
 		return 0;
 	}
-	CryptoManager::getInstance()->loadCertificates(false);
 	return 0;
 }
 

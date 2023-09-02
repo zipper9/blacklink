@@ -67,7 +67,7 @@ class CryptoManager : public Singleton<CryptoManager>
 {
 	public:
 		typedef pair<bool, string> SSLVerifyData;
-		
+
 		enum TLSTmpKeys
 		{
 			KEY_DH_2048,
@@ -78,33 +78,37 @@ class CryptoManager : public Singleton<CryptoManager>
 		enum SSLContext
 		{
 			SSL_CLIENT,
-			SSL_SERVER
+			SSL_SERVER,
+			SSL_UNAUTH_CLIENT,
+			MAX_CONTEXT
 		};
 
-		SSLSocket* getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto);
-		SSLSocket* getServerSocket(bool allowUntrusted);
+		SSLSocket* getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto) noexcept;
+		SSLSocket* getServerSocket(bool allowUntrusted) noexcept;
 
-		SSL_CTX* getSSLContext(SSLContext wanted);
+		SSL_CTX* getSSLContext(SSLContext wanted) const noexcept;
 
-		void loadCertificates(bool createOnError = true) noexcept;
-		void generateCertificate();
-		static const ByteVector& getKeyprint() noexcept;
-		
-		static bool TLSOk() noexcept;
+		bool isInitialized() const noexcept;
+		bool initializeKeyPair() noexcept;
+		void generateNewKeyPair();
+		void getCertFingerprint(ByteVector& fp) const noexcept;
+		void checkExpiredCert() noexcept;
 
 		static int idxVerifyData;
-		
+
 	private:
 		friend class Singleton<CryptoManager>;
-		
+
 		CryptoManager();
 		virtual ~CryptoManager();
 
-		ssl::SSL_CTX clientContext;
-		ssl::SSL_CTX serverContext;
-
-		bool load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept;
-		void sslRandCheck();
+		bool loadKeyPair(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept;
+		void createKeyPair(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey);
+		bool loadOrCreateKeyPair(ssl::X509& cert, ssl::EVP_PKEY& pkey, bool createOnError) noexcept;
+		static void sslRandCheck() noexcept;
+		static ssl::SSL_CTX createContext(bool isServer) noexcept;
+		static StringList loadTrustedList() noexcept;
+		static void loadVerifyLocations(ssl::SSL_CTX& ctx, const StringList& files) noexcept;
 
 		static int getKeyLength(TLSTmpKeys key);
 		static DH* getTmpDH(int keyLen);
@@ -116,18 +120,21 @@ class CryptoManager : public Singleton<CryptoManager>
 		static CriticalSection* cs;
 #endif
 
-		static bool certsLoaded;
-
-		static char idxVerifyDataName[];
-		static SSLVerifyData trustedKeyprint;
-		
-		static ByteVector keyprint;
-		
 		static string formatError(X509_STORE_CTX *ctx, const string& message);
 		static string getNameEntryByNID(X509_NAME* name, int nid) noexcept;
+		static int64_t getX509EndTime(const X509* cert) noexcept;
 
 	public:
 		static void getX509Digest(ByteVector& out, const X509* x509, const EVP_MD* md) noexcept;
+
+	private:
+		ssl::SSL_CTX context[MAX_CONTEXT];
+		mutable CriticalSection contextLock;
+		bool keyPairInitialized;
+		ByteVector certFingerprint;
+		int64_t endTime;
+
+		static SSLVerifyData trustedKeyprint;
 };
 
 #endif // !defined(CRYPTO_MANAGER_H)

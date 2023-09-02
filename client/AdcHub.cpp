@@ -660,7 +660,7 @@ void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 	{
 		// Nothing special
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::TLSOk())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -724,7 +724,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	{
 		secure = false;
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::TLSOk())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -1029,7 +1029,7 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	{
 		secure = false;
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::TLSOk())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -1082,7 +1082,7 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	{
 		secure = false;
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::TLSOk())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -1104,7 +1104,10 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 
 void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)
 {
-	connectUser(*user, token, CryptoManager::TLSOk() && (user->getUser()->getFlags() & User::ADCS) != 0, false);
+	connectUser(*user, token,
+		CryptoManager::getInstance()->isInitialized() &&
+		(user->getUser()->getFlags() & User::ADCS) != 0,
+		false);
 }
 
 void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure, bool revConnect)
@@ -1543,11 +1546,14 @@ void AdcHub::info(bool/* forceUpdate*/)
 	
 	string su(AdcSupports::SEGA_FEATURE);
 	
-	if (CryptoManager::TLSOk())
+	auto cryptoManager = CryptoManager::getInstance();
+	if (cryptoManager->isInitialized())
 	{
 		su += "," + AdcSupports::ADCS_FEATURE;
-		const auto &kp = CryptoManager::getKeyprint();
-		addInfoParam(c, "KP", "SHA256/" + Encoder::toBase32(&kp[0], kp.size()));
+		ByteVector kp;
+		cryptoManager->getCertFingerprint(kp);
+		if (!kp.empty())
+			addInfoParam(c, "KP", "SHA256/" + Encoder::toBase32(kp.data(), kp.size()));
 	}
 	
 	const bool optionNatTraversal = BOOLSETTING(ALLOW_NAT_TRAVERSAL);

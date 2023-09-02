@@ -103,7 +103,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	
 	LOAD_STEP_L(FAVORITE_HUBS, FavoriteManager::getInstance()->load());
 	
-	LOAD_STEP_L(CERTIFICATES, CryptoManager::getInstance()->loadCertificates());
+	LOAD_STEP_L(CERTIFICATES, CryptoManager::getInstance()->initializeKeyPair());
 	LOAD_STEP_L(DOWNLOAD_QUEUE, QueueManager::getInstance()->loadQueue());
 	LOAD_STEP_L(WAITING_USERS, UploadManager::getInstance()->load());
 

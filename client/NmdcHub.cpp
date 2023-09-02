@@ -723,7 +723,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		IpAddress localIp;
 		if (!getMyExternalIP(localIp) || localIp.type == AF_INET6)
 			return;
-		bool secure = CryptoManager::TLSOk() && (flags & User::TLS);
+		bool secure = CryptoManager::getInstance()->isInitialized() && (flags & User::TLS);
 		// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
 		// sender_nick at the end should work at least in most used hubsofts
 		uint16_t port = socketPool.addSocket(userKey, AF_INET, true, secure, true, Util::emptyString);
@@ -837,7 +837,7 @@ void NmdcHub::connectToMeParse(const string& param)
 			portStr.erase(portStr.length() - 1);
 			if (portStr.empty())
 				break;
-			if (CryptoManager::TLSOk())
+			if (CryptoManager::getInstance()->isInitialized())
 				secure = true;
 		}
 
@@ -1197,7 +1197,7 @@ void NmdcHub::lockParse(const string& aLine)
 			feat += " HubTopic";
 #endif
 			feat += " TTHS";
-			if (CryptoManager::TLSOk())
+			if (CryptoManager::getInstance()->isInitialized())
 				feat += " TLS";
 			if (BOOLSETTING(USE_SALT_PASS))
 				feat += " SaltPass";
@@ -1853,8 +1853,9 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 		myNick = this->myNick;
 	}
 
-	bool secure = CryptoManager::TLSOk() && (user.getUser()->getFlags() & User::TLS);	
-	uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
+	bool secure = CryptoManager::getInstance()->isInitialized() && (user.getUser()->getFlags() & User::TLS);
+	auto cm = ConnectionManager::getInstance();
+	uint16_t port = secure ? cm->getSecurePort() : cm->getPort();
 	if (port == 0)
 	{
 		LogManager::message(STRING(NOT_LISTENING));
@@ -1869,7 +1870,7 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 	dcdebug("NmdcHub::connectToMe %s\n", user.getIdentity().getNick().c_str());
 	const string nick = fromUtf8(user.getIdentity().getNick());
 	uint64_t expires = token.empty() ? GET_TICK() + 45000 : UINT64_MAX;
-	if (!ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl(), token, getEncoding(), expires))
+	if (!cm->nmdcExpect(nick, myNick, getHubUrl(), token, getEncoding(), expires))
 		return;
 
 	send("$ConnectToMe " + nick + ' ' + Util::printIpAddress(ip) + ':' + Util::toString(port) + (secure ? "S|" : "|"));
@@ -2003,7 +2004,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		status |= NmdcSupports::NAT0;
 	}
 
-	if (CryptoManager::TLSOk())
+	if (CryptoManager::getInstance()->isInitialized())
 	{
 		status |= NmdcSupports::TLS;
 	}

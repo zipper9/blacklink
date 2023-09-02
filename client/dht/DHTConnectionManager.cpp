@@ -34,7 +34,7 @@ namespace dht
 	 */
 	void ConnectionManager::connect(const Node::Ptr& node, const string& token)
 	{
-		bool useTLS = CryptoManager::getInstance()->TLSOk() &&
+		bool useTLS = CryptoManager::getInstance()->isInitialized() &&
 			(node->getUser()->getFlags() & User::TLS) != 0;
 		if (useTLS && node->getIdentity().getStringParam("KP").empty() && !BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS))
 			useTLS = false;
@@ -95,7 +95,7 @@ namespace dht
 		{
 			// Nothing special
 		}
-		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk())
+		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
 		{
 			secure = true;
 		}
@@ -142,7 +142,7 @@ namespace dht
 		{
 			secure = false;
 		}
-		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->TLSOk())
+		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
 		{
 			secure = true;
 		}
