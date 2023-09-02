@@ -4,6 +4,7 @@
 #include "mdb/lmdb.h"
 #include "Locks.h"
 #include "MerkleTree.h"
+#include "WaitableEvent.h"
 
 class HashDatabaseConnection
 {
@@ -14,6 +15,7 @@ class HashDatabaseConnection
 		{
 			size_t numPages;
 			size_t numKeys;
+			int64_t mapSize;
 			int64_t totalKeysSize;
 			int64_t totalDataSize;
 			int64_t totalTreesSize;
@@ -23,9 +25,10 @@ class HashDatabaseConnection
 
 		enum
 		{
-			GET_DB_INFO_DETAILS = 1,
-			GET_DB_INFO_TREES   = 2,
-			GET_DB_INFO_DIGEST  = 4
+			GET_DB_INFO_DETAILS  = 1,
+			GET_DB_INFO_TREES    = 2,
+			GET_DB_INFO_DIGEST   = 4,
+			GET_DB_INFO_MAP_SIZE = 8
 		};
 
 		~HashDatabaseConnection() noexcept;
@@ -42,12 +45,14 @@ class HashDatabaseConnection
 		bool busy = true;
 		uint64_t removeTime = 0;
 		MDB_txn *txnRead = nullptr;
-		MDB_env *const env;
+		HashDatabaseLMDB *const parent;
 		std::vector<uint8_t> buf;
 
-		HashDatabaseConnection(MDB_env *env) : env(env) {}
+		HashDatabaseConnection(HashDatabaseLMDB *parent) : parent(parent) {}
 		bool createReadTxn(MDB_dbi &dbi) noexcept;
+		void completeReadTxn() noexcept;
 		bool createWriteTxn(MDB_dbi &dbi, MDB_txn* &txnWrite) noexcept;
+		void abortWriteTxn(MDB_txn *txnWrite) noexcept;
 		bool writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key, MDB_val &val) noexcept;
 		bool resizeMap() noexcept;
 };
@@ -72,13 +77,35 @@ class HashDatabaseLMDB
 		void closeIdleConnections(uint64_t tick) noexcept;
 
 	private:
+		enum
+		{
+			STATE_NORMAL,
+			STATE_SHUTDOWN,
+			STATE_RESIZE,
+			STATE_WANT_RESIZE
+		};
+
 		MDB_env *env = nullptr;
 		mutable CriticalSection cs;
 		std::unique_ptr<HashDatabaseConnection> defConn;
 		std::list<std::unique_ptr<HashDatabaseConnection>> conn;
 		uintptr_t defThreadId = 0;
 
-		static bool checkError(int error, const char* what) noexcept;
+		mutable FastCriticalSection csSharedState;
+		int sharedState = STATE_NORMAL;
+		int numTxn = 0;
+		WaitableEvent resizeComplete;
+		WaitableEvent mayResize;
+
+		static bool checkError(int error, const char *what) noexcept;
+		bool addTransaction() noexcept;
+		void releaseTransaction(HashDatabaseConnection *conn) noexcept;
+		bool resizeMap() noexcept;
+		bool waitResizeComplete() noexcept;
+		bool waitMayResize() noexcept;
+		void completeResize() noexcept;
+		int getSharedState() const noexcept;
+		void shutdown() noexcept; // FIXME: not used
 };
 
 #endif /* HASH_DATABASE_LMDB_H */

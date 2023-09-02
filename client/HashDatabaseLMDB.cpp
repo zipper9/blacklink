@@ -5,10 +5,9 @@
 #include "File.h"
 #include "TimeUtil.h"
 #include "LogManager.h"
-#include "TigerHash.h"
 #include "unaligned.h"
 
-static const size_t TTH_SIZE = 24;
+static const size_t TTH_SIZE = TigerTree::BYTES;
 static const size_t BASE_ITEM_SIZE = 10;
 
 enum
@@ -20,8 +19,10 @@ enum
 
 #if defined(_WIN64) || defined(__LP64__)
 #define PLATFORM_TAG "x64"
+static const mdb_size_t MIN_MAP_SIZE = 1024ull*1024ull*1024ull;
 #else
 #define PLATFORM_TAG "x32"
+static const mdb_size_t MIN_MAP_SIZE = 400ull*1024ull*1024ull;
 #endif
 
 string HashDatabaseLMDB::getDBPath() noexcept
@@ -49,12 +50,11 @@ bool HashDatabaseLMDB::open() noexcept
 		return false;
 	}
 
-	static const mdb_size_t minMapSize = 1024ull*1024ull*1024ull;
 	MDB_envinfo info;
 	error = mdb_env_info(env, &info);
-	if (error || info.me_mapsize < minMapSize)
+	if (error || info.me_mapsize < MIN_MAP_SIZE)
 	{
-		error = mdb_env_set_mapsize(env, minMapSize);
+		error = mdb_env_set_mapsize(env, MIN_MAP_SIZE);
 		if (!checkError(error, "mdb_env_set_mapsize"))
 		{
 			mdb_env_close(env);
@@ -91,6 +91,8 @@ bool HashDatabaseLMDB::checkError(int error, const char* what) noexcept
 		errorText += what;
 		errorText += ")";
 	}
+	errorText += ", thread 0x";
+	errorText += Util::toHexString(BaseThread::getCurrentThreadId());
 	LogManager::message(errorText);
 	return false;
 }
@@ -163,63 +165,121 @@ HashDatabaseConnection::~HashDatabaseConnection() noexcept
 
 bool HashDatabaseConnection::createReadTxn(MDB_dbi &dbi) noexcept
 {
+	if (!parent->addTransaction()) return false;
 	int error;
 	const char* what;
 	if (!txnRead)
 	{
 		what = "mdb_txn_begin";
-		error = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txnRead);
+		error = mdb_txn_begin(parent->env, nullptr, MDB_RDONLY, &txnRead);
 	}
 	else
 	{
 		error = mdb_txn_renew(txnRead);
 		what = "mdb_txn_renew";
 	}
-	if (!HashDatabaseLMDB::checkError(error, what)) return false;
+	if (!HashDatabaseLMDB::checkError(error, what))
+	{
+		parent->releaseTransaction(this);
+		return false;
+	}
 	error = mdb_dbi_open(txnRead, nullptr, 0, &dbi);
-	return HashDatabaseLMDB::checkError(error, "mdb_dbi_open");
+	if (!HashDatabaseLMDB::checkError(error, "mdb_dbi_open"))
+	{
+		parent->releaseTransaction(this);
+		return false;
+	}
+	return true;
+}
+
+void HashDatabaseConnection::completeReadTxn() noexcept
+{
+	mdb_txn_reset(txnRead);
+	parent->releaseTransaction(this);
 }
 
 bool HashDatabaseConnection::createWriteTxn(MDB_dbi &dbi, MDB_txn* &txnWrite) noexcept
 {
-	int error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
-	if (!HashDatabaseLMDB::checkError(error, "mdb_txn_begin")) return false;
+	if (!parent->addTransaction()) return false;
+	int error = mdb_txn_begin(parent->env, nullptr, 0, &txnWrite);
+	if (!HashDatabaseLMDB::checkError(error, "mdb_txn_begin"))
+	{
+		parent->releaseTransaction(this);
+		return false;
+	}
 	error = mdb_dbi_open(txnWrite, nullptr, 0, &dbi);
-	return HashDatabaseLMDB::checkError(error, "mdb_dbi_open");
+	if (!HashDatabaseLMDB::checkError(error, "mdb_dbi_open"))
+	{
+		parent->releaseTransaction(this);
+		return false;
+	}
+	return true;
+}
+
+void HashDatabaseConnection::abortWriteTxn(MDB_txn *txnWrite) noexcept
+{
+	mdb_txn_abort(txnWrite);
+	parent->releaseTransaction(this);
 }
 
 bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key, MDB_val &val) noexcept
 {
-	int error = mdb_put(txnWrite, dbi, &key, &val, 0);
-	if (error == MDB_MAP_FULL)
+	bool result = false;
+	int retryCount = 0;
+	while (retryCount < 2)
 	{
-		if (!resizeMap())
+		int error = mdb_put(txnWrite, dbi, &key, &val, 0);
+		if (error == MDB_MAP_FULL)
 		{
-			mdb_txn_abort(txnWrite);
-			return false;
+			abortWriteTxn(txnWrite);
+			if (!resizeMap() || !createWriteTxn(dbi, txnWrite)) break;
+			++retryCount;
+			continue;
 		}
-		error = mdb_put(txnWrite, dbi, &key, &val, 0);
+		if (!HashDatabaseLMDB::checkError(error, "mdb_put"))
+		{
+			abortWriteTxn(txnWrite);
+			break;
+		}
+		error = mdb_txn_commit(txnWrite);
+		txnWrite = nullptr; // Must not call mdb_txn_abort after mdb_txn_commit, even when an error is returned
+		if (error == MDB_MAP_FULL)
+		{
+			parent->releaseTransaction(this);
+			if (!resizeMap() || !createWriteTxn(dbi, txnWrite)) break;
+			++retryCount;
+			continue;
+		}
+		result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit");
+		break;
 	}
-	if (!HashDatabaseLMDB::checkError(error, "mdb_put"))
+	if (result)
 	{
-		mdb_txn_abort(txnWrite);
-		return false;
+		mdb_dbi_close(parent->env, dbi); // dbi is always 1, so mdb_dbi_close does nothing
+		parent->releaseTransaction(this);
 	}
-	error = mdb_txn_commit(txnWrite);
-	bool result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit");
-	mdb_dbi_close(env, dbi);
 	return result;
 }
 
 bool HashDatabaseConnection::resizeMap() noexcept
 {
+	if (!parent->resizeMap()) return false;
+	if (parent->getSharedState() == HashDatabaseLMDB::STATE_NORMAL) return true; // already resized by another thread
+
 	MDB_envinfo info;
-	int error = mdb_env_info(env, &info);
-	if (!HashDatabaseLMDB::checkError(error, "mdb_env_info")) return false;
+	int error = mdb_env_info(parent->env, &info);
+	if (!HashDatabaseLMDB::checkError(error, "mdb_env_info"))
+	{
+		parent->completeResize();
+		return false;
+	}
 
 	size_t newMapSize = info.me_mapsize << 1;
-	error = mdb_env_set_mapsize(env, newMapSize);
-	return HashDatabaseLMDB::checkError(error, "mdb_env_set_mapsize");
+	LogManager::message("Resizing LMDB map to " + Util::toString(newMapSize), false);
+	error = mdb_env_set_mapsize(parent->env, newMapSize);
+	bool result = HashDatabaseLMDB::checkError(error, "mdb_env_set_mapsize");
+	parent->completeResize();
+	return result;
 }
 
 bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, uint64_t *fileSize, string *path, size_t *treeSize, uint32_t *uploadCount) noexcept
@@ -239,13 +299,13 @@ bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, uint6
 	int error = mdb_get(txnRead, dbi, &key, &val);
 	if (error)
 	{
-		mdb_txn_reset(txnRead);
+		completeReadTxn();
 		return false;
 	}
 
 	if (val.mv_size < BASE_ITEM_SIZE)
 	{
-		mdb_txn_reset(txnRead);
+		completeReadTxn();
 		return false;
 	}
 
@@ -281,7 +341,7 @@ bool HashDatabaseConnection::getFileInfo(const void *tth, unsigned &flags, uint6
 		}
 	}
 
-	mdb_txn_reset(txnRead);
+	completeReadTxn();
 	return true;
 }
 
@@ -296,13 +356,13 @@ bool HashDatabaseConnection::getTigerTree(const void *tth, TigerTree &tree) noex
 	int error = mdb_get(txnRead, dbi, &key, &val);
 	if (error)
 	{
-		mdb_txn_reset(txnRead);
+		completeReadTxn();
 		return false;
 	}
 
 	if (val.mv_size < BASE_ITEM_SIZE)
 	{
-		mdb_txn_reset(txnRead);
+		completeReadTxn();
 		return false;
 	}
 
@@ -324,7 +384,7 @@ bool HashDatabaseConnection::getTigerTree(const void *tth, TigerTree &tree) noex
 		}
 	}
 
-	mdb_txn_reset(txnRead);
+	completeReadTxn();
 	return found;
 }
 
@@ -380,7 +440,7 @@ bool HashDatabaseConnection::putFileInfo(const void *tth, unsigned flags, uint64
 
 	if (!updateFlags && !updatePath && !incUploadCount)
 	{
-		mdb_txn_abort(txnWrite);
+		abortWriteTxn(txnWrite);
 		return true;
 	}
 
@@ -483,7 +543,7 @@ bool HashDatabaseConnection::putTigerTree(const TigerTree &tree) noexcept
 
 	if (!updateTree)
 	{
-		mdb_txn_abort(txnWrite);
+		abortWriteTxn(txnWrite);
 		return true;
 	}
 
@@ -543,7 +603,7 @@ HashDatabaseConnection *HashDatabaseLMDB::getDefaultConnection() noexcept
 {
 	ASSERT_MAIN_THREAD();
 	LOCK(cs);
-	if (!defConn) defConn.reset(new HashDatabaseConnection(env));
+	if (!defConn) defConn.reset(new HashDatabaseConnection(this));
 	return defConn.get();
 }
 
@@ -560,7 +620,7 @@ HashDatabaseConnection *HashDatabaseLMDB::getConnection() noexcept
 				return c.get();
 			}
 	}
-	HashDatabaseConnection *newConn = new HashDatabaseConnection(env);
+	HashDatabaseConnection *newConn = new HashDatabaseConnection(this);
 	std::unique_ptr<HashDatabaseConnection> c(newConn);
 	LOCK(cs);
 	conn.emplace_back(std::move(c));
@@ -598,10 +658,10 @@ void HashDatabaseLMDB::closeIdleConnections(uint64_t tick) noexcept
 
 bool HashDatabaseConnection::getDBInfo(DbInfo &info, int flags) noexcept
 {
-	info.totalKeysSize = info.totalDataSize = info.totalTreesSize = -1;
+	info.totalKeysSize = info.totalDataSize = info.totalTreesSize = info.mapSize = -1;
 
 	MDB_stat stat;
-	if (mdb_env_stat(env, &stat))
+	if (mdb_env_stat(parent->env, &stat))
 	{
 		info.numPages = 0;
 		info.numKeys = 0;
@@ -612,6 +672,13 @@ bool HashDatabaseConnection::getDBInfo(DbInfo &info, int flags) noexcept
 	info.numPages = stat.ms_branch_pages + stat.ms_leaf_pages + stat.ms_overflow_pages;
 
 	if (!(flags & GET_DB_INFO_DETAILS)) return true;
+
+	if (flags & GET_DB_INFO_MAP_SIZE)
+	{
+		MDB_envinfo envinfo;
+		if (!mdb_env_info(parent->env, &envinfo))
+			info.mapSize = envinfo.me_mapsize;
+	}
 
 	MDB_dbi dbi;
 	if (!createReadTxn(dbi)) return false;
@@ -653,7 +720,7 @@ bool HashDatabaseConnection::getDBInfo(DbInfo &info, int flags) noexcept
 	}
 
 	mdb_cursor_close(cursor);
-	mdb_txn_reset(txnRead);
+	completeReadTxn();
 
 	if (flags & GET_DB_INFO_DIGEST)
 	{
@@ -669,4 +736,126 @@ bool HashDatabaseConnection::getDBInfo(DbInfo &info, int flags) noexcept
 		info.totalTreesSize = -1;
 
 	return true;
+}
+
+bool HashDatabaseLMDB::addTransaction() noexcept
+{
+	for (;;)
+	{
+		csSharedState.lock();
+		int state = sharedState;
+		if (state == STATE_NORMAL) ++numTxn;
+		csSharedState.unlock();
+
+		if (state == STATE_NORMAL) break;
+		if (state == STATE_SHUTDOWN) return false;
+		dcassert(state == STATE_RESIZE || state == STATE_WANT_RESIZE);
+		if (!waitResizeComplete()) return false;
+	}
+	return true;
+}
+
+void HashDatabaseLMDB::releaseTransaction(HashDatabaseConnection *conn) noexcept
+{
+	csSharedState.lock();
+	dcassert(sharedState == STATE_NORMAL || sharedState == STATE_WANT_RESIZE || sharedState == STATE_SHUTDOWN);
+	dcassert(numTxn > 0);
+	int state = sharedState;
+	int newNumTxn = --numTxn;
+	csSharedState.unlock();
+	if (state == STATE_WANT_RESIZE)
+	{
+		mdb_txn_abort(conn->txnRead);
+		conn->txnRead = nullptr;
+		if (newNumTxn == 0) mayResize.notify();
+	}
+}
+
+bool HashDatabaseLMDB::resizeMap() noexcept
+{
+	int state = -1;
+	csSharedState.lock();
+	int prevState = sharedState;
+	if (prevState != STATE_RESIZE && prevState != STATE_WANT_RESIZE)
+	{
+		sharedState = numTxn == 0 ? STATE_RESIZE : STATE_WANT_RESIZE;
+		state = sharedState;
+		if (resizeComplete.empty())
+			resizeComplete.create();
+		else
+			resizeComplete.reset();
+		if (state == STATE_WANT_RESIZE)
+		{
+			if (mayResize.empty())
+				mayResize.create();
+			else
+				mayResize.reset();
+		}
+	}
+	csSharedState.unlock();
+	if (prevState == STATE_RESIZE || prevState == STATE_WANT_RESIZE) // Another writer is resizing the map
+		return waitResizeComplete();
+	if (state == STATE_WANT_RESIZE)
+	{
+		if (!waitMayResize()) return false;
+	}
+#ifdef _DEBUG
+	csSharedState.lock();
+	state = sharedState;
+	csSharedState.unlock();
+	dcassert(state == STATE_RESIZE);
+#endif
+	return true;
+}
+
+bool HashDatabaseLMDB::waitMayResize() noexcept
+{
+	bool result = true;
+	mayResize.wait();
+	csSharedState.lock();
+	if (sharedState != STATE_SHUTDOWN)
+	{
+		dcassert(sharedState == STATE_WANT_RESIZE);
+		sharedState = STATE_RESIZE;
+	}
+	else
+		result = false;
+	csSharedState.unlock();
+	return result;
+}
+
+bool HashDatabaseLMDB::waitResizeComplete() noexcept
+{
+	resizeComplete.wait();
+	csSharedState.lock();
+	bool result = sharedState != STATE_SHUTDOWN;
+	csSharedState.unlock();
+	return result;
+}
+
+void HashDatabaseLMDB::completeResize() noexcept
+{
+	csSharedState.lock();
+	if (sharedState != STATE_SHUTDOWN)
+	{
+		dcassert(sharedState == STATE_RESIZE);
+		sharedState = STATE_NORMAL;
+	}
+	csSharedState.unlock();
+	resizeComplete.notify();
+}
+
+int HashDatabaseLMDB::getSharedState() const noexcept
+{
+	LOCK(csSharedState);
+	return sharedState;
+}
+
+void HashDatabaseLMDB::shutdown() noexcept
+{
+	csSharedState.lock();
+	sharedState = STATE_SHUTDOWN;
+	csSharedState.unlock();
+	if (!resizeComplete.empty()) resizeComplete.notify();
+	if (!mayResize.empty()) mayResize.notify();
 }

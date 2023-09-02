@@ -1203,11 +1203,12 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				auto db = DatabaseManager::getInstance();
 				auto hashDb = db->getHashDatabaseConnection();
 				HashDatabaseConnection::DbInfo info;
-				if (hashDb && hashDb->getDBInfo(info, HashDatabaseConnection::GET_DB_INFO_DETAILS | HashDatabaseConnection::GET_DB_INFO_TREES | HashDatabaseConnection::GET_DB_INFO_DIGEST))
+				if (hashDb && hashDb->getDBInfo(info, HashDatabaseConnection::GET_DB_INFO_DETAILS | HashDatabaseConnection::GET_DB_INFO_TREES | HashDatabaseConnection::GET_DB_INFO_DIGEST | HashDatabaseConnection::GET_DB_INFO_MAP_SIZE))
 				{
 					res.text = "LMDB information\n";
 					res.text += "Items: " + Util::toString(info.numKeys);
 					res.text += "\nPages: " + Util::toString(info.numPages);
+					res.text += "\nMap size: " + Util::formatBytes(info.mapSize);
 					res.text += "\nSize of all keys: " + Util::toString(info.totalKeysSize);
 					res.text += "\nSize of all values: " + Util::toString(info.totalDataSize);
 					res.text += "\nSize of all trees: " + Util::toString(info.totalTreesSize);
