@@ -77,7 +77,7 @@ CryptoManager::CryptoManager()
 #endif
 
 	sslRandCheck();
-	idxVerifyData = SSL_get_ex_new_index(0, "VerifyData", nullptr, nullptr, nullptr);
+	idxVerifyData = SSL_get_ex_new_index(0, (void *) "VerifyData", nullptr, nullptr, nullptr);
 
 	// Init temp data for DH keys
 	for (int i = 0; i < NUM_KEYS; ++i)
@@ -856,5 +856,5 @@ void CryptoManager::checkExpiredCert() noexcept
 			return;
 	}
 	try { generateNewKeyPair(); }
-	catch (Exception) {}
+	catch (Exception&) {}
 }

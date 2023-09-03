@@ -17,8 +17,8 @@
 #define SQLITE_USE_ALLOCA
 
 #if defined _POSIX_SOURCE || defined _GNU_SOURCE
-#define HAVE_LOCALTIME_R
-#define HAVE_GMTIME_R
+#define HAVE_LOCALTIME_R 1
+#define HAVE_GMTIME_R 1
 #endif
 
 #endif /* _SQLITE_CONF_H_ */

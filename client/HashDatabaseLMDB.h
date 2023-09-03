@@ -6,6 +6,8 @@
 #include "MerkleTree.h"
 #include "WaitableEvent.h"
 
+class HashDatabaseLMDB;
+
 class HashDatabaseConnection
 {
 		friend class HashDatabaseLMDB;
