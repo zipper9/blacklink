@@ -21,7 +21,6 @@
 */
 
 #include "stdinc.h"
-#include "sqlite3.h"
 #include "sqlite3x.hpp"
 
 namespace sqlite3x

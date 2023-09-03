@@ -1,6 +1,6 @@
 #include "stdinc.h"
 #include "WebServerAuth.h"
-#include "Encoder.h"
+#include "Base32.h"
 
 #ifdef HAVE_OPENSSL
 #include <openssl/evp.h>
@@ -45,7 +45,7 @@ string WebServerAuth::createAuthCookie(uint64_t expires, uint64_t contextId, con
 	EVP_EncryptFinal(ctx, tmp, &outLen);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, AC_TAG_SIZE, u.ac.tag);
 	EVP_CIPHER_CTX_free(ctx);
-	return Encoder::toBase32(u.data, sizeof(AuthCookie));
+	return Util::toBase32(u.data, sizeof(AuthCookie));
 }
 
 bool WebServerAuth::checkAuthCookie(const string& cookie, uint64_t timestamp, uint64_t& contextId) const noexcept
@@ -58,7 +58,7 @@ bool WebServerAuth::checkAuthCookie(const string& cookie, uint64_t timestamp, ui
 	static const size_t BASE32_SIZE = (sizeof(AuthCookie) * 8 + 4) / 5;
 	if (cookie.length() != BASE32_SIZE) return false;
 	bool error = false;
-	Encoder::fromBase32(cookie.data(), u.data, sizeof(AuthCookie), &error);
+	Util::fromBase32(cookie.data(), u.data, sizeof(AuthCookie), &error);
 	if (error) return false;
 
 	unsigned char tmp[sizeof(AuthCookie)];

@@ -1,7 +1,7 @@
 #ifndef HASH_DATABASE_LMDB_H
 #define HASH_DATABASE_LMDB_H
 
-#include "mdb/lmdb.h"
+#include <lmdb.h>
 #include "Locks.h"
 #include "MerkleTree.h"
 #include "WaitableEvent.h"

@@ -19,7 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_CID_H
 #define DCPLUSPLUS_DCPP_CID_H
 
-#include "Encoder.h"
+#include "Base32.h"
 #include "debug.h"
 #include <boost/functional/hash.hpp>
 
@@ -59,22 +59,22 @@ class CID
 		}
 		string toBase32() const
 		{
-			return Encoder::toBase32(cid.b, SIZE);
+			return Util::toBase32(cid.b, SIZE);
 		}
 		string& toBase32(string& tmp) const
 		{
-			return Encoder::toBase32(cid.b, SIZE, tmp);
+			return Util::toBase32(cid.b, SIZE, tmp);
 		}
 
 		void fromBase32(const string& base32)
 		{
 			if (base32.length() == 39)
-				Encoder::fromBase32(base32.c_str(), cid.b, SIZE);
+				Util::fromBase32(base32.c_str(), cid.b, SIZE);
 			else
 			{
 				string tmp = base32;
 				tmp.resize(39);
-				Encoder::fromBase32(tmp.c_str(), cid.b, SIZE);
+				Util::fromBase32(tmp.c_str(), cid.b, SIZE);
 			}
 		}
 		

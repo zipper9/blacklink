@@ -621,7 +621,7 @@ void NmdcHub::searchParse(const string& param, int type)
 	else
 	{
 		if (param.length() < 41 || param[39] != ' ') return;
-		if (!Encoder::isBase32(param.c_str(), 39)) return;
+		if (!Util::isBase32(param.c_str(), 39)) return;
 		searchParam.filter = param.substr(0, 39);
 		searchParam.filter.insert(0, "TTH:", 4);
 		searchParam.seeker = param.substr(40);
@@ -1912,12 +1912,12 @@ void NmdcHub::password(const string& pwd, bool setPassword)
 	{
 		size_t saltBytes = salt.size() * 5 / 8;
 		std::unique_ptr<uint8_t[]> buf(new uint8_t[saltBytes]);
-		Encoder::fromBase32(useSalt.c_str(), buf.get(), saltBytes);
+		Util::fromBase32(useSalt.c_str(), buf.get(), saltBytes);
 		TigerHash th;
 		string localPwd = fromUtf8(pwd);
 		th.update(localPwd.data(), localPwd.length());
 		th.update(buf.get(), saltBytes);
-		cmd += Encoder::toBase32(th.finalize(), TigerHash::BYTES);
+		cmd += Util::toBase32(th.finalize(), TigerHash::BYTES);
 	}
 	else
 		cmd += fromUtf8(pwd);

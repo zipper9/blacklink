@@ -46,9 +46,6 @@
     <ClCompile Include="client\FavoriteManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\Encoder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\Client.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,20 +148,17 @@
     <ClCompile Include="client\ZUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\sqlite\sqlite3.c">
-      <Filter>Source Files\sqlite</Filter>
-    </ClCompile>
     <ClCompile Include="client\sqlite\sqlite3x_command.cpp">
-      <Filter>Source Files\sqlite</Filter>
+      <Filter>sqlite</Filter>
     </ClCompile>
     <ClCompile Include="client\sqlite\sqlite3x_connection.cpp">
-      <Filter>Source Files\sqlite</Filter>
+      <Filter>sqlite</Filter>
     </ClCompile>
     <ClCompile Include="client\sqlite\sqlite3x_reader.cpp">
-      <Filter>Source Files\sqlite</Filter>
+      <Filter>sqlite</Filter>
     </ClCompile>
     <ClCompile Include="client\sqlite\sqlite3x_transaction.cpp">
-      <Filter>Source Files\sqlite</Filter>
+      <Filter>sqlite</Filter>
     </ClCompile>
     <ClCompile Include="client\UserCommand.cpp">
       <Filter>Source Files</Filter>
@@ -231,12 +225,6 @@
     </ClCompile>
     <ClCompile Include="client\PortTest.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="client\mdb\mdb.c">
-      <Filter>lmdb</Filter>
-    </ClCompile>
-    <ClCompile Include="client\mdb\midl.c">
-      <Filter>lmdb</Filter>
     </ClCompile>
     <ClCompile Include="client\FileTypes.cpp">
       <Filter>Source Files</Filter>
@@ -349,12 +337,6 @@
     <ClCompile Include="client\IpTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\maxminddb\data-pool.c">
-      <Filter>maxminddb</Filter>
-    </ClCompile>
-    <ClCompile Include="client\maxminddb\maxminddb.c">
-      <Filter>maxminddb</Filter>
-    </ClCompile>
     <ClCompile Include="client\FinishedItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -402,6 +384,24 @@
     </ClCompile>
     <ClCompile Include="client\NetworkDevices.cpp">
       <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\Base32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sqlite\sqlite3.c">
+      <Filter>sqlite</Filter>
+    </ClCompile>
+    <ClCompile Include="lmdb\mdb.c">
+      <Filter>lmdb</Filter>
+    </ClCompile>
+    <ClCompile Include="lmdb\midl.c">
+      <Filter>lmdb</Filter>
+    </ClCompile>
+    <ClCompile Include="maxminddb\data-pool.c">
+      <Filter>maxminddb</Filter>
+    </ClCompile>
+    <ClCompile Include="maxminddb\maxminddb.c">
+      <Filter>maxminddb</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -469,9 +469,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\DownloadManagerListener.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\Encoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\Exception.h">
@@ -726,78 +723,6 @@
     <ClInclude Include="client\dcformat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="selene\include\selene.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\BaseFun.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Class.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\ClassFun.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Ctor.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Dtor.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\ExceptionHandler.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\ExceptionTypes.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Fun.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\function.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\LuaName.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\LuaRef.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\MetatableRegistry.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Obj.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\ObjFun.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\primitives.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\references.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Registry.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\ResourceHandler.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Selector.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\State.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\traits.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\Tuple.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
-    <ClInclude Include="selene\include\selene\util.h">
-      <Filter>Header Files\selene</Filter>
-    </ClInclude>
     <ClInclude Include="client\zip\miniz.h">
       <Filter>Header Files\zip</Filter>
     </ClInclude>
@@ -815,12 +740,6 @@
     </ClInclude>
     <ClInclude Include="client\PortTest.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\mdb\lmdb.h">
-      <Filter>lmdb</Filter>
-    </ClInclude>
-    <ClInclude Include="client\mdb\midl.h">
-      <Filter>lmdb</Filter>
     </ClInclude>
     <ClInclude Include="client\FileTypes.h">
       <Filter>Header Files</Filter>
@@ -978,15 +897,6 @@
     <ClInclude Include="client\Tag16.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\maxminddb\data-pool.h">
-      <Filter>maxminddb</Filter>
-    </ClInclude>
-    <ClInclude Include="client\maxminddb\maxminddb-compat-util.h">
-      <Filter>maxminddb</Filter>
-    </ClInclude>
-    <ClInclude Include="client\maxminddb\maxminddb.h">
-      <Filter>maxminddb</Filter>
-    </ClInclude>
     <ClInclude Include="client\BaseThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1071,6 +981,27 @@
     <ClInclude Include="client\NetworkDevices.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\Base32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lmdb\lmdb.h">
+      <Filter>lmdb</Filter>
+    </ClInclude>
+    <ClInclude Include="lmdb\midl.h">
+      <Filter>lmdb</Filter>
+    </ClInclude>
+    <ClInclude Include="maxminddb\data-pool.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
+    <ClInclude Include="maxminddb\maxminddb.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
+    <ClInclude Include="maxminddb\maxminddb_config.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
+    <ClInclude Include="maxminddb\maxminddb-compat-util.h">
+      <Filter>maxminddb</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -1082,9 +1013,6 @@
     <Filter Include="Header Files\sqlite">
       <UniqueIdentifier>{8bbddd30-ea83-4cff-a396-58c23c41f445}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\sqlite">
-      <UniqueIdentifier>{16d3c7d3-ee44-44de-a820-f5fcffbe4341}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\idna">
       <UniqueIdentifier>{14c6f065-8e7e-4320-90bb-3c457151c8da}</UniqueIdentifier>
     </Filter>
@@ -1093,9 +1021,6 @@
     </Filter>
     <Filter Include="Source Files\jsoncpp">
       <UniqueIdentifier>{a2bc7e46-ac54-4dd9-bdbf-0729d9408fad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\selene">
-      <UniqueIdentifier>{b769fbea-470d-4491-9a00-40028bb8cc41}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\mzip">
       <UniqueIdentifier>{84096e6f-60b6-4f0c-939d-d548ac07cd87}</UniqueIdentifier>
@@ -1114,6 +1039,9 @@
     </Filter>
     <Filter Include="maxminddb">
       <UniqueIdentifier>{61342f6d-4e97-4efe-b053-6c36ca9de518}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sqlite">
+      <UniqueIdentifier>{16d3c7d3-ee44-44de-a820-f5fcffbe4341}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

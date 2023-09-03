@@ -436,7 +436,7 @@ static bool parseCID(CID& cid, const string& param, Commands::Result* res)
 {
 	bool error;
 	if (param.length() == 39)
-		Encoder::fromBase32(param.c_str(), cid.writableData(), CID::SIZE, &error);
+		Util::fromBase32(param.c_str(), cid.writableData(), CID::SIZE, &error);
 	else
 		error = true;
 	if (error)
@@ -455,7 +455,7 @@ static bool parseTTH(TTHValue& tth, const string& param, Commands::Result& res)
 {
 	bool error;
 	if (param.length() == 39)
-		Encoder::fromBase32(param.c_str(), tth.data, TTHValue::BYTES, &error);
+		Util::fromBase32(param.c_str(), tth.data, TTHValue::BYTES, &error);
 	else
 		error = true;
 	if (error)
@@ -1212,8 +1212,8 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					res.text += "\nSize of all keys: " + Util::toString(info.totalKeysSize);
 					res.text += "\nSize of all values: " + Util::toString(info.totalDataSize);
 					res.text += "\nSize of all trees: " + Util::toString(info.totalTreesSize);
-					res.text += "\nHash of all keys: " + Encoder::toBase32(info.keysHash, sizeof(info.keysHash));
-					res.text += "\nHash of all values: " + Encoder::toBase32(info.dataHash, sizeof(info.dataHash));
+					res.text += "\nHash of all keys: " + Util::toBase32(info.keysHash, sizeof(info.keysHash));
+					res.text += "\nHash of all values: " + Util::toBase32(info.dataHash, sizeof(info.dataHash));
 				}
 				else
 				{

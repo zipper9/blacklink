@@ -152,8 +152,6 @@ class RecursiveMutex
 };
 #endif
 
-#ifdef IRAINMAN_USE_SPIN_LOCK
-
 /**
  * A fast, non-recursive and unfair implementation of the Critical Section.
  * It is meant to be used in situations where the risk for lock conflict is very low,
@@ -163,16 +161,16 @@ class RecursiveMutex
  * first to get it when it's freed...
  */
 
-class FastCriticalSection
+class SpinLock
 {
 	public:
-		FastCriticalSection()
+		SpinLock()
 		{
 			state.clear();
 		}
 
-		FastCriticalSection(const FastCriticalSection&) = delete;
-		FastCriticalSection& operator= (const FastCriticalSection&) = delete;
+		SpinLock(const SpinLock&) = delete;
+		SpinLock& operator= (const SpinLock&) = delete;
 
 #ifdef LOCK_DEBUG
 		void lock(const char* filename = nullptr, int line = 0)
@@ -192,9 +190,12 @@ class FastCriticalSection
 	private:
 		std::atomic_flag state;
 };
+
+#ifdef USE_SPIN_LOCK
+typedef SpinLock FastCriticalSection;
 #else
 typedef CriticalSection FastCriticalSection;
-#endif // IRAINMAN_USE_SPIN_LOCK
+#endif
 
 template<class T> class LockBase
 {

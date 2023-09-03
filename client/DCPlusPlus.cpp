@@ -43,7 +43,7 @@
 #include "IpGrant.h"
 #endif // SSA_IPGRANT_FEATURE
 
-#ifdef ENABLE_WEB_SERVER
+#ifdef BL_FEATURE_WEB_SERVER
 #include "WebServerManager.h"
 #endif
 
@@ -107,7 +107,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP_L(DOWNLOAD_QUEUE, QueueManager::getInstance()->loadQueue());
 	LOAD_STEP_L(WAITING_USERS, UploadManager::getInstance()->load());
 
-#ifdef ENABLE_WEB_SERVER
+#ifdef BL_FEATURE_WEB_SERVER
 	WebServerManager::newInstance();
 #endif
 
@@ -140,7 +140,7 @@ void preparingCoreToShutdown()
 #ifdef DEBUG_SHUTDOWN
 		sl.step("UploadManager");
 #endif
-#ifdef ENABLE_WEB_SERVER
+#ifdef BL_FEATURE_WEB_SERVER
 		WebServerManager::getInstance()->shutdown();
 #endif
 		ClientManager::prepareClose();
@@ -195,7 +195,7 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #endif
 
 	ConnectivityManager::deleteInstance();
-#ifdef ENABLE_WEB_SERVER
+#ifdef BL_FEATURE_WEB_SERVER
 	WebServerManager::deleteInstance();
 #endif
 	if (pGuiInitProc) pGuiInitProc(pGuiParam);

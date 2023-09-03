@@ -3059,7 +3059,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	if (searchOptions.fileType != FILE_TYPE_ANY)
 	{
 		if (searchOptions.fileType == FILE_TYPE_TTH)
-			Encoder::fromBase32(findStr.c_str(), sq.tth.data, TTHValue::BYTES);
+			Util::fromBase32(findStr.c_str(), sq.tth.data, TTHValue::BYTES);
 		sq.type = searchOptions.fileType;
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_TYPE;
 	}

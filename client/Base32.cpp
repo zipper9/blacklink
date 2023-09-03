@@ -17,10 +17,10 @@
  */
 
 #include "stdinc.h"
-#include "Encoder.h"
+#include "Base32.h"
 #include "debug.h"
 
-const int8_t Encoder::g_base32Table[] =
+static const int8_t base32Table[] =
 {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -40,53 +40,53 @@ const int8_t Encoder::g_base32Table[] =
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 };
 
-const char Encoder::g_base32Alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+static const char base32Alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-string& Encoder::toBase32(const uint8_t* src, size_t len, string& dst)
+string& Util::toBase32(const uint8_t* src, size_t len, string& dst)
 {
 	// Code snagged from the bitzi bitcollider
 	size_t i, index;
 	uint8_t word;
 	dst.reserve(((len * 8) / 5) + 1);
-	
+
 	for (i = 0, index = 0; i < len;)
 	{
 		/* Is the current word going to span a byte boundary? */
 		if (index > 3)
 		{
 			word = (uint8_t)(src[i] & (0xFF >> index));
-			index = (index + 5) % 8;
+			index = (index + 5) & 7;
 			word <<= index;
 			if ((i + 1) < len)
 				word |= src[i + 1] >> (8 - index);
-				
+
 			i++;
 		}
 		else
 		{
 			word = (uint8_t)(src[i] >> (8 - (index + 5))) & 0x1F;
-			index = (index + 5) % 8;
+			index = (index + 5) & 7;
 			if (index == 0)
 				i++;
 		}
-		
+
 		dcassert(word < 32);
-		dst += g_base32Alphabet[word];
+		dst += base32Alphabet[word];
 	}
 	return dst;
 }
 
-void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorPtr)
+void Util::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorPtr)
 {
 	size_t i, index, offset;
-	
+
 	if (errorPtr) *errorPtr = false;
 	memset(dst, 0, len);
 	for (i = 0, index = 0, offset = 0; src[i]; i++)
 	{
 		// Skip what we don't recognise
-		int8_t tmp = g_base32Table[(unsigned char) src[i]];
-		
+		int8_t tmp = base32Table[(unsigned char) src[i]];
+
 		if (tmp == -1)
 		{
 			if (errorPtr)
@@ -96,10 +96,10 @@ void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorP
 			}
 			continue;
 		}
-			
+
 		if (index <= 3)
 		{
-			index = (index + 5) % 8;
+			index = (index + 5) & 7;
 			if (index == 0)
 			{
 				dst[offset] |= tmp;
@@ -114,7 +114,7 @@ void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorP
 		}
 		else
 		{
-			index = (index + 5) % 8;
+			index = (index + 5) & 7;
 			dst[offset] |= (tmp >> index);
 			offset++;
 			if (offset == len)

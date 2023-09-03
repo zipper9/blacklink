@@ -126,7 +126,7 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			
 			TTHValue tth;
 			bool error;
-			Encoder::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
+			Util::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
 			if (error) return;
 
 			int64_t size = Util::toInt64(*valSize);
@@ -1380,7 +1380,7 @@ bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename, bool hid
 
 	TTHValue tth;
 	bool error;
-	Encoder::fromBase32(filename.c_str() + 4, tth.data, sizeof(tth.data), &error);
+	Util::fromBase32(filename.c_str() + 4, tth.data, sizeof(tth.data), &error);
 	if (error) return false;
 		
 	READ_LOCK(*csShare);
@@ -3436,7 +3436,7 @@ bool ShareManager::readFileAttr(const string& path, FileAttr attr[MAX_FILE_ATTR]
 						if (!size.empty() && tth.length() == 39)
 						{
 							attr[i].size = Util::toInt64(size);
-							Encoder::fromBase32(tth.c_str(), attr[i].root.data, TTHValue::BYTES);
+							Util::fromBase32(tth.c_str(), attr[i].root.data, TTHValue::BYTES);
 							result = true;
 						}
 						break;

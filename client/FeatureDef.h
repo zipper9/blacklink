@@ -65,10 +65,6 @@
 
 #endif
 
-#ifdef _WIN32
-#define ENABLE_WEB_SERVER
-#endif
-
 #ifdef _DEBUG
 #define BL_FEATURE_COLLECT_UNKNOWN_TAGS
 #define BL_FEATURE_COLLECT_UNKNOWN_FEATURES
@@ -76,6 +72,7 @@
 
 #define BL_FEATURE_IP_DATABASE
 #define BL_FEATURE_DROP_SLOW_SOURCES
+#define BL_FEATURE_WEB_SERVER
 
 #define FLYLINKDC_USE_STATS_FRAME
 //#define FLYLINKDC_USE_ASK_SLOT // отключаем автопопрошайку
@@ -94,8 +91,7 @@
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 
-#define IRAINMAN_USE_SPIN_LOCK
-
+#define USE_SPIN_LOCK
 #define USE_APPDATA
 
 // [+] SSA - новый алгоритм поиска имени файла и title для WinAmp

@@ -407,7 +407,7 @@ void Client::onConnected() noexcept
 		if (!kp.empty())
 		{
 			vector<uint8_t> kp2v(kp.size());
-			Encoder::fromBase32(keyprint.c_str() + 7, &kp2v[0], kp2v.size());
+			Util::fromBase32(keyprint.c_str() + 7, &kp2v[0], kp2v.size());
 			if (!std::equal(kp.begin(), kp.end(), kp2v.begin()))
 			{
 				state = STATE_DISCONNECTED;

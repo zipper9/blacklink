@@ -20,7 +20,7 @@
 #define DCPLUSPLUS_DCPP_HASH_VALUE_H
 
 #include "TigerHash.h"
-#include "Encoder.h"
+#include "Base32.h"
 #include "BaseUtil.h"
 
 template<class Hasher>
@@ -39,11 +39,11 @@ struct HashValue
 	}
 	explicit HashValue(const char* base32, unsigned len)
 	{
-		Encoder::fromBase32(base32, data, BYTES);
+		Util::fromBase32(base32, data, BYTES);
 	}
 	explicit HashValue(const std::string& base32)
 	{
-		Encoder::fromBase32(base32.c_str(), data, BYTES);
+		Util::fromBase32(base32.c_str(), data, BYTES);
 	}
 	bool operator!=(const HashValue& rhs) const
 	{
@@ -59,11 +59,11 @@ struct HashValue
 	}
 	std::string toBase32() const
 	{
-		return Encoder::toBase32(data, BYTES);
+		return Util::toBase32(data, BYTES);
 	}
 	std::string& toBase32(std::string& tmp) const
 	{
-		return Encoder::toBase32(data, BYTES, tmp);
+		return Util::toBase32(data, BYTES, tmp);
 	}
 	size_t toHash() const
 	{

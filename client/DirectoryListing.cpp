@@ -131,7 +131,7 @@ UserPtr DirectoryListing::getUserFromFilename(const string& fileName)
 		size_t n = name.length() - (i + 1);		
 		if (n == 39)
 		{
-			Encoder::fromBase32(name.c_str() + i + 1, cid.writableData(), CID::SIZE, &hasCID);
+			Util::fromBase32(name.c_str() + i + 1, cid.writableData(), CID::SIZE, &hasCID);
 			hasCID = !hasCID;
 			if (hasCID)
 			{
@@ -336,7 +336,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 
 			TTHValue tth;
 			bool error;
-			Encoder::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
+			Util::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
 			if (error) return;
 
 			if (!ownList && tth.isZero()) return;

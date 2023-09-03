@@ -17,11 +17,7 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
-
 #include "PropertiesDlg.h"
-
 #include "GeneralPage.h"
 #include "DownloadPage.h"
 #include "PriorityPage.h"
@@ -48,7 +44,6 @@
 #include "MiscPage.h"
 #include "MessagesPage.h"
 #include "RangesPage.h"
-#include "WebServerPage.h"
 #include "DCLSTPage.h"
 #include "IntegrationPage.h"
 #include "CertificatesPage.h"
@@ -59,6 +54,10 @@
 #include "FileListPage.h"
 #include "DatabasePage.h"
 #include "SearchUrlsPage.h"
+
+#ifdef BL_FEATURE_WEB_SERVER
+#include "WebServerPage.h"
+#endif
 
 PropertiesDlg* PropertiesDlg::instance = nullptr;
 
@@ -98,7 +97,9 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new CertificatesPage();
 	pages[n++] = new MiscPage();
 	pages[n++] = new RangesPage();
+#ifdef BL_FEATURE_WEB_SERVER
 	pages[n++] = new WebServerPage();
+#endif
 	pages[n++] = new FileListPage();
 	pages[n++] = new DCLSTPage();
 	pages[n++] = new IntegrationPage();

@@ -22,7 +22,7 @@
 #include "HttpClient.h"
 #include "ZUtils.h"
 #include "ResourceManager.h"
-#include "maxminddb/maxminddb.h"
+#include <maxminddb.h>
 #include <boost/algorithm/string.hpp>
 
 using sqlite3x::database_error;

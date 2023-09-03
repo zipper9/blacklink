@@ -225,7 +225,7 @@ int CryptoManager::verifyCallback(int preverifyOk, X509_STORE_CTX *ctx)
 
 		ByteVector kp;
 		getX509Digest(kp, cert, EVP_sha256());
-		string expected_keyp = "SHA256/" + Encoder::toBase32(kp.data(), kp.size());
+		string expected_keyp = "SHA256/" + Util::toBase32(kp.data(), kp.size());
 
 		// Do a full string comparison to avoid potential false positives caused by invalid inputs
 		if (keyp.compare(expected_keyp) == 0)

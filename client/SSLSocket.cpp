@@ -469,7 +469,7 @@ void SSLSocket::logInfo(bool isServer) const
 					CryptoManager::getX509Digest(digest, cert, EVP_sha256());
 					StringMap m;
 					m["IP"] = m["ip"] = Util::printIpAddress(getIp());
-					m["KP"] = m["kp"] = Encoder::toBase32(digest.data(), digest.size());
+					m["KP"] = m["kp"] = Util::toBase32(digest.data(), digest.size());
 					string expandedPath = SETTING(LOG_DIRECTORY);
 					expandedPath += Util::validateFileName(Util::formatParams(path, m, true));
 					if (!File::isExist(expandedPath))

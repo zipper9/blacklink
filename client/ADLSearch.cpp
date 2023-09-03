@@ -166,7 +166,7 @@ bool ADLSearchManager::SearchContextItem::prepare(const ADLSearch& search, const
 	if (search.sourceType == ADLSearch::TTH)
 	{
 		bool error;
-		Encoder::fromBase32(search.searchString.c_str(), tth.data, TTHValue::BYTES, &error);
+		Util::fromBase32(search.searchString.c_str(), tth.data, TTHValue::BYTES, &error);
 		return !error;
 	}
 

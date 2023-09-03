@@ -25,8 +25,8 @@
 
 #include <string>
 #include <vector>
-#include "sqlite3.h"
-#include "../client/Exception.h"
+#include <sqlite3.h>
+#include "../Exception.h"
 
 namespace sqlite3x
 {

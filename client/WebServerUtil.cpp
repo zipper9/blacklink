@@ -2,7 +2,7 @@
 #include "WebServerUtil.h"
 #include "Util.h"
 #include "SimpleXML.h"
-#include "Encoder.h"
+#include "Base32.h"
 
 static const boost::unordered_map<string, string> extToContentType =
 {
@@ -260,7 +260,7 @@ string WebServerUtil::printItemId(uintptr_t id) noexcept
 		id >>= 8;
 	}
 	if (!count) data[count++] = 0;
-	return Encoder::toBase32(data, count);
+	return Util::toBase32(data, count);
 }
 
 uintptr_t WebServerUtil::parseItemId(const string& s) noexcept
@@ -268,7 +268,7 @@ uintptr_t WebServerUtil::parseItemId(const string& s) noexcept
 	if (s.empty()) return 0;
 	uint8_t data[sizeof(uintptr_t)];
 	bool error;
-	Encoder::fromBase32(s.c_str(), data, sizeof(data), &error);
+	Util::fromBase32(s.c_str(), data, sizeof(data), &error);
 	if (error) return 0;
 	uintptr_t result = 0;
 	for (int i = sizeof(data)-1; i >= 0; i--)

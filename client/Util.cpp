@@ -1153,7 +1153,7 @@ string Util::getRandomPassword()
 	uint8_t data[10];
 	for (size_t i = 0; i < sizeof(data); ++i)
 		data[i] = (uint8_t) Util::rand();
-	return Encoder::toBase32(data, sizeof(data));
+	return toBase32(data, sizeof(data));
 }
 
 string Util::toAdcFile(const string& file)

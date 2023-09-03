@@ -1,8 +1,11 @@
 #include "stdinc.h"
 #include "Random.h"
+#include "Locks.h"
 
 #ifdef HAVE_OPENSSL
 #include <openssl/rand.h>
+#else
+#include "TimeUtil.h"
 #endif
 
 /* Below is a high-speed random number generator with much
@@ -13,8 +16,50 @@
    see http://www.math.keio.ac.jp/matumoto/emt.html or email
    matumoto@math.keio.ac.jp */
 
+static Util::MT19937 randState;
+static FastCriticalSection csRandState;
+
+// No locking!
+void Util::initRand()
+{
+	randState.randomize();
+}
+
+uint32_t Util::rand()
+{
+	LOCK(csRandState);
+	return randState.getValue();
+}
+
+#ifdef HAVE_OPENSSL
+void Util::MT19937::randomize()
+{
+	RAND_pseudo_bytes((unsigned char*) mt, (N + 1)*sizeof(uint32_t));
+	mti = N + 1;
+}
+#else
+void Util::MT19937::randomize()
+{
+	uint32_t seed = 0;
+	while (seed == 0)
+		seed = (uint32_t) time(nullptr) ^ (uint32_t) Util::getHighResTimestamp();
+	setSeed(seed);
+}
+#endif
+
+void Util::MT19937::setSeed(uint32_t seed)
+{
+	/* setting initial seeds to mt[N] using         */
+	/* the generator Line 25 of Table 1 in          */
+	/* [KNUTH 1981, The Art of Computer Programming */
+	/*    Vol. 2 (2nd Ed.), pp102]                  */
+	mt[0] = seed;
+	for (mti = 1; mti < N; mti++)
+		mt[mti] = 69069 * mt[mti-1];
+	mti = N + 1;
+}
+
 /* Period parameters */
-#define N 624
 #define M 397
 #define MATRIX_A 0x9908b0df   /* constant vector a */
 #define UPPER_MASK 0x80000000 /* most significant w-r bits */
@@ -28,31 +73,7 @@
 #define TEMPERING_SHIFT_T(y)  (y << 15)
 #define TEMPERING_SHIFT_L(y)  (y >> 18)
 
-static uint32_t mt[N + 1]; /* the array for the state vector  */
-static int mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
-
-/* initializing the array with a NONZERO seed */
-#ifdef HAVE_OPENSSL
-void Util::initRand()
-{
-	RAND_pseudo_bytes((unsigned char*) mt, (N + 1)*sizeof(uint32_t));
-	mti = N;
-}
-#else
-void Util::initRand()
-{
-	uint32_t seed = (uint32_t) time(nullptr);
-	/* setting initial seeds to mt[N] using         */
-	/* the generator Line 25 of Table 1 in          */
-	/* [KNUTH 1981, The Art of Computer Programming */
-	/*    Vol. 2 (2nd Ed.), pp102]                  */
-	mt[0] = seed;
-	for (mti = 1; mti < N; mti++)
-		mt[mti] = 69069 * mt[mti-1];
-}
-#endif
-
-uint32_t Util::rand()
+uint32_t Util::MT19937::getValue()
 {
 	uint32_t y;
 	/* mag01[x] = x * MATRIX_A  for x=0,1 */

@@ -1408,7 +1408,7 @@ void AdcHub::password(const string& pwd, bool setPassword)
 		{
 			size_t saltBytes = salt.size() * 5 / 8;
 			std::unique_ptr<uint8_t[]> buf(new uint8_t[saltBytes]);
-			Encoder::fromBase32(salt.c_str(), &buf[0], saltBytes);
+			Util::fromBase32(salt.c_str(), &buf[0], saltBytes);
 			TigerHash th;
 			if (featureFlags & FEATURE_FLAG_OLD_PASSWORD)
 			{
@@ -1418,7 +1418,7 @@ void AdcHub::password(const string& pwd, bool setPassword)
 			th.update(pwd.data(), pwd.length());
 			th.update(&buf[0], saltBytes);
 			salt.clear();
-			c.addParam(Encoder::toBase32(th.finalize(), TigerHash::BYTES));
+			c.addParam(Util::toBase32(th.finalize(), TigerHash::BYTES));
 		}
 	}
 	send(c);
@@ -1553,7 +1553,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 		ByteVector kp;
 		cryptoManager->getCertFingerprint(kp);
 		if (!kp.empty())
-			addInfoParam(c, "KP", "SHA256/" + Encoder::toBase32(kp.data(), kp.size()));
+			addInfoParam(c, "KP", "SHA256/" + Util::toBase32(kp.data(), kp.size()));
 	}
 	
 	const bool optionNatTraversal = BOOLSETTING(ALLOW_NAT_TRAVERSAL);

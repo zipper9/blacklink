@@ -35,7 +35,7 @@ class HubEntry
 			if (!(kp.length() == 52 + 7 && kp.compare(0, 7, "SHA256/", 7) == 0)) return false;
 			uint8_t dst[32];
 			bool error;
-			Encoder::fromBase32(kp.c_str() + 7, dst, sizeof(dst), &error);
+			Util::fromBase32(kp.c_str() + 7, dst, sizeof(dst), &error);
 			return !error;
 		}
 
