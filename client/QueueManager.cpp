@@ -1963,6 +1963,12 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 					{
 						// Blah...no use keeping an unfinished file list...
 						File::deleteFile(download->getPath() + q->getListExt() + dctmpExtension);
+						if (download->getReasonCode() == Download::REASON_CODE_FILE_UNAVAILABLE)
+						{
+							removeItem(q, true);
+							download.reset();
+							return;
+						}
 					}
 					if (download->getType() == Transfer::TYPE_FILE)
 					{
@@ -1985,7 +1991,7 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 				q->unlockAttributes();
 				if (prio != QueueItem::PAUSED)
 				{
-					const string& reason = download->getReason();
+					const string& reason = download->getReasonText();
 					if (reason.empty())
 					{
 						q->getOnlineUsers(getConn);

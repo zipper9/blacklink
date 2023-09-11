@@ -34,7 +34,8 @@ Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noex
 	Transfer(conn, getTargetPath(item), item->getTTH()),
 	qi(item),
 	downloadFile(nullptr),
-	treeValid(false)
+	treeValid(false),
+	reasonCode(REASON_CODE_UNSPECIFIED)
 #ifdef BL_FEATURE_DROP_SLOW_SOURCES
 	, lastNormalSpeed(0)
 #endif

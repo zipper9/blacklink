@@ -467,7 +467,8 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason,
 	{
 		removeDownload(d);
 		fire(DownloadManagerListener::Failed(), d, reason);
-		d->setReason(reason);
+		d->setReasonCode(Download::REASON_CODE_CONNECTION_FAILURE);
+		d->setReasonText(reason);
 		QueueManager::getInstance()->putDownload(d, false);
 	}
 #ifdef _DEBUG
@@ -582,7 +583,8 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	
 	auto qm = QueueManager::getInstance();
 	qm->removeSource(d->getPath(), source->getUser(), (Flags::MaskType)(d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE), false);
-	d->setReason(STRING(FILE_NOT_AVAILABLE));
+	d->setReasonCode(Download::REASON_CODE_FILE_UNAVAILABLE);
+	d->setReasonText(STRING(FILE_NOT_AVAILABLE));
 	qm->putDownload(d, false);
 	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
 	checkDownloads(ucPtr);

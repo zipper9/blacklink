@@ -33,6 +33,14 @@ class Download : public Transfer, public Flags
 			FLAG_TTH_LIST         = 0x800
 		};
 
+		enum
+		{
+			REASON_CODE_UNSPECIFIED,
+			REASON_CODE_CONNECTION_FAILURE,
+			REASON_CODE_FILE_UNAVAILABLE,
+			REASON_CODE_OTHER_ERROR // not used
+		};
+
 		Download(const UserConnectionPtr& conn, const QueueItemPtr& qi) noexcept;
 
 		void getParams(StringMap& params) const;
@@ -70,7 +78,8 @@ class Download : public Transfer, public Flags
 		}
 
 		GETSET(bool, treeValid, TreeValid);
-		GETSET(string, reason, Reason);
+		GETSET(string, reasonText, ReasonText);
+		GETSET(int, reasonCode, ReasonCode);
 #ifdef DEBUG_TRANSFERS
 		GETSET(string, downloadPath, DownloadPath);
 #endif
