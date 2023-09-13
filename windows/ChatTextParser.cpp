@@ -3,6 +3,7 @@
 #include "Colors.h"
 #include "../client/Text.h"
 #include "../client/MagnetLink.h"
+#include "../client/FormatUtil.h"
 #include "../client/Util.h"
 
 ChatTextParser chatTextParser;

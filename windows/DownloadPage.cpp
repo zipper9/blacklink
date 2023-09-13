@@ -23,6 +23,7 @@
 #include "DialogLayout.h"
 #include "BrowseFile.h"
 #include "../client/File.h"
+#include "../client/PathUtil.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

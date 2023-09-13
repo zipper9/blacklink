@@ -1,7 +1,9 @@
 #include "stdinc.h"
 #include "HashDatabaseLMDB.h"
 #include "StrUtil.h"
-#include "Util.h"
+#include "AppPaths.h"
+#include "PathUtil.h"
+#include "Util.h" // ASSERT_MAIN_THREAD
 #include "File.h"
 #include "TimeUtil.h"
 #include "LogManager.h"

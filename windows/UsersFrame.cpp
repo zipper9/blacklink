@@ -27,6 +27,7 @@
 #include "Fonts.h"
 #include "ExMessageBox.h"
 #include "../client/Util.h"
+#include "../client/FormatUtil.h"
 #include "../client/UserManager.h"
 #include "../client/ShareManager.h"
 #include "../client/dht/DHT.h"

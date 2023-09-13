@@ -26,7 +26,8 @@
 #include "../client/QueueManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/DatabaseManager.h"
-#include "../client/Random.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 
 #include "TransferView.h"
 #include "MainFrm.h"
@@ -1395,6 +1396,11 @@ void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& do
 	const string& token = download->getConnectionQueueToken();
 	ui->setToken(token);
 	addTask(TRANSFER_UPDATE_TOKEN, ui);
+}
+
+void TransferView::on(DownloadManagerListener::Complete, const DownloadPtr& download) noexcept
+{
+	onTransferComplete(download.get(), true, Util::getFileName(download->getPath()), false);
 }
 
 void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& download, const string& reason) noexcept

@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "LocationUtil.h"
+#include "AppPaths.h"
 #include "Util.h"
 #include "StrUtil.h"
 #include "DatabaseManager.h"

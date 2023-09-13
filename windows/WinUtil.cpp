@@ -19,14 +19,10 @@
 #include "stdafx.h"
 
 #include "../client/File.h"
-#include "Resource.h"
 
 #include <atlwin.h>
 #include <shlobj.h>
 #include <mmsystem.h>
-
-#define COMPILE_MULTIMON_STUBS 1
-#include <MultiMon.h>
 #include <powrprof.h>
 
 #include "WinUtil.h"
@@ -34,13 +30,13 @@
 
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/ShareManager.h"
-#include "../client/UploadManager.h"
-#include "../client/HashManager.h"
 #include "../client/File.h"
 #include "../client/DownloadManager.h"
 #include "../client/QueueManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/MagnetLink.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
 #include "Colors.h"
 #include "Fonts.h"
 #include "MagnetDlg.h"

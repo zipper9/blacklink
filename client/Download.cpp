@@ -21,9 +21,12 @@
 #include "UserConnection.h"
 #include "QueueItem.h"
 #include "DatabaseManager.h"
-#include "Util.h"
 #include "SettingsManager.h"
+#include "AppPaths.h"
+#include "PathUtil.h"
+#include "Util.h" // toAdcFile
 #include "ParamExpander.h"
+#include "FormatUtil.h"
 #include "Random.h"
 
 #ifdef DEBUG_SHUTDOWN

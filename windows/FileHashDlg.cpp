@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "FileHashDlg.h"
 #include "../client/HashManager.h"
-#include "../client/Util.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 #include "../client/HashUtil.h"
 #include "../client/File.h"
 #include "DialogLayout.h"
@@ -9,7 +10,7 @@
 #include "BrowseFile.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -58,7 +59,7 @@ LRESULT FileHashDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	CButton ctrlCopyTTH(GetDlgItem(IDC_COPY_TTH));
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 		imageButton.SubclassWindow(ctrlCopyTTH);
 #endif
 	ctrlCopyTTH.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::COPY_TO_CLIPBOARD, 0));
@@ -196,7 +197,7 @@ bool FileHashDlg::initFileInfo()
 		clearMagnet();
 		return false;
 	}
-	SetDlgItemTextW(IDC_FILE_SIZE, Util::formatBytesW(fileSize).c_str());
+	SetDlgItemText(IDC_FILE_SIZE, Util::formatBytesT(fileSize).c_str());
 	TigerTree tree;
 	if (HashManager::doLoadTree(Text::fromT(filename), tree, fileSize, false))
 	{

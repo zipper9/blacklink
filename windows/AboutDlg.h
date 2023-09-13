@@ -23,7 +23,6 @@
 #include "RichTextLabel.h"
 #include "WinUtil.h"
 #include "CompiledDateTime.h"
-#include "../client/Util.h"
 
 #if _MSC_VER >= 1921
 #define MSC_RELEASE 2019

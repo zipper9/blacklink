@@ -2,7 +2,7 @@
 #include "FavDirDlg.h"
 #include "WinUtil.h"
 #include "BrowseFile.h"
-#include "../client/Util.h"
+#include "../client/PathUtil.h"
 #include <boost/algorithm/string.hpp>
 
 static const WinUtil::TextItem texts[] =

@@ -19,7 +19,6 @@
 #include "stdafx.h"
 #include "LimitEditDlg.h"
 #include "WinUtil.h"
-#include "../client/Util.h"
 
 static const WinUtil::TextItem texts[] =
 {

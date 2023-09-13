@@ -6,7 +6,7 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
-#include "CompatibilityManager.h"
+#include "SysVersion.h"
 #pragma comment(lib, "iphlpapi.lib")
 #else
 #include <arpa/inet.h>
@@ -62,7 +62,7 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos, int opt
 	ULONG len = 15360;
 	ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST;
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 		flags |= GAA_FLAG_INCLUDE_PREFIX;
 #endif
 	for (int i = 0; i < 3; ++i)
@@ -89,7 +89,7 @@ void Util::getNetworkAdapters(int af, vector<AdapterInfo>& adapterInfos, int opt
 						{
 							unsigned prefixLen;
 #ifdef OSVER_WIN_XP
-							if (CompatibilityManager::isOsVistaPlus())
+							if (SysVersion::isOsVistaPlus())
 								prefixLen = ualh->OnLinkPrefixLength;
 							else
 								prefixLen = getPrefixLen(pAdapterInfo, address, af);

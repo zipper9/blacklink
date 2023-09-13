@@ -2,7 +2,6 @@
 #include "FavUserDlg.h"
 #include "WinUtil.h"
 #include "../client/FavoriteUser.h"
-#include "../client/Util.h"
 
 static const WinUtil::TextItem texts[] =
 {

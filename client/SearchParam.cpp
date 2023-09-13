@@ -2,7 +2,8 @@
 #include "SearchParam.h"
 #include "SearchResult.h"
 #include "Random.h"
-#include "Util.h"
+#include "PathUtil.h"
+#include "Util.h" // isTigerHashString
 #include "SimpleStringTokenizer.h"
 
 SearchTokenList SearchTokenList::instance;

@@ -29,6 +29,7 @@
 #include "../client/Commands.h"
 #include "../client/CommandCallback.h"
 #include "../client/TimeUtil.h"
+#include "../client/version.h"
 #include "SingleInstance.h"
 #include "FlatTabCtrl.h"
 #include "TransferView.h"
@@ -321,11 +322,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			WinUtil::openFile(tdir);
 		}
 
-		LRESULT onOpenConfigs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			openDirs(Util::getConfigPath());
-			return 0;
-		}
+		LRESULT onOpenConfigs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		LRESULT onOpenLogs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -333,12 +330,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			return 0;
 		}
 
-		LRESULT onOpenDownloads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			openDirs(Util::getDownloadDir(UserPtr()));
-			return 0;
-		}
-		
+		LRESULT onOpenDownloads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
 		LRESULT onWindowCascade(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			prepareNonMaximized();

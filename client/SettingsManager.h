@@ -21,7 +21,6 @@
 
 #include "SettingsManagerListener.h"
 #include "StrUtil.h"
-#include "Util.h"
 #include "Speaker.h"
 #include "Singleton.h"
 #include "Exception.h"
@@ -819,16 +818,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			isSet[key] = false;
 		}
 
-		void load()
-		{
-			Util::migrate(getConfigFile());
-			load(getConfigFile());
-		}
-
-		void save()
-		{
-			save(getConfigFile());
-		}
+		void load();
+		void save();
 
 		void load(const string& fileName);
 		void save(const string& fileName);
@@ -888,11 +879,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		
 		static SearchTypesIter getSearchType(const string& name);
 		
-		static string getConfigFile()
-		{
-			return Util::getConfigPath() + "DCPlusPlus.xml";
-		}
-
 		static void pathToRelative(string& path, const string& prefix);
 		static void pathFromRelative(string& path, const string& prefix);
 };

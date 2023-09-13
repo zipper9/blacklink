@@ -23,6 +23,7 @@
 #endif
 
 #include "QueueManager.h"
+#include "AppPaths.h"
 #include "SearchManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
@@ -32,11 +33,13 @@
 #include "DebugManager.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchResult.h"
+#include "PathUtil.h"
 #include "SharedFileStream.h"
 #include "ADLSearch.h"
 #include "ShareManager.h"
 #include "Wildcards.h"
 #include "Random.h"
+#include "version.h"
 
 static const unsigned SAVE_QUEUE_TIME = 300000; // 5 minutes
 static const int64_t MOVER_LIMIT = 10 * 1024 * 1024;
@@ -51,6 +54,11 @@ uint64_t QueueManager::lastSave = 0;
 QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::userQueueMap[QueueItem::LAST];
 QueueManager::UserQueue::RunningMap QueueManager::UserQueue::runningMap;
 std::unique_ptr<RWLock> QueueManager::UserQueue::csRunningMap = std::unique_ptr<RWLock>(RWLock::create());
+
+static string getQueueFile()
+{
+	return Util::getConfigPath() + "Queue.xml";
+}
 
 QueueManager::FileQueue::FileQueue() :
 #ifdef USE_QUEUE_RWLOCK

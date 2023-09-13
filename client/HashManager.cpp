@@ -23,9 +23,11 @@
 #include "LogManager.h"
 #include "DatabaseManager.h"
 #include "ClientManager.h"
-#include "CompatibilityManager.h"
+#include "SysVersion.h"
 #include "ShareManager.h"
+#include "PathUtil.h"
 #include "TimeUtil.h"
+#include "FormatUtil.h"
 
 // Return values of fastHash and slowHash
 enum
@@ -583,7 +585,7 @@ int HashManager::Hasher::run()
 				const uint64_t speed = end > start ? size * 1000 / (end - start) : 0;
 				hashManager->hashDone(end, currentItem.fileID, currentItem.file, filename, tree, speed, size);
 #ifdef _WIN32
-				if (!CompatibilityManager::isWine() && size >= SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576)
+				if (!SysVersion::isWine() && size >= SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576)
 				{
 					if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))
 					{

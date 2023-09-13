@@ -1,5 +1,6 @@
 #include "stdinc.h"
 #include "WebServerManager.h"
+#include "AppPaths.h"
 #include "HttpHeaders.h"
 #include "JsonFormatter.h"
 #include "BufferedSocket.h"
@@ -15,7 +16,9 @@
 #include "ShareManager.h"
 #include "WebServerUtil.h"
 #include "MagnetLink.h"
+#include "PathUtil.h"
 #include "TimeUtil.h"
+#include "FormatUtil.h"
 
 static const unsigned SESSION_EXPIRE_TIME = 10; // minutes
 

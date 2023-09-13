@@ -22,6 +22,8 @@
 #include "WinUtil.h"
 #include "../client/Text.h"
 #include "../client/Util.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 #include "../client/ParamExpander.h"
 #include "../client/SettingsManager.h"
 #include "../client/File.h"

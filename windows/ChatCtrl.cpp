@@ -20,13 +20,13 @@
 #include "Colors.h"
 #include "../client/OnlineUser.h"
 #include "../client/Client.h"
-#include "../client/CompatibilityManager.h"
 #include <boost/algorithm/string.hpp>
 #include <tom.h>
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 #include "Emoticons.h"
 #include "../GdiOle/GDIImageOle.h"
+#include "../client/SysVersion.h"
 #include "ImageDataObject.h"
 #include "MainFrm.h"
 #endif
@@ -97,7 +97,7 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 		msg += _T('\n');
 
 #ifdef BL_UI_FEATURE_EMOTICONS
-		if (emoticonPackList.getPacks().empty() || CompatibilityManager::isWine())
+		if (emoticonPackList.getPacks().empty() || SysVersion::isWine())
 			useEmoticons = false;
 #endif
 

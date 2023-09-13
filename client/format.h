@@ -16,15 +16,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef DCPLUSPLUS_DCPP_FORMAT_H_
-#define DCPLUSPLUS_DCPP_FORMAT_H_
+#ifndef FORMAT_H_
+#define FORMAT_H_
 
 #include <boost/format.hpp>
 
-#define F_(String) dcpp_fmt(String)
-
 template<typename T>
-boost::basic_format<T> dcpp_fmt(const std::basic_string<T>& t)
+boost::basic_format<T> F_(const std::basic_string<T>& t)
 {
 	boost::basic_format<T> fmt;
 	fmt.exceptions(boost::io::no_error_bits);
@@ -33,9 +31,9 @@ boost::basic_format<T> dcpp_fmt(const std::basic_string<T>& t)
 }
 
 template<typename T>
-boost::basic_format<T> dcpp_fmt(const T* t)
+boost::basic_format<T> F_(const T* t)
 {
-	return dcpp_fmt(std::basic_string<T>(t));
+	return F_(std::basic_string<T>(t));
 }
 
-#endif /* DCPLUSPLUS_DCPP_FORMAT_H_ */
+#endif // FORMAT_H_

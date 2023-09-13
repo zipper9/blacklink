@@ -18,17 +18,24 @@
 
 #include "stdinc.h"
 #include "FavoriteManager.h"
+#include "AppPaths.h"
+#include "PathUtil.h"
+#include "TimeUtil.h"
 #include "ClientManager.h"
 #include "StringTokenizer.h"
 #include "SimpleXML.h"
 #include "ConnectionManager.h"
 #include "LogManager.h"
 #include "DatabaseManager.h"
-#include "TimeUtil.h"
 #include <boost/algorithm/string.hpp>
 
 static const unsigned SAVE_RECENTS_TIME = 3*60000;
 static const unsigned SAVE_FAVORITES_TIME = 60000;
+
+static string getFavoritesFile()
+{
+	return Util::getConfigPath() + "Favorites.xml";
+}
 
 FavoriteManager::FavoriteManager()
 {

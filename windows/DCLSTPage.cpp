@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "BrowseFile.h"
 #include "../client/SettingsManager.h"
+#include "../client/PathUtil.h"
 
 static const WinUtil::TextItem texts[] =
 {

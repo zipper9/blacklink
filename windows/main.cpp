@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "resource.h"
 #include "MainFrm.h"
 #include "ResourceLoader.h"
 #include "PopupManager.h"
@@ -29,6 +28,9 @@
 #include "../client/CompatibilityManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/HashManager.h"
+#include "../client/AppPaths.h"
+#include "../client/FormatUtil.h"
+#include "../client/SysVersion.h"
 #include "SplashWindow.h"
 #include "CommandLine.h"
 #include "KnownClients.h"
@@ -264,7 +266,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	g_DisableSplash = cmdLine.disableSplash;
 	g_DisableGDIPlus = cmdLine.disableGDIPlus;
 	g_DisableTestPort = cmdLine.disablePortTest;
-	if (cmdLine.setWine) CompatibilityManager::setWine(cmdLine.setWine == 1);
+	if (cmdLine.setWine) SysVersion::setWine(cmdLine.setWine == 1);
 #ifdef SSA_SHELL_INTEGRATION
 	if (cmdLine.installShellExt)
 	{
@@ -289,6 +291,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	}
 
 	Util::initialize();
+	Util::initFormatParams();
 	ThrottleManager::newInstance();
 	ToolbarManager::newInstance();
 	

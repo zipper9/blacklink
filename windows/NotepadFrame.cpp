@@ -23,6 +23,7 @@
 #include "Fonts.h"
 #include "../client/LogManager.h"
 #include "../client/File.h"
+#include "../client/AppPaths.h"
 
 static int textUnderCursor(POINT p, CEdit& ctrl, tstring& x)
 {

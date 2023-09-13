@@ -28,9 +28,10 @@
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 #include "../client/IpTest.h"
+#include "../client/AppPaths.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -674,7 +675,7 @@ LRESULT NetworkFirewallTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ScreenToClient(&rc);
 	ctrlStatus.Create(m_hWnd, rc, nullptr, WS_CHILD | WS_VISIBLE, 0, IDC_FIREWALL_STATUS);
 #ifdef OSVER_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
+	if (SysVersion::isOsVistaPlus())
 #endif
 		ctrlButton.SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
 

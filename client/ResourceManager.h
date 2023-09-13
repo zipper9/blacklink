@@ -20,7 +20,7 @@
 #define DCPLUSPLUS_CLIENT_RESOURCE_MANAGER_H
 
 #include "debug.h"
-#include "dcformat.h"
+#include "format.h"
 #include <boost/unordered/unordered_map.hpp>
 
 #define STRING(x) ResourceManager::getString(ResourceManager::x)
@@ -33,13 +33,13 @@
 #define WSTRING_I(x) ResourceManager::getStringW(x)
 #define CWSTRING_I(x) ResourceManager::getStringW(x).c_str()
 
-#define STRING_F(x, args) (dcpp_fmt(ResourceManager::getString(ResourceManager::x)) % args).str()
-#define CSTRING_F(x, args) (dcpp_fmt(ResourceManager::getString(ResourceManager::x)) % args).str().c_str()
-#define WSTRING_F(x, args) (dcpp_fmt(ResourceManager::getStringW(ResourceManager::x)) % args).str()
-#define CWSTRING_F(x, args) (dcpp_fmt(ResourceManager::getStringW(ResourceManager::x)) % args).str().c_str()
+#define STRING_F(x, args) (F_(ResourceManager::getString(ResourceManager::x)) % args).str()
+#define CSTRING_F(x, args) (F_(ResourceManager::getString(ResourceManager::x)) % args).str().c_str()
+#define WSTRING_F(x, args) (F_(ResourceManager::getStringW(ResourceManager::x)) % args).str()
+#define CWSTRING_F(x, args) (F_(ResourceManager::getStringW(ResourceManager::x)) % args).str().c_str()
 
-#define PLURAL_F(x, number) (dcpp_fmt(ResourceManager::getPluralString(ResourceManager::x, ResourceManager::getPluralCategory(number))) % number).str()
-#define WPLURAL_F(x, number) (dcpp_fmt(ResourceManager::getPluralStringW(ResourceManager::x, ResourceManager::getPluralCategory(number))) % number).str()
+#define PLURAL_F(x, number) (F_(ResourceManager::getPluralString(ResourceManager::x, ResourceManager::getPluralCategory(number))) % number).str()
+#define WPLURAL_F(x, number) (F_(ResourceManager::getPluralStringW(ResourceManager::x, ResourceManager::getPluralCategory(number))) % number).str()
 
 #ifdef _UNICODE
 #define TSTRING WSTRING

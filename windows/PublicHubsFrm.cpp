@@ -24,6 +24,7 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "CountryList.h"
+#include "../client/FormatUtil.h"
 
 const int PublicHubsFrame::columnId[] =
 {

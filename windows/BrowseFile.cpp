@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "BrowseFile.h"
-#include "../client/Util.h"
+#include "../client/PathUtil.h"
 
 #ifdef OSVER_WIN_XP
+#include "../client/Util.h"
 
 static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData)
 {

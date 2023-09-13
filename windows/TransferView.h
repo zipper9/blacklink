@@ -23,7 +23,6 @@
 #include "../client/UploadManagerListener.h"
 #include "../client/ConnectionManagerListener.h"
 #include "../client/forward.h"
-#include "../client/Util.h"
 #include "../client/Download.h"
 #include "../client/Upload.h"
 #include "../client/TaskQueue.h"
@@ -521,10 +520,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 		void on(DownloadManagerListener::RemoveToken, const string& token) noexcept override;
 		void on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept override;
-		void on(DownloadManagerListener::Complete, const DownloadPtr& download) noexcept override
-		{
-			onTransferComplete(download.get(), true, Util::getFileName(download->getPath()), false);
-		}
+		void on(DownloadManagerListener::Complete, const DownloadPtr& download) noexcept override;
 		void on(DownloadManagerListener::Failed, const DownloadPtr& download, const string& reason) noexcept override;
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
 		void on(DownloadManagerListener::Starting, const DownloadPtr& download) noexcept override;

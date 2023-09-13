@@ -17,12 +17,13 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "SoundsPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "BrowseFile.h"
 #include "../client/File.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
 #include <mmsystem.h>
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -187,7 +188,7 @@ LRESULT Sounds::onDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, 
 	{
 		if (item.iItem >= 0 && item.iItem < _countof(defaultSounds))
 		{
-			tstring themePath = Text::toT(Util::getSoundPath() + getSelectedTheme());
+			tstring themePath = Text::toT(Util::getSoundsPath() + getSelectedTheme());
 			Util::appendPathSeparator(themePath);
 			const tstring selectedSoundPath = themePath + defaultSounds[item.iItem];
 			ctrlSounds.SetItemText(item.iItem, 1, selectedSoundPath.c_str());
@@ -205,7 +206,7 @@ string Sounds::getSelectedTheme() const
 
 void Sounds::setAllToDefault()
 {
-	tstring themePath = Text::toT(Util::getSoundPath() + getSelectedTheme());
+	tstring themePath = Text::toT(Util::getSoundsPath() + getSelectedTheme());
 	Util::appendPathSeparator(themePath);
 	
 	for (size_t i = 0; i < _countof(defaultSounds); ++i)
@@ -240,7 +241,7 @@ void Sounds::getSoundThemeList()
 {
 	if (themes.empty())
 	{
-		const string fileFindPath = Util::getSoundPath() + '*';
+		const string fileFindPath = Util::getSoundsPath() + '*';
 		for (FileFindIter i(fileFindPath); i != FileFindIter::end; ++i)
 		{
 			if (i->isDirectory())

@@ -20,7 +20,7 @@
 #include "MessagePanel.h"
 #include "WinUtil.h"
 #include "../client/ClientManager.h"
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 #include "../client/SimpleStringTokenizer.h"
@@ -84,7 +84,7 @@ void MessagePanel::createButton(int index, int image, int idc, ResourceManager::
 	RECT rc = {};
 	ctrlButtons[index].Create(m_hWnd, rc, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | BS_ICON | BS_CENTER, 0, idc);
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 		imageButtons[index].SubclassWindow(ctrlButtons[index]);
 #endif
 	ctrlButtons[index].SetIcon(g_iconBitmaps.getIcon(image, 0));

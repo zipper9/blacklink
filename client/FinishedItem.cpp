@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "FinishedItem.h"
-#include "Util.h"
+#include "PathUtil.h"
+#include "FormatUtil.h"
 #include "ResourceManager.h"
 
 tstring FinishedItem::getText(int col) const

@@ -35,8 +35,12 @@
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/StringTokenizer.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
+#include "../client/SysVersion.h"
 #include "../client/dht/DHT.h"
 
 #define USE_DOWNLOAD_DIR
@@ -310,7 +314,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                    BS_DEFPUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 		ctrlDoSearchSubclass.SubclassWindow(ctrlDoSearch);
 #endif
 	ctrlDoSearch.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0));
@@ -319,7 +323,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_PURGE);
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 		ctrlPurgeSubclass.SubclassWindow(ctrlPurge);
 #endif
 	ctrlPurge.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::CLEAR, 0));
@@ -378,7 +382,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	auto ctrlHubsHeader = ctrlHubs.GetHeader();
 #ifdef OSVER_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
+	if (SysVersion::isOsVistaPlus())
 #endif
 		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
 

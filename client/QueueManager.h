@@ -251,8 +251,6 @@ class QueueManager : public Singleton<QueueManager>,
 		void loadQueue() noexcept;
 		void saveQueue(bool force = false) noexcept;
 
-		static string getQueueFile() { return Util::getConfigPath() + "Queue.xml"; }
-		
 		static bool handlePartialSearch(const TTHValue& tth, QueueItem::PartsInfo& outPartsInfo, uint64_t& blockSize);
 		bool handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, QueueItem::PartsInfo& outPartialInfo);
 		

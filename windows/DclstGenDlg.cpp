@@ -29,7 +29,10 @@
 #include "../client/HashManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 #include "../client/LogManager.h"
+#include "../client/version.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

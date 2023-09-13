@@ -14,7 +14,7 @@
 
 #include "../client/Singleton.h"
 #include "../client/SettingsManagerListener.h"
-#include "../client/Util.h"
+#include "../client/BaseUtil.h"
 
 class ToolbarEntry
 {

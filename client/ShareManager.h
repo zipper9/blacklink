@@ -179,7 +179,6 @@ class ShareManager :
 		void getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) noexcept;
 		void load(SimpleXML& xml);
 		void init();
-		static string getEmptyBZXmlFile() { return Util::getConfigPath() + "EmptyFiles.xml.bz2"; }
 		string getBZXmlFile(const CID& id, int64_t& xmlSize) const noexcept;
 		void saveShareList(SimpleXML& xml) const;
 

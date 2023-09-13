@@ -2,7 +2,8 @@
 #include "ExtendedTrace.h"
 #include "../client/Thread.h"
 #include "../client/File.h"
-#include "../client/Util.h"
+#include "../client/AppPaths.h"
+#include "../client/Path.h"
 #include "MainFrm.h"
 #include "WinUtil.h"
 

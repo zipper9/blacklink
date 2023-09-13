@@ -21,13 +21,15 @@
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
 #include "LineDlg.h"
-#include "../client/ClientManager.h"
-#include "../client/DownloadManager.h"
 #include "Fonts.h"
 #include "BarShader.h"
 #include "MainFrm.h"
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
+#include "../client/ClientManager.h"
+#include "../client/DownloadManager.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 
 #ifdef DEBUG_QUEUE_FRAME
 int QueueFrame::DirItem::itemsCreated;

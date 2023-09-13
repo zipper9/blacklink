@@ -9,6 +9,10 @@
 #include "../client/QueueManager.h"
 #include "../client/dht/DHT.h"
 
+#ifdef OSVER_WIN_XP
+#include "../client/SysVersion.h"
+#endif
+
 static const int BUTTON_SIZE = 26;
 
 static const int columnSizes[] =
@@ -193,7 +197,7 @@ LRESULT UserListWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 
 	ctrlClearFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_ICON | BS_CENTER, 0, IDC_CLEAR);
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 		clearFilterSubclass.SubclassWindow(ctrlClearFilter);
 #endif
 	ctrlClearFilter.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::CLEAR, 0));

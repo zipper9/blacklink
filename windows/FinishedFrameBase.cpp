@@ -4,6 +4,7 @@
 #include "ShellContextMenu.h"
 #include "../client/QueueManager.h"
 #include "../client/UploadManager.h"
+#include "../client/FormatUtil.h"
 #include "ExMessageBox.h"
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT

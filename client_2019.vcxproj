@@ -488,6 +488,7 @@
     <ClCompile Include="client\AdcSupports.cpp" />
     <ClCompile Include="client\ADLSearch.cpp" />
     <ClCompile Include="client\AntiFlood.cpp" />
+    <ClCompile Include="client\AppPaths.cpp" />
     <ClCompile Include="client\AutoDetectSocket.cpp" />
     <ClCompile Include="client\Base32.cpp" />
     <ClCompile Include="client\BaseUtil.cpp" />
@@ -523,6 +524,7 @@
     <ClCompile Include="client\FileTypes.cpp" />
     <ClCompile Include="client\FinishedItem.cpp" />
     <ClCompile Include="client\FinishedManager.cpp" />
+    <ClCompile Include="client\FormatUtil.cpp" />
     <ClCompile Include="client\HashBloom.cpp" />
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
     <ClCompile Include="client\HashManager.cpp" />
@@ -619,6 +621,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="client\StringDefs.cpp" />
+    <ClCompile Include="client\SysVersion.cpp" />
     <ClCompile Include="client\TagCollector.cpp" />
     <ClCompile Include="client\Text.cpp" />
     <ClCompile Include="client\Thread.cpp" />
@@ -629,6 +632,7 @@
     <ClCompile Include="client\Transfer.cpp" />
     <ClCompile Include="client\Upload.cpp" />
     <ClCompile Include="client\UploadManager.cpp" />
+    <ClCompile Include="client\UriUtil.cpp" />
     <ClCompile Include="client\User.cpp" />
     <ClCompile Include="client\UserCommand.cpp" />
     <ClCompile Include="client\UserConnection.cpp" />
@@ -714,6 +718,7 @@
   <ItemGroup>
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AntiFlood.h" />
+    <ClInclude Include="client\AppPaths.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\Base32.h" />
     <ClInclude Include="client\BaseStreams.h" />
@@ -726,7 +731,6 @@
     <ClInclude Include="client\ConnectionStatus.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
     <ClInclude Include="client\DatabaseManager.h" />
-    <ClInclude Include="client\dcformat.h" />
     <ClInclude Include="client\dht\BootstrapManager.h" />
     <ClInclude Include="client\dht\Constants.h" />
     <ClInclude Include="client\dht\DHT.h" />
@@ -740,6 +744,8 @@
     <ClInclude Include="client\FeatureDef.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\FinishedItem.h" />
+    <ClInclude Include="client\format.h" />
+    <ClInclude Include="client\FormatUtil.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
     <ClInclude Include="client\HashUtil.h" />
     <ClInclude Include="client\HintedUser.h" />
@@ -852,11 +858,13 @@
     <ClInclude Include="client\ResourceManager.h" />
     <ClInclude Include="client\sqlite\sqlite_conf.h" />
     <ClInclude Include="client\StrUtil.h" />
+    <ClInclude Include="client\SysVersion.h" />
     <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\TagCollector.h" />
     <ClInclude Include="client\Thread.h" />
     <ClInclude Include="client\TimeUtil.h" />
     <ClInclude Include="client\TransferData.h" />
+    <ClInclude Include="client\UriUtil.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\UserManagerListener.h" />

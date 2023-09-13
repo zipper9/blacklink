@@ -320,14 +320,9 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
-		
+
 		void load(SimpleXML& xml);
-		                
-		static string getFavoritesFile()
-		{
-			return Util::getConfigPath() + "Favorites.xml";
-		}
-		
+
 		bool addUserL(const UserPtr& user, FavoriteMap::iterator& iUser, bool create = true);		
 		void speakUserUpdate(const bool added, const FavoriteUser& user);
 };

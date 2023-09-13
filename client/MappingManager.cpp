@@ -32,6 +32,7 @@
 
 #include "ResourceManager.h"
 #include "SearchManager.h"
+#include "version.h"
 
 static inline Mapper::Protocol getProtocol(int port)
 {

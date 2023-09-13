@@ -20,7 +20,6 @@
 #define WIN_UTIL_H
 
 #include "resource.h"
-#include "../client/Util.h"
 #include "../client/NetworkUtil.h"
 #include "../client/SettingsManager.h"
 #include "UserInfoSimple.h"

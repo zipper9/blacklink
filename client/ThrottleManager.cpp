@@ -20,6 +20,7 @@
 #include "ThrottleManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
+#include "Util.h"
 
 #define CONDWAIT_TIMEOUT        250
 

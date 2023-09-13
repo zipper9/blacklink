@@ -16,7 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 #include "stdafx.h"
-#include "Resource.h"
 #include "MainFrm.h"
 #include "HubFrame.h"
 #include "SearchFrm.h"
@@ -71,13 +70,17 @@
 #include "../client/CryptoManager.h"
 #include "../client/Random.h"
 #include "../client/NmdcHub.h"
-#include "../client/dht/DHT.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/HttpClient.h"
 #include "../client/SocketPool.h"
 #include "../client/AntiFlood.h"
 #include "../client/IpTest.h"
 #include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
+#include "../client/dht/DHT.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -286,7 +289,7 @@ void MainFrame::createMainMenu(void)
 #if _WTL_CMDBAR_VISTA_MENUS
 	// Use Vista-styled menus for Windows Vista and later.
 #ifdef OSVER_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
+	if (SysVersion::isOsVistaPlus())
 #endif
 	{
 		ctrlCmdBar._AddVistaBitmapsFromImageList(0, ctrlCmdBar.m_arrCommand.GetSize());
@@ -424,7 +427,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	dcassert(messageIdTaskbarCreated);
 	
 #ifdef OSVER_WIN_XP
-	if (messageIdTaskbarCreated && CompatibilityManager::isOsVistaPlus())
+	if (messageIdTaskbarCreated && SysVersion::isOsVistaPlus())
 #endif
 	{
 		typedef BOOL (CALLBACK* LPFUNC)(UINT message, DWORD dwFlag);
@@ -438,7 +441,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 				changeWindowMessageFilter(messageIdTaskbarCreated, 1);
 				changeWindowMessageFilter(WMU_WHERE_ARE_YOU, 1);
 #ifdef OSVER_WIN_VISTA
-				if (CompatibilityManager::isWin7Plus())
+				if (SysVersion::isWin7Plus())
 #endif
 				{
 					messageIdTaskbarButtonCreated = RegisterWindowMessage(_T("TaskbarButtonCreated"));
@@ -722,7 +725,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		}
 
 #ifdef FLYLINKDC_CALC_MEMORY_USAGE
-		if (!CompatibilityManager::isWine())
+		if (!SysVersion::isWine())
 		{
 			if ((tick / 1000) % 5 == 0)
 			{
@@ -1399,7 +1402,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				if (newHashProgressState != HASH_PROGRESS_HIDDEN)
 				{
 #ifdef OSVER_WIN_XP
-					if (CompatibilityManager::isOsVistaPlus())
+					if (SysVersion::isOsVistaPlus())
 #endif
 						ctrlHashProgress.SendMessage(PBM_SETSTATE, newHashProgressState == HASH_PROGRESS_PAUSED ? PBST_PAUSED : PBST_NORMAL);
 					if (hashProgressState == HASH_PROGRESS_MARQUEE || newHashProgressState == HASH_PROGRESS_MARQUEE)
@@ -1752,6 +1755,18 @@ LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			dcassert(0);
 			break;
 	}
+	return 0;
+}
+
+LRESULT MainFrame::onOpenConfigs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	openDirs(Util::getConfigPath());
+	return 0;
+}
+
+LRESULT MainFrame::onOpenDownloads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	openDirs(Util::getDownloadDir(UserPtr()));
 	return 0;
 }
 
@@ -2515,7 +2530,7 @@ LRESULT MainFrame::onTaskbarCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 LRESULT MainFrame::onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 #ifdef OSVER_WIN_VISTA
-	if (!CompatibilityManager::isWin7Plus())
+	if (!SysVersion::isWin7Plus())
 		return 0;
 #endif
 

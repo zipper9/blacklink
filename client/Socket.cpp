@@ -25,7 +25,7 @@
 #include "SettingsManager.h"
 
 #ifdef _WIN32
-#include "CompatibilityManager.h"
+#include "SysVersion.h"
 #define SHUT_RDWR SD_BOTH
 #endif
 
@@ -212,7 +212,7 @@ uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 
 	if (addr.type == AF_INET6
 #ifdef OSVER_WIN_XP
-	    && CompatibilityManager::isOsVistaPlus()
+	    && SysVersion::isOsVistaPlus()
 #endif
 	    )
 		setSocketOpt(IPPROTO_IPV6, IPV6_V6ONLY, 1);
@@ -338,7 +338,7 @@ int Socket::getSocketOptInt(int level, int option) const
 void Socket::setInBufSize()
 {
 #ifdef _WIN32
-	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
+	if (!SysVersion::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
 #endif
 	{
 		const int sockInBuf = SETTING(SOCKET_IN_BUFFER);
@@ -350,7 +350,7 @@ void Socket::setInBufSize()
 void Socket::setOutBufSize()
 {
 #ifdef _WIN32
-	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
+	if (!SysVersion::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
 #endif
 	{
 		const int sockOutBuf = SETTING(SOCKET_OUT_BUFFER);

@@ -21,24 +21,11 @@
 
 #include "Text.h"
 #include "BaseUtil.h"
-#include "Path.h"
 #include "HashValue.h"
+#include "UriUtil.h"
 #include "forward.h"
 #include "debug.h"
 #include <atomic>
-
-#define URI_SEPARATOR '/'
-#define URI_SEPARATOR_STR "/"
-
-#ifdef _UNICODE
-#define formatBytesT formatBytesW
-#define formatExactSizeT formatExactSizeW
-#define formatSecondsT formatSecondsW
-#else
-#define formatBytesT formatBytes
-#define formatExactSizeT formatExactSize
-#define formatSecondsT formatSeconds
-#endif
 
 const string& getAppName();
 const tstring& getAppNameT();
@@ -61,80 +48,12 @@ void ASSERT_MAIN_THREAD_INIT();
 
 namespace Util
 {
-	enum Paths
-	{
-		/** Global configuration */
-		PATH_GLOBAL_CONFIG,
-		/** Per-user configuration (queue, favorites, ...) */
-		PATH_USER_CONFIG,
-		/** Per-user local data (cache, temp files, ...) */
-		PATH_USER_LOCAL,
-		/** Translations */
-		PATH_WEB_SERVER,
-		/** Default download location */
-		PATH_DOWNLOADS,
-		/** Default file list location */
-		PATH_FILE_LISTS,
-		/** Default hub list cache */
-		PATH_HUB_LISTS,
-		/** Where the notepad file is stored */
-		PATH_NOTEPAD,
-		/** Folder with emoticons packs*/
-		PATH_EMOPACKS,
-		/** Languages files location*/
-		PATH_LANGUAGES,
-		/** Themes and resources */
-		PATH_THEMES,
-		/** Executable path **/
-		PATH_EXE,
-		/** Sounds path **/
-		PATH_SOUNDS,
-		/** Default download directory for HttpClient **/
-		PATH_HTTP_DOWNLOADS,
-		PATH_LAST
-	};
-
-	enum SysPaths
-	{
-#ifdef _WIN32
-		WINDOWS,
-		PROGRAM_FILESX86,
-		PROGRAM_FILES,
-		APPDATA,
-		LOCAL_APPDATA,
-		COMMON_APPDATA,
-		PERSONAL,
-#endif
-		SYS_PATH_LAST
-	};
-
-	extern string paths[PATH_LAST];
-	extern string sysPaths[SYS_PATH_LAST];
 	extern bool away;
 	extern string awayMsg;
 	extern time_t awayTime;
 	extern const time_t startTime;
 
-	/** Path of program configuration files */
-	inline const string& getPath(Paths path)
-	{
-		dcassert(!paths[path].empty());
-		return paths[path];
-	}
-
-	/** Path of system folder */
-	inline const string& getSysPath(SysPaths path)
-	{
-		dcassert(!sysPaths[path].empty());
-		return sysPaths[path];
-	}
-
-#ifdef _WIN32
-	extern NUMBERFMT g_nf;
-#endif
-
 	void initialize();
-	bool isLocalMode() noexcept;
 
 	bool isAdc(const string& url);
 	bool isAdcS(const string& url);
@@ -152,133 +71,14 @@ namespace Util
 	bool isHttpLink(const string& url);
 	bool isHttpLink(const wstring& url);
 
-	template<typename string_type>
-	inline bool checkFileExt(const string_type& filename, const string_type& ext)
-	{
-		if (filename.length() <= ext.length()) return false;
-		return Text::isAsciiSuffix2<string_type>(filename, ext);
-	}
-
 	bool isTorrentFile(const tstring& file);
 	bool isDclstFile(const string& file);
-
-	template <class T>
-	inline void appendPathSeparator(T& path)
-	{
-		if (!path.empty() && path.back() != PATH_SEPARATOR && path.back() != URI_SEPARATOR)
-			path += typename T::value_type(PATH_SEPARATOR);
-	}
-
-	template <class T>
-	inline void appendUriSeparator(T& path)
-	{
-		if (!path.empty() && path.back() != URI_SEPARATOR && path.back() != PATH_SEPARATOR)
-			path += typename T::value_type(URI_SEPARATOR);
-	}
-
-	template<typename T>
-	inline void uriSeparatorsToPathSeparators(T& str)
-	{
-		std::replace(str.begin(), str.end(), URI_SEPARATOR, PATH_SEPARATOR);
-	}
-
-	template<typename T>
-	inline void removePathSeparator(T& path)
-	{
-#ifdef _WIN32
-		if (path.length() == 3 && path[1] == ':') return; // Drive letter, like "C:\"
-#endif
-		if (!path.empty() && path.back() == PATH_SEPARATOR)
-			path.erase(path.length()-1);
-	}
-
-	template<typename T>
-	inline void toNativePathSeparators(T& path)
-	{
-#ifdef _WIN32
-		std::replace(path.begin(), path.end(), '/', '\\');
-#else
-		std::replace(path.begin(), path.end(), '\\', '/');
-#endif
-	}
-
-	template<typename T>
-	inline bool isReservedDirName(const T& name)
-	{
-		if (name.empty() || name.length() > 2) return false;
-		if (name[0] != '.') return false;
-		return name.length() == 1 || name[1] == '.';
-	}
-
-	/** Path of temporary storage */
-	string getTempPath();
-
-	/** Migrate from pre-localmode config location */
-	void migrate(const string& file) noexcept;
-
-	inline const string& getListPath() { return getPath(PATH_FILE_LISTS); }
-	inline const string& getHubListsPath() { return getPath(PATH_HUB_LISTS); }
-	inline const string& getNotepadFile() { return getPath(PATH_NOTEPAD); }
-	inline const string& getConfigPath() { return getPath(PATH_USER_CONFIG); }
-	inline const string& getDataPath() { return getPath(PATH_GLOBAL_CONFIG); }
-	inline const string& getLocalisationPath() { return getPath(PATH_LANGUAGES); }
-	inline const string& getLocalPath() { return getPath(PATH_USER_LOCAL); }
-	inline const string& getWebServerPath() { return getPath(PATH_WEB_SERVER); }
-	inline const string& getDownloadsPath() { return getPath(PATH_DOWNLOADS); }
-	inline const string& getEmoPacksPath() { return getPath(PATH_EMOPACKS); }
-	inline const string& getThemesPath() { return getPath(PATH_THEMES); }
-	inline const string& getExePath() { return getPath(PATH_EXE); }
-	inline const string& getSoundPath() { return getPath(PATH_SOUNDS); }
-	inline const string& getHttpDownloadsPath() { return getPath(PATH_HTTP_DOWNLOADS); }
 
 	string getIETFLang();
 
 	inline time_t getStartTime() { return startTime; }
 	inline time_t getUpTime() { return time(nullptr) - getStartTime(); }
 	int getCurrentHour();
-
-	template<typename string_t>
-	static string_t getFilePath(const string_t& path)
-	{
-		const auto i = path.rfind(PATH_SEPARATOR);
-		return i != string_t::npos ? path.substr(0, i + 1) : path;
-	}
-
-	template<typename string_t>
-	inline string_t getFileName(const string_t& path)
-	{
-		const auto i = path.rfind(PATH_SEPARATOR);
-		return i != string_t::npos ? path.substr(i + 1) : path;
-	}
-
-	template<typename string_t>
-	inline string_t getFileExtWithoutDot(const string_t& path)
-	{
-		const auto i = path.rfind('.');
-		if (i == string_t::npos) return string_t();
-		const auto j = path.rfind(PATH_SEPARATOR);
-		if (j != string_t::npos && j > i) return string_t();
-		return path.substr(i + 1);
-	}
-
-	template<typename string_t>
-	inline string_t getFileExt(const string_t& path)
-	{
-		const auto i = path.rfind('.');
-		if (i == string_t::npos) return string_t();
-		const auto j = path.rfind(PATH_SEPARATOR);
-		if (j != string_t::npos && j > i) return string_t();
-		return path.substr(i);
-	}
-
-	template<typename string_t>
-	inline string_t getLastDir(const string_t& path)
-	{
-		const auto i = path.rfind(PATH_SEPARATOR);
-		if (i == string_t::npos) return string_t();	
-		const auto j = path.rfind(PATH_SEPARATOR, i - 1);
-		return j != string_t::npos ? path.substr(j + 1, i - j - 1) : path;
-	}
 
 	template<typename string_t>
 	void replace(const string_t& search, const string_t& replacement, string_t& str)
@@ -296,31 +96,6 @@ namespace Util
 		replace(string_t(search), string_t(replacement), str);
 	}
 
-	bool parseIpPort(const string& ipPort, string& ip, uint16_t& port);
-
-	struct ParsedUrl
-	{
-		string protocol;
-		string host;
-		string user;
-		string password;
-		uint16_t port;
-		string path;
-		string query;
-		string fragment;
-		bool isSecure;
-
-		void clearUser() { user.clear(); password.clear(); }
-		void clearPath() { path.clear(); query.clear(); fragment.clear(); }
-	};
-
-	void decodeUrl(const string& url, ParsedUrl& res, const string& defProto = "dchub");
-	string formatUrl(const ParsedUrl& p, bool omitDefaultPort);
-
-	string encodeUriQuery(const string& str);
-	string encodeUriPath(const string& str);
-	string decodeUri(const string& str);
-
 	enum
 	{
 		HUB_PROTOCOL_NMDC = 1,
@@ -331,9 +106,6 @@ namespace Util
 
 	int getHubProtocol(const string& scheme); // 'scheme' must be in lowercase
 
-	std::map<string, string> decodeQuery(const string& query);
-	string getQueryParam(const string& query, const string& key);
-
 	string validateFileName(string file, bool badCharsOnly = false);
 	string ellipsizePath(const string& path);
 
@@ -341,15 +113,6 @@ namespace Util
 
 	string toAdcFile(const string& file);
 	string toNmdcFile(const string& file);
-
-#ifdef _UNICODE
-	wstring formatSecondsW(int64_t sec, bool supressHours = false) noexcept;
-#endif
-	string formatSeconds(int64_t sec, bool supressHours = false) noexcept;
-	string formatTime(uint64_t rest, const bool withSeconds = true) noexcept;
-	string formatDateTime(const string &format, time_t t, bool useGMT = false) noexcept;
-	string formatDateTime(time_t t, bool useGMT = false) noexcept;
-	string formatCurrentDate() noexcept;
 
 	template<typename T>
 	T roundDown(T size, T blockSize)
@@ -413,22 +176,6 @@ namespace Util
 		return listToStringT<ListT, StrChar>(lst, false, true);
 	}
 
-	string formatBytes(int64_t bytes);
-	string formatBytes(double bytes);
-	inline string formatBytes(int32_t bytes)  { return formatBytes(int64_t(bytes)); }
-	inline string formatBytes(uint32_t bytes) { return formatBytes(int64_t(bytes)); }
-	inline string formatBytes(uint64_t bytes) { return formatBytes(int64_t(bytes)); }
-	string formatExactSize(int64_t bytes);
-
-#ifdef _UNICODE
-	wstring formatBytesW(int64_t bytes);
-	wstring formatBytesW(double bytes);
-	inline wstring formatBytesW(int32_t bytes)  { return formatBytesW(int64_t(bytes)); }
-	inline wstring formatBytesW(uint32_t bytes) { return formatBytesW(int64_t(bytes)); }
-	inline wstring formatBytesW(uint64_t bytes) { return formatBytesW(int64_t(bytes)); }
-	wstring formatExactSizeW(int64_t bytes);
-#endif
-
 #ifdef _WIN32
 	int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
 	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
@@ -450,29 +197,12 @@ namespace Util
 
 	void setLimiter(bool enable);
 
-	void backupSettings();
 	string formatDchubUrl(const string& url);
 	string formatDchubUrl(ParsedUrl& p);
 
 	string getMagnet(const string& hash, const string& file, int64_t size);
 	string getMagnet(const TTHValue& hash, const string& file, int64_t size);
 	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);
-
-#ifdef _WIN32
-	tstring getModuleFileName();
-#else
-	string getModuleFileName();
-#endif
-
-	void loadBootConfig();
-	bool locatedInSysPath(SysPaths sysPath, const string& path);
-	bool locatedInSysPath(const string& path);
-	void initProfileConfig();
-	void moveSettings();
-
-#ifdef _WIN32
-	string getSystemDownloadsPath(const string& def);
-#endif
 
 	StringList splitSettingAndLower(const string& patternList, bool trimSpace = false);
 

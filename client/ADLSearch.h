@@ -188,8 +188,6 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 		void saveL() const noexcept;
 		void prepare(SearchContext& ctx, DirectoryListing* dl) const noexcept;
 		static void copyDirectory(DirectoryListing::Directory* adlsDestDir, const DirectoryListing::Directory* src, const DirectoryListing* dl) noexcept;
-
-		static string getConfigFile();
 };
 
 #endif // !defined(ADL_SEARCH_H)

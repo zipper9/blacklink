@@ -25,6 +25,7 @@
 #include "Colors.h"
 #include "Fonts.h"
 #include "../client/File.h"
+#include "../client/PathUtil.h"
 
 void TextFrame::openWindow(const tstring& fileName)
 {

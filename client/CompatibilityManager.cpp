@@ -28,7 +28,8 @@
 #define PSAPI_VERSION 1
 #endif
 #include <psapi.h>
-#include "Util.h"
+#include "SysVersion.h"
+#include "FormatUtil.h"
 #include "Socket.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
@@ -50,9 +51,6 @@ string CompatibilityManager::g_incopatibleSoftwareList;
 string CompatibilityManager::g_startupInfo;
 DWORDLONG CompatibilityManager::g_TotalPhysMemory;
 DWORDLONG CompatibilityManager::g_FreePhysMemory;
-OSVERSIONINFOEX CompatibilityManager::g_osvi = {0};
-SYSTEM_INFO CompatibilityManager::g_sysInfo = {0};
-bool CompatibilityManager::g_supports[LAST_SUPPORTS];
 LONG CompatibilityManager::g_comCtlVersion = 0;
 DWORD CompatibilityManager::g_oldPriorityClass = 0;
 FINDEX_INFO_LEVELS CompatibilityManager::findFileLevel = FindExInfoStandard;
@@ -70,6 +68,14 @@ DWORD CompatibilityManager::findFileFlags = 0;
 DWORD CompatibilityManager::compareFlags = 0;
 #endif
 
+string CompatibilityManager::getDefaultPath()
+{
+	const char* homePath = SysVersion::isWine() ? getenv("HOME") : getenv("SystemDrive");
+	string defaultPath = homePath ? homePath : (SysVersion::isWine() ? "\\tmp" : "C:"); // FIXME
+	defaultPath += '\\';
+	return defaultPath;
+}
+
 void CompatibilityManager::init()
 {
 #ifdef _WIN64
@@ -81,18 +87,14 @@ void CompatibilityManager::init()
 	_set_FMA3_enable(0);
 #endif
 #endif
+	SysVersion::initialize();
+
 	WSADATA wsaData = {0};
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-	setWine(detectWine());
-	
-	if (!isWine() && isWow64Process())
-		set(RUNNING_IS_WOW64);
-		
-	detectOsSupports();
-	getSystemInfoFromOS();
+	g_comCtlVersion = getComCtlVersionFromOS();
 	generateSystemInfoForApp();
-	if (CompatibilityManager::isOsWin7Plus())
+	if (SysVersion::isOsWin7Plus())
 	{
 		findFileLevel = FindExInfoBasic;
 		findFileFlags = FIND_FIRST_EX_LARGE_FETCH;
@@ -100,58 +102,6 @@ void CompatibilityManager::init()
 		compareFlags = SORT_DIGITSASNUMBERS;
 #endif
 	}
-}
-
-void CompatibilityManager::getSystemInfoFromOS()
-{
-	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms724958(v=vs.85).aspx
-	GetSystemInfo(&g_sysInfo);
-}
-
-void CompatibilityManager::detectOsSupports()
-{
-	g_osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-
-	if (!GetVersionEx((OSVERSIONINFO*)&g_osvi))
-		memset(&g_osvi, 0, sizeof(OSVERSIONINFOEX));
-
-	int version;	
-	if (g_osvi.dwMajorVersion >= 10)
-	{
-		version = g_osvi.dwBuildNumber >= 22000 ? OS_WINDOWS11_PLUS : OS_WINDOWS10_PLUS;
-	}
-	else
-	{
-		uint32_t v = g_osvi.dwMajorVersion << 16 | g_osvi.dwMinorVersion;
-		if (v >= 0x60002)
-			version = OS_WINDOWS8_PLUS;
-		else if (v >= 0x60001)
-			version = OS_WINDOWS7_PLUS;
-		else if (v >= 0x60000)
-			version = OS_VISTA_PLUS;
-		else if (v >= 0x50001)
-			version = OS_XP_PLUS;
-		else
-			version = -1;
-	}
-	while (version >= OS_XP_PLUS)
-	{
-		set(static_cast<Supports>(version));
-		--version;
-	}
-
-	g_comCtlVersion = getComCtlVersionFromOS();
-}
-
-bool CompatibilityManager::detectWine()
-{
-	const HMODULE module = GetModuleHandle(_T("ntdll.dll"));
-	if (!module)
-		return false;
-		
-	const bool ret = GetProcAddress(module, "wine_server_call") != nullptr;
-	FreeLibrary(module);
-	return ret;
 }
 
 struct DllInfo
@@ -229,247 +179,13 @@ string CompatibilityManager::getIncompatibleSoftwareMessage()
 	return Util::emptyString;
 }
 
-string CompatibilityManager::getFormattedOsVersion()
-{
-	string s = Util::toString(getOsMajor()) + '.' + Util::toString(getOsMinor());
-	if (getOsType() == VER_NT_SERVER)
-		s += " Server";
-	if (getOsSpMajor() > 0)
-		s += " SP" + Util::toString(getOsSpMajor());
-	if (isWine())
-		s += " Wine";
-	if (runningIsWow64())
-		s += " WOW64";
-	return s;
-}
-
-const char* CompatibilityManager::getProcArchString()
-{
-	switch (g_sysInfo.wProcessorArchitecture)
-	{
-		case PROCESSOR_ARCHITECTURE_AMD64:
-			return "x86-x64";
-		case PROCESSOR_ARCHITECTURE_INTEL:
-			return "x86";
-		case PROCESSOR_ARCHITECTURE_IA64:
-			return "Intel Itanium-based";
-#ifdef PROCESSOR_ARCHITECTURE_ARM
-		case PROCESSOR_ARCHITECTURE_ARM:
-			return "ARM";
-#endif
-#ifdef PROCESSOR_ARCHITECTURE_ARM64
-		case PROCESSOR_ARCHITECTURE_ARM64:
-			return "ARM64";
-#endif
-	};
-	return "Unknown";
-}
-
-#include "winprod.h"
-
-struct
-{
-	DWORD type;
-	const char* name;
-} static const productNames[] =
-{
-	{ PRODUCT_ULTIMATE,                     "Ultimate Edition"                            },
-	{ PRODUCT_PROFESSIONAL,                 "Professional"                                },
-	{ PRODUCT_PROFESSIONAL_N,               "Professional N"                              },
-	{ PRODUCT_HOME_PREMIUM,                 "Home Premium Edition"                        },
-	{ PRODUCT_HOME_BASIC,                   "Home Basic Edition"                          },
-	{ PRODUCT_ENTERPRISE,                   "Enterprise Edition"                          },
-	{ PRODUCT_BUSINESS,                     "Business Edition"                            },
-	{ PRODUCT_STARTER,                      "Starter Edition"                             },
-	{ PRODUCT_CLUSTER_SERVER,               "Cluster Server Edition"                      },
-	{ PRODUCT_DATACENTER_SERVER,            "Datacenter Edition"                          },
-	{ PRODUCT_DATACENTER_SERVER_CORE,       "Datacenter Edition (core installation)"      },
-	{ PRODUCT_ENTERPRISE_SERVER,            "Enterprise Edition"                          },
-	{ PRODUCT_ENTERPRISE_SERVER_CORE,       "Enterprise Edition (core installation)"      },
-	{ PRODUCT_ENTERPRISE_SERVER_IA64,       "Server Enterprise for Itanium-based Systems" },
-	{ PRODUCT_SMALLBUSINESS_SERVER,         "Small Business Server"                       },
-	{ PRODUCT_SMALLBUSINESS_SERVER_PREMIUM, "Small Business Server Premium Edition"       },
-	{ PRODUCT_STANDARD_SERVER,              "Standard Edition"                            },
-	{ PRODUCT_STANDARD_SERVER_CORE,         "Standard Edition (core installation)"        },
-	{ PRODUCT_WEB_SERVER,                   "Web Server Edition"                          },
-	{ PRODUCT_IOTUAP,                       "IoT Core"                                    },
-	{ PRODUCT_EDUCATION,                    "Education"                                   },
-	{ PRODUCT_ENTERPRISE_S,                 "Enterprise 2015 LTSB"                        },
-	{ PRODUCT_ENTERPRISE_S_N,               "Enterprise 2015 LTSB N"                      },
-	{ PRODUCT_CORE,                         "Home"                                        },
-	{ PRODUCT_CORE_SINGLELANGUAGE,          "Home Single Language"                        },
-	{ PRODUCT_UNLICENSED,                   "Unlicensed"                                  }
-};
-
-string CompatibilityManager::getWindowsVersionName()
-{
-	string text = "Microsoft Windows ";
-	DWORD dwType;
-	
-	// Test for the specific product.
-	// https://msdn.microsoft.com/ru-ru/library/windows/desktop/ms724833(v=vs.85).aspx
-	if (getOsMajor() == 6 || getOsMajor() == 10)
-	{
-		if (getOsMajor() == 10)
-		{
-			if (getOsMinor() == 0)
-			{
-				if (g_osvi.dwBuildNumber >= 22000)
-					text += getOsType() == VER_NT_WORKSTATION ? "11" : "Server 2022";
-				else
-					text += getOsType() == VER_NT_WORKSTATION ? "10" : "Server 2016";
-			}
-			// check type for Win10: Desktop, Mobile, etc...
-		}
-		if (getOsMajor() == 6)
-		{
-			if (getOsMinor() == 0)
-			{
-				if (getOsType() == VER_NT_WORKSTATION)
-					text += "Vista";
-				else
-					text += "Server 2008";
-			}
-			if (getOsMinor() == 1)
-			{
-				if (getOsType() == VER_NT_WORKSTATION)
-					text += "7";
-				else
-					text += "Server 2008 R2";
-			}
-			if (getOsMinor() == 2)
-			{
-				if (getOsType() == VER_NT_WORKSTATION)
-					text += "8";
-				else
-					text += "Server 2012";
-			}
-			if (getOsMinor() == 3)
-			{
-				if (getOsType() == VER_NT_WORKSTATION)
-					text += "8.1";
-				else
-					text += "Server 2012 R2";
-			}
-		}
-		// Product Info  https://msdn.microsoft.com/en-us/library/windows/desktop/ms724358(v=vs.85).aspx
-		typedef BOOL (WINAPI* GET_PRODUCT_INFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
-		GET_PRODUCT_INFO getProductInfo = (GET_PRODUCT_INFO) GetProcAddress(GetModuleHandle(_T("kernel32.dll")), "GetProductInfo");
-		if (getProductInfo)
-		{
-			getProductInfo(getOsMajor(), getOsMinor(), 0, 0, &dwType);
-			const char* name = nullptr;
-			for (size_t i = 0; i < _countof(productNames); ++i)
-				if (productNames[i].type == dwType)
-				{
-					name = productNames[i].name;
-					break;
-				}
-			if (name)
-			{
-				text += ' ';
-				text += name;
-			}
-		}
-	}
-	if (getOsMajor() == 5)
-	{
-		if (getOsMinor() == 2)
-		{
-			if (GetSystemMetrics(SM_SERVERR2))
-				text += "Server 2003 R2, ";
-			else if (getOsSuiteMask() & VER_SUITE_STORAGE_SERVER)
-				text += "Storage Server 2003";
-			else if (getOsSuiteMask() & VER_SUITE_WH_SERVER)
-				text += "Home Server";
-			else if (getOsType() == VER_NT_WORKSTATION && getProcArch() == PROCESSOR_ARCHITECTURE_AMD64)
-			{
-				text += "XP Professional x64 Edition";
-			}
-			else
-				text += "Server 2003, ";  // Test for the server type.
-			if (getOsType() != VER_NT_WORKSTATION)
-			{
-				if (getProcArch() == PROCESSOR_ARCHITECTURE_IA64)
-				{
-					if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-						text += "Datacenter Edition for Itanium-based Systems";
-					else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-						text += "Enterprise Edition for Itanium-based Systems";
-				}
-				else if (getProcArch() == PROCESSOR_ARCHITECTURE_AMD64)
-				{
-					if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-						text += "Datacenter x64 Edition";
-					else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-						text += "Enterprise x64 Edition";
-					else
-						text += "Standard x64 Edition";
-				}
-				else
-				{
-					if (getOsSuiteMask() & VER_SUITE_COMPUTE_SERVER)
-						text += "Compute Cluster Edition";
-					else if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-						text += "Datacenter Edition";
-					else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-						text += "Enterprise Edition";
-					else if (getOsSuiteMask() & VER_SUITE_BLADE)
-						text += "Web Edition";
-					else
-						text += "Standard Edition";
-				}
-			}
-		}
-		if (getOsMinor() == 1)
-		{
-			text += "XP ";
-			if (getOsSuiteMask() & VER_SUITE_PERSONAL)
-				text += "Home Edition";
-			else
-				text += "Professional";
-		}
-		if (getOsMinor() == 0)
-		{
-			text += "2000 ";
-			if (getOsType() == VER_NT_WORKSTATION)
-			{
-				text += "Professional";
-			}
-			else
-			{
-				if (getOsSuiteMask() & VER_SUITE_DATACENTER)
-					text += "Datacenter Server";
-				else if (getOsSuiteMask() & VER_SUITE_ENTERPRISE)
-					text += "Advanced Server";
-				else
-					text += "Server";
-			}
-		}
-	}
-	// Include service pack (if any) and build number.
-	if (g_osvi.szCSDVersion[0] != 0)
-	{
-		text += ' ' + Text::fromT(g_osvi.szCSDVersion);
-	}
-	text += " (build " + Util::toString(g_osvi.dwBuildNumber) + ")";
-	if (g_osvi.dwMajorVersion >= 6)
-	{
-		if ((getProcArch() == PROCESSOR_ARCHITECTURE_AMD64) || runningIsWow64())
-			text += ", 64-bit";
-		else if (getProcArch() == PROCESSOR_ARCHITECTURE_INTEL)
-			text += ", 32-bit";
-	}
-	return text;
-}
-
 void CompatibilityManager::generateSystemInfoForApp()
 {
 	g_startupInfo = getAppNameVer();
 	g_startupInfo += " is starting\n"
-	                 "\tNumber of processors: " + Util::toString(getProcessorsCount()) + ".\n" +
+	                 "\tNumber of processors: " + Util::toString(SysVersion::getCPUCount()) + ".\n" +
 	                 + "\tProcessor type: ";
-	g_startupInfo += getProcArchString();
+	g_startupInfo += SysVersion::getProcArchString();
 	g_startupInfo += ".\n";
 
 	g_startupInfo += getGlobalMemoryStatusMessage();
@@ -477,15 +193,15 @@ void CompatibilityManager::generateSystemInfoForApp()
 
 	g_startupInfo += "\tRunning in ";
 #ifndef _WIN64
-	if (runningIsWow64())
+	if (SysVersion::isWow64())
 		g_startupInfo += "Windows WOW64\n\tPlease consider using the x64 version!";
 	else
 #endif
 		g_startupInfo += "Windows native ";
 	g_startupInfo += "\n\t";
 
-	g_startupInfo += getWindowsVersionName();
-	g_startupInfo += " (" + CompatibilityManager::getFormattedOsVersion() + ")";
+	g_startupInfo += SysVersion::getFormattedOsName();
+	g_startupInfo += " (" + SysVersion::getFormattedOsVerNum() + ")";
 	g_startupInfo += "\n\n";
 	Util::convertToDos(g_startupInfo);
 }
@@ -511,23 +227,6 @@ LONG CompatibilityManager::getComCtlVersionFromOS()
 		FreeLibrary(comctl32dll);
 	}
 	return result;
-}
-
-bool CompatibilityManager::isWow64Process()
-{
-	typedef BOOL (WINAPI* IS_WOW64_PROCESS)(HANDLE, PBOOL);
-	static IS_WOW64_PROCESS isWow64Process;
-	static bool resolved;
-	if (!resolved)
-	{
-		HMODULE kernel32lib = GetModuleHandle(_T("kernel32"));
-		if (kernel32lib) isWow64Process = (IS_WOW64_PROCESS) GetProcAddress(kernel32lib, "IsWow64Process");
-		resolved = true;
-	}
-	BOOL isWow64;
-	if (isWow64Process && isWow64Process(GetCurrentProcess(), &isWow64))
-		return isWow64 != FALSE;
-	return false;
 }
 
 bool CompatibilityManager::getGlobalMemoryStatus(MEMORYSTATUSEX* status)
@@ -638,7 +337,7 @@ string CompatibilityManager::getStats() // moved from WinUtil
 		Client::getTotalCounts());
 	s += buf;
 	s += "OS version\t";
-	s += getWindowsVersionName();
+	s += SysVersion::getFormattedOsName();
 	s += '\n';
 
 	HANDLE currentProcess = GetCurrentProcess();

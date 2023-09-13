@@ -23,7 +23,7 @@
 #include "BarShader.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 static const size_t MAX_CAPTION_LEN = 40;
@@ -119,7 +119,7 @@ BOOL OMenu::CreatePopupMenu()
 		if (BOOLSETTING(USE_CUSTOM_MENU))
 			ownerDrawMode =
 #ifdef OSVER_WIN_XP
-				CompatibilityManager::isOsVistaPlus() &&
+				SysVersion::isOsVistaPlus() &&
 #endif
 				IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
 		else
@@ -751,7 +751,7 @@ bool OMenu::SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap)
 	if (ownerDrawMode == OD_NEVER)
 	{
 #ifdef OSVER_WIN_XP
-		if (!CompatibilityManager::isOsVistaPlus()) return false;
+		if (!SysVersion::isOsVistaPlus()) return false;
 #endif
 		mii.fMask = MIIM_BITMAP;
 		mii.hbmpItem = hBitmap;

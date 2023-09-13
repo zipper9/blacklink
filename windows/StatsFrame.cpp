@@ -24,6 +24,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "Fonts.h"
+#include "../client/FormatUtil.h"
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
 

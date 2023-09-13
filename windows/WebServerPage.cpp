@@ -2,6 +2,8 @@
 #include "WebServerPage.h"
 #include "../client/SettingsManager.h"
 #include "../client/File.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
 

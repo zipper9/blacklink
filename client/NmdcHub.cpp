@@ -38,6 +38,7 @@
 #include "Random.h"
 #include "Tag16.h"
 #include "SocketPool.h"
+#include "version.h"
 #include "../jsoncpp/include/json/json.h"
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");

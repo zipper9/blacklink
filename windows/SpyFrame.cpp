@@ -22,6 +22,7 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "../client/Client.h"
+#include "../client/FormatUtil.h"
 #include "../client/LocationUtil.h"
 #include "../client/Tag16.h"
 

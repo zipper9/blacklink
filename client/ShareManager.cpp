@@ -18,12 +18,12 @@
 
 #include "stdinc.h"
 #include "ShareManager.h"
+#include "AppPaths.h"
 #include "Transfer.h"
 #include "FileTypes.h"
 #include "AdcCommand.h"
 #include "AdcHub.h"
 #include "SimpleXML.h"
-#include "SimpleXMLReader.h"
 #include "FilteredFile.h"
 #include "BZUtils.h"
 #include "ClientManager.h"
@@ -34,15 +34,23 @@
 #include "DatabaseManager.h"
 #include "LogManager.h"
 #include "DebugManager.h"
+#include "PathUtil.h"
 #include "TimeUtil.h"
+#include "FormatUtil.h"
 #include "Tag16.h"
 #include "unaligned.h"
+#include "version.h"
 
 STANDARD_EXCEPTION(ShareLoaderException);
 STANDARD_EXCEPTION(ShareWriterException);
 
 #undef DEBUG_FILELIST
 #undef DEBUG_SHARE_MANAGER
+
+static string getEmptyBZXmlFile()
+{
+	return Util::getConfigPath() + "EmptyFiles.xml.bz2";
+}
 
 static const string tagFileListing = "FileListing";
 static const string tagDirectory = "Directory";
@@ -416,7 +424,6 @@ static const uint8_t SHARE_DATA_ATTRIB_SIZE        = 2;
 static const uint8_t SHARE_DATA_ATTRIB_TTH         = 3;
 static const uint8_t SHARE_DATA_ATTRIB_TIMESTAMP   = 4;
 static const uint8_t SHARE_DATA_ATTRIB_TIME_SHARED = 5;
-static const uint8_t SHARE_DATA_ATTRIB_HIT         = 6;
 
 void ShareManager::loadShareData(File& file)
 {

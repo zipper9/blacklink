@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "SearchResult.h"
+#include "PathUtil.h"
 #include "Client.h"
 #include "LocationUtil.h"
 #include "DatabaseManager.h"

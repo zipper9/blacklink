@@ -23,6 +23,8 @@
 #include "KnownClients.h"
 #include "../client/SimpleXMLReader.h"
 #include "../client/File.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
 
 static const string defLangFileName("en-US.xml");
 
@@ -79,7 +81,7 @@ void GeneralPage::write()
 		{
 			g_settings->set(SettingsManager::LANGUAGE_FILE, langFile);
 			SettingsManager::getInstance()->save();
-			ResourceManager::loadLanguage(Util::getLocalisationPath() + langFile);
+			ResourceManager::loadLanguage(Util::getLanguagesPath() + langFile);
 			if (languageList.size() != 1)
 				MessageBox(CTSTRING(CHANGE_LANGUAGE_INFO), CTSTRING(CHANGE_LANGUAGE), MB_OK | MB_ICONEXCLAMATION);
 		}
@@ -277,7 +279,7 @@ void GeneralPage::getLangList()
 		defLang.filename = defLangFileName;
 		defLang.language = "English";
 		languageList.push_back(defLang);
-		const StringList files = File::findFiles(Util::getLocalisationPath(), "*-*.xml");
+		const StringList files = File::findFiles(Util::getLanguagesPath(), "*-*.xml");
 		for (auto i = files.cbegin(); i != files.cend(); ++i)
 		{
 			LanguageInfo lang;

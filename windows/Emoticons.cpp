@@ -5,7 +5,7 @@
 #include "Emoticons.h"
 #include "../client/File.h"
 #include "../client/SimpleXML.h"
-#include "../client/Util.h"
+#include "../client/AppPaths.h"
 #include "../client/LogManager.h"
 #include "../GdiOle/GDIImageOle.h"
 

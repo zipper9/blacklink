@@ -55,7 +55,6 @@
 #endif
 
 #include "compiler.h"
-#include "version.h"
 
 #include <wchar.h>
 #include <ctype.h>

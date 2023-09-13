@@ -4,6 +4,7 @@
 #include "WinUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/FormatUtil.h"
 
 static const int ICON_SIZE = 16;
 

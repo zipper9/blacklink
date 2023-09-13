@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "UserMessages.h"
 #include "../client/File.h"
+#include "../client/AppPaths.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/BusyCounter.h"
 

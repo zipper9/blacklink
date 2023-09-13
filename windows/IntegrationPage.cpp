@@ -19,10 +19,11 @@
 #include "stdafx.h"
 #include "IntegrationPage.h"
 #include "WinUtil.h"
+#include "../client/AppPaths.h"
 #include "../ShellExt.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 static const PropPage::ListItem listItems[] =
@@ -53,7 +54,7 @@ LRESULT IntegrationPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	updateAutostartState();
 
 #ifdef OSVER_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
+	if (SysVersion::isOsVistaPlus())
 #endif
 	{
 		GetDlgItem(IDC_SHELL_INT_BUTTON).SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
@@ -78,7 +79,7 @@ LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, H
 		checkShellInt();
 		if (oldState == shellIntEnabled
 #ifdef OSVER_WIN_XP
-		        && CompatibilityManager::isOsVistaPlus()
+		        && SysVersion::isOsVistaPlus()
 #endif
 		   )
 		{
@@ -103,7 +104,7 @@ LRESULT IntegrationPage::onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, 
 		checkAutostart();
 		if (oldState == autostartEnabled
 #ifdef OSVER_WIN_XP
-		        && CompatibilityManager::isOsVistaPlus()
+		        && SysVersion::isOsVistaPlus()
 #endif
 		   )
 		{

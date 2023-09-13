@@ -22,6 +22,7 @@
 #include "DialogLayout.h"
 #include "BrowseFile.h"
 #include "../client/LogManager.h"
+#include "../client/PathUtil.h"
 #include "../client/File.h"
 #include "../client/BusyCounter.h"
 

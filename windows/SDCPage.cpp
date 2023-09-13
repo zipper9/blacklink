@@ -23,7 +23,7 @@
 #include "../client/SettingsManager.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -119,7 +119,7 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlShutdownAction.SetCurSel(SETTING(SHUTDOWN_ACTION));
 
 #ifdef OSVER_WIN_XP
-	BOOL enable = !CompatibilityManager::isOsVistaPlus();
+	BOOL enable = !SysVersion::isOsVistaPlus();
 #else
 	BOOL enable = FALSE;
 #endif

@@ -19,7 +19,8 @@
 #include "stdafx.h"
 #include "UserInfo.h"
 #include "resource.h"
-#include "LocationUtil.h"
+#include "../client/LocationUtil.h"
+#include "../client/FormatUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/FavoriteManager.h"
 

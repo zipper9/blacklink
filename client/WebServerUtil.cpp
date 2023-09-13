@@ -184,7 +184,7 @@ void WebServerUtil::printItemCount(string& os, int count, ResourceManager::Strin
 	string tmp;
 	string text = count == 0 ?
 		STRING_I(resEmpty) :
-		(dcpp_fmt(ResourceManager::getPluralString(resPlural, ResourceManager::getPluralCategory(count))) % count).str();
+		(F_(ResourceManager::getPluralString(resPlural, ResourceManager::getPluralCategory(count))) % count).str();
 	os += SimpleXML::escape(text, tmp, false);
 	os += "</h3>";
 }

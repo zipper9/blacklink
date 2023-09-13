@@ -17,6 +17,8 @@
  */
 
 #include "stdinc.h"
+#include "AppPaths.h"
+#include "PathUtil.h"
 #include "LogManager.h"
 #include "SimpleXML.h"
 #include "AdcHub.h"
@@ -24,8 +26,9 @@
 #include "ThrottleManager.h"
 #include "ShareManager.h"
 #include "SearchManager.h"
-#include "CompatibilityManager.h"
+#include "SysVersion.h"
 #include "Random.h"
+#include "version.h"
 #include <boost/algorithm/string.hpp>
 
 #ifndef _WIN32
@@ -65,6 +68,11 @@ string SettingsManager::strDefaults[STR_LAST - STR_FIRST];
 int    SettingsManager::intDefaults[INT_LAST - INT_FIRST];
 
 bool SettingsManager::isSet[SETTINGS_LAST];
+
+static string getConfigFile()
+{
+	return Util::getConfigPath() + "DCPlusPlus.xml";
+}
 
 // Search types
 SettingsManager::SearchTypes SettingsManager::g_searchTypes; // name, extlist
@@ -914,20 +922,20 @@ void SettingsManager::setDefaults()
 	setDefault(WINAMPTOOLBAR, "0,-1,1,2,3,4,5,6,7,8");
 
 	// Sounds
-	setDefault(SOUND_BEEPFILE, Util::getSoundPath() + "PrivateMessage.wav");
-	setDefault(SOUND_BEGINFILE, Util::getSoundPath() + "DownloadBegins.wav");
-	setDefault(SOUND_FINISHFILE, Util::getSoundPath() + "DownloadFinished.wav");
-	setDefault(SOUND_SOURCEFILE, Util::getSoundPath() + "AltSourceAdded.wav");
-	setDefault(SOUND_UPLOADFILE, Util::getSoundPath() + "UploadFinished.wav");
-	setDefault(SOUND_FAKERFILE, Util::getSoundPath() + "FakerFound.wav");
-	setDefault(SOUND_CHATNAMEFILE, Util::getSoundPath() + "MyNickInMainChat.wav");
-	setDefault(SOUND_TTH, Util::getSoundPath() + "FileCorrupted.wav");
-	setDefault(SOUND_HUBCON, Util::getSoundPath() + "HubConnected.wav");
-	setDefault(SOUND_HUBDISCON, Util::getSoundPath() + "HubDisconnected.wav");
-	setDefault(SOUND_FAVUSER, Util::getSoundPath() + "FavUser.wav");
-	setDefault(SOUND_FAVUSER_OFFLINE, Util::getSoundPath() + "FavUserDisconnected.wav");
-	setDefault(SOUND_TYPING_NOTIFY, Util::getSoundPath() + "TypingNotify.wav");
-	setDefault(SOUND_SEARCHSPY, Util::getSoundPath() + "SearchSpy.wav");
+	setDefault(SOUND_BEEPFILE, Util::getSoundsPath() + "PrivateMessage.wav");
+	setDefault(SOUND_BEGINFILE, Util::getSoundsPath() + "DownloadBegins.wav");
+	setDefault(SOUND_FINISHFILE, Util::getSoundsPath() + "DownloadFinished.wav");
+	setDefault(SOUND_SOURCEFILE, Util::getSoundsPath() + "AltSourceAdded.wav");
+	setDefault(SOUND_UPLOADFILE, Util::getSoundsPath() + "UploadFinished.wav");
+	setDefault(SOUND_FAKERFILE, Util::getSoundsPath() + "FakerFound.wav");
+	setDefault(SOUND_CHATNAMEFILE, Util::getSoundsPath() + "MyNickInMainChat.wav");
+	setDefault(SOUND_TTH, Util::getSoundsPath() + "FileCorrupted.wav");
+	setDefault(SOUND_HUBCON, Util::getSoundsPath() + "HubConnected.wav");
+	setDefault(SOUND_HUBDISCON, Util::getSoundsPath() + "HubDisconnected.wav");
+	setDefault(SOUND_FAVUSER, Util::getSoundsPath() + "FavUser.wav");
+	setDefault(SOUND_FAVUSER_OFFLINE, Util::getSoundsPath() + "FavUserDisconnected.wav");
+	setDefault(SOUND_TYPING_NOTIFY, Util::getSoundsPath() + "TypingNotify.wav");
+	setDefault(SOUND_SEARCHSPY, Util::getSoundsPath() + "SearchSpy.wav");
 
 	// Themes and custom images
 	setDefault(EMOTICONS_FILE, "Kolobok");
@@ -1195,8 +1203,8 @@ void SettingsManager::setDefaults()
 
 	// Menu settings
 #ifdef _WIN32
-	bool useFlatMenuHeader = CompatibilityManager::isOsWin8Plus();
-	bool useCustomMenu = !CompatibilityManager::isOsWin11Plus();
+	bool useFlatMenuHeader = SysVersion::isOsWin8Plus();
+	bool useCustomMenu = !SysVersion::isOsWin11Plus();
 #else
 	int useFlatMenuHeader = FALSE;
 	int useCustomMenu = FALSE;
@@ -1370,7 +1378,7 @@ void SettingsManager::setDefaults()
 
 bool SettingsManager::loadLanguage()
 {
-	auto path = Util::getLocalisationPath();
+	auto path = Util::getLanguagesPath();
 	auto name = get(LANGUAGE_FILE);
 	if (name.empty())
 	{
@@ -2238,4 +2246,15 @@ int SettingsManager::getIdByName(const string& name) noexcept
 string SettingsManager::getNameById(int id) noexcept
 {
 	return settingTags[id];
+}
+
+void SettingsManager::load()
+{
+	Util::migrate(getConfigFile());
+	load(getConfigFile());
+}
+
+void SettingsManager::save()
+{
+	save(getConfigFile());
 }

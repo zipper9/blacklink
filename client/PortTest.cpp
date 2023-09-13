@@ -5,6 +5,7 @@
 #include "JsonFormatter.h"
 #include "SettingsManager.h"
 #include "ConnectivityManager.h"
+#include "TigerHash.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
 

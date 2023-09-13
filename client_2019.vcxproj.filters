@@ -400,6 +400,18 @@
     <ClCompile Include="maxminddb\maxminddb.c">
       <Filter>maxminddb</Filter>
     </ClCompile>
+    <ClCompile Include="client\AppPaths.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\UriUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\FormatUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\SysVersion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -717,9 +729,6 @@
     <ClInclude Include="client\TransferData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\dcformat.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\zip\miniz.h">
       <Filter>Header Files\zip</Filter>
     </ClInclude>
@@ -998,6 +1007,21 @@
     </ClInclude>
     <ClInclude Include="maxminddb\maxminddb-compat-util.h">
       <Filter>maxminddb</Filter>
+    </ClInclude>
+    <ClInclude Include="client\AppPaths.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\format.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\UriUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\FormatUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\SysVersion.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -4,10 +4,11 @@
 #include "DialogLayout.h"
 #include "../client/ShareManager.h"
 #include "../client/HashManager.h"
+#include "../client/FormatUtil.h"
 #include "../client/TimeUtil.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -315,7 +316,7 @@ void HashProgressDlg::setProgressMarquee(bool enable)
 void HashProgressDlg::setProgressState(int state)
 {
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus()) return;
+	if (!SysVersion::isOsVistaPlus()) return;
 #endif
 	if (progressState == state) return;
 	progress.SendMessage(PBM_SETSTATE, state);

@@ -22,7 +22,9 @@
 #include "BrowseFile.h"
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
-#include "../client/CompatibilityManager.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
+#include "../client/SysVersion.h"
 #include <boost/algorithm/string/replace.hpp>
 
 static void saveAction(int flags, int action)
@@ -274,7 +276,7 @@ public:
 WinUtil::DefinedMagnetAction MagnetDlg::showDialog(HWND hWndParent, int flags, const TTHValue& hash, tstring& fileName, int64_t fileSize, int64_t dirSize)
 {
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 	{
 		ClassicMagnetDlg dlg(hash, fileName, fileSize, dirSize, flags);
 		if (dlg.DoModal(hWndParent) != IDOK) return WinUtil::MA_ASK;

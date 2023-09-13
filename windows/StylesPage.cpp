@@ -7,6 +7,8 @@
 #include "ColorUtil.h"
 #include "BrowseFile.h"
 #include "../client/File.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

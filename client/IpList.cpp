@@ -1,6 +1,5 @@
 #include "stdinc.h"
 #include "IpList.h"
-#include "Util.h"
 #include "Ip4Address.h"
 
 bool IpList::addRange(uint32_t start, uint32_t end, uint64_t payload, int& error)

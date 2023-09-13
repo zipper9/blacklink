@@ -1,8 +1,9 @@
 #include "stdinc.h"
 #include "MagnetLink.h"
 #include "Text.h"
+#include "BaseUtil.h"
 #include "StrUtil.h"
-#include "Util.h"
+#include "UriUtil.h"
 #include "SimpleStringTokenizer.h"
 
 void MagnetLink::clear()

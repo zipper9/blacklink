@@ -17,15 +17,15 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "SharePage.h"
 #include "LineDlg.h"
 #include "BrowseFile.h"
-#include "../client/Util.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 #include "../client/ShareManager.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 enum
@@ -407,7 +407,7 @@ void SharePage::insertGroup(int groupId, const wstring& name)
 	lg.iGroupId = groupId;
 	lg.state = LVGS_NORMAL |
 #ifdef OSVER_WIN_XP
-		(CompatibilityManager::isOsVistaPlus() ? LVGS_COLLAPSIBLE : 0)
+		(SysVersion::isOsVistaPlus() ? LVGS_COLLAPSIBLE : 0)
 #else
 		LVGS_COLLAPSIBLE
 #endif

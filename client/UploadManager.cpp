@@ -24,7 +24,10 @@
 #include "ShareManager.h"
 #include "ClientManager.h"
 #include "DatabaseManager.h"
+#include "PathUtil.h"
+#include "FormatUtil.h"
 #include "BZUtils.h"
+#include "ZUtils.h"
 #include "Upload.h"
 #include "QueueManager.h"
 #include "UserManager.h"
@@ -32,7 +35,6 @@
 #include "SharedFileStream.h"
 #include "IpGrant.h"
 #include "Wildcards.h"
-#include "ZUtils.h"
 #include "FilteredFile.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;

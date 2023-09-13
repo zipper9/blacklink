@@ -20,6 +20,7 @@
 #include "OnlineUser.h"
 #include "Client.h"
 #include "ClientManager.h"
+#include "FormatUtil.h"
 #include "LocationUtil.h"
 #include "UserConnection.h"
 #include "ConnectivityManager.h"

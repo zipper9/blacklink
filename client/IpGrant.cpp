@@ -22,6 +22,7 @@
 
 #include "IpGrant.h"
 #include "Util.h"
+#include "AppPaths.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
 

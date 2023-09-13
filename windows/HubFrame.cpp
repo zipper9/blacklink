@@ -23,6 +23,7 @@
 #include "PrivateFrame.h"
 #include "MainFrm.h"
 #include "Fonts.h"
+#include "../client/FormatUtil.h"
 #include "../client/QueueManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/UserManager.h"

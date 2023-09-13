@@ -19,9 +19,12 @@
 #include "stdafx.h"
 #include "WinUtil.h"
 #include "CheckTargetDlg.h"
-#include "../client/CompatibilityManager.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 
 #ifdef OSVER_WIN_XP
+#include "../client/SysVersion.h"
+
 static const WinUtil::TextItem texts[] =
 {
 	{ IDC_REPLACE_DESCR,         ResourceManager::REPLACE_CAPTION       },
@@ -148,7 +151,7 @@ LRESULT ClassicCheckTargetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWN
 void CheckTargetDlg::showDialog(HWND hWndParent, const string& fullPath, int64_t sizeNew, int64_t sizeExisting, time_t timeExisting, int& option, bool& applyForAll)
 {
 #ifdef OSVER_WIN_XP
-	if (!CompatibilityManager::isOsVistaPlus())
+	if (!SysVersion::isOsVistaPlus())
 	{
 		ClassicCheckTargetDlg dlg(fullPath, sizeNew, sizeExisting, timeExisting, option);
 		dlg.DoModal(hWndParent);

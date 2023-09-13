@@ -3,6 +3,7 @@
 #include "HttpHeaders.h"
 #include "BufferedSocket.h"
 #include "SettingsManager.h"
+#include "FormatUtil.h"
 #include "version.h"
 #include "ResourceManager.h"
 #include "BaseStreams.h"

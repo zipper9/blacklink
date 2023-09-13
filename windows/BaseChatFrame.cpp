@@ -23,6 +23,7 @@
 #include "MainFrm.h"
 #include "BrowseFile.h"
 #include "../client/StringTokenizer.h"
+#include "../client/PathUtil.h"
 #include <tom.h>
 #include <comdef.h>
 

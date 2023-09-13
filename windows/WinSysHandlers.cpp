@@ -2,7 +2,9 @@
 #include "WinSysHandlers.h"
 #include "LogManager.h"
 #include "../client/ResourceManager.h"
-#include "../client/Util.h"
+#include "../client/BaseUtil.h"
+#include "../client/Text.h"
+#include "../client/AppPaths.h"
 #include "RegKey.h"
 
 bool WinUtil::hubUrlHandlersRegistered = false;

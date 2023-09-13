@@ -14,16 +14,15 @@ Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@n
 
 #include <atlctrls.h>
 #include <atldlgs.h>
-#include "../client/Text.h"
 #include <shlobj.h>
 #include <lm.h>
+#include "../client/typedefs.h"
 
 //Class which gets stored int the item data on the tree control
 
 class FolderTreeItemInfo
 {
 	public:
-		//Constructors / Destructors
 		FolderTreeItemInfo():
 			m_pNetResource(nullptr),
 			m_bNetworkNode(false)
@@ -43,7 +42,6 @@ class FolderTreeItemInfo
 			dcassert(m_pNetResource == nullptr);
 		}
 		
-		//Member variables
 		tstring         m_sFQPath;          //Fully qualified path for this item
 		tstring         m_sRelativePath;    //The relative bit of the path
 		NETRESOURCE*    m_pNetResource;     //Used if this item is under Network Neighborhood
@@ -70,48 +68,25 @@ class SystemImageList
 		SystemImageList();
 };
 
-// [-] IRainman old code:
-//Struct taken from svrapi.h as we cannot mix Win9x and Win NT net headers in one program
-//#pragma pack(1)
-//struct FolderTree_share_info_50
-//{
-//	char            shi50_netname[LM20_NNLEN + 1];  /* share name */
-//	unsigned char   shi50_type;                     /* see below */
-//	unsigned short  shi50_flags;                    /* see below */
-//	char FAR *      shi50_remark;                   /* ANSI comment string */
-//	char FAR *      shi50_path;                     /* shared resource */
-//	char            shi50_rw_password[SHPWLEN + 1]; /* read-write password (share-level security) */
-//	char            shi50_ro_password[SHPWLEN + 1]; /* read-only password (share-level security) */
-//};  /* share_info_50 */
-//#pragma pack()
-
 //class which manages enumeration of shares. This is used for determining
 //if an item is shared or not
 class ShareEnumerator
 {
 	public:
-		//Constructors / Destructors
 		ShareEnumerator();
 		~ShareEnumerator();
 		
-		//Methods
 		void Refresh(); //Updates the internal enumeration list
 		bool IsShared(const tstring& sPath) const;
 		
 	protected:
-		//Defines
 		typedef NET_API_STATUS(WINAPI NT_NETSHAREENUM)(LPWSTR, DWORD, LPBYTE*, DWORD, LPDWORD, LPDWORD, LPDWORD);
 		typedef NET_API_STATUS(WINAPI NT_NETAPIBUFFERFREE)(LPVOID);
-		// [-] IRainman old code: typedef NET_API_STATUS(WINAPI WIN9X_NETSHAREENUM)(const char FAR *, short, char FAR *, unsigned short, unsigned short FAR *, unsigned short FAR *);
-		
-		//Data
-		// [-] IRainman old code: bool                     m_bWinNT;          //Are we running on NT
+
 		HMODULE                  m_hNetApi;         //Handle to the net api dll
 		NT_NETSHAREENUM*         m_pNTShareEnum;    //NT function pointer for NetShareEnum
 		NT_NETAPIBUFFERFREE*     m_pNTBufferFree;   //NT function pointer for NetAPIBufferFree
 		SHARE_INFO_502*          m_pNTShareInfo;    //NT share info
-		// [-] IRainman old code: WIN9X_NETSHAREENUM*      m_pWin9xShareEnum; //Win9x function pointer for NetShareEnum
-		// [-] IRainman old code: FolderTree_share_info_50* m_pWin9xShareInfo; //Win9x share info
 		DWORD                    m_dwShares;        //The number of shares enumerated
 };
 

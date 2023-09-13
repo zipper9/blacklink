@@ -3,7 +3,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "ShareMiscPage.h"
 #include "../client/SettingsManager.h"
 #include "../client/ShareManager.h"
@@ -12,7 +11,7 @@
 #include "DialogLayout.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -144,7 +143,7 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlAction.Attach(GetDlgItem(IDC_REMOVE));
 
 #ifdef OSVER_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
+	if (SysVersion::isOsVistaPlus())
 #endif
 		ctrlAction.SetButtonStyle(ctrlAction.GetButtonStyle() | BS_SPLITBUTTON);
 

@@ -20,6 +20,8 @@
 
 #include "HubEntry.h"
 #include "HublistManager.h"
+#include "AppPaths.h"
+#include "PathUtil.h"
 #include "HttpClient.h"
 #include "BZUtils.h"
 #include "FilteredFile.h"

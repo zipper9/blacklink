@@ -26,6 +26,7 @@
 #include "TaskManager.h"
 #include "Utils.h"
 
+#include "../AppPaths.h"
 #include "../AdcCommand.h"
 #include "../AdcSupports.h"
 #include "../ChatMessage.h"

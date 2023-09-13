@@ -23,6 +23,7 @@
 
 #include "stdinc.h"
 #include "ADLSearch.h"
+#include "AppPaths.h"
 #include "QueueManager.h"
 #include "LogManager.h"
 #include "SimpleStringTokenizer.h"
@@ -30,6 +31,11 @@
 #include "FavoriteManager.h"
 #include "ClientManager.h"
 #include "TimeUtil.h"
+
+static string getConfigFile()
+{
+	return Util::getConfigPath() + "ADLSearch.xml";
+}
 
 ADLSearch::ADLSearch() :
 	isCaseSensitive(false),
@@ -646,9 +652,4 @@ void ADLSearchManager::SearchContext::insertResults() noexcept
 			dd.dir = nullptr;
 		}
 	}
-}
-
-string ADLSearchManager::getConfigFile()
-{
-	return Util::getConfigPath() + "ADLSearch.xml";
 }

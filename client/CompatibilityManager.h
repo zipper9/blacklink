@@ -22,6 +22,7 @@
 #ifdef _WIN32
 
 #include "typedefs.h"
+#include "w.h"
 
 #ifndef SORT_DIGITSASNUMBERS
 #define SORT_DIGITSASNUMBERS 0x00000008
@@ -33,72 +34,6 @@ class CompatibilityManager
 		// Call this function as soon as possible (immediately after the start of the program).
 		static void init();
 		
-		static bool isWine()
-		{
-			return isSet(IS_WINE);
-		}
-		static bool runningIsWow64()
-		{
-			return isSet(RUNNING_IS_WOW64);
-		}
-		static bool isOsXpPlus()
-		{
-			return isSet(OS_XP_PLUS);
-		}
-		static bool isOsVistaPlus()
-		{
-			return isSet(OS_VISTA_PLUS);
-		}
-		static bool isOsWin7Plus()
-		{
-			return isSet(OS_WINDOWS7_PLUS);
-		}
-		static bool isOsWin8Plus()
-		{
-			return isSet(OS_WINDOWS8_PLUS);
-		}
-		static bool isOsWin10Plus()
-		{
-			return isSet(OS_WINDOWS10_PLUS);
-		}
-		static bool isOsWin11Plus()
-		{
-			return isSet(OS_WINDOWS11_PLUS);
-		}
-		static void setWine(bool p_wine)
-		{
-			set(IS_WINE, p_wine);
-		}
-		static LONG getComCtlVersion()
-		{
-			return g_comCtlVersion;
-		}
-		static string getFormattedOsVersion();
-		static string getWindowsVersionName();
-		static DWORD getOsMajor()
-		{
-			return g_osvi.dwMajorVersion;
-		}
-		static DWORD getOsMinor()
-		{
-			return g_osvi.dwMinorVersion;
-		}
-		static WORD getOsSpMajor()
-		{
-			return g_osvi.wServicePackMajor;
-		}
-		static BYTE getOsType()
-		{
-			return g_osvi.wProductType;
-		}
-		static BYTE getOsSuiteMask()
-		{
-			return g_osvi.wSuiteMask;
-		}
-		static OSVERSIONINFOEX& getVersionInfo() // [+] SSA Get System Info
-		{
-			return g_osvi;
-		}
 		static bool isIncompatibleSoftwareFound()
 		{
 			return !g_incopatibleSoftwareList.empty();
@@ -112,24 +47,14 @@ class CompatibilityManager
 		static string generateFullSystemStatusMessage();
 		static string getStats();
 		static string getNetworkStats();
-		static string getDefaultPath()
-		{
-			const char* homePath = isWine() ? getenv("HOME") : getenv("SystemDrive");
-			string defaultPath = homePath ? homePath : (isWine() ? "\\tmp" : "C:"); // TODO - убрать это под wine не должен быть доступен tmp!
-			defaultPath += '\\';
-			return defaultPath;
-		}
+		static string getDefaultPath();
 		static string& getStartupInfo()
 		{
 			return g_startupInfo;
 		}
-		static size_t getProcessorsCount()
+		static LONG getComCtlVersion()
 		{
-			return g_sysInfo.dwNumberOfProcessors;
-		}
-		static WORD getProcArch()
-		{
-			return g_sysInfo.wProcessorArchitecture;
+			return g_comCtlVersion;
 		}
 		static DWORDLONG getTotalPhysMemory()
 		{
@@ -158,41 +83,13 @@ class CompatibilityManager
 		static DWORD g_oldPriorityClass;
 		static string g_incopatibleSoftwareList;
 		static string g_startupInfo;
-		static OSVERSIONINFOEX g_osvi;
-		static SYSTEM_INFO g_sysInfo;
-		
-		enum Supports
-		{
-			IS_WINE = 0,
-			OS_XP_PLUS,
-			OS_VISTA_PLUS,
-			OS_WINDOWS7_PLUS,
-			OS_WINDOWS8_PLUS,
-			OS_WINDOWS10_PLUS,
-			OS_WINDOWS11_PLUS,
-			RUNNING_IS_WOW64,
-			LAST_SUPPORTS
-		};
-		static void set(Supports index, bool val = true)
-		{
-			g_supports[index] = val;
-		}
-		static bool isSet(Supports index)
-		{
-			return g_supports[index];
-		}
-		static bool g_supports[LAST_SUPPORTS];
+
 		static LONG g_comCtlVersion;
 		static DWORDLONG g_TotalPhysMemory;
 		static DWORDLONG g_FreePhysMemory;
-		
-		static void detectOsSupports();
-		static bool detectWine();
+
 		static LONG getComCtlVersionFromOS();
-		static void getSystemInfoFromOS();
-		static const char* getProcArchString();
 		static void generateSystemInfoForApp();
-		static bool isWow64Process();
 		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* status);
 
 	public:

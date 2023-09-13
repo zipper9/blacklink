@@ -24,6 +24,7 @@
 #include "CryptoManager.h"
 #include "ParamExpander.h"
 #include "TimeUtil.h"
+#include "Util.h"
 #include <openssl/err.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L

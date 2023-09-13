@@ -3,6 +3,7 @@
 #include "Fonts.h"
 #include "HubFrame.h"
 #include "LineDlg.h"
+#include "../client/FormatUtil.h"
 
 const int RecentHubsFrame::columnId[] =
 {

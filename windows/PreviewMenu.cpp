@@ -2,6 +2,7 @@
 #include "PreviewMenu.h"
 #include "RegKey.h"
 #include "resource.h"
+#include "../client/PathUtil.h"
 #include "../client/FavoriteManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/LogManager.h"

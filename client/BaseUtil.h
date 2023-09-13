@@ -3,6 +3,12 @@
 
 #include "typedefs.h"
 
+#ifdef _WIN32
+#include "w.h"
+#else
+#include <errno.h>
+#endif
+
 template<typename T, bool flag> struct ReferenceSelector
 {
 	typedef T ResultType;

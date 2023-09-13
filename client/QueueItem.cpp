@@ -24,7 +24,9 @@
 #include "UserConnection.h"
 #include "SettingsManager.h"
 #include "TimeUtil.h"
+#include "Util.h"
 #include "Random.h"
+#include "version.h"
 
 #ifdef USE_QUEUE_RWLOCK
 std::unique_ptr<RWLock> QueueItem::g_cs = std::unique_ptr<RWLock>(RWLock::create());

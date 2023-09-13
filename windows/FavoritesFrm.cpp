@@ -24,7 +24,9 @@
 #include "FavHubGroupsDlg.h"
 #include "ExMessageBox.h"
 #include "Fonts.h"
+#include "../client/FormatUtil.h"
 #include "../client/ShareManager.h"
+#include "../client/SysVersion.h"
 
 #ifdef _UNICODE
 static const WCHAR PASSWORD_CHAR = L'\x25CF';
@@ -701,7 +703,7 @@ void FavoriteHubsFrame::fillList(const TStringList& groups)
 		lg.iGroupId = static_cast<int>(i);
 		lg.state = LVGS_NORMAL |
 #ifdef OSVER_WIN_XP
-		           (CompatibilityManager::isOsVistaPlus() ? LVGS_COLLAPSIBLE : 0)
+		           (SysVersion::isOsVistaPlus() ? LVGS_COLLAPSIBLE : 0)
 #else
 		           LVGS_COLLAPSIBLE
 #endif

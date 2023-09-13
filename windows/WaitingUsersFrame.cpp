@@ -19,6 +19,8 @@
 #include "stdafx.h"
 #include "../client/ClientManager.h"
 #include "../client/QueueManager.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 #include "WaitingUsersFrame.h"
 #include "MainFrm.h"
 #include "BarShader.h"

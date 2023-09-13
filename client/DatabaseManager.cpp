@@ -11,9 +11,11 @@
 
 #include "DatabaseManager.h"
 #include "SettingsManager.h"
+#include "AppPaths.h"
 #include "LogManager.h"
 #include "FinishedItem.h"
 #include "TimeUtil.h"
+#include "FormatUtil.h"
 #include "NetworkUtil.h"
 #include "BusyCounter.h"
 #include "SocketAddr.h"
@@ -22,6 +24,7 @@
 #include "HttpClient.h"
 #include "ZUtils.h"
 #include "ResourceManager.h"
+#include "version.h"
 #include <maxminddb.h>
 #include <boost/algorithm/string.hpp>
 

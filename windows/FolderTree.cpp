@@ -11,7 +11,7 @@ Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@n
 
 #include "stdafx.h"
 #include "FolderTree.h"
-#include "../client/Util.h"
+#include "../client/PathUtil.h"
 #include "../client/ShareManager.h"
 #include "../client/CompatibilityManager.h"
 #include "LineDlg.h"
@@ -100,21 +100,10 @@ ShareEnumerator::ShareEnumerator()
 {
 	//Set out member variables to defaults
 	m_pNTShareEnum = nullptr;
-	// [-] IRainman old code: m_pWin9xShareEnum = nullptr;
 	m_pNTBufferFree = nullptr;
 	m_pNTShareInfo = nullptr;
-	// [-] IRainman old code: m_pWin9xShareInfo = nullptr;
-	// [-] IRainman old code: m_pWin9xShareInfo = nullptr;
-	// [-] IRainman old code: m_hNetApi = nullptr;
 	m_dwShares = 0;
 	
-	// [-] IRainman old code
-	//Determine if we are running Windows NT or Win9x
-	//OSVERSIONINFO osvi = {0};
-	//osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	//m_bWinNT = (GetVersionEx(&osvi) && osvi.dwPlatformId == VER_PLATFORM_WIN32_NT);
-	//if (m_bWinNT)
-	//{
 	//Load up the NETAPI dll
 	m_hNetApi = LoadLibrary(_T("NETAPI32.dll"));
 	if (m_hNetApi)
@@ -123,36 +112,16 @@ ShareEnumerator::ShareEnumerator()
 		m_pNTShareEnum = (NT_NETSHAREENUM*) GetProcAddress(m_hNetApi, "NetShareEnum");
 		m_pNTBufferFree = (NT_NETAPIBUFFERFREE*) GetProcAddress(m_hNetApi, "NetApiBufferFree");
 	}
-	//}
-	//else
-	//{
-	//  //Load up the NETAPI dll
-	//  m_hNetApi = LoadLibrary(_T("SVRAPI.dll"));
-	//  if (m_hNetApi)
-	//  {
-	//      //Get the required function pointer
-	//      m_pWin9xShareEnum = (WIN9X_NETSHAREENUM*) GetProcAddress(m_hNetApi, "NetShareEnum");
-	//  }
-	//}
-	
+
 	//Update the array of shares we know about
 	Refresh();
 }
 
 ShareEnumerator::~ShareEnumerator()
 {
-	// [-] IRainman old code
-	//if (m_bWinNT)
-	//{
-	//Free the buffer if valid
 	if (m_pNTShareInfo)
 		m_pNTBufferFree(m_pNTShareInfo);
-	//}
-	// [-] IRainman old code:
-	//else
-	//  //Free up the heap memory we have used
-	//  delete [] m_pWin9xShareInfo;
-	
+
 	//Free the dll now that we are finished with it
 	if (m_hNetApi)
 	{
@@ -164,9 +133,6 @@ ShareEnumerator::~ShareEnumerator()
 void ShareEnumerator::Refresh()
 {
 	m_dwShares = 0;
-	// [-] IRainman old code:
-	//if (m_bWinNT)
-	//{
 	//Free the buffer if valid
 	if (m_pNTShareInfo)
 		m_pNTBufferFree(m_pNTShareInfo);
@@ -177,46 +143,6 @@ void ShareEnumerator::Refresh()
 		DWORD dwEntriesRead = 0;
 		m_pNTShareEnum(NULL, 502, (LPBYTE*) &m_pNTShareInfo, MAX_PREFERRED_LENGTH, &dwEntriesRead, &m_dwShares, NULL);
 	}
-	// [-] IRainman old code:
-	/*}
-	else
-	{
-	    //Free the buffer if valid
-	    if (m_pWin9xShareInfo)
-	        delete [] m_pWin9xShareInfo;
-	
-	    //Call the function to enumerate the shares
-	    if (m_pWin9xShareEnum)
-	    {
-	        //Start with a reasonably sized buffer
-	        unsigned short cbBuffer = 1024;
-	        bool bNeedMoreMemory = true;
-	        bool bSuccess = false;
-	        while (bNeedMoreMemory && !bSuccess)
-	        {
-	            unsigned short nTotalRead = 0;
-	            m_pWin9xShareInfo = (FolderTree_share_info_50*) new BYTE[cbBuffer];
-	            memset(m_pWin9xShareInfo, 0, cbBuffer);
-	            unsigned short nShares = 0;
-	            NET_API_STATUS nStatus = m_pWin9xShareEnum(NULL, 50, (char FAR *)m_pWin9xShareInfo, cbBuffer, (unsigned short FAR *) & nShares, (unsigned short FAR *) & nTotalRead);
-	            if (nStatus == ERROR_MORE_DATA)
-	            {
-	                //Free up the heap memory we have used
-	                delete [] m_pWin9xShareInfo;
-	
-	                //And double the size, ready for the next loop around
-	                cbBuffer *= 2;
-	            }
-	            else if (nStatus == NERR_Success)
-	            {
-	                m_dwShares = nShares;
-	                bSuccess = true;
-	            }
-	            else
-	                bNeedMoreMemory = false;
-	        }
-	    }
-	}*/
 }
 
 bool ShareEnumerator::IsShared(const tstring& path) const

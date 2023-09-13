@@ -17,24 +17,24 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
-
-#include "../client/QueueManager.h"
-#include "../client/ClientManager.h"
-#include "../client/ShareManager.h"
-#include "../client/DatabaseManager.h"
-#include "../client/Client.h"
 #include "DirectoryListingFrm.h"
 #include "PrivateFrame.h"
 #include "QueueFrame.h"
 #include "DclstGenDlg.h"
-#include "MainFrm.h"
 #include "SearchDlg.h"
 #include "FindDuplicatesDlg.h"
 #include "DuplicateFilesDlg.h"
 #include "Fonts.h"
 #include "BrowseFile.h"
 #include "LineDlg.h"
+#include "../client/QueueManager.h"
+#include "../client/ClientManager.h"
+#include "../client/ShareManager.h"
+#include "../client/DatabaseManager.h"
+#include "../client/Client.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
 
 static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;
@@ -1275,7 +1275,7 @@ LRESULT DirectoryListingFrame::onDownloadAny(WORD, WORD, HWND, BOOL&)
 		bool getConnFlag = true;
 		QueueManager::QueueItemParams params;
 		params.sourcePath = path;
-		auto pos = path.rfind(URI_SEPARATOR);
+		auto pos = path.rfind('/');
 		if (pos != string::npos) path.erase(0, pos + 1);
 		QueueManager::getInstance()->add(path, params, dl->getUser(), 0, 0, getConnFlag);
 	}
@@ -2217,7 +2217,7 @@ LRESULT DirectoryListingFrame::onCopyUrl(WORD /*wNotifyCode*/, WORD wID, HWND /*
 		else if (ii->type == ItemInfo::DIRECTORY)
 			path = dl->getPath(ii->dir);
 		int index = wID - IDC_COPY_URL;
-		if (!path.empty() && index < contextMenuHubUrl.size())
+		if (!path.empty() && index < (int) contextMenuHubUrl.size())
 			WinUtil::setClipboard(getFileUrl(contextMenuHubUrl[index], path));
 	}
 	return 0;
@@ -2232,7 +2232,7 @@ LRESULT DirectoryListingFrame::onCopyUrlTree(WORD /*wNotifyCode*/, WORD wID, HWN
 
 	string path = dl->getPath(d);
 	int index = wID - IDC_COPY_URL_TREE;
-	if (!path.empty() && index < contextMenuHubUrl.size())
+	if (!path.empty() && index < (int) contextMenuHubUrl.size())
 		WinUtil::setClipboard(getFileUrl(contextMenuHubUrl[index], path));
 	return 0;
 }

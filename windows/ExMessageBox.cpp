@@ -24,7 +24,7 @@
 #include "WinUtil.h"
 
 #ifdef OSVER_WIN_XP
-#include "../client/CompatibilityManager.h"
+#include "../client/SysVersion.h"
 #endif
 
 ExMessageBox::MessageBoxValues ExMessageBox::mbv = {0};
@@ -100,7 +100,7 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 		case WM_ERASEBKGND:
 		{
 #ifdef OSVER_WIN_XP
-			if (!CompatibilityManager::isOsVistaPlus()) break;
+			if (!SysVersion::isOsVistaPlus()) break;
 #endif
 			RECT rc = {0};
 			HDC dc = (HDC)wParam;

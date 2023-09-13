@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "SplashWindow.h"
 #include "../client/ResourceManager.h"
+#include "../client/version.h"
 #include "resource.h"
 #include <zlib.h>
 

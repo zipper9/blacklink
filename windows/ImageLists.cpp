@@ -4,7 +4,8 @@
 #include "ResourceLoader.h"
 #include "RegKey.h"
 #include "resource.h"
-#include "../client/CompatibilityManager.h"
+#include "../client/AppPaths.h"
+#include "../client/PathUtil.h"
 #include "../client/Tag16.h"
 #include <shellapi.h>
 

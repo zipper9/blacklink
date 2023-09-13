@@ -18,10 +18,10 @@
 
 #include "stdinc.h"
 #include "Mapper_MiniUPnPc.h"
-
+#include "BaseUtil.h"
 #include "StrUtil.h"
 #include "NetworkUtil.h"
-#include "Util.h"
+#include "UriUtil.h"
 #include "Resolver.h"
 
 extern "C"

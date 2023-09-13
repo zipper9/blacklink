@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include "IpGuard.h"
 #include "Util.h"
+#include "AppPaths.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
 
