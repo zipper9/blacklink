@@ -207,7 +207,7 @@ class FileFindIter
 	public:
 		explicit FileFindIter(const string& path);
 #ifdef _WIN32
-		explicit FileFindIter(const wstring& path);
+		explicit FileFindIter(const wstring& path) { init(path); }
 #endif
 
 		~FileFindIter();
@@ -220,12 +220,15 @@ class FileFindIter
 
 		struct DirData :
 #ifdef _WIN32
-			public WIN32_FIND_DATA
+			public WIN32_FIND_DATAW
 #else
 			public stat
 #endif
 		{
 			string getFileName() const;
+#ifdef _WIN32
+			wstring getFileNameW() const { return cFileName; }
+#endif
 			bool isDirectory() const;
 			bool isReadOnly() const;
 			bool isHidden() const;

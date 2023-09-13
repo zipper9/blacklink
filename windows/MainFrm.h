@@ -108,7 +108,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, onRebuildToolbar)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_MENUSELECT, onMenuSelect)
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, onAnimChangeFrame)
 #endif
 		COMMAND_ID_HANDLER(ID_APP_EXIT, onExit)
@@ -257,7 +257,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onParentNotify(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled);
 		LRESULT onViewQuickSearchBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 		LRESULT onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 #endif
 		LRESULT onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

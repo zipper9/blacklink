@@ -766,6 +766,7 @@
     <ClCompile Include="windows\ADLSProperties.cpp" />
     <ClCompile Include="windows\AdvancedPage.cpp" />
     <ClCompile Include="windows\AppearancePage.cpp" />
+    <ClCompile Include="windows\EmoticonPacksDlg.cpp" />
     <ClCompile Include="windows\MenuHelper.cpp" />
     <ClCompile Include="windows\PreviewAppsPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
@@ -914,6 +915,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="windows\StringSetSearch.cpp" />
     <ClCompile Include="windows\StylesPage.cpp" />
     <ClCompile Include="windows\TabsPage.cpp" />
     <ClCompile Include="windows\TextFrame.cpp" />
@@ -953,6 +955,7 @@
     <ClInclude Include="windows\ADLSProperties.h" />
     <ClInclude Include="windows\AdvancedPage.h" />
     <ClInclude Include="windows\AppearancePage.h" />
+    <ClInclude Include="windows\EmoticonPacksDlg.h" />
     <ClInclude Include="windows\LockRedraw.h" />
     <ClInclude Include="windows\MenuHelper.h" />
     <ClInclude Include="windows\PreviewAppsPage.h" />
@@ -1060,6 +1063,7 @@
     <ClInclude Include="windows\StaticFrame.h" />
     <ClInclude Include="windows\StatusLabelCtrl.h" />
     <ClInclude Include="windows\StatusMessageHistory.h" />
+    <ClInclude Include="windows\StringSetSearch.h" />
     <ClInclude Include="windows\StylesPage.h" />
     <ClInclude Include="windows\ThemeManager.h" />
     <ClInclude Include="windows\ThemeUtil.h" />

@@ -174,7 +174,7 @@ uint64_t File::getTimeStamp() const noexcept
 uint64_t File::getTimeStamp(const string& fileName) noexcept
 {
 	WIN32_FILE_ATTRIBUTE_DATA data;
-	if (!GetFileAttributesEx(formatPath(Text::utf8ToWide(fileName)).c_str(), GetFileExInfoStandard, &data)) return 0;
+	if (!GetFileAttributesExW(formatPath(Text::utf8ToWide(fileName)).c_str(), GetFileExInfoStandard, &data)) return 0;
 	return *reinterpret_cast<const uint64_t*>(&data.ftLastWriteTime);
 }
 
@@ -415,7 +415,7 @@ bool File::getVolumeInfo(const wstring& path, VolumeInfo &vi) noexcept
 uint64_t File::calcFilesSize(const string& path, const string& pattern)
 {
 	uint64_t size = 0;
-	WIN32_FIND_DATA data;
+	WIN32_FIND_DATAW data;
 	HANDLE hFind = FindFirstFileExW(formatPath(Text::utf8ToWide(path + pattern)).c_str(),
 	                                CompatibilityManager::findFileLevel,
 	                                &data,
@@ -439,7 +439,7 @@ StringList File::findFiles(const string& path, const string& pattern, bool appen
 {
 	StringList ret;
 	
-	WIN32_FIND_DATA data;
+	WIN32_FIND_DATAW data;
 	HANDLE hFind = FindFirstFileExW(formatPath(Text::utf8ToWide(path + pattern)).c_str(),
 	                                CompatibilityManager::findFileLevel,
 	                                &data,

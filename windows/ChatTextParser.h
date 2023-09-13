@@ -1,8 +1,8 @@
 #ifndef CHAT_TEXT_PARSER_H_
 #define CHAT_TEXT_PARSER_H_
 
-#include "../client/w.h"
-#include "../client/typedefs.h"
+#include "StringSetSearch.h"
+#include "Emoticons.h"
 
 #ifdef _UNICODE
 #define HIDDEN_TEXT_SEP L'\x241F'
@@ -13,6 +13,13 @@
 class ChatTextParser
 {
 	public:
+		enum
+		{
+			TYPE_LINK = 1,
+			TYPE_BBCODE,
+			TYPE_EMOTICON
+		};
+
 #ifdef BL_UI_FEATURE_BB_CODES
 		enum
 		{
@@ -39,6 +46,13 @@ class ChatTextParser
 		};
 #endif
 
+		struct EmoticonItem
+		{
+			Emoticon* emoticon;
+			tstring::size_type start;
+			tstring::size_type end;
+		};
+
 		struct LinkItem
 		{
 			int type;
@@ -48,29 +62,49 @@ class ChatTextParser
 			int hiddenTextLen;
 		};
 
-		void parseText(const tstring& text, const CHARFORMAT2& cf, bool formatBBCodes);
+		void parseText(const tstring& text, const CHARFORMAT2& cf, bool formatBBCodes, unsigned maxEmoticons);
 		void processText(tstring& text);
 		void findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
-		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);
+		void initSearch();
+#ifdef BL_UI_FEATURE_EMOTICONS
+		void setEmoticonPackList(EmoticonPackList* packList) { emtConfig = packList; }
+#endif
 		void clear();
 #ifdef BL_UI_FEATURE_BB_CODES
 		const vector<TagItem>& getTags() const { return tags; }
 		vector<TagItem>& getTags() { return tags; }
 #endif
 		const vector<LinkItem>& getLinks() const { return links; }
+#ifdef BL_UI_FEATURE_EMOTICONS
+		const vector<EmoticonItem>& getEmoticons() const { return emoticons; }
+#endif
 
 	private:
+		StringSetSearch::Set ss;
 #ifdef BL_UI_FEATURE_BB_CODES
 		vector<TagItem> tags;
 #endif
-
+#ifdef BL_UI_FEATURE_EMOTICONS
+		EmoticonPackList* emtConfig = nullptr;
+		vector<EmoticonItem> emoticons;
+		boost::unordered_map<tstring, uint32_t> textToKey;
+		boost::unordered_map<uint32_t, vector<Emoticon*>> keyToText;
+		uint32_t nextKey = 0;
+#endif
 		vector<LinkItem> links;
 
 		static void processLink(const tstring& text, LinkItem& li);
 #ifdef BL_UI_FEATURE_BB_CODES
+		static int processBBCode(const tstring& text, tstring::size_type& pos, bool& isClosing);
 		const CHARFORMAT2* getPrevFormat() const;
-		static bool processTag(TagItem& item, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
+		static bool processStartTag(TagItem& item, const tstring& text, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
 #endif
+#ifdef BL_UI_FEATURE_EMOTICONS
+		uint32_t addKey(const tstring& text, Emoticon* emoticon);
+#endif
+		void applyShift(int what, size_t startIndex, tstring::size_type start, int shift);
 };
+
+extern ChatTextParser chatTextParser;
 
 #endif // CHAT_TEXT_PARSER_H_

@@ -55,8 +55,9 @@
 #include "AddMagnet.h"
 #include "CheckTargetDlg.h"
 #include "DclstGenDlg.h"
-#ifdef IRAINMAN_INCLUDE_SMILE
-# include "../GdiOle/GDIImage.h"
+#ifdef BL_UI_FEATURE_EMOTICONS
+#include "../GdiOle/GDIImage.h"
+#include "../client/SimpleStringTokenizer.h"
 #endif
 #include "../client/ConnectionManager.h"
 #include "../client/ConnectivityManager.h"
@@ -202,10 +203,6 @@ MainFrame::~MainFrame()
 	mediaToolbarHot.Destroy();
 	settingsImages.Destroy();
 	
-#ifdef IRAINMAN_INCLUDE_SMILE
-	EmoticonPack::destroy();
-#endif
-
 	UserInfoGuiTraits::uninit();
 	MenuHelper::uninit();
 	WinUtil::uninit();
@@ -595,9 +592,21 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	transferView.UpdateLayout();
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-	EmoticonPack::reCreate();
+#ifdef BL_UI_FEATURE_EMOTICONS
+	StringList emoticonPacks;
+	const string& emoticonPack = SETTING(EMOTICONS_FILE);
+	if (!emoticonPack.empty() && emoticonPack != "Disabled")
+	{
+		emoticonPacks.push_back(emoticonPack);
+		SimpleStringTokenizer<char> st(SETTING(ADDITIONAL_EMOTICONS), ';');
+		string token;
+		while (st.getNextNonEmptyToken(token))
+			emoticonPacks.push_back(token);
+	}
+	emoticonPackList.setConfig(emoticonPacks);
+	chatTextParser.setEmoticonPackList(&emoticonPackList);
 #endif
+	chatTextParser.initSearch();
 
 	if (!PopupManager::isValidInstance())
 		PopupManager::newInstance();
@@ -2992,7 +3001,7 @@ void MainFrame::toggleTopmost()
 	::SetWindowPos(m_hWnd, order, rc.left, rc.top, rc.Width(), rc.Height(), SWP_SHOWWINDOW);
 }
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 LRESULT MainFrame::onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
 {
 	CGDIImage* pImage = reinterpret_cast<CGDIImage*>(lParam);
@@ -3008,7 +3017,7 @@ LRESULT MainFrame::onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lP
 	pImage->Release();
 	return 0;
 }
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif // BL_UI_FEATURE_EMOTICONS
 
 LRESULT MainFrame::onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {

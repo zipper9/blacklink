@@ -213,6 +213,7 @@ static const char* settingTags[] =
 	"ThemeDLLName",
 	"ThemeManagerSoundsThemeName",
 	"EmoticonsFile",
+	"AdditionalEmoticons",
 
 	// Password
 	"AuthPass",
@@ -929,7 +930,8 @@ void SettingsManager::setDefaults()
 	setDefault(SOUND_SEARCHSPY, Util::getSoundPath() + "SearchSpy.wav");
 
 	// Themes and custom images
-	setDefault(EMOTICONS_FILE, "FlylinkSmilesInternational");
+	setDefault(EMOTICONS_FILE, "Kolobok");
+	setDefault(ADDITIONAL_EMOTICONS, "FlylinkSmilesInternational;FlylinkSmiles");
 
 	// Frames UI state
 	setDefault(HUB_FRAME_VISIBLE, "1,1,0,1,1,1,1,1,1,1,1,1,1,1");

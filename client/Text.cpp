@@ -543,14 +543,6 @@ string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 	return wideToAcp(utf8ToWide(str, wtmp), tmp, toCharset);
 }
 
-void asciiMakeLower(string& str) noexcept
-{
-	char* s = &str[0];
-	size_t len = str.length();
-	for (size_t i = 0; i < len; i++)
-		s[i] = asciiToLower(s[i]);
-}
-
 void makeLower(wstring& str) noexcept
 {
 #ifdef _WIN32

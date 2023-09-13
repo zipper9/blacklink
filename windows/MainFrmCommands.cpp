@@ -210,7 +210,7 @@ bool MainFrame::processCommand(const ParsedCommand& pc, Result& res)
 			}
 #endif
 			return true;
-	}
 #endif
+	}
 	return false;
 }

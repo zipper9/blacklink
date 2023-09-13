@@ -1,9 +1,6 @@
 #ifndef EMOTICONS_H_
 #define EMOTICONS_H_
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-
-#include "ImageDataObject.h"
 #include <boost/unordered/unordered_set.hpp>
 #include "../client/BaseUtil.h"
 
@@ -25,19 +22,19 @@ class Emoticon
 
 		Emoticon(const Emoticon&) = delete;
 		Emoticon& operator= (const Emoticon&) = delete;
-		
-		void setIcon(const tstring& text, const string& iconBmpFile, const string& iconGifFile);
+
+		void setIcon(const tstring& text, const string& iconBmpFile, const string& iconGifFile) noexcept;
 		const tstring& getText() const { return text; }
 		string getBmpPath() const;
 		string getGifPath() const;
 		bool isDuplicate() const { return alias != nullptr; }
-		void checkDuplicate(Emoticon* prev);
+		void checkDuplicate(Emoticon* prev) noexcept;
 		bool isHidden() const { return hidden; }
 		void setHidden(bool flag) { hidden = flag; }
 
 		CGDIImage* getImage(int flags, HWND callbackWnd, UINT callbackMsg);
 		IOleObject* getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground, const tstring& text);
-		
+
 	protected:
 		enum
 		{
@@ -56,7 +53,6 @@ class Emoticon
 		CGDIImage *imageBmp;
 
 	private:
-		string unzipIcons(const string& fileName);
 		void tryLoadGif(HWND callbackWnd, UINT callbackMsg);
 		void tryLoadBmp(HWND callbackWnd, UINT callbackMsg);
 };
@@ -66,35 +62,48 @@ class Emoticon
 class EmoticonPack
 {
 	public:
-		EmoticonPack() : useEmoticons(false), packSize(0) { }
-		~EmoticonPack();
+		EmoticonPack() noexcept : timestamp(0) {}
+		~EmoticonPack() noexcept;
 
 		EmoticonPack(const EmoticonPack&) = delete;
 		EmoticonPack& operator= (const EmoticonPack&) = delete;
 
-		bool loadXMLFile(const string& name);
-		bool initialize();
-
-		static bool reCreate();
-		static void destroy();
-		static EmoticonPack* current;
-
-		GETSET(bool, useEmoticons, UseEmoticons);
-
-		const vector<Emoticon*>& getEmoticonsArray() const { return emoticons; }
-		const vector<Emoticon*>& getSortedEmoticons() const { return sortedEmoticons; }
-		size_t getPackSize() const { return packSize; }
+		bool loadXMLFile(const string& name) noexcept;
+		const std::vector<Emoticon*>& getEmoticons() const { return emoticons; }
+		const std::vector<Emoticon*>& getSortedEmoticons() const { return sortedEmoticons; }
+		const string& getName() const { return name; }
+		uint64_t getTimeStamp() const { return timestamp; }
 
 	protected:
-		vector<Emoticon*> emoticons;
-		vector<Emoticon*> sortedEmoticons;
-		size_t packSize;
+		std::vector<Emoticon*> emoticons;
+		std::vector<Emoticon*> sortedEmoticons;
+		string name;
+		uint64_t timestamp;
 
 	private:
-		boost::unordered_set<string> nameSet;
-		void cleanup();
+		void cleanup() noexcept;
+		void initialize() noexcept;
 };
 
-#endif // IRAINMAN_INCLUDE_SMILE
+// EmoticonPackList
+
+class EmoticonPackList
+{
+	public:
+		EmoticonPackList() noexcept  {}
+		~EmoticonPackList() noexcept { clear(); }
+
+		EmoticonPackList(const EmoticonPackList&) = delete;
+		EmoticonPackList& operator= (const EmoticonPackList&) = delete;
+
+		void setConfig(const StringList& names) noexcept;
+		void clear() noexcept;
+		const std::vector<EmoticonPack*>& getPacks() const { return packs; }
+
+	protected:
+		std::vector<EmoticonPack*> packs;
+};
+
+extern EmoticonPackList emoticonPackList;
 
 #endif // EMOTICONS_H_

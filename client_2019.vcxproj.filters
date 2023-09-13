@@ -211,9 +211,6 @@
     <ClCompile Include="jsoncpp\jsoncpp.cpp">
       <Filter>Source Files\jsoncpp</Filter>
     </ClCompile>
-    <ClCompile Include="client\zip\zip.c">
-      <Filter>Source Files\mzip</Filter>
-    </ClCompile>
     <ClCompile Include="client\debug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1021,9 +1018,6 @@
     </Filter>
     <Filter Include="Source Files\jsoncpp">
       <UniqueIdentifier>{a2bc7e46-ac54-4dd9-bdbf-0729d9408fad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\mzip">
-      <UniqueIdentifier>{84096e6f-60b6-4f0c-939d-d548ac07cd87}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\zip">
       <UniqueIdentifier>{84323aa5-4f68-4fa2-bdee-e193b3129271}</UniqueIdentifier>

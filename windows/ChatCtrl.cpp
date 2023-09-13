@@ -17,19 +17,19 @@
 #include "stdafx.h"
 #include "ChatCtrl.h"
 #include "WinUtil.h"
+#include "Colors.h"
 #include "../client/OnlineUser.h"
 #include "../client/Client.h"
 #include "../client/CompatibilityManager.h"
 #include <boost/algorithm/string.hpp>
 #include <tom.h>
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-#include "../GdiOle/GDIImageOle.h"
+#ifdef BL_UI_FEATURE_EMOTICONS
 #include "Emoticons.h"
+#include "../GdiOle/GDIImageOle.h"
+#include "ImageDataObject.h"
 #include "MainFrm.h"
-
-static const unsigned MAX_EMOTICONS_PER_MESSAGE = 48;
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif
 
 extern "C" const GUID IID_ITextDocument =
 {
@@ -47,8 +47,8 @@ string ChatCtrl::g_sSelectedHostname;
 ChatCtrl::ChatCtrl() : autoScroll(true), useChatCacheFlag(true), chatCacheSize(0),
 	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr),
 	findInit(true), findRangeStart(0), findRangeEnd(0), currentFindFlags(FR_DOWN)
-#ifdef IRAINMAN_INCLUDE_SMILE
-	,outOfMemory(false), totalEmoticons(0), pStorage(nullptr), refs(0)
+#ifdef BL_UI_FEATURE_EMOTICONS
+	, totalEmoticons(0), pStorage(nullptr), refs(0)
 #endif
 {
 }
@@ -57,7 +57,7 @@ ChatCtrl::~ChatCtrl()
 {
 	if (pRichEditOle)
 		pRichEditOle->Release();
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	if (pStorage)
 		pStorage->Release();
 #endif
@@ -96,11 +96,11 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 			normalizeLineBreaks(msg);
 		msg += _T('\n');
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-		if (!EmoticonPack::current || CompatibilityManager::isWine())
+#ifdef BL_UI_FEATURE_EMOTICONS
+		if (emoticonPackList.getPacks().empty() || CompatibilityManager::isWine())
 			useEmoticons = false;
 #endif
-		
+
 		isFavorite = isBanned = isOp = false;
 		if (id)
 		{
@@ -152,9 +152,6 @@ void ChatCtrl::restoreChatCache()
 				appendText(*i, UINT_MAX, false);
 		}
 	}
-#ifdef IRAINMAN_INCLUDE_SMILE
-	outOfMemory = false; // ???
-#endif
 }
 
 void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos, unsigned addFlags)
@@ -172,7 +169,7 @@ void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startP
 	}
 }
 
-void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highlightNick)
+void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
@@ -235,26 +232,26 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles, bool highl
 		}
 	}
 
-	appendTextInternal(text, message, maxSmiles, highlightNick);
+	appendTextInternal(text, message, maxEmoticons, highlightNick);
 	SetSel(selBeginSaved, selEndSaved);
 	goToEnd(cr, false);
 }
 
-void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick)
+void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
-		appendText(text, message, maxSmiles, highlightNick);
+		appendText(text, message, maxEmoticons, highlightNick);
 }
 
-void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick)
+void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
-		appendText(text, message, maxSmiles, highlightNick);
+		appendText(text, message, maxEmoticons, highlightNick);
 }
 
-void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick)
+void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
 	SetRedraw(FALSE);
 	const auto& cf = message.myMessage ? Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE] : Colors::getCharFormat(message.textStyle);
@@ -263,15 +260,15 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 #else
 	const bool formatBBCodes = false;
 #endif
-	textParser.parseText(text, cf, formatBBCodes);
-	textParser.processText(text);
+	chatTextParser.parseText(text, cf, formatBBCodes, maxEmoticons);
+	chatTextParser.processText(text);
 
 	LONG startPos, endPos;
 	insertAndFormat(text, cf, startPos, endPos);
 
 #ifdef BL_UI_FEATURE_BB_CODES
 	bool acceptColors = BOOLSETTING(FORMAT_BB_CODES_COLORS);
-	for (auto& ti : textParser.getTags())
+	for (auto& ti : chatTextParser.getTags())
 	{
 		if (ti.openTagStart == tstring::npos || ti.closeTagEnd == tstring::npos) continue;
 		if (ti.type == ChatTextParser::BBCODE_COLOR && !acceptColors) continue;
@@ -281,7 +278,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 	}
 #endif
 
-	for (const auto& li : textParser.getLinks())
+	for (const auto& li : chatTextParser.getLinks())
 	{
 		if (li.start == tstring::npos || li.end == tstring::npos) continue;
 		auto tmp = Colors::charFormat[Colors::TEXT_STYLE_URL];
@@ -296,61 +293,33 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 		}
 	}
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-	if (message.useEmoticons && !outOfMemory)
-	{		
-		HWND mainFrameWnd = MainFrame::getMainFrame()->m_hWnd;
-		const vector<Emoticon*>& emoticons = EmoticonPack::current->getSortedEmoticons();
-		const tstring replacement(1, HIDDEN_TEXT_SEP);
-		size_t imageIndex = 0;
-		size_t currentLink = 0;
-		tstring::size_type pos = 0;
-		unsigned messageEmoticons = 0;
-		while (imageIndex < emoticons.size() && !outOfMemory && messageEmoticons < MAX_EMOTICONS_PER_MESSAGE && totalEmoticons < maxSmiles)
-		{
-			const tstring& emoticonText = emoticons[imageIndex]->getText();
-			textParser.findSubstringAvoidingLinks(pos, text, emoticonText, currentLink);
-			if (pos != tstring::npos)
-			{
-				SetSel(startPos + pos, startPos + pos + emoticonText.length());
-				ReplaceSel(Util::emptyStringT.c_str());
-				text.replace(pos, emoticonText.length(), replacement);
-				textParser.applyShift(0, 0, pos, -(int) emoticonText.length() + 1);
-				
-				IOleClientSite *pOleClientSite = nullptr;
-					
-				if (!pRichEditOle)
-					initRichEditOle();
+#ifdef BL_UI_FEATURE_EMOTICONS
+	HWND mainFrameWnd = MainFrame::getMainFrame()->m_hWnd;
+	for (const auto& ei : chatTextParser.getEmoticons())
+	{
+		SetSel(startPos + ei.start, startPos + ei.end);
+		ReplaceSel(Util::emptyStringT.c_str());
+		IOleClientSite *pOleClientSite = nullptr;
+		if (!pRichEditOle)
+			initRichEditOle();
 
-				if (pRichEditOle && SUCCEEDED(pRichEditOle->GetClientSite(&pOleClientSite)) && pOleClientSite)
-				{
-					IOleObject *pObject = emoticons[imageIndex]->getImageObject(BOOLSETTING(CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
-						pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
-						Colors::charFormat[message.myMessage ? Colors::TEXT_STYLE_MY_MESSAGE : Colors::TEXT_STYLE_NORMAL].crBackColor,
-						emoticonText);
-					if (pObject)
-					{
-						if (CImageDataObject::InsertObject(m_hWnd, pRichEditOle, pOleClientSite, pStorage, pObject))
-						{
-							messageEmoticons++;
-							totalEmoticons++;
-						}
-						pObject->Release();
-					}
-					pOleClientSite->Release();
-				}
-				// TODO: handle failures
-			}
-			else
+		if (pRichEditOle && SUCCEEDED(pRichEditOle->GetClientSite(&pOleClientSite)) && pOleClientSite)
+		{
+			IOleObject* pObject = ei.emoticon->getImageObject(BOOLSETTING(CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
+				pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
+				Colors::charFormat[message.myMessage ? Colors::TEXT_STYLE_MY_MESSAGE : Colors::TEXT_STYLE_NORMAL].crBackColor,
+				ei.emoticon->getText());
+			if (pObject)
 			{
-				pos = 0;
-				currentLink = 0;
-				imageIndex++;
+				if (CImageDataObject::InsertObject(m_hWnd, pRichEditOle, pOleClientSite, pStorage, pObject))
+					totalEmoticons++;
+				pObject->Release();
 			}
+			pOleClientSite->Release();
 		}
 	}
-#endif // IRAINMAN_INCLUDE_SMILE
-	
+#endif
+
 	if (!myNick.empty() && highlightNick)
 	{
 		bool nickFound = false;
@@ -358,7 +327,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 		tstring::size_type pos = 0;
 		while (true)
 		{
-			textParser.findSubstringAvoidingLinks(pos, text, myNick, currentLink);
+			chatTextParser.findSubstringAvoidingLinks(pos, text, myNick, currentLink);
 			if (pos == tstring::npos) break;
 			if ((pos == 0 || nickBoundaryChars.find(text[pos-1]) != tstring::npos) &&
 			    (pos + myNick.length() >= text.length() || nickBoundaryChars.find(text[pos + myNick.length()]) != tstring::npos))
@@ -378,7 +347,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxSmi
 
 	SetRedraw(TRUE);
 	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
-	textParser.clear();
+	chatTextParser.clear();
 }
 
 bool ChatCtrl::hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos)
@@ -773,7 +742,7 @@ long ChatCtrl::findAndSelect(DWORD flags, FINDTEXTEX& ft)
 	return index;
 }
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 {
 	if (!pRichEditOle) return;
@@ -825,7 +794,7 @@ LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 			if (len > 0)
 			{
 				line.resize(len);
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 				replaceObjects(line, startIndex);
 #endif
 				// remove hidden text
@@ -895,7 +864,7 @@ LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 			{
 				tstring s = text;
 				SysFreeString(text);
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 				replaceObjects(s, start);
 #endif
 				WinUtil::setClipboard(s);
@@ -937,12 +906,12 @@ void ChatCtrl::initRichEditOle()
 {
 	pRichEditOle = GetOleInterface();
 	dcassert(pRichEditOle);
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	SetOleCallback(this);
 #endif
 }
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 HRESULT STDMETHODCALLTYPE ChatCtrl::QueryInterface(THIS_ REFIID riid, LPVOID FAR * lplpObj)
 {
 	HRESULT res = E_NOINTERFACE;
@@ -1038,4 +1007,4 @@ COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE ChatCtrl::GetContextMenu(THIS_ WO
 	::DefWindowProc(m_hWnd, WM_CONTEXTMENU, (WPARAM)m_hWnd, GetMessagePos());
 	return S_OK;
 }
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif // BL_UI_FEATURE_EMOTICONS

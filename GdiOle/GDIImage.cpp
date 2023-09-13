@@ -2,11 +2,11 @@
 
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
 #include "GdiImage.h"
+#include "../client/debug.h"
 
 #ifdef DEBUG_GDI_IMAGE
 #include <unordered_set>
 #include "../client/Locks.h"
-#include "../client/debug.h"
 
 #ifdef _DEBUG
 #include "../client/StrUtil.h"
@@ -444,7 +444,7 @@ CGDIImage *CGDIImage::createInstance(const WCHAR* fileName)
 LONG CGDIImage::Release()
 {
 	const LONG lRef = InterlockedDecrement(&m_lRef);
-
+	dcassert(lRef >= 0);
 	if (lRef == 0)
 	{
 #ifdef DEBUG_GDI_IMAGE
@@ -464,7 +464,7 @@ void CGDIImage::setCallback(HWND hwnd, UINT message)
 
 void CGDIImage::freePropItem()
 {
-	delete [](char*) m_pItem;
+	delete[] (char*) m_pItem;
 	m_pItem = nullptr;
 }
 

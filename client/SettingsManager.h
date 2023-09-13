@@ -182,6 +182,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			THEME_MANAGER_THEME_DLL_NAME,
 			THEME_MANAGER_SOUNDS_THEME_NAME,
 			EMOTICONS_FILE,
+			ADDITIONAL_EMOTICONS,
 
 			// Password
 			PASSWORD,

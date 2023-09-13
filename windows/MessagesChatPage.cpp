@@ -42,7 +42,7 @@ static const PropPage::ListItem listItems[] =
 {
 	{ SettingsManager::SHOW_SEND_MESSAGE_BUTTON, ResourceManager::SHOW_SEND_MESSAGE_BUTTON},
 	{ SettingsManager::SHOW_MULTI_CHAT_BTN, ResourceManager::SHOW_MULTI_CHAT_BTN },
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	{ SettingsManager::SHOW_EMOTICONS_BTN, ResourceManager::SHOW_EMOTICONS_BTN },
 #endif
 #ifdef BL_UI_FEATURE_BB_CODES
@@ -58,7 +58,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::FORMAT_BB_CODES_COLORS, ResourceManager::FORMAT_BB_CODES_COLORS },
 	{ SettingsManager::FORMAT_BOT_MESSAGE, ResourceManager::FORMAT_BOT_MESSAGE },
 #endif
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	{ SettingsManager::CHAT_ANIM_SMILES, ResourceManager::CHAT_ANIM_SMILES },
 	{ SettingsManager::SMILE_SELECT_WND_ANIM_SMILES, ResourceManager::SMILE_SELECT_WND_ANIM_SMILES },
 #endif

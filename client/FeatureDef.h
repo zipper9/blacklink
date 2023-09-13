@@ -83,11 +83,11 @@
 #endif
 
 #define BL_UI_FEATURE_BB_CODES
+#define BL_UI_FEATURE_EMOTICONS
 #undef  BL_UI_FEATURE_VIEW_AS_TEXT
 
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-#define IRAINMAN_INCLUDE_SMILE // Disable this to cut all smile support from code.
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 
@@ -102,7 +102,7 @@
 // TODO
 //#define SSA_SHELL_INTEGRATION
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 # define IRAINMAN_INCLUDE_GDI_OLE 1
 #endif
 

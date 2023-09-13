@@ -1,7 +1,7 @@
-#ifndef __EMOTICONS_DLG
-#define __EMOTICONS_DLG
+#ifndef EMOTICONS_DLG_H_
+#define EMOTICONS_DLG_H_
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 
 #include <atlbase.h>
 #include <atlapp.h>
@@ -95,6 +95,6 @@ class EmoticonsDlg : public CDialogImpl<EmoticonsDlg>
 		void clearButtons();
 };
 
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif // BL_UI_FEATURE_EMOTICONS
 
-#endif // __EMOTICONS_DLG
+#endif // EMOTICONS_DLG_H_

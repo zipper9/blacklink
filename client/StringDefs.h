@@ -1682,6 +1682,8 @@ enum Strings   // @DontAdd
 	FILE_LIST_INCLUDE_UPLOAD_COUNT, // "Add file upload count"
 	EMOTICONS_NOT_AVAILABLE, // "Emoticons not available."
 	EMOTICONS_DISABLED, // "Emoticons disabled.\nUse right click to select an icon set."
+	ENABLE_EMOTICONS, // "Enable emoticons"
+	SELECT_EMOTICON_PACKS, // "Select emoticon packs"
 	SEARCH_HIT_INFO, // "%1% on %2% searched for %3%: found %4%"
 	SEARCH_HIT_MULTIPLE, // "%1% results, including %2%"
 	SEARCH_HIT_IGNORED, // "%1% on %2% searched for %3%: ignored"

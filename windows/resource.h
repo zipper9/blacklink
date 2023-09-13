@@ -130,6 +130,7 @@
 #define IDD_INSERT_LINK                 365
 #define IDD_SEARCH_URL                  366
 #define IDD_SEARCH_URLS_PAGE            367
+#define IDD_EMOTICON_PACKS              368
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_GROUP_TEMPLATES             1002
@@ -1215,7 +1216,6 @@
 #define IDC_USER_COMMAND                4000
 #define IDC_DOWNLOAD_TO_FAV             4500
 #define IDC_DOWNLOADDIR_TO_FAV          5000
-#define IDC_EMOMENU                     5500
 #define IDC_COPY                        6000
 #define IDC_LOCATE_FILE_IN_QUEUE        6100
 #define IDC_OPEN_MY_LIST                6200
@@ -1253,7 +1253,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        364
+#define _APS_NEXT_RESOURCE_VALUE        370
 #define _APS_NEXT_COMMAND_VALUE         7613
 #define _APS_NEXT_CONTROL_VALUE         1985
 #define _APS_NEXT_SYMED_VALUE           2423

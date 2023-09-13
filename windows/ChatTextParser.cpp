@@ -5,8 +5,11 @@
 #include "../client/MagnetLink.h"
 #include "../client/Util.h"
 
+ChatTextParser chatTextParser;
+
 static const tstring badUrlChars(_T("\r\n \"<>[]"));
 static const tstring urlDelimChars(_T(",.;!?"));
+static const tstring objectReplacement(1, HIDDEN_TEXT_SEP);
 
 static const tstring linkPrefixes[] =
 {
@@ -32,14 +35,6 @@ static const tstring linkPrefixes[] =
 static const int LINK_TYPE_MAGNET = 0;
 static const int LINK_TYPE_HTTP   = 6;
 static const int LINK_TYPE_WWW    = _countof(linkPrefixes)-1;
-
-struct SubstringInfo
-{
-	uint64_t value;
-	uint64_t mask;
-};
-
-static SubstringInfo substringInfo[_countof(linkPrefixes)];
 
 #ifdef BL_UI_FEATURE_BB_CODES
 static const tstring bbCodes[] =
@@ -70,69 +65,47 @@ static int getLinkType(const tstring& link)
 }
 #endif
 
-static void makeSubstringInfo()
+void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool formatBBCodes, unsigned maxEmoticons)
 {
-	for (int i = 0; i < _countof(linkPrefixes); ++i)
-	{
-		uint64_t mask = std::numeric_limits<uint64_t>::max();
-		uint64_t val = 0;
-		const TCHAR* c = linkPrefixes[i].data();
-		size_t len = linkPrefixes[i].length();
-		if (len > 8)
-		{
-			c += len - 8;
-			len = 8;
-		}
-		else
-			mask >>= (8 - len) * 8;
-		for (size_t i = 0; i < len; ++i)
-			val = val<<8 | (uint8_t) c[i];
-		substringInfo[i].mask = mask;
-		substringInfo[i].value = val;
-	}
-}
-
-void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool formatBBCodes)
-{
-	static std::atomic_bool substringInfoInitialized = false;
-	if (!substringInfoInitialized)
-	{
-		makeSubstringInfo();
-		substringInfoInitialized = true;
-	}
-
+	ASSERT_MAIN_THREAD();
 	links.clear();
-	uint64_t hash = 0;
-	bool inUrl = false;
 #ifdef BL_UI_FEATURE_BB_CODES
 	tags.clear();
-	tstring tagData;
-	tstring::size_type tagStart = tstring::npos;
 	TagItem ti;
+#endif
+#ifdef BL_UI_FEATURE_EMOTICONS
+	emoticons.clear();
 #endif
 	LinkItem li;
 	li.start = tstring::npos;
 	TCHAR linkPrevChar = 0;
 	int ipv6Link = 0;
-	for (tstring::size_type i = 0; i < text.length(); ++i)
+	StringSetSearch::SearchContext ctx;
+	ctx.setIgnoreCase(true);
+	tstring::size_type i = 0;
+	while (i < text.length())
 	{
-		TCHAR c = text[i];
-		if (c >= _T('A') && c <= _T('Z')) c = c - _T('A') + _T('a');
-		hash = hash << 8 | (uint8_t) c;
 		if (li.start != tstring::npos)
 		{
+			TCHAR c = text[i];
+			if (c >= _T('A') && c <= _T('Z')) c = c - _T('A') + _T('a');
 			if (c == _T('[') && ipv6Link == 0 && i-li.start <= 8 && text[i-1] == _T('/'))
 			{
 				ipv6Link = 1;
+				i++;
 				continue;
 			}
 			if (c == _T(']') && ipv6Link == 1)
 			{
 				ipv6Link = 2;
+				i++;
 				continue;
 			}
 			if (badUrlChars.find(c) == tstring::npos)
+			{
+				i++;
 				continue;
+			}
 			li.end = i;
 			TCHAR pairChar = 0;
 			switch (linkPrevChar)
@@ -147,96 +120,104 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 			links.push_back(li);
 			li.start = tstring::npos;
 			ipv6Link = 0;
-		}
-#ifdef BL_UI_FEATURE_BB_CODES
-		if (c == _T('[') && formatBBCodes)
-		{
-			tagStart = i;
-			tagData.clear();
+			i = li.end;
 			continue;
 		}
-		if (c == _T(']'))
+		ctx.reset(ss, i);
+		if (!ctx.search(text, ss)) break;
+		i = ctx.getCurrentPos();
+		uint64_t data = ctx.getCurrentData();
+		int type = data & 3;
+#ifdef BL_UI_FEATURE_BB_CODES
+		if (type == TYPE_BBCODE && formatBBCodes)
 		{
-			if (!tagData.empty())
+			tstring::size_type tagStart = i - 1;
+			bool isClosing;
+			int code = processBBCode(text, i, isClosing);
+			if (code != -1)
 			{
-				if (tagData[0] == _T('/'))
+				if (isClosing)
 				{
-					tagData.erase(0, 1);
-					int type = findBBCode(tagData);
-					if (type == BBCODE_URL) inUrl = false;
-					if (type != -1)
+					int index = tags.size()-1;
+					bool urlProcessed = false;
+					while (index >= 0)
 					{
-						int index = tags.size()-1;
-						bool urlProcessed = false;
-						while (index >= 0)
+						if (tags[index].type == code && tags[index].closeTagStart == tstring::npos)
 						{
-							if (tags[index].type == type && tags[index].closeTagStart == tstring::npos)
+							tags[index].closeTagStart = tagStart;
+							tags[index].closeTagEnd = i;
+							if (code == BBCODE_URL)
 							{
-								tags[index].closeTagStart = tagStart;
-								tags[index].closeTagEnd = i + 1;
-								if (type == BBCODE_URL)
-								{
-									urlProcessed = true;
-									break;
-								}
+								urlProcessed = true;
+								break;
 							}
-							index--;
 						}
-						if (urlProcessed)
-						{
-							LinkItem li;
-							li.start = tags[index].openTagEnd;
-							li.end = tags[index].closeTagStart;
-							tstring url;
-							tags[index].getUrl(text, url, li.updatedText);
-							if (li.updatedText.empty()) li.updatedText = url;
-							li.type = getLinkType(url);
-							if (li.type == -1 || li.type == LINK_TYPE_WWW)
-							{
-								li.type = LINK_TYPE_HTTP;
-								url.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
-							}
-							li.updatedText += HIDDEN_TEXT_SEP;
-							li.updatedText += url;
-							li.updatedText += HIDDEN_TEXT_SEP;
-							li.hiddenTextLen = url.length() + 2;
-							links.emplace_back(std::move(li));
-						}
+						index--;
 					}
-					tagStart = tstring::npos;
-					tagData.clear();
-					continue;
+					if (urlProcessed)
+					{
+						LinkItem li;
+						li.start = tags[index].openTagEnd;
+						li.end = tags[index].closeTagStart;
+						tstring url;
+						tags[index].getUrl(text, url, li.updatedText);
+						if (li.updatedText.empty()) li.updatedText = url;
+						li.type = getLinkType(url);
+						if (li.type == -1 || li.type == LINK_TYPE_WWW)
+						{
+							li.type = LINK_TYPE_HTTP;
+							url.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
+						}
+						li.updatedText += HIDDEN_TEXT_SEP;
+						li.updatedText += url;
+						li.updatedText += HIDDEN_TEXT_SEP;
+						li.hiddenTextLen = url.length() + 2;
+						links.emplace_back(std::move(li));
+					}
 				}
-				const CHARFORMAT2* prevFmt = getPrevFormat();
-				if (!prevFmt) prevFmt = &cf;
-				if (processTag(ti, tagData, tagStart, i + 1, *prevFmt))
-					tags.push_back(ti);
+				else
+				{
+					const CHARFORMAT2* prevFmt = getPrevFormat();
+					if (!prevFmt) prevFmt = &cf;
+					if (processStartTag(ti, text, tagStart, i, *prevFmt))
+						tags.push_back(ti);
+				}
 			}
 			continue;
 		}
-		if (tagStart != tstring::npos && (tagData.length() < 32 || inUrl))
-		{
-			tagData += c;
-			if (tagData.length() == 4 && tagData == _T("url=")) inUrl = true;
-		}
 #endif
-		if (!inUrl)
-			for (int j = 0; j < _countof(linkPrefixes); ++j)
-				if ((hash & substringInfo[j].mask) == substringInfo[j].value)
+		if (type == TYPE_LINK)
+		{
+			int index = data >> 2;
+			tstring::size_type len = linkPrefixes[index].length();
+			dcassert(i >= len);
+			tstring::size_type start = i - len;
+			if (start == 0 || !_istalpha(text[start-1]))
+			{
+				li.type = index;
+				li.start = start;
+				li.end = tstring::npos;
+				li.hiddenTextLen = 0;
+				linkPrevChar = i == 0 ? 0 : text[i-1];
+				i = start;
+			}
+			continue;
+		}
+#ifdef BL_UI_FEATURE_EMOTICONS
+		if (type == TYPE_EMOTICON && (unsigned) emoticons.size() < maxEmoticons)
+		{
+			const auto& v = keyToText[(uint32_t) (data >> 2)];
+			dcassert(!v.empty());
+			tstring::size_type len = v.front()->getText().length();
+			dcassert(i >= len);
+			for (Emoticon* e : v)
+				if (!text.compare(i - len, len, e->getText()))
 				{
-					const tstring& link = linkPrefixes[j];
-					tstring::size_type start = i+1-link.length();
-					if (i >= link.length()-1 && text.compare(start, link.length(), link) == 0 &&
-					    (start == 0 || !_istalpha(text[start-1])))
-					{
-						li.type = j;
-						li.start = start;
-						li.end = tstring::npos;
-						li.hiddenTextLen = 0;
-						linkPrevChar = start == 0 ? 0 : text[start-1];
-					}
+					emoticons.emplace_back(EmoticonItem{e, i - len, i});
 					break;
 				}
+		}
+#endif
 	}
 
 	if (li.start != tstring::npos)
@@ -248,6 +229,7 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 
 void ChatTextParser::processText(tstring& text)
 {
+	ASSERT_MAIN_THREAD();
 #ifdef BL_UI_FEATURE_BB_CODES
 	for (size_t i = 0; i < tags.size(); ++i)
 	{
@@ -257,12 +239,12 @@ void ChatTextParser::processText(tstring& text)
 		{
 			tstring::size_type start = ti.openTagStart;
 			tstring::size_type len = ti.openTagEnd - ti.openTagStart;
-			applyShift(i + 1, 0, start, -(int) len);
+			applyShift(TYPE_BBCODE, i + 1, start, -(int) len);
 			text.erase(start, len);
 
 			start = ti.closeTagStart;
 			len = ti.closeTagEnd - ti.closeTagStart;
-			applyShift(i + 1, 0, start, -(int) len);
+			applyShift(TYPE_BBCODE, i + 1, start, -(int) len);
 			text.erase(start, len);
 		}
 	}
@@ -276,10 +258,21 @@ void ChatTextParser::processText(tstring& text)
 		{
 			tstring::size_type len = li.end - li.start;
 			int shift = (int) li.updatedText.length() - (int) len;
-			applyShift(0, i, li.start, shift);
+			applyShift(TYPE_LINK, i, li.start, shift);
 			text.replace(li.start, len, li.updatedText);
 		}
 	}
+
+#ifdef BL_UI_FEATURE_EMOTICONS
+	for (size_t i = 0; i < emoticons.size(); ++i)
+	{
+		EmoticonItem& ei = emoticons[i];
+		tstring::size_type len = ei.emoticon->getText().length();
+		int shift = 1 - (int) len;
+		applyShift(TYPE_EMOTICON, i, ei.start, shift);
+		text.replace(ei.start, len, objectReplacement);
+	}
+#endif
 }
 
 void ChatTextParser::findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const
@@ -301,8 +294,36 @@ void ChatTextParser::findSubstringAvoidingLinks(tstring::size_type& pos, tstring
 }
 
 #ifdef BL_UI_FEATURE_BB_CODES
-bool ChatTextParser::processTag(ChatTextParser::TagItem& ti, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt)
+int ChatTextParser::processBBCode(const tstring& text, tstring::size_type& pos, bool& isClosing)
 {
+	isClosing = false;
+	if (pos + 2 >= text.length()) return -1;
+	if (text[pos] == _T('/'))
+	{
+		isClosing = true;
+		pos++;
+	}
+	tstring::size_type endPos = text.find_first_of(_T(" ]="), pos);
+	if (endPos == tstring::npos || endPos - pos > 8) return -1;
+	TCHAR endChar = text[endPos];
+	if (endChar == _T(' ') || (isClosing && endChar == _T('='))) return -1;
+	tstring tag = text.substr(pos, endPos - pos);
+	Text::asciiMakeLower(tag);
+	int code = findBBCode(tag);
+	if (code == -1 || (code != BBCODE_URL && code != BBCODE_COLOR && endChar != _T(']'))) return -1;
+	if (endChar == _T('='))
+	{
+		endPos = text.find(_T(']'), endPos + 1);
+		if (endPos == tstring::npos) return -1;
+	}
+	pos = endPos + 1;
+	return code;
+}
+
+bool ChatTextParser::processStartTag(ChatTextParser::TagItem& ti, const tstring& text, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt)
+{
+	tstring tag = text.substr(start + 1, end - start - 2);
+	Text::asciiMakeLower(tag);
 	if (tag.compare(0, 6, _T("color=")) == 0)
 	{
 		ti.type = BBCODE_COLOR;
@@ -361,7 +382,7 @@ bool ChatTextParser::processTag(ChatTextParser::TagItem& ti, tstring& tag, tstri
 
 const CHARFORMAT2* ChatTextParser::getPrevFormat() const
 {
-	for (auto i = tags.rbegin(); i != tags.rend(); i++)
+	for (auto i = tags.rbegin(); i != tags.rend(); ++i)
 	{
 		const TagItem& ti = *i;
 		if (ti.closeTagStart == tstring::npos) return &ti.fmt;
@@ -436,10 +457,10 @@ static inline void shiftPos(tstring::size_type& pos, tstring::size_type movePos,
 		pos += shift;
 }
 
-void ChatTextParser::applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift)
+void ChatTextParser::applyShift(int what, size_t startIndex, tstring::size_type start, int shift)
 {
 #ifdef BL_UI_FEATURE_BB_CODES
-	for (size_t j = tagsStartIndex; j < tags.size(); ++j)
+	for (size_t j = what == TYPE_BBCODE ? startIndex : 0; j < tags.size(); ++j)
 	{
 		shiftPos(tags[j].openTagStart, start, shift);
 		shiftPos(tags[j].openTagEnd, start, shift);
@@ -450,11 +471,18 @@ void ChatTextParser::applyShift(size_t tagsStartIndex, size_t linksStartIndex, t
 		shiftPos(tags[j].closeTagEnd, start, shift);
 	}
 #endif
-	for (size_t j = linksStartIndex; j < links.size(); ++j)
+	for (size_t j = what == TYPE_LINK ? startIndex : 0; j < links.size(); ++j)
 	{
 		shiftPos(links[j].start, start, shift);
 		shiftPos(links[j].end, start, shift);
 	}
+#ifdef BL_UI_FEATURE_EMOTICONS
+	for (size_t j = what == TYPE_EMOTICON ? startIndex : 0; j < emoticons.size(); ++j)
+	{
+		shiftPos(emoticons[j].start, start, shift);
+		shiftPos(emoticons[j].end, start, shift);
+	}
+#endif
 }
 
 void ChatTextParser::clear()
@@ -463,6 +491,9 @@ void ChatTextParser::clear()
 	tags.clear();
 #endif
 	links.clear();
+#ifdef BL_UI_FEATURE_EMOTICONS
+	emoticons.clear();
+#endif
 }
 
 #ifdef BL_UI_FEATURE_BB_CODES
@@ -477,5 +508,53 @@ void ChatTextParser::TagItem::getUrl(const tstring& text, tstring& url, tstring&
 		url = std::move(description);
 		description.clear();
 	}
+}
+#endif
+
+void ChatTextParser::initSearch()
+{
+	ss.clear();
+#ifdef BL_UI_FEATURE_BB_CODES
+	ss.addString(_T("["), TYPE_BBCODE);
+#endif
+	for (int i = 0; i < _countof(linkPrefixes); ++i)
+		ss.addString(linkPrefixes[i], TYPE_LINK | i << 2);
+#ifdef BL_UI_FEATURE_EMOTICONS
+	textToKey.clear();
+	keyToText.clear();
+	nextKey = 0;
+	if (emtConfig)
+	{
+		for (const auto& pack : emtConfig->getPacks())
+			for (Emoticon* e : pack->getSortedEmoticons())
+			{
+				tstring text = Text::toLower(e->getText());
+				uint32_t key = addKey(text, e);
+				if (key)
+					ss.addString(text, (uint64_t) key << 2 | TYPE_EMOTICON);
+			}
+	}
+#endif
+}
+
+#ifdef BL_UI_FEATURE_EMOTICONS
+uint32_t ChatTextParser::addKey(const tstring& text, Emoticon* emoticon)
+{
+	uint32_t key;
+	auto i = textToKey.find(text);
+	if (i == textToKey.end())
+	{
+		key = ++nextKey;
+		textToKey.insert(make_pair(text, key));
+	}
+	else
+		key = i->second;
+	auto& v = keyToText[key];
+	for (const Emoticon* e : v)
+		if (e->getText() == emoticon->getText())
+			return 0;
+	dcassert(v.empty() || v.back()->getText().length() == emoticon->getText().length());
+	v.push_back(emoticon);
+	return key;
 }
 #endif

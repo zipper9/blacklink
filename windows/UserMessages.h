@@ -2,8 +2,9 @@
 #define USER_MESSAGES_H_
 
 #include "../client/w.h"
+#include "../client/FeatureDef.h"
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 static const UINT WM_ANIM_CHANGE_FRAME  = WM_USER + 1;
 static const UINT WMU_PASTE_TEXT        = WM_USER + 108;
 #endif

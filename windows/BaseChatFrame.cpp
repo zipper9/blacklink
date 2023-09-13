@@ -213,7 +213,8 @@ LRESULT BaseChatFrame::onInsertLink(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWn
 	tstring text;
 	WinUtil::getWindowText(ctrlMessage, text);
 	ChatTextParser textParser;
-	textParser.parseText(text, Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE], true);
+	textParser.initSearch();
+	textParser.parseText(text, Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE], true, 0);
 	DlgInsertLink dlg;
 	for (const auto& tag : textParser.getTags())
 		if (tag.type == ChatTextParser::BBCODE_URL && insertPos >= (int) tag.openTagStart && insertPos <= (int) tag.closeTagEnd)

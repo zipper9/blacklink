@@ -18,24 +18,21 @@
 
 #include "stdafx.h"
 #include "MessagePanel.h"
-#include "Resource.h"
+#include "WinUtil.h"
 #include "../client/ClientManager.h"
 #include "../client/CompatibilityManager.h"
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
+#include "../client/SimpleStringTokenizer.h"
 #include "Emoticons.h"
 #include "EmoticonsDlg.h"
-#include "WinUtil.h"
+#include "EmoticonPacksDlg.h"
+#include "ChatTextParser.h"
 #endif
 
 static const int BUTTON_WIDTH = 26;
 static const int BUTTON_HEIGHT = 26;
 static const int EDIT_HEIGHT = 22;
-
-#ifdef IRAINMAN_INCLUDE_SMILE
-OMenu MessagePanel::g_emoMenu;
-int MessagePanel::emoMenuItemCount = 0;
-#endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
 	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false),
@@ -63,7 +60,7 @@ void MessagePanel::initPanel(HWND hWnd)
 
 	createButton(BUTTON_SEND, IconBitmaps::EDITOR_SEND, IDC_SEND_MESSAGE, ResourceManager::BBCODE_PANEL_SENDMESSAGE);
 	createButton(BUTTON_MULTILINE, IconBitmaps::EDITOR_MULTILINE, IDC_MESSAGEPANEL, ResourceManager::BBCODE_PANEL_MESSAGEPANELSIZE);
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	createButton(BUTTON_EMOTICONS, IconBitmaps::EDITOR_EMOTICON, IDC_EMOT, ResourceManager::BBCODE_PANEL_EMOTICONS);
 #endif
 	createButton(BUTTON_TRANSCODE, IconBitmaps::EDITOR_TRANSCODE, IDC_TRANSCODE, ResourceManager::BBCODE_PANEL_TRANSLATE);
@@ -133,7 +130,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 	{
 		updateButton(dwp, BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON), BUTTON_SEND, rc);
 		updateButton(dwp, BOOLSETTING(SHOW_MULTI_CHAT_BTN), BUTTON_MULTILINE, rc);
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 		updateButton(dwp, BOOLSETTING(SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
 #endif
 #ifdef BL_UI_FEATURE_BB_CODES
@@ -166,7 +163,7 @@ int MessagePanel::getPanelWidth() const
 	if (disableChat) return width;
 	int count = 0;
 	if (BOOLSETTING(SHOW_MULTI_CHAT_BTN)) ++count;
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	if (BOOLSETTING(SHOW_EMOTICONS_BTN)) ++count;
 #endif
 	if (BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON)) ++count;
@@ -211,7 +208,7 @@ void MessagePanel::setCCPMState(int state)
 	}
 }
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 void MessagePanel::pasteText(const tstring& text)
 {
 	int start, end;
@@ -267,99 +264,75 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 	}
 	return 0;
 }
-
-LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
-{
-	tooltip.Activate(FALSE);
-	TCHAR buf[256];
-	CMenuItemInfo mii;
-	mii.fMask = MIIM_STRING;
-	mii.cch = _countof(buf);
-	mii.dwTypeData = buf;
-	if (!g_emoMenu.GetMenuItemInfo(wID, FALSE, &mii))
-		return -1;
-	string emoticonsFile = Text::fromT(buf);
-	if (SETTING(EMOTICONS_FILE) != emoticonsFile)
-	{
-		SET_SETTING(EMOTICONS_FILE, emoticonsFile);
-		if (!EmoticonPack::reCreate())
-			return -1;
-	}
-	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
-		tooltip.Activate(TRUE);
-	return 0;
-}
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif // BL_UI_FEATURE_EMOTICONS
 
 BOOL MessagePanel::onContextMenu(POINT& pt, WPARAM& wParam)
 {
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	if (reinterpret_cast<HWND>(wParam) == ctrlButtons[BUTTON_EMOTICONS])
 	{
-		showEmoticonsMenu(g_emoMenu, pt, m_hWnd, IDC_EMOMENU, emoMenuItemCount);
+		showEmoticonsConfig(pt, m_hWnd);
 		return TRUE;
 	}
 #endif
 	return FALSE;
 }
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-void MessagePanel::showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count)
+#ifdef BL_UI_FEATURE_EMOTICONS
+static string formatNameList(const StringList& sl, size_t first)
 {
-	count = 0;
-	if (menu.m_hMenu)
-		menu.DestroyMenu();
-	menu.SetOwnerDraw(OMenu::OD_NEVER);
-	menu.CreatePopupMenu();
-	CMenuItemInfo mii;
-	mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_STATE;
-	mii.wID = idc;
-	mii.fType = MFT_STRING | MFT_RADIOCHECK;
-	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(DISABLED));
-	mii.fState = MFS_ENABLED | (SETTING(EMOTICONS_FILE) == "Disabled" ? MFS_CHECKED : 0);
-	int menuPos = 0;
-	menu.InsertMenuItem(menuPos++, TRUE, &mii);
-
-	WIN32_FIND_DATA data;
-	HANDLE hFind = FindFirstFileEx(Text::toT(Util::getEmoPacksPath() + "*.xml").c_str(),
-	                               CompatibilityManager::findFileLevel,
-	                               &data,
-	                               FindExSearchNameMatch,
-	                               nullptr,
-	                               0);
-	if (hFind != INVALID_HANDLE_VALUE)
+	string s;
+	for (size_t i = first; i < sl.size(); ++i)
 	{
-		do
-		{
-			tstring name = data.cFileName;
-			tstring::size_type i = name.rfind('.');
-			name.erase(i);
-			count++;
-
-			if (menuPos == 1)
-			{
-				mii.fType = MFT_SEPARATOR;
-				mii.fState = MFS_ENABLED;
-				mii.wID = 0;
-				menu.InsertMenuItem(menuPos++, TRUE, &mii);
-				mii.fType = MFT_STRING | MFT_RADIOCHECK;
-			}
-
-			mii.wID = idc + count;
-			mii.dwTypeData = const_cast<TCHAR*>(name.c_str());
-			mii.fState = MFS_ENABLED;
-			if (name == Text::toT(SETTING(EMOTICONS_FILE)))
-				mii.fState |= MFS_CHECKED;
-			menu.InsertMenuItem(menuPos++, TRUE, &mii);
-		}
-		while (FindNextFile(hFind, &data));
-		FindClose(hFind);
+		if (!s.empty()) s += ';';
+		s += sl[i];
 	}
-	if (!count)
+	return s;
+}
+
+void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
+{
+	StringList names;
+	const string& mainFile = SETTING(EMOTICONS_FILE);
+	bool enabled = true;
+	if (mainFile == "Disabled")
+		enabled = false;
+	else if (!mainFile.empty())
+		names.push_back(mainFile);
+	SimpleStringTokenizer<char> st(SETTING(ADDITIONAL_EMOTICONS), ';');
+	string token;
+	while (st.getNextNonEmptyToken(token))
+		names.push_back(token);
+
+	if (names.empty())
 	{
 		MessageBox(hWnd, CTSTRING(EMOTICONS_NOT_AVAILABLE), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 		return;
 	}
-	menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, hWnd);
+
+	EmoticonPacksDlg dlg;
+	dlg.enabled = enabled;
+	for (const string& name : names)
+		dlg.items.push_back(EmoticonPacksDlg::Item{Text::toT(name), true});
+	if (dlg.DoModal(hWnd) != IDOK) return;
+
+	names.clear();
+	for (const auto& item : dlg.items)
+		if (item.enabled) names.push_back(Text::fromT(item.name));
+
+	if (dlg.enabled && !names.empty())
+	{
+		emoticonPackList.setConfig(names);
+		SET_SETTING(EMOTICONS_FILE, names[0]);
+		SET_SETTING(ADDITIONAL_EMOTICONS, formatNameList(names, 1));
+	}
+	else
+	{
+		SET_SETTING(EMOTICONS_FILE, "Disabled");
+		SET_SETTING(ADDITIONAL_EMOTICONS, formatNameList(names, 0));
+		names.clear();
+		emoticonPackList.setConfig(names);
+	}
+	chatTextParser.initSearch();
 }
 #endif

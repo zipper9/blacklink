@@ -1,19 +1,17 @@
-#include "stdafx.h"
+#include <stdafx.h>
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-#include "../client/Util.h"
-#include "../client/SimpleXML.h"
-#include "../client/LogManager.h"
-#include "../client/SettingsManager.h"
-#include "../GdiOle/GDIImageOle.h"
+#ifdef BL_UI_FEATURE_EMOTICONS
+
 #include "Emoticons.h"
-#include <boost/algorithm/string/replace.hpp>
+#include "../client/File.h"
+#include "../client/SimpleXML.h"
+#include "../client/Util.h"
+#include "../client/LogManager.h"
+#include "../GdiOle/GDIImageOle.h"
 
-#ifdef FLYLINKDC_USE_ZIP_EMOTIONS
-#include "../client/zip/zip.h"
-#endif
+EmoticonPackList emoticonPackList;
 
-Emoticon::Emoticon() :	
+Emoticon::Emoticon() :
 	imageGif(nullptr),
 	imageBmp(nullptr),
 	alias(nullptr),
@@ -38,50 +36,7 @@ string Emoticon::getBmpPath() const
 	return Util::getEmoPacksPath() + fileBmp;
 }
 
-string Emoticon::unzipIcons(const string& fileName)
-{
-#ifdef FLYLINKDC_USE_ZIP_EMOTIONS
-	//struct buffer_t {
-	//  char *data;
-	//  size_t size;
-	//};
-	string l_result;
-	StepLogger sl("[Unzip EmoPacks.zip] " + fileName);
-	//buffer_t buf = {0};
-	const string l_path = Util::getEmoPacksPath() + "EmoPacks.zip";
-	const string l_tmp_path = Util::getTempPath(); // +"FlylinkDC++EmoPacks";
-	//File::ensureDirectory(l_tmp_path); // TODO first
-	auto l_copy_path = m_EmotionBmp;
-	boost::replace_all(l_copy_path, "\\", "-");
-	const string l_path_target = l_tmp_path + l_copy_path;
-	zip_t *zip = zip_open(l_path.c_str(), 0, 'r');
-	if (zip)
-	{
-		auto l_copy = m_EmotionBmp;
-		boost::replace_all(l_copy, "\\", "/");
-		if (!zip_entry_open(zip, l_copy.c_str()))
-		{
-			if (!zip_entry_fread(zip, l_path_target.c_str()))
-			{
-				l_result = l_path_target;
-			}
-			zip_entry_close(zip);
-		}
-		zip_close(zip);
-	}
-	
-	//assert(0 == zip_entry_extract(zip, on_extract, &buf));
-	
-//		free(buf.data);
-//		buf.data = NULL;
-//		buf.size = 0;
-	return l_result;
-#else
-	return fileName;
-#endif // FLYLINKDC_USE_ZIP_EMOTIONS
-}
-
-void Emoticon::setIcon(const tstring& text, const string& iconBmpFile, const string& iconGifFile)
+void Emoticon::setIcon(const tstring& text, const string& iconBmpFile, const string& iconGifFile) noexcept
 {
 	this->text = text;
 	fileBmp = iconBmpFile;
@@ -117,7 +72,7 @@ CGDIImage* Emoticon::getImage(int flags, HWND callbackWnd, UINT callbackMsg)
 void Emoticon::tryLoadGif(HWND callbackWnd, UINT callbackMsg)
 {
 	if (imageGif || fileGif.empty() || (loadingError & MASK_GIF)) return;
-	const string path = unzipIcons(getGifPath());
+	const string path = getGifPath();
 	imageGif = CGDIImage::createInstance(Text::toT(path).c_str());
 	if (imageGif->isInitialized())
 	{
@@ -133,7 +88,7 @@ void Emoticon::tryLoadGif(HWND callbackWnd, UINT callbackMsg)
 void Emoticon::tryLoadBmp(HWND callbackWnd, UINT callbackMsg)
 {
 	if (imageBmp || fileBmp.empty() || (loadingError & MASK_BMP)) return;
-	const string path = unzipIcons(getBmpPath());
+	const string path = getBmpPath();
 	imageBmp = CGDIImage::createInstance(Text::toT(path).c_str());
 	if (imageBmp->isInitialized())
 	{
@@ -174,58 +129,34 @@ IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, 
 	return nullptr;
 }
 
-void Emoticon::checkDuplicate(Emoticon* prev)
+void Emoticon::checkDuplicate(Emoticon* prev) noexcept
 {
 	if (fileBmp == prev->fileBmp && fileGif == prev->fileGif)
 		alias = prev->alias ? prev->alias : prev;
 }
 
-EmoticonPack* EmoticonPack::current = nullptr;
-
-void EmoticonPack::destroy()
-{
-	delete current;
-	current = nullptr;
-}
-
-bool EmoticonPack::reCreate()
-{
-	destroy();
-	current = new EmoticonPack;
-	if (!current->initialize())
-	{
-		delete current;
-		current = nullptr;
-		SET_SETTING(EMOTICONS_FILE, "Disabled");
-		dcassert(FALSE);
-		return false;
-	}
-	return true;
-}
-
-EmoticonPack::~EmoticonPack()
+EmoticonPack::~EmoticonPack() noexcept
 {
 	cleanup();
 }
 
-void EmoticonPack::cleanup()
+void EmoticonPack::cleanup() noexcept
 {
 	for_each(emoticons.begin(), emoticons.end(), [](auto p) { delete p; });
 	emoticons.clear();
 	sortedEmoticons.clear();
-	nameSet.clear();
-	packSize = 0;
 }
 
-bool EmoticonPack::loadXMLFile(const string& name)
+bool EmoticonPack::loadXMLFile(const string& name) noexcept
 {
 	const string path = Util::getEmoPacksPath() + name + ".xml";
-	if (!File::isExist(path))
-		return true;
+	uint64_t timestamp = File::getTimeStamp(path);
+	if (!timestamp) return false;
 	try
 	{
+		boost::unordered_set<string> nameSet;
 		SimpleXML xml;
-		xml.fromXML(File(path, File::READ, File::OPEN).read());
+		xml.fromXML(File(path, File::READ, File::OPEN, false).read());
 		emoticons.reserve(200);
 		if (xml.findChild("Emoticons"))
 		{
@@ -246,7 +177,6 @@ bool EmoticonPack::loadXMLFile(const string& name)
 					Emoticon* emoticon = new Emoticon();
 					emoticon->setIcon(Text::toT(iconText), iconBmpFile, iconGifFile);
 					emoticon->setHidden(xml.getBoolChildAttrib("Hidden"));
-					packSize++;
 					if (!emoticons.empty()) emoticon->checkDuplicate(emoticons.back());
 					emoticons.push_back(emoticon);
 				}
@@ -259,35 +189,23 @@ bool EmoticonPack::loadXMLFile(const string& name)
 		dcdebug("EmoticonPack::loadXMLFile: %s\n", e.getError().c_str());
 		return false;
 	}
+	this->name = name;
+	this->timestamp = timestamp;
+	initialize();
 	return true;
 }
 
-static bool sortFunc(const Emoticon* l, const Emoticon* r)
+static bool sortFunc(const Emoticon* l, const Emoticon* r) noexcept
 {
 	const tstring& lt = l->getText();
 	const tstring& rt = r->getText();
-	if (lt.length() != rt.length()) 
+	if (lt.length() != rt.length())
 		return lt.length() > rt.length();
 	return lt.compare(0, rt.length(), rt) > 0;
 }
 
-bool EmoticonPack::initialize()
+void EmoticonPack::initialize() noexcept
 {
-	static const string defName = "FlylinkSmilesInternational";
-	static const string defNameOld = "FlylinkSmiles";
-
-	setUseEmoticons(false);
-	cleanup();
-	const string currentName = SETTING(EMOTICONS_FILE);
-	if (currentName == "Disabled")
-		return true;
-	loadXMLFile(currentName);
-	size_t savedSize = packSize;
-	if (currentName != defName)
-		loadXMLFile(defName);
-	if (currentName != defNameOld)
-		loadXMLFile(defNameOld);
-	packSize = savedSize;
 	sortedEmoticons = emoticons;
 	std::sort(sortedEmoticons.begin(), sortedEmoticons.end(), sortFunc);
 
@@ -299,9 +217,44 @@ bool EmoticonPack::initialize()
 		dcdebug("%s\n", text.c_str());
 	}
 #endif
-
-	setUseEmoticons(true);
-	return true;
 }
 
-#endif  // IRAINMAN_INCLUDE_SMILE
+void EmoticonPackList::clear() noexcept
+{
+	for (EmoticonPack* pack : packs) delete pack;
+	packs.clear();
+}
+
+void EmoticonPackList::setConfig(const StringList& names) noexcept
+{
+	vector<EmoticonPack*> newPacks;
+	for (const string& name : names)
+	{
+		const string path = Util::getEmoPacksPath() + name + ".xml";
+		bool found = false;
+		for (EmoticonPack* &oldPack : packs)
+			if (oldPack && oldPack->getName() == name)
+			{
+				uint64_t timestamp = File::getTimeStamp(path);
+				if (oldPack->getTimeStamp() == timestamp)
+				{
+					newPacks.push_back(oldPack);
+					oldPack = nullptr;
+					found = true;
+				}
+				break;
+			}
+		if (!found)
+		{
+			EmoticonPack* newPack = new EmoticonPack;
+			if (newPack->loadXMLFile(name))
+				newPacks.push_back(newPack);
+			else
+				delete newPack;
+		}
+	}
+	for_each(packs.begin(), packs.end(), [](auto p) { delete p; });
+	packs = std::move(newPacks);
+}
+
+#endif // BL_UI_FEATURE_EMOTICONS

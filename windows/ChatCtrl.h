@@ -31,7 +31,7 @@ class Identity;
 class Client;
 
 class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	, public IRichEditOleCallback
 #endif
 {
@@ -127,16 +127,14 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		tstring currentNeedle;
 		DWORD currentFindFlags;
 
-		ChatTextParser textParser;
-
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 		IStorage* pStorage;
 #endif
 
 		void initRichEditOle();
-		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
-		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles, bool highlightNick);
-		void appendText(tstring& text, const Message& message, unsigned maxSmiles, bool highlightNick);
+		void appendTextInternal(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick);
+		void appendTextInternal(tstring&& text, const Message& message, unsigned maxEmoticons, bool highlightNick);
+		void appendText(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick);
 		tstring getUrl(LONG start, LONG end, bool keepSelected);
 		tstring getUrl(const ENLINK* el, bool keepSelected);
 		tstring getUrlHiddenText(LONG end);
@@ -164,7 +162,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		static tstring g_sSelectedURL;
 		static string g_sSelectedHostname;
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 	protected:
 		volatile LONG refs;
 		
@@ -197,9 +195,8 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		                                                              CHARRANGE FAR * lpchrg,
 		                                                              HMENU FAR * lphmenu);
 	private:
-		bool outOfMemory;
 		unsigned totalEmoticons;
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif // BL_UI_FEATURE_EMOTICONS
 };
 
 #endif // CHAT_CTRL_H

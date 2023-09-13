@@ -152,7 +152,14 @@ static inline int asciiToLower(int c)
 	return c;
 }
 
-void asciiMakeLower(string& str) noexcept;
+template<typename string_type>
+void asciiMakeLower(string_type& str) noexcept
+{
+	auto s = &str[0];
+	size_t len = str.length();
+	for (size_t i = 0; i < len; i++)
+		s[i] = (typename string_type::value_type) asciiToLower(s[i]);
+}
 
 template<typename string_type>
 static bool isAsciiSuffix(const string_type& str, const string_type& suffix)
@@ -220,7 +227,6 @@ inline wchar_t toLower(wchar_t c) noexcept
 #endif
 }
 
-void asciiMakeLower(string& str) noexcept;
 void makeLower(wstring& str) noexcept;
 wstring toLower(const wstring& str) noexcept;
 wstring toLower(const wstring& str, wstring& tmp) noexcept;

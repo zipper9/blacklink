@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 #include "EmoticonsDlg.h"
 #include "Emoticons.h"
 #include "WinUtil.h"
@@ -43,11 +43,13 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	ShowWindow(SW_HIDE);
 	::EnableWindow(WinUtil::g_mainWnd, TRUE);
 
-	if (EmoticonPack::current)
+	const auto& packList = emoticonPackList.getPacks();
+	if (!packList.empty() && packList[0])
 	{
+		const EmoticonPack* pack = packList[0];
 		const int useAnimation = BOOLSETTING(SMILE_SELECT_WND_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : Emoticon::FLAG_NO_FALLBACK;
-		const vector<Emoticon*>& icons = EmoticonPack::current->getEmoticonsArray();
-		size_t packSize = EmoticonPack::current->getPackSize();
+		const vector<Emoticon*>& icons = pack->getEmoticons();
+		size_t packSize = icons.size();
 		size_t numberOfIcons = 0;
 		int sw = 0, sh = 0;
 		for (size_t i = 0; i < icons.size(); ++i)
@@ -167,7 +169,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		isError = true;
 		EndDialog(IDCANCEL);
 	}
-	
+
 	return 0;
 }
 
@@ -382,4 +384,4 @@ void CAnimatedButton::draw(HDC hdc)
 	}
 }
 
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif // BL_UI_FEATURE_EMOTICONS

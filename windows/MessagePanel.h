@@ -24,11 +24,11 @@
 #include <atlwin.h>
 #include <atlctrls.h>
 #include <atlcrack.h>
-
-#ifdef IRAINMAN_INCLUDE_SMILE
-#include "OMenu.h"
-#include "UserMessages.h"
 #include "resource.h"
+#include "../client/typedefs.h"
+
+#ifdef BL_UI_FEATURE_EMOTICONS
+#include "UserMessages.h"
 #endif
 
 #ifdef OSVER_WIN_XP
@@ -38,10 +38,9 @@
 class MessagePanel
 {
 		BEGIN_MSG_MAP(MessagePanel)
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 		MESSAGE_HANDLER(WMU_PASTE_TEXT, onPasteText)
 		COMMAND_ID_HANDLER(IDC_EMOT, onEmoticons)
-		COMMAND_RANGE_HANDLER(IDC_EMOMENU, IDC_EMOMENU + emoMenuItemCount, onEmoPackChange)
 #endif
 		END_MSG_MAP()
 
@@ -52,7 +51,7 @@ class MessagePanel
 		{
 			BUTTON_SEND,
 			BUTTON_MULTILINE,
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 			BUTTON_EMOTICONS,
 #endif
 			BUTTON_TRANSCODE,
@@ -81,7 +80,7 @@ class MessagePanel
 		void updatePanel(const CRect& rect);
 		void setCCPMState(int state);
 		int getPanelWidth() const;
-#ifdef IRAINMAN_INCLUDE_SMILE
+#ifdef BL_UI_FEATURE_EMOTICONS
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		void pasteText(const tstring& text);
@@ -104,15 +103,11 @@ class MessagePanel
 		ImageButton imageButtons[MAX_BUTTONS];
 #endif
 		CButton ctrlTransCodeBtn;
-#ifdef IRAINMAN_INCLUDE_SMILE
-		static OMenu g_emoMenu;
-		static int emoMenuItemCount;
-#endif
 		HWND m_hWnd;
 		int ccpmState;
 
-#ifdef IRAINMAN_INCLUDE_SMILE
-		static void showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count);
+#ifdef BL_UI_FEATURE_EMOTICONS
+		static void showEmoticonsConfig(const POINT& pt, HWND hWnd);
 		LRESULT onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 #endif
 		void createButton(int index, int image, int idc, ResourceManager::Strings caption);
