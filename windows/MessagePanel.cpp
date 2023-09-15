@@ -292,6 +292,13 @@ static string formatNameList(const StringList& sl, size_t first)
 
 void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
 {
+	EmoticonPacksDlg dlg;
+	if (!dlg.loadAvailablePacks())
+	{
+		MessageBox(hWnd, CTSTRING(EMOTICONS_NOT_AVAILABLE), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+		return;
+	}
+
 	StringList names;
 	const string& mainFile = SETTING(EMOTICONS_FILE);
 	bool enabled = true;
@@ -304,13 +311,6 @@ void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
 	while (st.getNextNonEmptyToken(token))
 		names.push_back(token);
 
-	if (names.empty())
-	{
-		MessageBox(hWnd, CTSTRING(EMOTICONS_NOT_AVAILABLE), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
-		return;
-	}
-
-	EmoticonPacksDlg dlg;
 	dlg.enabled = enabled;
 	for (const string& name : names)
 		dlg.items.push_back(EmoticonPacksDlg::Item{Text::toT(name), true});
@@ -324,7 +324,9 @@ void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
 	{
 		emoticonPackList.setConfig(names);
 		SET_SETTING(EMOTICONS_FILE, names[0]);
-		SET_SETTING(ADDITIONAL_EMOTICONS, formatNameList(names, 1));
+		string s = formatNameList(names, 1);
+		if (s.empty()) s += ';'; // prevent resetting to default value
+		SET_SETTING(ADDITIONAL_EMOTICONS, s);
 	}
 	else
 	{

@@ -40,6 +40,7 @@ class EmoticonPacksDlg : public CDialogImpl<EmoticonPacksDlg>
 			return 0;
 		}
 		LRESULT onListItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+		bool loadAvailablePacks();
 
 	public:
 		struct Item
@@ -52,6 +53,7 @@ class EmoticonPacksDlg : public CDialogImpl<EmoticonPacksDlg>
 		vector<Item> items;
 
 	private:
+		TStringList availPacks;
 		CListViewCtrl ctrlList;
 		CButton ctrlEnable;
 		CButton ctrlUp;

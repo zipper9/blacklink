@@ -38,15 +38,6 @@ LRESULT EmoticonPacksDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	ctrlUp = GetDlgItem(IDC_LIST_UP);
 	ctrlDown = GetDlgItem(IDC_LIST_DOWN);
 
-	TStringList availPacks;
-	for (FileFindIter it(Text::utf8ToWide(Util::getEmoPacksPath() + "*.xml")); it != FileFindIter::end; ++it)
-	{
-		wstring name = it->getFileNameW();
-		auto pos = name.rfind(L'.');
-		name.erase(pos);
-		availPacks.push_back(name);
-	}
-
 	vector<Item> newItems;
 	for (const Item& item : items)
 		for (auto i = availPacks.begin(); i != availPacks.end(); ++i)
@@ -59,6 +50,7 @@ LRESULT EmoticonPacksDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	for (const tstring& name : availPacks)
 		newItems.emplace_back(Item{name, false});
 	items = std::move(newItems);
+	availPacks.clear();
 
 	ctrlList.SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP | LVS_EX_CHECKBOXES);
 	WinUtil::setExplorerTheme(ctrlList);
@@ -141,6 +133,19 @@ void EmoticonPacksDlg::moveSelection(int direction)
 		++index;
 	}
 	ctrlList.SelectItem(selIndex);
+}
+
+bool EmoticonPacksDlg::loadAvailablePacks()
+{
+	availPacks.clear();
+	for (FileFindIter it(Text::utf8ToWide(Util::getEmoPacksPath() + "*.xml")); it != FileFindIter::end; ++it)
+	{
+		wstring name = it->getFileNameW();
+		auto pos = name.rfind(L'.');
+		name.erase(pos);
+		availPacks.push_back(name);
+	}
+	return !availPacks.empty();
 }
 
 #endif // BL_UI_FEATURE_EMOTICONS
