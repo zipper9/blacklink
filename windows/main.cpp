@@ -35,6 +35,10 @@
 #include "CommandLine.h"
 #include "KnownClients.h"
 
+#ifdef BL_UI_FEATURE_EMOTICONS
+#include "Emoticons.h"
+#endif
+
 #if !defined(_DEBUG) && (defined(_M_IX86) || defined(_M_X64))
 #define USE_CRASH_HANDLER
 #endif
@@ -231,6 +235,9 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	}
 	
 	shutdown(GuiUninit, NULL/*, true*/);
+#ifdef BL_UI_FEATURE_EMOTICONS
+	emoticonPackList.clear();
+#endif
 #ifdef IRAINMAN_INCLUDE_GDI_INIT
 	Gdiplus::GdiplusShutdown(g_gdiplusToken);
 #endif
