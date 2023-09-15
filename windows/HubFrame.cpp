@@ -767,7 +767,7 @@ void HubFrame::doConnected()
 		fm->updateRecent(r);
 	}
 
-	addStatus(TSTRING(CONNECTED));
+	addTask(ADD_STATUS_LINE, new StatusTask(STRING(CONNECTED), true, true));
 	setHubParam();
 
 	if (client)
@@ -2131,7 +2131,7 @@ void HubFrame::on(Connecting, const Client*) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	addStatus(Text::toT(STRING(CONNECTING_TO) + ' ' + baseClient->getHubUrl() + " ..."));
+	addTask(ADD_STATUS_LINE, new StatusTask(STRING(CONNECTING_TO) + ' ' + baseClient->getHubUrl() + " ...", true, true));
 	++hubUpdateCount;
 }
 
