@@ -372,7 +372,7 @@ bool File::getCurrentDirectory(wstring& path) noexcept
 		path.clear();
 		return false;
 	}
-	path.resize(size-1);
+	path.resize(size);
 	return true;
 }
 
