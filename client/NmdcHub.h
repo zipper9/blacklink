@@ -96,7 +96,7 @@ class NmdcHub : public Client, private Flags
 			SUPPORTS_USERCOMMAND = 0x001,
 			SUPPORTS_NOGETINFO   = 0x002,
 			SUPPORTS_USERIP2     = 0x004,
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 			SUPPORTS_EXTJSON2    = 0x008,
 #endif
 			SUPPORTS_NICKRULE    = 0x010,
@@ -178,7 +178,7 @@ class NmdcHub : public Client, private Flags
 		bool resendMyINFO(bool alwaysSend, bool forcePassive) override;
 		void myInfo(bool alwaysSend, bool forcePassive = false);
 		void myInfoParse(const string& param);
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 		bool extJSONParse(const string& param);
 #endif
 		void searchParse(const string& param, int type);

@@ -149,7 +149,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -191,7 +191,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -232,7 +232,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -272,7 +272,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -315,7 +315,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -358,7 +358,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -401,7 +401,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -447,7 +447,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir)\jsoncpp\include\;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\bzip2;$(SolutionDir)\zlib;$(SolutionDir)\sqlite;$(SolutionDir)\lmdb;$(SolutionDir)\maxminddb;$(SolutionDir)\openssl\include;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -544,6 +544,7 @@
     <ClCompile Include="client\IpTest.cpp" />
     <ClCompile Include="client\JobExecutor.cpp" />
     <ClCompile Include="client\JsonFormatter.cpp" />
+    <ClCompile Include="client\JsonParser.cpp" />
     <ClCompile Include="client\LocationUtil.cpp" />
     <ClCompile Include="client\LogManager.cpp" />
     <ClCompile Include="client\MagnetLink.cpp" />
@@ -582,6 +583,8 @@
     <ClCompile Include="client\IpList.cpp" />
     <ClCompile Include="client\NetworkDevices.cpp" />
     <ClCompile Include="client\NetworkUtil.cpp" />
+    <ClCompile Include="client\NmdcExtJson.cpp" />
+    <ClCompile Include="client\NmdcExtJsonAttrib.cpp" />
     <ClCompile Include="client\NmdcHub.cpp" />
     <ClCompile Include="client\IpTrust.cpp" />
     <ClCompile Include="client\OnlineUser.cpp" />
@@ -647,7 +650,6 @@
     <ClCompile Include="client\sqlite\sqlite3x_connection.cpp" />
     <ClCompile Include="client\sqlite\sqlite3x_reader.cpp" />
     <ClCompile Include="client\sqlite\sqlite3x_transaction.cpp" />
-    <ClCompile Include="jsoncpp\jsoncpp.cpp" />
     <ClCompile Include="lmdb\mdb.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -771,6 +773,7 @@
     <ClInclude Include="client\IpTest.h" />
     <ClInclude Include="client\JobExecutor.h" />
     <ClInclude Include="client\JsonFormatter.h" />
+    <ClInclude Include="client\JsonParser.h" />
     <ClInclude Include="client\LocationUtil.h" />
     <ClInclude Include="client\Locks.h" />
     <ClInclude Include="client\LruCache.h" />
@@ -780,6 +783,7 @@
     <ClInclude Include="client\Mapper_NATPMP.h" />
     <ClInclude Include="client\NetworkDevices.h" />
     <ClInclude Include="client\NetworkUtil.h" />
+    <ClInclude Include="client\NmdcExtJson.h" />
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />
@@ -873,7 +877,6 @@
     <ClInclude Include="client\WinEvent.h" />
     <ClInclude Include="client\zip\miniz.h" />
     <ClInclude Include="client\zip\zip.h" />
-    <ClInclude Include="jsoncpp\include\json\json.h" />
     <ClInclude Include="client\SearchManager.h" />
     <ClInclude Include="client\SearchManagerListener.h" />
     <ClInclude Include="client\SearchQueue.h" />

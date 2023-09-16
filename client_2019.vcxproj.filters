@@ -208,9 +208,6 @@
     <ClCompile Include="client\AdcSupports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="jsoncpp\jsoncpp.cpp">
-      <Filter>Source Files\jsoncpp</Filter>
-    </ClCompile>
     <ClCompile Include="client\debug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -410,6 +407,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\SysVersion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\NmdcExtJsonAttrib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\NmdcExtJson.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\JsonParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -717,9 +723,6 @@
     <ClInclude Include="client\UserManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="jsoncpp\include\json\json.h">
-      <Filter>Header Files\jsoncpp</Filter>
-    </ClInclude>
     <ClInclude Include="client\HintedUser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1023,6 +1026,12 @@
     <ClInclude Include="client\SysVersion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\NmdcExtJson.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\JsonParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -1036,12 +1045,6 @@
     </Filter>
     <Filter Include="Source Files\idna">
       <UniqueIdentifier>{14c6f065-8e7e-4320-90bb-3c457151c8da}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\jsoncpp">
-      <UniqueIdentifier>{1939ab80-b10d-48d1-a1ee-ceb30dfe0622}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\jsoncpp">
-      <UniqueIdentifier>{a2bc7e46-ac54-4dd9-bdbf-0729d9408fad}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\zip">
       <UniqueIdentifier>{84323aa5-4f68-4fa2-bdee-e193b3129271}</UniqueIdentifier>

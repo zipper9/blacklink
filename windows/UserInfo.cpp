@@ -183,7 +183,7 @@ tstring UserInfo::getText(int col) const
 		{
 			return Text::toT(getIdentity().getTag());
 		}
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 		case COLUMN_FLY_HUB_GENDER:
 		{
 			return getIdentity().getGenderTypeAsString();

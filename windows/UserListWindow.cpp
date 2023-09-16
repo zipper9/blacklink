@@ -35,7 +35,7 @@ static const int columnSizes[] =
 	300,    // COLUMN_CID
 	200,    // COLUMN_TAG
 	40,     // COLUMN_P2P_GUARD
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 	20,     // FLY_HUB_GENDER
 	50,     // COLUMN_FLY_HUB_COUNT_FILES
 	100,    // COLUMN_FLY_HUB_LAST_SHARE_DATE
@@ -70,7 +70,7 @@ const int UserListWindow::columnId[] =
 	COLUMN_CID,
 	COLUMN_TAG,
 	COLUMN_P2P_GUARD,
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 	COLUMN_FLY_HUB_GENDER,
 	COLUMN_FLY_HUB_COUNT_FILES,
 	COLUMN_FLY_HUB_LAST_SHARE_DATE,
@@ -105,7 +105,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::CID,             // COLUMN_CID
 	ResourceManager::TAG,             // COLUMN_TAG
 	ResourceManager::P2P_GUARD,       // COLUMN_P2P_GUARD
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 	ResourceManager::FLY_HUB_GENDER,  // COLUMN_FLY_HUB_GENDER
 	ResourceManager::FLY_HUB_COUNT_FILES,     // COLUMN_FLY_HUB_COUNT_FILES
 	ResourceManager::FLY_HUB_LAST_SHARE_DATE, // COLUMN_FLY_HUB_LAST_SHARE_DATE

@@ -6,43 +6,75 @@ void JsonFormatter::open(char c) noexcept
 {
 	if (expectValue)
 	{
-		s += '\n';
+		if (decorate) s += '\n';
 		expectValue = false;
 	}
-	else if (wantComma) s += ",\n";
-	s.append(indent, '\t');
-	s += c;
-	s += '\n';
-	indent++;
+	else if (wantComma)
+	{
+		s += ',';
+		if (decorate) s += '\n';
+	}
+	if (decorate)
+	{
+		s.append(indent, '\t');
+		s += c;
+		s += '\n';
+		indent++;
+	}
+	else
+		s += c;
 	wantComma = false;
 }
 
 void JsonFormatter::close(char c) noexcept
 {
-	s += '\n';
-	s.append(--indent, '\t');
+	if (decorate)
+	{
+		s += '\n';
+		s.append(--indent, '\t');
+	}
 	s += c;
 	wantComma = true;
 }
 
 void JsonFormatter::appendKey(const char* key) noexcept
 {
-	if (wantComma) s += ",\n";
-	s.append(indent, '\t');
-	s += '"';
-	s += key;
-	s += "\" : ";
+	if (decorate)
+	{
+		if (wantComma) s += ",\n";
+		s.append(indent, '\t');
+		s += '"';
+		s += key;
+		s += "\" : ";
+	}
+	else
+	{
+		if (wantComma) s += ',';
+		s += '"';
+		s += key;
+		s += "\":";
+	}
 	wantComma = false;
 	expectValue = true;
 }
 
 void JsonFormatter::appendKey(const string& key) noexcept
 {
-	if (wantComma) s += ",\n";
-	s.append(indent, '\t');
-	s += '"';
-	s += key;
-	s += "\" : ";
+	if (decorate)
+	{
+		if (wantComma) s += ",\n";
+		s.append(indent, '\t');
+		s += '"';
+		s += key;
+		s += "\" : ";
+	}
+	else
+	{
+		if (wantComma) s += ',';
+		s += '"';
+		s += key;
+		s += "\":";
+	}
 	wantComma = false;
 	expectValue = true;
 }
@@ -100,6 +132,13 @@ void JsonFormatter::appendStringValue(const string& val, bool escape) noexcept
 }
 
 void JsonFormatter::appendIntValue(int val) noexcept
+{
+	s += Util::toString(val);
+	wantComma = true;
+	expectValue = false;
+}
+
+void JsonFormatter::appendInt64Value(int64_t val) noexcept
 {
 	s += Util::toString(val);
 	wantComma = true;

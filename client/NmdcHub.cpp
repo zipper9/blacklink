@@ -39,7 +39,11 @@
 #include "Tag16.h"
 #include "SocketPool.h"
 #include "version.h"
-#include "../jsoncpp/include/json/json.h"
+
+#ifdef BL_FEATURE_NMDC_EXT_JSON
+#include "NmdcExtJson.h"
+#include "JsonFormatter.h"
+#endif
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
@@ -1083,7 +1087,7 @@ void NmdcHub::supportsParse(const string& param)
 		{
 			flags |= SUPPORTS_SEARCHRULE;
 		}
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 		else if (tok == "ExtJSON2")
 		{
 			flags |= SUPPORTS_EXTJSON2;
@@ -1184,7 +1188,7 @@ void NmdcHub::lockParse(const string& aLine)
 			feat += " UserIP2";
 			feat += " TTHSearch";
 			feat += " ZPipe0";
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 			if (BOOLSETTING(SEND_EXT_JSON))
 				feat += " ExtJSON2";
 #endif
@@ -1571,7 +1575,7 @@ void NmdcHub::onLine(const string& line)
 		isMyInfo = true;
 		myInfoParse(param);
 	}
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 	else if (cmd == "ExtJSON")
 	{
 		//bMyInfoCommand = false;
@@ -2060,7 +2064,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		ShareManager::getInstance()->getShareGroupInfo(shareGroup, bytesShared, filesShared);
 	currentMyInfo += Util::toString(bytesShared);
 	currentMyInfo += "$|";
-	    
+
 	csState.lock();
 	const bool myInfoChanged = currentMyInfo != lastMyInfo;
 	const unsigned supportFlags = hubSupportFlags;
@@ -2077,13 +2081,15 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			csState.unlock();
 			send(currentMyInfo);
 		}
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 		if (supportFlags & SUPPORTS_EXTJSON2)
 		{
-			Json::Value json;
-			json["Gender"] = SETTING(GENDER) + 1;
-			if (!hideShare)
-				json["Files"] = filesShared;
+			JsonFormatter json;
+			json.setDecorate(false);
+			json.open('{');
+			NmdcExtJson::appendInt64Attrib(json, NmdcExtJson::EXT_JSON_FILES, hideShare ? 0 : filesShared);
+			NmdcExtJson::appendIntAttrib(json, NmdcExtJson::EXT_JSON_GENDER, SETTING(GENDER) + 1);
+			json.close('}');
 #if 0
 			if (ShareManager::getLastSharedDate())
 			{
@@ -2147,13 +2153,8 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			}
 #endif
 #endif			
-
-			string jsonStr = json.toStyledString(false);
-
-			boost::algorithm::trim(jsonStr);
-			std::replace(jsonStr.begin(), jsonStr.end(), '\r', ' ');
-			std::replace(jsonStr.begin(), jsonStr.end(), '\n', ' ');
-			boost::replace_all(jsonStr, "  ", " ");
+			string jsonStr;
+			json.moveResult(jsonStr);
 			jsonStr.erase(std::remove_if(jsonStr.begin(), jsonStr.end(),
 				[](char c) { return c=='$' || c=='|'; }), jsonStr.end());
 
@@ -2168,7 +2169,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			} else
 				csState.unlock();
 		}
-#endif // FLYLINKDC_USE_EXT_JSON
+#endif // BL_FEATURE_NMDC_EXT_JSON
 	}
 }
 
@@ -2413,7 +2414,7 @@ void NmdcHub::onTimer(uint64_t tick) noexcept
 	socketPool.removeSocket(user);
 }
 
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 bool NmdcHub::extJSONParse(const string& param)
 {
 	string::size_type j = param.find(' ', 0);
@@ -2426,41 +2427,30 @@ bool NmdcHub::extJSONParse(const string& param)
 
 	const string text = unescape(param.substr(nick.size() + 1));
 	OnlineUserPtr ou = getUser(nick);
-	try
+	NmdcExtJson::Data data;
+	if (data.parse(text))
 	{
-		Json::Value root;
-		Json::Reader reader(Json::Features::strictMode());
-		if (!reader.parse(text, root))
-		{
-			LogManager::message("Failed to parse ExtJSON: " + param, false);
-			return false;
-		}
 		ou->getIdentity().setExtJSON();
-		ou->getIdentity().setStringParam("F4", root["Gender"].asString());
-		ou->getIdentity().setExtJSONSupportInfo(root["Support"].asString());
-		ou->getIdentity().setExtJSONRAMWorkingSet(root["RAM"].asInt());
-		ou->getIdentity().setExtJSONRAMPeakWorkingSet(root["RAMPeak"].asInt());
-		ou->getIdentity().setExtJSONRAMFree(root["RAMFree"].asInt());
-		//ou->getIdentity().setExtJSONGDI(root["GDI"].asInt());
-		ou->getIdentity().setExtJSONCountFiles(root["Files"].asInt());
-		ou->getIdentity().setExtJSONLastSharedDate(root["LastDate"].asInt64());
-		ou->getIdentity().setExtJSONSQLiteDBSize(root["SQLSize"].asInt());
-		ou->getIdentity().setExtJSONlevelDBHistSize(root["LDBHistSize"].asInt());
-		ou->getIdentity().setExtJSONSQLiteDBSizeFree(root["SQLFree"].asInt());
-		ou->getIdentity().setExtJSONQueueFiles(root["QueueFiles"].asInt());
-		ou->getIdentity().setExtJSONQueueSrc(root["QueueSrc"].asInt64()); //TODO - временны баг - тут 32 бита
-		ou->getIdentity().setExtJSONTimesStartCore(root["StartCore"].asInt64());  //TODO тут тоже 32 бита
-		ou->getIdentity().setExtJSONTimesStartGUI(root["StartGUI"].asInt64()); //TODO тут тоже 32 бита
+		ou->getIdentity().setStringParam("F4", data.attr[NmdcExtJson::EXT_JSON_GENDER]);
+		ou->getIdentity().setExtJSONSupportInfo(data.attr[NmdcExtJson::EXT_JSON_SUPPORT]);
+		ou->getIdentity().setExtJSONRAMWorkingSet(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_RAM]));
+		ou->getIdentity().setExtJSONRAMPeakWorkingSet(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_RAM_PEAK]));
+		ou->getIdentity().setExtJSONRAMFree(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_RAM_FREE]));
+		ou->getIdentity().setExtJSONCountFiles(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_FILES]));
+		ou->getIdentity().setExtJSONLastSharedDate(Util::toInt64(data.attr[NmdcExtJson::EXT_JSON_LAST_DATE]));
+		ou->getIdentity().setExtJSONSQLiteDBSize(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_SQL_SIZE]));
+		ou->getIdentity().setExtJSONlevelDBHistSize(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_LDB_HIST_SIZE]));
+		ou->getIdentity().setExtJSONSQLiteDBSizeFree(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_SQL_FREE]));
+		ou->getIdentity().setExtJSONQueueFiles(Util::toInt(data.attr[NmdcExtJson::EXT_JSON_QUEUE_FILES]));
+		ou->getIdentity().setExtJSONQueueSrc(Util::toInt64(data.attr[NmdcExtJson::EXT_JSON_QUEUE_SRC]));
+		ou->getIdentity().setExtJSONTimesStartCore(Util::toInt64(data.attr[NmdcExtJson::EXT_JSON_START_CORE]));
+		ou->getIdentity().setExtJSONTimesStartGUI(Util::toInt64(data.attr[NmdcExtJson::EXT_JSON_START_GUI]));
 		fireUserUpdated(ou);
 		return true;
 	}
-	catch (Json::RuntimeError& e)
-	{
-		LogManager::message("Failed to parse ExtJSON: " + param + " (" + string(e.what()) + ")", false);
-	}
 	return false;
 }
-#endif // FLYLINKDC_USE_EXT_JSON
+#endif // BL_FEATURE_NMDC_EXT_JSON
 
 void NmdcHub::myInfoParse(const string& param)
 {

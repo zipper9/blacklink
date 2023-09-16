@@ -479,7 +479,7 @@ class Identity
 		string getTag() const;
 		string getApplication() const;
 		
-#ifdef FLYLINKDC_USE_EXT_JSON
+#ifdef BL_FEATURE_NMDC_EXT_JSON
 	private:
 		bool hasExtJson;
 
