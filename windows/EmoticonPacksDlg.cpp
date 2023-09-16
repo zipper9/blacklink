@@ -133,6 +133,7 @@ void EmoticonPacksDlg::moveSelection(int direction)
 		++index;
 	}
 	ctrlList.SelectItem(selIndex);
+	updateButtons(TRUE);
 }
 
 bool EmoticonPacksDlg::loadAvailablePacks()
