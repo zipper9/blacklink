@@ -150,6 +150,9 @@ ssl::SSL_CTX CryptoManager::createContext(bool isServer) noexcept
 		}
 
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verifyCallback);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000
+		SSL_CTX_set_security_level(ctx, 0); // Required to enable SHA1
+#endif
 	}
 	return ctxPtr;
 }
