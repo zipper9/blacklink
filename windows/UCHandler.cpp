@@ -23,7 +23,6 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 			serviceSubMenu.CreatePopupMenu();
 		else
 			serviceSubMenu.ClearMenu();
-		serviceSubMenu.InsertSeparatorFirst(TSTRING(SERVICE_COMMANDS));
 		if (isTransfers)
 		{
 			serviceSubMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION), g_iconBitmaps.getBitmap(IconBitmaps::DISCONNECT, 0));
@@ -46,7 +45,6 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 			subMenu.CreatePopupMenu();
 		else
 			subMenu.ClearMenu();
-		subMenu.InsertSeparatorFirst(TSTRING(USER_COMMANDS));
 		if (!addOpCommands) WinUtil::appendSeparator(menu);
 		subMenuIndex = menu.GetMenuItemCount();
 		menu.AppendMenu(MF_POPUP, subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::COMMANDS, 0));
