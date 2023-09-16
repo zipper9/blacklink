@@ -1471,7 +1471,7 @@ enum Strings   // @DontAdd
 	USER_CMD_EDIT_TITLE, // "Edit user command"
 	USER_CMD_PARAM_NOTE, // "Note: You can use <a href='1'>variables</a> and date/time specifiers (%Y, %m, etc)."
 	USER_CMD_TYPE_HINT, // "Command types:\nSeparator – Adds a separator to the menu\nRaw – Sends raw command to the hub (experts only, end it with \"|\"!)\nChat – Sends command as if you were typing it in the chat\nPrivate message – Sends command as if you sent it by PM"
-	USER_CMD_PARAM_HINT, // "%[myNI]: your own nick\n%[userNI]: the user's nick (user & search context only)\n%[userTAG]: user tag (user & search context only)\n%[userDE]: user description (user & search con4text only)\n%[userEM]: user email (user & search context only)\n%[userSS]: user shared bytes (exact) (user & search context only)\n%[userSSshort]: user shared bytes (formatted) (user & search context only)\n%[userI4]: user IP (if supported by hub)\n%[fileFN]: filename (search context only)\n%[line:reason]: opens up a window asking for \"reason\""
+	USER_CMD_PARAM_HINT, // "%[myNI]: your own nick\n%[userNI]: the user's nick (user & search context only)\n%[userTAG]: user tag (user & search context only)\n%[userDE]: user description (user & search context only)\n%[userEM]: user email (user & search context only)\n%[userSS]: user shared bytes (exact) (user & search context only)\n%[userSSshort]: user shared bytes (formatted) (user & search context only)\n%[userI4]: user IP (if provided by hub)\n%[fileFN]: filename (search context only)\n%[line:reason]: opens up a window asking for \"reason\""
 	USER_CMD_NAME_EMPTY, // "Command name must not be empty"
 	USER_CMD_TEXT_EMPTY, // "Command text must not be empty"
 	USER_CMD_NICK_EMPTY, // "PM recipient must not be empty"
