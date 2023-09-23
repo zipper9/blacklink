@@ -23,13 +23,20 @@ extern "C" {
 #  error OPENSSL_ALGORITHM_DEFINES no longer supported
 # endif
 
+#ifdef _WIN64
+# ifndef OPENSSL_SYS_WIN64A
+#  define OPENSSL_SYS_WIN64A 1
+# endif
+#else
+# ifndef OPENSSL_SYS_WIN32
+#  define OPENSSL_SYS_WIN32 1
+# endif
+#endif
+
 /*
  * OpenSSL was configured with the following options:
  */
 
-# ifndef OPENSSL_SYS_WIN32
-#  define OPENSSL_SYS_WIN32 1
-# endif
 # define OPENSSL_CONFIGURED_API 30000
 # ifndef OPENSSL_RAND_SEED_OS
 #  define OPENSSL_RAND_SEED_OS
@@ -180,7 +187,11 @@ extern "C" {
 #endif
 # endif
 
+#if defined _M_ARM || defined _M_ARM64
+# define RC4_INT unsigned char
+#else
 # define RC4_INT unsigned int
+#endif
 
 # ifdef  __cplusplus
 }

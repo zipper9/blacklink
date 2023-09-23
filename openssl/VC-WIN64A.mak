@@ -4,8 +4,8 @@ PLATFORM=VC-WIN64A
 SRCDIR=.
 BLDDIR=.
 
-VERSION=3.0.10
-VERSION_NUMBER=3.0.10
+VERSION=3.0.11
+VERSION_NUMBER=3.0.11
 MAJOR=3
 MINOR=0
 
@@ -158,7 +158,7 @@ BIN_EX_LIBS=$(CNF_EX_LIBS) $(EX_LIBS)
 # CPPFLAGS_Q is used for one thing only: to build up buildinf.h
 CPPFLAGS_Q=-D"L_ENDIAN" -D"OPENSSL_PIC"
 
-PERLASM_SCHEME= auto
+PERLASM_SCHEME= nasm
 
 
 # The main targets ###################################################
@@ -176,9 +176,6 @@ build_modules: build_generated
 	$(MAKE) /$(MAKEFLAGS) _build_modules
 _build_modules: build_modules_nodep
 
-build_docs: build_html_docs
-build_html_docs: $(HTMLDOCS1) $(HTMLDOCS3) $(HTMLDOCS5) $(HTMLDOCS7)
-	@
 build_generated: $(GENERATED_MANDATORY)
 	@
 build_libs_nodep: $(LIBS) 
@@ -187,12 +184,9 @@ build_modules_nodep: $(MODULES)
 	@
 
 # Kept around for backward compatibility
-build_apps build_tests: build_programs
 
 # Convenience target to prebuild all generated files, not just the mandatory
 # ones
-build_all_generated: $(GENERATED_MANDATORY) $(GENERATED) build_docs
-	@@rem
 
 !IF "$(BUILD_DEBUG)" != ""
 LIB_CFLAGS=$(LIB_CFLAGS) /MTd
@@ -209,15 +203,6 @@ LIB_CFLAGS=$(LIB_CFLAGS) /MT
 
 
 
-makefile: configdata.pm "Configurations\common0.tmpl" "Configurations\windows-makefile.tmpl"
-	@$(ECHO) "Detected changed: $?"
-	"$(PERL)" configdata.pm
-	@$(ECHO) "**************************************************"
-	@$(ECHO) "***                                            ***"
-	@$(ECHO) "***   Please run the same make command again   ***"
-	@$(ECHO) "***                                            ***"
-	@$(ECHO) "**************************************************"
-	@exit 1
 
 
 

@@ -1,5 +1,11 @@
 @echo off
 
+start /wait /B sed 2>NUL
+if errorlevel 2 goto :sed_error
+
+start /wait /B perl -v 2>NUL
+if errorlevel 2 goto :perl_error
+
 sed "s/SUBDIRS=crypto ssl apps util tools fuzz providers doc/SUBDIRS=crypto ssl providers/" -i build.info
 
 perl Configure VC-WIN64-ARM no-makedepend no-shared no-engine no-static-engine no-mdc2 no-ec2m no-sm2 no-sm4 no-aria no-camellia no-cast no-gost no-psk no-srp no-hw-padlock no-tests no-legacy --prefix=\tmp --openssldir=\tmp
@@ -35,8 +41,9 @@ sed -e "s/\(libcrypto\|libssl\|libdefault\|libcommon\)-lib-//g" -i %F%
 sed "s/[-_a-z0-9\\]\+\\\\\([-_a-zA-Z0-9\(\)\$]\+\.obj\)/$\(OUTDIR\)\\\\\1/g" -i %F%
 
 rem Remove unused targets
-for %%S in (all _all depend test tests _tests list-tests install uninstall clean libclean distclean build_engines _build_engines build_engines_nodep build_programs _build_programs build_programs_nodep configdata.pm "reconfigure reconf") do call :remove_target %%S
+for %%S in (all _all depend makefile test tests _tests list-tests install uninstall clean libclean distclean build_engines _build_engines build_engines_nodep build_programs _build_programs build_programs_nodep configdata.pm build_html_docs build_docs build_all_generated "reconfigure reconf" "build_apps build_tests") do call :remove_target %%S
 for %%S in (%GENFILES%) do call :remove_target %%S
+for %%S in (%CONFFILES%) do call :remove_target %%S
 
 sed "s/build_programs_nodep//g" -i %F%
 sed "s/copy-utils//g" -i %F%
@@ -88,4 +95,12 @@ exit 1
 
 :gen_error
 echo Error generating files
+exit 1
+
+:sed_error
+echo 'sed' not found
+exit 1
+
+:perl_error
+echo 'perl' not found
 exit 1
