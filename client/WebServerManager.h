@@ -1,6 +1,7 @@
 #ifndef WEB_SERVER_MANAGER_H_
 #define WEB_SERVER_MANAGER_H_
 
+#include "WebServerListener.h"
 #include "Singleton.h"
 #include "Speaker.h"
 #include "HttpServerConnection.h"
@@ -11,19 +12,6 @@
 #include "Locks.h"
 #include "RWLock.h"
 #include "Thread.h"
-
-class WebServerListener
-{
-	public:
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-
-		typedef X<0> ShutdownPC;
-
-		virtual void on(ShutdownPC, int action) noexcept = 0;
-};
 
 struct WaitingUsersItem
 {

@@ -19,7 +19,12 @@
 #ifndef DCPLUSPLUS_DCPP_TEXT_H
 #define DCPLUSPLUS_DCPP_TEXT_H
 
-#include "typedefs.h"
+#include "tstring.h"
+#include <stdint.h>
+
+#ifndef _WIN32
+#include <wctype.h>
+#endif
 
 /**
  * Text handling routines for DC++. DC++ internally uses UTF-8 for
@@ -129,7 +134,7 @@ inline string fromT(const tstring& str) noexcept
 	return wideToUtf8(str);
 }
 
-inline string fromT(const TCHAR* str) noexcept
+inline string fromT(const tchar_t* str) noexcept
 {
 	return fromT(tstring(str));
 }

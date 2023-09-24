@@ -19,6 +19,7 @@
 #ifndef DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 #define DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 
+#include "typedefs.h"
 #include "SettingsManagerListener.h"
 #include "StrUtil.h"
 #include "Speaker.h"

@@ -19,10 +19,8 @@
 #ifndef TASK_QUEUE_H
 #define TASK_QUEUE_H
 
-#include <vector>
 #include <utility>
 #include <algorithm>
-#include <stdint.h>
 #include "typedefs.h"
 #include "Locks.h"
 

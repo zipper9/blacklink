@@ -1032,6 +1032,12 @@
     <ClInclude Include="client\JsonParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\WebServerListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\tstring.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

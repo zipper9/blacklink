@@ -19,20 +19,12 @@
 #ifndef DCPLUSPLUS_DCPP_TYPEDEFS_H_
 #define DCPLUSPLUS_DCPP_TYPEDEFS_H_
 
-#include <string>
+#include <stdint.h>
 #include <vector>
 #include <boost/unordered/unordered_map.hpp>
 #include <boost/unordered/unordered_set.hpp>
+#include "tstring.h"
 #include "noexcept.h"
-
-using std::string;
-using std::wstring;
-
-#ifdef _UNICODE
-typedef wstring tstring;
-#else
-typedef string tstring;
-#endif
 
 typedef std::vector<string> StringList;
 typedef std::pair<string, string> StringPair;

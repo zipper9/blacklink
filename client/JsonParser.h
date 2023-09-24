@@ -2,7 +2,6 @@
 #define JSON_PARSER_H_
 
 #include "typedefs.h"
-#include <stdint.h>
 
 // undefine windows.h macro
 #ifdef NO_ERROR

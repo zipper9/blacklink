@@ -868,11 +868,13 @@
     <ClInclude Include="client\Thread.h" />
     <ClInclude Include="client\TimeUtil.h" />
     <ClInclude Include="client\TransferData.h" />
+    <ClInclude Include="client\tstring.h" />
     <ClInclude Include="client\UriUtil.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\UserManagerListener.h" />
     <ClInclude Include="client\WebServerAuth.h" />
+    <ClInclude Include="client\WebServerListener.h" />
     <ClInclude Include="client\WebServerUtil.h" />
     <ClInclude Include="client\WinEvent.h" />
     <ClInclude Include="client\zip\miniz.h" />

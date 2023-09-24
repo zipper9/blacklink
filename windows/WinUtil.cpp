@@ -18,8 +18,6 @@
 
 #include "stdafx.h"
 
-#include "../client/File.h"
-
 #include <atlwin.h>
 #include <shlobj.h>
 #include <mmsystem.h>

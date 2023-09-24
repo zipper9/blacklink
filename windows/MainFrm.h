@@ -20,15 +20,14 @@
 #define MAIN_FRM_H
 
 #include "../client/HubEntry.h"
-#include "../client/LogManager.h"
-#include "../client/WebServerManager.h"
 #include "../client/UserManagerListener.h"
 #include "../client/FinishedManagerListener.h"
 #include "../client/FavoriteManagerListener.h"
+#include "../client/SearchManagerListener.h"
 #include "../client/QueueManagerListener.h"
+#include "../client/WebServerListener.h"
 #include "../client/Commands.h"
 #include "../client/CommandCallback.h"
-#include "../client/TimeUtil.h"
 #include "../client/version.h"
 #include "SingleInstance.h"
 #include "FlatTabCtrl.h"
@@ -412,20 +411,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		static bool isAppMinimized(HWND hWnd);
 		static bool isAppMinimized() { return appMinimized; }
 		CToolBarCtrl& getToolBar() { return ctrlToolbar; }
-		
-		void setShutDown(bool flag)
-		{
-			if (flag)
-				shutdownTime = Util::getTick() / 1000;
-			shutdownEnabled = flag;
-			setShutdownButton(flag);
-		}
 
-		bool isShutDown() const
-		{
-			return shutdownEnabled;
-		}
-		
+		void setShutDown(bool flag);
+		bool isShutDown() const { return shutdownEnabled; }
+
 		static void setAwayButton(bool check)
 		{
 			if (instance)

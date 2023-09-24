@@ -450,7 +450,6 @@ void OMenu::measureText(HDC hdc)
 			omi->sizeText.cx = rc.right - rc.left;
 			omi->sizeText.cy = rc.bottom - rc.top;
 			if (omi->sizeText.cx > maxTextWidth) maxTextWidth = omi->sizeText.cx;
-			if (omi->sizeText.cx > maxTextWidth) maxTextWidth = omi->sizeText.cx;
 			omi->sizeBitmap.cx = omi->sizeBitmap.cy = 0;
 			if (omi->bitmap)
 			{
@@ -517,9 +516,7 @@ LRESULT OMenu::onMeasureItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lPa
 				{
 					height = parent->sizeCheck.cy + totalHeight(parent->marginCheckBackground) + totalHeight(parent->marginCheck);
 					width = parent->maxBitmapWidth + parent->marginCheckBackground.cxRightWidth;
-					width += parent->maxTextWidth + totalWidth(parent->marginText);
-					if (parent->maxAccelWidth)
-						width += parent->maxAccelWidth;
+					width += parent->maxTextWidth + totalWidth(parent->marginText) + parent->maxAccelWidth;
 					int partHeight = omi->sizeText.cy + totalHeight(parent->marginText);
 					if (partHeight > height) height = partHeight;
 					partHeight = omi->sizeBitmap.cy + totalHeight(parent->marginBitmap);

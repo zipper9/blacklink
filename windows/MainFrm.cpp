@@ -1249,7 +1249,7 @@ LRESULT MainFrame::onParentNotify(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	LRESULT res = 0;
 	bHandled = FALSE;
 	
-	if (LOWORD(wParam) == WM_LBUTTONDOWN)
+	if (LOWORD(wParam) == WM_LBUTTONDOWN && hashProgressState != HASH_PROGRESS_HIDDEN)
 	{
 		POINT pt = {LOWORD(lParam), HIWORD(lParam)};
 		RECT rect;
@@ -2876,6 +2876,14 @@ void MainFrame::setAway(bool flag)
 {
 	setAwayButton(flag);
 	Util::setAway(flag);
+}
+
+void MainFrame::setShutDown(bool flag)
+{
+	if (flag)
+		shutdownTime = Util::getTick() / 1000;
+	shutdownEnabled = flag;
+	setShutdownButton(flag);
 }
 
 LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

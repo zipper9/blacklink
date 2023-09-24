@@ -1116,7 +1116,6 @@
 #define IDC_POPUP_H_SPIN                2298
 #define IDC_POPUP_TRANSP_STR            2299
 #define IDC_POPUP_TRANSP_SLIDER         2300
-#define IDC_PROPPAGE_TRANSPARENCY       2302
 #define IDC_SETTINGS_COPY_FILE          2303
 #define IDC_SKIP_EXISTING               2304
 #define IDC_CAPTION_COPY_FILE           2305

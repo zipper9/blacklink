@@ -2,7 +2,6 @@
 #define IP_STAT_H_
 
 #include "typedefs.h"
-#include <stdint.h>
 #include <list>
 
 struct IPStatItem
