@@ -21,6 +21,7 @@
 #include "SocketAddr.h"
 #include "Random.h"
 #include "Tag16.h"
+#include "SimpleStringTokenizer.h"
 #include "HttpClient.h"
 #include "ZUtils.h"
 #include "ResourceManager.h"
@@ -968,7 +969,10 @@ bool DatabaseConnection::loadUserStat(const CID& cid, UserStatItem& stat)
 			{
 				stat.messageCount = static_cast<unsigned>(messageCount);
 				stat.lastIp = std::move(lastIp);
-				stat.nickList.emplace_back(std::move(nick));
+				string token;
+				SimpleStringTokenizer<char> st(nick, '\n');
+				while (st.getNextNonEmptyToken(token))
+					stat.nickList.emplace_back(std::move(token));
 				result = true;
 			}
 			stat.flags |= UserStatItem::FLAG_LOADED;

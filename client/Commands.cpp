@@ -1076,7 +1076,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			{
 #ifdef BL_FEATURE_IP_DATABASE
 				UserStatItem userStat;
-				IPStatMap* ipStat = nullptr;
+				std::unique_ptr<IPStatMap> ipStatPtr;
 				auto db = DatabaseManager::getInstance();
 				auto conn = db->getConnection();
 				if (conn)
@@ -1088,7 +1088,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					}
 					else
 					{
-						ipStat = conn->loadIPStat(cid);
+						ipStatPtr.reset(conn->loadIPStat(cid));
 						conn->loadUserStat(cid, userStat);
 					}
 					db->putConnection(conn);
@@ -1099,7 +1099,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					res.text = STRING(COMMAND_DONE);
 					return true;
 				}
-				if (!ipStat && !(userStat.flags & UserStatItem::FLAG_LOADED))
+				if (!ipStatPtr && !(userStat.flags & UserStatItem::FLAG_LOADED))
 				{
 					res.text = "No information in DB";
 					return true;
@@ -1115,6 +1115,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 							res.text += "Nick: " + s.substr(0, pos) + ", Hub: " + s.substr(pos + 1) + '\n';
 					}
 				}
+				IPStatMap* ipStat = ipStatPtr.get();
 				if (ipStat)
 					for (auto i = ipStat->data.cbegin(); i != ipStat->data.cend(); ++i)
 					{
