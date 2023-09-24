@@ -95,7 +95,7 @@ class ChatTextParser
 
 		static void processLink(const tstring& text, LinkItem& li);
 #ifdef BL_UI_FEATURE_BB_CODES
-		static int processBBCode(const tstring& text, tstring::size_type& pos, bool& isClosing);
+		static int processBBCode(const tstring& text, tstring::size_type& pos, bool openLink, bool& isClosing);
 		const CHARFORMAT2* getPrevFormat() const;
 		static bool processStartTag(TagItem& item, const tstring& text, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
 #endif

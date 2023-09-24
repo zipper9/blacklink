@@ -66,6 +66,42 @@ static int getLinkType(const tstring& link)
 }
 #endif
 
+static tstring getMagnetDescription(const tstring& link, const MagnetLink& magnet)
+{
+	bool isTorrentLink = Util::isTorrentLink(link);
+	tstring result = Text::toT(magnet.getFileName());
+	tstring details;
+	if (magnet.exactLength > 0)
+		details = Util::formatBytesT(magnet.exactLength);
+	if (magnet.dirSize > 0)
+	{
+		if (!details.empty()) details += _T(", ");
+		details += TSTRING(SETTINGS_SHARE_SIZE) + _T(' ') + Util::formatBytesT(magnet.dirSize);
+	}
+	if (isTorrentLink)
+	{
+		if (!details.empty()) details += _T(", ");
+		details += TSTRING(BT_LINK);
+	}
+	if (!isTorrentLink && !magnet.exactSource.empty())
+	{
+		if (!details.empty()) details += _T(", ");
+		details += TSTRING(HUB) + _T(": ") + Text::toT(Util::formatDchubUrl(magnet.exactSource));
+	}
+	if (!magnet.acceptableSource.empty())
+	{
+		if (!details.empty()) details += _T(", ");
+		details += TSTRING(WEB_URL) + _T(": ") + Text::toT(magnet.acceptableSource);
+	}
+	if (!details.empty())
+	{
+		result += _T(" (");
+		result += details;
+		result += _T(')');
+	}
+	return result;
+}
+
 void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool formatBBCodes, unsigned maxEmoticons)
 {
 	ASSERT_MAIN_THREAD();
@@ -79,6 +115,7 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 #endif
 	LinkItem li;
 	li.start = tstring::npos;
+	bool openLink = false;
 	TCHAR linkPrevChar = 0;
 	int ipv6Link = 0;
 	StringSetSearch::SearchContext ctx;
@@ -120,21 +157,33 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 				--li.end;
 			links.push_back(li);
 			li.start = tstring::npos;
+			li.updatedText.clear();
 			ipv6Link = 0;
 			i = li.end;
 			continue;
 		}
 		ctx.reset(ss, i);
-		if (!ctx.search(text, ss)) break;
-		i = ctx.getCurrentPos();
-		uint64_t data = ctx.getCurrentData();
+		uint64_t data;
+		if (openLink)
+		{
+			i = text.find(_T('['), i);
+			if (i == tstring::npos) break;
+			++i;
+			data = TYPE_BBCODE;
+		}
+		else
+		{
+			if (!ctx.search(text, ss)) break;
+			i = ctx.getCurrentPos();
+			data = ctx.getCurrentData();
+		}
 		int type = data & 3;
 #ifdef BL_UI_FEATURE_BB_CODES
 		if (type == TYPE_BBCODE && formatBBCodes)
 		{
 			tstring::size_type tagStart = i - 1;
 			bool isClosing;
-			int code = processBBCode(text, i, isClosing);
+			int code = processBBCode(text, i, openLink, isClosing);
 			if (code != -1)
 			{
 				if (isClosing)
@@ -150,6 +199,7 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 							if (code == BBCODE_URL)
 							{
 								urlProcessed = true;
+								openLink = false;
 								break;
 							}
 						}
@@ -160,15 +210,23 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 						LinkItem li;
 						li.start = tags[index].openTagEnd;
 						li.end = tags[index].closeTagStart;
-						tstring url;
-						tags[index].getUrl(text, url, li.updatedText);
-						if (li.updatedText.empty()) li.updatedText = url;
+						tstring url, description;
+						tags[index].getUrl(text, url, description);
 						li.type = getLinkType(url);
 						if (li.type == -1 || li.type == LINK_TYPE_WWW)
 						{
+							if (description.empty()) description = url;
 							li.type = LINK_TYPE_HTTP;
 							url.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
 						}
+						else if (li.type == LINK_TYPE_MAGNET && description.empty())
+						{
+							MagnetLink magnet;
+							if (magnet.parse(Text::fromT(url)))
+								description = getMagnetDescription(url, magnet);
+						}
+						if (description.empty()) description = url;
+						li.updatedText = std::move(description);
 						li.updatedText += HIDDEN_TEXT_SEP;
 						li.updatedText += url;
 						li.updatedText += HIDDEN_TEXT_SEP;
@@ -181,7 +239,14 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 					const CHARFORMAT2* prevFmt = getPrevFormat();
 					if (!prevFmt) prevFmt = &cf;
 					if (processStartTag(ti, text, tagStart, i, *prevFmt))
+					{
 						tags.push_back(ti);
+						if (ti.type == BBCODE_URL)
+						{
+							dcassert(!openLink);
+							openLink = true;
+						}
+					}
 				}
 			}
 			continue;
@@ -295,7 +360,7 @@ void ChatTextParser::findSubstringAvoidingLinks(tstring::size_type& pos, tstring
 }
 
 #ifdef BL_UI_FEATURE_BB_CODES
-int ChatTextParser::processBBCode(const tstring& text, tstring::size_type& pos, bool& isClosing)
+int ChatTextParser::processBBCode(const tstring& text, tstring::size_type& pos, bool openLink, bool& isClosing)
 {
 	isClosing = false;
 	if (pos + 2 >= text.length()) return -1;
@@ -306,12 +371,14 @@ int ChatTextParser::processBBCode(const tstring& text, tstring::size_type& pos, 
 	}
 	tstring::size_type endPos = text.find_first_of(_T(" ]="), pos);
 	if (endPos == tstring::npos || endPos - pos > 8) return -1;
+	if (openLink && !isClosing) return -1;
 	TCHAR endChar = text[endPos];
 	if (endChar == _T(' ') || (isClosing && endChar == _T('='))) return -1;
 	tstring tag = text.substr(pos, endPos - pos);
 	Text::asciiMakeLower(tag);
 	int code = findBBCode(tag);
-	if (code == -1 || (code != BBCODE_URL && code != BBCODE_COLOR && endChar != _T(']'))) return -1;
+	if (code == -1 || (code != BBCODE_URL && code != BBCODE_COLOR && endChar != _T(']')) || (openLink && code != BBCODE_URL))
+		return -1;
 	if (endChar == _T('='))
 	{
 		endPos = text.find(_T(']'), endPos + 1);
@@ -394,6 +461,7 @@ const CHARFORMAT2* ChatTextParser::getPrevFormat() const
 
 void ChatTextParser::processLink(const tstring& text, ChatTextParser::LinkItem& li)
 {
+	if (!li.updatedText.empty()) return;
 	if (li.type == LINK_TYPE_MAGNET)
 	{
 		tstring link = text.substr(li.start, li.end - li.start);
@@ -402,39 +470,10 @@ void ChatTextParser::processLink(const tstring& text, ChatTextParser::LinkItem& 
 		{
 			li.start = li.end = tstring::npos;
 			li.type = -1;
+			li.updatedText.clear();
 			return;
 		}
-		bool isTorrentLink = Util::isTorrentLink(link);
-		li.updatedText = Text::toT(magnet.getFileName());
-		tstring description;
-		if (magnet.exactLength > 0)
-			description = Util::formatBytesT(magnet.exactLength);
-		if (magnet.dirSize > 0)
-		{
-			if (!description.empty()) description += _T(", ");
-			description += TSTRING(SETTINGS_SHARE_SIZE) + _T(' ') + Util::formatBytesT(magnet.dirSize);
-		}
-		if (isTorrentLink)
-		{
-			if (!description.empty()) description += _T(", ");
-			description += TSTRING(BT_LINK);
-		}
-		if (!isTorrentLink && !magnet.exactSource.empty())
-		{
-			if (!description.empty()) description += _T(", ");
-			description += TSTRING(HUB) + _T(": ") + Text::toT(Util::formatDchubUrl(magnet.exactSource));
-		}
-		if (!magnet.acceptableSource.empty())
-		{
-			if (!description.empty()) description += _T(", ");
-			description += TSTRING(WEB_URL) + _T(": ") + Text::toT(magnet.acceptableSource);
-		}
-		if (!description.empty())
-		{
-			li.updatedText += _T(" (");
-			li.updatedText += description;
-			li.updatedText += _T(')');
-		}
+		li.updatedText = getMagnetDescription(link, magnet);
 		li.updatedText += HIDDEN_TEXT_SEP;
 		li.updatedText += link;
 		li.updatedText += HIDDEN_TEXT_SEP;
