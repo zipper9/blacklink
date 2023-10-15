@@ -256,14 +256,16 @@ FlagImage::~FlagImage()
 
 int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 {
-	if (x_size >= 200 && x_size <= 640 && y_size >= 140 && y_size <= 480)
-		return 3; //Mobile or VHS
-	if (x_size >= 640 && x_size <= 1080 && y_size >= 240 && y_size <= 720)
-		return 2; //SD
-	if (x_size >= 1080 && x_size <= 1920 && y_size >= 500 && y_size <= 1080)
-		return 1; //HD
+	if (y_size > x_size)
+		std::swap(x_size, y_size);
 	if (x_size >= 1920 && y_size >= 1080)
 		return 0; //Full HD
+	if (x_size >= 1280 && y_size >= 720)
+		return 1; //HD
+	if (x_size >= 640 && y_size >= 480)
+		return 2; //SD
+	if (x_size >= 320 && y_size >= 200)
+		return 3; //Mobile or VHS
 	return -1;
 }
 
