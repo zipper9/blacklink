@@ -104,7 +104,9 @@ OnlineUserPtr AdcHub::addUser(uint32_t sid, const CID& cid, const string& nick)
 			ou = users.insert(make_pair(sid, getMyOnlineUser())).first->second;
 		}
 		ou->getIdentity().setSID(sid);
+#ifdef BL_FEATURE_IP_DATABASE
 		ou->getUser()->addNick(nick, getHubUrl());
+#endif
 	}
 	else // User
 	{

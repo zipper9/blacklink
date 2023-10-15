@@ -489,8 +489,8 @@ string Identity::formatSpeedLimit(const uint32_t limit)
 void Identity::getReport(string& report)
 {
 #ifdef BL_FEATURE_IP_DATABASE
-	user->loadIPStat();
-	user->loadUserStat();
+	User::loadIPStatFromDB(user);
+	User::loadUserStatFromDB(user);
 #endif
 	report = " *** User info ***\r\n";
 	const string sid = getSIDString();
@@ -590,7 +590,7 @@ void Identity::getReport(string& report)
 		unsigned countNormal = getHubsNormal();
 		unsigned countReg = getHubsRegistered();
 		unsigned countOp = getHubsOperator();
-		unsigned countHubs = countNormal + countReg + countOp;	
+		unsigned countHubs = countNormal + countReg + countOp;
 		if (countHubs)
 		{
 			char buf[64];
@@ -681,12 +681,24 @@ void Identity::getReport(string& report)
 #ifdef BL_FEATURE_IP_DATABASE
 		uint64_t bytes[2];
 		user->getBytesTransfered(bytes);
-		if (bytes[0] + bytes[1])
+		flags = user->getFlags();
+		static const string msgLoading = " (still loading)";
+		if (bytes[0] + bytes[1] || (flags & User::IP_STAT_LOADING))
 		{
-			appendIfValueNotEmpty("Downloaded", formatShareBytes(bytes[0]));
-			appendIfValueNotEmpty("Uploaded", formatShareBytes(bytes[1]));
+			for (int i = 0; i < 2; i++)
+			{
+				string s = formatShareBytes(bytes[i]);
+				if (flags & User::IP_STAT_LOADING) s += msgLoading;
+				appendIfValueNotEmpty(i == 0 ? "Downloaded" : "Uploaded", s);
+			}
 		}
-		appendIfValueNotEmpty("Message count", Util::toString(user->getMessageCount()));
+		string s = Util::toString(user->getMessageCount());
+		if (flags & User::USER_STAT_LOADING) s += msgLoading;
+		appendIfValueNotEmpty("Message count", s);
+#ifdef _DEBUG
+		appendBoolValue("User stats must be saved", (flags & User::SAVE_USER_STAT) != 0, "yes", "no");
+		appendBoolValue("IP stats changed", (flags & User::IP_STAT_CHANGED) != 0, "yes", "no");
+#endif
 #endif
 		appendBoolValue("Favorite", (flags & User::FAVORITE) != 0, "yes", "no");
 	}
@@ -710,9 +722,15 @@ string Identity::getSupports() const
 
 void Identity::setIP4(Ip4Address ip) noexcept
 {
-	this->ip4 = ip;
-	getUser()->setIP4(ip);
+	if (ip4 == ip) return;
+	ip4 = ip;
 	change(1<<COLUMN_IP);
+#ifdef BL_FEATURE_IP_DATABASE
+	if (getUser()->setIP4(ip))
+		User::loadUserStatFromDB(getUser());
+#else
+	getUser()->setIP4(ip);
+#endif
 }
 
 Ip4Address Identity::getIP4() const noexcept
@@ -723,9 +741,15 @@ Ip4Address Identity::getIP4() const noexcept
 
 void Identity::setIP6(const Ip6Address& ip) noexcept
 {
-	this->ip6 = ip;
-	getUser()->setIP6(ip);
+	if (ip6 == ip) return;
+	ip6 = ip;
 	change(1<<COLUMN_IP);
+#ifdef BL_FEATURE_IP_DATABASE
+	if (getUser()->setIP6(ip))
+		User::loadUserStatFromDB(getUser());
+#else
+	getUser()->setIP6(ip);
+#endif
 }
 
 Ip6Address Identity::getIP6() const noexcept

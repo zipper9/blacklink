@@ -16,7 +16,7 @@ void UserStatItem::addNick(const string& nickHub)
 	}
 	nickList.emplace_back(nickHub);
 	if (nickList.size() > MAX_NICK_LIST_SIZE) nickList.pop_front();
-	flags |= FLAG_CHANGED;
+	flags |= FLAG_NICK_LIST_CHANGED;
 }
 
 void UserStatItem::addNick(const string& nick, const string& hub)
@@ -29,6 +29,6 @@ void UserStatItem::setIP(const string& ip)
 	if (lastIp != ip)
 	{
 		lastIp = ip;
-		flags |= FLAG_CHANGED;
+		flags |= FLAG_LAST_IP_CHANGED;
 	}
 }

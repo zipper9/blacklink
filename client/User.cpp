@@ -81,42 +81,46 @@ void User::updateNick(const string& newNick)
 		nick = newNick;
 }
 
-void User::setIP4(Ip4Address ip)
+bool User::setIP4(Ip4Address ip)
 {
 	if (!Util::isValidIp4(ip))
-		return;
+		return false;
 	LOCK(cs);
 	if (lastIp4 == ip)
-		return;
+		return false;
 	lastIp4 = ip;
 	flags |= LAST_IP_CHANGED;
 #ifdef BL_FEATURE_IP_DATABASE
 	userStat.setIP(Util::printIpAddress(ip));
-	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
+	static const auto MASK = UserStatItem::FLAG_INSERTED | UserStatItem::FLAG_LAST_IP_CHANGED;
+	if ((userStat.flags & MASK) == MASK)
 	{
 		dcassert(flags & USER_STAT_LOADED);
 		flags |= SAVE_USER_STAT;
 	}
 #endif
+	return true;
 }
 
-void User::setIP6(const Ip6Address& ip)
+bool User::setIP6(const Ip6Address& ip)
 {
 	if (!Util::isValidIp6(ip))
-		return;
+		return false;
 	LOCK(cs);
 	if (lastIp6 == ip)
-		return;
+		return false;
 	lastIp6 = ip;
 	flags |= LAST_IP_CHANGED;
 #ifdef BL_FEATURE_IP_DATABASE
 	userStat.setIP(Util::printIpAddress(ip));
-	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
+	static const auto MASK = UserStatItem::FLAG_INSERTED | UserStatItem::FLAG_LAST_IP_CHANGED;
+	if ((userStat.flags & MASK) == MASK)
 	{
 		dcassert(flags & USER_STAT_LOADED);
 		flags |= SAVE_USER_STAT;
 	}
 #endif
+	return true;
 }
 
 void User::setIP(const IpAddress& ip)
@@ -182,104 +186,154 @@ void User::getBytesTransfered(uint64_t out[]) const
 
 void User::addBytesUploaded(const IpAddress& ip, uint64_t size)
 {
+	string key = Util::printIpAddress(ip);
 	LOCK(cs);
-	if (flags & IP_STAT_LOADED)
-	{
-		if (!ipStat) ipStat = new IPStatMap;
-		IPStatItem& item = ipStat->data[Util::printIpAddress(ip)];
-		item.upload += size;
-		item.flags |= IPStatItem::FLAG_CHANGED;
-		ipStat->totalUploaded += size;
-		flags |= IP_STAT_CHANGED;
-	}
+	if (!ipStat) ipStat = new IPStatMap;
+	IPStatItem& item = ipStat->data[key];
+	item.upload += size;
+	item.flags |= IPStatItem::FLAG_CHANGED;
+	ipStat->totalUploaded += size;
+	flags |= IP_STAT_CHANGED;
 }
 
 void User::addBytesDownloaded(const IpAddress& ip, uint64_t size)
 {
+	string key = Util::printIpAddress(ip);
 	LOCK(cs);
-	if (flags & IP_STAT_LOADED)
-	{
-		if (!ipStat) ipStat = new IPStatMap;
-		IPStatItem& item = ipStat->data[Util::printIpAddress(ip)];
-		item.download += size;
-		item.flags |= IPStatItem::FLAG_CHANGED;
-		ipStat->totalDownloaded += size;
-		flags |= IP_STAT_CHANGED;
-	}
+	if (!ipStat) ipStat = new IPStatMap;
+	IPStatItem& item = ipStat->data[key];
+	item.download += size;
+	item.flags |= IPStatItem::FLAG_CHANGED;
+	ipStat->totalDownloaded += size;
+	flags |= IP_STAT_CHANGED;
 }
 
-void User::loadIPStatFromDB()
+void User::addLoadedData(IPStatMap* newIpStat)
 {
-	if (!BOOLSETTING(ENABLE_RATIO_USER_LIST))
-		return;
-
-	IPStatMap* dbStat = nullptr;
-	auto dm = DatabaseManager::getInstance();
-	auto conn = dm->getConnection();
-	if (conn)
+	cs.lock();
+	if (newIpStat)
 	{
-		dbStat = conn->loadIPStat(getCID());
-		dm->putConnection(conn);
-	}
-	LOCK(cs);
-	flags |= IP_STAT_LOADED;
-	delete ipStat;
-	ipStat = dbStat;
-}
-
-void User::loadIPStat()
-{
-	if (!(getFlags() & IP_STAT_LOADED))
-		loadIPStatFromDB();	
-}
-
-void User::loadUserStatFromDB()
-{
-	if (!BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER))
-		return;
-	
-	UserStatItem dbStat;
-	auto dm = DatabaseManager::getInstance();
-	auto conn = dm->getConnection();
-	if (conn)
-	{
-		conn->loadUserStat(getCID(), dbStat);
-		dm->putConnection(conn);
-	}
-
-	LOCK(cs);
-	flags |= USER_STAT_LOADED;
-	for (const auto& nick : userStat.nickList)
-		dbStat.addNick(nick);
-	if (!userStat.lastIp.empty())
-		dbStat.setIP(userStat.lastIp);
-	userStat = std::move(dbStat);
-	IpAddress ip;
-	if (Util::parseIpAddress(ip, userStat.lastIp) && Util::isValidIp(ip))
-	{
-		if (ip.type == AF_INET)
+		if (ipStat)
 		{
-			if (lastIp4 == 0)
+			for (auto i : newIpStat->data)
 			{
-				lastIp4 = ip.data.v4;
-				flags |= LAST_IP_CHANGED;
+				auto j = ipStat->data.find(i.first);
+				if (j == ipStat->data.end())
+					ipStat->data.insert(i);
+				else
+				{
+					const auto& d1 = i.second;
+					auto& d2 = j->second;
+					d2.download += d1.download;
+					d2.upload += d1.upload;
+					d2.flags |= IPStatItem::FLAG_INSERTED;
+				}
 			}
+			ipStat->totalDownloaded += newIpStat->totalDownloaded;
+			ipStat->totalUploaded += newIpStat->totalUploaded;
 		}
 		else
 		{
-			if (Util::isEmpty(lastIp6))
-			{
-				lastIp6 = ip.data.v6;
-				flags |= LAST_IP_CHANGED;
-			}
+			ipStat = newIpStat;
+			newIpStat = nullptr;
 		}
 	}
+	flags = (flags & ~IP_STAT_LOADING) | IP_STAT_LOADED;
+	cs.unlock();
+	delete newIpStat;
 }
 
-void User::loadUserStat()
+void User::addLoadedData(UserStatItem& dbUserStat)
 {
-	if (!(getFlags() & USER_STAT_LOADED))
-		loadUserStatFromDB();
+	cs.lock();
+	if (dbUserStat.flags & UserStatItem::FLAG_INSERTED)
+	{
+		userStat.flags = UserStatItem::FLAG_INSERTED;
+		for (const string& item : userStat.nickList)
+			dbUserStat.addNick(item);
+		if (dbUserStat.flags & UserStatItem::FLAG_NICK_LIST_CHANGED)
+		{
+			userStat.nickList = std::move(dbUserStat.nickList);
+			userStat.flags |= UserStatItem::FLAG_NICK_LIST_CHANGED;
+			flags |= SAVE_USER_STAT;
+		}
+		if (userStat.lastIp.empty())
+		{
+			userStat.lastIp = dbUserStat.lastIp;
+			IpAddress ip;
+			if (Util::parseIpAddress(ip, userStat.lastIp) && Util::isValidIp(ip))
+			{
+				if (ip.type == AF_INET)
+				{
+					if (lastIp4 == 0)
+					{
+						lastIp4 = ip.data.v4;
+						flags |= LAST_IP_CHANGED;
+					}
+				}
+				else
+				{
+					if (Util::isEmpty(lastIp6))
+					{
+						lastIp6 = ip.data.v6;
+						flags |= LAST_IP_CHANGED;
+					}
+				}
+			}
+		}
+		else if (userStat.lastIp != dbUserStat.lastIp)
+		{
+			userStat.flags |= UserStatItem::FLAG_LAST_IP_CHANGED;
+			flags |= SAVE_USER_STAT;
+		}
+		userStat.messageCount += dbUserStat.messageCount;
+		if (userStat.messageCount != dbUserStat.messageCount)
+		{
+			userStat.flags |= UserStatItem::FLAG_MSG_COUNT_CHANGED;
+			flags |= SAVE_USER_STAT;
+		}
+	}
+	else if ((userStat.flags & UserStatItem::FLAG_MSG_COUNT_CHANGED) || (ipStat && ipStat->totalDownloaded + ipStat->totalUploaded))
+		flags |= SAVE_USER_STAT;
+
+	flags = (flags & ~USER_STAT_LOADING) | USER_STAT_LOADED;
+	cs.unlock();
+}
+
+void User::loadIPStatFromDB(const UserPtr& user)
+{
+	{
+		LOCK(user->cs);
+		if (user->flags & (IP_STAT_LOADING | IP_STAT_LOADED)) return;
+		user->flags |= IP_STAT_LOADING;
+	}
+
+	if (!BOOLSETTING(ENABLE_RATIO_USER_LIST))
+	{
+		LOCK(user->cs);
+		user->flags = (user->flags & ~IP_STAT_LOADING) | IP_STAT_LOADED;
+		return;
+	}
+
+	DatabaseManager::getInstance()->loadIPStatAsync(user);
+}
+
+void User::loadUserStatFromDB(const UserPtr& user)
+{
+	{
+		LOCK(user->cs);
+		if (user->flags & (USER_STAT_LOADING | USER_STAT_LOADED)) return;
+		user->flags |= USER_STAT_LOADING;
+	}
+
+	if (!BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER))
+	{
+		LOCK(user->cs);
+		user->flags = (user->flags & ~USER_STAT_LOADING) | USER_STAT_LOADED;
+		return;
+	}
+
+	DatabaseManager::getInstance()->loadUserStatAsync(user);
 }
 
 void User::saveUserStat()
@@ -291,16 +345,15 @@ void User::saveUserStat()
 		return;
 	}
 	flags &= ~SAVE_USER_STAT;
-	dcassert(flags & USER_STAT_LOADED);
 	if (userStat.nickList.empty())
 	{
 		cs.unlock();
 		dcassert(0);
 		return;
 	}
-	userStat.flags &= ~UserStatItem::FLAG_CHANGED;
+	userStat.flags &= ~(UserStatItem::FLAG_NICK_LIST_CHANGED | UserStatItem::FLAG_LAST_IP_CHANGED | UserStatItem::FLAG_MSG_COUNT_CHANGED);
 	UserStatItem dbStat = userStat;
-	userStat.flags |= UserStatItem::FLAG_LOADED;
+	userStat.flags |= UserStatItem::FLAG_INSERTED;
 	cs.unlock();
 
 	DatabaseManager::getInstance()->saveUserStat(getCID(), dbStat);
@@ -308,14 +361,14 @@ void User::saveUserStat()
 
 void User::saveIPStat()
 {
-	vector<IPStatVecItem> items;
-	bool loadUserStat = false;
+	static const auto MASK = IP_STAT_LOADED | IP_STAT_CHANGED;
 	cs.lock();
-	if ((flags & (IP_STAT_LOADED | IP_STAT_CHANGED)) != (IP_STAT_LOADED | IP_STAT_CHANGED) || !ipStat)
+	if ((flags & MASK) != MASK || !ipStat)
 	{
 		cs.unlock();
 		return;
 	}
+	vector<IPStatVecItem> items;
 	for (auto& i : ipStat->data)
 	{
 		IPStatItem& item = i.second;
@@ -323,34 +376,25 @@ void User::saveIPStat()
 		{
 			item.flags &= ~IPStatItem::FLAG_CHANGED;
 			items.emplace_back(IPStatVecItem{i.first, item});
-			item.flags |= IPStatItem::FLAG_LOADED;
+			item.flags |= IPStatItem::FLAG_INSERTED;
 		}
 	}
 	flags &= ~IP_STAT_CHANGED;
-	if (!items.empty() && !(userStat.flags & UserStatItem::FLAG_LOADED))
-	{
+	if (!items.empty() && (flags & USER_STAT_LOADED) && !(userStat.flags & UserStatItem::FLAG_INSERTED))
 		flags |= SAVE_USER_STAT;
-		if (!(flags & USER_STAT_LOADED)) loadUserStat = true;
-	}
 	cs.unlock();
 
-	DatabaseManager::getInstance()->saveIPStat(getCID(), items);
-	if (loadUserStat) loadUserStatFromDB();
+	if (!items.empty())
+		DatabaseManager::getInstance()->saveIPStat(getCID(), items);
 }
 
 void User::incMessageCount()
 {
-	cs.lock();
-	if (!(flags & USER_STAT_LOADED))
-	{
-		cs.unlock();
-		loadUserStatFromDB();
-		cs.lock();
-	}
+	LOCK(cs);
 	userStat.messageCount++;
-	userStat.flags |= UserStatItem::FLAG_CHANGED;
-	flags |= SAVE_USER_STAT;
-	cs.unlock();
+	userStat.flags |= UserStatItem::FLAG_MSG_COUNT_CHANGED;
+	if (flags & USER_STAT_LOADED)
+		flags |= SAVE_USER_STAT;
 }
 
 void User::saveStats(bool ipStat, bool userStat)
@@ -359,12 +403,10 @@ void User::saveStats(bool ipStat, bool userStat)
 	if (userStat) saveUserStat();
 }
 
-bool User::statsChanged() const
+bool User::shouldSaveStats() const
 {
 	LOCK(cs);
-	if (flags & SAVE_USER_STAT) return true;
-	if ((flags & (IP_STAT_LOADED | IP_STAT_CHANGED)) == (IP_STAT_LOADED | IP_STAT_CHANGED) && ipStat) return true;
-	return false;
+	return (flags & (SAVE_USER_STAT | IP_STAT_CHANGED)) != 0;
 }
 
 bool User::getLastNickAndHub(string& nick, string& hub) const
@@ -378,17 +420,24 @@ bool User::getLastNickAndHub(string& nick, string& hub) const
 	hub = val.substr(pos + 1);
 	return true;
 }
-#endif
 
 void User::addNick(const string& nick, const string& hub)
 {
-#ifdef BL_FEATURE_IP_DATABASE
 	if (nick.empty() || hub.empty()) return;
 	LOCK(cs);
 	userStat.addNick(nick, hub);
-	if (!(flags & USER_STAT_LOADED))
-		userStat.flags &= ~UserStatItem::FLAG_CHANGED;
-	else if (userStat.flags & UserStatItem::FLAG_CHANGED)
+	static const auto MASK = UserStatItem::FLAG_INSERTED | UserStatItem::FLAG_NICK_LIST_CHANGED;
+	if ((userStat.flags & MASK) == MASK)
 		flags |= SAVE_USER_STAT;
-#endif
 }
+
+#if 0
+void User::reportSaving()
+{
+	if (!(flags & SAVE_USER_STAT))
+		LogManager::message("User " + nick + "/" + cid.toBase32() + " must be saved: flags=0x"
+			+ Util::toHexString(flags) + ", userStatFlags=" + Util::toString(userStat.flags), false);
+}
+#endif
+
+#endif // BL_FEATURE_IP_DATABASE

@@ -814,7 +814,7 @@ void DatabaseConnection::saveIPStats(const vector<DBIPStatItem>& items)
 void DatabaseConnection::saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans)
 {
 	if (!count) trans.begin();
-	if (item.flags & IPStatItem::FLAG_LOADED)
+	if (item.flags & IPStatItem::FLAG_INSERTED)
 	{
 		initQuery(updateIPStat, "update ip_stat set upload=?, download=? where cid=? and ip=?");
 		updateIPStat.bind(1, static_cast<long long>(item.upload));
@@ -858,7 +858,7 @@ IPStatMap* DatabaseConnection::loadIPStat(const CID& cid)
 				IPStatItem item;
 				item.download = download;
 				item.upload = upload;
-				item.flags = IPStatItem::FLAG_LOADED;
+				item.flags = IPStatItem::FLAG_INSERTED;
 				if (ipStat->data.insert(make_pair(ip, item)).second)
 				{
 					ipStat->totalDownloaded += download;
@@ -897,7 +897,7 @@ void DatabaseConnection::saveUserStat(const CID& cid, const UserStatItem& stat, 
 		nickList += nick;
 	}
 	if (!count) trans.begin();
-	if (stat.flags & UserStatItem::FLAG_LOADED)
+	if (stat.flags & UserStatItem::FLAG_INSERTED)
 	{
 		initQuery(updateUserStat, "update user_db.user_stat set nick=?, last_ip=?, message_count=? where cid=?");
 		updateUserStat.bind(1, nickList, SQLITE_STATIC);
@@ -965,7 +965,7 @@ bool DatabaseConnection::loadUserStat(const CID& cid, UserStatItem& stat)
 			string nick = reader.getstring(0);
 			string lastIp = reader.getstring(1);
 			int64_t messageCount = reader.getint(2);
-			if (!nick.empty() && (!lastIp.empty() || messageCount > 0))
+			if (!nick.empty() || !lastIp.empty())
 			{
 				stat.messageCount = static_cast<unsigned>(messageCount);
 				stat.lastIp = std::move(lastIp);
@@ -975,7 +975,7 @@ bool DatabaseConnection::loadUserStat(const CID& cid, UserStatItem& stat)
 					stat.nickList.emplace_back(std::move(token));
 				result = true;
 			}
-			stat.flags |= UserStatItem::FLAG_LOADED;
+			stat.flags |= UserStatItem::FLAG_INSERTED;
 		}
 	}
 	catch (const database_error& e)
@@ -1572,6 +1572,23 @@ void DatabaseManager::saveUserStat(const CID& cid, const UserStatItem& stat) noe
 	if (job && !backgroundThread.addJob(job))
 		delete job;
 }
+
+void DatabaseManager::loadIPStatAsync(const UserPtr& user) noexcept
+{
+	LoadIPStatJob* job = new LoadIPStatJob;
+	job->user = user;
+	if (!backgroundThread.addJob(job))
+		delete job;
+}
+
+void DatabaseManager::loadUserStatAsync(const UserPtr& user) noexcept
+{
+	LoadUserStatJob* job = new LoadUserStatJob;
+	job->user = user;
+	if (!backgroundThread.addJob(job))
+		delete job;
+}
+
 #endif
 
 void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item) noexcept
@@ -1721,6 +1738,31 @@ void DatabaseManager::SaveUserStatJob::run()
 	if (conn)
 	{
 		conn->saveUserStats(items);
+		db->putConnection(conn);
+	}
+}
+
+void DatabaseManager::LoadIPStatJob::run()
+{
+	auto db = DatabaseManager::getInstance();
+	auto conn = db->getConnection();
+	if (conn)
+	{
+		IPStatMap* ipStat = conn->loadIPStat(user->getCID());
+		user->addLoadedData(ipStat);
+		db->putConnection(conn);
+	}
+}
+
+void DatabaseManager::LoadUserStatJob::run()
+{
+	auto db = DatabaseManager::getInstance();
+	auto conn = db->getConnection();
+	if (conn)
+	{
+		UserStatItem userStat;
+		conn->loadUserStat(user->getCID(), userStat);
+		user->addLoadedData(userStat);
 		db->putConnection(conn);
 	}
 }

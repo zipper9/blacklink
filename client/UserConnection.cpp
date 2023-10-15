@@ -670,7 +670,7 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 #ifdef BL_FEATURE_IP_DATABASE
 	if (len)
 	{
-		getUser()->loadIPStat();
+		User::loadIPStatFromDB(getUser());
 		getUser()->addBytesDownloaded(getSocket()->getIp(), len);
 	}
 #endif
@@ -683,7 +683,7 @@ void UserConnection::onBytesSent(size_t bytes)
 #ifdef BL_FEATURE_IP_DATABASE
 	if (bytes)
 	{
-		getUser()->loadIPStat();
+		User::loadIPStatFromDB(getUser());
 		getUser()->addBytesUploaded(getSocket()->getIp(), bytes);
 	}
 #endif

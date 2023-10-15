@@ -144,7 +144,7 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 		bool isMyNick = nick == myNick;
 		csState.unlock();
 
-		WRITE_LOCK(*csUsers);
+		csUsers->acquireExclusive();
 #if 0
 		if (hub)
 		{
@@ -168,7 +168,9 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 			else
 			{
 				dcassert(res.first->second->getIdentity().getNick() == nick);
-				return res.first->second;
+				ou = res.first->second;
+				csUsers->releaseExclusive();
+				return ou;
 			}
 		}
 		else
@@ -184,10 +186,13 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 			else
 			{
 				dcassert(res.first->second->getIdentity().getNick() == nick);
-				return res.first->second;
+				ou = res.first->second;
+				csUsers->releaseExclusive();
+				return ou;
 			}
 		}
 	}
+	csUsers->releaseExclusive();
 	if (!ou->getUser()->getCID().isZero())
 	{
 		ClientManager::getInstance()->putOnline(ou, true);

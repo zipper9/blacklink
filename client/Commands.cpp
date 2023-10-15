@@ -1099,12 +1099,12 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					res.text = STRING(COMMAND_DONE);
 					return true;
 				}
-				if (!ipStatPtr && !(userStat.flags & UserStatItem::FLAG_LOADED))
+				if (!ipStatPtr && !(userStat.flags & UserStatItem::FLAG_INSERTED))
 				{
 					res.text = "No information in DB";
 					return true;
 				}
-				if (userStat.flags & UserStatItem::FLAG_LOADED)
+				if (userStat.flags & UserStatItem::FLAG_INSERTED)
 				{
 					res.text += "Last IP: " + userStat.lastIp + '\n';
 					res.text += "Messages: " + Util::toString(userStat.messageCount) + '\n';

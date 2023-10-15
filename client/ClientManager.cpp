@@ -172,13 +172,18 @@ void ClientManager::setUserIP(const UserPtr& user, const IpAddress& ip)
 		return;
 	}
 
-	WRITE_LOCK(*g_csOnlineUsers);
-	const auto p = g_onlineUsers.equal_range(user->getCID());
-	for (auto i = p.first; i != p.second; ++i)
+	OnlineUserList users;
+	{
+		READ_LOCK(*g_csOnlineUsers);
+		const auto p = g_onlineUsers.equal_range(user->getCID());
+		for (auto i = p.first; i != p.second; ++i)
+			users.push_back(i->second);
+	}
+	for (OnlineUserPtr& ou : users)
 		if (ip.type == AF_INET)
-			i->second->getIdentity().setIP4(ip.data.v4);
+			ou->getIdentity().setIP4(ip.data.v4);
 		else
-			i->second->getIdentity().setIP6(ip.data.v6);
+			ou->getIdentity().setIP6(ip.data.v6);
 }
 
 bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
@@ -607,11 +612,14 @@ UserPtr ClientManager::getUser(const string& nick, const string& hubUrl)
 	dcassert(!nick.empty());
 	const CID cid = makeCid(nick, hubUrl);
 	
-	WRITE_LOCK(*g_csUsers);
+	g_csUsers->acquireExclusive();
 	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick)));
 	auto& user = p.first->second;
 	user->setFlag(User::NMDC);
+	g_csUsers->releaseExclusive();
+#ifdef BL_FEATURE_IP_DATABASE
 	user->addNick(nick, hubUrl);
+#endif
 	return user;
 }
 
@@ -624,13 +632,17 @@ UserPtr ClientManager::createUser(const CID& cid, const string& nick, const stri
 		UserPtr user = p.first->second;
 		g_csUsers->releaseExclusive();
 		if (!nick.empty()) user->updateNick(nick);
+#ifdef BL_FEATURE_IP_DATABASE
 		user->addNick(nick, hubUrl);
+#endif
 		return user;
 	}
 	UserPtr user = std::make_shared<User>(cid, nick);
 	p.first->second = user;
 	g_csUsers->releaseExclusive();
+#ifdef BL_FEATURE_IP_DATABASE
 	user->addNick(nick, hubUrl);
+#endif
 	return user;
 }
 
@@ -1137,7 +1149,7 @@ void ClientManager::flushRatio()
 			READ_LOCK(*g_csUsers);
 			for (auto i = g_users.cbegin(); i != g_users.cend(); ++i)
 			{
-				if (i->second->statsChanged())
+				if (i->second->shouldSaveStats())
 					usersToFlush.push_back(i->second);
 			}
 		}

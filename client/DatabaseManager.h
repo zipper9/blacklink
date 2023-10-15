@@ -326,6 +326,8 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		GlobalRatio getGlobalRatio() const;
 		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items) noexcept;
 		void saveUserStat(const CID& cid, const UserStatItem& stat) noexcept;
+		void loadIPStatAsync(const UserPtr& user) noexcept;
+		void loadUserStatAsync(const UserPtr& user) noexcept;
 #endif
 
 	private:
@@ -389,6 +391,18 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		struct SaveUserStatJob : public JobExecutor::Job
 		{
 			vector<DBUserStatItem> items;
+			void run() override;
+		};
+
+		struct LoadIPStatJob : public JobExecutor::Job
+		{
+			UserPtr user;
+			void run() override;
+		};
+
+		struct LoadUserStatJob : public JobExecutor::Job
+		{
+			UserPtr user;
 			void run() override;
 		};
 #endif

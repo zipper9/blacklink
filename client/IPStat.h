@@ -6,8 +6,8 @@
 
 struct IPStatItem
 {
-	static const uint8_t FLAG_LOADED  = 1;
-	static const uint8_t FLAG_CHANGED = 2;
+	static const uint8_t FLAG_INSERTED = 1;
+	static const uint8_t FLAG_CHANGED  = 2;
 
 	uint64_t download = 0;
 	uint64_t upload = 0;
@@ -30,8 +30,10 @@ struct IPStatMap
 struct UserStatItem
 {
 	static const size_t MAX_NICK_LIST_SIZE = 16;
-	static const uint8_t FLAG_LOADED  = 1;
-	static const uint8_t FLAG_CHANGED = 2;
+	static const uint8_t FLAG_INSERTED          = 1;
+	static const uint8_t FLAG_NICK_LIST_CHANGED = 2;
+	static const uint8_t FLAG_LAST_IP_CHANGED   = 4;
+	static const uint8_t FLAG_MSG_COUNT_CHANGED = 8;
 
 	string lastIp;
 	std::list<string> nickList;

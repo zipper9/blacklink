@@ -129,14 +129,14 @@ tstring UserInfo::getText(int col) const
 		case COLUMN_UPLOAD:
 		{
 			const UserPtr& user = getUser();
-			user->loadIPStat();
+			User::loadIPStatFromDB(user);
 			auto value = user->getBytesUploaded();
 			return value ? Util::formatBytesT(value) : Util::emptyStringT;
 		}
 		case COLUMN_DOWNLOAD:
 		{
 			const UserPtr& user = getUser();
-			user->loadIPStat();
+			User::loadIPStatFromDB(user);
 			auto value = user->getBytesDownloaded();
 			return value ? Util::formatBytesT(value) : Util::emptyStringT;
 		}
@@ -147,7 +147,7 @@ tstring UserInfo::getText(int col) const
 		case COLUMN_MESSAGES:
 		{
 			const UserPtr& user = getUser();
-			user->loadUserStat();
+			User::loadUserStatFromDB(user);
 			auto value = user->getMessageCount();
 			return value ? Util::toStringT(value) : Util::emptyStringT;
 		}

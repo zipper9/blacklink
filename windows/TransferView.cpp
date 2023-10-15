@@ -968,7 +968,7 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 				Util::getIpInfo(transferIp, ipInfo, IPInfo::FLAG_P2P_GUARD);
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			ratioText.clear();
-			ui.hintedUser.user->loadIPStat();
+			User::loadIPStatFromDB(ui.hintedUser.user);
 			uint64_t bytes[2];
 			ui.hintedUser.user->getBytesTransfered(bytes);
 			if (bytes[0] + bytes[1])

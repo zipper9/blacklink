@@ -945,6 +945,7 @@ void HubFrame::processTasks()
 							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), UINT_MAX, Colors::TEXT_STYLE_NORMAL);
 #ifdef BL_FEATURE_IP_DATABASE
 							auto& user = msg->from->getUser();
+							User::loadUserStatFromDB(user);
 							user->incMessageCount();
 							//client->incMessagesCount();
 							shouldUpdateStats |= ctrlUsers.updateUser(msg->from, 1<<COLUMN_MESSAGES, isDHT || isConnected());

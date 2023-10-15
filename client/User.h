@@ -73,13 +73,15 @@ class User final
 			BANNED_BIT,
 			RESERVED_SLOT_BIT,
 			LAST_IP_CHANGED_BIT,
+			IP_STAT_LOADING_BIT,
 			IP_STAT_LOADED_BIT,
 			IP_STAT_CHANGED_BIT,
+			USER_STAT_LOADING_BIT,
 			USER_STAT_LOADED_BIT,
 			SAVE_USER_STAT_BIT,
 			LAST_BIT // for static_assert (32 bit)
 		};
-		
+
 		/** Each flag is set if it's true in at least one hub */
 		enum UserFlags
 		{
@@ -95,12 +97,12 @@ class User final
 			TLS = 1 << TLS_BIT,             //< Client supports TLS
 			ADCS = TLS,                     //< Client supports TLS
 			CCPM = 1 << CCPM_BIT,
-			
+
 			NO_ADC_1_0_PROTOCOL = 1 << NO_ADC_1_0_PROTOCOL_BIT,
 			NO_ADCS_0_10_PROTOCOL = 1 << NO_ADCS_0_10_PROTOCOL_BIT,
-			
+
 			NAT0 = 1 << NAT_BIT,
-			
+
 #ifdef FLYLINKDC_USE_IPFILTER
 			PG_IPGUARD_BLOCK = 1 << PG_IPGUARD_BLOCK_BIT,
 			PG_IPTRUST_BLOCK = 1 << PG_IPTRUST_BLOCK_BIT,
@@ -114,7 +116,9 @@ class User final
 			RESERVED_SLOT = 1 << RESERVED_SLOT_BIT,
 			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED = 1 << IP_STAT_LOADED_BIT,
+			IP_STAT_LOADING = 1 << IP_STAT_LOADING_BIT,
 			IP_STAT_CHANGED = 1 << IP_STAT_CHANGED_BIT,
+			USER_STAT_LOADING = 1 << USER_STAT_LOADING_BIT,
 			USER_STAT_LOADED = 1 << USER_STAT_LOADED_BIT,
 			SAVE_USER_STAT = 1 << SAVE_USER_STAT_BIT
 		};
@@ -123,11 +127,11 @@ class User final
 		User(const User&) = delete;
 		User& operator= (const User&) = delete;
 		~User();
-		
+
 #ifdef _DEBUG
 		static std::atomic_int g_user_counts;
 #endif
-		
+
 		const CID& getCID() const
 		{
 			return cid;
@@ -137,8 +141,8 @@ class User final
 		bool hasNick() const;
 		void setLastNick(const string& nick);
 		void updateNick(const string& nick);
-		void setIP4(Ip4Address ip);
-		void setIP6(const Ip6Address& ip);
+		bool setIP4(Ip4Address ip);
+		bool setIP6(const Ip6Address& ip);
 		void setIP(const IpAddress& ip);
 
 		void setBytesShared(int64_t bytesShared)
@@ -176,7 +180,7 @@ class User final
 			LOCK(cs);
 			return slots;
 		}
-		
+
 		MaskType getFlags() const
 		{
 			LOCK(cs);
@@ -200,9 +204,9 @@ class User final
 		void unsetFlag(MaskType flag)
 		{
 			LOCK(cs);
-			flags &= ~flag;		
+			flags &= ~flag;
 		}
-		
+
 		void changeFlags(MaskType setFlags, MaskType unsetFlags)
 		{
 			LOCK(cs);
@@ -234,7 +238,6 @@ class User final
 		Ip4Address getIP4() const;
 		Ip6Address getIP6() const;
 		void getInfo(string& nick, Ip4Address& ip4, Ip6Address& ip6, int64_t& bytesShared, int& slots) const;
-		void addNick(const string& nick, const string& hub);
 
 		void modifyUploadCount(int delta)
 		{
@@ -254,20 +257,23 @@ class User final
 		}
 
 #ifdef BL_FEATURE_IP_DATABASE
+		void addNick(const string& nick, const string& hub);
 		uint64_t getBytesUploaded() const;
 		uint64_t getBytesDownloaded() const;
 		void getBytesTransfered(uint64_t out[]) const;
 		void addBytesUploaded(const IpAddress& ip, uint64_t size);
 		void addBytesDownloaded(const IpAddress& ip, uint64_t size);
+		void addLoadedData(IPStatMap* newIpStat);
+		void addLoadedData(UserStatItem& dbUserStat);
 		void incMessageCount();
 		unsigned getMessageCount() const;
-		void loadUserStat();
 		void saveUserStat();
-		void loadIPStat();
 		void saveIPStat(); // must be called before saveUserStat
 		void saveStats(bool ipStat, bool userStat);
-		bool statsChanged() const;
+		bool shouldSaveStats() const;
 		bool getLastNickAndHub(string& nick, string& hub) const;
+		static void loadUserStatFromDB(const UserPtr& user);
+		static void loadIPStatFromDB(const UserPtr& user);
 #endif // BL_FEATURE_IP_DATABASE
 
 	private:
@@ -284,9 +290,6 @@ class User final
 #ifdef BL_FEATURE_IP_DATABASE
 		UserStatItem userStat;
 		IPStatMap* ipStat;
-
-		void loadIPStatFromDB();
-		void loadUserStatFromDB();
 #endif
 };
 
