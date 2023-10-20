@@ -3,6 +3,7 @@
 
 #include "Text.h"
 #include <locale.h>
+#include <stdlib.h>
 
 #ifdef _UNICODE
 #define toStringT toStringW

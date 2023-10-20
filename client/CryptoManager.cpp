@@ -22,6 +22,7 @@
 #include "File.h"
 #include "LogManager.h"
 #include "ClientManager.h"
+#include "TimeUtil.h"
 #include "version.h"
 
 #include <openssl/bn.h>
@@ -35,6 +36,14 @@ static void* tmpKeysMap[CryptoManager::NUM_KEYS] = { nullptr, nullptr };
 int CryptoManager::idxVerifyData = 0;
 CryptoManager::SSLVerifyData CryptoManager::trustedKeyprint = { false, "trusted_keyp" };
 static CriticalSection g_cs;
+
+#if OPENSSL_VERSION_NUMBER < 0x10101000
+#define USE_ASN1_TIME_TO_TM
+#endif
+
+#ifdef USE_ASN1_TIME_TO_TM
+static bool asn1_time_to_tm(tm& t, const ASN1_TIME* d, bool enforceRfc5280);
+#endif
 
 // Cipher suites for TLS <= 1.2
 static const char cipherSuites[] =
@@ -498,17 +507,22 @@ static bool loadFile(const string& file, int64_t maxSize, ByteVector& data) noex
 
 int64_t CryptoManager::getX509EndTime(const X509* cert) noexcept
 {
-	const ASN1_TIME* t = X509_get_notAfter(cert);
-	if (!t)
+	const ASN1_TIME* at = X509_get_notAfter(cert);
+	if (!at)
 		return 0;
+#ifdef USE_ASN1_TIME_TO_TM
+	tm t;
+	return asn1_time_to_tm(t, at, false) ? Util::gmtToUnixTime(&t) : 0;
+#else
 	int days = 0, seconds = 0;
 	ASN1_TIME* t0 = ASN1_TIME_new();
 	ASN1_TIME_set(t0, 0);
 	int64_t result = 0;
-	if (ASN1_TIME_diff(&days, &seconds, t0, t))
+	if (ASN1_TIME_diff(&days, &seconds, t0, at))
 		result = (int64_t) days * 86400 + seconds;
 	ASN1_TIME_free(t0);
 	return result;
+#endif
 }
 
 bool CryptoManager::loadKeyPair(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept
@@ -793,7 +807,12 @@ SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted) const noexcept
 {
 	LOCK(contextLock);
 	SSL_CTX* ctx = context[wanted].get();
-	if (ctx) SSL_CTX_up_ref(ctx);
+	if (ctx)
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+		CRYPTO_add(&ctx->references, 1, CRYPTO_LOCK_SSL_CTX);
+#else
+		SSL_CTX_up_ref(ctx);
+#endif
 	return ctx;
 }
 
@@ -861,3 +880,207 @@ void CryptoManager::checkExpiredCert() noexcept
 	try { generateNewKeyPair(); }
 	catch (Exception&) {}
 }
+
+#ifdef USE_ASN1_TIME_TO_TM
+static inline bool isDigit(char c)
+{
+	return c >= '0' && c <= '9';
+}
+
+static inline bool isLeapYear(int year) noexcept
+{
+	if (year % 400 == 0) return true;
+	if (year % 100 == 0) return false;
+	return year % 4 == 0;
+}
+
+// Copied from ossl_asn1_time_to_tm
+bool asn1_time_to_tm(tm& t, const ASN1_TIME* d, bool enforceRfc5280)
+{
+	static const int8_t min[9] = { 0, 0, 1, 1, 0, 0, 0, 0, 0 };
+	static const int8_t max[9] = { 99, 99, 12, 31, 23, 59, 59, 12, 59 };
+	static const int8_t mdays[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+	int n, i, i2, o, min_l = 11, end = 6, btz = 5, md;
+	bool strict = false;
+	/*
+	 * ASN1_STRING_FLAG_X509_TIME is used to enforce RFC 5280
+	 * time string format, in which:
+	 *
+	 * 1. "seconds" is a 'MUST'
+	 * 2. "Zulu" timezone is a 'MUST'
+	 * 3. "+|-" is not allowed to indicate a time zone
+	 */
+	if (d->type == V_ASN1_UTCTIME)
+	{
+		if (enforceRfc5280)
+		{
+			min_l = 13;
+			strict = true;
+		}
+	}
+	else if (d->type == V_ASN1_GENERALIZEDTIME)
+	{
+		end = 7;
+		btz = 6;
+		if (enforceRfc5280)
+		{
+			min_l = 15;
+			strict = true;
+		}
+		else
+			min_l = 13;
+	}
+	else
+		return false;
+
+	int l = d->length;
+	const char* a = (const char *) d->data;
+	o = 0;
+	memset(&t, 0, sizeof(t));
+
+	/*
+	 * GENERALIZEDTIME is similar to UTCTIME except the year is represented
+	 * as YYYY. This stuff treats everything as a two digit field so make
+	 * first two fields 00 to 99
+	 */
+
+	if (l < min_l)
+		goto err;
+	for (i = 0; i < end; i++)
+	{
+		if (!strict && i == btz && (a[o] == 'Z' || a[o] == '+' || a[o] == '-'))
+		{
+			i++;
+			break;
+		}
+		if (!isDigit(a[o]))
+			goto err;
+		n = a[o] - '0';
+		/* incomplete 2-digital number */
+		if (++o == l)
+			goto err;
+
+		if (!isDigit(a[o]))
+			goto err;
+		n = (n * 10) + a[o] - '0';
+		/* no more bytes to read, but we haven't seen time-zone yet */
+		if (++o == l)
+			goto err;
+
+		i2 = (d->type == V_ASN1_UTCTIME) ? i + 1 : i;
+
+		if (n < min[i2] || n > max[i2])
+			goto err;
+		switch (i2)
+		{
+			case 0:
+				/* UTC will never be here */
+				t.tm_year = n * 100 - 1900;
+				break;
+			case 1:
+				if (d->type == V_ASN1_UTCTIME)
+					t.tm_year = n < 50 ? n + 100 : n;
+				else
+					t.tm_year += n;
+				break;
+			case 2:
+				t.tm_mon = n - 1;
+				break;
+			case 3:
+				/* check if tm_mday is valid in tm_mon */
+				if (t.tm_mon == 1) /* it's February */
+					md = mdays[1] + isLeapYear(t.tm_year + 1900);
+				else
+					md = mdays[t.tm_mon];
+				if (n > md)
+					goto err;
+				t.tm_mday = n;
+#if 0 // NOTE: tm_wday and tm_yday are not needed
+				determine_days(&t);
+#endif
+				break;
+			case 4:
+				t.tm_hour = n;
+				break;
+			case 5:
+				t.tm_min = n;
+				break;
+			case 6:
+				t.tm_sec = n;
+				break;
+		}
+	}
+
+	/*
+	 * Optional fractional seconds: decimal point followed by one or more
+	 * digits.
+	 */
+	if (d->type == V_ASN1_GENERALIZEDTIME && a[o] == '.')
+	{
+		if (strict)
+			/* RFC 5280 forbids fractional seconds */
+			goto err;
+		if (++o == l)
+			goto err;
+		i = o;
+		while (o < l && isDigit(a[o]))
+			o++;
+		/* Must have at least one digit after decimal point */
+		if (i == o)
+			goto err;
+		/* no more bytes to read, but we haven't seen time-zone yet */
+		if (o == l)
+			goto err;
+	}
+
+	/*
+	 * 'o' will never point to '\0' at this point, the only chance
+	 * 'o' can point to '\0' is either the subsequent if or the first
+	 * else if is true.
+	 */
+	if (a[o] == 'Z')
+		o++;
+	else if (!strict && (a[o] == '+' || a[o] == '0'))
+	{
+		int offsign = a[o] == '-' ? 1 : -1;
+		int offset = 0;
+		o++;
+		/*
+		 * if not equal, no need to do subsequent checks
+		 * since the following for-loop will add 'o' by 4
+		 * and the final return statement will check if 'l'
+		 * and 'o' are equal.
+		 */
+		if (o + 4 != l)
+			goto err;
+		for (i = end; i < end + 2; i++)
+		{
+			if (!isDigit(a[o]))
+				goto err;
+			n = a[o] - '0';
+			o++;
+			if (!isDigit(a[o]))
+				goto err;
+			n = (n * 10) + a[o] - '0';
+			i2 = (d->type == V_ASN1_UTCTIME) ? i + 1 : i;
+			if (n < min[i2] || n > max[i2])
+				goto err;
+			if (i == end)
+				offset = n * 3600;
+			else if (i == end + 1)
+				offset += n * 60;
+			o++;
+		}
+		if (offset) // NOTE: TZ offset not supported
+			goto err;
+//		if (offset && !OPENSSL_gmtime_adj(&tmp, 0, offset * offsign))
+//			goto err;
+	}
+	else
+		goto err; /* not Z, or not +/- in non-strict mode */
+	if (o == l)
+		return true;
+ err:
+	return false;
+}
+#endif

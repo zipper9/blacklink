@@ -22,6 +22,8 @@
 
 #ifdef _WIN32
 #include <process.h>
+#else
+#include <errno.h>
 #endif
 
 #if !defined(USE_WIN_THREAD_NAME) && defined(_WIN32) && defined(_DEBUG) && !defined(OSVER_WIN_XP)
