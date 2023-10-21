@@ -687,11 +687,11 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 			ctrlStatus.GetBorders(borders);
 
 			const uint64_t now = GET_TICK();
-			const int width = rc.right - rc.left - 1;
+			const int width = rc.right - rc.left;
 			const int pos = (int) min<int64_t>(width, width * (now - searchStartTime) / delta);
-			
-			OperaColors::FloodFill(dis->hDC, rc.left, rc.top, rc.left + pos, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
-			
+
+			OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.left + pos, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
+
 			SetBkMode(dis->hDC, TRANSPARENT);
 			const int textHeight = WinUtil::getTextHeight(dis->hDC);
 			const int top = rc.top + (rc.bottom - rc.top - textHeight) / 2;

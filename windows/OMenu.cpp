@@ -571,7 +571,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					*/
 				
 					if (BOOLSETTING(MENUBAR_TWO_COLORS))
-						OperaColors::FloodFill(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
+						OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
 					else
 					{
 						COLORREF clrOld = SetBkColor(dis->hDC, SETTING(MENUBAR_LEFT_COLOR));

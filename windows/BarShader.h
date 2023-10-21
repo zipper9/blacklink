@@ -103,57 +103,52 @@ class OperaColors
 			return RGB(r, g, b);
 		}
 
-		static void FloodFill(HDC hDC, int x1, int y1, int x2, int y2, COLORREF c1, COLORREF c2, bool light = true);
-		static void EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b);
+		static void drawBar(HDC hDC, int x1, int y1, int x2, int y2, COLORREF c1, COLORREF c2, bool light = true);
+		static void getBarColors(COLORREF clr, COLORREF& a, COLORREF& b);
+		static void clearCache();
 
-		static void ClearCache();
-		
 	private:
+		struct FloodCacheKey
+		{
+			COLORREF c1;
+			COLORREF c2;
+			bool light;
+		};
+
 		struct FloodCacheItem
 		{
-			FloodCacheItem() : w(0), h(0), hDC(nullptr), bitmap(nullptr) {}
+			FloodCacheItem() : w(0), h(0), bitmap(nullptr), dibBuffer(nullptr) {}
 
 			FloodCacheItem(const FloodCacheItem&) = delete;
 			FloodCacheItem& operator= (const FloodCacheItem&) = delete;
 
 			void cleanup()
 			{
-				if (hDC)
+				if (bitmap)
 				{
 					DeleteObject(bitmap);
 					bitmap = nullptr;					
-					DeleteDC(hDC);
-					hDC = nullptr;
+					dibBuffer = nullptr;
 				}
 			}
-			~FloodCacheItem()
-			{
-				cleanup();
-			}
+			~FloodCacheItem() { cleanup(); }
 
-			struct FCIMapper
-			{
-				COLORREF c1;
-				COLORREF c2;
-				bool light;
-			} mapper;
-			
 			int w;
 			int h;
-			HDC hDC;
 			HBITMAP bitmap;
+			void* dibBuffer;
 		};
-		
+
 		template<bool b64>
 		struct fci_hash
 		{
-			size_t operator()(const FloodCacheItem::FCIMapper& x) const;
+			size_t operator()(const FloodCacheKey& x) const;
 		};
 
 		template<>
 		struct fci_hash<false>
 		{
-			size_t operator()(const FloodCacheItem::FCIMapper& x) const
+			size_t operator()(const FloodCacheKey& x) const
 			{
 				return (((x.c1 & 0xFFFFFF) << 7) ^ (x.c2 & 0xFFFFFF)) | (x.light ? 1u : 0u) << 31;
 			}
@@ -162,7 +157,7 @@ class OperaColors
 		template<>
 		struct fci_hash<true>
 		{
-			size_t operator()(const FloodCacheItem::FCIMapper& x) const
+			size_t operator()(const FloodCacheKey& x) const
 			{
 				return (uint64_t)(x.c1 & 0xFFFFFF) | ((uint64_t)(x.c2 & 0xFFFFFF) << 24) | (x.light ? 1ull : 0ull) << 48;
 			}
@@ -170,15 +165,15 @@ class OperaColors
 		
 		struct fci_equal_to
 		{
-			bool operator()(const FloodCacheItem::FCIMapper& x, const FloodCacheItem::FCIMapper& y) const
+			bool operator()(const FloodCacheKey& x, const FloodCacheKey& y) const
 			{
 				return x.c1 == y.c1 && x.c2 == y.c2 && x.light == y.light;
 			}
 		};
 		
-		typedef std::unordered_map<FloodCacheItem::FCIMapper, FloodCacheItem*, fci_hash<sizeof(size_t) == 8>, fci_equal_to> FCIMap;
-		
-		static FCIMap cache;
+		typedef std::unordered_map<FloodCacheKey, FloodCacheItem*, fci_hash<sizeof(size_t) == 8>, fci_equal_to> CacheMap;
+
+		static CacheMap cache;
 };
 
 class ProgressBar

@@ -328,7 +328,7 @@ LRESULT OtherColorsTab::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 			if (useCustomMenu)
 			{
 				if (menuTwoColors)
-					OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, menuLeftColor, menuRightColor, menuBumped);
+					OperaColors::drawBar(dc, rc.left, rc.top, rc.right, rc.bottom, menuLeftColor, menuRightColor, menuBumped);
 				else
 					dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, menuLeftColor);
 				backgroundColor = menuLeftColor;

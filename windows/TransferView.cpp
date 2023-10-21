@@ -123,7 +123,7 @@ TransferView::TransferView() : timer(m_hWnd), shouldSort(false), onlyActiveUploa
 
 TransferView::~TransferView()
 {
-	OperaColors::ClearCache();
+	OperaColors::clearCache();
 }
 
 LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

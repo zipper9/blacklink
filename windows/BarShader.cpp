@@ -89,7 +89,7 @@ void CBarShader::FillRange(uint64_t qwStart, uint64_t qwEnd, COLORREF crColor)
 		
 	if (qwStart >= qwEnd)
 		return;
-	POSITION endprev, endpos = m_Spans.FindFirstKeyAfter(qwEnd + 1ui64);
+	POSITION endprev, endpos = m_Spans.FindFirstKeyAfter(qwEnd + 1);
 	
 	if ((endprev = endpos) != NULL)
 		m_Spans.GetPrev(endpos);
@@ -259,15 +259,9 @@ void CBarShader::FillRect(HDC hdc, LPCRECT rectSpan, COLORREF crColor)
 	}
 }
 
-// OperaColors
-#define MIN3(a, b, c) (((a) < (b)) ? ((((a) < (c)) ? (a) : (c))) : ((((b) < (c)) ? (b) : (c))))
-#define MAX3(a, b, c) (((a) > (b)) ? ((((a) > (c)) ? (a) : (c))) : ((((b) > (c)) ? (b) : (c))))
-#define CENTER(a, b, c) ((((a) < (b)) && ((a) < (c))) ? (((b) < (c)) ? (b) : (c)) : ((((b) < (a)) && ((b) < (c))) ? (((a) < (c)) ? (a) : (c)) : (((a) < (b)) ? (a) : (b))))
-#define ABS(a) (((a) < 0) ? (-(a)): (a))
+OperaColors::CacheMap OperaColors::cache;
 
-OperaColors::FCIMap OperaColors::cache;
-
-void OperaColors::EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b)
+void OperaColors::getBarColors(COLORREF clr, COLORREF& a, COLORREF& b)
 {
 	const HLSCOLOR hls_a = ::RGB2HLS(clr);
 	const HLSCOLOR hls_b = hls_a;
@@ -285,27 +279,30 @@ void OperaColors::EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b)
 	b = ::HLS2RGB(HLS(HLS_H(hls_b), buf, HLS_S(hls_b)));
 }
 
-void OperaColors::ClearCache()
+void OperaColors::clearCache()
 {
 	for (auto i = cache.begin(); i != cache.end(); ++i)
-	{
 		delete i->second;
-	}
 	cache.clear();
 }
 
-void OperaColors::FloodFill(HDC hdc, int x1, int y1, int x2, int y2, const COLORREF c1, const COLORREF c2, bool light /*= true */)
+static inline uint32_t swapColorBytes(uint32_t c)
 {
-	if (x2 <= x1 || y2 <= y1 || x2 > 10000)
+	return (c & 0xFF) << 16 | (c & 0xFF0000) >> 16 | (c & 0xFF00FF00);
+}
+
+void OperaColors::drawBar(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c1, COLORREF c2, bool light /*= true */)
+{
+	if (x2 <= x1 || y2 <= y1)
 		return;
 		
 	int w = x2 - x1;
 	int h = y2 - y1;
 	
-	FloodCacheItem::FCIMapper fcim = { c1, c2, light };
-	const auto i = cache.find(fcim);
-	
-	FloodCacheItem* fci = nullptr;
+	FloodCacheKey key = { c1, c2, light };
+	auto i = cache.find(key);
+
+	FloodCacheItem* fci;
 	if (i != cache.end())
 	{
 		fci = i->second;
@@ -313,7 +310,11 @@ void OperaColors::FloodFill(HDC hdc, int x1, int y1, int x2, int y2, const COLOR
 		{
 			// Perfect, this kind of flood already exist in memory, let's paint it stretched
 			SetStretchBltMode(hdc, HALFTONE);
-			StretchBlt(hdc, x1, y1, w, h, fci->hDC, 0, 0, fci->w, fci->h, SRCCOPY);
+			HDC hMemDC = CreateCompatibleDC(hdc);
+			HGDIOBJ oldBitmap = SelectObject(hMemDC, fci->bitmap);
+			StretchBlt(hdc, x1, y1, w, h, hMemDC, 0, 0, fci->w, fci->h, SRCCOPY);
+			SelectObject(hMemDC, oldBitmap);
+			DeleteDC(hMemDC);
 			return;
 		}
 		fci->cleanup();
@@ -321,64 +322,75 @@ void OperaColors::FloodFill(HDC hdc, int x1, int y1, int x2, int y2, const COLOR
 	else
 	{
 		fci = new FloodCacheItem();
-		cache[fcim] = fci;
+		i = cache.insert(make_pair(key, fci)).first;
 	}
-	
-	fci->hDC = CreateCompatibleDC(hdc); // Leak (?)
+
 	fci->w = w;
 	fci->h = h;
-	fci->mapper = fcim;
-	
-	BITMAPINFOHEADER bih;
-	memset(&bih, 0, sizeof(BITMAPINFOHEADER));
-	bih.biSize = sizeof(BITMAPINFOHEADER);
-	bih.biWidth = w;
-	bih.biHeight = -h;
-	bih.biPlanes = 1;
-	bih.biBitCount = 32;
-	bih.biCompression = BI_RGB;
-	bih.biClrUsed = 32;
-	fci->bitmap = CreateDIBitmap(hdc, &bih, 0, NULL, NULL, DIB_RGB_COLORS);
-	const auto oldBitmap = SelectObject(fci->hDC, fci->bitmap);
-	if (!DeleteObject(oldBitmap))
+
+	int rowSize = w * 4;
+	BITMAPINFOHEADER bmi = {};
+	bmi.biWidth = w;
+	bmi.biHeight = -h;
+	bmi.biPlanes = 1;
+	bmi.biBitCount = 32;
+	bmi.biCompression = BI_RGB;
+	bmi.biSize = sizeof(bmi);
+	bmi.biSizeImage = rowSize * h;
+
+	fci->bitmap = CreateDIBSection(nullptr, (BITMAPINFO*) &bmi, DIB_RGB_COLORS, &fci->dibBuffer, nullptr, 0);
+	if (!fci->bitmap)
 	{
-#ifdef _DEBUG
-		const auto errorCode = GetLastError();
-		dcdebug("DeleteObject: error = %d", errorCode);
-		dcassert(0);
-#endif
+		delete fci;
+		cache.erase(i);
+		return;
 	}
-	
+
+	memset(fci->dibBuffer, 0, bmi.biSizeImage);
+	uint8_t* p0 = (uint8_t*) fci->dibBuffer;
 	if (!light)
 	{
 		for (int x = 0; x < w; ++x)
 		{
-			HBRUSH hBr = CreateSolidBrush(blendColors(c2, c1, double(x - x1) / (double)(w)));
-			const RECT rc = { x, 0, x + 1, h };
-			FillRect(fci->hDC, &rc, hBr);
-			DeleteObject(hBr);
+			uint32_t color = swapColorBytes(blendColors(c2, c1, double(x - x1) / double(w)));
+			uint8_t* p = p0;
+			for (int y = 0; y < h; ++y)
+			{
+				*(uint32_t*) p = color;
+				p += rowSize;
+			}
+			p0 += 4;
 		}
 	}
 	else
 	{
-		const int MAX_SHADE = 44;
-		const int SHADE_LEVEL = 90;
-		static const int blendVector[MAX_SHADE] =
+		static const int MAX_SHADE = 44;
+		static const int SHADE_LEVEL = 90;
+		static const int8_t blendVector[MAX_SHADE] =
 		{
 			0, 8, 16, 20, 10, 4, 0, -2, -4, -6, -10, -12, -14, -16, -14, -12, -10, -8, -6, -4, -2, 0,
 			1, 2, 3, 8, 10, 12, 14, 16, 14, 12, 10, 6, 4, 2, 0, -4, -10, -20, -16, -8, 0
 		};
-		for (int x = 0; x <= w; ++x)
+		for (int x = 0; x < w; ++x)
 		{
-			const COLORREF cr = blendColors(c2, c1, double(x) / double(w));
+			COLORREF color0 = blendColors(c2, c1, double(x) / double(w));
+			uint8_t* p = p0;
 			for (int y = 0; y < h; ++y)
 			{
-				const size_t index = (size_t) ((double(y) / h) * (MAX_SHADE - 1));
-				SetPixelV(fci->hDC, x, y, brightenColor(cr, (double) blendVector[index] / (double) SHADE_LEVEL));
+				size_t index = (size_t) ((double(y) / h) * (MAX_SHADE - 1));
+				COLORREF color = brightenColor(color0, (double) blendVector[index] / (double) SHADE_LEVEL);
+				*(uint32_t*) p = swapColorBytes(color);
+				p += rowSize;
 			}
+			p0 += 4;
 		}
 	}
-	BitBlt(hdc, x1, y1, x2, y2, fci->hDC, 0, 0, SRCCOPY);
+
+	HDC hMemDC = CreateCompatibleDC(hdc);
+	HGDIOBJ oldBitmap = SelectObject(hMemDC, fci->bitmap);
+	BitBlt(hdc, x1, y1, x2, y2, hMemDC, 0, 0, SRCCOPY);
+	SelectObject(hMemDC, oldBitmap);
+	DeleteDC(hMemDC);
 }
 
 bool ProgressBar::Settings::operator== (const ProgressBar::Settings& rhs) const
@@ -462,8 +474,8 @@ void ProgressBar::draw(HDC hdc, const RECT& rc, int pos, const tstring& text, in
 		FillRect(hdc, &rcFill, backBrush);
 
 		COLORREF a, b;
-		OperaColors::EnlightenFlood(settings.clrBackground, a, b);
-		OperaColors::FloodFill(hdc, rc.left + 1, rc.top + 1, rcFill.left, rc.bottom - 1, a, b, settings.odcBumped);
+		OperaColors::getBarColors(settings.clrBackground, a, b);
+		OperaColors::drawBar(hdc, rc.left + 1, rc.top + 1, rcFill.left, rc.bottom - 1, a, b, settings.odcBumped);
 
 		SelectObject(hdc, oldPen);
 		SelectObject(hdc, oldBrush);
