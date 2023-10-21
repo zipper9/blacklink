@@ -37,6 +37,9 @@
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 #include "Emoticons.h"
+#ifdef DEBUG_GDI_IMAGE
+#include "../GdiOle/GDIImage.h"
+#endif
 #endif
 
 #if !defined(_DEBUG) && (defined(_M_IX86) || defined(_M_X64))
@@ -233,10 +236,15 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			_Module.RemoveMessageLoop();
 		}
 	}
-	
+
 	shutdown(GuiUninit, NULL/*, true*/);
 #ifdef BL_UI_FEATURE_EMOTICONS
 	emoticonPackList.clear();
+#ifdef DEBUG_GDI_IMAGE
+	if (CGDIImage::getImageCount()) BaseThread::sleep(1000);
+	CGDIImage::stopTimers();
+	dcdebug("CGDIImage instance count: %d\n", (int) CGDIImage::getImageCount());
+#endif
 #endif
 #ifdef IRAINMAN_INCLUDE_GDI_INIT
 	Gdiplus::GdiplusShutdown(g_gdiplusToken);

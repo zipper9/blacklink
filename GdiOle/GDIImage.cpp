@@ -39,6 +39,24 @@ size_t CGDIImage::getImageCount()
 	return imageSet.size();
 }
 
+void CGDIImage::stopTimers()
+{
+	std::vector<CGDIImage*> imageVec;
+	{
+		LOCK(csImageSet);
+		for (CGDIImage* image : imageSet)
+		{
+			imageVec.push_back(image);
+			image->AddRef();
+		}
+	}
+	for (CGDIImage* image : imageVec)
+	{
+		destroyTimer(image, INVALID_HANDLE_VALUE);
+		image->Release();
+	}
+}
+
 #ifdef _DEBUG
 tstring CGDIImage::getLoadedList()
 {

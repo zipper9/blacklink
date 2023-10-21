@@ -88,6 +88,7 @@ class CGDIImage
 #ifdef DEBUG_GDI_IMAGE
 		static bool checkImage(CGDIImage* image);
 		static size_t getImageCount();
+		static void stopTimers();
 #ifdef _DEBUG
 		static tstring getLoadedList();
 #endif
