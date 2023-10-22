@@ -818,7 +818,7 @@ SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted) const noexcept
 
 SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto) noexcept
 {
-	SSL_CTX* ctx = getSSLContext(SSL_CLIENT);
+	SSL_CTX* ctx = getSSLContext(proto == Socket::PROTO_HTTP ? SSL_UNAUTH_CLIENT : SSL_CLIENT);
 	return ctx ? new SSLSocket(ctx, proto, allowUntrusted, expKP) : nullptr;
 }
 
