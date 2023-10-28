@@ -28,6 +28,8 @@
 
 static const string defLangFileName("en-US.xml");
 
+static const char* connSpeeds[] = { "0.005", "0.01", "0.02", "0.05", "0.1", "0.2", "0.5", "1", "2", "5", "10", "20", "50", "100", "1000" };
+
 static const WinUtil::TextItem texts[] =
 {
 	{ IDC_SETTINGS_PERSONAL_INFORMATION, ResourceManager::SETTINGS_PERSONAL_INFORMATION },
@@ -36,7 +38,6 @@ static const WinUtil::TextItem texts[] =
 	{ IDC_SETTINGS_GENDER, ResourceManager::FLY_GENDER },
 	{ IDC_SETTINGS_DESCRIPTION, ResourceManager::DESCRIPTION },
 	{ IDC_SETTINGS_UPLOAD_LINE_SPEED, ResourceManager::SETTINGS_UPLOAD_LINE_SPEED },
-	{ IDC_SETTINGS_MEBIBITS, ResourceManager::MBPS },
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	{ IDC_CHECK_ADD_TO_DESCRIPTION, ResourceManager::ADD_TO_DESCRIPTION },
 	{ IDC_CHECK_ADD_LIMIT, ResourceManager::ADD_LIMIT },
@@ -54,7 +55,6 @@ static const PropPage::Item items[] =
 	{ IDC_NICK,          SettingsManager::NICK,               PropPage::T_STR  },
 	{ IDC_EMAIL,         SettingsManager::EMAIL,              PropPage::T_STR  },
 	{ IDC_DESCRIPTION,   SettingsManager::DESCRIPTION,        PropPage::T_STR  },
-	{ IDC_CONNECTION,    SettingsManager::UPLOAD_SPEED,       PropPage::T_STR  },
 	{ IDC_CLIENT_ID,     SettingsManager::OVERRIDE_CLIENT_ID, PropPage::T_BOOL },
 	{ IDC_CLIENT_ID_BOX, SettingsManager::CLIENT_ID,          PropPage::T_STR  },
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
@@ -73,7 +73,12 @@ void GeneralPage::write()
 	string oldUploadSpeed = SETTING(UPLOAD_SPEED);
 	int oldGender = SETTING(GENDER);
 	PropPage::write(*this, items);
-	int selIndex = ctrlLanguage.GetCurSel();
+	CComboBox ctrlConnection(GetDlgItem(IDC_CONNECTION));
+	int selIndex = ctrlConnection.GetCurSel();
+	if (selIndex >= 0)
+		g_settings->set(SettingsManager::UPLOAD_SPEED, connSpeeds[selIndex]);
+	CComboBox ctrlLanguage(GetDlgItem(IDC_LANGUAGE));
+	selIndex = ctrlLanguage.GetCurSel();
 	if (selIndex != -1)
 	{
 		string langFile(static_cast<const char*>(ctrlLanguage.GetItemDataPtr(selIndex)));
@@ -118,10 +123,25 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	GetDlgItem(IDC_CHECK_ADD_LIMIT).ShowWindow(FALSE);
 #endif	
 	WinUtil::translate(*this, texts);
+
 	CComboBox ctrlConnection(GetDlgItem(IDC_CONNECTION));
-	
-	for (auto i = SettingsManager::g_connectionSpeeds.cbegin(); i != SettingsManager::g_connectionSpeeds.cend(); ++i)
-		ctrlConnection.AddString(Text::toT(*i).c_str());
+	const string& value = SettingsManager::get(SettingsManager::UPLOAD_SPEED);
+	const string& defValue = SettingsManager::getDefault(SettingsManager::UPLOAD_SPEED);
+	int selIndex = -1, defIndex = -1;
+	for (int i = 0; i < _countof(connSpeeds); ++i)
+	{
+		if (defIndex < 0 && defValue == connSpeeds[i])
+			defIndex = i;
+		if (selIndex < 0 && value == connSpeeds[i])
+			selIndex = i;
+		tstring s = Text::toT(connSpeeds[i]);
+		s += _T(' ');
+		s += TSTRING(MBITPS);
+		ctrlConnection.AddString(s.c_str());
+	}
+	if (selIndex < 0)
+		selIndex = defIndex;
+	ctrlConnection.SetCurSel(selIndex);
 	
 	CComboBox comboClientId(GetDlgItem(IDC_CLIENT_ID_BOX));
 	for (size_t i = 0; KnownClients::clients[i].name; ++i)
@@ -135,16 +155,15 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	PropPage::read(*this, items);
 	
-	ctrlLanguage.Attach(GetDlgItem(IDC_LANGUAGE));
+	CComboBox ctrlLanguage(GetDlgItem(IDC_LANGUAGE));
 	getLangList();
 	for (auto i = languageList.cbegin(); i != languageList.cend(); ++i)
 	{
 		int index = ctrlLanguage.AddString(Text::toT(i->language).c_str());
 		ctrlLanguage.SetItemDataPtr(index, const_cast<char*>(i->filename.c_str()));
 	}
-	
-	int selIndex = -1;
-	int defLangIndex = -1;
+
+	selIndex = defIndex = -1;
 	int itemCount = ctrlLanguage.GetCount();
 	for (int i = 0; i < itemCount; ++i)
 	{
@@ -154,16 +173,14 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 			selIndex = i;
 			break;
 		}
-		if (defLangIndex < 0 && defLangFileName == text)
-			defLangIndex = i;
+		if (defIndex < 0 && defLangFileName == text)
+			defIndex = i;
 	}
-	if (selIndex < 0)
-		selIndex = defLangIndex;	
 
+	if (selIndex < 0)
+		selIndex = defIndex;
 	ctrlLanguage.SetCurSel(selIndex);
-	
-	ctrlConnection.SetCurSel(ctrlConnection.FindString(0, Text::toT(SETTING(UPLOAD_SPEED)).c_str()));
-	
+
 	ctrlGender.Attach(GetDlgItem(IDC_GENDER));
 	ResourceLoader::LoadImageList(IDR_GENDER_USERS, imageListGender, 16, 16);
 	ctrlGender.SetImageList(imageListGender);

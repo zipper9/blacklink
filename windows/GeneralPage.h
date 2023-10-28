@@ -64,12 +64,11 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 			string filename;
 			string language;
 		};
-		
-		CComboBox ctrlLanguage;
-		vector<LanguageInfo> languageList;		
+
+		vector<LanguageInfo> languageList;
 		CComboBoxEx ctrlGender;
 		CImageList imageListGender;
-		
+
 		void fixControls();
 		void getLangList();
 		void addGenderItem(const TCHAR* text, int imageIndex, int index);

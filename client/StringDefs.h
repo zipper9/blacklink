@@ -587,6 +587,7 @@ enum Strings   // @DontAdd
 	MAX_MSG_LENGTH, // "Max length"
 	MAX_SEGMENTS_NUMBER, // "Set number of segments"
 	MAX_USERS, // "Max users"
+	MBITPS, // "Mbit/s"
 	MESSAGES_COUNT, // "Messages"
 	MEDIA_AUDIO, // "Audio"
 	MEDIA_MENU_ITUNES, // "iTunes"

@@ -357,9 +357,7 @@ bool OMenu::getMenuFont(LOGFONT& lf) const
 		HRESULT hr = GetThemeSysFont(hTheme, TMT_MENUFONT, &lf);
 		if (SUCCEEDED(hr)) return true;
 	}
-	NONCLIENTMETRICS ncm;
-	memset(&ncm, 0, sizeof(ncm));
-	ncm.cbSize = sizeof(ncm);
+	NONCLIENTMETRICS ncm = { offsetof(NONCLIENTMETRICS, lfMessageFont) + sizeof(NONCLIENTMETRICS::lfMessageFont) };
 	if (!SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0)) return false;
 	memcpy(&lf, &ncm.lfMenuFont, sizeof(lf));
 	return true;

@@ -599,7 +599,7 @@ void SplashWindow::drawText(HDC hdc)
 {
 	if (!font)
 	{
-		NONCLIENTMETRICS ncm = { sizeof(ncm) };
+		NONCLIENTMETRICS ncm = { offsetof(NONCLIENTMETRICS, lfMessageFont) + sizeof(NONCLIENTMETRICS::lfMessageFont) };
 		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0);
 		font = CreateFontIndirect(&ncm.lfMessageFont);
 	}

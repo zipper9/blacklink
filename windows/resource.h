@@ -712,10 +712,9 @@
 #define IDC_CAPTION_TYPE                1717
 #define IDC_CAPTION_URL                 1718
 #define IDC_URL                         1719
-#define IDC_CLIENT_ID                   1727
-#define IDC_FILELIST_DIFF               1733
-#define IDC_SETTINGS_MEBIBITS           1734
-#define IDC_CLIENT_ID_BOX               1735
+#define IDC_CLIENT_ID                   1720
+#define IDC_CLIENT_ID_BOX               1721
+#define IDC_FILELIST_DIFF               1722
 #define IDC_SETTINGS_PASSWORD           1738
 #define IDC_SETTINGS_PASSWORD_HINT      1742
 #define IDC_AVAILABLE_STYLES            1744
@@ -760,7 +759,6 @@
 #define IDC_HTTP_PROXY_URL              1825
 #define IDC_CAPTION_HTTP_PROXY_URL      1826
 #define IDC_USERLIST_COLORS             1828
-#define IDC_SELECT_TAB_COLOR            1829
 #define IDC_SAMPLE_TAB_COLOR            1830
 #define IDC_RESET_TAB_COLOR             1831
 #define IDC_AUTOPRIORITY                1833

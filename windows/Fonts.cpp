@@ -25,7 +25,7 @@ void Fonts::init()
 	if (!g_dialogFont)
 		g_dialogFont = (HFONT) GetStockObject(DEFAULT_GUI_FONT);
 
-	NONCLIENTMETRICS ncm = { sizeof(ncm) };
+	NONCLIENTMETRICS ncm = { offsetof(NONCLIENTMETRICS, lfMessageFont) + sizeof(NONCLIENTMETRICS::lfMessageFont) };
 	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
 		memcpy(&lf, &ncm.lfMessageFont, sizeof(LOGFONT));
 	else
@@ -61,7 +61,7 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 	const StringTokenizer<tstring, TStringList> st(setting, _T(','));
 	const auto& sl = st.getTokens();
 	
-	NONCLIENTMETRICS ncm = { sizeof(ncm) };
+	NONCLIENTMETRICS ncm = { offsetof(NONCLIENTMETRICS, lfMessageFont) + sizeof(NONCLIENTMETRICS::lfMessageFont) };
 	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
 		memcpy(&dest, &ncm.lfMessageFont, sizeof(LOGFONT));
 	else

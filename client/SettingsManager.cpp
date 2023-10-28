@@ -59,8 +59,6 @@ static const char WANT_END_FILES_DEFAULT[] = "*.mov;*.mp4;*.3gp;*.3g2";
 
 static const int MIN_SPEED_LIMIT = 32;
 
-StringList SettingsManager::g_connectionSpeeds;
-
 string SettingsManager::strSettings[STR_LAST - STR_FIRST];
 int    SettingsManager::intSettings[INT_LAST - INT_FIRST];
 
@@ -800,30 +798,13 @@ void SettingsManager::setDefaults()
 	if (settingsInitialized) return;
 	settingsInitialized = true;
 #endif
-	g_connectionSpeeds.reserve(15);
-	g_connectionSpeeds.push_back("0.005");
-	g_connectionSpeeds.push_back("0.01");
-	g_connectionSpeeds.push_back("0.02");
-	g_connectionSpeeds.push_back("0.05");
-	g_connectionSpeeds.push_back("0.1");
-	g_connectionSpeeds.push_back("0.2");
-	g_connectionSpeeds.push_back("0.5");
-	g_connectionSpeeds.push_back("1");
-	g_connectionSpeeds.push_back("2");
-	g_connectionSpeeds.push_back("5");
-	g_connectionSpeeds.push_back("10");
-	g_connectionSpeeds.push_back("20");
-	g_connectionSpeeds.push_back("50");
-	g_connectionSpeeds.push_back("100");
-	g_connectionSpeeds.push_back("1000");
-	dcassert(g_connectionSpeeds.size() == g_connectionSpeeds.capacity());
 
 	// Language & encoding
 	setDefault(LANGUAGE_FILE, DEFAULT_LANG_FILE);
 	setDefault(TIME_STAMPS_FORMAT, "%X");
 
 	// User settings
-	setDefault(UPLOAD_SPEED, g_connectionSpeeds[12]); // 50Mb/s
+	setDefault(UPLOAD_SPEED, "50"); // 50 Mbit/s
 
 	// Network settings
 	setDefault(BIND_ADDRESS, "0.0.0.0");
