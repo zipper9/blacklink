@@ -312,13 +312,14 @@ void Client::connect()
 	updateActivityL();
 	prevSocket = clientSock;
 	clientSock = nullptr;
+	bool hasTempNick = !randomTempNick.empty();
 	csState.unlock();
 
 	resetSocket(prevSocket);
 	bytesShared.store(0);
 	setAutoReconnect(true);
 	setReconnDelay(Util::rand(10, 30));
-	reloadSettings(true);
+	reloadSettings(!hasTempNick);
 	resetRegistered();
 	resetOp();
 	updateConnectionStatus(ConnectionStatus::CONNECTING);
