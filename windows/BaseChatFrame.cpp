@@ -713,6 +713,7 @@ LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 
 void BaseChatFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool history /*= true*/, int textStyle /* = Colors::TEXT_STYLE_SYSTEM_MESSAGE*/)
 {
+	ASSERT_MAIN_THREAD();
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;

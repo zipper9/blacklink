@@ -767,7 +767,7 @@ void HubFrame::doConnected()
 		fm->updateRecent(r);
 	}
 
-	addTask(ADD_STATUS_LINE, new StatusTask(STRING(CONNECTED), true, true));
+	addStatus(TSTRING(CONNECTED));
 	setHubParam();
 
 	if (client)
