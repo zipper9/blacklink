@@ -471,6 +471,14 @@ static bool parseTTH(TTHValue& tth, const string& param, Commands::Result& res)
 	return true;
 }
 
+static uint64_t getBlockSize(uint64_t fileSize, unsigned leafCount)
+{
+	if (!leafCount) return 0;
+	uint64_t bl = 1024;
+	while (bl * leafCount < fileSize) bl <<= 1;
+	return bl;
+}
+
 bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 {
 	if (!checkArguments(pc, res.text))
@@ -786,7 +794,13 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					res.text += "found in database, flags=" + Util::toString(flags);
 					res.text += ", fileSize=" + Util::toString(fileSize);
 					if (!path.empty()) { res.text += ", path="; res.text += path; }
-					if (treeSize) { res.text += ", treeSize="; res.text += Util::toString(treeSize); }
+					if (treeSize)
+					{
+						res.text += ", treeSize=";
+						res.text += Util::toString(treeSize);
+						res.text += ", blockSize=";
+						res.text += Util::toString(getBlockSize(fileSize, treeSize / TigerTree::BYTES));
+					}
 					if (uploadCount) { res.text += ", uploadCount="; res.text += Util::toString(uploadCount); }
 					res.text += '\n';
 				}

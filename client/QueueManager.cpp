@@ -3392,9 +3392,8 @@ void QueueManager::RecheckerJob::run()
 		LOCK(q->csSegments);
 		q->resetDownloadedL();
 		for (auto i = sizes.cbegin(); i != sizes.cend(); ++i)
-		{
 			q->addSegmentL(Segment(i->first, i->second));
-		}
+		q->downloadedBytes = q->doneSegmentsSize;
 	}
 
 	manager.rechecked(q);
