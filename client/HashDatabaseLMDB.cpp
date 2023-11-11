@@ -102,11 +102,9 @@ bool HashDatabaseLMDB::checkError(int error, const char* what) noexcept
 class ItemParser
 {
 	public:
-		ItemParser(const uint8_t *data, size_t dataSize) : data(data), dataSize(dataSize), ptr(0)
-		{
-		}
-
+		ItemParser(const uint8_t *data, size_t dataSize) noexcept : data(data), dataSize(dataSize), ptr(0) {}
 		bool getItem(int &itemType, const void* &itemData, size_t &itemSize, size_t &headerSize) noexcept;
+		void reset() noexcept { ptr = 0; }
 
 	private:
 		const uint8_t* const data;
@@ -245,6 +243,45 @@ bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &
 		}
 		error = mdb_txn_commit(txnWrite);
 		txnWrite = nullptr; // Must not call mdb_txn_abort after mdb_txn_commit, even when an error is returned
+		if (error == MDB_MAP_FULL)
+		{
+			parent->releaseTransaction(this);
+			if (!resizeMap() || !createWriteTxn(dbi, txnWrite)) break;
+			++retryCount;
+			continue;
+		}
+		result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit");
+		break;
+	}
+	if (result)
+	{
+		mdb_dbi_close(parent->env, dbi); // dbi is always 1, so mdb_dbi_close does nothing
+		parent->releaseTransaction(this);
+	}
+	return result;
+}
+
+bool HashDatabaseConnection::deleteData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key) noexcept
+{
+	bool result = false;
+	int retryCount = 0;
+	while (retryCount < 2)
+	{
+		int error = mdb_del(txnWrite, dbi, &key, nullptr);
+		if (error == MDB_MAP_FULL)
+		{
+			abortWriteTxn(txnWrite);
+			if (!resizeMap() || !createWriteTxn(dbi, txnWrite)) break;
+			++retryCount;
+			continue;
+		}
+		if (!HashDatabaseLMDB::checkError(error, "mdb_del"))
+		{
+			abortWriteTxn(txnWrite);
+			break;
+		}
+		error = mdb_txn_commit(txnWrite);
+		txnWrite = nullptr;
 		if (error == MDB_MAP_FULL)
 		{
 			parent->releaseTransaction(this);
@@ -585,6 +622,61 @@ bool HashDatabaseConnection::putTigerTree(const TigerTree &tree) noexcept
 	val.mv_data = buf.data();
 	val.mv_size = outSize;
 	return writeData(txnWrite, dbi, key, val);
+}
+
+bool HashDatabaseConnection::removeTigerTree(const void *tth) noexcept
+{
+	MDB_txn *txnWrite = nullptr;
+	MDB_dbi dbi;
+	if (!createWriteTxn(dbi, txnWrite)) return false;
+
+	MDB_val key, val;
+	key.mv_data = const_cast<void*>(tth);
+	key.mv_size = TTH_SIZE;
+
+	int error = mdb_get(txnWrite, dbi, &key, &val);
+	if (!error && val.mv_size >= BASE_ITEM_SIZE + TTH_SIZE)
+	{
+		const uint8_t *ptr = static_cast<const uint8_t*>(val.mv_data);
+		unsigned flags = loadUnaligned16(ptr);
+		size_t treeSize = 0;
+		ItemParser parser(ptr + BASE_ITEM_SIZE, val.mv_size - BASE_ITEM_SIZE);
+		int itemType;
+		size_t itemSize, headerSize;
+		const void *itemData;
+		while (parser.getItem(itemType, itemData, itemSize, headerSize))
+		{
+			if (itemType == ITEM_TIGER_TREE)
+			{
+				treeSize = itemSize + headerSize;
+				break;
+			}
+		}
+		if (treeSize)
+		{
+			parser.reset();
+			buf.resize(val.mv_size - treeSize);
+			uint8_t *outPtr = buf.data();
+			memcpy(outPtr, ptr, BASE_ITEM_SIZE);
+			outPtr += BASE_ITEM_SIZE;
+			while (parser.getItem(itemType, itemData, itemSize, headerSize))
+			{
+				if (itemType == ITEM_TIGER_TREE) continue;
+				memcpy(outPtr, static_cast<const uint8_t*>(itemData) - headerSize, itemSize + headerSize);
+				outPtr += itemSize + headerSize;
+			}
+			size_t outSize = outPtr - buf.data();
+			if (outSize == BASE_ITEM_SIZE && flags == 0)
+				return deleteData(txnWrite, dbi, key);
+			
+			val.mv_data = buf.data();
+			val.mv_size = outSize;
+			return writeData(txnWrite, dbi, key, val);
+		}
+	}
+
+	abortWriteTxn(txnWrite);
+	return false;
 }
 
 bool HashDatabaseLMDB::getDBInfo(size_t &dataItems, uint64_t &dbSize) noexcept

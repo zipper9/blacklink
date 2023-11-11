@@ -342,11 +342,12 @@ static int getAction(const ParsedCommand& pc, const char* actions[])
 	return 0;
 }
 
-static const char* actionsTTH[] = { "info", "addtree", nullptr };
+static const char* actionsTTH[] = { "info", "addtree", "rmtree", nullptr };
 enum
 {
 	ACTION_TTH_INFO = 1,
-	ACTION_TTH_ADD_TREE
+	ACTION_TTH_ADD_TREE,
+	ACTION_TTH_REMOVE_TREE
 };
 
 static const char* actionsUserConnections[] = { "list", "expect", "tokens", "suppress", nullptr };
@@ -856,6 +857,32 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				catch (Exception& e)
 				{
 					res.text = e.getError();
+					res.what = RESULT_ERROR_MESSAGE;
+				}
+				return true;
+			}
+			if (action == ACTION_TTH_REMOVE_TREE)
+			{
+				if (pc.args.size() < 3)
+				{
+					res.text = STRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+					res.what = RESULT_ERROR_MESSAGE;
+					return true;
+				}
+				TTHValue tth;
+				if (!parseTTH(tth, pc.args[2], res)) return true;
+				auto db = DatabaseManager::getInstance();
+				auto hashDb = db->getHashDatabaseConnection();
+				if (hashDb && hashDb->removeTigerTree(tth.data))
+				{
+					db->putHashDatabaseConnection(hashDb);
+					res.text = STRING(DONE);
+					res.what = RESULT_LOCAL_TEXT;
+				}
+				else
+				{
+					if (hashDb) db->putHashDatabaseConnection(hashDb);
+					res.text = "Unable to remove tree";
 					res.what = RESULT_ERROR_MESSAGE;
 				}
 				return true;

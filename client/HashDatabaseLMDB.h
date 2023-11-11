@@ -41,6 +41,7 @@ class HashDatabaseConnection
 		bool getTigerTree(const void *tth, TigerTree &tree) noexcept;
 		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path, bool incUploadCount) noexcept;
 		bool putTigerTree(const TigerTree &tree) noexcept;
+		bool removeTigerTree(const void *tth) noexcept;
 		bool getDBInfo(DbInfo &info, int flags) noexcept;
 
 	private:
@@ -56,6 +57,7 @@ class HashDatabaseConnection
 		bool createWriteTxn(MDB_dbi &dbi, MDB_txn* &txnWrite) noexcept;
 		void abortWriteTxn(MDB_txn *txnWrite) noexcept;
 		bool writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key, MDB_val &val) noexcept;
+		bool deleteData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &key) noexcept;
 		bool resizeMap() noexcept;
 };
 
