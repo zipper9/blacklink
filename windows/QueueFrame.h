@@ -83,11 +83,11 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onPriority)
 		COMMAND_RANGE_HANDLER(IDC_SEGMENTONE, IDC_SEGMENTTWO_HUNDRED, onSegments)
-		COMMAND_RANGE_HANDLER(IDC_BROWSELIST, IDC_BROWSELIST + menuItems, onGetList)
-		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCE, IDC_REMOVE_SOURCE + menuItems, onRemoveSource)
-		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCES, IDC_REMOVE_SOURCES + 1 + menuItems, onRemoveSources)
-		COMMAND_RANGE_HANDLER(IDC_PM, IDC_PM + menuItems, onPM)
-		COMMAND_RANGE_HANDLER(IDC_READD, IDC_READD + 1 + readdItems, onReadd)
+		COMMAND_RANGE_HANDLER(IDC_BROWSELIST, IDC_BROWSELIST + (int) onlineSourcesList.size() - 1, onGetList)
+		COMMAND_RANGE_HANDLER(IDC_PM, IDC_PM + (int) onlineSourcesList.size() - 1, onPM)
+		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCE, IDC_REMOVE_SOURCE + 1 + (int) sourcesList.size() - 1, onRemoveSource)
+		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCES, IDC_REMOVE_SOURCES + (int) sourcesList.size() - 1, onRemoveSources)
+		COMMAND_RANGE_HANDLER(IDC_READD, IDC_READD + 1 + (int) readdList.size() - 1, onReadd)
 		COMMAND_ID_HANDLER(IDC_AUTOPRIORITY, onAutoPriority)
 		NOTIFY_HANDLER(IDC_QUEUE, NM_CUSTOMDRAW, onCustomDraw)
 		CHAIN_MSG_MAP(splitBase)
@@ -421,17 +421,23 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		bool usingDirMenu;
 		size_t lastTotalCount;
 		int64_t lastTotalSize;
-		
-		int menuItems;
-		int readdItems;
-		
+
+		struct SourceInfo
+		{
+			UserPtr user;
+			Flags::MaskType flags;
+			tstring nick;
+		};
+
+		vector<SourceInfo> sourcesList, onlineSourcesList, readdList;
+
 		DirItem* root;
 		DirItem* fileLists;
 		int clearingTree;
 		const DirItem* currentDir;
 		string currentDirPath;
 		bool treeInserted;
-		
+
 		QueueListViewCtrl ctrlQueue;
 		CTreeViewCtrl ctrlDirs;
 		
@@ -449,6 +455,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void initPriorityMenu();
 		static void clearMenu(OMenu& menu, int count);
 		static void clearCheck(HMENU hMenu);
+		static void sortSources(vector<SourceInfo>& v);
 		void addQueueList();
 		void addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree);
 		void addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree);

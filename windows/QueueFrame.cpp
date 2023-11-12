@@ -103,8 +103,7 @@ static const ResourceManager::Strings columnNames[] =
 
 QueueFrame::QueueFrame() :
 	timer(m_hWnd),
-	menuItems(0),
-	usingDirMenu(false), readdItems(0), fileLists(nullptr), showTree(true),
+	usingDirMenu(false), fileLists(nullptr), showTree(true),
 	showTreeContainer(WC_BUTTON, this, SHOWTREE_MESSAGE_MAP),
 	clearingTree(0), currentDir(nullptr), treeInserted(false),
 	lastTotalCount(0), lastTotalSize(-1), updateStatus(false)
@@ -129,7 +128,7 @@ QueueFrame::~QueueFrame()
 #endif
 }
 
-static tstring getSourceName(const UserPtr& user, bool partial)
+static tstring getSourceName(const UserPtr& user)
 {
 	tstring res;
 #ifdef BL_FEATURE_IP_DATABASE
@@ -142,27 +141,42 @@ static tstring getSourceName(const UserPtr& user, bool partial)
 	}
 #endif
 	if (res.empty()) res = Text::toT(user->getLastNick());
-	if (partial) res.insert(0, _T("[P] "));
 	return res;
 }
 
-static const tstring& getErrorText(const QueueItem::Source& source)
+static void checkSourceFlags(tstring& nick, Flags::MaskType flags)
 {
-	if (source.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
+	if (flags & QueueItem::Source::FLAG_PARTIAL) nick.insert(0, _T("[P] "));
+}
+
+static const tstring& getErrorText(Flags::MaskType flags)
+{
+	if (flags & QueueItem::Source::FLAG_FILE_NOT_AVAILABLE)
 		return TSTRING(FILE_NOT_AVAILABLE);
-	if (source.isSet(QueueItem::Source::FLAG_NO_NEED_PARTS))
+	if (flags & QueueItem::Source::FLAG_NO_NEED_PARTS)
 		return TSTRING(NO_NEEDED_PART);
-	if (source.isSet(QueueItem::Source::FLAG_BAD_TREE))
+	if (flags & QueueItem::Source::FLAG_BAD_TREE)
 		return TSTRING(INVALID_TREE);
-	if (source.isSet(QueueItem::Source::FLAG_NO_TTHF))
+	if (flags & QueueItem::Source::FLAG_NO_TTHF)
 		return TSTRING(SOURCE_TOO_OLD);
-	if (source.isSet(QueueItem::Source::FLAG_PASSIVE))
+	if (flags & QueueItem::Source::FLAG_PASSIVE)
 		return TSTRING(PASSIVE_USER);
-	if (source.isSet(QueueItem::Source::FLAG_SLOW_SOURCE))
+	if (flags & QueueItem::Source::FLAG_SLOW_SOURCE)
 		return TSTRING(SLOW_USER);
-	if (source.isSet(QueueItem::Source::FLAG_UNTRUSTED))
+	if (flags & QueueItem::Source::FLAG_UNTRUSTED)
 		return TSTRING(CERTIFICATE_NOT_TRUSTED);
 	return Util::emptyStringT;
+}
+
+void QueueFrame::sortSources(vector<QueueFrame::SourceInfo>& v)
+{
+	std::sort(v.begin(), v.end(), [](const SourceInfo& a, const SourceInfo &b)
+	{
+		Flags::MaskType aPartial = a.flags & QueueItem::Source::FLAG_PARTIAL;
+		Flags::MaskType bPartial = b.flags & QueueItem::Source::FLAG_PARTIAL;
+		if (aPartial != bPartial) return aPartial < bPartial;
+		return a.nick < b.nick;
+	});
 }
 
 LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -546,7 +560,9 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				{
 					if (!tmp.empty())
 						tmp += _T(", ");
-					tmp += getSourceName(j->first, j->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
+					tstring nick = getSourceName(j->first);
+					checkSourceFlags(nick, j->second.getFlags());
+					tmp += nick;
 				}
 			}
 			return tmp.empty() ? TSTRING(NO_USERS) : tmp;
@@ -596,9 +612,10 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 					{
 						if (!tmp.empty())
 							tmp += _T(", ");
-						tmp += getSourceName(j->first, j->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
-
-						const tstring& error = getErrorText(j->second);
+						tstring nick = getSourceName(j->first);
+						checkSourceFlags(nick, j->second.getFlags());
+						tmp += nick;
+						const tstring& error = getErrorText(j->second.getFlags());
 						if (!error.empty())
 						{
 							tmp += _T(" (");
@@ -1694,8 +1711,9 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				if (!isFileList)
 					singleMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				
-				menuItems = 0;
-				int onlineUsers = 0;
+				sourcesList.clear();
+				onlineSourcesList.clear();
+				readdList.clear();
 
 				qi->lockAttributes();
 				auto maxSegments = qi->getMaxSegmentsL();
@@ -1713,78 +1731,74 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					singleMenu.EnableMenuItem(indexPreview, MF_BYPOSITION | (hasPreview ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
 				}
 				{
-					MENUITEMINFO mii = { sizeof(mii) };
 					QueueRLock(*QueueItem::g_cs);
 					const auto& sources = qi->getSourcesL();
 					for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 					{
-						const auto user = i->first;
-						tstring nick = getSourceName(user, i->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
-						WinUtil::escapeMenu(nick);
-						bool isOnline = user->isOnline();
-							
-						mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
-						mii.fType = MFT_STRING;
-						mii.dwTypeData = const_cast<TCHAR*>(nick.c_str());
-						mii.dwItemData = (ULONG_PTR) &i->first;
-						if (isOnline)
-						{
-							mii.wID = IDC_BROWSELIST + menuItems;
-							browseMenu.InsertMenuItem(menuItems, TRUE, &mii);
-						}
-						mii.wID = IDC_REMOVE_SOURCE + 1 + menuItems; // "All" is before sources
-						removeMenu.InsertMenuItem(menuItems + 2, TRUE, &mii); // "All" and separator come first
-						mii.wID = IDC_REMOVE_SOURCES + menuItems;
-						removeAllMenu.InsertMenuItem(menuItems, TRUE, &mii);
-						if (isOnline)
-						{
-							mii.wID = IDC_PM + menuItems;
-							pmMenu.InsertMenuItem(menuItems, TRUE, &mii);
-							onlineUsers++;
-						}
-						menuItems++;
+						SourceInfo si{i->first, i->second.getFlags(), getSourceName(i->first)};
+						sourcesList.push_back(si);
+						if (si.user->isOnline()) onlineSourcesList.push_back(si);
 					}
-
-					readdItems = 0;
 					const auto& badSources = qi->getBadSourcesL();
 					for (auto i = badSources.cbegin(); i != badSources.cend(); ++i)
-					{
-						const auto& user = i->first;
-						tstring nick = getSourceName(user, i->second.isAnySet(QueueItem::Source::FLAG_PARTIAL));
-						const tstring& error = getErrorText(i->second);
-						if (!error.empty())
-						{
-							nick += _T(" (");
-							nick += error;
-							nick += _T(')');
-						}
-						WinUtil::escapeMenu(nick);
-						mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
-						mii.fType = MFT_STRING;
-						mii.dwTypeData = const_cast<TCHAR*>(nick.c_str());
-						mii.dwItemData = (ULONG_PTR) &(*i);
-						mii.wID = IDC_READD + 1 + readdItems;  // "All" is before sources
-						readdMenu.InsertMenuItem(readdItems + 2, TRUE, &mii);  // "All" and separator come first
-						readdItems++;
-					}
+						readdList.emplace_back(SourceInfo{i->first, i->second.getFlags(), getSourceName(i->first)});
 				}
 
-				if (menuItems == 0)
+				sortSources(sourcesList);
+				for (size_t i = 0; i < sourcesList.size(); ++i)
+				{
+					const SourceInfo& si = sourcesList[i];
+					tstring nick = si.nick;
+					checkSourceFlags(nick, si.flags);
+					WinUtil::escapeMenu(nick);
+					removeMenu.AppendMenu(MF_STRING, IDC_REMOVE_SOURCE + 1 + i, nick.c_str());
+					removeAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_SOURCES + i, nick.c_str());
+				}
+
+				sortSources(onlineSourcesList);
+				for (size_t i = 0; i < onlineSourcesList.size(); ++i)
+				{
+					const SourceInfo& si = onlineSourcesList[i];
+					tstring nick = si.nick;
+					checkSourceFlags(nick, si.flags);
+					WinUtil::escapeMenu(nick);
+					browseMenu.AppendMenu(MF_STRING, IDC_BROWSELIST + i, nick.c_str());
+					pmMenu.AppendMenu(MF_STRING, IDC_PM + i, nick.c_str());
+				}
+
+				sortSources(readdList);
+				for (size_t i = 0; i < readdList.size(); ++i)
+				{
+					const SourceInfo& si = readdList[i];
+					tstring nick = si.nick;
+					checkSourceFlags(nick, si.flags);
+					const tstring& error = getErrorText(si.flags);
+					if (!error.empty())
+					{
+						nick += _T(" (");
+						nick += error;
+						nick += _T(')');
+					}
+					WinUtil::escapeMenu(nick);
+					readdMenu.AppendMenu(MF_STRING, IDC_READD + 1 + i, nick.c_str());
+				}
+
+				if (sourcesList.empty())
 				{
 					// removeMenu
 					singleMenu.EnableMenuItem(indexPM + 7, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 					// removeAllMenu
 					singleMenu.EnableMenuItem(indexPM + 8, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				}
-				
-				if (onlineUsers == 0)
+
+				if (onlineSourcesList.empty())
 				{
 					if (indexBrowse != -1)
 						singleMenu.EnableMenuItem(indexBrowse, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 					singleMenu.EnableMenuItem(indexPM, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				}
-				
-				if (readdItems == 0)
+
+				if (readdList.empty())
 					singleMenu.EnableMenuItem(indexPM + 1, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 
 				priorityMenu.CheckMenuItem(ii->getPriority(), MF_BYPOSITION | MF_CHECKED);
@@ -1930,13 +1944,12 @@ LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 {
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
-		const void* data = browseMenu.GetItemData(wID);
-		if (data)
+		size_t index = wID - IDC_BROWSELIST;
+		if (index < onlineSourcesList.size())
 		{
-			const UserPtr* s = static_cast<const UserPtr*>(data);
 			try
 			{
-				QueueManager::getInstance()->addList(*s, 0, QueueItem::XFLAG_CLIENT_VIEW);
+				QueueManager::getInstance()->addList(sourcesList[index].user, 0, QueueItem::XFLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)
 			{
@@ -1968,13 +1981,12 @@ LRESULT QueueFrame::onReadd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 			}
 			else
 			{
-				const void* data = readdMenu.GetItemData(wID);
-				if (data)
+				size_t index = wID - (IDC_READD + 1);
+				if (index < readdList.size())
 				{
-					UserPtr s = *static_cast<const UserPtr*>(data);
 					try
 					{
-						QueueManager::getInstance()->readd(qi->getTarget(), s);
+						QueueManager::getInstance()->readd(qi->getTarget(), readdList[index].user);
 					}
 					catch (const QueueException& e)
 					{
@@ -2002,18 +2014,13 @@ LRESULT QueueFrame::onRemoveSource(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 				QueueRLock(*QueueItem::g_cs);
 				const auto& sources = qi->getSourcesL();
 				for (auto si = sources.cbegin(); si != sources.cend(); ++si)
-				{
 					sourcesToRemove.push_back(std::make_pair(qi->getTarget(), si->first));
-				}
 			}
 			else
 			{
-				const void* data = removeMenu.GetItemData(wID);
-				if (data)
-				{
-					const UserPtr* s = static_cast<const UserPtr*>(data);
-					sourcesToRemove.push_back(std::make_pair(qi->getTarget(), *s));
-				}
+				size_t index = wID - (IDC_REMOVE_SOURCE + 1);
+				if (index < sourcesList.size())
+					sourcesToRemove.push_back(std::make_pair(qi->getTarget(), sourcesList[index].user));
 			}
 		}
 		removeSources();
@@ -2023,12 +2030,9 @@ LRESULT QueueFrame::onRemoveSource(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 
 LRESULT QueueFrame::onRemoveSources(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	const void* data = removeAllMenu.GetItemData(wID);
-	if (data)
-	{
-		const UserPtr* s = static_cast<const UserPtr*>(data);
-		QueueManager::getInstance()->removeSource(*s, QueueItem::Source::FLAG_REMOVED);
-	}
+	size_t index = wID - IDC_REMOVE_SOURCES;
+	if (index < sourcesList.size())
+		QueueManager::getInstance()->removeSource(sourcesList[index].user, QueueItem::Source::FLAG_REMOVED);
 	return 0;
 }
 
@@ -2036,12 +2040,12 @@ LRESULT QueueFrame::onPM(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL&
 {
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
-		const void* data = pmMenu.GetItemData(wID);
-		if (data)
+		size_t index = wID - IDC_PM;
+		if (index < onlineSourcesList.size())
 		{
-			const UserPtr* s = static_cast<const UserPtr*>(data);
-			const auto hubs = ClientManager::getHubs((*s)->getCID(), Util::emptyString);
-			PrivateFrame::openWindow(nullptr, HintedUser(*s, !hubs.empty() ? hubs[0] : Util::emptyString));
+			const UserPtr& user = sourcesList[index].user;
+			const auto hubs = ClientManager::getHubs(user->getCID(), Util::emptyString);
+			PrivateFrame::openWindow(nullptr, HintedUser(user, !hubs.empty() ? hubs[0] : Util::emptyString));
 		}
 	}
 	return 0;

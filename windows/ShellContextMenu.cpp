@@ -53,7 +53,7 @@ void ShellContextMenu::setPath(const wstring& strPath)
 	{
 		hr = SHBindToParent(pidlParent, IID_IShellFolder, (void**) &shellFolder, &pidlChild);
 		if (FAILED(hr)) cleanup();
-    }
+	}
 }
 
 HMENU ShellContextMenu::getMenu()
