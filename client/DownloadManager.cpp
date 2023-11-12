@@ -191,7 +191,7 @@ bool DownloadManager::isStartDownload(QueueItem::Priority prio) const noexcept
 void DownloadManager::checkDownloads(const UserConnectionPtr& ucPtr, bool quickCheck) noexcept
 {
 	UserConnection* conn = ucPtr.get();
-	const QueueItem::Priority prio = QueueManager::hasDownload(conn->getUser());
+	const QueueItem::Priority prio = QueueManager::hasDownload(conn->getUser()); // FIXME: Use getDownload
 	if (quickCheck && prio == QueueItem::PAUSED)
 		return;
 	if (!isStartDownload(prio))
@@ -206,7 +206,7 @@ void DownloadManager::checkDownloads(const UserConnectionPtr& ucPtr, bool quickC
 	if (!d)
 	{
 		conn->setState(UserConnection::STATE_IDLE);
-		if (errorInfo.error != QueueManager::SUCCESS)
+		if (errorInfo.error != QueueItem::SUCCESS)
 			fire(DownloadManagerListener::Status(), conn, errorInfo);
 		return;
 	}
@@ -317,7 +317,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 		return;
 	}
 	
-	if (d->getType() == Transfer::TYPE_FILE && d->getTreeValid())
+	if (d->getType() == Transfer::TYPE_FILE && d->getTigerTree().getFileSize())
 	{
 		typedef MerkleCheckOutputStream<TigerTree, true> MerkleStream;
 		d->setDownloadFile(new MerkleStream(d->getTigerTree(), d->getDownloadFile(), d->getStartPos()));
@@ -393,18 +393,17 @@ void DownloadManager::endData(UserConnection* source)
 	{
 		d->getDownloadFile()->flushBuffers(false);
 		
-		int64_t bl = 1024;
+		int64_t bl = TigerTree::BASE_BLOCK_SIZE;
 		auto &tree = d->getTigerTree();
-		while (bl * (int64_t)tree.getLeaves().size() < tree.getFileSize())
-		{
-			bl *= 2;
-		}
+		while (bl * (int64_t) tree.getLeaves().size() < tree.getFileSize())
+			bl <<= 1;
 		tree.setBlockSize(bl);
 		tree.calcRoot();
 		
 		if (!(d->getTTH() == tree.getRoot()))
 		{
 			// This tree is for a different file, remove from queue
+			d->getTigerTree().setFileSize(0);
 			removeDownload(d);
 			fire(DownloadManagerListener::Failed(), d, STRING(INVALID_TREE));
 			
@@ -416,7 +415,6 @@ void DownloadManager::endData(UserConnection* source)
 			if (ucPtr) checkDownloads(ucPtr);
 			return;
 		}
-		d->setTreeValid(true);
 	}
 	else
 	{

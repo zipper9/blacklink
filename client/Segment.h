@@ -46,6 +46,11 @@ class Segment
 			return (getStart() < rhs.getStart()) || (getStart() == rhs.getStart() && getSize() < rhs.getSize());
 		}
 
+		bool operator==(const Segment& rhs) const
+		{
+			return start == rhs.start && size == rhs.size;
+		}
+
 		bool contains(const Segment& rhs) const
 		{
 			return getStart() <= rhs.getStart() && getEnd() == rhs.getEnd(); // ???

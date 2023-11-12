@@ -77,7 +77,6 @@ class Download : public Transfer, public Flags
 			return downloadFile;
 		}
 
-		GETSET(bool, treeValid, TreeValid);
 		GETSET(string, reasonText, ReasonText);
 		GETSET(int, reasonCode, ReasonCode);
 #ifdef DEBUG_TRANSFERS

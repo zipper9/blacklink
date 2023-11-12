@@ -60,18 +60,6 @@ class QueueManager : public Singleton<QueueManager>,
 	private SearchManagerListener, private ClientManagerListener
 {
 	public:
-		// return values for getNextL
-		enum
-		{
-			SUCCESS,
-			ERROR_NO_ITEM,
-			ERROR_NO_NEEDED_PART,
-			ERROR_FILE_SLOTS_TAKEN,
-			ERROR_DOWNLOAD_SLOTS_TAKEN,
-			ERROR_NO_FREE_BLOCK,
-			ERROR_INVALID_CONNECTION
-		};
-
 		enum
 		{
 			DIR_FLAG_DOWNLOAD_DIRECTORY = 1,
@@ -90,6 +78,14 @@ class QueueManager : public Singleton<QueueManager>,
 #endif
 			QueueItem::Priority priority = QueueItem::DEFAULT;
 			bool readdBadSource = true;
+		};
+
+		struct QueueItemSegment
+		{
+			QueueItemPtr qi;
+			Segment seg;
+			DownloadPtr download;
+			Flags::MaskType sourceFlags;
 		};
 
 		// Add a file to the queue
@@ -238,13 +234,13 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		void setPriority(const string& target, QueueItem::Priority p, bool resetAutoPriority) noexcept;
 		void setAutoPriority(const string& target, bool ap);
-		
+
 		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
 		static QueueItemPtr getQueuedItem(const UserPtr& user) noexcept;
 		DownloadPtr getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& error) noexcept;
 		void putDownload(DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& download);
-		
+
 		/** @return The highest priority download the user has, PAUSED may also mean no downloads */
 		static QueueItem::Priority hasDownload(const UserPtr& user);
 		
@@ -341,12 +337,19 @@ class QueueManager : public Singleton<QueueManager>,
 				void removeRunning(const UserPtr& d);
 
 			private:	
+				// flags for getNextL
+				enum
+				{
+					FLAG_ADD_SEGMENT  = 1,
+					FLAG_ALLOW_REMOVE = 2
+				};
+
 				void addL(const QueueItemPtr& qi, QueueItem::Priority p);
 				void addL(const QueueItemPtr& qi, QueueItem::Priority prioQueue, const UserPtr& user);
-				int getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
+				int getNextL(QueueItemSegment& result, const UserPtr& user, const QueueItem::GetSegmentParams& gsp, QueueItem::Priority minPrio, int flags);
 				QueueItemPtr getRunning(const UserPtr& user);
-				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
-				void removeDownload(const QueueItemPtr& qi, const UserPtr& d);
+				void setRunningDownload(const QueueItemPtr& qi, const UserPtr& user);
+				void removeDownload(const QueueItemPtr& qi, const UserPtr& user);
 				void removeQueueItemL(const QueueItemPtr& qi, bool removeDownloadFlag);
 				void removeQueueItem(const QueueItemPtr& qi);
 				void removeUserL(const QueueItemPtr& qi, const UserPtr& user, bool removeDownloadFlag);

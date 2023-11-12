@@ -1436,13 +1436,13 @@ static const tstring& getReasonText(int error)
 {
 	switch (error)
 	{
-		case QueueManager::ERROR_NO_NEEDED_PART:
+		case QueueItem::ERROR_NO_NEEDED_PART:
 			return TSTRING(NO_NEEDED_PART);
-		case QueueManager::ERROR_FILE_SLOTS_TAKEN:
+		case QueueItem::ERROR_FILE_SLOTS_TAKEN:
 			return TSTRING(ALL_FILE_SLOTS_TAKEN);
-		case QueueManager::ERROR_DOWNLOAD_SLOTS_TAKEN:
+		case QueueItem::ERROR_DOWNLOAD_SLOTS_TAKEN:
 			return TSTRING(ALL_DOWNLOAD_SLOTS_TAKEN);
-		case QueueManager::ERROR_NO_FREE_BLOCK:
+		case QueueItem::ERROR_NO_FREE_BLOCK:
 			return TSTRING(NO_FREE_BLOCK);
 	}
 	return Util::emptyStringT;

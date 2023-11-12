@@ -89,7 +89,20 @@ class QueueItem
 			XFLAG_CLIENT_VIEW       = 0x0040, // The file must be opened by the app
 			XFLAG_TEXT_VIEW         = 0x0080, // File should be viewed as a text file (used with XFLAG_CLIENT_VIEW)
 			XFLAG_AUTODROP          = 0x0100, // Slow sources autodrop is enabled for this file
-			XFLAG_DOWNLOAD_CONTENTS = 0x0200
+			XFLAG_DOWNLOAD_CONTENTS = 0x0200,
+			XFLAG_ALLOW_SEGMENTS    = 0x0400
+		};
+
+		// return values for QueueManager::getNextL
+		enum
+		{
+			SUCCESS,
+			ERROR_NO_ITEM,
+			ERROR_NO_NEEDED_PART,
+			ERROR_FILE_SLOTS_TAKEN,
+			ERROR_DOWNLOAD_SLOTS_TAKEN,
+			ERROR_NO_FREE_BLOCK,
+			ERROR_INVALID_CONNECTION
 		};
 
 		bool isUserList() const
@@ -100,6 +113,12 @@ class QueueItem
 		typedef std::vector<uint16_t> PartsInfo;
 		static int countParts(const PartsInfo& pi);
 		static bool compareParts(const PartsInfo& a, const PartsInfo& b);
+
+		struct RunningSegment
+		{
+			Segment seg;
+			DownloadPtr d;
+		};
 
 		/**
 		 * Source parts info
@@ -160,7 +179,7 @@ class QueueItem
 		};
 
 		// used by getChunksVisualisation
-		struct RunningSegment
+		struct SegmentEx
 		{
 			int64_t start;
 			int64_t end;
@@ -169,7 +188,6 @@ class QueueItem
 
 		struct GetSegmentParams
 		{
-			int64_t blockSize;
 			int64_t wantedSize;
 			int64_t lastSpeed;
 			bool enableMultiChunk;
@@ -240,7 +258,7 @@ class QueueItem
 		size_t getOnlineSourceCountL() const;
 		uint32_t getSourcesVersion() const { return sourcesVersion.load(); }
 		void updateSourcesVersion() { ++sourcesVersion; }
-		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
+		void getChunksVisualisation(vector<SegmentEx>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
 		void setOverlapped(const Segment& segment, bool isOverlapped);
 
@@ -254,17 +272,19 @@ class QueueItem
 		void updateDownloadedBytes();
 		void updateDownloadedBytesAndSpeed();
 		void addDownload(const DownloadPtr& download);
+		void addDownload(const Segment& seg);
+		bool setDownloadForSegment(const Segment& seg, const DownloadPtr& download);
 		bool removeDownload(const UserPtr& user);
+		bool removeDownload(const Segment& seg);
 		size_t getDownloadsSegmentCount() const { return downloads.size(); }
 		bool disconnectSlow(const DownloadPtr& d);
 		void disconnectOthers(const DownloadPtr& d);
 		bool isMultipleSegments() const;
-		bool isDownloadTree() const;
 		UserPtr getFirstUser() const;
 		void getUsers(UserList& users) const;
 
 		// Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found
-		Segment getNextSegmentL(const GetSegmentParams& gsp, const PartialSource::Ptr &partialSource) const;
+		Segment getNextSegmentL(const GetSegmentParams& gsp, const PartialSource::Ptr &partialSource, int* error) const;
 
 		void addSegment(const Segment& segment);
 		void addSegmentL(const Segment& segment);
@@ -332,14 +352,14 @@ class QueueItem
 		const TTHValue& getTTH() const { return tthRoot; }
 		time_t getAdded() const { return added; }
 
-		void updateBlockSize(uint64_t treeBlockSize);
+		bool updateBlockSize(uint64_t treeBlockSize);
 		uint64_t getBlockSize() const { return blockSize; }
 
 		static string getDCTempName(const string& fileName, const TTHValue* tth);
 
 	private:
 		mutable CriticalSection csSegments;
-		std::vector<DownloadPtr> downloads;
+		std::vector<RunningSegment> downloads;
 
 		SegmentSet doneSegments;
 		int64_t doneSegmentsSize;

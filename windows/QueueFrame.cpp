@@ -2490,7 +2490,7 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				ii->getQueueItem()->getChunksVisualisation(runningChunks, doneChunks);
 				for (auto i = runningChunks.cbegin(); i < runningChunks.cend(); ++i)
 				{
-					const QueueItem::RunningSegment& rs = *i;
+					const QueueItem::SegmentEx& rs = *i;
 					statusBar.FillRange(rs.start, rs.end, colorRunning);
 					statusBar.FillRange(rs.start, rs.start + rs.pos, colorRunning2);
 				}

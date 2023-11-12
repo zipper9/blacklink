@@ -20,7 +20,7 @@
 #include "Download.h"
 #include "UserConnection.h"
 #include "QueueItem.h"
-#include "DatabaseManager.h"
+#include "LogManager.h"
 #include "SettingsManager.h"
 #include "AppPaths.h"
 #include "PathUtil.h"
@@ -37,7 +37,6 @@ Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noex
 	Transfer(conn, getTargetPath(item), item->getTTH()),
 	qi(item),
 	downloadFile(nullptr),
-	treeValid(false),
 	reasonCode(REASON_CODE_UNSPECIFIED)
 #ifdef BL_FEATURE_DROP_SLOW_SOURCES
 	, lastNormalSpeed(0)
@@ -69,83 +68,6 @@ Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noex
 #endif
 	if (queueItemFlags & QueueItem::FLAG_USER_GET_IP)
 		setFlag(FLAG_USER_GET_IP);
-
-	const bool isFile = getType() == TYPE_FILE && qi->getSize() != -1;
-	const bool hasTTH = !tth.isZero();
-
-	if (isFile && hasTTH)
-	{
-		auto db = DatabaseManager::getInstance();
-		auto hashDb = db->getHashDatabaseConnection();
-		if (hashDb)
-		{
-			treeValid = db->getTree(hashDb, getTTH(), tigerTree);
-			db->putHashDatabaseConnection(hashDb);
-		}
-		if (treeValid)
-			qi->updateBlockSize(tigerTree.getBlockSize());
-	}
-	{
-		QueueRLock(*QueueItem::g_cs);
-		auto it = qi->findSourceL(getUser());
-		if (it != qi->getSourcesL().end())
-		{
-			const auto& src = it->second;
-			if (src.isSet(QueueItem::Source::FLAG_PARTIAL))
-				setFlag(FLAG_DOWNLOAD_PARTIAL);
-
-			if (isFile)
-			{
-				QueueItem::GetSegmentParams gsp;
-				gsp.readSettings();
-				if (treeValid)
-				{
-					gsp.blockSize = tigerTree.getBlockSize();
-					gsp.wantedSize = conn->getChunkSize();
-					gsp.lastSpeed = conn->getSpeed();
-					setSegment(qi->getNextSegmentL(gsp, src.partialSource));
-				}
-				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !src.isSet(QueueItem::Source::FLAG_NO_TREE) && qi->getSize() > MIN_BLOCK_SIZE && hasTTH)
-				{
-					// Get the tree unless the file is small (for small files, we'd probably only get the root anyway)
-					setType(TYPE_TREE);
-					tigerTree.setFileSize(qi->getSize());
-					setSegment(Segment(0, -1));
-				}
-				else if (hasTTH)
-				{
-					// Use the root as tree to get some sort of validation at least...
-					// TODO: use aligned block size ??
-					tigerTree = TigerTree(qi->getSize(), qi->getSize(), tth);
-					setTreeValid(true);
-					gsp.blockSize = tigerTree.getBlockSize();
-					gsp.wantedSize = 0;
-					gsp.lastSpeed = 0;
-					setSegment(qi->getNextSegmentL(gsp, src.partialSource));
-				}
-				else
-				{
-					gsp.blockSize = 1;
-					gsp.wantedSize = qi->getSize();
-					gsp.lastSpeed = 0;
-					setSegment(qi->getNextSegmentL(gsp, src.partialSource));
-				}
-
-				if (getStartPos() + getSize() != qi->getSize())
-					setFlag(FLAG_CHUNKED);
-
-				if (getSegment().getOverlapped())
-				{
-					setFlag(FLAG_OVERLAP);
-					qi->setOverlapped(getSegment(), true);
-				}
-			}
-		}
-		else
-		{
-			dcassert(0);
-		}
-	}
 }
 
 Download::~Download()

@@ -124,8 +124,8 @@ int16_t QueueItem::getTransferFlags(int& flags) const
 	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		const auto& d = *i;
-		if (d->getStartTime() > 0)
+		const Download* d = i->d.get();
+		if (d && d->getStartTime() > 0)
 		{
 			segs++;
 
@@ -357,15 +357,55 @@ void QueueItem::addDownload(const DownloadPtr& download)
 {
 	LOCK(csSegments);
 	dcassert(download->getUser());
-	//dcassert(downloads.find(p_download->getUser()) == downloads.end());
-	downloads.push_back(download);
+	RunningSegment rs;
+	rs.d = download;
+	rs.seg = download->getSegment();
+	downloads.push_back(rs);
+}
+
+void QueueItem::addDownload(const Segment& seg)
+{
+	LOCK(csSegments);
+	RunningSegment rs;
+	rs.seg = seg;
+	downloads.push_back(rs);
+}
+
+bool QueueItem::setDownloadForSegment(const Segment& seg, const DownloadPtr& download)
+{
+	LOCK(csSegments);
+	for (auto i = downloads.begin(); i != downloads.end(); ++i)
+	{
+		if (i->seg == seg)
+		{
+			dcassert(!i->d);
+			i->d = download;
+			return true;
+		}
+	}
+	return false;
 }
 
 bool QueueItem::removeDownload(const UserPtr& user)
 {
 	LOCK(csSegments);
 	for (auto i = downloads.begin(); i != downloads.end(); ++i)
-		if ((*i)->getUser() == user)
+	{
+		const Download* d = i->d.get();
+		if (d && d->getUser() == user)
+		{
+			downloads.erase(i);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool QueueItem::removeDownload(const Segment& seg)
+{
+	LOCK(csSegments);
+	for (auto i = downloads.begin(); i != downloads.end(); ++i)
+		if (i->seg == seg)
 		{
 			downloads.erase(i);
 			return true;
@@ -403,7 +443,7 @@ Segment QueueItem::getNextSegmentForward(const int64_t blockSize, const int64_t 
 		if (!overlaps)
 		{
 			for (auto i = downloads.cbegin(); !overlaps && i != downloads.cend(); ++i)
-				overlaps = block.overlaps((*i)->getSegment());
+				overlaps = block.overlaps(i->seg);
 		}
 
 		if (!overlaps)
@@ -470,7 +510,7 @@ Segment QueueItem::getNextSegmentBackward(const int64_t blockSize, const int64_t
 		if (!overlaps)
 		{
 			for (auto i = downloads.crbegin(); !overlaps && i != downloads.crend(); ++i)
-				overlaps = (*i)->getSegment().overlaps(block);
+				overlaps = i->seg.overlaps(block);
 		}
 
 		if (!overlaps)
@@ -520,11 +560,14 @@ bool QueueItem::shouldSearchBackward() const
 	return true;
 }
 
-Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSource::Ptr& partialSource) const
+Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSource::Ptr& partialSource, int* error) const
 {
-	const int64_t blockSize = gsp.blockSize;
+	const int64_t blockSize = getBlockSize();
 	if (getSize() == -1 || blockSize == 0)
+	{
+		if (error) *error = SUCCESS;
 		return Segment(0, -1);
+	}
 
 	csAttribs.lock();
 	uint8_t savedMaxSegments = maxSegments;
@@ -534,7 +577,10 @@ Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSou
 	if (!gsp.enableMultiChunk)
 	{
 		if (!downloads.empty())
+		{
+			if (error) *error = ERROR_DOWNLOAD_SLOTS_TAKEN;
 			return Segment(-1, 0);
+		}
 
 		int64_t start = 0;
 		int64_t end = getSize();
@@ -556,6 +602,7 @@ Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSou
 				}
 			}
 		}
+		if (error) *error = SUCCESS;
 		return Segment(start, std::min(getSize(), end) - start);
 	}
 
@@ -563,10 +610,11 @@ Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSou
 	    (gsp.dontBeginSegment && static_cast<int64_t>(gsp.dontBeginSegSpeed) * 1024 < getAverageSpeed()))
 	{
 		// no other segments if we have reached the speed or segment limit
+		if (error) *error = ERROR_NO_FREE_BLOCK;
 		return Segment(-1, 0);
 	}
 
-	/* added for PFS */
+	// Added for PFS
 	vector<int64_t> posArray;
 	vector<Segment> neededParts;
 
@@ -597,25 +645,32 @@ Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSou
 	Segment block = shouldSearchBackward()?
 		getNextSegmentBackward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray) :
 		getNextSegmentForward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray);
-	if (block.getSize()) return block;
+	if (block.getSize())
+	{
+		if (error) *error = SUCCESS;
+		return block;
+	}
 
 	if (!neededParts.empty())
 	{
 		// select random chunk for download
 		dcdebug("Found partial chunks: %d\n", int(neededParts.size()));
-
 		Segment& selected = neededParts[Util::rand(0, static_cast<uint32_t>(neededParts.size()))];
 		selected.setSize(std::min(selected.getSize(), targetSize)); // request only wanted size
+		if (error) *error = SUCCESS;
 		return selected;
 	}
 
+#if 0 // Disabled
 	if (!partialSource && gsp.overlapChunks && gsp.lastSpeed > 10 * 1024)
 	{
 		// overlap slow running chunk
 		const uint64_t currentTick = GET_TICK();
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
-			const auto d = *i;
+			const Download* d = i->d.get();
+			if (!d)
+				continue;
 
 			// current chunk mustn't be already overlapped
 			if (d->getOverlapped())
@@ -639,12 +694,15 @@ Segment QueueItem::getNextSegmentL(const GetSegmentParams& gsp, const PartialSou
 			if (2 * newChunkLeft < secondsLeft)
 			{
 				dcdebug("Overlapping... old user: " I64_FMT " s, new user: " I64_FMT " s\n", d->getSecondsLeft(), newChunkLeft);
+				if (error) *error = SUCCESS;
 				return Segment(d->getStartPos() + pos, size, true);
 			}
 		}
 	}
+#endif
 
-	return Segment(0, 0);
+	if (error) *error = ERROR_NO_NEEDED_PART;
+	return Segment(-1, 0);
 }
 
 void QueueItem::setOverlapped(const Segment& segment, bool isOverlapped)
@@ -653,8 +711,8 @@ void QueueItem::setOverlapped(const Segment& segment, bool isOverlapped)
 	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		auto d = *i;
-		if (d->getSegment().contains(segment))
+		Download* d = i->d.get();
+		if (d && d->getSegment().contains(segment))
 		{
 			d->setOverlapped(isOverlapped);
 			break;
@@ -669,9 +727,12 @@ void QueueItem::updateDownloadedBytesAndSpeed()
 	downloadedBytes = doneSegmentsSize;
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		const auto d = *i;
-		downloadedBytes += d->getPos();
-		totalSpeed += d->getRunningAverage();
+		const Download* d = i->d.get();
+		if (d)
+		{
+			downloadedBytes += d->getPos();
+			totalSpeed += d->getRunningAverage();
+		}
 	}
 	averageSpeed = totalSpeed;
 }
@@ -797,19 +858,20 @@ void QueueItem::getDoneSegments(vector<Segment>& done) const
 		done.push_back(*i);
 }
 
-void QueueItem::getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const
+void QueueItem::getChunksVisualisation(vector<SegmentEx>& running, vector<Segment>& done) const
 {
 	running.clear();
 	done.clear();
 	LOCK(csSegments);
 	running.reserve(downloads.size());
-	RunningSegment rs;
+	SegmentEx rs;
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		const Segment &segment = (*i)->getSegment();
+		const Segment& segment = i->seg;
+		const Download* d = i->d.get();
 		rs.start = segment.getStart();
 		rs.end = segment.getEnd();
-		rs.pos = (*i)->getPos();
+		rs.pos = d ? d->getPos() : 0;
 		running.push_back(rs);
 	}
 	done.reserve(doneSegments.size());
@@ -823,11 +885,14 @@ bool QueueItem::isMultipleSegments() const
 	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		if ((*i)->getStartTime() > 0)
+		const Download* d = i->d.get();
+		if (d && d->getStartTime() > 0)
+		{
 			activeSegments++;
-		// more segments won't change anything
-		if (activeSegments > 1)
-			return true;
+			// more segments won't change anything
+			if (activeSegments > 1)
+				return true;
+		}
 	}
 	return false;
 }
@@ -836,16 +901,11 @@ UserPtr QueueItem::getFirstUser() const
 {
 	LOCK(csSegments);
 	if (!downloads.empty())
-		return downloads.front()->getUser();
-	else
-		return UserPtr();
-}
-
-bool QueueItem::isDownloadTree() const
-{
-	LOCK(csSegments);
-	if (downloads.empty()) return false;
-	return downloads.front()->getType() == Transfer::TYPE_TREE;
+	{
+		const Download* d = downloads.front().d.get();
+		if (d) return d->getUser();
+	}
+	return UserPtr();
 }
 
 void QueueItem::getUsers(UserList& users) const
@@ -853,7 +913,10 @@ void QueueItem::getUsers(UserList& users) const
 	LOCK(csSegments);
 	users.reserve(downloads.size());
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
-		users.push_back((*i)->getUser());
+	{
+		const Download* d = i->d.get();
+		if (d) users.push_back(d->getUser());
+	}
 }
 
 void QueueItem::disconnectOthers(const DownloadPtr& download)
@@ -861,8 +924,11 @@ void QueueItem::disconnectOthers(const DownloadPtr& download)
 	LOCK(csSegments);
 	// Disconnect all possible overlapped downloads
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
-		if ((*i) != download)
-			(*i)->disconnect();
+	{
+		const DownloadPtr& d = i->d;
+		if (d && d != download)
+			d->disconnect();
+	}
 }
 
 bool QueueItem::disconnectSlow(const DownloadPtr& download)
@@ -872,30 +938,32 @@ bool QueueItem::disconnectSlow(const DownloadPtr& download)
 	LOCK(csSegments);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
-		const auto& j = *i;
-		if (j != download && j->getSegment().contains(download->getSegment()))
+		const DownloadPtr& d = i->d;
+		if (d && d != download && d->getSegment().contains(download->getSegment()))
 		{
 			// overlapping has no sense if segment is going to finish
-			if (j->getSecondsLeft() < 10)
+			if (d->getSecondsLeft() < 10)
 				break;
 
 			found = true;
 
 			// disconnect slow chunk
-			j->disconnect();
+			d->disconnect();
 			break;
 		}
 	}
 	return found;
 }
 
-void QueueItem::updateBlockSize(uint64_t treeBlockSize)
+bool QueueItem::updateBlockSize(uint64_t treeBlockSize)
 {
 	if (treeBlockSize > blockSize)
 	{
 		dcassert(!(treeBlockSize % blockSize));
 		blockSize = treeBlockSize;
+		return true;
 	}
+	return false;
 }
 
 void QueueItem::GetSegmentParams::readSettings()

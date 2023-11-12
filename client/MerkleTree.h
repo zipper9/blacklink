@@ -48,10 +48,10 @@ class MerkleTree
 		typedef std::vector<MerkleValue> MerkleList;
 		
 		MerkleTree() : fileSize(0), blockSize(BASE_BLOCK_SIZE) { }
-		explicit MerkleTree(int64_t aBlockSize) : fileSize(0), blockSize(aBlockSize) { }
+		explicit MerkleTree(int64_t blockSize) : fileSize(0), blockSize(blockSize) { }
 		
 		/** Initialise a single root tree */
-		MerkleTree(int64_t aFileSize, int64_t aBlockSize, const MerkleValue& aRoot) : root(aRoot), fileSize(aFileSize), blockSize(aBlockSize)
+		MerkleTree(int64_t fileSize, int64_t blockSize, const MerkleValue& root) : root(root), fileSize(fileSize), blockSize(blockSize)
 		{
 			leaves.push_back(root);
 		}
@@ -66,7 +66,7 @@ class MerkleTree
 			leaves.resize(hashCount);
 			for (size_t i = 0; i < hashCount; i++, data += BYTES)
 				memcpy(leaves[i].data, data, BYTES);
-			int64_t bl = 1024;
+			int64_t bl = BASE_BLOCK_SIZE;
 			while (static_cast<int64_t>(bl * hashCount) < fileSize)
 				bl <<= 1;
 			this->fileSize = fileSize;
@@ -74,35 +74,33 @@ class MerkleTree
 			calcRoot();
 			return true;
 		}
-		
-		static uint64_t calcBlockSize(const uint64_t aFileSize, const unsigned int maxLevels)
+
+		static uint64_t calcBlockSize(uint64_t fileSize, unsigned maxLevels)
 		{
-			uint64_t tmp = BASE_BLOCK_SIZE;
-			const uint64_t maxHashes = ((uint64_t)1) << (maxLevels - 1);
-			while ((maxHashes * tmp) < aFileSize)
-			{
-				tmp *= 2;
-			}
-			return tmp;
+			uint64_t blockSize = BASE_BLOCK_SIZE;
+			const uint64_t maxHashes = (uint64_t) 1 << (maxLevels - 1);
+			while (maxHashes * blockSize < fileSize)
+				blockSize <<= 1;
+			return blockSize;
 		}
 
-		static size_t calcBlocks(int64_t aFileSize, int64_t aBlockSize)
+		static size_t calcBlocks(int64_t fileSize, int64_t blockSize)
 		{
-			dcassert(aBlockSize > 0);
-			dcassert(aFileSize >= aBlockSize);
-			return max((size_t)((aFileSize + aBlockSize - 1) / aBlockSize), (size_t)1);
+			dcassert(blockSize > 0);
+			dcassert(fileSize >= 0);
+			return max<int64_t>((fileSize + blockSize - 1) / blockSize, 1);
 		}
 
-		static uint16_t calcBlocks(int64_t aFileSize)
+		static uint16_t calcBlocks(int64_t fileSize)
 		{
-			return (uint16_t)calcBlocks(aFileSize, calcBlockSize(aFileSize, 10));
+			return (uint16_t) calcBlocks(fileSize, calcBlockSize(fileSize, 10));
 		}
 
 		static uint64_t getMaxBlockSize(int64_t fileSize)
 		{
 			return max(calcBlockSize(fileSize, 10), MIN_BLOCK_SIZE);
 		}
-		
+
 		uint64_t calcFullLeafCnt(uint64_t ttrBlockSize)
 		{
 			return ttrBlockSize / BASE_BLOCK_SIZE;
@@ -198,31 +196,31 @@ class MerkleTree
 			return blockSize;
 		}
 
-		void setBlockSize(int64_t aSize)
+		void setBlockSize(int64_t size)
 		{
-			blockSize = aSize;
+			blockSize = size;
 		}
-		
+
 		int64_t getFileSize() const
 		{
 			return fileSize;
 		}
 
-		void setFileSize(int64_t aSize)
+		void setFileSize(int64_t size)
 		{
-			fileSize = aSize;
+			fileSize = size;
 		}
-		
-		bool verifyRoot(const uint8_t* aRoot)
+
+		bool verifyRoot(const uint8_t* root)
 		{
-			return memcmp(aRoot, getRoot().data(), BYTES) == 0;
+			return memcmp(root, getRoot().data(), BYTES) == 0;
 		}
-		
+
 		void calcRoot()
 		{
 			root = getHash(0, fileSize);
 		}
-		
+
 		void getLeafData(ByteVector& buf)
 		{
 			size_t size = leaves.size();

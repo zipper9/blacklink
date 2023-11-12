@@ -292,7 +292,7 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 	{
 		const QueueItemPtr& q = i->second;
 		// We prefer to search for things that are not running...
-		if (cand && q->getNextSegmentL(gsp, nullptr).getSize() == 0)
+		if (cand && q->getNextSegmentL(gsp, nullptr, nullptr).getSize() == 0)
 			continue;
 		// No finished files
 		if (q->isFinished())
@@ -315,13 +315,13 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 
 		cand = q;
 
-		if (cand->getNextSegmentL(gsp, nullptr).getSize() != 0)
+		if (cand->getNextSegmentL(gsp, nullptr, nullptr).getSize() != 0)
 			break;
 	}
 
 	//check this again, if the first item we pick is running and there are no
 	//other suitable items this will be true
-	if (cand && cand->getNextSegmentL(gsp, nullptr).getSize() == 0)
+	if (cand && cand->getNextSegmentL(gsp, nullptr, nullptr).getSize() == 0)
 		cand = nullptr;
 
 	return cand;
@@ -331,7 +331,6 @@ QueueItemPtr QueueManager::FileQueue::findAutoSearch(const deque<string>& recent
 {
 	QueueItem::GetSegmentParams gsp;
 	gsp.readSettings();
-	gsp.blockSize = 0;
 	gsp.wantedSize = 0;
 	gsp.lastSpeed = 0;
 
@@ -361,10 +360,10 @@ QueueItemPtr QueueManager::FileQueue::findAutoSearch(const deque<string>& recent
 					LogManager::message("[1-1] FileQueue::findAutoSearch - cand" + cand->getTarget(), false);
 #endif
 			}
-			else if (cand->getNextSegmentL(gsp, nullptr).getSize() == 0)
+			else if (cand->getNextSegmentL(gsp, nullptr, nullptr).getSize() == 0)
 			{
 				QueueItemPtr cand2 = findCandidateL(queue.begin(), i, recent, gsp);
-				if (cand2 && cand2->getNextSegmentL(gsp, nullptr).getSize() != 0)
+				if (cand2 && cand2->getNextSegmentL(gsp, nullptr, nullptr).getSize() != 0)
 				{
 #ifdef _DEBUG
 					LogManager::message("[2] FileQueue::findAutoSearch - cand2 = " + cand2->getTarget(), false);
@@ -452,96 +451,90 @@ QueueItemPtr QueueManager::FileQueue::findTarget(const string& target) const
 	return nullptr;
 }
 
-int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio, int64_t wantedSize, int64_t lastSpeed, bool allowRemove)
+int QueueManager::UserQueue::getNextL(QueueItemSegment& result, const UserPtr& user, const QueueItem::GetSegmentParams& gsp, QueueItem::Priority minPrio, int flags)
 {
 	int p = QueueItem::LAST - 1;
-	int lastError = ERROR_NO_ITEM;
+	int lastError = QueueItem::ERROR_NO_ITEM;
 
-	QueueItem::GetSegmentParams gsp;
-	gsp.wantedSize = wantedSize;
-	gsp.lastSpeed = lastSpeed;
-	gsp.readSettings();
+	size_t fileSlots = SETTING(FILE_SLOTS);
+	bool hasFreeSlots = fileSlots == 0 || userQueue.getRunningCount() < fileSlots;
 
 	do
 	{
 		const auto i = userQueueMap[p].find(user);
 		if (i != userQueueMap[p].cend())
 		{
-			dcassert(!i->second.empty());
-			for (auto j = i->second.cbegin(); j != i->second.cend(); ++j)
+			QueueItemList& userItems = i->second;
+			auto j = userItems.cbegin();
+			while (j != userItems.cend())
 			{
 				const QueueItemPtr qi = *j;
 				const auto source = qi->findSourceL(user);
 				if (source == qi->sources.end())
-					continue;
-				if (source->second.isSet(QueueItem::Source::FLAG_PARTIAL))
 				{
-					// check partial source
-					gsp.blockSize = qi->getBlockSize();
-					const Segment segment = qi->getNextSegmentL(gsp, source->second.partialSource);
-					if (allowRemove && segment.getStart() != -1 && segment.getSize() == 0)
-					{
-						// no other partial chunk from this user, remove him from queue
-						removeUserL(qi, user, true);
-						qi->removeSourceL(user, QueueItem::Source::FLAG_NO_NEED_PARTS);
-						result = qi;
-						return ERROR_NO_NEEDED_PART;
-					}
+					++j;
+					continue;
 				}
+				bool isFileList = (qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)) != 0;
 				if (qi->isWaiting())
 				{
-					// check maximum simultaneous files setting
-					size_t fileSlots = SETTING(FILE_SLOTS);
-					if (fileSlots == 0 ||
-					    (qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)) != 0 ||
-					    userQueue.getRunningCount() < fileSlots)
+					// Check maximum simultaneous files setting
+					if (!isFileList && !hasFreeSlots)
 					{
-						result = qi;
-						return SUCCESS;
-					}
-					if (lastError == ERROR_NO_ITEM)
-					{
-						lastError = ERROR_FILE_SLOTS_TAKEN;
-						result = qi;
-					}
-					continue;
-				}
-				else if (qi->isDownloadTree()) // No segmented downloading when getting the tree
-				{
-					continue;
-				}
-				if (!(qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP)))
-				{
-					gsp.blockSize = qi->getBlockSize();
-					const Segment segment = qi->getNextSegmentL(gsp, source->second.partialSource);
-					if (segment.getSize() == 0)
-					{
-						if (lastError == ERROR_NO_ITEM)
-						{
-							lastError = segment.getStart() == -1 ? ERROR_DOWNLOAD_SLOTS_TAKEN : ERROR_NO_FREE_BLOCK;
-							result = qi;
-						}
-						//LogManager::message("No segment for User " + user->getLastNick() + " target=" + qi->getTarget() + " flags=" + Util::toString(qi->getFlags()), false);
+						lastError = QueueItem::ERROR_FILE_SLOTS_TAKEN;
+						result.qi = qi;
+						++j;
 						continue;
 					}
 				}
-				result = qi;
-				return SUCCESS;
+				else if (isFileList || qi->getSize() == -1 || !(qi->getExtraFlags() & QueueItem::XFLAG_ALLOW_SEGMENTS))
+				{
+					// Disallow multiple segments when getting a tree, file list or file of unknown size
+					++j;
+					continue;
+				}
+				int sourceError;
+				Segment segment = qi->getNextSegmentL(gsp, source->second.partialSource, &sourceError);
+				if (segment.getSize())
+				{
+					if ((flags & FLAG_ADD_SEGMENT) && segment.getSize() != -1)
+					{
+						qi->addDownload(segment);
+						result.seg = segment;
+					}
+					else
+						result.seg = Segment(0, -1);
+					result.qi = qi;
+					result.sourceFlags = source->second.getFlags();
+					return QueueItem::SUCCESS;
+				}
+				if ((flags & FLAG_ALLOW_REMOVE) && source->second.partialSource && sourceError == QueueItem::ERROR_NO_NEEDED_PART)
+				{
+					qi->removeSourceL(user, QueueItem::Source::FLAG_NO_NEED_PARTS);
+					j = userItems.erase(j);
+					continue;
+				}
+				if (lastError == QueueItem::ERROR_NO_ITEM)
+				{
+					lastError = sourceError;
+					result.qi = qi;
+					//LogManager::message("No segment for User " + user->getLastNick() + " target=" + qi->getTarget() + " flags=" + Util::toString(qi->getFlags()), false);
+				}
+				++j;
 			}
+			if (userItems.empty())
+				userQueueMap[p].erase(i);
 		}
 		p--;
 	}
 	while (p >= minPrio);
-
 	return lastError;
 }
 
-void QueueManager::UserQueue::addDownload(const QueueItemPtr& qi, const DownloadPtr& d)
+void QueueManager::UserQueue::setRunningDownload(const QueueItemPtr& qi, const UserPtr& user)
 {
-	qi->addDownload(d);
-	// Only one download per user...
 	WRITE_LOCK(*csRunningMap);
-	runningMap[d->getUser()] = qi;
+	runningMap[user] = qi;
 }
 
 size_t QueueManager::UserQueue::getRunningCount()
@@ -1217,12 +1210,18 @@ size_t QueueManager::getDirectoryItemCount() const noexcept
 
 QueueItem::Priority QueueManager::hasDownload(const UserPtr& user)
 {
-	QueueItemPtr qi;
+	QueueItemSegment result;
+	QueueItem::GetSegmentParams gsp;
+	gsp.readSettings();
+	gsp.wantedSize = 0;
+	gsp.lastSpeed = 0;
+
 	{
 		QueueRLock(*QueueItem::g_cs);
-		if (userQueue.getNextL(qi, user, QueueItem::LOWEST) != SUCCESS)
+		if (userQueue.getNextL(result, user, gsp, QueueItem::LOWEST, 0) != QueueItem::SUCCESS)
 			return QueueItem::PAUSED;
 	}
+	const QueueItem* qi = result.qi.get();
 	qi->lockAttributes();
 	auto p = qi->getPriorityL();
 	qi->unlockAttributes();
@@ -1426,9 +1425,17 @@ void QueueManager::endBatch() noexcept
 
 QueueItemPtr QueueManager::getQueuedItem(const UserPtr& user) noexcept
 {
-	QueueRLock(*QueueItem::g_cs);
-	QueueItemPtr qi;
-	if (userQueue.getNextL(qi, user) == SUCCESS) return qi;
+	QueueItemSegment result;
+	QueueItem::GetSegmentParams gsp;
+	gsp.readSettings();
+	gsp.wantedSize = 0;
+	gsp.lastSpeed = 0;
+
+	{
+		QueueRLock(*QueueItem::g_cs);
+		if (userQueue.getNextL(result, user, gsp, QueueItem::LOWEST, 0) == QueueItem::SUCCESS)
+			return result.qi;
+	}
 	return QueueItemPtr();
 }
 
@@ -1460,17 +1467,24 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 	const UserPtr u = source->getUser();
 	if (!u)
 	{
-		errorInfo.error = ERROR_INVALID_CONNECTION;
+		errorInfo.error = QueueItem::ERROR_INVALID_CONNECTION;
 		return d;
 	}
 
 	dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
-	QueueItemPtr q;
+
+	QueueItem* q = nullptr;
+	QueueItemSegment qs;
+	QueueItem::GetSegmentParams gsp;
+	gsp.readSettings();
+	gsp.wantedSize = source->getChunkSize();
+	gsp.lastSpeed = source->getSpeed();
 
 	{
 		QueueWLock(*QueueItem::g_cs);
-		errorInfo.error = userQueue.getNextL(q, u, QueueItem::LOWEST, source->getChunkSize(), source->getSpeed(), true);
-		if (errorInfo.error != SUCCESS)
+		errorInfo.error = userQueue.getNextL(qs, u, gsp, QueueItem::LOWEST, UserQueue::FLAG_ADD_SEGMENT | UserQueue::FLAG_ALLOW_REMOVE);
+		q = qs.qi.get();
+		if (errorInfo.error != QueueItem::SUCCESS)
 		{
 			if (q)
 			{
@@ -1508,15 +1522,75 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 		}
 	}
 
-	// NOTE: Download's constructor locks QueueItem::g_cs
-	d = std::make_shared<Download>(ucPtr, q);
+	dcassert(qs.qi);
+	d = std::make_shared<Download>(ucPtr, qs.qi);
 #ifdef DEBUG_TRANSFERS
 	const string& sourcePath = q->getSourcePath();
 	if (!sourcePath.empty()) d->setDownloadPath(sourcePath);
 #endif
-	if (d->getSegment().getStart() != -1 && d->getSegment().getSize() == 0)
+
+	const bool isFile = d->getType() == Transfer::TYPE_FILE && q->getSize() != -1;
+	const bool hasTTH = !q->getTTH().isZero();
+	bool segmentAdded = qs.seg.getSize() != -1;
+	bool treeValid = false;
+	if (isFile && hasTTH)
 	{
-		errorInfo.error = ERROR_NO_NEEDED_PART;
+		auto db = DatabaseManager::getInstance();
+		auto hashDb = db->getHashDatabaseConnection();
+		if (hashDb)
+		{
+			treeValid = db->getTree(hashDb, q->getTTH(), d->getTigerTree());
+			db->putHashDatabaseConnection(hashDb);
+		}
+		if (treeValid)
+		{
+			if (q->updateBlockSize(d->getTigerTree().getBlockSize()))
+			{
+				if (segmentAdded)
+				{
+					q->removeDownload(qs.seg);
+					segmentAdded = false;
+				}
+				QueueRLock(*QueueItem::g_cs);
+				auto it = q->findSourceL(u);
+				if (it != q->getSourcesL().end())
+				{
+					const auto& src = it->second;
+					qs.seg = q->getNextSegmentL(gsp, src.partialSource, nullptr);
+					qs.sourceFlags = src.getFlags();
+				}
+				else
+					qs.seg = Segment(-1, 0);
+			}
+			q->changeExtraFlags(QueueItem::XFLAG_ALLOW_SEGMENTS, QueueItem::XFLAG_ALLOW_SEGMENTS);
+		}
+		else if (ucPtr->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !(qs.sourceFlags & QueueItem::Source::FLAG_NO_TREE) && q->getSize() > MIN_BLOCK_SIZE)
+		{
+			// Get the tree unless the file is small (for small files, we'd probably only get the root anyway)
+			d->setType(Transfer::TYPE_TREE);
+			d->getTigerTree().setFileSize(q->getSize());
+			if (segmentAdded)
+			{
+				q->removeDownload(qs.seg);
+				segmentAdded = false;
+			}
+			qs.seg = Segment(0, -1);
+		}
+		else
+		{
+			if (segmentAdded)
+			{
+				q->removeDownload(qs.seg);
+				segmentAdded = false;
+			}
+			qs.seg = Segment(0, -1);
+		}
+	}
+
+	if (qs.seg.getSize() == 0)
+	{
+		dcassert(!segmentAdded);
+		errorInfo.error = QueueItem::ERROR_NO_NEEDED_PART;
 		errorInfo.target = q->getTarget();
 		errorInfo.size = q->getSize();
 		errorInfo.type = Transfer::TYPE_FILE;
@@ -1524,10 +1598,19 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 		return d;
 	}
 
-	source->setDownload(d);
-	userQueue.addDownload(q, d);
+	if (segmentAdded)
+		q->setDownloadForSegment(qs.seg, d);
+	else
+		q->addDownload(d);
 
-	addUpdatedSource(q);
+	d->setSegment(qs.seg);
+	source->setDownload(d);
+	userQueue.setRunningDownload(qs.qi, u);
+
+	if (qs.seg.getStart() || (qs.seg.getSize() != -1 && qs.seg.getEnd() != q->getSize()))
+		d->setFlag(Download::FLAG_CHUNKED);
+
+	addUpdatedSource(qs.qi);
 	dcdebug("found %s\n", q->getTarget().c_str());
 	return d;
 }
@@ -1535,14 +1618,14 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 class TreeOutputStream : public OutputStream
 {
 	public:
-		explicit TreeOutputStream(TigerTree& aTree) : tree(aTree), bufPos(0)
+		explicit TreeOutputStream(TigerTree& tree) : tree(tree), bufPos(0)
 		{
 		}
 
-		size_t write(const void* xbuf, size_t len) override
+		size_t write(const void* data, size_t len) override
 		{
 			size_t pos = 0;
-			uint8_t* b = (uint8_t*)xbuf;
+			const uint8_t* b = static_cast<const uint8_t*>(data);
 			while (pos < len)
 			{
 				size_t left = len - pos;
@@ -1569,8 +1652,10 @@ class TreeOutputStream : public OutputStream
 
 		size_t flushBuffers(bool force) override
 		{
+			// TODO: check bufPos
 			return 0;
 		}
+
 	private:
 		TigerTree& tree;
 		uint8_t buf[TigerTree::BYTES];
@@ -1628,7 +1713,8 @@ void QueueManager::setFile(const DownloadPtr& d)
 		}
 
 		// open stream for both writing and reading, because UploadManager can request reading from it
-		const int64_t fileSize = d->getTreeValid() ? d->getTigerTree().getFileSize() : d->getSize();
+		const int64_t treeFileSize = d->getTigerTree().getFileSize();
+		const int64_t fileSize = treeFileSize ? treeFileSize : d->getSize();
 		int64_t diffFileSize = 0;
 		if (qi->getSize() == -1)
 		{
@@ -1870,10 +1956,13 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 				if (download->getType() == Transfer::TYPE_TREE)
 				{
 					// Got a full tree, now add it to the database
-					dcassert(download->getTreeValid());
-					if (hashDb)
+					dcassert(download->getTigerTree().getFileSize() != 0);
+					bool hasTree = download->getTigerTree().getLeaves().size() >= 2;
+					if (hashDb && hasTree)
 						db->addTree(hashDb, download->getTigerTree());
 					userQueue.removeDownload(q, download->getUser());
+					if (hasTree)
+						q->changeExtraFlags(QueueItem::XFLAG_ALLOW_SEGMENTS, QueueItem::XFLAG_ALLOW_SEGMENTS);
 					fireStatusUpdated(q);
 				}
 				else
@@ -3341,7 +3430,7 @@ void QueueManager::RecheckerJob::run()
 				MerkleCheckOutputStream<TigerTree, false> os(tt, &dummy, startPos);
 
 				inFile.setPos(startPos);
-				int64_t bytesLeft = min((tempSize - startPos), blockSize); //Take care of the last incomplete block
+				int64_t bytesLeft = min(tempSize - startPos, blockSize); //Take care of the last incomplete block
 				int64_t segmentSize = bytesLeft;
 				while (bytesLeft > 0)
 				{

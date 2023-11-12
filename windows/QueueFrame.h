@@ -238,7 +238,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			REMOVE_ITEM_ARRAY
 		};
 
-		vector<QueueItem::RunningSegment> runningChunks;
+		vector<QueueItem::SegmentEx> runningChunks;
 		vector<Segment> doneChunks;
 
 		vector<std::pair<std::string, UserPtr> > sourcesToRemove;
