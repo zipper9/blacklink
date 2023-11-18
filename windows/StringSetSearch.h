@@ -55,6 +55,7 @@ namespace StringSetSearch
 
 		private:
 			size_t pos;
+			size_t foundPos;
 			const Node* current;
 			const Node* found;
 			bool ignoreCase;

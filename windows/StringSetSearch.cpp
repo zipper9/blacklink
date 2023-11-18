@@ -100,6 +100,7 @@ bool StringSetSearch::SearchContext::search(const tstring& s, const Set& ss)
 	{
 		current = current->back;
 		found = nullptr;
+		foundPos = (size_t) -1;
 	}
 	while (pos < s.length())
 	{
@@ -109,11 +110,15 @@ bool StringSetSearch::SearchContext::search(const tstring& s, const Set& ss)
 		if (current->findChar(index, ch))
 		{
 			current = current->links[index].p;
-			if (current->hasData) found = current;
 			pos++;
+			if (current->hasData)
+			{
+				found = current;
+				foundPos = pos;
+			}
 			continue;
 		}
-		if (found) return true;
+		if (found) break;
 		if (current != ss.root)
 		{
 			current = current->back;
@@ -121,12 +126,16 @@ bool StringSetSearch::SearchContext::search(const tstring& s, const Set& ss)
 		}
 		pos++;
 	}
-	return found != nullptr;
+	if (!found) return false;
+	current = found;
+	pos = foundPos;
+	return true;
 }
 
 StringSetSearch::SearchContext::SearchContext()
 {
 	pos = 0;
+	foundPos = (size_t) -1;
 	current = nullptr;
 	found = nullptr;
 	ignoreCase = false;
@@ -135,6 +144,7 @@ StringSetSearch::SearchContext::SearchContext()
 void StringSetSearch::SearchContext::reset(const Set& ss, size_t newPos)
 {
 	pos = newPos;
+	foundPos = (size_t) -1;
 	current = ss.root;
 	found = nullptr;
 }
