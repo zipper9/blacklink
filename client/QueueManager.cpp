@@ -1460,7 +1460,7 @@ void QueueManager::getTargets(const TTHValue& tth, StringList& sl, int maxCount)
 	}
 }
 
-DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& errorInfo) noexcept
+DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& errorInfo, bool checkSlots) noexcept
 {
 	DownloadPtr d;
 	UserConnection* source = ucPtr.get();
@@ -1473,6 +1473,7 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 
 	dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
 
+	bool segmentAdded = false;
 	QueueItem* q = nullptr;
 	QueueItemSegment qs;
 	QueueItem::GetSegmentParams gsp;
@@ -1520,6 +1521,23 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 				q->resetDownloaded();
 			}
 		}
+
+		segmentAdded = qs.seg.getSize() != -1;
+		if (checkSlots)
+		{
+			q->lockAttributes();
+			auto p = q->getPriorityL();
+			q->unlockAttributes();
+			if (!DownloadManager::getInstance()->isStartDownload(p))
+			{
+				if (segmentAdded) q->removeDownload(qs.seg);
+				errorInfo.error = QueueItem::ERROR_DOWNLOAD_SLOTS_TAKEN;
+				errorInfo.target = q->getTarget();
+				errorInfo.size = q->getSize();
+				errorInfo.type = Transfer::TYPE_FILE;
+				return d;
+			}
+		}
 	}
 
 	dcassert(qs.qi);
@@ -1531,7 +1549,6 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 
 	const bool isFile = d->getType() == Transfer::TYPE_FILE && q->getSize() != -1;
 	const bool hasTTH = !q->getTTH().isZero();
-	bool segmentAdded = qs.seg.getSize() != -1;
 	bool treeValid = false;
 	if (isFile && hasTTH)
 	{

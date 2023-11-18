@@ -824,7 +824,7 @@ void ConnectionManager::checkConnections(uint64_t tick)
 		UserConnection* uc = j->second.get();
 		if (uc->state == UserConnection::STATE_UNUSED)
 		{
-			userConnections.erase(j++);
+			j = userConnections.erase(j);
 			continue;
 		}
 		uint64_t lastActivity = uc->getLastActivity();
@@ -845,11 +845,11 @@ void ConnectionManager::checkConnections(uint64_t tick)
 				}
 			}
 			else if (uc->getState() == UserConnection::STATE_TRY_AGAIN && lastActivity + UC_RETRY_TIME * 1000 < tick)
-				DownloadManager::getInstance()->checkDownloads(j->second, true);
+				DownloadManager::getInstance()->checkDownloads(j->second);
 			else if (lastActivity + UC_IDLE_TIME * 1000 < tick)
 				uc->disconnect(true);
 			else if (uc->getState() == UserConnection::STATE_IDLE)
-				DownloadManager::getInstance()->checkDownloads(j->second, true);
+				DownloadManager::getInstance()->checkDownloads(j->second);
 		}
 		++j;
 	}

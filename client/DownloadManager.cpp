@@ -188,25 +188,16 @@ bool DownloadManager::isStartDownload(QueueItem::Priority prio) const noexcept
 	return true;
 }
 
-void DownloadManager::checkDownloads(const UserConnectionPtr& ucPtr, bool quickCheck) noexcept
+void DownloadManager::checkDownloads(const UserConnectionPtr& ucPtr) noexcept
 {
 	UserConnection* conn = ucPtr.get();
-	const QueueItem::Priority prio = QueueManager::hasDownload(conn->getUser()); // FIXME: Use getDownload
-	if (quickCheck && prio == QueueItem::PAUSED)
-		return;
-	if (!isStartDownload(prio))
-	{
-		conn->disconnect();
-		return;
-	}
-
 	Download::ErrorInfo errorInfo;
-	auto d = QueueManager::getInstance()->getDownload(ucPtr, errorInfo);
+	auto d = QueueManager::getInstance()->getDownload(ucPtr, errorInfo, true);
 
 	if (!d)
 	{
 		conn->setState(UserConnection::STATE_IDLE);
-		if (errorInfo.error != QueueItem::SUCCESS)
+		if (errorInfo.error != QueueItem::SUCCESS && errorInfo.error != QueueItem::ERROR_NO_ITEM)
 			fire(DownloadManagerListener::Status(), conn, errorInfo);
 		return;
 	}

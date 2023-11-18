@@ -237,7 +237,7 @@ class QueueManager : public Singleton<QueueManager>,
 
 		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
 		static QueueItemPtr getQueuedItem(const UserPtr& user) noexcept;
-		DownloadPtr getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& error) noexcept;
+		DownloadPtr getDownload(const UserConnectionPtr& ucPtr, Download::ErrorInfo& error, bool checkSlots = false) noexcept;
 		void putDownload(DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& download);
 

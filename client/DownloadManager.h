@@ -51,7 +51,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		bool checkFileDownload(const UserPtr& user) const;
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
-		void checkDownloads(const UserConnectionPtr& conn, bool quickCheck = false) noexcept;
+		void checkDownloads(const UserConnectionPtr& conn) noexcept;
 		void checkUserIP(UserConnection* source) noexcept;
 		void fileNotAvailable(UserConnection* source);
 		void noSlots(UserConnection* source, const string& param = Util::emptyString) noexcept;
