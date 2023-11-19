@@ -336,6 +336,7 @@ class ConnectionManager :
 
 		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi);
 		UserConnectionPtr getConnection(bool nmdc, bool secure) noexcept;
+		UserConnectionPtr findConnection(const string& token) const noexcept;
 		void deleteConnection(UserConnectionPtr& conn);
 		void connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci);
 		void removeExpectedToken(const string& token);

@@ -843,10 +843,8 @@ string QueueManager::getFileListTarget(const UserPtr& user)
 
 void QueueManager::getDownloadConnection(const UserPtr& user)
 {
-	if (!ClientManager::isBeforeShutdown() && ConnectionManager::isValidInstance())
-	{
+	if (!ClientManager::isBeforeShutdown())
 		ConnectionManager::getInstance()->getDownloadConnection(user);
-	}
 }
 
 void QueueManager::add(const string& target, const QueueItemParams& params, const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, bool& getConnFlag)

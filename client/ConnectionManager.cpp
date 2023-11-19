@@ -459,6 +459,7 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 {
 	dcassert(user);
 	ConnectionQueueItemPtr cqi;
+	string existingToken;
 	{
 		WRITE_LOCK(*csDownloads);
 		const auto i = find(downloads.begin(), downloads.end(), user);
@@ -468,6 +469,17 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 				tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
 			downloads.insert(cqi);
 			if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
+		}
+		else
+			existingToken = (*i)->getConnectionQueueToken();
+	}
+	if (!existingToken.empty())
+	{
+		UserConnectionPtr ucPtr = findConnection(existingToken);
+		if (ucPtr && ucPtr->getState() == UserConnection::STATE_IDLE)
+		{
+			DownloadManager::getInstance()->checkDownloads(ucPtr);
+			return;
 		}
 	}
 	if (cqi)
@@ -529,9 +541,18 @@ UserConnectionPtr ConnectionManager::getConnection(bool nmdc, bool secure) noexc
 
 UserConnectionPtr ConnectionManager::findConnection(const UserConnection* conn) const noexcept
 {
-	WRITE_LOCK(*csConnections);
+	READ_LOCK(*csConnections);
 	auto i = userConnections.find(conn);
 	return i == userConnections.end() ? UserConnectionPtr() : i->second;
+}
+
+UserConnectionPtr ConnectionManager::findConnection(const string& token) const noexcept
+{
+	READ_LOCK(*csConnections);
+	for (auto i = userConnections.cbegin(); i != userConnections.cend(); ++i)
+		if (i->second->getConnectionQueueToken() == token)
+			return i->second;
+	return UserConnectionPtr();
 }
 
 void ConnectionManager::putConnection(UserConnection* conn)
@@ -1210,7 +1231,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 			}
 		}
 	}
-	
+
 	if (isActive)
 	{
 		UserConnectionPtr ucPtr = findConnection(conn);
