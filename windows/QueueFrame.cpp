@@ -1949,7 +1949,7 @@ LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		{
 			try
 			{
-				QueueManager::getInstance()->addList(sourcesList[index].user, 0, QueueItem::XFLAG_CLIENT_VIEW);
+				QueueManager::getInstance()->addList(onlineSourcesList[index].user, 0, QueueItem::XFLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)
 			{
@@ -2043,7 +2043,7 @@ LRESULT QueueFrame::onPM(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL&
 		size_t index = wID - IDC_PM;
 		if (index < onlineSourcesList.size())
 		{
-			const UserPtr& user = sourcesList[index].user;
+			const UserPtr& user = onlineSourcesList[index].user;
 			const auto hubs = ClientManager::getHubs(user->getCID(), Util::emptyString);
 			PrivateFrame::openWindow(nullptr, HintedUser(user, !hubs.empty() ? hubs[0] : Util::emptyString));
 		}
