@@ -198,6 +198,17 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, c
 	return frame;
 }
 
+DirectoryListingFrame* DirectoryListingFrame::findFrame(const UserPtr& user)
+{
+	for (const auto& af : activeFrames)
+	{
+		DirectoryListingFrame* frame = af.second;
+		if (frame->loading || frame->dclstFlag || frame->searchResultsFlag) continue;
+		if (frame->dl->getUser() == user) return frame;
+	}
+	return nullptr;
+}
+
 DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl) :
 	TimerHelper(m_hWnd),
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
@@ -1498,6 +1509,18 @@ void DirectoryListingFrame::selectItem(const tstring& name)
 		ctrlTree.EnsureVisible(ht);
 		ctrlTree.SelectItem(ht);
 	}
+}
+
+void DirectoryListingFrame::selectItem(const TTHValue& tth)
+{
+	if (loading) return;
+	const DirectoryListing::File* f = dl->getRoot()->findFileByHash(tth);
+	if (!f) return;
+	const DirectoryListing::Directory* dir = f->getParent();
+	HTREEITEM ht = static_cast<HTREEITEM>(dir->getUserData());
+	ctrlTree.EnsureVisible(ht);
+	ctrlTree.SelectItem(ht);
+	selectFile(f);
 }
 
 void DirectoryListingFrame::appendFavTargets(OMenu& menu, const int idc)

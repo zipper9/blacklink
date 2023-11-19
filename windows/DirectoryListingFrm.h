@@ -57,6 +57,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static void openWindow(const HintedUser& user, const string& txt, int64_t speed);
 		static void closeAll();
 		static void closeAllOffline();
+		static DirectoryListingFrame* findFrame(const UserPtr& user);
 
 		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
@@ -262,6 +263,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		HTREEITEM findItem(HTREEITEM ht, const tstring& name);
 		void selectItem(const tstring& name);
+		void selectItem(const TTHValue& tth);
 
 		LRESULT onListItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 
@@ -500,7 +502,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		static const int columnId[];
 
-		typedef std::map< HWND, DirectoryListingFrame* > FrameMap;
+		typedef std::map<HWND, DirectoryListingFrame*> FrameMap;
 		static FrameMap activeFrames;
 
 		void on(SettingsManagerListener::Repaint) override;

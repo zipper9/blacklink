@@ -20,13 +20,11 @@
 #include "QueueFrame.h"
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
+#include "DirectoryListingFrm.h"
 #include "LineDlg.h"
 #include "Fonts.h"
-#include "BarShader.h"
-#include "MainFrm.h"
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
-#include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
@@ -1712,7 +1710,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					singleMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				
 				sourcesList.clear();
-				onlineSourcesList.clear();
+				pmSourcesList.clear();
+				browseSourcesList.clear();
 				readdList.clear();
 
 				qi->lockAttributes();
@@ -1735,13 +1734,19 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					const auto& sources = qi->getSourcesL();
 					for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 					{
-						SourceInfo si{i->first, i->second.getFlags(), getSourceName(i->first)};
+						const UserPtr& user = i->first;
+						bool hasFileList = DirectoryListingFrame::findFrame(user) != nullptr;
+						bool isOnline = user->isOnline();
+						SourceInfo si{user, i->second.getFlags(), getSourceName(user), hasFileList};
 						sourcesList.push_back(si);
-						if (si.user->isOnline()) onlineSourcesList.push_back(si);
+						if (hasFileList || isOnline)
+							browseSourcesList.push_back(si);
+						if (isOnline)
+							pmSourcesList.push_back(si);
 					}
 					const auto& badSources = qi->getBadSourcesL();
 					for (auto i = badSources.cbegin(); i != badSources.cend(); ++i)
-						readdList.emplace_back(SourceInfo{i->first, i->second.getFlags(), getSourceName(i->first)});
+						readdList.emplace_back(SourceInfo{i->first, i->second.getFlags(), getSourceName(i->first), false});
 				}
 
 				sortSources(sourcesList);
@@ -1755,15 +1760,24 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					removeAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_SOURCES + i, nick.c_str());
 				}
 
-				sortSources(onlineSourcesList);
-				for (size_t i = 0; i < onlineSourcesList.size(); ++i)
+				sortSources(pmSourcesList);
+				for (size_t i = 0; i < pmSourcesList.size(); ++i)
 				{
-					const SourceInfo& si = onlineSourcesList[i];
+					const SourceInfo& si = pmSourcesList[i];
+					tstring nick = si.nick;
+					checkSourceFlags(nick, si.flags);
+					WinUtil::escapeMenu(nick);
+					pmMenu.AppendMenu(MF_STRING, IDC_PM + i, nick.c_str());
+				}
+
+				sortSources(browseSourcesList);
+				for (size_t i = 0; i < browseSourcesList.size(); ++i)
+				{
+					const SourceInfo& si = browseSourcesList[i];
 					tstring nick = si.nick;
 					checkSourceFlags(nick, si.flags);
 					WinUtil::escapeMenu(nick);
 					browseMenu.AppendMenu(MF_STRING, IDC_BROWSELIST + i, nick.c_str());
-					pmMenu.AppendMenu(MF_STRING, IDC_PM + i, nick.c_str());
 				}
 
 				sortSources(readdList);
@@ -1791,12 +1805,11 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					singleMenu.EnableMenuItem(indexPM + 8, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				}
 
-				if (onlineSourcesList.empty())
-				{
-					if (indexBrowse != -1)
-						singleMenu.EnableMenuItem(indexBrowse, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+				if (browseSourcesList.empty() && indexBrowse != -1)
+					singleMenu.EnableMenuItem(indexBrowse, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+
+				if (pmSourcesList.empty())
 					singleMenu.EnableMenuItem(indexPM, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
-				}
 
 				if (readdList.empty())
 					singleMenu.EnableMenuItem(indexPM + 1, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
@@ -1945,11 +1958,28 @@ LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
 		size_t index = wID - IDC_BROWSELIST;
-		if (index < onlineSourcesList.size())
+		if (index < browseSourcesList.size())
 		{
+			UserPtr& user = browseSourcesList[index].user;
+			if (sourcesList[index].hasFileList)
+			{
+				DirectoryListingFrame* frame = DirectoryListingFrame::findFrame(user);
+				if (frame)
+				{
+					WinUtil::activateMDIChild(frame->m_hWnd);
+					int itemIndex = ctrlQueue.GetNextItem(-1, LVNI_SELECTED);
+					if (itemIndex != -1)
+					{
+						const QueueItemInfo* ii = ctrlQueue.getItemData(itemIndex);
+						const QueueItemPtr& qi = ii->getQueueItem();
+						if (qi) frame->selectItem(qi->getTTH());
+					}
+					return 0;
+				}
+			}
 			try
 			{
-				QueueManager::getInstance()->addList(onlineSourcesList[index].user, 0, QueueItem::XFLAG_CLIENT_VIEW);
+				QueueManager::getInstance()->addList(user, 0, QueueItem::XFLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)
 			{
@@ -2041,9 +2071,9 @@ LRESULT QueueFrame::onPM(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL&
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
 		size_t index = wID - IDC_PM;
-		if (index < onlineSourcesList.size())
+		if (index < pmSourcesList.size())
 		{
-			const UserPtr& user = onlineSourcesList[index].user;
+			const UserPtr& user = pmSourcesList[index].user;
 			const auto hubs = ClientManager::getHubs(user->getCID(), Util::emptyString);
 			PrivateFrame::openWindow(nullptr, HintedUser(user, !hubs.empty() ? hubs[0] : Util::emptyString));
 		}

@@ -83,8 +83,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onPriority)
 		COMMAND_RANGE_HANDLER(IDC_SEGMENTONE, IDC_SEGMENTTWO_HUNDRED, onSegments)
-		COMMAND_RANGE_HANDLER(IDC_BROWSELIST, IDC_BROWSELIST + (int) onlineSourcesList.size() - 1, onGetList)
-		COMMAND_RANGE_HANDLER(IDC_PM, IDC_PM + (int) onlineSourcesList.size() - 1, onPM)
+		COMMAND_RANGE_HANDLER(IDC_BROWSELIST, IDC_BROWSELIST + (int) browseSourcesList.size() - 1, onGetList)
+		COMMAND_RANGE_HANDLER(IDC_PM, IDC_PM + (int) pmSourcesList.size() - 1, onPM)
 		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCE, IDC_REMOVE_SOURCE + 1 + (int) sourcesList.size() - 1, onRemoveSource)
 		COMMAND_RANGE_HANDLER(IDC_REMOVE_SOURCES, IDC_REMOVE_SOURCES + (int) sourcesList.size() - 1, onRemoveSources)
 		COMMAND_RANGE_HANDLER(IDC_READD, IDC_READD + 1 + (int) readdList.size() - 1, onReadd)
@@ -427,9 +427,10 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			UserPtr user;
 			Flags::MaskType flags;
 			tstring nick;
+			bool hasFileList;
 		};
 
-		vector<SourceInfo> sourcesList, onlineSourcesList, readdList;
+		vector<SourceInfo> sourcesList, pmSourcesList, browseSourcesList, readdList;
 
 		DirItem* root;
 		DirItem* fileLists;

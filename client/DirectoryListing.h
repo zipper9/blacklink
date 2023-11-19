@@ -158,6 +158,7 @@ class DirectoryListing
 				
 				void filterList(const TTHMap& l);
 				void clearMatches();
+				const File* findFileByHash(const TTHValue& tth) const;
 				void getHashList(TTHMap& l) const;
 				void findDuplicates(TTHToFileMap& m, int64_t minSize) const;
 				bool match(const SearchQuery &sq) const;

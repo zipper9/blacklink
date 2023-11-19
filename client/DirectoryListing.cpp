@@ -873,6 +873,25 @@ void DirectoryListing::Directory::clearMatches()
 	unsetFlag(FLAG_FOUND | FLAG_HAS_FOUND);
 }
 
+const DirectoryListing::File* DirectoryListing::Directory::findFileByHash(const TTHValue& tth) const
+{
+	for (auto i = files.begin(); i != files.end(); ++i)
+	{
+		const File* f = *i;
+		if (f->getTTH() == tth) return f;
+	}
+	for (auto i = directories.begin(); i != directories.end(); ++i)
+	{
+		const Directory* d = *i;
+		if (!d->getAdls())
+		{
+			const File* f = d->findFileByHash(tth);
+			if (f) return f;
+		}
+	}
+	return nullptr;
+}
+
 void DirectoryListing::Directory::updateSubDirs(MaskType& updatedFlags)
 {
 	MaskType flags = 0;
