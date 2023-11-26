@@ -508,17 +508,17 @@ int QueueManager::UserQueue::getNextL(QueueItemSegment& result, const UserPtr& u
 					result.sourceFlags = source->second.getFlags();
 					return QueueItem::SUCCESS;
 				}
-				if ((flags & FLAG_ALLOW_REMOVE) && source->second.partialSource && sourceError == QueueItem::ERROR_NO_NEEDED_PART)
-				{
-					qi->removeSourceL(user, QueueItem::Source::FLAG_NO_NEED_PARTS);
-					j = userItems.erase(j);
-					continue;
-				}
 				if (lastError == QueueItem::ERROR_NO_ITEM)
 				{
 					lastError = sourceError;
 					result.qi = qi;
 					//LogManager::message("No segment for User " + user->getLastNick() + " target=" + qi->getTarget() + " flags=" + Util::toString(qi->getFlags()), false);
+				}
+				if ((flags & FLAG_ALLOW_REMOVE) && source->second.partialSource && sourceError == QueueItem::ERROR_NO_NEEDED_PART)
+				{
+					qi->removeSourceL(user, QueueItem::Source::FLAG_NO_NEED_PARTS);
+					j = userItems.erase(j);
+					continue;
 				}
 				++j;
 			}
