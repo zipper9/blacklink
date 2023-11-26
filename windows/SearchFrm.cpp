@@ -2717,6 +2717,7 @@ void SearchFrame::insertStoredResults(HTREEITEM treeItem, int filter, bool doSiz
 		{
 			si->groupInfo.reset();
 			si->hits = -1;
+			si->stateFlags = 0;
 			if (si->sr.getType() == SearchResult::TYPE_FILE)
 				ctrlResults.insertGroupedItem(si, expandSR, true);
 			else
