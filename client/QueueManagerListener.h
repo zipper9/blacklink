@@ -37,7 +37,6 @@ class QueueManagerListener
 		typedef X<1> Finished;
 		typedef X<2> Removed;
 		typedef X<3> Moved;
-		typedef X<4> TargetsUpdated;
 		typedef X<5> StatusUpdated;
 		typedef X<6> PartialList;
 		typedef X<7> FileSizeUpdated;
@@ -60,7 +59,6 @@ class QueueManagerListener
 		virtual void on(Removed, const QueueItemPtr&) noexcept { }
 		virtual void on(RemovedArray, const vector<QueueItemPtr>& data) noexcept { }
 		virtual void on(Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept { }
-		virtual void on(TargetsUpdated, const StringList&) noexcept { }
 		virtual void on(StatusUpdated, const QueueItemPtr&) noexcept { }
 		virtual void on(StatusUpdatedList, const QueueItemList&) noexcept { }
 		virtual void on(PartialList, const HintedUser&, const string&) noexcept { }

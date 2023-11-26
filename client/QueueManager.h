@@ -448,10 +448,8 @@ class QueueManager : public Singleton<QueueManager>,
 		
 	private:
 		bool sourceAdded;
-		StringSet updatedSources;
 		CriticalSection csUpdatedSources;
 		void fireStatusUpdated(const QueueItemPtr& qi);
-		void addUpdatedSource(const QueueItemPtr& qi);
 
 	public:
 		static void getDownloadConnection(const UserPtr& user);

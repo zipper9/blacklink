@@ -1158,7 +1158,6 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, Queue
 			userQueue.addL(qi, qi->prioQueue, user);
 		}
 	}
-	addUpdatedSource(qi);
 	setDirty();
 	return wantConnection;
 }
@@ -1625,7 +1624,6 @@ DownloadPtr QueueManager::getDownload(const UserConnectionPtr& ucPtr, Download::
 	if (qs.seg.getStart() || (qs.seg.getSize() != -1 && qs.seg.getEnd() != q->getSize()))
 		d->setFlag(Download::FLAG_CHUNKED);
 
-	addUpdatedSource(qs.qi);
 	dcdebug("found %s\n", q->getTarget().c_str());
 	return d;
 }
@@ -1862,15 +1860,6 @@ void QueueManager::copyFile(const string& source, const string& target, QueueIte
 	}
 	dcassert(!userQueue.isInQueue(qi));
 	removeItem(qi, false);
-}
-
-void QueueManager::addUpdatedSource(const QueueItemPtr& qi)
-{
-	if (!ClientManager::isBeforeShutdown())
-	{
-		LOCK(csUpdatedSources);
-		updatedSources.insert(qi->getTarget());
-	}
 }
 
 void QueueManager::fireStatusUpdated(const QueueItemPtr& qi)
@@ -2413,12 +2402,10 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 		{
 			isRunning = true;
 			userQueue.removeDownload(q, user);
-			addUpdatedSource(q);
 		}
 		userQueue.removeUserL(q, user, true);
 		q->removeSourceL(user, reason);
 
-		addUpdatedSource(q);
 		setDirty();
 	}
 	while (false);
@@ -2452,14 +2439,9 @@ void QueueManager::removeSource(const UserPtr& user, Flags::MaskType reason) noe
 				{
 					qi->removeSourceL(user, reason);
 					if (qi->getFlags() & QueueItem::FLAG_USER_LIST)
-					{
 						targetsToRemove.push_back(qi->getTarget());
-					}
 					else
-					{
-						addUpdatedSource(qi);
 						dirty = true;
-					}
 				}
 				ulm.erase(i);
 			}
@@ -3021,18 +3003,11 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	if (ClientManager::isBeforeShutdown())
 		return;
 
-	StringList targetList;
 	bool sourceAddedFlag = false;
 	{
 		LOCK(csUpdatedSources);
-		targetList.reserve(updatedSources.size());
-		for (auto i = updatedSources.cbegin(); i != updatedSources.cend(); ++i)
-			targetList.push_back(*i);
-		updatedSources.clear();
 		std::swap(sourceAdded, sourceAddedFlag);
 	}
-	if (!targetList.empty())
-		fire(QueueManagerListener::TargetsUpdated(), targetList);
 	if (sourceAddedFlag)
 		fire(QueueManagerListener::SourceAdded());
 }
@@ -3161,7 +3136,6 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 
 				userQueue.addL(qi, p, user);
 				dcassert(si != qi->getSourcesL().end());
-				addUpdatedSource(qi);
 				if (BOOLSETTING(LOG_PSR_TRACE))
 					logPartialSourceInfo(partialSource, user, tth, "adding partial source", wantConnection);
 			}

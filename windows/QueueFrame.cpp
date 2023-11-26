@@ -1269,16 +1269,6 @@ void QueueFrame::on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& q
 	addTask(UPDATE_FILE_SIZE, new UpdateFileSizeTask(qi, diff));
 }
 
-void QueueFrame::on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
-		for (auto i = targets.cbegin(); i != targets.cend(); ++i)
-			addTask(UPDATE_ITEM, new TargetTask(*i));
-	}
-}
-
 void QueueFrame::on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());

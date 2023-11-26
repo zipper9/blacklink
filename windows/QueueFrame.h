@@ -515,7 +515,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept override;
 		void on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept override;
 		void on(RemovedArray, const vector<QueueItemPtr>& data) noexcept override;
-		void on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept override;
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept override;
 		void on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
