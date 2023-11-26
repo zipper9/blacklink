@@ -293,7 +293,7 @@ void QueueItem::resetDownloaded()
 void QueueItem::resetDownloadedL()
 {
 	doneSegments.clear();
-	doneSegmentsSize = 0;
+	doneSegmentsSize = downloadedBytes = 0;
 }
 
 bool QueueItem::isFinished() const
