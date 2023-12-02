@@ -59,14 +59,16 @@ class RangesPageP2PGuard: public CDialogImpl<RangesPageP2PGuard>
 		BEGIN_MSG_MAP(RangesPageP2PGuard)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WMU_LINK_ACTIVATED, onLinkActivated)
-		COMMAND_ID_HANDLER(IDC_ENABLE_P2P_GUARD, onFixControls)
+		COMMAND_ID_HANDLER(IDC_ENABLE_P2P_GUARD, onEnableP2PGuard)
+		COMMAND_ID_HANDLER(IDC_LOAD_INI_FILE, onEnableIniFile)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemoveBlocked)
 		COMMAND_HANDLER(IDC_MANUAL_P2P_GUARD, LBN_SELCHANGE, onSelChange)
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onLinkActivated(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onFixControls(WORD, WORD, HWND, BOOL&) { fixControls(); return 0; }
+		LRESULT onEnableP2PGuard(WORD, WORD, HWND, BOOL&);
+		LRESULT onEnableIniFile(WORD, WORD, HWND, BOOL&);
 		LRESULT onSelChange(WORD, WORD, HWND, BOOL&);
 		LRESULT onRemoveBlocked(WORD, WORD, HWND, BOOL&);
 		void fixControls();

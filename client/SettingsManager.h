@@ -386,6 +386,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			ENABLE_P2P_GUARD,
 			ENABLE_IPTRUST,
 			IPGUARD_DEFAULT_DENY,
+			P2P_GUARD_LOAD_INI,
+			P2P_GUARD_BLOCK,
 
 			// Anti-flood
 			ANTIFLOOD_MIN_REQ_COUNT,

@@ -763,18 +763,20 @@ void DatabaseConnection::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& resul
 	}
 }
 
+void DatabaseConnection::doDeleteP2PGuard(int type)
+{
+	initQuery(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where type=? or type is null");
+	deleteP2PGuard.bind(1, type);
+	deleteP2PGuard.executenonquery();
+}
+
 void DatabaseConnection::saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld)
 {
 	try
 	{
 		BusyCounter<int> busy(g_DisableSQLtrace);
 		sqlite3_transaction trans(connection);
-		if (removeOld)
-		{
-			initQuery(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where (type=? or type is null)");
-			deleteP2PGuard.bind(1, type);
-			deleteP2PGuard.executenonquery();
-		}
+		if (removeOld) doDeleteP2PGuard(type);
 		initQuery(insertP2PGuard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
 		for (const auto& val : data)
 		{
@@ -790,6 +792,20 @@ void DatabaseConnection::saveP2PGuardData(const vector<P2PGuardData>& data, int 
 	catch (const database_error& e)
 	{
 		DatabaseManager::getInstance()->reportError("SQLite - saveP2PGuardData: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void DatabaseConnection::clearP2PGuardData(int type)
+{
+	try
+	{
+		sqlite3_transaction trans(connection);
+		doDeleteP2PGuard(type);
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - clearP2PGuardData: " + e.getError(), e.getErrorCode());
 	}
 }
 

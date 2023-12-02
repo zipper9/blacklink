@@ -66,8 +66,8 @@ void Util::loadIBlockList()
 	conn->saveP2PGuardData(parsedData, DatabaseManager::PG_DATA_IBLOCKLIST_COM, true);
 	conn->setRegistryVarInt(e_TimeStampIBlockListCom, timeStampFile);
 }
-	
-void Util::loadP2PGuard()
+
+void Util::loadP2PGuardIni()
 {
 	static const string p2pGuardFile("P2PGuard.ini");
 	const string fileName = getConfigPath() + p2pGuardFile;
@@ -76,6 +76,7 @@ void Util::loadP2PGuard()
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
 	const uint64_t timeStampDb = conn->getRegistryVarInt(e_TimeStampP2PGuard);
 	if (timeStampFile == timeStampDb) return;
+
 	vector<P2PGuardData> parsedData;
 	auto addLine = [&parsedData](const string& s) -> bool
 	{
@@ -107,6 +108,16 @@ void Util::loadP2PGuard()
 	}
 	conn->saveP2PGuardData(parsedData, DatabaseManager::PG_DATA_P2P_GUARD_INI, true);
 	conn->setRegistryVarInt(e_TimeStampP2PGuard, timeStampFile);
+}
+
+void Util::unloadP2PGuardIni()
+{
+	auto conn = DatabaseManager::getInstance()->getDefaultConnection();
+	const uint64_t timeStampDb = conn->getRegistryVarInt(e_TimeStampP2PGuard);
+	if (!timeStampDb) return;
+
+	conn->clearP2PGuardData(DatabaseManager::PG_DATA_P2P_GUARD_INI);
+	conn->setRegistryVarInt(e_TimeStampP2PGuard, 0);
 }
 	
 void Util::loadCustomLocations()

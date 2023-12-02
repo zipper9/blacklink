@@ -681,6 +681,8 @@
 #define IDC_IPTRUST_DATA                1665
 #define IDC_CAPTION_MANUAL_P2P_GUARD    1666
 #define IDC_MANUAL_P2P_GUARD            1667
+#define IDC_LOAD_INI_FILE               1668
+#define IDC_P2P_GUARD_BLOCK             1669
 #define IDC_SLOT_CONTROL_GROUP          1670
 #define IDC_MINISLOTCONTROL             1672
 #define IDC_MINISLOT_CONTROL_GROUP      1673

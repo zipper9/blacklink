@@ -1126,7 +1126,7 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 #endif
 	UpdateInfo* ui = new UpdateInfo(hintedUser, true);
 	ui->setToken(token);
-#ifdef FLYLINKDC_USE_IPFILTER
+#ifdef BL_FEATURE_IPFILTER
 	const auto userFlags = ui->hintedUser.user->getFlags();
 	if (userFlags & (User::PG_IPTRUST_BLOCK | User::PG_IPGUARD_BLOCK | User::PG_P2PGUARD_BLOCK))
 	{

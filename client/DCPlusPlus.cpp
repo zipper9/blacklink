@@ -47,6 +47,14 @@
 #include "WebServerManager.h"
 #endif
 
+static void initP2PGuard()
+{
+	if (BOOLSETTING(ENABLE_P2P_GUARD) && BOOLSETTING(P2P_GUARD_LOAD_INI))
+		Util::loadP2PGuardIni();
+	else
+		Util::unloadP2PGuardIni();
+}
+
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam, DatabaseManager::ErrorCallback dbErrorCallback)
 {
 #define LOAD_STEP(name, function)\
@@ -68,7 +76,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP_L(STARTUP_SQLITE_DATABASE, DatabaseManager::newInstance());
 	DatabaseManager::getInstance()->init(dbErrorCallback, SETTING(SQLITE_JOURNAL_MODE));
 
-	LOAD_STEP_L(STARTUP_P2P_GUARD, Util::loadP2PGuard());
+	LOAD_STEP_L(STARTUP_P2P_GUARD, initP2PGuard());
 	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());
 	
 	if (BOOLSETTING(USE_CUSTOM_LOCATIONS))

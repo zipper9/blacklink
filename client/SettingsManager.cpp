@@ -422,6 +422,8 @@ static const char* settingTags[] =
 	"EnableP2PGuard",
 	"EnableIpTrust",
 	"IpGuardDefaultDeny",
+	"P2PGuardLoadIni",
+	"P2PGuardBlock",
 
 	// Anti-flood
 	"AntiFloodMinReqCount",

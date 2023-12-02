@@ -1,11 +1,16 @@
 #include "stdafx.h"
 #include "RangesPage.h"
 #include "WinUtil.h"
+#include "DialogLayout.h"
 
 #include "../client/IpGuard.h"
 #include "../client/IpTrust.h"
 #include "../client/File.h"
 #include "../client/DatabaseManager.h"
+
+using DialogLayout::FLAG_TRANSLATE;
+using DialogLayout::UNSPEC;
+using DialogLayout::AUTO;
 
 static const WinUtil::TextItem texts1[] =
 {
@@ -21,13 +26,22 @@ static const WinUtil::TextItem texts2[] =
 	{ 0,                  ResourceManager::Strings()               }
 };
 
-static const WinUtil::TextItem texts3[] =
+static const DialogLayout::Item layoutItems3[] =
 {
-	{ IDC_ENABLE_P2P_GUARD,         ResourceManager::P2P_GUARD_ENABLE             },
-	{ IDC_P2P_GUARD_DESC,           ResourceManager::P2P_GUARD_DESC               },
-	{ IDC_CAPTION_MANUAL_P2P_GUARD, ResourceManager::SETTINGS_MANUALLY_BLOCKED_IP },
-	{ IDC_REMOVE,                   ResourceManager::REMOVE_SELECTED              },
-	{ 0,                            ResourceManager::Strings()                    }
+	{ IDC_ENABLE_P2P_GUARD,         FLAG_TRANSLATE, AUTO,   UNSPEC },
+	{ IDC_P2P_GUARD_DESC,           FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_CAPTION_MANUAL_P2P_GUARD, FLAG_TRANSLATE, AUTO,   UNSPEC },
+	{ IDC_REMOVE,                   FLAG_TRANSLATE, UNSPEC, UNSPEC },
+	{ IDC_LOAD_INI_FILE,            FLAG_TRANSLATE, AUTO,   UNSPEC },
+	{ IDC_P2P_GUARD_BLOCK,          FLAG_TRANSLATE, AUTO,   UNSPEC },
+};
+
+static const PropPage::Item items3[] =
+{
+	{ IDC_ENABLE_P2P_GUARD, SettingsManager::ENABLE_P2P_GUARD,   PropPage::T_BOOL },
+	{ IDC_LOAD_INI_FILE,    SettingsManager::P2P_GUARD_LOAD_INI, PropPage::T_BOOL },
+	{ IDC_P2P_GUARD_BLOCK,  SettingsManager::P2P_GUARD_BLOCK,    PropPage::T_BOOL },
+	{ 0,                    0,                                   PropPage::T_END  }
 };
 
 #define ADD_TAB(name, type, text) \
@@ -224,10 +238,11 @@ LRESULT RangesPageP2PGuard::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	infoLabel.setUseDialogBackground(true);
 	infoLabel.setUseSystemColors(true);
 	infoLabel.SubclassWindow(GetDlgItem(IDC_P2P_GUARD_DESC));
-	WinUtil::translate(*this, texts3);
+	DialogLayout::layout(m_hWnd, layoutItems3, _countof(layoutItems3));
+
+	PropPage::read(*this, items3);
 
 	checkBox.Attach(GetDlgItem(IDC_ENABLE_P2P_GUARD));
-	checkBox.SetCheck(BOOLSETTING(ENABLE_P2P_GUARD) ? BST_CHECKED : BST_UNCHECKED);
 	listBox.Attach(GetDlgItem(IDC_MANUAL_P2P_GUARD));
 	loadBlocked();
 	fixControls();
@@ -241,12 +256,27 @@ LRESULT RangesPageP2PGuard::onLinkActivated(UINT, WPARAM, LPARAM lParam, BOOL&)
 	return 0;
 }
 
+LRESULT RangesPageP2PGuard::onEnableP2PGuard(WORD, WORD, HWND, BOOL&)
+{
+	GetParent().GetParent().SendMessage(WMU_RESTART_REQUIRED);
+	fixControls();
+	return 0;
+}
+
+LRESULT RangesPageP2PGuard::onEnableIniFile(WORD, WORD, HWND, BOOL&)
+{
+	GetParent().GetParent().SendMessage(WMU_RESTART_REQUIRED);
+	return 0;
+}
+
 void RangesPageP2PGuard::fixControls()
 {
 	BOOL state = checkBox.GetCheck() != BST_UNCHECKED;
 	listBox.EnableWindow(state);
 	BOOL unused;
 	onSelChange(0, 0, nullptr, unused);
+	GetDlgItem(IDC_LOAD_INI_FILE).EnableWindow(state);
+	GetDlgItem(IDC_P2P_GUARD_BLOCK).EnableWindow(state);
 }
 
 void RangesPageP2PGuard::loadBlocked()
@@ -316,5 +346,5 @@ LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
 
 void RangesPageP2PGuard::write()
 {
-	g_settings->set(SettingsManager::ENABLE_P2P_GUARD, checkBox.GetCheck() != BST_UNCHECKED);
+	PropPage::write(*this, items3);
 }

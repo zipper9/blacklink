@@ -26,7 +26,8 @@
 namespace Util
 {
 	void loadCustomLocations();
-	void loadP2PGuard();
+	void loadP2PGuardIni();
+	void unloadP2PGuardIni();
 	void loadIBlockList();
 
 	void getIpInfo(const IpAddress& ip, IPInfo& result, int what, bool onlyCached = false);

@@ -35,6 +35,7 @@
 #include "StatusMessageHistory.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
+#include "HIconWrapper.h"
 
 #define QUICK_SEARCH_MAP 20
 #define STATUS_MESSAGE_MAP 9

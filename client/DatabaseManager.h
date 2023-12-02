@@ -164,6 +164,7 @@ class DatabaseConnection
 		void loadP2PGuard(Ip4Address ip, IPInfo& result);
 		void saveLocation(const vector<LocationInfo>& data);
 		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
+		void clearP2PGuardData(int type);
 		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
 		void removeManuallyBlockedIP(Ip4Address ip);
 #ifdef BL_FEATURE_IP_DATABASE
@@ -188,6 +189,7 @@ class DatabaseConnection
 		int64_t getRandValForRegistry();
 		void deleteOldTransferHistory();
 		void initInsertTransferQuery();
+		void doDeleteP2PGuard(int type);
 #ifdef BL_FEATURE_IP_DATABASE
 		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
 		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);

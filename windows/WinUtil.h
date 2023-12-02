@@ -24,7 +24,6 @@
 #include "../client/SettingsManager.h"
 #include "UserInfoSimple.h"
 #include "OMenu.h"
-#include "HIconWrapper.h"
 #include "ImageLists.h"
 
 #define SHOW_POPUP(popup_key, msg, title) \

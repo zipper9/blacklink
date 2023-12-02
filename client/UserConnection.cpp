@@ -118,7 +118,7 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	}
 */
 
-#ifdef FLYLINKDC_USE_IPFILTER
+#ifdef BL_FEATURE_IPFILTER
 	if (ipTrust.isBlocked(ip.data.v4))
 	{
 		LogManager::message(STRING_F(IP_BLOCKED, "IPTrust" % Util::printIpAddress(ip.data.v4)));
@@ -127,7 +127,7 @@ bool UserConnection::isIpBlocked(bool isDownload)
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
 		return true;
 	}
-	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
+	if (!isDownload && BOOLSETTING(ENABLE_P2P_GUARD) && BOOLSETTING(P2P_GUARD_BLOCK))
 	{
 		IPInfo ipInfo;
 		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
