@@ -444,6 +444,7 @@ IconBitmaps::IconBitmaps()
 	init(HAMMER,                  SOURCE_OTHER,    31);
 	init(FINGER,                  SOURCE_OTHER,    32);
 	init(KEY,                     SOURCE_OTHER,    33);
+	init(GOTO_FILELIST,           SOURCE_OTHER,    35);
 	init(EDITOR_SEND,             SOURCE_EDITOR,   0);
 	init(EDITOR_MULTILINE,        SOURCE_EDITOR,   1);
 	init(EDITOR_EMOTICON,         SOURCE_EDITOR,   2);

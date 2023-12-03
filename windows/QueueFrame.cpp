@@ -1767,7 +1767,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					tstring nick = si.nick;
 					checkSourceFlags(nick, si.flags);
 					WinUtil::escapeMenu(nick);
-					browseMenu.AppendMenu(MF_STRING, IDC_BROWSELIST + i, nick.c_str());
+					browseMenu.AppendMenu(MF_STRING, IDC_BROWSELIST + i, nick.c_str(),
+						si.hasFileList ? g_iconBitmaps.getBitmap(IconBitmaps::GOTO_FILELIST, 0) : nullptr);
 				}
 
 				sortSources(readdList);

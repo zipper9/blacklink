@@ -1850,7 +1850,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			}
 		}
 		if (originalId && findFrameByID(originalId))
-			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL));
+			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_FILELIST, 0));
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		MenuHelper::unlinkStaticMenus(directoryMenu);
 		return TRUE;
