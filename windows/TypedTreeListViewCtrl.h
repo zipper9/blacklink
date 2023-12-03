@@ -237,10 +237,10 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 
 			if (parent)
 			{
+				parent->hits++;
 				if (parent->getStateFlags() & STATE_FLAG_EXPANDED)
 					return insertItemInternal(getSortPos(item), item, useImageCallback ? I_IMAGECALLBACK : item->getImageIndex());
 				item->setStateFlags(item->getStateFlags() & ~STATE_FLAG_VISIBLE);
-				parent->hits++;
 				return -1;
 			}
 
