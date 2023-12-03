@@ -155,9 +155,9 @@ void UserConnection::failed(const string& line) noexcept
 
 void UserConnection::protocolError(const string& error) noexcept
 {
-	ConnectionManager::getInstance()->failed(this, error, true);
 	if (isSet(FLAG_ASSOCIATED | FLAG_DOWNLOAD))
 		DownloadManager::getInstance()->fail(this, error);
+	ConnectionManager::getInstance()->failed(this, error, true);
 }
 
 bool UserConnection::checkState(int state, const string& command) const noexcept
