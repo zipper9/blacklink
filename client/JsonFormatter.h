@@ -29,6 +29,8 @@ private:
 	bool expectValue;
 	bool wantComma;
 	bool decorate;
+
+	void appendValue();
 };
 
 #endif // JSON_FORMATTER_H_

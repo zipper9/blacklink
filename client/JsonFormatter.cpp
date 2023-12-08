@@ -2,28 +2,21 @@
 #include "JsonFormatter.h"
 #include "StrUtil.h"
 
+static const char INDENT_CHAR = '\t';
+
 void JsonFormatter::open(char c) noexcept
 {
-	if (expectValue)
-	{
-		if (decorate) s += '\n';
-		expectValue = false;
-	}
-	else if (wantComma)
-	{
-		s += ',';
-		if (decorate) s += '\n';
-	}
+	if (wantComma) s += ',';
 	if (decorate)
 	{
-		s.append(indent, '\t');
-		s += c;
 		s += '\n';
+		s.append(indent, INDENT_CHAR);
+		s += c;
 		indent++;
 	}
 	else
 		s += c;
-	wantComma = false;
+	wantComma = expectValue = false;
 }
 
 void JsonFormatter::close(char c) noexcept
@@ -31,7 +24,7 @@ void JsonFormatter::close(char c) noexcept
 	if (decorate)
 	{
 		s += '\n';
-		s.append(--indent, '\t');
+		s.append(--indent, INDENT_CHAR);
 	}
 	s += c;
 	wantComma = true;
@@ -41,8 +34,9 @@ void JsonFormatter::appendKey(const char* key) noexcept
 {
 	if (decorate)
 	{
-		if (wantComma) s += ",\n";
-		s.append(indent, '\t');
+		if (wantComma) s += ',';
+		s += '\n';
+		s.append(indent, INDENT_CHAR);
 		s += '"';
 		s += key;
 		s += "\" : ";
@@ -62,8 +56,9 @@ void JsonFormatter::appendKey(const string& key) noexcept
 {
 	if (decorate)
 	{
-		if (wantComma) s += ",\n";
-		s.append(indent, '\t');
+		if (wantComma) s += ',';
+		s += '\n';
+		s.append(indent, INDENT_CHAR);
 		s += '"';
 		s += key;
 		s += "\" : ";
@@ -81,6 +76,7 @@ void JsonFormatter::appendKey(const string& key) noexcept
 
 void JsonFormatter::appendStringValue(const string& val, bool escape) noexcept
 {
+	appendValue();
 	s += '"';
 	size_t lastAppended = 0;
 	size_t len = val.length();
@@ -127,27 +123,37 @@ void JsonFormatter::appendStringValue(const string& val, bool escape) noexcept
 	if (lastAppended < len)
 		s.append(val, lastAppended, len - lastAppended);
 	s += '"';
-	wantComma = true;
-	expectValue = false;
 }
 
 void JsonFormatter::appendIntValue(int val) noexcept
 {
+	appendValue();
 	s += Util::toString(val);
-	wantComma = true;
-	expectValue = false;
 }
 
 void JsonFormatter::appendInt64Value(int64_t val) noexcept
 {
+	appendValue();
 	s += Util::toString(val);
-	wantComma = true;
-	expectValue = false;
 }
 
 void JsonFormatter::appendBoolValue(bool val) noexcept
 {
+	appendValue();
 	s += val ? "true" : "false";
+}
+
+void JsonFormatter::appendValue()
+{
+	if (wantComma)
+	{
+		if (decorate) s += ", "; else s += ',';
+	}
+	else if (decorate && !expectValue)
+	{
+		s += '\n';
+		s.append(indent, INDENT_CHAR);
+	}
 	wantComma = true;
 	expectValue = false;
 }

@@ -414,6 +414,7 @@ static int getHexChar(const char* s) noexcept
 
 int JsonParser::unescape(string& s) noexcept
 {
+	if (s.empty()) return 0;
 	char* data = &s[0];
 	size_t writePos = 0;
 	size_t readPos = 0;
@@ -469,6 +470,7 @@ int JsonParser::unescape(string& s) noexcept
 			prevSurrogatePos = 0;
 			prevSurrogate = 0;
 		}
+		if (prevSurrogate) return ERR_INVALID_ESCAPE;
 		writePos += Text::wcToUtf8(chr, data + writePos);
 		readPos += escapeLen;
 	}
