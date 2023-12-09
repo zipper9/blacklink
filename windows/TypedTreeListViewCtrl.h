@@ -316,6 +316,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 									gi->parent = nullptr;
 									SetItemState(pos, INDEXTOSTATEIMAGEMASK(0), LVIS_STATEIMAGEMASK);
 								}
+								else
+									parent->hits = children.size();
 								updateItem(pos);
 							}
 						}
