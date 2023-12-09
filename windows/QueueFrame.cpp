@@ -1952,7 +1952,7 @@ LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		if (index < browseSourcesList.size())
 		{
 			UserPtr& user = browseSourcesList[index].user;
-			if (sourcesList[index].hasFileList)
+			if (browseSourcesList[index].hasFileList)
 			{
 				DirectoryListingFrame* frame = DirectoryListingFrame::findFrame(user);
 				if (frame)
