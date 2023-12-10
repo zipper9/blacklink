@@ -1151,10 +1151,10 @@ void ConnectionManager::processMyNick(UserConnection* source, const string& nick
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			const ConnectionQueueItemPtr& cqi = *i;
-			cqi->setErrors(0);
 			if ((cqi->getState() == ConnectionQueueItem::CONNECTING || cqi->getState() == ConnectionQueueItem::WAITING) &&
 			    cqi->getUser()->getCID() == cid)
 			{
+				cqi->setErrors(0);
 				source->setUser(cqi->getUser());
 				// Indicate that we're interested in this file...
 				source->setFlag(UserConnection::FLAG_DOWNLOAD);
