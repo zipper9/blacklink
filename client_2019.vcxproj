@@ -603,7 +603,6 @@
     <ClCompile Include="client\SearchParam.cpp" />
     <ClCompile Include="client\SearchQueue.cpp" />
     <ClCompile Include="client\SearchResult.cpp" />
-    <ClCompile Include="client\ServerSocket.cpp" />
     <ClCompile Include="client\SettingsManager.cpp" />
     <ClCompile Include="client\SharedFile.cpp" />
     <ClCompile Include="client\SharedFileStream.cpp" />
@@ -884,7 +883,6 @@
     <ClInclude Include="client\SearchQueue.h" />
     <ClInclude Include="client\SearchResult.h" />
     <ClInclude Include="client\Segment.h" />
-    <ClInclude Include="client\ServerSocket.h" />
     <ClInclude Include="client\SettingsManager.h" />
     <ClInclude Include="client\SharedFileStream.h" />
     <ClInclude Include="client\ShareManager.h" />

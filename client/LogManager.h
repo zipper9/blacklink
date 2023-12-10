@@ -41,7 +41,6 @@ class LogManager
 			STATUS,
 			WEBSERVER,
 			SQLITE_TRACE,
-			DDOS_TRACE,
 #ifdef FLYLINKDC_USE_TORRENT
 			TORRENT_TRACE,
 #endif
@@ -65,7 +64,6 @@ class LogManager
 		static void log(int area, const string& msg) noexcept;
 		static void log(int area, const StringMap& params) noexcept;
 		static void log(int area, Util::ParamExpander* ex) noexcept;
-		static void ddos_message(const string& message) noexcept;
 		static void flood_message(const string& message) noexcept;
 #ifdef FLYLINKDC_USE_TORRENT
 		static void torrent_message(const string& message, bool addToSystem = true) noexcept;

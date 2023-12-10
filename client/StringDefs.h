@@ -1081,7 +1081,6 @@ enum Strings   // @DontAdd
 	SETTINGS_LOG_DOWNLOADS, // "Log downloads"
 	SETTINGS_LOG_FILELIST_TRANSFERS, // "Log file list transfers"
 	SETTINGS_LOG_SQLITE_TRACE, // "Log SQLite statements"
-	SETTINGS_LOG_DDOS_TRACE, // "Log DDoS detect"
 	SETTINGS_LOG_TORRENT_TRACE,  // "Log torrent"
 	SETTINGS_LOG_SEARCH_TRACE, // "Log search hits"
 	SETTINGS_LOG_DHT_TRACE, // "Log DHT information"

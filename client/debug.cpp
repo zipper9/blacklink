@@ -1,4 +1,5 @@
 #include "stdinc.h"
+#include "debug.h"
 
 #ifdef _WIN32
 void DumpDebugMessage(const TCHAR *filename, const char *msg, size_t msgSize, bool appendNL)

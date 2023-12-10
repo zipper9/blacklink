@@ -5,7 +5,7 @@
 const string Util::emptyString;
 const wstring Util::emptyStringW;
 const tstring Util::emptyStringT;
-const vector<uint8_t> Util::emptyByteVector;
+const std::vector<uint8_t> Util::emptyByteVector;
 
 #ifndef _WIN32
 

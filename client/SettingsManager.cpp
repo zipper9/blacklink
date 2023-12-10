@@ -166,7 +166,6 @@ static const char* settingTags[] =
 	"LogFileWebServer",
 	"LogFileSystem",
 	"LogFileSQLiteTrace",
-	"LogFileDdosTrace",
 	"LogFileTorrentTrace",
 	"LogFileSearchTrace",
 	"LogFileDHTTrace",
@@ -183,7 +182,6 @@ static const char* settingTags[] =
 	"LogFormatWebServer",
 	"LogFormatSystem",	
 	"LogFormatSQLiteTrace",
-	"LogFormatDdosTrace",
 	"LogFormatTorrentTrace",
 	"LogFormatSearchTrace",
 	"LogFormatDHTTrace",
@@ -474,7 +472,6 @@ static const char* settingTags[] =
 	"WebServerLog",
 	"LogSystem",
 	"LogSQLiteTrace",
-	"LogDDOSTrace",
 	"LogTorrentTrace",
 	"LogSearchTrace",
 	"LogDHTTrace",
@@ -864,7 +861,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_WEBSERVER, "WebServer.log");
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_SQLITE_TRACE, "SQLTrace.log");
-	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
 	setDefault(LOG_FILE_TORRENT_TRACE, "torrent.log");
 	setDefault(LOG_FILE_SEARCH_TRACE, "Found.log");
 	setDefault(LOG_FILE_DHT_TRACE, "DHT.log");
@@ -881,7 +877,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_WEBSERVER, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");
-	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SEARCH_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_DHT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
@@ -1578,7 +1573,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FORMAT_STATUS:
 		case LOG_FORMAT_SYSTEM:
 		case LOG_FORMAT_SQLITE_TRACE:
-		case LOG_FORMAT_DDOS_TRACE:
 		case LOG_FORMAT_FLOOD_TRACE:
 		case LOG_FORMAT_TCP_MESSAGES:
 		case LOG_FORMAT_UDP_PACKETS:
@@ -1590,7 +1584,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FILE_SYSTEM:
 		case LOG_FILE_WEBSERVER:
 		case LOG_FILE_SQLITE_TRACE:
-		case LOG_FILE_DDOS_TRACE:
 		case LOG_FILE_TORRENT_TRACE:
 		case LOG_FILE_DHT_TRACE:
 		case LOG_FILE_PSR_TRACE:

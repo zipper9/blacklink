@@ -57,11 +57,9 @@ void LogManager::init()
 	types[STATUS].formatOption          = SettingsManager::LOG_FORMAT_STATUS;
 	types[WEBSERVER].fileOption         = SettingsManager::LOG_FILE_WEBSERVER;
 	types[WEBSERVER].formatOption       = SettingsManager::LOG_FORMAT_WEBSERVER;
-	
+
 	types[SQLITE_TRACE].fileOption      = SettingsManager::LOG_FILE_SQLITE_TRACE;
 	types[SQLITE_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
-	types[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;
-	types[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
 	types[SEARCH_TRACE].fileOption      = SettingsManager::LOG_FILE_SEARCH_TRACE;
 	types[SEARCH_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SEARCH_TRACE;
 	types[DHT_TRACE].fileOption         = SettingsManager::LOG_FILE_DHT_TRACE;
@@ -227,12 +225,6 @@ void LogManager::setOptions(int area, const TStringPair& p) noexcept
 	string filename = Text::fromT(p.first);
 	SettingsManager::set((SettingsManager::StrSetting) la.fileOption, filename);
 	SettingsManager::set((SettingsManager::StrSetting) la.formatOption, Text::fromT(p.second));
-}
-
-void LogManager::ddos_message(const string& message) noexcept
-{
-	if (BOOLSETTING(LOG_DDOS_TRACE))
-		LOG(DDOS_TRACE, message);
 }
 
 void LogManager::flood_message(const string& message) noexcept

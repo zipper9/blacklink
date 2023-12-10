@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #ifdef _WIN32
 #include "w.h"
