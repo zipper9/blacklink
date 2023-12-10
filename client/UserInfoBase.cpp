@@ -33,7 +33,7 @@ void UserInfoBase::getUserResponses()
 	{
 		try
 		{
-			QueueManager::getInstance()->addCheckUserIP(getUser());
+			QueueManager::getInstance()->userCheckStart(getUser());
 		}
 		catch (const Exception& e)
 		{
@@ -41,23 +41,6 @@ void UserInfoBase::getUserResponses()
 		}
 	}
 }
-
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-void UserInfoBase::checkList()
-{
-	if (getUser())
-	{
-		try
-		{
-			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_USER_CHECK, 0);
-		}
-		catch (const Exception& e)
-		{
-			LogManager::message(e.getError());
-		}
-	}
-}
-#endif
 
 void UserInfoBase::doReport(const string& hubHint)
 {

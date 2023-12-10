@@ -24,9 +24,7 @@ class Download : public Transfer, public Flags
 			FLAG_XML_BZ_LIST      = 0x010,
 			FLAG_DOWNLOAD_PARTIAL = 0x020,
 			FLAG_OVERLAP          = 0x040,
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
 			FLAG_USER_CHECK       = 0x080,
-#endif
 			FLAG_RECURSIVE_LIST   = 0x100,
 			FLAG_USER_GET_IP      = 0x200,
 			FLAG_MATCH_QUEUE      = 0x400,

@@ -155,12 +155,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static const CID& getMyPID();
 		static void setMyPID(const string& pid);
 
-		static void connectionTimeout(const UserPtr& p);
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-		static void checkCheating(const UserPtr& p, DirectoryListing* dl);
-#endif
-		static void setClientStatus(const UserPtr& p, const string& aCheatString, const int aRawCommand, bool aBadClient);
-
 		static void setSupports(const UserPtr& user, uint8_t knownUcSupports);
 		static void setUnknownCommand(const UserPtr& user, const string& unknownCommand);
 		static void dumpUserInfo(const HintedUser& user);

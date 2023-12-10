@@ -51,9 +51,6 @@ QueueManager::FileQueue QueueManager::fileQueue;
 QueueManager::UserQueue QueueManager::userQueue;
 bool QueueManager::dirty = false;
 uint64_t QueueManager::lastSave = 0;
-QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::userQueueMap[QueueItem::LAST];
-QueueManager::UserQueue::RunningMap QueueManager::UserQueue::runningMap;
-std::unique_ptr<RWLock> QueueManager::UserQueue::csRunningMap = std::unique_ptr<RWLock>(RWLock::create());
 
 static string getQueueFile()
 {
@@ -395,6 +392,10 @@ QueueItemPtr QueueManager::FileQueue::moveTarget(QueueItemPtr& qi, const string&
 	return qt;
 }
 
+QueueManager::UserQueue::UserQueue() : csRunningMap(RWLock::create())
+{
+}
+
 bool QueueManager::UserQueue::getQueuedItems(const UserPtr& user, QueueItemList& out) const
 {
 	bool hasDown = false;
@@ -537,7 +538,7 @@ void QueueManager::UserQueue::setRunningDownload(const QueueItemPtr& qi, const U
 	runningMap[user] = qi;
 }
 
-size_t QueueManager::UserQueue::getRunningCount()
+size_t QueueManager::UserQueue::getRunningCount() const
 {
 	READ_LOCK(*csRunningMap);
 	return runningMap.size();
@@ -636,6 +637,23 @@ void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr&
 		return;
 	uq.erase(i);
 	if (uq.empty()) ulm.erase(j);
+}
+
+QueueItemPtr QueueManager::UserQueue::findItemByFlag(const UserPtr& user, int flag) const
+{
+	QueueRLock(*QueueItem::g_cs);
+	for (int p = QueueItem::LAST - 1; p >= 0; --p)
+	{
+		const auto j = userQueueMap[p].find(user);
+		if (j != userQueueMap[p].end())
+		{
+			const QueueItemList& ql = j->second;
+			for (const QueueItemPtr& qi : ql)
+				if (qi->getFlags() & flag)
+					return qi;
+		}
+	}
+	return QueueItemPtr();
 }
 
 QueueManager::QueueManager() :
@@ -811,11 +829,42 @@ void QueueManager::addList(const UserPtr& user, QueueItem::MaskType flags, Queue
 	add(initialDir, params, user, (QueueItem::MaskType)(QueueItem::FLAG_USER_LIST | flags), extraFlags, getConnFlag);
 }
 
+#if 0
 void QueueManager::addCheckUserIP(const UserPtr& user)
 {
 	bool getConnFlag = true;
 	QueueItemParams params;
 	add(Util::emptyString, params, user, QueueItem::FLAG_USER_GET_IP, 0, getConnFlag);
+}
+#endif
+
+bool QueueManager::userCheckStart(const UserPtr& user)
+{
+	if (!user->startUserCheck(Util::getTick())) return false;
+	try
+	{
+		addList(user, QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_USER_CHECK, 0, Util::emptyString);
+	}
+	catch (const Exception&)
+	{
+		user->changeFlags(User::USER_CHECK_FAILED, User::USER_CHECK_RUNNING);
+		return false;
+	}
+	return true;
+}
+
+void QueueManager::userCheckProcessFailure(const UserPtr& user, int numErrors, bool removeQueueItem)
+{
+	if ((numErrors >= 3 || numErrors == -1) && (user->getFlags() & User::USER_CHECK_RUNNING))
+	{
+		user->changeFlags(User::USER_CHECK_FAILED, User::USER_CHECK_RUNNING);
+		if (removeQueueItem)
+		{
+			QueueItemPtr qi = userQueue.findItemByFlag(user, QueueItem::FLAG_USER_CHECK);
+			if (qi) removeItem(qi, true);
+		}
+		LogManager::message("User check failed: " + user->getLastNick(), false);
+	}
 }
 
 string QueueManager::getFileListTarget(const UserPtr& user)
@@ -1920,10 +1969,18 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 					if (download->isSet(Download::FLAG_TTH_LIST))
 						processListFlags |= DIR_FLAG_TTH_LIST;
 				}
-				else
+				else if (q->getFlags() & QueueItem::FLAG_USER_CHECK)
 				{
-					fire(QueueManagerListener::PartialList(), hintedUser, download->getFileListBuffer());
+					// User check completed
+					// TODO: process partial list
+					user->changeFlags(0, User::USER_CHECK_RUNNING | User::USER_CHECK_FAILED);
 				}
+				else
+					fire(QueueManagerListener::PartialList(), hintedUser, download->getFileListBuffer());
+			}
+			else if (q->getFlags() & QueueItem::FLAG_USER_CHECK)
+			{
+				user->changeFlags(User::USER_CHECK_FAILED, User::USER_CHECK_RUNNING);
 			}
 			else
 			{
@@ -2002,7 +2059,7 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 					if (!isFile || isFinishedFile)
 					{
 						const string& path = download->getPath();
-						if (!(q->getFlags() & QueueItem::FLAG_USER_GET_IP))
+						if (!(q->getFlags() & (QueueItem::FLAG_USER_GET_IP | QueueItem::FLAG_USER_CHECK)))
 						{
 							string tempTarget;
 							if (isFile)
@@ -2275,7 +2332,15 @@ void QueueManager::removeAll()
 
 void QueueManager::removeItem(const QueueItemPtr& qi, bool removeFromUserQueue)
 {
-	if (removeFromUserQueue) userQueue.removeQueueItem(qi);
+	if (removeFromUserQueue)
+	{
+		if (qi->getFlags() & QueueItem::FLAG_USER_CHECK)
+		{
+			UserPtr user = qi->getFirstSource();
+			if (user) userCheckProcessFailure(user, -1, false);
+		}
+		userQueue.removeQueueItem(qi);
+	}
 	fileQueue.remove(qi);
 	csBatch.lock();
 	if (batchCounter)
@@ -2430,7 +2495,7 @@ void QueueManager::removeSource(const UserPtr& user, Flags::MaskType reason) noe
 		QueueWLock(*QueueItem::g_cs);
 		for (int p = QueueItem::LAST - 1; p >= 0; --p)
 		{
-			auto& ulm = UserQueue::userQueueMap[p];
+			auto& ulm = userQueue.userQueueMap[p];
 			auto i = ulm.find(user);
 			if (i != ulm.end())
 			{

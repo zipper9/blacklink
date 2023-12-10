@@ -92,7 +92,11 @@ class QueueManager : public Singleton<QueueManager>,
 		void add(const string& target, const QueueItemParams& params, const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, bool& getConnFlag);
 		// Add a user's filelist to the queue
 		void addList(const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, const string& initialDir = Util::emptyString);
+#if 0
 		void addCheckUserIP(const UserPtr& user);
+#endif
+		bool userCheckStart(const UserPtr& user);
+		void userCheckProcessFailure(const UserPtr& user, int numErrors, bool removeQueueItem);
 		bool addDclstFile(const string& path);
 		void processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority);
 		void startBatch() noexcept;
@@ -333,7 +337,8 @@ class QueueManager : public Singleton<QueueManager>,
 			friend class QueueManager;
 
 			public:
-				static size_t getRunningCount();
+				UserQueue();
+				size_t getRunningCount() const;
 				void removeRunning(const UserPtr& d);
 
 			private:	
@@ -356,17 +361,18 @@ class QueueManager : public Singleton<QueueManager>,
 				bool isInQueue(const QueueItemPtr& qi) const;
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
+				QueueItemPtr findItemByFlag(const UserPtr& user, int flag) const;
 
 				typedef boost::unordered_map<UserPtr, QueueItemList> UserQueueMap;
 				typedef boost::unordered_map<UserPtr, QueueItemPtr> RunningMap;
 
 			private:
 				/** QueueItems by priority and user (this is where the download order is determined) */
-				static UserQueueMap userQueueMap[QueueItem::LAST];
+				UserQueueMap userQueueMap[QueueItem::LAST];
 				/** Currently running downloads, a QueueItem is always either here or in the userQueue */
-				static RunningMap runningMap;
+				RunningMap runningMap;
 				/** Last error message to sent to TransferView */
-				static std::unique_ptr<RWLock> csRunningMap;
+				std::unique_ptr<RWLock> csRunningMap;
 		};
 
 		/** QueueItems by user */

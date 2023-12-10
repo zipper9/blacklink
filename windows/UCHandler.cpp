@@ -31,9 +31,6 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		}
 		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
 		if (!isMultiple) serviceSubMenu.AppendMenu(MF_STRING, IDC_REPORT, CTSTRING(DUMP_USER_INFO));
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));
-#endif
 		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
 		WinUtil::appendSeparator(menu);
 		menu.AppendMenu(MF_POPUP, serviceSubMenu, CTSTRING(SERVICE_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::HAMMER, 0));

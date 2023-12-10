@@ -368,11 +368,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			BANDWIDTH_LIMIT_START,
 			BANDWIDTH_LIMIT_END,
 			PER_USER_UPLOAD_SPEED_LIMIT,
-			
-			// Auto ban (Ints)
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-			CHECK_NEW_USERS,
-#endif
+
+			// User checking
+			CHECK_USERS_NMDC,
+			CHECK_USERS_ADC,
+			USER_CHECK_BATCH,
 
 			// Auto priority (Ints)
 			AUTO_PRIORITY_USE_PATTERNS,
@@ -659,9 +659,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PROMPT_HUB_PASSWORD,
 			FILTER_MESSAGES,
 			ENABLE_COUNTRY_FLAG,
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-			SHOW_SHARE_CHECKED_USERS,
-#endif
+			SHOW_CHECKED_USERS, // not implemented yet
 			HUB_POSITION,
 			SORT_FAVUSERS_FIRST,
 			FILTER_ENTER,

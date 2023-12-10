@@ -118,12 +118,7 @@ OnlineUserPtr AdcHub::addUser(uint32_t sid, const CID& cid, const string& nick)
 	}
 
 	if (sid != AdcCommand::HUB_SID)
-	{
 		ClientManager::getInstance()->putOnline(ou, true);
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		UserManager::getInstance()->checkUser(ou);
-#endif
-	}
 	return ou;
 }
 
@@ -428,6 +423,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		setAutoReconnect(true);
 		updateCounts(false);
 		updateConnectionStatus(ConnectionStatus::SUCCESS);
+		updateUserCheckTime();
 		fireUserUpdated(ou);
 		if (fireLoggedIn)
 			fire(ClientListener::LoggedIn(), this);
@@ -1708,4 +1704,19 @@ void AdcHub::onFailed(const string& aLine) noexcept
 {
 	clearUsers();
 	Client::onFailed(aLine);
+}
+
+void AdcHub::getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const noexcept
+{
+	READ_LOCK(*csUsers);
+	for (SIDMap::const_iterator i = users.cbegin(); i != users.cend(); ++i)
+	{
+		const OnlineUserPtr& ou = i->second;
+		if (ou->getIdentity().isBotOrHub()) continue;
+		const UserPtr& user = ou->getUser();
+		if (user->getFlags() & (User::USER_CHECK_RUNNING | User::MYSELF)) continue;
+		int64_t lastCheckTime = user->getLastCheckTime();
+		if (lastCheckTime && lastCheckTime + timeDiff > tick) continue;
+		res.push_back(user);
+	}
 }

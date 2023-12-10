@@ -766,12 +766,13 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 				else if (cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + CONNECTION_TIMEOUT * 1000 < tick)
 				{
 					const string& token = cqi->getConnectionQueueToken();
-					ClientManager::connectionTimeout(cqi->getUser());
-					cqi->setErrors(cqi->getErrors() + 1);
+					int numErrors = cqi->getErrors() + 1;
+					cqi->setErrors(numErrors);
 					downloadError.emplace_back(ReasonItem{cqi->getHintedUser(), token, STRING(CONNECTION_TIMEOUT)});
 					cqi->setLastAttempt(tick);
 					cqi->setState(ConnectionQueueItem::WAITING);
 					removeExpectedToken(token);
+					QueueManager::getInstance()->userCheckProcessFailure(cqi->getUser(), numErrors, true);
 #ifdef DEBUG_NMDC_UC
 					LogManager::message("Connection timed out: user=" + cqi->getHintedUser().user->getLastNick() +
 						" token=" + cqi->getConnectionQueueToken() +

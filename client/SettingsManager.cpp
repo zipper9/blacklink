@@ -405,10 +405,10 @@ static const char* settingTags[] =
 	"TimeLimitEnd",
 	"PerUserUploadLimit",
 
-	// Auto ban (Ints)
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-	"CheckNewUsers",
-#endif
+	// User checking (Ints)
+	"CheckUsersNmdc",
+	"CheckUsersAdc",
+	"UserCheckBatch",
 
 	// Auto priority (Ints)
 	"AutoPriorityUsePatterns",
@@ -696,9 +696,7 @@ static const char* settingTags[] =
 	"PromptPassword",
 	"FilterMessages",
 	"EnableCountryFlag",
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
 	"ShowCheckedUsers",
-#endif
 	"HubPosition",
 	"SortFavUsersFirst",
 	"FilterEnter",
@@ -1041,6 +1039,9 @@ void SettingsManager::setDefaults()
 	setDefault(MAX_FINISHED_DOWNLOADS, 1000);
 	setDefault(MAX_FINISHED_UPLOADS, 1000);
 
+	// User checking
+	setDefault(USER_CHECK_BATCH, 5);
+
 	// Auto priority (Ints)
 	setDefault(AUTO_PRIORITY_USE_PATTERNS, TRUE);
 	setDefault(AUTO_PRIORITY_PATTERNS_PRIO, QueueItem::HIGHER);
@@ -1290,6 +1291,7 @@ void SettingsManager::setDefaults()
 	setDefault(PROMPT_HUB_PASSWORD, TRUE);
 	setDefault(FILTER_MESSAGES, TRUE);
 	setDefault(ENABLE_COUNTRY_FLAG, TRUE);
+	setDefault(SHOW_CHECKED_USERS, TRUE);
 	setDefault(HUB_POSITION, POS_RIGHT);
 	setDefault(USER_THRESHOLD, 1000);
 	setDefault(POPUP_PMS_HUB, TRUE);
@@ -1948,7 +1950,11 @@ bool SettingsManager::set(IntSetting key, int value)
 			VERIFY(0, 3);
 			break;
 		}
-
+		case USER_CHECK_BATCH:
+		{
+			VERIFY(5, 50);
+			break;
+		}
 #undef VER_MIN
 #undef VER_MAX
 #undef VER_DEF_VAL

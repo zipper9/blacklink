@@ -433,28 +433,6 @@ void Identity::loadP2PGuard()
 	}
 }
 
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-string Identity::setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient)
-{
-	if (!c.isOp() || isOp())
-	{
-		return Util::emptyString;
-	}
-
-	PLAY_SOUND(SOUND_FAKERFILE);
-
-	StringMap ucParams;
-	getParams(ucParams, "user", true);
-	string cheat = Util::formatParams(aCheatDescription, ucParams, false);
-
-	setStringParam("CS", cheat);
-	setFakeCardBit(BAD_CLIENT, aBadClient);
-
-	string report = "*** " + STRING(USER) + ' ' + getNick() + " - " + cheat;
-	return report;
-}
-#endif
-
 string Identity::formatShareBytes(uint64_t bytes)
 {
 	return bytes ? Util::formatBytes(bytes) + " (" + Util::formatExactSize(bytes) + ")" : Util::emptyString;
@@ -634,11 +612,6 @@ void Identity::getReport(string& report)
 #ifdef FLYLINKDC_USE_REALSHARED_IDENTITY
 		appendIfValueNotEmpty(STRING(SHARED) + " - real", formatShareBytes(getRealBytesShared()));
 #endif
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-		appendIfValueSetInt("Fake check card", getFakeCard());
-#endif
-		appendIfValueSetInt("Connection Timeouts", getConnectionTimeouts());
-		appendIfValueSetInt("Filelist disconnects", getFileListDisconnects());
 
 		if (isNmdc)
 		{
@@ -701,6 +674,17 @@ void Identity::getReport(string& report)
 #endif
 #endif
 		appendBoolValue("Favorite", (flags & User::FAVORITE) != 0, "yes", "no");
+		int64_t lastCheckTime = user->getLastCheckTime();
+		if (lastCheckTime)
+		{
+			int64_t now = Util::getTick();
+			s = Util::toString((now + 999 - lastCheckTime) / 1000) + "s ago";
+			if (flags & User::USER_CHECK_RUNNING)
+				s += " (running)";
+			else if (flags & User::USER_CHECK_FAILED)
+				s += " (failed)";
+			appendIfValueNotEmpty("Last check", s);
+		}
 	}
 }
 

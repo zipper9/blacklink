@@ -123,7 +123,6 @@ enum Strings   // @DontAdd
 	CHAT_REFFERING_TO_NICK, // "Insert \",\" instead of \":\" after the nick (used with \"Add nick to chat\")"
 	CHEATING_USER, // "Cheating User found"
 	CHECK_0BYTE_SHARE, // "zero bytes real size"
-	CHECK_FILELIST, // "Check file list"
 	CHECK_FORBIDDEN, // "Shared forbidden file: %s"
 	DONT_SHARE_SYSTEM_FOLDER, // "System folder %1% should not be shared"
 	CHECK_INFLATED, // "file-list was inflated %s times"

@@ -33,7 +33,8 @@ User::User(const CID& cid, const string& nick) : cid(cid),
 	slots(0),
 	uploadCount(0),
 	lastIp4(0),
-	lastIp6{}
+	lastIp6{},
+	lastCheckTime(0)
 #ifdef BL_FEATURE_IP_DATABASE
 	, ipStat(nullptr)
 #endif

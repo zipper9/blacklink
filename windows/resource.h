@@ -1087,7 +1087,6 @@
 #define IDC_FILTER_FOCUS                2269
 #define IDC_GET_USER_RESPONSES          2270
 #define IDC_REPORT                      2271
-#define IDC_CHECKLIST                   2272
 #define IDC_ADD_MAGNET                  2273
 #define IDC_CCPM                        2274
 #define IDC_BOLD                        2275

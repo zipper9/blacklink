@@ -35,9 +35,6 @@ class UserInfoBase
 		void browseList();
 		
 		void getUserResponses();
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		void checkList();
-#endif
 		void matchQueue();
 
 		void doReport(const string& hubHint);

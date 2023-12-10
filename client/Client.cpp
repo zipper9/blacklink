@@ -32,6 +32,9 @@
 #include "Resolver.h"
 #include "Random.h"
 
+static const unsigned USER_CHECK_INTERVAL = 60000;
+static const unsigned USER_CHECK_VALIDITY = 60 * 60000;
+
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
 #ifdef _DEBUG
@@ -42,6 +45,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	reconnDelay(120),
 	lastActivity(GET_TICK()),
 	pendingUpdate(0),
+	nextUserCheck(0),
 	autoReconnect(false),
 	state(STATE_DISCONNECTED),
 	connSuccess(false),
@@ -432,6 +436,7 @@ void Client::onFailed(const string& line) noexcept
 	csState.unlock();
 
 	if (!connected) updateConnectionStatus(ConnectionStatus::FAILURE);
+	clearUserCheckList();
 	fire(ClientListener::ClientFailed(), this, line);
 }
 
@@ -442,6 +447,7 @@ void Client::disconnect(bool graceless)
 	if (clientSock)
 		clientSock->disconnect(graceless);
 	csState.unlock();
+	clearUserCheckList();
 }
 
 bool Client::isSecure() const
@@ -651,7 +657,7 @@ void Client::on(Second, uint64_t tick) noexcept
 	const uint64_t lastActivity = this->lastActivity;
 	const uint64_t pendingUpdate = this->pendingUpdate;
 	csState.unlock();
-	
+
 	if (state == STATE_WAIT_PORT_TEST)
 	{
 		connectIfNetworkOk();
@@ -679,6 +685,8 @@ void Client::on(Second, uint64_t tick) noexcept
 			send(&separator, 1);
 		if (pendingUpdate && tick >= pendingUpdate)
 			info(false);
+		if (tick >= nextUserCheck)
+			checkUsers(tick);
 		onTimer(tick);
 	}
 
@@ -687,7 +695,7 @@ void Client::on(Second, uint64_t tick) noexcept
 		//dcassert(0);
 		return;
 	}
-	
+
 	if (state == STATE_NORMAL)
 	{
 		Search s;
@@ -1022,7 +1030,7 @@ void Client::getUserCommands(vector<UserCommand>& result) const
 		result.push_back(uc);
 }
 
-string Client::getOpChat() const
+string Client::getOpChat() const noexcept
 {
 	LOCK(csOpChat);
 	return opChat;
@@ -1034,4 +1042,90 @@ void Client::updateConnectionStatus(ConnectionStatus::Status status)
 		FavoriteManager::getInstance()->changeConnectionStatus(favoriteId, status);
 	else
 		FavoriteManager::getInstance()->changeConnectionStatus(getHubUrl(), status);
+}
+
+void Client::checkUsers(uint64_t tick)
+{
+	nextUserCheck = tick + USER_CHECK_INTERVAL;
+	bool autoChecks = !exclChecks &&
+		SettingsManager::getBool(getType() == TYPE_NMDC ? SettingsManager::CHECK_USERS_NMDC : SettingsManager::CHECK_USERS_ADC);
+	if (!autoChecks && !hasUserCheckList())
+		return;
+
+	unsigned maxUsersToCheck = SETTING(USER_CHECK_BATCH);
+	unsigned numActive = 0;
+	UserList usersToCheck;
+	{
+		LOCK(csCheckUsers);
+		auto i = checkUsersList.begin();
+		while (i != checkUsersList.end())
+		{
+			UserPtr& user = *i;
+			if (!user->isOnline())
+			{
+				i = checkUsersList.erase(i);
+				continue;
+			}
+			if (user->getFlags() & User::USER_CHECK_RUNNING)
+			{
+				++numActive;
+				++i;
+				continue;
+			}
+			uint64_t lastCheckTime = user->getLastCheckTime();
+			if (lastCheckTime && lastCheckTime + USER_CHECK_VALIDITY > tick)
+			{
+				i = checkUsersList.erase(i);
+				continue;
+			}
+			if (usersToCheck.size() < maxUsersToCheck)
+				usersToCheck.push_back(user);
+			++i;
+		}
+	}
+	unsigned numUsers = numActive + (unsigned) usersToCheck.size();
+	if (autoChecks && numUsers < maxUsersToCheck)
+	{
+		// Get more users
+		UserList newUsers;
+		getUsersToCheck(newUsers, tick, USER_CHECK_VALIDITY);
+		unsigned count = maxUsersToCheck - numUsers;
+		if (count > newUsers.size()) count = newUsers.size();
+		if (count)
+		{
+			LOCK(csCheckUsers);
+			for (unsigned i = 0; i < count; i++)
+			{
+				unsigned pos = Util::rand(i, newUsers.size());
+				if (pos != i) std::swap(newUsers[pos], newUsers[i]);
+				usersToCheck.push_back(newUsers[i]);
+				checkUsersList.push_back(newUsers[i]);
+			}
+		}
+	}
+	auto qm = QueueManager::getInstance();
+	for (UserPtr& user : usersToCheck)
+	{
+		if (numActive >= maxUsersToCheck) break;
+		LogManager::message("User check started: " + user->getLastNick(), false);
+		qm->userCheckStart(user);
+		++numActive;
+	}
+}
+
+void Client::updateUserCheckTime() noexcept
+{
+	nextUserCheck = Util::getTick() + USER_CHECK_INTERVAL;
+}
+
+void Client::clearUserCheckList() noexcept
+{
+	LOCK(csCheckUsers);
+	checkUsersList.clear();
+}
+
+bool Client::hasUserCheckList() const noexcept
+{
+	LOCK(csCheckUsers);
+	return !checkUsersList.empty();
 }

@@ -48,7 +48,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		void clearDownloads() noexcept;
 		
 		bool isStartDownload(QueueItem::Priority prio) const noexcept;
-		bool checkFileDownload(const UserPtr& user) const;
+		bool checkFileDownload(const UserPtr& user) const noexcept;
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
 		void checkDownloads(const UserConnectionPtr& conn) noexcept;

@@ -52,9 +52,9 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::COUNTRY_IN_CHAT, ResourceManager::COUNTRY_IN_CHAT },
 	{ SettingsManager::ISP_IN_CHAT, ResourceManager::ISP_IN_CHAT },
 	{ SettingsManager::DISPLAY_CHEATS_IN_MAIN_CHAT, ResourceManager::SETTINGS_DISPLAY_CHEATS_IN_MAIN_CHAT },
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-	{ SettingsManager::SHOW_SHARE_CHECKED_USERS, ResourceManager::SETTINGS_ADVANCED_SHOW_SHARE_CHECKED_USERS },
-	{ SettingsManager::CHECK_NEW_USERS, ResourceManager::CHECK_ON_CONNECT },
+#if 0
+	{ SettingsManager::SHOW_CHECKED_USERS, ResourceManager::SETTINGS_ADVANCED_SHOW_SHARE_CHECKED_USERS },
+	{ SettingsManager::CHECK_USERS_NMDC, ResourceManager::CHECK_ON_CONNECT },
 #endif
 	{ SettingsManager::STATUS_IN_CHAT, ResourceManager::SETTINGS_STATUS_IN_CHAT },
 	{ SettingsManager::SHOW_JOINS, ResourceManager::SETTINGS_SHOW_JOINS },

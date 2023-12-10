@@ -157,9 +157,6 @@ void DownloadManager::addConnection(UserConnectionPtr& ucPtr)
 	if (!conn->isSet(UserConnection::FLAG_SUPPORTS_TTHF) || !conn->isSet(UserConnection::FLAG_SUPPORTS_ADCGET))
 	{
 		// Can't download from these...
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		ClientManager::setClientStatus(conn->getUser(), STRING(SOURCE_TOO_OLD), -1, true);
-#endif
 		QueueManager::getInstance()->removeSource(conn->getUser(), QueueItem::Source::FLAG_NO_TTHF);
 		conn->disconnect();
 		return;
@@ -433,6 +430,12 @@ void DownloadManager::endData(UserConnection* source)
 	if (d->getType() != Transfer::TYPE_FILE || d->getQueueItem()->isFinished())
 		fire(DownloadManagerListener::Complete(), d);
 
+	if (d->isSet(Download::FLAG_USER_CHECK))
+	{
+		source->disconnect();
+		return;
+	}
+
 	UserConnectionPtr ucPtr = ConnectionManager::getInstance()->findConnection(source);
 	if (ucPtr) checkDownloads(ucPtr);
 }
@@ -563,14 +566,8 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	removeDownload(d);
 	fire(DownloadManagerListener::Failed(), d, STRING(FILE_NOT_AVAILABLE));
 	
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-	if (d->isSet(Download::FLAG_USER_CHECK))
-	{
-		ClientManager::setClientStatus(source->getUser(), "Filelist Not Available", SETTING(AUTOBAN_FL_UNAVAILABLE), false);
-	}
-#endif
-	
 	auto qm = QueueManager::getInstance();
+	qm->userCheckProcessFailure(source->getUser(), -1, false);
 	qm->removeSource(d->getPath(), source->getUser(), (Flags::MaskType)(d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE), false);
 	d->setReasonCode(Download::REASON_CODE_FILE_UNAVAILABLE);
 	d->setReasonText(STRING(FILE_NOT_AVAILABLE));
@@ -579,7 +576,7 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	checkDownloads(ucPtr);
 }
 
-bool DownloadManager::checkFileDownload(const UserPtr& user) const
+bool DownloadManager::checkFileDownload(const UserPtr& user) const noexcept
 {
 	READ_LOCK(*csDownloads);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)

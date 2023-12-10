@@ -113,36 +113,6 @@ bool UserManager::checkOutgoingPM(const UserPtr& user, bool automatic)
 	return !automatic || (flags & FLAG_OPEN) != 0;
 }
 
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-void UserManager::checkUser(const OnlineUserPtr& user) const
-{
-	if (BOOLSETTING(CHECK_NEW_USERS))
-	{
-		if (!user->getUser()->isMe())
-		{
-			const Client& client = user->getClient();
-			if (!client.getExcludeCheck() && client.isOp() && (client.isActive() || user->getIdentity().isTcpActive()))
-			{
-				if (!BOOLSETTING(DONT_BAN_FAVS) || (user->getUser()->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE)
-				{
-					if (!isInProtectedUserList(user->getIdentity().getNick()))
-					{
-						try
-						{
-							QueueManager::getInstance()->addList(HintedUser(user->getUser(), client.getHubUrl()), QueueItem::FLAG_USER_CHECK);
-						}
-						catch (const Exception& e)
-						{
-							LogManager::message(e.getError());
-						}
-					}
-				}
-			}
-		}
-	}
-}
-#endif // IRAINMAN_INCLUDE_USER_CHECK
-
 void UserManager::getIgnoreList(vector<IgnoreListItem>& ignoreList) const noexcept
 {
 	dcassert(ignoreListLoaded);

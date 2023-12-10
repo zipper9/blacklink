@@ -441,16 +441,20 @@ class Client : public ClientBase,
 		int fakeClientStatus;
 		int fakeSlots;
 		CID shareGroup;
-		
-		void updateCounts(bool remove);
-		
-		void processPasswordRequest(const string& pwd);
 
-		/** Reload details from favmanager or settings */
+		void updateCounts(bool remove);
+		void processPasswordRequest(const string& pwd);
+		void checkUsers(uint64_t tick);
+		void updateUserCheckTime() noexcept;
+		void clearUserCheckList() noexcept;
+		bool hasUserCheckList() const noexcept;
+
+		// Reload details from FavoriteManager or settings
 		void reloadSettings(bool updateNick);
 
 		virtual void searchToken(const SearchParam& sp) = 0;
 		virtual void onTimer(uint64_t tick) noexcept {}
+		virtual void getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const noexcept = 0;
 
 		// TimerManagerListener
 		virtual void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
@@ -464,7 +468,7 @@ class Client : public ClientBase,
 		virtual void onDataLine(const string&) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
 
-		string getOpChat() const;
+		string getOpChat() const noexcept;
 		void setKeyPrint(const string& keyprint) { this->keyprint = keyprint; }
 
 		void clearUserCommands(int ctx);
@@ -493,6 +497,10 @@ class Client : public ClientBase,
 
 		vector<UserCommand> userCommands;
 		mutable std::unique_ptr<RWLock> csUserCommands;
+
+		uint64_t nextUserCheck;
+		std::list<UserPtr> checkUsersList;
+		mutable CriticalSection csCheckUsers;
 
 		static void resetSocket(BufferedSocket* bufferedSocket) noexcept;
 		void updateActivityL()

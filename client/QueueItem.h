@@ -69,9 +69,7 @@ class QueueItem
 			FLAG_USER_LIST          = 0x0001, // This is a user file listing download
 			FLAG_PARTIAL_LIST       = 0x0002, // Request partial file list (used with FLAG_USER_LIST)
 			FLAG_RECURSIVE_LIST     = 0x0004, // Request recursive file list (used with FLAG_PARTIAL_LIST)
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-			FLAG_USER_CHECK         = 0x0008, // Test user's file list for fake share
-#endif
+			FLAG_USER_CHECK         = 0x0008, // Request info from user
 			FLAG_USER_GET_IP        = 0x0010,
 			FLAG_DCLST_LIST         = 0x0020,
 			FLAG_WANT_END           = 0x0040
@@ -227,6 +225,7 @@ class QueueItem
 
 		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const;
 		void getOnlineUsers(UserList& l) const;
+		UserPtr getFirstSource() const;
 
 #ifdef USE_QUEUE_RWLOCK
 		static std::unique_ptr<RWLock> g_cs;
@@ -280,7 +279,6 @@ class QueueItem
 		bool disconnectSlow(const DownloadPtr& d);
 		void disconnectOthers(const DownloadPtr& d);
 		bool isMultipleSegments() const;
-		UserPtr getFirstUser() const;
 		void getUsers(UserList& users) const;
 
 		// Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found

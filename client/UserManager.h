@@ -64,10 +64,6 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		bool checkOutgoingPM(const UserPtr& user, bool automatic);
 		void addPMPassword(const UserPtr& user, const string& password);
 
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		void checkUser(const OnlineUserPtr& user) const;
-#endif
-
 		void getIgnoreList(vector<IgnoreListItem>& ignoreList) const noexcept;
 		string getIgnoreListAsString() const noexcept;
 		bool addToIgnoreList(const IgnoreListItem& item);

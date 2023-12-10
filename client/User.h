@@ -79,6 +79,8 @@ class User final
 			USER_STAT_LOADING_BIT,
 			USER_STAT_LOADED_BIT,
 			SAVE_USER_STAT_BIT,
+			USER_CHECK_RUNNING_BIT,
+			USER_CHECK_FAILED_BIT,
 			LAST_BIT // for static_assert (32 bit)
 		};
 
@@ -120,10 +122,12 @@ class User final
 			IP_STAT_CHANGED = 1 << IP_STAT_CHANGED_BIT,
 			USER_STAT_LOADING = 1 << USER_STAT_LOADING_BIT,
 			USER_STAT_LOADED = 1 << USER_STAT_LOADED_BIT,
-			SAVE_USER_STAT = 1 << SAVE_USER_STAT_BIT
+			SAVE_USER_STAT = 1 << SAVE_USER_STAT_BIT,
+			USER_CHECK_RUNNING = 1 << USER_CHECK_RUNNING_BIT,
+			USER_CHECK_FAILED = 1 << USER_CHECK_FAILED_BIT
 		};
 
-		User(const CID& aCID, const string& nick);
+		User(const CID& cid, const string& nick);
 		User(const User&) = delete;
 		User& operator= (const User&) = delete;
 		~User();
@@ -256,6 +260,21 @@ class User final
 			return uploadCount;
 		}
 
+		bool startUserCheck(int64_t tick)
+		{
+			LOCK(cs);
+			if (flags & USER_CHECK_RUNNING) return false;
+			flags |= USER_CHECK_RUNNING;
+			lastCheckTime = tick;
+			return true;
+		}
+
+		int64_t getLastCheckTime() const
+		{
+			LOCK(cs);
+			return lastCheckTime;
+		}
+
 #ifdef BL_FEATURE_IP_DATABASE
 		void addNick(const string& nick, const string& hub);
 		uint64_t getBytesUploaded() const;
@@ -287,6 +306,7 @@ class User final
 		int uploadCount;
 		Ip4Address lastIp4;
 		Ip6Address lastIp6;
+		int64_t lastCheckTime;
 #ifdef BL_FEATURE_IP_DATABASE
 		UserStatItem userStat;
 		IPStatMap* ipStat;

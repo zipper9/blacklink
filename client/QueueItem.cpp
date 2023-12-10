@@ -247,6 +247,15 @@ void QueueItem::getOnlineUsers(UserList& list) const
 			list.push_back(i->first);
 }
 
+UserPtr QueueItem::getFirstSource() const
+{
+	UserPtr user;
+	QueueRLock(*QueueItem::g_cs);
+	auto i = sources.cbegin();
+	if (i != sources.end()) user = i->first;
+	return user;
+}
+
 QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user)
 {
 	SourceIter it;
@@ -895,17 +904,6 @@ bool QueueItem::isMultipleSegments() const
 		}
 	}
 	return false;
-}
-
-UserPtr QueueItem::getFirstUser() const
-{
-	LOCK(csSegments);
-	if (!downloads.empty())
-	{
-		const Download* d = downloads.front().d.get();
-		if (d) return d->getUser();
-	}
-	return UserPtr();
 }
 
 void QueueItem::getUsers(UserList& users) const

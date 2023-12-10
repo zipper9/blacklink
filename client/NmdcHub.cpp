@@ -194,12 +194,7 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 	}
 	csUsers->releaseExclusive();
 	if (!ou->getUser()->getCID().isZero())
-	{
 		ClientManager::getInstance()->putOnline(ou, true);
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		UserManager::getInstance()->checkUser(ou);
-#endif
-	}
 	return ou;
 }
 
@@ -1245,7 +1240,6 @@ void NmdcHub::helloParse(const string& param)
 	if (!param.empty())
 	{
 		OnlineUserPtr ou = getUser(param);
-		
 		if (isMe(ou))
 		{
 			if (isActive())
@@ -1260,6 +1254,7 @@ void NmdcHub::helloParse(const string& param)
 				connSuccess = true;
 			}
 			updateConnectionStatus(ConnectionStatus::SUCCESS);
+			updateUserCheckTime();
 			updateCounts(false);
 			version();
 			getNickList();
@@ -2417,6 +2412,21 @@ void NmdcHub::onTimer(uint64_t tick) noexcept
 	lastNatUserExpires = 0;
 	csState.unlock();
 	socketPool.removeSocket(user);
+}
+
+void NmdcHub::getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const noexcept
+{
+	READ_LOCK(*csUsers);
+	for (NickMap::const_iterator i = users.cbegin(); i != users.cend(); ++i)
+	{
+		const OnlineUserPtr& ou = i->second;
+		if (ou->getIdentity().isBotOrHub()) continue;
+		const UserPtr& user = ou->getUser();
+		if (user->getFlags() & (User::USER_CHECK_RUNNING | User::MYSELF)) continue;
+		int64_t lastCheckTime = user->getLastCheckTime();
+		if (lastCheckTime && lastCheckTime + timeDiff > tick) continue;
+		res.push_back(user);
+	}
 }
 
 #ifdef BL_FEATURE_NMDC_EXT_JSON

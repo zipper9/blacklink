@@ -61,11 +61,8 @@ Download::Download(const UserConnectionPtr& conn, const QueueItemPtr& item) noex
 	{
 		setType(TYPE_FULL_LIST);
 	}
-
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
 	if (queueItemFlags & QueueItem::FLAG_USER_CHECK)
 		setFlag(FLAG_USER_CHECK);
-#endif
 	if (queueItemFlags & QueueItem::FLAG_USER_GET_IP)
 		setFlag(FLAG_USER_GET_IP);
 }

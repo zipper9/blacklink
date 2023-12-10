@@ -81,16 +81,7 @@ class Identity
 			memset(&ip6, 0, sizeof(ip6));
 			setSID(aSID);
 		}
-		
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-		enum FakeCard // [!] IRainman: The internal feature to the protocols it has nothing to do!
-		{
-			NOT_CHECKED = 0x01,
-			CHECKED     = 0x02,
-			BAD_CLIENT  = 0x04 //-V112
-			, BAD_LIST    = 0x08
-		};
-#endif
+
 		enum NotEmptyString
 		{
 			EM = 0x01,
@@ -201,8 +192,6 @@ class Identity
 #define GSUINT(bits, x)\
 	uint##bits##_t get##x() const  { return get_uint##bits(e_##x); }\
 	void set##x(uint##bits##_t val) { set_uint##bits(e_##x, val); }
-#define GC_INC_UINT(bits, x)\
-	uint##bits##_t  inc##x() { return ++values.info_uint##bits[e_##x]; }
 
 #define GSUINTBIT(bits, x)\
 	bool get##x##Bit(uint##bits##_t mask) const\
@@ -261,9 +250,6 @@ class Identity
 		{
 			e_ClientType, // 7 бит
 			e_Status,
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-			e_FakeCard,   // 6 бит
-#endif
 			e_ConnectionTimeouts,
 			e_FileListDisconnects,
 			e_KnownSupports, // 1 бит для ADC, 0 для NMDC
@@ -277,10 +263,6 @@ class Identity
 	public:
 		GSUINTBIT(8, Status);
 		GSUINT(8, Status);
-		GSUINT(8, ConnectionTimeouts); // "TO"
-		GC_INC_UINT(8, ConnectionTimeouts); // "TO"
-		GSUINT(8, FileListDisconnects); // "FD"
-		GC_INC_UINT(8, FileListDisconnects); // "FD"
 		GSUINT(8, ClientType); // "CT"
 		GSUINT(8, KnownSupports); // "SU"
 		GSUINT(8, KnownUcSupports); // "SU"
@@ -335,11 +317,6 @@ class Identity
 			return getClientTypeBit(CT_HIDDEN);
 		}
 #endif
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-		GSUINT(8, FakeCard);
-		GSUINTBIT(8, FakeCard);
-#endif
-		
 		GSUINTBIT(8, NotEmptyString);
 		GSUINT(8, NotEmptyString);
 		
@@ -529,16 +506,10 @@ class Identity
 		}
 		void setStringParam(const char* name, const string& val);
 		
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-		string setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient);
-#endif
 		void getReport(string& report);
 		void updateClientType(const OnlineUser& ou)
 		{
 			setStringParam("CS", Util::emptyString);
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-			setFakeCardBit(BAD_CLIENT, false);
-#endif
 		}
 		
 		void getParams(StringMap& map, const string& prefix, bool compatibility, bool dht = false) const;

@@ -41,8 +41,6 @@ class NmdcHub : public Client, private Flags
 		void hubMessage(const string& message, bool thirdPerson = false) override;
 		bool privateMessage(const OnlineUserPtr& user, const string& message, int flags) override;
 		void sendUserCmd(const UserCommand& command, const StringMap& params) override;
-		void searchToken(const SearchParam& sp) override;
-		void onTimer(uint64_t tick) noexcept override;
 		void password(const string& pwd, bool setPassword) override;
 		void info(bool forceUpdate) override
 		{
@@ -88,7 +86,12 @@ class NmdcHub : public Client, private Flags
 		{
 			return strncmp(lock.c_str(), "EXTENDEDPROTOCOL", 16) == 0;
 		}
-		
+
+	protected:
+		void searchToken(const SearchParam& sp) override;
+		void onTimer(uint64_t tick) noexcept override;
+		void getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const noexcept override;
+
 	private:
 		friend class ClientManager;
 		enum SupportFlags
