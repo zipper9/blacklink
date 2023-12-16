@@ -39,9 +39,6 @@
 static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;
 
-DirectoryListingFrame::UserList DirectoryListingFrame::userList;
-CriticalSection DirectoryListingFrame::lockUserList;
-
 DirectoryListingFrame::FrameMap DirectoryListingFrame::activeFrames;
 
 const int DirectoryListingFrame::columnId[] =
@@ -101,42 +98,10 @@ static const ResourceManager::Strings columnNames[] =
 static SearchOptions searchOptions;
 static FindDuplicatesDlg::Options findDupsOptions;
 
-DirectoryListingFrame::~DirectoryListingFrame()
-{
-	removeFromUserList();
-}
-
-void DirectoryListingFrame::addToUserList(const UserPtr& user, bool isBrowsing)
-{
-	if (!user || user->getCID().isZero()) return;
-	LOCK(lockUserList);
-	for (auto i = userList.cbegin(); i != userList.cend(); ++i)
-	{
-		const UserFrame& uf = *i;
-		if (uf.user == user && uf.isBrowsing == isBrowsing) return;
-	}
-	UserFrame uf;
-	uf.user = user;
-	uf.isBrowsing = isBrowsing;
-	uf.frame = this;
-	userList.push_back(uf);
-}
-
-void DirectoryListingFrame::removeFromUserList()
-{
-	LOCK(lockUserList);
-	for (auto i = userList.cbegin(); i != userList.cend(); ++i)
-		if (i->frame == this)
-		{
-			userList.erase(i);
-			break;
-		}
-}
-
 void DirectoryListingFrame::openWindow(const tstring& file, const tstring& dir, const HintedUser& user, int64_t speed, bool isDcLst /*= false*/)
 {
 	HWND hwnd;
-	DirectoryListingFrame* frame = new DirectoryListingFrame(user, nullptr);
+	DirectoryListingFrame* frame = new DirectoryListingFrame(user, nullptr, false);
 	frame->setSpeed(speed);
 	frame->setDclstFlag(isDcLst);
 	frame->setFileName(Text::fromT(file));
@@ -155,22 +120,15 @@ void DirectoryListingFrame::openWindow(const tstring& file, const tstring& dir, 
 
 void DirectoryListingFrame::openWindow(const HintedUser& user, const string& txt, int64_t speed)
 {
+	DirectoryListingFrame* frame = findFrame(user, true);
+	if (frame)
 	{
-		LOCK(lockUserList);
-		for (auto i = userList.begin(); i != userList.end(); ++i)
-		{
-			UserFrame& frame = *i;
-			if (frame.user == user.user && frame.isBrowsing)
-			{
-				frame.frame->setSpeed(speed);
-				frame.frame->loadXML(txt);
-				return;
-			}
-		}
+		frame->setSpeed(speed);
+		frame->loadXML(txt);
+		return;
 	}
-	DirectoryListingFrame* frame = new DirectoryListingFrame(user, nullptr);
+	frame = new DirectoryListingFrame(user, nullptr, true);
 	frame->setSpeed(speed);
-	frame->addToUserList(user, true);
 	if (BOOLSETTING(POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
@@ -181,7 +139,7 @@ void DirectoryListingFrame::openWindow(const HintedUser& user, const string& txt
 
 DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, const HintedUser& user, int64_t speed, bool searchResults)
 {
-	DirectoryListingFrame* frame = new DirectoryListingFrame(user, dl);
+	DirectoryListingFrame* frame = new DirectoryListingFrame(user, dl, false);
 	frame->searchResultsFlag = searchResults;
 	frame->setSpeed(speed);
 	if (BOOLSETTING(POPUNDER_FILELIST))
@@ -198,24 +156,26 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, c
 	return frame;
 }
 
-DirectoryListingFrame* DirectoryListingFrame::findFrame(const UserPtr& user)
+DirectoryListingFrame* DirectoryListingFrame::findFrame(const UserPtr& user, bool browsing)
 {
 	for (const auto& af : activeFrames)
 	{
 		DirectoryListingFrame* frame = af.second;
 		if (frame->loading || frame->dclstFlag || frame->searchResultsFlag) continue;
-		if (frame->dl->getUser() == user) return frame;
+		if (frame->dl->getUser() == user && frame->isBrowsing() == browsing)
+			return frame;
 	}
 	return nullptr;
 }
 
-DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl) :
+DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl, bool browsing) :
 	TimerHelper(m_hWnd),
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
 	treeContainer(WC_TREEVIEW, this, CONTROL_MESSAGE_MAP),
 	listContainer(WC_LISTVIEW, this, CONTROL_MESSAGE_MAP),
 	historyIndex(0),
 	setWindowTitleTick(0),
+	browsing(browsing),
 	treeRoot(nullptr), selectedDir(nullptr), hTheme(nullptr),
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
 	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false), showingDupFiles(false),
@@ -545,6 +505,21 @@ void DirectoryListingFrame::updateRootItemText()
 	item.mask = TVIF_TEXT;
 	item.pszText = const_cast<TCHAR*>(name.c_str());
 	ctrlTree.SetItem(&item);
+}
+
+void DirectoryListingFrame::startLoading()
+{
+	ctrlStatus.SetText(STATUS_TEXT, CTSTRING(LOADING_FILE_LIST));
+	ctrlTree.EnableWindow(FALSE);
+	ctrlList.EnableWindow(FALSE);
+	ctrlFind.EnableWindow(FALSE);
+	ctrlFindNext.EnableWindow(FALSE);
+	ctrlFindPrev.EnableWindow(FALSE);
+	ctrlListDiff.EnableWindow(FALSE);
+	ctrlMatchQueue.EnableWindow(FALSE);
+	loadStartTime = GET_TICK();
+	loading = true;
+	destroyTimer();
 }
 
 void DirectoryListingFrame::enableControls()
@@ -1364,10 +1339,7 @@ LRESULT DirectoryListingFrame::onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD
 			else
 			{
 				showingDupFiles = true;
-				search[SEARCH_CURRENT].goToFirstFound(dl->getRoot());
-				search[SEARCH_PREV].clear();
-				search[SEARCH_NEXT] = search[SEARCH_CURRENT];
-				if (!search[SEARCH_NEXT].next()) search[SEARCH_NEXT].clear();
+				goToFirstFound();
 			}
 			updateSearchButtons();
 			redraw();
@@ -1397,32 +1369,35 @@ LRESULT DirectoryListingFrame::onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, H
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	string selectedFile;
-	string pattern = nick + ".????????_????.*.xml.bz2";
-	StringList files = File::findFiles(Util::getListPath(), pattern, false);
-	if (!files.empty())
+	if (wID != IDC_FILELIST_DIFF2)
 	{
-		string loadedFile = Util::getFileName(fileName);
-		auto i = std::remove(files.begin(), files.end(), loadedFile);
-		if (i != files.end()) files.erase(i);
+		string pattern = nick + ".????????_????.*.xml.bz2";
+		StringList files = File::findFiles(Util::getListPath(), pattern, false);
 		if (!files.empty())
 		{
-			size_t titleLen = pattern.length() - 10;
-			CMenu menu;
-			menu.CreatePopupMenu();
-			for (size_t i = 0; i < files.size(); ++i)
-				menu.AppendMenu(MF_STRING, i + 1, Text::toT(files[i].substr(0, titleLen)).c_str());
-			menu.AppendMenu(MF_SEPARATOR);
-			menu.AppendMenu(MF_STRING, IDC_BROWSE, CTSTRING(BROWSE));
-			RECT rc;
-			ctrlListDiff.GetWindowRect(&rc);
-			int result = menu.TrackPopupMenu(TPM_NONOTIFY | TPM_RETURNCMD, rc.left, rc.bottom, m_hWnd);
-			if (result != IDC_BROWSE)
+			string loadedFile = Util::getFileName(fileName);
+			auto i = std::remove(files.begin(), files.end(), loadedFile);
+			if (i != files.end()) files.erase(i);
+			if (!files.empty())
 			{
-				if (result <= 0 || (size_t) result > files.size()) return 0;
-				selectedFile = Util::getListPath() + files[result-1];
+				size_t titleLen = pattern.length() - 10;
+				CMenu menu;
+				menu.CreatePopupMenu();
+				for (size_t i = 0; i < files.size(); ++i)
+					menu.AppendMenu(MF_STRING, i + 1, Text::toT(files[i].substr(0, titleLen)).c_str());
+				menu.AppendMenu(MF_SEPARATOR);
+				menu.AppendMenu(MF_STRING, IDC_BROWSE, CTSTRING(BROWSE));
+				RECT rc;
+				ctrlListDiff.GetWindowRect(&rc);
+				int result = menu.TrackPopupMenu(TPM_NONOTIFY | TPM_RETURNCMD, rc.left, rc.bottom, m_hWnd);
+				if (result != IDC_BROWSE)
+				{
+					if (result <= 0 || (size_t) result > files.size()) return 0;
+					selectedFile = Util::getListPath() + files[result-1];
+				}
 			}
 		}
 	}
@@ -1433,31 +1408,23 @@ LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 			return 0;
 		selectedFile = Text::fromT(file);
 	}
-	ctrlStatus.SetText(STATUS_TEXT, CTSTRING(LOADING_FILE_LIST));
 	ctrlTree.SelectItem(NULL); // refreshTree won't select item without this
-	ctrlTree.EnableWindow(FALSE);
-	ctrlList.EnableWindow(FALSE);
-	ctrlFind.EnableWindow(FALSE);
-	ctrlFindNext.EnableWindow(FALSE);
-	ctrlFindPrev.EnableWindow(FALSE);
-	ctrlListDiff.EnableWindow(FALSE);
-	ctrlMatchQueue.EnableWindow(FALSE);
-	destroyTimer();
-	loadStartTime = GET_TICK();
+	startLoading();
 	ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_SUBTRACT_FILE);
 	tdl->setFile(selectedFile);
-	loading = true;
-	try
-	{
-		tdl->start(0);
-	}
-	catch (const ThreadException& e)
-	{
-		delete tdl;
-		loading = false;
-		enableControls();
-		LogManager::message("DirectoryListingFrame::onListDiff error: " + e.getError());
-	}
+	tdl->start();
+	return 0;
+}
+
+LRESULT DirectoryListingFrame::onListCompare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	tstring file;
+	if (!WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), WinUtil::getFileMaskString(WinUtil::fileListsMask).c_str()) || file.empty())
+		return 0;
+	startLoading();
+	ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_COMPARE_FILE);
+	tdl->setFile(Text::fromT(file));
+	tdl->start();
 	return 0;
 }
 
@@ -1484,6 +1451,15 @@ LRESULT DirectoryListingFrame::onGoToDirectory(WORD /*wNotifyCode*/, WORD /*wID*
 	selectItem(fullPath);
 
 	return 0;
+}
+
+void DirectoryListingFrame::goToFirstFound()
+{
+	search[SEARCH_CURRENT].goToFirstFound(dl->getRoot());
+	search[SEARCH_PREV].clear();
+	search[SEARCH_NEXT] = search[SEARCH_CURRENT];
+	if (!search[SEARCH_NEXT].next())
+		search[SEARCH_NEXT].clear();
 }
 
 HTREEITEM DirectoryListingFrame::findItem(HTREEITEM ht, const tstring& name)
@@ -1851,6 +1827,10 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		}
 		if (originalId && findFrameByID(originalId))
 			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_FILELIST, 0));
+		directoryMenu.AppendMenu(MF_SEPARATOR);
+		directoryMenu.AppendMenu(MF_STRING, IDC_FILELIST_DIFF2, CTSTRING(FILE_LIST_DIFF2));
+		directoryMenu.AppendMenu(MF_STRING, IDC_FILELIST_COMPARE, CTSTRING(FILE_LIST_COMPARE));
+
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		MenuHelper::unlinkStaticMenus(directoryMenu);
 		return TRUE;
@@ -2365,11 +2345,28 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			loading = false;
 			if (!isClosedOrShutdown())
 			{
-				initStatus();
-				ctrlStatus.SetText(0, (TSTRING(PROCESSED_FILE_LIST) + _T(' ') + Util::toStringT((GET_TICK() - loadStartTime) / 1000) + TSTRING(S)).c_str());
 				enableControls();
-				//notify the user that we've loaded the list
-				setDirty();
+				if (lParam == ThreadedDirectoryListing::MODE_COMPARE_FILE)
+				{
+					ctrlStatus.SetText(0, _T(""));
+					bool hasMatches = (dl->getRoot()->getFlags() & DirectoryListing::FLAG_HAS_FOUND) != 0;
+					if (hasMatches)
+					{
+						goToFirstFound();
+						updateSearchButtons();
+						redraw();
+						showFound();
+					}
+					else
+						MessageBox(CTSTRING(NO_MATCHES), CTSTRING(SEARCH), MB_ICONINFORMATION);
+				}
+				else
+				{
+					initStatus();
+					ctrlStatus.SetText(0, (TSTRING(PROCESSED_FILE_LIST) + _T(' ') + Util::toStringT((GET_TICK() - loadStartTime) / 1000) + TSTRING(S)).c_str());
+					//notify the user that we've loaded the list
+					setDirty();
+				}
 			}
 			else
 			{
@@ -2378,8 +2375,21 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			break;
 		case ABORTED:
 		{
+			std::unique_ptr<ErrorInfo> error(reinterpret_cast<ErrorInfo*>(lParam));
 			loading = false;
-			PostMessage(WM_CLOSE, 0, 0);
+			int mode = -1;
+			if (error)
+			{
+				mode = error->mode;
+				MessageBox(error->text.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+			}
+			if (mode == ThreadedDirectoryListing::MODE_LOAD_FILE)
+				PostMessage(WM_CLOSE, 0, 0);
+			else
+			{
+				enableControls();
+				ctrlStatus.SetText(0, _T(""));
+			}
 			break;
 		}
 		case SPLICE_TREE:
@@ -3219,7 +3229,6 @@ int ThreadedDirectoryListing::run()
 				const UserPtr& user = window->dl->getUser();
 				window->updateWindowTitle();
 				window->dl->loadFile(filePath, this, user->isMe());
-				window->addToUserList(user, false);
 				window->updateWindowTitle();
 				auto adls = ADLSearchManager::getInstance();
 				if (!adls->isEmpty())
@@ -3245,6 +3254,17 @@ int ThreadedDirectoryListing::run()
 				}
 				break;
 			}
+			case MODE_COMPARE_FILE:
+			{
+				dcassert(!filePath.empty());
+				DirectoryListing newListing(window->abortFlag, false);
+				newListing.loadFile(filePath, this, false);
+				if (!newListing.isAborted())
+				{
+					window->dl->getRoot()->matchTTHSet(*newListing.getTTHSet());
+				}
+				break;
+			}
 			case MODE_LOAD_PARTIAL_LIST:
 			{
 				unique_ptr<DirectoryListing> newListing(new DirectoryListing(window->abortFlag));
@@ -3257,7 +3277,7 @@ int ThreadedDirectoryListing::run()
 			default:
 				dcassert(0);
 		}
-		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::FINISHED);
+		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::FINISHED, mode);
 	}
 	catch (const AbortException&)
 	{
@@ -3265,10 +3285,11 @@ int ThreadedDirectoryListing::run()
 	}
 	catch (const Exception& e)
 	{
-		tstring error = TSTRING(ERROR_PARSING_FILE_LIST);
-		error += Text::toT(e.getError());
-		::MessageBox(NULL, error.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
-		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED);
+		auto error = new DirectoryListingFrame::ErrorInfo;
+		error->text = TSTRING(ERROR_PARSING_FILE_LIST);
+		error->text += Text::toT(e.getError());
+		error->mode = mode;
+		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED, reinterpret_cast<LPARAM>(error));
 	}
 
 	//cleanup the thread object

@@ -57,7 +57,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static void openWindow(const HintedUser& user, const string& txt, int64_t speed);
 		static void closeAll();
 		static void closeAllOffline();
-		static DirectoryListingFrame* findFrame(const UserPtr& user);
+		static DirectoryListingFrame* findFrame(const UserPtr& user, bool browsing);
 
 		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
@@ -108,10 +108,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			STATUS_DUMMY,
 			STATUS_LAST
 		};
+
 		FileImage::TypeDirectoryImages getDirectoryIcon(const DirectoryListing::Directory* dir) const;
 
-		DirectoryListingFrame(const HintedUser& user, DirectoryListing *dl);
-		~DirectoryListingFrame();
+		DirectoryListingFrame(const HintedUser& user, DirectoryListing *dl, bool browsing);
 
 		static CFrameWndClassInfo& GetWndClassInfo();
 
@@ -171,6 +171,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDcLst)
 		COMMAND_ID_HANDLER(IDC_SHOW_DUPLICATES, onShowDuplicates)
 		COMMAND_ID_HANDLER(IDC_GOTO_ORIGINAL, onGoToOriginal)
+		COMMAND_ID_HANDLER(IDC_FILELIST_DIFF2, onListDiff)
+		COMMAND_ID_HANDLER(IDC_FILELIST_COMPARE, onListCompare)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET + 1, IDC_DOWNLOAD_TARGET + LastDir::get().size(), onDownloadToLastDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_TREE + 1, IDC_DOWNLOAD_TARGET_TREE + LastDir::get().size(), onDownloadToLastDirTree)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
@@ -254,6 +256,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void runUserCommand(UserCommand& uc);
 		void loadFile(const tstring& name, const tstring& dir);
 		void loadXML(const string& txt);
+		bool isBrowsing() const { return browsing; }
 
 		void setFileName(const string& name) { fileName = name; }
 		const string& getFileName() const { return fileName; }
@@ -287,6 +290,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		LRESULT onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onListCompare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 
@@ -338,6 +342,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		DirectoryListingFrame& operator= (const DirectoryListingFrame &) = delete;
 
 	private:
+		struct ErrorInfo
+		{
+			int mode;
+			tstring text;
+		};
+
 		enum
 		{
 			SEARCH_CURRENT,
@@ -351,8 +361,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static DirectoryListingFrame* openWindow(DirectoryListing *dl, const HintedUser& user, int64_t speed, bool searchResults);
 		static DirectoryListingFrame* findFrameByID(uint64_t id);
 
-		void addToUserList(const UserPtr& user, bool isBrowsing);
-		void removeFromUserList();
 		void getFileItemColor(DirectoryListing::File::MaskType, COLORREF &fg, COLORREF &bg);
 		void getDirItemColor(DirectoryListing::Directory::MaskType flags, COLORREF &fg, COLORREF &bg);
 		void changeDir(const DirectoryListing::Directory* dir);
@@ -360,7 +368,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void selectFile(const DirectoryListing::File *file);
 		void updateStatus();
 		void initStatus();
+		void startLoading();
 		void enableControls();
+		void goToFirstFound();
 		void addHistory(const string& name);
 		void up();
 		void back();
@@ -487,18 +497,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		vector<const DirectoryListing::Directory*> pathCache;
 		DirectoryListing::TTHToFileMap dupFiles;
 		bool showingDupFiles;
-
-		struct UserFrame
-		{
-			UserPtr user;
-			bool isBrowsing;
-			DirectoryListingFrame* frame;
-		};
-
-		typedef std::list<UserFrame> UserList;
-
-		static UserList userList;
-		static CriticalSection lockUserList;
+		const bool browsing;
 
 		static const int columnId[];
 
@@ -519,7 +518,8 @@ class ThreadedDirectoryListing : public Thread, private DirectoryListing::Progre
 		{
 			MODE_LOAD_FILE,
 			MODE_SUBTRACT_FILE,
-			MODE_LOAD_PARTIAL_LIST
+			MODE_LOAD_PARTIAL_LIST,
+			MODE_COMPARE_FILE
 		};
 
 		ThreadedDirectoryListing(DirectoryListingFrame* pWindow, int mode) : window(pWindow), mode(mode) {}

@@ -1725,7 +1725,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 					{
 						const UserPtr& user = i->first;
-						bool hasFileList = DirectoryListingFrame::findFrame(user) != nullptr;
+						bool hasFileList = DirectoryListingFrame::findFrame(user, false) != nullptr;
 						bool isOnline = user->isOnline();
 						SourceInfo si{user, i->second.getFlags(), getSourceName(user), hasFileList};
 						sourcesList.push_back(si);
@@ -1954,7 +1954,7 @@ LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			UserPtr& user = browseSourcesList[index].user;
 			if (browseSourcesList[index].hasFileList)
 			{
-				DirectoryListingFrame* frame = DirectoryListingFrame::findFrame(user);
+				DirectoryListingFrame* frame = DirectoryListingFrame::findFrame(user, false);
 				if (frame)
 				{
 					WinUtil::activateMDIChild(frame->m_hWnd);

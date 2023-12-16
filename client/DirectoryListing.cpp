@@ -817,6 +817,23 @@ void DirectoryListing::Directory::findDuplicates(DirectoryListing::TTHToFileMap&
 	}
 }
 
+void DirectoryListing::Directory::matchTTHSet(const DirectoryListing::TTHMap& l)
+{
+	for (auto i = files.cbegin(); i != files.cend(); ++i)
+	{
+		File* f = *i;
+		if (l.contains(f->getTTH()))
+			DirectoryListing::markAsFound(f);
+	}
+	
+	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
+	{
+		Directory* d = *i;
+		if (!d->getAdls())
+			d->matchTTHSet(l);
+	}
+}
+
 void DirectoryListing::buildTTHSet()
 {
 	dcassert(root);
@@ -846,19 +863,17 @@ void DirectoryListing::findDuplicates(DirectoryListing::TTHToFileMap& m, int64_t
 		if (files.size() > 1)
 		{
 			for (File* file : files)
-			{
-				file->setFlag(FLAG_FOUND);
-				Directory* d = file->getParent();
-				while (d)
-				{
-					if (d->isAnySet(FLAG_HAS_FOUND)) break;
-					d->setFlag(FLAG_HAS_FOUND);
-					d = d->getParent();
-				}
-			}
+				markAsFound(file);
 			m.emplace(i.first, files);
 		}
 	}
+}
+
+void DirectoryListing::matchTTHSet(const TTHMap& l)
+{
+	dcassert(root);
+	root->clearMatches();
+	root->matchTTHSet(l);
 }
 
 void DirectoryListing::Directory::clearMatches()
@@ -1657,6 +1672,18 @@ bool DirectoryListing::Directory::match(const DirectoryListing::SearchQuery &sq)
 		if (!std::regex_search(name, sq.re)) return false;
 	}
 	return true;
+}
+
+void DirectoryListing::markAsFound(File* file) noexcept
+{
+	file->setFlag(FLAG_FOUND);
+	Directory* d = file->getParent();
+	while (d)
+	{
+		if (d->isAnySet(FLAG_HAS_FOUND)) break;
+		d->setFlag(FLAG_HAS_FOUND);
+		d = d->getParent();
+	}
 }
 
 void DirectoryListing::getFileParams(const File* f, StringMap& ucParams) const noexcept

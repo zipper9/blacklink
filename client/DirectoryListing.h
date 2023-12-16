@@ -161,6 +161,7 @@ class DirectoryListing
 				const File* findFileByHash(const TTHValue& tth) const;
 				void getHashList(TTHMap& l) const;
 				void findDuplicates(TTHToFileMap& m, int64_t minSize) const;
+				void matchTTHSet(const TTHMap& l);
 				bool match(const SearchQuery &sq) const;
 				const string& getName() const { return name; }
 				Directory* getParent() { return parent; }
@@ -333,11 +334,12 @@ class DirectoryListing
 		{
 			return hintedUser.user;
 		}
-		
+
 		void buildTTHSet();
 		const TTHMap* getTTHSet() const { return tthSet; }
 		void clearTTHSet();
 		void findDuplicates(TTHToFileMap& result, int64_t minSize);
+		void matchTTHSet(const TTHMap& l);
 
 		bool isOwnList() const { return ownList; }
 		const string& getBasePath() const { return basePath; }
@@ -347,6 +349,7 @@ class DirectoryListing
 		bool isAborted() const { return aborted; }
 		bool hasTimestamps() const { return hasTimestampsFlag; }
 
+		static void markAsFound(File* file) noexcept;
 		void getFileParams(const File* f, StringMap& ucParams) const noexcept;
 		void getDirectoryParams(const Directory* d, StringMap& ucParams) const noexcept;
 

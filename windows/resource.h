@@ -717,6 +717,8 @@
 #define IDC_CLIENT_ID                   1720
 #define IDC_CLIENT_ID_BOX               1721
 #define IDC_FILELIST_DIFF               1722
+#define IDC_FILELIST_DIFF2              1723
+#define IDC_FILELIST_COMPARE            1724
 #define IDC_SETTINGS_PASSWORD           1738
 #define IDC_SETTINGS_PASSWORD_HINT      1742
 #define IDC_AVAILABLE_STYLES            1744
