@@ -31,6 +31,7 @@
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/FavoriteManager.h"
 #include "../client/Client.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"

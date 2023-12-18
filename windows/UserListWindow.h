@@ -11,6 +11,7 @@
 #include "UserInfoBaseHandler.h"
 #include "TaskQueue.h"
 #include "../client/ClientManager.h"
+#include "../client/FavoriteManager.h"
 
 #ifdef OSVER_WIN_XP
 #include "ImageButton.h"

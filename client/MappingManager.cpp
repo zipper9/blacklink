@@ -30,6 +30,7 @@
 #include "Mapper_NATPMP.h"
 #endif
 
+#include "SettingsManager.h"
 #include "ResourceManager.h"
 #include "SearchManager.h"
 #include "version.h"

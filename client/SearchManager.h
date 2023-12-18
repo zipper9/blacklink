@@ -23,9 +23,12 @@
 #include "Thread.h"
 #include "StringSearch.h"
 #include "SearchManagerListener.h"
+#include "ClientManagerListener.h"
 #include "AdcCommand.h"
-#include "ClientManager.h"
 #include "Socket.h"
+#include "QueueItem.h"
+#include "Speaker.h"
+#include "Singleton.h"
 
 #ifdef _WIN32
 #include "WinEvent.h"

@@ -21,6 +21,7 @@
 #include "FavDirDlg.h"
 #include "WinUtil.h"
 #include "../client/PathUtil.h"
+#include "../client/FavoriteManager.h"
 
 static const WinUtil::TextItem texts[] =
 {

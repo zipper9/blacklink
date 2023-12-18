@@ -9,7 +9,7 @@ void JsonFormatter::open(char c) noexcept
 	if (wantComma) s += ',';
 	if (decorate)
 	{
-		s += '\n';
+		if (!s.empty()) s += '\n';
 		s.append(indent, INDENT_CHAR);
 		s += c;
 		indent++;

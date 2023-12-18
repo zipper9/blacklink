@@ -1,6 +1,6 @@
 #include "stdinc.h"
 #include "WebServerUtil.h"
-#include "Util.h"
+#include "UriUtil.h"
 #include "SimpleXML.h"
 #include "Base32.h"
 

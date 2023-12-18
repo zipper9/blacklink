@@ -1,7 +1,6 @@
 #ifndef CLIENTLISTENER_H_
 #define CLIENTLISTENER_H_
 
-#include "SearchQueue.h"
 #include "ChatMessage.h"
 
 class ClientBase;
@@ -52,13 +51,13 @@ class ClientListener
 			HubTopic,
 			OperatorInfo
 		};
-		
+
 		enum StatusFlags
 		{
-			FLAG_NORMAL = 0x00,
-			FLAG_IS_SPAM = 0x01
+			FLAG_KICK_MSG  = 1,
+			FLAG_DEBUG_MSG = 2
 		};
-		
+
 		virtual void on(Connecting, const Client*) noexcept { }
 		virtual void on(Connected, const Client*) noexcept { }
 		virtual void on(LoggedIn, const Client*) noexcept { }
@@ -71,7 +70,7 @@ class ClientListener
 		virtual void on(GetPassword, const Client*) noexcept { }
 		virtual void on(HubUpdated, const Client*) noexcept { }
 		virtual void on(Message, const Client*, std::unique_ptr<ChatMessage>&) noexcept { }
-		virtual void on(StatusMessage, const Client*, const string&, int = FLAG_NORMAL) noexcept { }
+		virtual void on(StatusMessage, const Client*, const string&, int flags = 0) noexcept { }
 		virtual void on(SettingsLoaded, const Client*) noexcept { }
 		virtual void on(HubFull, const Client*) noexcept { }
 		virtual void on(NickError, NickErrorCode) noexcept { }

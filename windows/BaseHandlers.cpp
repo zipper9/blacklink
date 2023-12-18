@@ -3,6 +3,7 @@
 #include "ImageLists.h"
 #include "WinUtil.h"
 #include "../client/ParamExpander.h"
+#include "../client/FavoriteManager.h"
 
 void PreviewBaseHandler::appendPreviewItems(OMenu& menu)
 {

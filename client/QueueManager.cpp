@@ -25,11 +25,12 @@
 #include "QueueManager.h"
 #include "AppPaths.h"
 #include "SearchManager.h"
-#include "ConnectionManager.h"
-#include "DownloadManager.h"
-#include "DatabaseManager.h"
 #include "Download.h"
+#include "DownloadManager.h"
 #include "UploadManager.h"
+#include "FavoriteManager.h"
+#include "ConnectionManager.h"
+#include "DatabaseManager.h"
 #include "DebugManager.h"
 #include "MerkleCheckOutputStream.h"
 #include "SearchResult.h"
@@ -2630,7 +2631,7 @@ void QueueManager::saveQueue(bool force) noexcept
 		string queueFile = getQueueFile();
 		string tempFile = queueFile + ".tmp";
 		File ff(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
-		BufferedOutputStream<false> f(&ff, 256 * 1024);
+		BufferedOutputStream<false> f(&ff, 2 * 1024 * 1024);
 
 		f.write(SimpleXML::utf8Header);
 		f.write(LIT("<Downloads Version=\"" VERSION_STR "\">\r\n"));

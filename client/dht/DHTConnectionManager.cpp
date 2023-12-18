@@ -25,6 +25,7 @@
 #include "../ClientManager.h"
 #include "../ConnectionManager.h"
 #include "../CryptoManager.h"
+#include "../AdcSupports.h"
 
 namespace dht
 {

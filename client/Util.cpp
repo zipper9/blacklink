@@ -17,6 +17,7 @@
  */
 
 #include "stdinc.h"
+#include <boost/algorithm/string/trim.hpp>
 
 #include "Util.h"
 #include "StrUtil.h"

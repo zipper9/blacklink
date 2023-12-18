@@ -28,6 +28,7 @@
 #include "../client/FavoriteManagerListener.h"
 #include "../client/UserManagerListener.h"
 #include "../client/OnlineUser.h"
+#include "../client/FavoriteUser.h"
 
 static const int USERS_FRAME_TRAITS = UserInfoGuiTraits::FAVORITES_VIEW | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY;
 

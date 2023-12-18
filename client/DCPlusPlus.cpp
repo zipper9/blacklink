@@ -27,7 +27,9 @@
 #include "HashManager.h"
 #include "SearchManager.h"
 #include "LogManager.h"
+#include "FavoriteManager.h"
 #include "FinishedManager.h"
+#include "ClientManager.h"
 #include "ADLSearch.h"
 #include "MappingManager.h"
 #include "ConnectivityManager.h"
@@ -35,6 +37,7 @@
 #include "ThrottleManager.h"
 #include "HublistManager.h"
 #include "DatabaseManager.h"
+#include "AdcSupports.h"
 #include "dht/DHT.h"
 
 #include "IpGuard.h"

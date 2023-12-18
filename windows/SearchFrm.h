@@ -30,12 +30,14 @@
 #include "DialogLayout.h"
 #include "StatusLabelCtrl.h"
 
+#include "../client/ClientManagerListener.h"
+#include "../client/FavoriteManagerListener.h"
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
-#include "../client/ClientManagerListener.h"
 #include "../client/QueueManager.h"
 #include "../client/SearchResult.h"
 #include "../client/ShareManager.h"
+#include "../client/FavoriteUser.h"
 
 #ifdef OSVER_WIN_XP
 #include "ImageButton.h"

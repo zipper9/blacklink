@@ -34,6 +34,8 @@
 #include "NmdcHub.h"
 #include "AntiFlood.h"
 #include "Random.h"
+#include "SettingsManager.h"
+#include "FavoriteManager.h"
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #include "TagCollector.h"

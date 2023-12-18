@@ -17,6 +17,7 @@
  */
 
 #include "stdafx.h"
+#include <boost/algorithm/string/trim.hpp>
 
 #include "SearchFrm.h"
 #include "MainFrm.h"
@@ -34,6 +35,7 @@
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
+#include "../client/FavoriteManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"

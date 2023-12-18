@@ -21,28 +21,10 @@
 
 #include "Streams.h"
 #include "SimpleXMLReader.h"
+#include "SimpleXMLException.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include <boost/algorithm/string/trim.hpp>
-
-/** Evaluates op(pair<T1, T2>.first, compareTo) */
-template < class T1, class T2, class op = std::equal_to<T1> >
-class CompareFirst
-{
-	public:
-		explicit CompareFirst(const T1& compareTo) : a(compareTo) { }
-		CompareFirst& operator=(const CompareFirst&) = delete;
-		bool operator()(const std::pair<T1, T2>& p)
-		{
-			return op()(p.first, a);
-		}
-
-	private:
-		const T1& a;
-};
-
-
-STANDARD_EXCEPTION(SimpleXMLException);
 
 /**
  * A simple XML class that loads an XML-ish structure into an internal tree
@@ -252,7 +234,7 @@ class SimpleXML
 				
 				const string& getAttrib(const string& aName, const string& aDefault = Util::emptyString) const
 				{
-					StringPairList::const_iterator i = find_if(attribs.begin(), attribs.end(), CompareFirst<string, string>(aName));
+					StringPairList::const_iterator i = find_if(attribs.begin(), attribs.end(), [&](const auto& p) { return p.first == aName; });
 					return i == attribs.end() ? aDefault : i->second;
 				}
 				void toXML(int indent, OutputStream* f);

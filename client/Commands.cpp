@@ -15,6 +15,7 @@
 #include "HttpClient.h"
 #include "IpTest.h"
 #include "AntiFlood.h"
+#include "AdcSupports.h"
 #include "Random.h"
 #include "AppPaths.h"
 #include "dht/DHT.h"

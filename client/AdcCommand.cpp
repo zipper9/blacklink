@@ -18,22 +18,21 @@
 
 #include "stdinc.h"
 #include "AdcCommand.h"
+#include "StrUtil.h"
 
-#include "ClientManager.h"
-
-AdcCommand::AdcCommand(uint32_t aCmd, char aType /* = TYPE_CLIENT */) : cmdInt(aCmd), from(0), to(0), type(aType)
+AdcCommand::AdcCommand(uint32_t cmd, char type /* = TYPE_CLIENT */) : cmdInt(cmd), from(0), to(0), type(type)
 {
 	dcassert(cmdChar[3] == 0);
 	cmdChar[3] = 0;
 }
 
-AdcCommand::AdcCommand(uint32_t aCmd, const uint32_t aTarget, char aType) : cmdInt(aCmd), from(0), to(aTarget), type(aType)
+AdcCommand::AdcCommand(uint32_t cmd, const uint32_t target, char type) : cmdInt(cmd), from(0), to(target), type(type)
 {
 	dcassert(cmdChar[3] == 0);
 	cmdChar[3] = 0;
 }
 
-AdcCommand::AdcCommand(Severity sev, Error err, const string& desc, char aType /* = TYPE_CLIENT */) : cmdInt(CMD_STA), from(0), to(0), type(aType)
+AdcCommand::AdcCommand(Severity sev, Error err, const string& desc, char type /* = TYPE_CLIENT */) : cmdInt(CMD_STA), from(0), to(0), type(type)
 {
 	addParam((sev == SEV_SUCCESS && err == SUCCESS) ? "000" : Util::toString(sev * 100 + err));
 	addParam(desc);
@@ -104,16 +103,14 @@ int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 			{
 				if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 				{
-					if (cur.length() != 4)
-						return PARSE_ERROR_INVALID_SID_LENGTH;
 					from = toSID(cur);
+					if (!from) return PARSE_ERROR_INVALID_SID_LENGTH;
 					fromSet = true;
 				}
 				else if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 				{
-					if (cur.length() != 4)
-						return PARSE_ERROR_INVALID_SID_LENGTH;
 					to = toSID(cur);
+					if (!to) return PARSE_ERROR_INVALID_SID_LENGTH;
 					toSet = true;
 				}
 				else if (type == TYPE_FEATURE && !featureSet)
@@ -139,16 +136,14 @@ int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 	{
 		if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 		{
-			if (cur.length() != 4)
-				return PARSE_ERROR_INVALID_SID_LENGTH;
 			from = toSID(cur);
+			if (!from) return PARSE_ERROR_INVALID_SID_LENGTH;
 			fromSet = true;
 		}
 		else if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 		{
-			if (cur.length() != 4)
-				return PARSE_ERROR_INVALID_SID_LENGTH;
 			to = toSID(cur);
+			if (!to) return PARSE_ERROR_INVALID_SID_LENGTH;
 			toSet = true;
 		}
 		else if (type == TYPE_FEATURE && !featureSet)
@@ -176,9 +171,9 @@ int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 	return PARSE_OK;
 }
 
-string AdcCommand::toString(const CID& aCID, bool nmdc /* = false */) const
+string AdcCommand::toString(const CID& cid, bool nmdc /* = false */) const
 {
-	return getHeaderString(aCID) + getParamString(nmdc);
+	return getHeaderString(cid) + getParamString(nmdc);
 }
 
 string AdcCommand::toString(uint32_t sid /* = 0 */, bool nmdc /* = false */) const
@@ -220,13 +215,9 @@ string AdcCommand::getHeaderString(uint32_t sid, bool nmdc) const
 {
 	string tmp;
 	if (nmdc)
-	{
-		tmp += "$ADC";
-	}
+		tmp = "$ADC";
 	else
-	{
-		tmp += getType();
-	}
+		tmp = getType();
 	
 	tmp += cmdChar;
 	

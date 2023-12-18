@@ -12,6 +12,8 @@
 #include "SearchManager.h"
 #include "QueueManager.h"
 #include "FinishedManager.h"
+#include "ClientManager.h"
+#include "FavoriteManager.h"
 #include "UploadManager.h"
 #include "ShareManager.h"
 #include "WebServerUtil.h"

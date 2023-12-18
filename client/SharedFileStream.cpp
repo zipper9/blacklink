@@ -21,6 +21,7 @@
 #include "SharedFileStream.h"
 #include "LogManager.h"
 #include "ClientManager.h"
+#include "SettingsManager.h"
 
 #ifdef _WIN32
 static const int64_t MAX_MAPPED_FILE_SIZE = 2ll << 30;

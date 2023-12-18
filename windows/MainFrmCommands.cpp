@@ -2,6 +2,7 @@
 #include "MainFrm.h"
 #include "SearchFrm.h"
 #include "Players.h"
+#include "../client/FavoriteManager.h"
 
 #ifdef DEBUG_GDI_IMAGE
 #include "../GdiOle/GDIImage.h"

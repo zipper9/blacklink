@@ -42,6 +42,7 @@
 #include "../FavoriteManager.h"
 #include "../ConnectivityManager.h"
 #include "../DebugManager.h"
+#include "../SimpleXML.h"
 #include "../User.h"
 #include "../Tag16.h"
 #include "../Random.h"

@@ -27,6 +27,7 @@
 #include "StatusMessageHistory.h"
 #include "../client/ClientManager.h"
 #include "../client/Commands.h"
+#include "../client/SettingsManager.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::Callback
 {

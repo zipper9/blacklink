@@ -29,6 +29,7 @@
 #include "QueueManager.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
+#include "FavoriteManager.h"
 #include "ParamExpander.h"
 #include "StringTokenizer.h"
 #include "SimpleStringTokenizer.h"
@@ -38,6 +39,7 @@
 #include "Random.h"
 #include "Tag16.h"
 #include "SocketPool.h"
+#include "AdcSupports.h"
 #include "version.h"
 
 #ifdef BL_FEATURE_NMDC_EXT_JSON
@@ -961,13 +963,13 @@ void NmdcHub::chatMessageParse(const string& line)
 	
 	if (lowerLine.find("hub-security") != string::npos && lowerLine.find("was kicked by") != string::npos)
 	{
-		fire(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
+		fire(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_KICK_MSG);
 		return;
 	}
 	
 	if (lowerLine.find("is kicking") != string::npos && lowerLine.find("because:") != string::npos)
 	{
-		fire(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
+		fire(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_KICK_MSG);
 		return;
 	}
 

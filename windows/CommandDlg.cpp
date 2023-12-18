@@ -17,6 +17,7 @@
  */
 
 #include "stdafx.h"
+#include <boost/algorithm/string/trim.hpp>
 
 #include "../client/UserCommand.h"
 #include "../client/NmdcHub.h"

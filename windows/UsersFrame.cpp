@@ -31,7 +31,6 @@
 #include "../client/UserManager.h"
 #include "../client/ShareManager.h"
 #include "../client/dht/DHT.h"
-#include <algorithm>
 
 const int UsersFrame::columnId[] =
 {

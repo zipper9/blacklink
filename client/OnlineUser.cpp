@@ -26,6 +26,7 @@
 #include "ConnectivityManager.h"
 #include "Resolver.h"
 #include "Tag16.h"
+#include "AdcSupports.h"
 
 #ifdef _DEBUG
 std::atomic_int OnlineUser::onlineUserCount(0);

@@ -24,7 +24,9 @@
 #include "../ClientManager.h"
 #include "../LogManager.h"
 #include "../HttpClient.h"
+#include "../SimpleXML.h"
 #include "../ResourceManager.h"
+#include "../SettingsManager.h"
 #include <zlib.h>
 
 namespace dht

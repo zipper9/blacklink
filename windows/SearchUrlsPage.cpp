@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "../client/SettingsManager.h"
+#include "../client/FavoriteManager.h"
 #include "SearchUrlsPage.h"
 #include "DialogLayout.h"
 #include "ImageLists.h"

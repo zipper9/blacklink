@@ -20,10 +20,14 @@
 #define DCPLUSPLUS_DCPP_CLIENT_MANAGER_H
 
 #include "ClientListener.h"
-#include "AdcSupports.h"
-#include "DirectoryListing.h"
-#include "FavoriteManager.h"
+#include "ClientManagerListener.h"
 #include "OnlineUser.h"
+#include "HintedUser.h"
+#include "SearchParam.h"
+#include "Speaker.h"
+#include "Singleton.h"
+#include "ConnectionStatus.h"
+#include "Util.h"
 
 class UserCommand;
 

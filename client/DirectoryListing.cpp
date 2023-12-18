@@ -31,6 +31,7 @@
 #include "SimpleXMLReader.h"
 #include "User.h"
 #include "ShareManager.h"
+#include "ClientManager.h"
 
 static const int PROGRESS_REPORT_TIME = 2000;
 

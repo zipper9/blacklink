@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "../client/ADLSearch.h"
+#include "../client/FavoriteManager.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

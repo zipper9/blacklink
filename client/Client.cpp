@@ -17,6 +17,8 @@
  */
 
 #include "stdinc.h"
+#include <boost/algorithm/string/trim.hpp>
+
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "LogManager.h"
@@ -26,6 +28,7 @@
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "UserManager.h"
+#include "FavoriteManager.h"
 #include "DebugManager.h"
 #include "Wildcards.h"
 #include "ParamExpander.h"

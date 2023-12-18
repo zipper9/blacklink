@@ -17,6 +17,7 @@
  */
 
 #include "stdafx.h"
+#include <boost/algorithm/string.hpp>
 
 #include "PrivateFrame.h"
 #include "WinUtil.h"
@@ -26,8 +27,8 @@
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/ConnectionManager.h"
+#include "../client/FavoriteManager.h"
 #include "../client/dht/DHT.h"
-#include <boost/algorithm/string.hpp>
 
 static const size_t MAX_PM_FRAMES = 100;
 static const unsigned AWAY_MSG_COOLDOWN_TIME = 300000; // 5 minutes

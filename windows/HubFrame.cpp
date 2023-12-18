@@ -2161,7 +2161,7 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 		return;
 	string convertedLine = line;
 	Util::convertToDos(convertedLine);
-	addTask(ADD_STATUS_LINE, new StatusTask(convertedLine, !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM), false));
+	addTask(ADD_STATUS_LINE, new StatusTask(convertedLine, !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_KICK_MSG), false));
 }
 
 void HubFrame::on(ClientListener::SettingsLoaded, const Client*) noexcept

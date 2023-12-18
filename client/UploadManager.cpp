@@ -31,6 +31,7 @@
 #include "Upload.h"
 #include "QueueManager.h"
 #include "UserManager.h"
+#include "FavoriteManager.h"
 #include "FinishedManager.h"
 #include "SharedFileStream.h"
 #include "IpGrant.h"

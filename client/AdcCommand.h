@@ -135,9 +135,9 @@ class AdcCommand
 			return std::string(reinterpret_cast<const char*>(&x), sizeof(x));
 		}
 		
-		explicit AdcCommand(uint32_t aCmd, char aType = TYPE_CLIENT);
-		explicit AdcCommand(uint32_t aCmd, const uint32_t aTarget, char aType);
-		explicit AdcCommand(Severity sev, Error err, const string& desc, char aType = TYPE_CLIENT);
+		explicit AdcCommand(uint32_t cmd, char type = TYPE_CLIENT);
+		explicit AdcCommand(uint32_t cmd, const uint32_t target, char type);
+		explicit AdcCommand(Severity sev, Error err, const string& desc, char type = TYPE_CLIENT);
 		
 		AdcCommand(const AdcCommand&) = delete;
 		AdcCommand& operator= (const AdcCommand&) = delete;
@@ -171,7 +171,7 @@ class AdcCommand
 		StringList& getParameters() { return parameters; }
 		const StringList& getParameters() const { return parameters; }
 		
-		string toString(const CID& aCID, bool nmdc = false) const;
+		string toString(const CID& cid, bool nmdc = false) const;
 		string toString(uint32_t sid, bool nmdc = false) const;
 		
 		AdcCommand& addParam(const string& name, const string& value)
@@ -207,13 +207,14 @@ class AdcCommand
 				nick = "[nick unknown]"; // FIXME FIXME
 			return nick;
 		}
-		static uint32_t toSID(const string& aSID)
+		static uint32_t toSID(const string& sid)
 		{
-			return *reinterpret_cast<const uint32_t*>(aSID.data());
+			if (sid.length() != 4) return 0;
+			return *reinterpret_cast<const uint32_t*>(sid.data());
 		}
-		static string fromSID(const uint32_t aSID)
+		static string fromSID(const uint32_t sid)
 		{
-			return string(reinterpret_cast<const char*>(&aSID), sizeof(aSID));
+			return string(reinterpret_cast<const char*>(&sid), sizeof(sid));
 		}
 		
 		string getParamString(bool nmdc) const;

@@ -84,7 +84,7 @@ LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, H
 		   )
 		{
 			WinUtil::runElevated(NULL, Util::getModuleFileName().c_str(), shellIntEnabled ? _T("/uninstallShellExt") : _T("/installShellExt"));
-			Thread::sleep(1000);
+			BaseThread::sleep(1000);
 		}
 	}
 	checkShellInt();
@@ -109,7 +109,7 @@ LRESULT IntegrationPage::onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, 
 		   )
 		{
 			WinUtil::runElevated(NULL, Util::getModuleFileName().c_str(), shellIntEnabled ? _T("/uninstallStartup") : _T("/installStartup"));
-			Thread::sleep(1000);
+			BaseThread::sleep(1000);
 		}
 	}
 	checkAutostart();

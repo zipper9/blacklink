@@ -29,6 +29,7 @@
 #include "NmdcHub.h"
 #include "QueueManager.h"
 #include "ConnectivityManager.h"
+#include "FavoriteManager.h"
 #include "PortTest.h"
 #include "BusyCounter.h"
 #include "dht/DHT.h"

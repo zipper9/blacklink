@@ -17,8 +17,11 @@
  */
 
 #include "stdinc.h"
+#include <boost/algorithm/string.hpp>
+
 #include "AppPaths.h"
 #include "PathUtil.h"
+#include "Util.h"
 #include "LogManager.h"
 #include "SimpleXML.h"
 #include "AdcHub.h"
@@ -26,10 +29,11 @@
 #include "ThrottleManager.h"
 #include "ShareManager.h"
 #include "SearchManager.h"
+#include "FavoriteManager.h"
+#include "ClientManager.h"
 #include "SysVersion.h"
 #include "Random.h"
 #include "version.h"
-#include <boost/algorithm/string.hpp>
 
 #ifndef _WIN32
 #define TRUE  1

@@ -800,6 +800,7 @@
     <ClInclude Include="client\SettingsManagerListener.h" />
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
+    <ClInclude Include="client\SimpleXMLException.h" />
     <ClInclude Include="client\SockDefs.h" />
     <ClInclude Include="client\SocketAddr.h" />
     <ClInclude Include="client\SocketPool.h" />

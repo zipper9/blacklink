@@ -17,8 +17,9 @@
  */
 
 #include "stdafx.h"
-
+#include <boost/algorithm/string/trim.hpp>
 #include <comdef.h>
+
 #include "NetworkPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"

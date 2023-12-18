@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 #include "../client/SettingsManager.h"
+#include "../client/FavoriteManager.h"
 #include "PreviewAppsPage.h"
 #include "PreviewDlg.h"
 #include "PreviewMenu.h"

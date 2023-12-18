@@ -20,6 +20,7 @@
 #define DCPLUSPLUS_DCPP_SIMPLEXMLREADER_H_
 
 #include "typedefs.h"
+#include "SimpleXMLException.h"
 
 class InputStream;
 

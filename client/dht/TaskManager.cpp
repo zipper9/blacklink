@@ -28,6 +28,7 @@
 #include "../ShareManager.h"
 #include "../SearchManager.h"
 #include "../ConnectivityManager.h"
+#include "../ClientManager.h"
 
 namespace dht
 {

@@ -223,7 +223,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 				// Same CID but different SID not allowed
 				const string message = ou->getIdentity().getNick() + " (" + ou->getIdentity().getSIDString() +
 					") has same CID {" + cidStr + "} as " + c.getNick() + " (" + AdcCommand::fromSID(c.getFrom()) + "), ignoring.";
-				fire(ClientListener::StatusMessage(), this, message, ClientListener::FLAG_IS_SPAM);
+				fire(ClientListener::StatusMessage(), this, message, ClientListener::FLAG_DEBUG_MSG);
 				return;
 			}
 		}
@@ -599,14 +599,10 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 			}
 			
 			if (source)
-			{
 				tmp = victim->getIdentity().getNick() + " was kicked by " + source->getIdentity().getNick() + ": " + tmp;
-			}
 			else
-			{
 				tmp = victim->getIdentity().getNick() + " was kicked: " + tmp;
-			}
-			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_IS_SPAM);
+			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_KICK_MSG);
 		}
 		putUser(s, c.getParam("DI", 1, tmp));
 	}

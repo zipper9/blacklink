@@ -18,9 +18,8 @@
 
 #include "stdinc.h"
 #include "SimpleXMLReader.h"
-
-#include "SimpleXML.h"
-
+#include "BaseUtil.h"
+#include "StrUtil.h"
 #include "Text.h"
 #include "Streams.h"
 
@@ -94,8 +93,6 @@ void SimpleXMLReader::append(std::string& str, size_t maxLen, const std::string:
 	str.append(begin, end);
 }
 
-/// @todo This is cheating - we should be converting from the encoding, but since we simplify a few things
-/// this is ok
 bool SimpleXMLReader::error(const char* e)
 {
 	throw SimpleXMLException(Util::toString(pos) + ": " + e);
@@ -105,16 +102,14 @@ const string& SimpleXMLReader::CallBack::getAttrib(StringPairList& attribs, cons
 {
 	hint = min(hint, attribs.size());
 	
-	auto i = find_if(attribs.begin() + hint, attribs.end(), CompareFirst<string, string>(name));
+	auto compare = [&](const auto& p) { return p.first == name; };
+	auto i = find_if(attribs.begin() + hint, attribs.end(), compare);
 	if (i == attribs.end())
 	{
-		i = find_if(attribs.begin(), attribs.begin() + hint, CompareFirst<string, string>(name));
+		i = find_if(attribs.begin(), attribs.begin() + hint, compare);
 		return i == (attribs.begin() + hint) ? Util::emptyString : i->second;
 	}
-	else
-	{
-		return i->second;
-	}
+	return i->second;
 }
 
 bool SimpleXMLReader::literal(const char* lit, size_t len, bool withSpace, ParseState newState)
@@ -745,7 +740,7 @@ bool SimpleXMLReader::process()
 				|| literal(LITN("<?xml"), true, STATE_DECL_VERSION)
 				|| literal(LITN("<!--"), false, STATE_COMMENT)
 				|| element()
-				|| spaceOrError("Expecting XML declaration, element or comment"); // https://drdump.com/Problem.aspx?ProblemID=174359
+				|| spaceOrError("Expecting XML declaration, element or comment");
 				break;
 			case STATE_DECL_VERSION:
 				skipSpace()
@@ -779,7 +774,7 @@ bool SimpleXMLReader::process()
 			case STATE_DECL_ENCODING_NAME_QUOT:
 				declEncodingValue()
 				|| spaceOrError("Expecting encoding value");
-				break; //[+]FlylinkDC++
+				break;
 			case STATE_DECL_STANDALONE:
 				literal(LITN("standalone"), false, STATE_DECL_STANDALONE_EQ)
 				|| literal(LITN("?>"), false, STATE_CONTENT)

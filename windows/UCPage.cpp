@@ -21,6 +21,7 @@
 #include "CommandDlg.h"
 #include "WinUtil.h"
 #include "LockRedraw.h"
+#include "../client/FavoriteManager.h"
 
 static const WinUtil::TextItem texts[] =
 {

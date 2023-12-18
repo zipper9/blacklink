@@ -22,6 +22,7 @@
 #include "File.h"
 #include "LogManager.h"
 #include "ClientManager.h"
+#include "ResourceManager.h"
 #include "TimeUtil.h"
 #include "version.h"
 

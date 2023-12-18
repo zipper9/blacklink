@@ -22,6 +22,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "ExMessageBox.h"
+#include "../client/FavoriteManager.h"
 
 static const WinUtil::TextItem texts[] =
 {
