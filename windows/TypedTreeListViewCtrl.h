@@ -5,6 +5,11 @@
 #include "LockRedraw.h"
 #include "../client/BusyCounter.h"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4267)
+#endif
+
 // Copyright (C) 2005-2009 Big Muscle, StrongDC++
 template<class T, int ctrlId, class KValue, bool uniqueParent>
 class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
@@ -490,5 +495,9 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			}
 		}
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // TYPED_TREE_LIST_VIEW_CTRL_H_

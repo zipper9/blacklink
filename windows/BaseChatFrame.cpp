@@ -397,7 +397,7 @@ void BaseChatFrame::destroyMessagePanel()
 void BaseChatFrame::setStatusText(int index, const tstring& text)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(index < ctrlStatusCache.size());
+	dcassert(index < (int) ctrlStatusCache.size());
 	if ((unsigned) index >= ctrlStatusCache.size()) return;
 	if (!ctrlStatus || ctrlStatusCache[index] != text)
 	{

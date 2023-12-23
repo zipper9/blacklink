@@ -180,7 +180,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 		{
 			chatCache.push_back(message);
 			chatCacheSize += message.length();
-			if (chatCacheSize + 1000 > SETTING(CHAT_BUFFER_SIZE))
+			if (chatCacheSize + 1000 > (size_t) SETTING(CHAT_BUFFER_SIZE))
 			{
 				chatCacheSize -= chatCache.front().length();
 				chatCache.pop_front();

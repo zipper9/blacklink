@@ -253,7 +253,7 @@ LRESULT OtherColorsTab::onMenuDefaults(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 	}
 	for (int i = 0; i < _countof(menuOptions); i++)
 	{
-		bool bval = g_settings->getDefault((SettingsManager::IntSetting) menuOptions[i].setting);
+		bool bval = g_settings->getDefault((SettingsManager::IntSetting) menuOptions[i].setting) != 0;
 		if (this->*menuOptions[i].ptr != bval)
 		{
 			this->*menuOptions[i].ptr = bval;
