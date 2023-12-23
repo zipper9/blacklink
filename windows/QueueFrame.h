@@ -375,7 +375,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				static const TTHValue emptyTTH;
 		};
 
-		class QueueListViewCtrl : public TypedListViewCtrl<QueueItemInfo, IDC_QUEUE>
+		class QueueListViewCtrl : public TypedListViewCtrl<QueueItemInfo>
 		{
 			protected:
 				void sortItems() override;

@@ -57,7 +57,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		typedef UCHandler<TransferView> ucBase;
 
 		class ItemInfo;
-		typedef TypedTreeListViewCtrl<ItemInfo, IDC_TRANSFERS, tstring, true> ItemInfoList;
+		typedef TypedTreeListViewCtrl<ItemInfo, tstring, true> ItemInfoList;
 
 		BEGIN_MSG_MAP(TransferView)
 		NOTIFY_HANDLER(IDC_TRANSFERS, LVN_GETDISPINFO, ctrlTransfers.onGetDispInfo)

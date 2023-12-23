@@ -460,7 +460,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		size_t historyIndex;
 
 		CTreeViewCtrl ctrlTree;
-		TypedListViewCtrl<ItemInfo, IDC_FILES> ctrlList;
+		TypedListViewCtrl<ItemInfo> ctrlList;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		bool treeViewFocused;
 		HTHEME hTheme;

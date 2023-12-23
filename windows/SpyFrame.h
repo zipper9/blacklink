@@ -172,7 +172,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		
 		static const int columnId[];
 		
-		TypedListViewCtrl<ItemInfo, IDC_RESULTS> ctrlSearches;
+		TypedListViewCtrl<ItemInfo> ctrlSearches;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		HTHEME hTheme;
 		CStatusBarCtrl ctrlStatus;

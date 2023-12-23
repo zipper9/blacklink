@@ -196,7 +196,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		void removeUser(const FavoriteUser& user);
 
 	private:
-		typedef TypedListViewCtrl<ItemInfo, IDC_USERS> UserInfoList;
+		typedef TypedListViewCtrl<ItemInfo> UserInfoList;
 		UserInfoList ctrlUsers;
 		IgnoredUsersWindow ctrlIgnored;
 		bool startup;

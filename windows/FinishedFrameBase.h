@@ -136,7 +136,7 @@ class FinishedFrameBase
 		CMenu copyMenu;
 		OMenu directoryMenu;
 
-		TypedListViewCtrl<FinishedItemInfo, 0> ctrlList;
+		TypedListViewCtrl<FinishedItemInfo> ctrlList;
 
 		CTreeViewCtrl ctrlTree;
 		HTREEITEM rootItem;

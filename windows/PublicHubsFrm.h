@@ -209,7 +209,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CContainedWindow filterContainer;
 		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
-		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
+		TypedListViewCtrl<HubInfo> ctrlHubs;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 
 		int xdu, ydu;

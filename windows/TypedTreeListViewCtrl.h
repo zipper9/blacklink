@@ -11,8 +11,8 @@
 #endif
 
 // Copyright (C) 2005-2009 Big Muscle, StrongDC++
-template<class T, int ctrlId, class KValue, bool uniqueParent>
-class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
+template<class T, class KValue, bool uniqueParent>
+class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 {
 	// uniqueParent == true:
 	//     T::createParent will be called to create a new parent
@@ -32,8 +32,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			states.Destroy();
 		}
 
-		typedef TypedTreeListViewCtrl<T, ctrlId, KValue, uniqueParent> thisClass;
-		typedef TypedListViewCtrl<T, ctrlId> baseClass;
+		typedef TypedTreeListViewCtrl<T, KValue, uniqueParent> thisClass;
+		typedef TypedListViewCtrl<T> baseClass;
 
 		struct GroupInfo
 		{

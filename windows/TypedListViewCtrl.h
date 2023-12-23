@@ -55,16 +55,16 @@ class TypedListViewColumns
 		static void getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTip);
 };
 
-template<class T, int ctrlId>
-class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CListViewCtrl, CControlWinTraits>,
-	public ListViewArrows<TypedListViewCtrl<T, ctrlId> >
+template<class T>
+class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl, CControlWinTraits>,
+	public ListViewArrows<TypedListViewCtrl<T> >
 {
 	public:
 		TypedListViewCtrl() : sortColumn(-1), sortAscending(true), leftMargin(0)
 		{
 		}
 		
-		typedef TypedListViewCtrl<T, ctrlId> thisClass;
+		typedef TypedListViewCtrl<T> thisClass;
 		typedef CListViewCtrl baseClass;
 		typedef ListViewArrows<thisClass> arrowBase;
 		

@@ -55,7 +55,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	public CMessageFilter
 {
 		class SearchInfo;
-		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue, false> SearchInfoList;
+		typedef TypedTreeListViewCtrl<SearchInfo, TTHValue, false> SearchInfoList;
 
 	public:
 		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, SizeModes mode = SIZE_ATLEAST, int type = FILE_TYPE_ANY);
@@ -469,7 +469,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		SearchInfoList ctrlResults;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		HTHEME hTheme;
-		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
+		TypedListViewCtrl<HubInfo> ctrlHubs;
 		
 		CTreeViewCtrl ctrlSearchFilterTree;
 		HTREEITEM treeItemRoot;

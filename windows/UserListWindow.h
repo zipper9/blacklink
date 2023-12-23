@@ -40,7 +40,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		UserListWindow(const UserListWindow&) = delete;
 		UserListWindow& operator= (const UserListWindow&) = delete;
 
-		typedef TypedListViewCtrl<UserInfo, IDC_USERS> CtrlUsers;
+		typedef TypedListViewCtrl<UserInfo> CtrlUsers;
 
 		CtrlUsers& getUserList() { return ctrlUsers; }
 		void setHubHint(const string& hint);

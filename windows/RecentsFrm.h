@@ -111,7 +111,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		CButton ctrlRemove;
 		CButton ctrlRemoveAll;
 		OMenu hubsMenu;
-		TypedListViewCtrl<ItemInfo, IDC_RECENTS> ctrlHubs;
+		TypedListViewCtrl<ItemInfo> ctrlHubs;
 
 		int xdu, ydu;
 		int buttonWidth, buttonHeight, buttonSpace;

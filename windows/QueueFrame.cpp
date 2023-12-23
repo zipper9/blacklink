@@ -2843,7 +2843,7 @@ void QueueFrame::QueueListViewCtrl::sortItems()
 		if (ii->type == QueueItemInfo::FILE)
 			ii->updateCachedInfo();
 	}
-	TypedListViewCtrl<QueueItemInfo, IDC_QUEUE>::sortItems();
+	TypedListViewCtrl<QueueItemInfo>::sortItems();
 }
 
 CFrameWndClassInfo& QueueFrame::GetWndClassInfo()

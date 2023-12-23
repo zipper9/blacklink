@@ -40,7 +40,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		typedef UserInfoBaseHandler<WaitingUsersFrame, UserInfoGuiTraits::NO_COPY> uiBase;
 
 		class UploadQueueItem;
-		typedef TypedListViewCtrl<UploadQueueItem, IDC_UPLOAD_QUEUE> CtrlList;
+		typedef TypedListViewCtrl<UploadQueueItem> CtrlList;
 
 	public:
 		static CFrameWndClassInfo& GetWndClassInfo();
