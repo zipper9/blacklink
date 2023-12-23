@@ -17,6 +17,7 @@
  */
 
 #include "stdinc.h"
+#include "Text.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "debug.h"

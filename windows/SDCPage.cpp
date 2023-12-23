@@ -21,6 +21,7 @@
 #include "DialogLayout.h"
 #include "KnownClients.h"
 #include "../client/SettingsManager.h"
+#include "../client/Text.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"

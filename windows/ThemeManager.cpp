@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "ThemeManager.h"
 #include "../client/AppPaths.h"
+#include "../client/Text.h"
 
 HMODULE ThemeManager::resourceLibInstance = nullptr;
 #ifdef _DEBUG

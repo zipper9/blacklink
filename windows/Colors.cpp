@@ -2,6 +2,7 @@
 #include "Colors.h"
 #include "BarShader.h"
 #include "../client/SettingsManager.h"
+#include "../client/Text.h"
 
 HBRUSH Colors::g_bgBrush = nullptr;
 HBRUSH Colors::g_tabBackgroundBrush = nullptr;

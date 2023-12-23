@@ -2,6 +2,7 @@
 #include "SearchHistory.h"
 #include "../client/DatabaseManager.h"
 #include "../client/StrUtil.h"
+#include "../client/Text.h"
 
 void SearchHistory::addItem(const tstring& s, int maxCount)
 {

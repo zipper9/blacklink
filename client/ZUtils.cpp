@@ -22,6 +22,10 @@
 #include "SettingsManager.h"
 #include "ResourceManager.h"
 
+#ifdef _WIN32
+#include "Text.h"
+#endif
+
 ZFilter::ZFilter() : totalIn(0), totalOut(0), compressing(true)
 {
 	memset(&zs, 0, sizeof(zs));

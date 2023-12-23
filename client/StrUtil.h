@@ -1,7 +1,6 @@
 #ifndef STR_UTIL_H_
 #define STR_UTIL_H_
 
-#include "Text.h"
 #include <locale.h>
 #include <stdlib.h>
 

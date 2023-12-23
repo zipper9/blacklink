@@ -21,6 +21,7 @@
 #include "BaseUtil.h"
 #include "StrUtil.h"
 #include "TimeUtil.h"
+#include "Text.h"
 #include "ParamExpander.h"
 #include "ResourceManager.h"
 

@@ -25,6 +25,7 @@
 #include "Download.h"
 #include "AdcCommand.h"
 #include "OnlineUser.h"
+#include "Text.h"
 #include <atomic>
 
 class UserConnection :

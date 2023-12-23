@@ -4,6 +4,7 @@
 #include "Fonts.h"
 #include "DialogLayout.h"
 #include "LockRedraw.h"
+#include "../client/Text.h"
 
 extern SettingsManager *g_settings;
 

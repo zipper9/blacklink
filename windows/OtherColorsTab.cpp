@@ -5,6 +5,7 @@
 #include "ColorUtil.h"
 #include "Fonts.h"
 #include "../client/SettingsManager.h"
+#include "../client/Text.h"
 
 extern SettingsManager *g_settings;
 static OtherColorsTab* instance;

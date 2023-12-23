@@ -21,6 +21,7 @@
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "Path.h"
+#include "Text.h"
 
 #ifndef _CONSOLE
 #include "LogManager.h"

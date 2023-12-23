@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "BaseUtil.h"
 #include "StrUtil.h"
+#include "Text.h"
 
 const string Util::emptyString;
 const wstring Util::emptyStringW;

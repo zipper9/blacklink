@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include "UriUtil.h"
 #include "StrUtil.h"
+#include "Text.h"
 #include "idna/idna.h"
 
 static inline int getHex(char c)

@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <regex>
+#include "Text.h"
 #include "TimerManager.h"
 #include "ClientListener.h"
 #include "SearchQueue.h"

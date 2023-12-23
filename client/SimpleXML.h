@@ -24,6 +24,7 @@
 #include "SimpleXMLException.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
+#include "Text.h"
 #include <boost/algorithm/string/trim.hpp>
 
 /**

@@ -23,6 +23,7 @@
 #include "SettingsManager.h"
 #include "UriUtil.h"
 #include "FormatUtil.h"
+#include "Text.h"
 #include "version.h"
 
 #include "ResourceManager.h"

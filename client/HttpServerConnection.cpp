@@ -4,6 +4,7 @@
 #include "BufferedSocket.h"
 #include "SettingsManager.h"
 #include "FormatUtil.h"
+#include "Text.h"
 #include "version.h"
 #include "ResourceManager.h"
 #include "BaseStreams.h"
