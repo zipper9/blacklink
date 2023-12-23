@@ -177,7 +177,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	historyIndex(0),
 	setWindowTitleTick(0),
 	browsing(browsing),
-	treeRoot(nullptr), selectedDir(nullptr), hTheme(nullptr),
+	treeRoot(nullptr), selectedDir(nullptr), treeViewFocused(false), hTheme(nullptr),
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
 	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false), showingDupFiles(false),
 	abortFlag(false),
@@ -1826,11 +1826,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				copyDirMenu.Detach();
 			}
 		}
-		if (originalId && findFrameByID(originalId))
-			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_FILELIST, 0));
 		directoryMenu.AppendMenu(MF_SEPARATOR);
 		directoryMenu.AppendMenu(MF_STRING, IDC_FILELIST_DIFF2, CTSTRING(FILE_LIST_DIFF2));
 		directoryMenu.AppendMenu(MF_STRING, IDC_FILELIST_COMPARE, CTSTRING(FILE_LIST_COMPARE));
+		if (originalId && findFrameByID(originalId))
+			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_FILELIST, 0));
 
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		MenuHelper::unlinkStaticMenus(directoryMenu);
@@ -2598,6 +2598,7 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 	switch (plvcd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
+			treeViewFocused = GetFocus() == ctrlTree;
 			return CDRF_NOTIFYITEMDRAW;
 
 		case CDDS_ITEMPREPAINT:
@@ -2612,8 +2613,12 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 					plvcd->clrTextBk = bg;
 					plvcd->clrText = fg;
 				}
+				else if (treeViewFocused)
+					plvcd->clrText = GetSysColor(COLOR_HIGHLIGHTTEXT);
 				else
-					plvcd->clrText = Colors::g_textColor;
+					plvcd->clrText =
+						GetSysColor(COLOR_WINDOW) == GetSysColor(COLOR_BTNFACE) ?
+						GetSysColor(COLOR_HIGHLIGHTTEXT) : GetSysColor(COLOR_BTNTEXT);
 			}
 		}
 	}

@@ -462,6 +462,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CTreeViewCtrl ctrlTree;
 		TypedListViewCtrl<ItemInfo, IDC_FILES> ctrlList;
 		CustomDrawHelpers::CustomDrawState customDrawState;
+		bool treeViewFocused;
 		HTHEME hTheme;
 		CStatusBarCtrl ctrlStatus;
 		HTREEITEM treeRoot;

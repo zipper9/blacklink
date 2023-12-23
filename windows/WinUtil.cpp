@@ -35,6 +35,7 @@
 #include "../client/MagnetLink.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
+#include "../client/SysVersion.h"
 #include "Colors.h"
 #include "Fonts.h"
 #include "MagnetDlg.h"
@@ -1163,6 +1164,9 @@ tstring WinUtil::getComboBoxItemText(HWND hwnd, int index)
 
 bool WinUtil::setExplorerTheme(HWND hWnd)
 {
+#ifdef OSVER_WIN_XP
+	if (!SysVersion::isOsVistaPlus()) return false;
+#endif
 	if (!IsAppThemed()) return false;
 	SetWindowTheme(hWnd, L"explorer", nullptr);
 	return true;
