@@ -58,11 +58,11 @@ LRESULT NotepadFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	{
 		tmp = File(Util::getNotepadFile(), File::READ, File::OPEN).read();
 	}
-	catch (const FileException& e)
+	catch (const FileException&)
 	{
-		LogManager::message("Error read " + Util::getNotepadFile() + " Error = " + e.getError());
+		//LogManager::message("Error read " + Util::getNotepadFile() + " Error = " + e.getError());
 	}
-	
+
 	ctrlPad.SetWindowText(Text::toT(tmp).c_str());
 	ctrlPad.EmptyUndoBuffer();
 	ctrlClientContainer.SubclassWindow(ctrlPad.m_hWnd);
@@ -95,11 +95,11 @@ LRESULT NotepadFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	{
 		closed = true;
 		SettingsManager::getInstance()->removeListener(this);
-		if (m_dirty || ctrlPad.GetModify())
+		if (ctrlPad.GetModify())
 		{
 			tstring tmp;
 			WinUtil::getWindowText(ctrlPad, tmp);
-			if (tmp.size())
+			if (!tmp.empty())
 			{
 				try
 				{
@@ -107,9 +107,11 @@ LRESULT NotepadFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 				}
 				catch (const FileException& e)
 				{
-					LogManager::message("Error write " + Util::getNotepadFile() + " Error = " + e.getError());
+					LogManager::message("Error writing " + Util::getNotepadFile() + ": " + e.getError());
 				}
 			}
+			else
+				File::deleteFile(Util::getNotepadFile());
 		}
 		
 		setButtonPressed(IDC_NOTEPAD, false);

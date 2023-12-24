@@ -30,9 +30,8 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 {
 	public:
 		static CFrameWndClassInfo& GetWndClassInfo();
-		
-		NotepadFrame() : m_dirty(false),
-			ctrlClientContainer(_T("edit"), this, NOTEPAD_MESSAGE_MAP)
+
+		NotepadFrame() : ctrlClientContainer(_T("edit"), this, NOTEPAD_MESSAGE_MAP)
 		{
 		}
 
@@ -75,12 +74,9 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 	private:
-	
-		bool m_dirty;
-		
 		CEdit ctrlPad;
 		CContainedWindow ctrlClientContainer;
-		
+
 		void on(SettingsManagerListener::Repaint) override;
 };
 
