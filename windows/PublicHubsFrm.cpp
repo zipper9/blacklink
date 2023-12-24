@@ -918,6 +918,7 @@ bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCom
 		case COLUMN_ENCODING:
 			entryString = &entry.getEncoding();
 			doSizeCompare = false;
+			break;
 		case COLUMN_SECURE:
 			if (!entry.getSecureUrl().empty()) tmp = STRING(YES);
 			entryString = &tmp;
