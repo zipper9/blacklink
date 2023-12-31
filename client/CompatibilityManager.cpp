@@ -521,11 +521,11 @@ static void getDisks(std::vector<DiskInfo>& results)
 
 	// and a check for mounted Network drives, todo fix a better way for network space
 	DWORD drives = GetLogicalDrives();
-	TCHAR drive[3] = { _T('C'), _T(':'), _T('\0') };
+	TCHAR drive[3] = { _T('A'), _T(':'), _T('\0') };
 
 	while (drives)
 	{
-		if (drives & 1)
+		if ((drives & 1) && drive[0] >= _T('C'))
 		{
 			ULARGE_INTEGER size, free;
 			UINT type = GetDriveType(drive);
