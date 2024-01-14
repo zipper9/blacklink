@@ -1,9 +1,8 @@
 #ifndef USER_INFO_BASE_HANDLER_H
 #define USER_INFO_BASE_HANDLER_H
 
-#include "OMenu.h"
-#include "resource.h"
-#include "ImageLists.h"
+#include "UserInfoSimple.h"
+#include "WinUtil.h"
 #include "../client/CID.h"
 #include "../client/LogManager.h"
 #include "../client/forward.h"
@@ -11,7 +10,35 @@
 class UserInfo;
 class UserInfoBase;
 class Identity;
-struct FavUserTraits;
+
+struct FavUserTraits
+{
+	FavUserTraits() :
+		isEmpty(true),
+		isFav(false),
+		isAutoGrantSlot(false),
+		uploadLimit(0),
+		isIgnoredPm(false), isFreePm(false),
+		isIgnoredByName(false),
+		isIgnoredByWildcard(false),
+		isOnline(true),
+		isHubConnected(false)
+	{
+	}
+	void init(const UserInfoSimple& ui);
+	
+	int uploadLimit;
+	
+	bool isAutoGrantSlot;
+	bool isFav;
+	bool isEmpty;
+	bool isIgnoredPm;
+	bool isFreePm;
+	bool isIgnoredByName;
+	bool isIgnoredByWildcard;
+	bool isOnline;
+	bool isHubConnected;
+};
 
 struct UserInfoGuiTraits
 {
@@ -105,7 +132,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		5) Before you destroy the menu in your class you will definitely need to call WinUtil::unlinkStaticMenus(yourMenu)
 		*/
 	public:
-		UserInfoBaseHandler() : selectedHint(UserInfoGuiTraits::g_hubHint), selectedUser(UserInfoBaseHandlerTraitsUser::g_user)
+		UserInfoBaseHandler() : selectedHint(UserInfoGuiTraits::g_hubHint), selectedUser(UserInfoBaseHandlerTraitsUser<T2>::g_user)
 #ifdef _DEBUG
 			, _debugIsClean(true)
 #endif
@@ -657,35 +684,6 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 	private:
 		dcdrun(bool _debugIsClean;)
-};
-
-struct FavUserTraits
-{
-	FavUserTraits() :
-		isEmpty(true),
-		isFav(false),
-		isAutoGrantSlot(false),
-		uploadLimit(0),
-		isIgnoredPm(false), isFreePm(false),
-		isIgnoredByName(false),
-		isIgnoredByWildcard(false),
-		isOnline(true),
-		isHubConnected(false)
-	{
-	}
-	void init(const UserInfoSimple& ui);
-	
-	int uploadLimit;
-	
-	bool isAutoGrantSlot;
-	bool isFav;
-	bool isEmpty;
-	bool isIgnoredPm;
-	bool isFreePm;
-	bool isIgnoredByName;
-	bool isIgnoredByWildcard;
-	bool isOnline;
-	bool isHubConnected;
 };
 
 #endif /* USER_INFO_BASE_HANDLER_H */

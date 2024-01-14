@@ -277,7 +277,7 @@ string Players::getMPCSpam()
 				ULONG cFetched = 0;
 				for (CComPtr<IBaseFilter> pBF; SUCCEEDED(pEF->Next(1, &pBF, &cFetched)); pBF = NULL)
 				{
-					if (CComQIPtr<IFileSourceFilter> pFSF = pBF)
+					if (CComQIPtr<IFileSourceFilter> pFSF = (CComQIPtr<IFileSourceFilter>) pBF)
 					{
 						LPOLESTR pFileName = NULL;
 						AM_MEDIA_TYPE mt;
@@ -350,7 +350,7 @@ string Players::getMPCSpam()
 			}
 			
 			// position routine
-			CComQIPtr<IMediaSeeking> pMS = pFG;
+			CComQIPtr<IMediaSeeking> pMS = (CComQIPtr<IMediaSeeking>) pFG;
 			REFERENCE_TIME pos = 0, dur = 0;
 			if (SUCCEEDED(pMS->GetCurrentPosition(&pos)) && SUCCEEDED(pMS->GetDuration(&dur)))
 			{

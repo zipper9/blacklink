@@ -303,20 +303,20 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 				UINT nMenuID = 0,
 				LPVOID lpCreateParam = NULL)
 	{
-		ATOM atom = T::GetWndClassInfo().Register(&m_pfnSuperWindowProc);
+		ATOM atom = T::GetWndClassInfo().Register(&this->m_pfnSuperWindowProc);
 
 		if (nMenuID != 0)
-			m_hMenu = ::LoadMenu(ATL::_AtlBaseModule.GetResourceInstance(), MAKEINTRESOURCE(nMenuID));
+			this->m_hMenu = ::LoadMenu(ATL::_AtlBaseModule.GetResourceInstance(), MAKEINTRESOURCE(nMenuID));
 
-		if (m_hMenu == NULL) m_hMenu = MenuHelper::mainMenu;
+		if (this->m_hMenu == NULL) this->m_hMenu = MenuHelper::mainMenu;
 
 		dwStyle = T::GetWndStyle(dwStyle);
 		dwExStyle = T::GetWndExStyle(dwExStyle);
 
 		dwExStyle |= WS_EX_MDICHILD; // force this one
-		m_pfnSuperWindowProc = ::DefMDIChildProc;
-		m_hWndMDIClient = hWndParent;
-		ATLASSERT(::IsWindow(m_hWndMDIClient));
+		this->m_pfnSuperWindowProc = ::DefMDIChildProc;
+		this->m_hWndMDIClient = hWndParent;
+		ATLASSERT(::IsWindow(this->m_hWndMDIClient));
 
 		if (rect.m_lpRect == NULL) rect.m_lpRect = &TBase::rcDefault;
 
@@ -324,7 +324,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		ATL::CWindow wndParent = hWndParent;
 		BOOL bMaximized = FALSE;
 
-		if (MDIGetActive(&bMaximized) == NULL) bMaximized = SETTING(MDI_MAXIMIZED);
+		if (this->MDIGetActive(&bMaximized) == NULL) bMaximized = SETTING(MDI_MAXIMIZED);
 
 		if (bMaximized) wndParent.SetRedraw(FALSE);
 
@@ -334,12 +334,12 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		if (bMaximized)
 		{
 			// Maximize and redraw everything
-			if (hWnd != NULL) MDIMaximize(hWnd);
+			if (hWnd) this->MDIMaximize(hWnd);
 			wndParent.SetRedraw(TRUE);
 			wndParent.RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN);
-			::SetFocus(GetMDIFrame()); // focus will be set back to this window
+			::SetFocus(this->GetMDIFrame()); // focus will be set back to this window
 		}
-		else if (hWnd != NULL && ::IsWindowVisible(m_hWnd) && !::IsChild(hWnd, ::GetFocus()))
+		else if (hWnd && ::IsWindowVisible(this->m_hWnd) && !::IsChild(hWnd, ::GetFocus()))
 		{
 			::SetFocus(hWnd);
 		}
@@ -381,7 +381,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
 		if (cs->lpszName) currentTitle = cs->lpszName;
 		dcassert(getTab());
-		getTab()->addTab(m_hWnd);
+		getTab()->addTab(this->m_hWnd);
 		created = true;
 		return 0;
 	}
@@ -390,11 +390,11 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	{
 		dcassert(getTab());
 		//dcdebug("onMDIActivate: wParam = 0x%X, lParam = 0x%X\n", wParam, lParam);
-		if (m_hWnd == (HWND) wParam)
+		if (this->m_hWnd == (HWND) wParam)
 			onDeactivate();
-		if (m_hWnd == (HWND) lParam)
+		if (this->m_hWnd == (HWND) lParam)
 		{
-			getTab()->setActive(m_hWnd);
+			getTab()->setActive(this->m_hWnd);
 			onActivate();
 		}
 		bHandled = FALSE;
@@ -407,7 +407,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		//dcdebug("onWindowPosChanging: hWnd = 0x%X, zoomed = %d, flags = 0x%X\n", m_hWnd, IsZoomed(), wp->flags);
 		if (!(wp->flags & SWP_HIDEWINDOW))
 		{
-			BOOL maximized = IsZoomed();
+			BOOL maximized = this->IsZoomed();
 			BOOL visible = getTab()->IsWindowVisible();
 			if (visible ^ maximized)
 			{
@@ -423,21 +423,21 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	{
 		bHandled = FALSE;
 		dcassert(getTab());
-		getTab()->removeTab(m_hWnd);
-		if (m_hMenu == MenuHelper::mainMenu) m_hMenu = NULL;
+		getTab()->removeTab(this->m_hWnd);
+		if (this->m_hMenu == MenuHelper::mainMenu) this->m_hMenu = NULL;
 		return 0;
 	}
 
 	LRESULT onReallyClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/)
 	{
-		MDIDestroy(m_hWnd);
+		this->MDIDestroy(this->m_hWnd);
 		return 0;
 	}
 
 	LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled */)
 	{
 		closing = true;
-		PostMessage(WM_REALLY_CLOSE);
+		this->PostMessage(WM_REALLY_CLOSE);
 		return 0;
 	}
 
@@ -446,7 +446,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		bHandled = FALSE;
 		dcassert(getTab());
 		if (created)
-			getTab()->updateText(m_hWnd, reinterpret_cast<LPCTSTR>(lParam));
+			getTab()->updateText(this->m_hWnd, reinterpret_cast<LPCTSTR>(lParam));
 		return 0;
 	}
 
@@ -473,44 +473,44 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	void setDirty()
 	{
 		dcassert(getTab());
-		getTab()->setDirty(m_hWnd);
+		getTab()->setDirty(this->m_hWnd);
 	}
 
 	void setCountMessages(int messageCount)
 	{
 		dcassert(getTab());
-		getTab()->setCountMessages(m_hWnd, messageCount);
+		getTab()->setCountMessages(this->m_hWnd, messageCount);
 	}
 
 	bool getActive()
 	{
 		dcassert(getTab());
-		return getTab()->getActive(m_hWnd);
+		return getTab()->getActive(this->m_hWnd);
 	}
 
 	void setDisconnected(bool dis = false)
 	{
 		dcassert(getTab());
-		getTab()->setDisconnected(m_hWnd, dis);
+		getTab()->setDisconnected(this->m_hWnd, dis);
 	}
 
 	void setIcon(HICON icon, bool disconnected = false)
 	{
 		dcassert(getTab());
-		getTab()->setIcon(m_hWnd, icon, disconnected);
+		getTab()->setIcon(this->m_hWnd, icon, disconnected);
 	}
 
 	void setTooltipText(const tstring& text)
 	{
 		dcassert(getTab());
-		getTab()->setTooltipText(m_hWnd, text);
+		getTab()->setTooltipText(this->m_hWnd, text);
 	}
 
 	void setWindowTitle(const tstring& text)
 	{
 		if (currentTitle == text) return;
 		currentTitle = text;
-		SetWindowText(currentTitle.c_str());
+		this->SetWindowText(currentTitle.c_str());
 		::SendMessage(WinUtil::g_mdiClient, WM_MDIREFRESHMENU, 0, 0);
 	}
 

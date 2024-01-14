@@ -295,6 +295,12 @@ int HashManager::Hasher::fastHash(const string& fileName, int64_t fileSize, uint
 	int64_t savedFileSize = fileSize;
 	OVERLAPPED over = { 0 };
 
+	DWORD hsize = 0;
+	DWORD rsize = 0;
+	uint8_t* hbuf = buf + FAST_HASH_BUF_SIZE;
+	uint8_t* rbuf = buf;
+	uint64_t lastRead;
+
 	if (!fileSize)
 	{
 		result = RESULT_OK;
@@ -302,14 +308,9 @@ int HashManager::Hasher::fastHash(const string& fileName, int64_t fileSize, uint
 		goto cleanup;
 	}
 
-	DWORD hsize = 0;
-	DWORD rsize = 0;
-	uint8_t* hbuf = buf + FAST_HASH_BUF_SIZE;
-	uint8_t* rbuf = buf;
-	
 	over.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	
-	uint64_t lastRead = GET_TICK();
+	lastRead = GET_TICK();
 	if (!::ReadFile(h, hbuf, FAST_HASH_BUF_SIZE, &hsize, &over))
 	{
 		int error = GetLastError();

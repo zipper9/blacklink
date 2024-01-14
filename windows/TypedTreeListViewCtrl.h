@@ -3,6 +3,7 @@
 
 #include "TypedListViewCtrl.h"
 #include "LockRedraw.h"
+#include "ResourceLoader.h"
 #include "../client/BusyCounter.h"
 
 #ifdef _MSC_VER
@@ -54,7 +55,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			ResourceLoader::LoadImageList(IDR_STATE, states, 16, 16);
-			SetImageList(states, LVSIL_STATE);
+			this->SetImageList(states, LVSIL_STATE);
 			bHandled = FALSE;
 			return 0;
 		}
@@ -68,14 +69,14 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			LVHITTESTINFO lvhti;
 			lvhti.pt = pt;
 
-			int pos = SubItemHitTest(&lvhti);
+			int pos = this->SubItemHitTest(&lvhti);
 			if (pos != -1)
 			{
 				CRect rect;
-				GetItemRect(pos, rect, LVIR_ICON);
+				this->GetItemRect(pos, rect, LVIR_ICON);
 				if (pt.x < rect.left)
 				{
-					T* i = getItemData(pos);
+					T* i = this->getItemData(pos);
 					if (i->groupInfo && i->groupInfo->parent == i)
 					{
 						if (i->getStateFlags() & STATE_FLAG_EXPANDED)
@@ -106,10 +107,10 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 				}
 			if (!mode)
 				return 0;
-			int pos = GetNextItem(-1, LVNI_FOCUSED);
+			int pos = this->GetNextItem(-1, LVNI_FOCUSED);
 			if (pos < 0)
 				return 0;
-			auto ii = getItemData(pos);
+			auto ii = this->getItemData(pos);
 			if (!ii || !ii->groupInfo || ii->groupInfo->parent != ii)
 				return 0;
 			if (mode == 1)
@@ -128,24 +129,24 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 
 		void Collapse(T* parent, int itemPos)
 		{
-			SetRedraw(FALSE);
+			this->SetRedraw(FALSE);
 			if (parent->groupInfo)
 			{
 				const vector<T*>& children = parent->groupInfo->children;
 				for (T* item : children)
 				{
-					if (deleteItem(item) != -1)
+					if (this->deleteItem(item) != -1)
 						item->setStateFlags(item->getStateFlags() & ~STATE_FLAG_VISIBLE);
 				}
 			}
 			parent->setStateFlags(parent->getStateFlags() & ~STATE_FLAG_EXPANDED);
-			SetItemState(itemPos, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
-			SetRedraw(TRUE);
+			this->SetItemState(itemPos, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
+			this->SetRedraw(TRUE);
 		}
 
 		void Expand(T* parent, int itemPos)
 		{
-			SetRedraw(FALSE);
+			this->SetRedraw(FALSE);
 			if (parent->groupInfo && !parent->groupInfo->children.empty())
 			{
 				parent->setStateFlags(parent->getStateFlags() | STATE_FLAG_EXPANDED);
@@ -156,10 +157,10 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 						insertChild(itemPos + 1, item);
 						item->setStateFlags(item->getStateFlags() | STATE_FLAG_VISIBLE);
 					}
-				SetItemState(itemPos, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
-				resort();
+				this->SetItemState(itemPos, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
+				this->resort();
 			}
-			SetRedraw(TRUE);
+			this->SetRedraw(TRUE);
 		}
 
 		void changeGroupCondNonVisual(T* item, const KValue& newGroupCond)
@@ -205,7 +206,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 				{
 					parent = gi->children.front();
 					gi->children.erase(gi->children.begin());
-					deleteItem(parent);
+					this->deleteItem(parent);
 				}
 				parent->hits = gi->children.size();
 				gi->parent = parent;
@@ -223,8 +224,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 						}
 						else
 							updateChild(child);
-					SetItemState(parentPos, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
-					if (resortFlag) resort();
+					this->SetItemState(parentPos, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
+					if (resortFlag) this->resort();
 				}
 				else
 				{
@@ -232,10 +233,10 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					for (T* child : gi->children)
 						if (child->getStateFlags() & STATE_FLAG_VISIBLE)
 						{
-							deleteItem(child);
+							this->deleteItem(child);
 							child->setStateFlags(child->getStateFlags() & ~STATE_FLAG_VISIBLE);
 						}
-					SetItemState(parentPos, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
+					this->SetItemState(parentPos, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
 				}
 				return parentPos;
 			}
@@ -276,23 +277,23 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					for (T* child : children)
 						if (child->getStateFlags() & STATE_FLAG_VISIBLE)
 						{
-							deleteItem(child);
-							if (ownsItemData) delete child;
+							this->deleteItem(child);
+							if (this->ownsItemData) delete child;
 						}
-					deleteItem(item);
+					this->deleteItem(item);
 					groups.erase(item->getGroupCond());
 				}
 				else
 				{
-					if (item->getStateFlags() & STATE_FLAG_VISIBLE) deleteItem(item);
+					if (item->getStateFlags() & STATE_FLAG_VISIBLE) this->deleteItem(item);
 					auto it = std::find(children.begin(), children.end(), item);
 					if (it != children.end())
 					{
 						children.erase(it);
 						if (uniqueParent && children.size() <= 1)
 						{
-							deleteItem(gi->parent);
-							if (ownsItemData) delete gi->parent;
+							this->deleteItem(gi->parent);
+							if (this->ownsItemData) delete gi->parent;
 							gi->parent = nullptr;
 							if (!children.empty())
 							{
@@ -312,18 +313,18 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 							T* parent = gi->parent;
 							if (parent)
 							{
-								int pos = findItem(parent);
+								int pos = this->findItem(parent);
 								dcassert(pos != -1);
 								if (children.empty())
 								{
 									children.push_back(parent);
 									parent->hits = -1;
 									gi->parent = nullptr;
-									SetItemState(pos, INDEXTOSTATEIMAGEMASK(0), LVIS_STATEIMAGEMASK);
+									this->SetItemState(pos, INDEXTOSTATEIMAGEMASK(0), LVIS_STATEIMAGEMASK);
 								}
 								else
 									parent->hits = children.size();
-								updateItem(pos);
+								this->updateItem(pos);
 							}
 						}
 						if (children.empty()) groups.erase(item->getGroupCond());
@@ -331,24 +332,24 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 				}
 			}
 			else if (item->getStateFlags() & STATE_FLAG_VISIBLE)
-				deleteItem(item);
+				this->deleteItem(item);
 
-			if (removeFromMemory && ownsItemData)
+			if (removeFromMemory && this->ownsItemData)
 				delete item;
 			else
 				item->groupInfo.reset();
 			if (resortFlag)
-				resort();
+				this->resort();
 		}
 
 		void deleteAllNoLock()
 		{
-			if (ownsItemData)
+			if (this->ownsItemData)
 			{
-				int count = GetItemCount();
+				int count = this->GetItemCount();
 				for (int i = 0; i < count; i++)
 				{
-					T* item = getItemData(i);
+					T* item = this->getItemData(i);
 					if (!item->groupInfo) delete item;
 				}
 				for (auto i = groups.cbegin(); i != groups.cend(); ++i)
@@ -358,22 +359,22 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					delete i->second->parent;
 				}
 			}
-			DeleteAllItems();
+			this->DeleteAllItems();
 			groups.clear();
 		}
 
 		void deleteAll()
 		{
-			dcassert(!destroyingItems);
-			BusyCounter<bool> busy(destroyingItems);
-			CLockRedraw<> lockRedraw(m_hWnd);
+			dcassert(!this->destroyingItems);
+			BusyCounter<bool> busy(this->destroyingItems);
+			CLockRedraw<> lockRedraw(this->m_hWnd);
 			deleteAllNoLock();
 		}
 
 		int getSortPos(const T* a)
 		{
-			int high = GetItemCount();
-			int sortColumn = getRealSortColumn();
+			int high = this->GetItemCount();
+			int sortColumn = this->getRealSortColumn();
 			if (sortColumn == -1 || high == 0)
 				return high;
 
@@ -386,13 +387,13 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			while (low <= high)
 			{
 				mid = (low + high) / 2;
-				b = getItemData(mid);
+				b = this->getItemData(mid);
 				comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
 
 				if (comp == 0)
 					return mid;
 
-				if (!isAscending() && abs(comp) != 2)
+				if (!this->isAscending() && abs(comp) != 2)
 					comp = -comp;
 
 				if (comp < 0)
@@ -402,7 +403,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			}
 
 			comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
-			if (!isAscending() && abs(comp) != 2)
+			if (!this->isAscending() && abs(comp) != 2)
 				comp = -comp;
 			if (comp > 0)
 				mid++;
@@ -414,7 +415,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 	protected:
 		void sortItems() override
 		{
-			SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
+			this->SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
 		}
 
 	private:
@@ -490,8 +491,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 		{
 			if (!(item->getStateFlags() & STATE_FLAG_USE_IMAGE_CALLBACK))
 			{
-				int pos = findItem(item);
-				if (pos != -1) updateImage(pos, 0);
+				int pos = this->findItem(item);
+				if (pos != -1) this->updateImage(pos, 0);
 			}
 		}
 };

@@ -42,7 +42,7 @@ class ATL_NO_VTABLE CGDIImageOle :
 #ifndef _WIN32_WCE
 	public IDataObjectImpl<CGDIImageOle>,
 #endif
-	public IProvideClassInfo2Impl<&CLSID_GDIImage, NULL, &LIBID_GdiOleLib>,
+	public IProvideClassInfo2Impl<&CLSID_GDIImage, nullptr, &LIBID_GdiOleLib>,
 #ifdef _WIN32_WCE // IObjectSafety is required on Windows CE for the control to be loaded correctly
 	public IObjectSafetyImpl<CGDIImageOle, INTERFACESAFE_FOR_UNTRUSTED_CALLER>,
 #endif

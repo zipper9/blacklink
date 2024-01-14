@@ -24,6 +24,7 @@
 #include "../client/SettingsManager.h"
 #include "ListViewArrows.h"
 #include "Colors.h"
+#include "LockRedraw.h"
 #include "resource.h"
 
 class ColumnInfo
@@ -80,15 +81,15 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		{
 			dcassert(!destroyingItems);
 			bool refresh = false;
-			if (GetBkColor() != Colors::g_bgColor)
+			if (this->GetBkColor() != Colors::g_bgColor)
 			{
-				SetBkColor(Colors::g_bgColor);
-				SetTextBkColor(Colors::g_bgColor);
+				this->SetBkColor(Colors::g_bgColor);
+				this->SetTextBkColor(Colors::g_bgColor);
 				refresh = true;
 			}
-			if (GetTextColor() != Colors::g_textColor)
+			if (this->GetTextColor() != Colors::g_textColor)
 			{
-				SetTextColor(Colors::g_textColor);
+				this->SetTextColor(Colors::g_textColor);
 				refresh = true;
 			}
 			return refresh;
@@ -99,9 +100,9 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1698
 			if ((GetKeyState(VkKeyScan('A') & 0xFF) & 0xFF00) > 0 && (GetKeyState(VK_CONTROL) & 0xFF00) > 0)
 			{
-				const int cnt = GetItemCount();
+				const int cnt = this->GetItemCount();
 				for (int i = 0; i < cnt; ++i)
-					SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+					this->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
 
 				return 0;
 			}
@@ -172,7 +173,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			{
 				sortColumn = -1;
 			}
-			updateArrow();
+			this->updateArrow();
 			resort();
 			return 0;
 		}
@@ -191,8 +192,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 		int insertItemState(int i, const T* item, int image, int state)
 		{
-			return InsertItem(LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE | LVIF_STATE, i,
-			                  LPSTR_TEXTCALLBACK, state, LVIS_STATEIMAGEMASK, image, (LPARAM)item); // TODO I_IMAGECALLBACK
+			return this->InsertItem(LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE | LVIF_STATE, i,
+				LPSTR_TEXTCALLBACK, state, LVIS_STATEIMAGEMASK, image, (LPARAM)item); // TODO I_IMAGECALLBACK
 		}
 
 		int insertItem(const T* item, int image)
@@ -202,19 +203,19 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 		int insertItem(int i, const T* item, int image)
 		{
-			return InsertItem(LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE, i,
-			                  LPSTR_TEXTCALLBACK, 0, 0, image, (LPARAM)item); // TODO I_IMAGECALLBACK
+			return this->InsertItem(LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE, i,
+				LPSTR_TEXTCALLBACK, 0, 0, image, (LPARAM)item); // TODO I_IMAGECALLBACK
 		}
 		
-		T* getItemData(const int iItem) const
+		T* getItemData(int i) const
 		{
-			return (T*)GetItemData(iItem);
+			return reinterpret_cast<T*>(this->GetItemData(i));
 		}
 
 	public:
 		int getSelectedCount() const
 		{
-			return GetSelectedCount();
+			return this->GetSelectedCount();
 		}
 
 		int findItem(const T* item) const
@@ -222,7 +223,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			LVFINDINFO fi = { 0 };
 			fi.flags  = LVFI_PARAM;
 			fi.lParam = (LPARAM)item;
-			return FindItem(&fi, -1);
+			return this->FindItem(&fi, -1);
 		}
 
 		struct CompFirst
@@ -239,14 +240,14 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			LVFINDINFO fi = { 0 };
 			fi.flags  = aPartial ? LVFI_PARTIAL : LVFI_STRING;
 			fi.psz = b.c_str();
-			return FindItem(&fi, start);
+			return this->FindItem(&fi, start);
 		}
 
 		void forEachSelected(void (T::*func)())
 		{
-			CLockRedraw<> lockRedraw(m_hWnd);
+			CLockRedraw<> lockRedraw(this->m_hWnd);
 			int i = -1;
-			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
+			while ((i = this->GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				T* itemData = getItemData(i);
 				if (itemData)
@@ -257,7 +258,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		template<class _Function>
 		_Function forEachT(_Function pred)
 		{
-			int cnt = GetItemCount();
+			int cnt = this->GetItemCount();
 			for (int i = 0; i < cnt; ++i)
 			{
 				T* itemData = getItemData(i);
@@ -271,7 +272,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		_Function forEachSelectedT(_Function pred)
 		{
 			int i = -1;
-			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
+			while ((i = this->GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				T* itemData = getItemData(i);
 				if (itemData)
@@ -284,7 +285,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		_Function forFirstSelectedT(_Function pred)
 		{
 			int i = -1;
-			if ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
+			if ((i = this->GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				T* itemData = getItemData(i);
 				if (itemData)
@@ -296,17 +297,17 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 		void updateItem(int i)
 		{
-			const int cnt = GetHeader().GetItemCount();
+			const int cnt = this->GetHeader().GetItemCount();
 			for (int j = 0; j < cnt; ++j)
 				if (!columns.columnList[j].isOwnerDraw)
-					SetItemText(i, j, LPSTR_TEXTCALLBACK);
+					this->SetItemText(i, j, LPSTR_TEXTCALLBACK);
 		}
 		
 		void updateItem(int i, int column)
 		{
 			int index = columns.columnToSubItem[column];
 			if (index >= 0)
-				SetItemText(i, index, LPSTR_TEXTCALLBACK);
+				this->SetItemText(i, index, LPSTR_TEXTCALLBACK);
 		}
 		
 		int updateItem(const T* item)
@@ -329,18 +330,15 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			lvItem.iItem = i;
 			lvItem.iSubItem = subItem;
 			lvItem.mask = LVIF_PARAM | LVIF_IMAGE;
-			GetItem(&lvItem);
+			this->GetItem(&lvItem);
 			lvItem.iImage = ((T*)lvItem.lParam)->getImageIndex();
-			SetItem(&lvItem);
+			this->SetItem(&lvItem);
 		}
 
 		int deleteItem(const T* item)
 		{
 			int i = findItem(item);
-			if (i != -1)
-			{
-				DeleteItem(i);
-			}
+			if (i != -1) this->DeleteItem(i);
 			return i;
 		}
 		
@@ -349,25 +347,25 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			dcassert(!destroyingItems);
 			if (ownsItemData)
 			{
-				const int count = GetItemCount();
+				const int count = this->GetItemCount();
 				for (int i = 0; i < count; ++i)
 				{
 					T* si = getItemData(i);
 					delete si;
 				}
 			}
-			DeleteAllItems();
+			this->DeleteAllItems();
 		}
 		
 		void deleteAll()
 		{
-			CLockRedraw<> lockRedraw(m_hWnd);
+			CLockRedraw<> lockRedraw(this->m_hWnd);
 			deleteAllNoLock();
 		}
 		
 		int getSortPos(const T* a) const
 		{
-			int high = GetItemCount();
+			int high = this->GetItemCount();
 			if (sortColumn == -1 || high == 0)
 				return high;
 
@@ -425,7 +423,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		void setAscending(bool s)
 		{
 			sortAscending = s;
-			updateArrow();
+			this->updateArrow();
 		}
 
 		int getSortForSettings() const
@@ -446,7 +444,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 				sortAscending = column > 0;
 				sortColumn = abs(column) - 1;
 			}
-			updateArrow();
+			this->updateArrow();
 		}
 		
 		void setColumns(int count, const int* ids, const ResourceManager::Strings* names, const int* widths)
@@ -499,7 +497,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 		void showMenu(const POINT &pt)
 		{
-			columns.showMenu(pt, m_hWnd);
+			columns.showMenu(pt, this->m_hWnd);
 		}
 		
 		LRESULT onEraseBkgnd(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
@@ -525,7 +523,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			}
 			
 			CRect rc;
-			GetHeader().GetWindowRect(&rc);
+			this->GetHeader().GetWindowRect(&rc);
 			
 			if (PtInRect(&rc, pt))
 			{
@@ -550,7 +548,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 				}
 			}
 			//updateAllImages(true);
-			UpdateWindow();
+			this->UpdateWindow();
 			return 0;
 		}
 		
@@ -575,7 +573,9 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		
 		T* getSelectedItem() const
 		{
-			return GetSelectedCount() > 0 ? getItemData(GetNextItem(-1, LVNI_SELECTED)) : nullptr;
+			return this->GetSelectedCount() > 0 ?
+				getItemData(this->GetNextItem(-1, LVNI_SELECTED)) :
+				nullptr;
 		}
 
 		bool enableHeaderMenu = true;
@@ -586,7 +586,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 		virtual void sortItems()
 		{
-			SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
+			this->SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
 		}
 
 	private:
@@ -605,7 +605,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 #if 0
 		void updateAllImages(bool updateItems = false)
 		{
-			const int cnt = GetItemCount();
+			const int cnt = this->GetItemCount();
 			for (int i = 0; i < cnt; ++i)
 			{
 				LVITEM lvItem = {0};

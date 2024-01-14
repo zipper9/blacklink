@@ -2124,8 +2124,8 @@ void MainFrame::storeWindowsPos()
 		// СОХРАНИМ координаты, только если окно в нормальном состоянии!!! Иначе - пусть будут последние
 		if ((wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL) && GetWindowRect(rc))
 		{
-			SET_SETTING(MAIN_WINDOW_POS_X, rc.left);
-			SET_SETTING(MAIN_WINDOW_POS_Y, rc.top);
+			SET_SETTING(MAIN_WINDOW_POS_X, (int) rc.left);
+			SET_SETTING(MAIN_WINDOW_POS_Y, (int) rc.top);
 			SET_SETTING(MAIN_WINDOW_SIZE_X, rc.Width());
 			SET_SETTING(MAIN_WINDOW_SIZE_Y, rc.Height());
 		}

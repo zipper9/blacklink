@@ -3,6 +3,7 @@
 
 #include "Path.h"
 #include "Text.h"
+#include <algorithm>
 
 namespace Util
 {

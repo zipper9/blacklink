@@ -255,17 +255,17 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-			ctrlStatus.Attach(m_hWndStatusBar);
+			this->CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
+			ctrlStatus.Attach(this->m_hWndStatusBar);
 
-			FinishedFrameBase::onCreate(m_hWnd, id);
+			FinishedFrameBase::onCreate(this->m_hWnd, id);
 			treeContainer.SubclassWindow(ctrlTree);
 			
 			UpdateLayout();
 
-			SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
-			SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
-			m_nProportionalPos = 2000; //SETTING(FLYSERVER_HUBLIST_SPLIT);
+			this->SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
+			this->SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
+			this->m_nProportionalPos = 2000; //SETTING(FLYSERVER_HUBLIST_SPLIT);
 
 			SettingsManager::getInstance()->addListener(this);
 			FinishedManager::getInstance()->addListener(this);
@@ -276,9 +276,9 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			if (!closed)
+			if (!this->closed)
 			{
-				closed = true;
+				this->closed = true;
 				FinishedManager::getInstance()->removeListener(this);
 				SettingsManager::getInstance()->removeListener(this);
 				if (loading)
@@ -287,8 +287,8 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 					loader.join();
 				}
 
-				setButtonPressed(id, false);
-				PostMessage(WM_CLOSE);
+				this->setButtonPressed(id, false);
+				this->PostMessage(WM_CLOSE);
 				return 0;
 			}
 			else
@@ -304,7 +304,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			PostMessage(WM_CLOSE);
+			this->PostMessage(WM_CLOSE);
 			return 0;
 		}
 
@@ -312,7 +312,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		{
 			bool updated = FinishedFrameBase::onSpeaker(wParam, lParam);
 			if (updated && SettingsManager::get(boldFinished))
-				setDirty();
+				this->setDirty();
 			return 0;
 		}
 
@@ -324,13 +324,13 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			if (!itemData) return 0;
 			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(itemData);
 			if (data->type == HistoryDate)
-				SendMessage(WM_COMMAND, IDC_REMOVE_ALL);
+				this->SendMessage(WM_COMMAND, IDC_REMOVE_ALL);
 			return 0;
 		}
 
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
-			return FinishedFrameBase::onContextMenu(m_hWnd, wParam, lParam, bHandled);
+			return FinishedFrameBase::onContextMenu(this->m_hWnd, wParam, lParam, bHandled);
 		}
 		
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
@@ -345,17 +345,17 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		{
 			NMLVKEYDOWN* kd = reinterpret_cast<NMLVKEYDOWN*>(pnmh);
 			if (kd->wVKey == VK_DELETE)
-				PostMessage(WM_COMMAND, IDC_REMOVE);
+				this->PostMessage(WM_COMMAND, IDC_REMOVE);
 			return 0;
 		}
 		
 		void UpdateLayout(BOOL bResizeBars = TRUE)
 		{
 			RECT rect;
-			GetClientRect(&rect);
+			this->GetClientRect(&rect);
 			
 			// position bars and offset their dimensions
-			UpdateBarsPosition(rect, bResizeBars);
+			this->UpdateBarsPosition(rect, bResizeBars);
 
 			if (ctrlStatus.IsWindow())
 			{
@@ -370,13 +370,13 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				ctrlStatus.SetParts(5, w);
 			}
 
-			SetSplitterRect(&rect);
+			this->SetSplitterRect(&rect);
 		}
 		
 	protected:
 		void on(UpdateStatus) noexcept override
 		{
-			SendMessage(WM_SPEAKER, SPEAK_UPDATE_STATUS, 0);
+			this->SendMessage(WM_SPEAKER, SPEAK_UPDATE_STATUS, 0);
 		}
 
 		void on(SettingsManagerListener::Repaint) override
@@ -384,13 +384,13 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			if (ctrlList.isRedraw())
 			{
 				setTreeViewColors(ctrlTree);
-				RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+				this->RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 			}
 		}
 
 		void on(FinishedManagerListener::DroppedItems, int64_t maxTempId) noexcept override
 		{
-			WinUtil::postSpeakerMsg(m_hWnd, SPEAK_REMOVE_DROPPED_ITEMS, new int64_t(maxTempId));
+			WinUtil::postSpeakerMsg(this->m_hWnd, SPEAK_REMOVE_DROPPED_ITEMS, new int64_t(maxTempId));
 		}
 };
 
