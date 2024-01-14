@@ -161,6 +161,7 @@ void WinUtil::init(HWND hWnd)
 	g_editorImage.init();
 	g_transfersImage.init();
 	g_transferArrowsImage.init();
+	g_navigationImage.init();
 
 	Colors::init();
 	Fonts::init();
@@ -173,7 +174,7 @@ void WinUtil::init(HWND hWnd)
 
 	if (BOOLSETTING(REGISTER_DCLST_HANDLER))
 		registerDclstHandler();
-	
+
 	g_hook = SetWindowsHookEx(WH_KEYBOARD, &KeyboardProc, NULL, GetCurrentThreadId());
 }
 
@@ -196,6 +197,7 @@ void WinUtil::uninit()
 	g_favUserImage.uninit();
 	g_editorImage.uninit();
 	g_TransferTreeImage.uninit();
+	g_navigationImage.uninit();
 
 	Fonts::uninit();
 	Colors::uninit();

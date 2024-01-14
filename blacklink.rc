@@ -2576,6 +2576,7 @@ IDR_FAV_USERS_STATES    PNG                     "res\\FavUserStates.png"
 
 IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
 
+IDR_NAVIGATION          PNG                     "res\\Navigation.png"
 
 /////////////////////////////////////////////////////////////////////////////
 //

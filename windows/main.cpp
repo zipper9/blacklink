@@ -23,6 +23,7 @@
 #include "ToolbarManager.h"
 #include "ThemeManager.h"
 #include "WinFirewall.h"
+#include "BackingStore.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
@@ -372,7 +373,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	                      
 	hRes = _Module.Init(NULL, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
-	
+
+	BackingStore::globalInit();
+
 	HINSTANCE hRichEditNew;
 	hRichEditNew = ::LoadLibrary(_T("MSFTEDIT.DLL"));
 /*

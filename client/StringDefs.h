@@ -690,7 +690,7 @@ enum Strings   // @DontAdd
 	NEW, // "&New..."
 	NEW_DISCONNECT, // "Remove user from queue if speed is below"
 	NEXT, // "Next"
-	PREV, // "Prev"
+	PREV, // "Previous"
 	NICK, // "Nick"
 	NICK_ERROR_TAKEN, // "Nick %1% is taken by another user, please change it to something else."
 	NICK_ERROR_TAKEN_AUTO, // "Nick %1% is taken by another user. It was automatically changed to %2%."

@@ -77,6 +77,7 @@
 #define IDD_DCLS_GENERATOR              222
 #define IDR_DCLST                       223
 #define IDR_GENDER_USERS                234
+#define IDR_NAVIGATION                  235
 #define IDD_SPEEDLIMIT_DLG              240
 #define IDD_INTEGRATION_PAGE            241
 #define IDR_TRAY_AND_TASKBAR_PM         255
@@ -266,8 +267,11 @@
 #define IDC_MIN_UPLOAD_SPIN             1142
 #define IDC_CHEVRON                     1143
 #define IDC_OPEN_FILE_LIST              1144
-#define IDC_SEARCH                      1147
-#define IDC_DETECT                      1148
+#define IDC_SEARCH                      1145
+#define IDC_DETECT                      1146
+#define IDC_NAVIGATION_BACK             1147
+#define IDC_NAVIGATION_FORWARD          1148
+#define IDC_NAVIGATION_UP               1149
 #define IDC_AUTO_REFRESH                1150
 #define IDC_CLOSE_WINDOW                1151
 #define IDC_FIND                        1152

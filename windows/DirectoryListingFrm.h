@@ -28,15 +28,14 @@
 #include "BaseHandlers.h"
 #include "UserInfoBaseHandler.h"
 #include "FileStatusColors.h"
+#include "DirectoryListingNavWnd.h"
 
-#include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"
 #include "../client/ADLSearch.h"
 #include "../client/ShareManager.h"
 
 class ThreadedDirectoryListing;
 
-#define STATUS_MESSAGE_MAP 9
 #define CONTROL_MESSAGE_MAP 10
 
 static const int DL_FRAME_TRAITS = UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_FILE_LIST;
@@ -47,7 +46,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
 	public InternetSearchBaseHandler,
 	private TimerHelper,
-	public CMessageFilter
+	public CMessageFilter,
+	public NavigationBar::Callback
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
 		static const int MAX_FAV_DIRS = 100;
@@ -100,12 +100,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			STATUS_TOTAL_SIZE,
 			STATUS_SELECTED_FILES,
 			STATUS_SELECTED_SIZE,
-			STATUS_FILE_LIST_DIFF,
-			STATUS_MATCH_QUEUE,
-			STATUS_FIND,
-			STATUS_PREV,
-			STATUS_NEXT,
-			STATUS_DUMMY,
 			STATUS_LAST
 		};
 
@@ -173,6 +167,14 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_GOTO_ORIGINAL, onGoToOriginal)
 		COMMAND_ID_HANDLER(IDC_FILELIST_DIFF2, onListDiff)
 		COMMAND_ID_HANDLER(IDC_FILELIST_COMPARE, onListCompare)
+		COMMAND_ID_HANDLER(IDC_FIND, onFind)
+		COMMAND_ID_HANDLER(IDC_NEXT, onNext)
+		COMMAND_ID_HANDLER(IDC_PREV, onPrev)
+		COMMAND_ID_HANDLER(IDC_MATCH_QUEUE, onMatchQueueOrFindDups)
+		COMMAND_ID_HANDLER(IDC_FILELIST_DIFF, onListDiff)
+		COMMAND_ID_HANDLER(IDC_NAVIGATION_BACK, onNavigation)
+		COMMAND_ID_HANDLER(IDC_NAVIGATION_FORWARD, onNavigation)
+		COMMAND_ID_HANDLER(IDC_NAVIGATION_UP, onNavigation)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET + 1, IDC_DOWNLOAD_TARGET + LastDir::get().size(), onDownloadToLastDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_TREE + 1, IDC_DOWNLOAD_TARGET_TREE + LastDir::get().size(), onDownloadToLastDirTree)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
@@ -187,13 +189,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CHAIN_COMMANDS(uibBase)
 		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(CSplitterImpl<DirectoryListingFrame>)
-		CHAIN_MSG_MAP_ALT(DirectoryListingFrame, STATUS_MESSAGE_MAP)
-		ALT_MSG_MAP(STATUS_MESSAGE_MAP)
-		COMMAND_ID_HANDLER(IDC_FIND, onFind)
-		COMMAND_ID_HANDLER(IDC_NEXT, onNext)
-		COMMAND_ID_HANDLER(IDC_PREV, onPrev)
-		COMMAND_ID_HANDLER(IDC_MATCH_QUEUE, onMatchQueueOrFindDups)
-		COMMAND_ID_HANDLER(IDC_FILELIST_DIFF, onListDiff)
 		ALT_MSG_MAP(CONTROL_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_XBUTTONUP, onXButtonUp)
 		END_MSG_MAP()
@@ -244,6 +239,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
+		void DrawSplitterPane(CDCHandle dc, int nPane);
+		void UpdatePane(int nPane, const RECT& rcPane);
+
 		void downloadSelected(const tstring& target, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
 		void downloadSelected(bool view = false, QueueItem::Priority prio = QueueItem::DEFAULT)
 		{
@@ -252,17 +250,20 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem, bool insertParent, const string& selPath = Util::emptyString);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		int getButtonWidth(ResourceManager::Strings id) const;
 		void runUserCommand(UserCommand& uc);
 		void loadFile(const tstring& name, const tstring& dir);
 		void loadXML(const string& txt);
 		bool isBrowsing() const { return browsing; }
+		bool isOwnList() const { return ownList; }
 
 		void setFileName(const string& name) { fileName = name; }
 		const string& getFileName() const { return fileName; }
 
 		void setDclstFlag(bool dclstFlag) { this->dclstFlag = dclstFlag; }
+		bool getDclstFlag() const { return dclstFlag; }
 		void setSpeed(int64_t speed) { this->speed = speed; }
+		tstring getRootItemText() const;
+		const string& getNick() const { return nick; }
 
 		HTREEITEM findItem(HTREEITEM ht, const tstring& name);
 		void selectItem(const tstring& name);
@@ -287,10 +288,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onNext(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPrev(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-
 		LRESULT onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onListCompare(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onNavigation(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 
@@ -341,6 +342,18 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		DirectoryListingFrame(const DirectoryListingFrame &) = delete;
 		DirectoryListingFrame& operator= (const DirectoryListingFrame &) = delete;
 
+	protected:
+		void selectItem(int index) override;
+		void getPopupItems(int index, vector<Item>& res) const override;
+		void selectPopupItem(int index, const tstring& text, uintptr_t itemData) override;
+		tstring getCurrentPath() const override;
+		HBITMAP getCurrentPathIcon() const override;
+		bool setCurrentPath(const tstring& path) override;
+		uint64_t getHistoryState() const override;
+		void getHistoryItems(vector<HistoryItem>& res) const override;
+		tstring getHistoryItem(int index) const override;
+		HBITMAP getChevronMenuImage(int index, uintptr_t itemData) override;
+
 	private:
 		struct ErrorInfo
 		{
@@ -364,17 +377,22 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void getFileItemColor(DirectoryListing::File::MaskType, COLORREF &fg, COLORREF &bg);
 		void getDirItemColor(DirectoryListing::Directory::MaskType flags, COLORREF &fg, COLORREF &bg);
 		void changeDir(const DirectoryListing::Directory* dir);
+		static void getParsedPath(const DirectoryListing::Directory* dir, vector<const DirectoryListing::Directory*>& path);
+		HBITMAP getIconForPath(const string& path) const;
 		void showDirContents(const DirectoryListing::Directory *dir, const DirectoryListing::Directory *selSubdir, const DirectoryListing::File *selFile);
 		void selectFile(const DirectoryListing::File *file);
+		const DirectoryListing::Directory* getNavBarItem(int index) const;
 		void updateStatus();
 		void initStatus();
 		void startLoading();
+		void disableControls();
 		void enableControls();
 		void goToFirstFound();
-		void addHistory(const string& name);
-		void up();
-		void back();
-		void forward();
+		void addNavHistory(const string& name);
+		void addTypedHistory(const string& name);
+		void navigationUp();
+		void navigationBack();
+		void navigationForward();
 		void openFileFromList(const tstring& file);
 		void showFound();
 		void dumpFoundPath(); // DEBUG
@@ -384,7 +402,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
 		void appendFavTargets(OMenu& menu, int idc);
 		void appendCustomTargetItems(OMenu& menu, int idc);
-		tstring getRootItemText() const;
 		void updateRootItemText();
 		string getFileUrl(const string& hubUrl, const string& path) const;
 		void appendCopyUrlItems(CMenu& menu, int idc, ResourceManager::Strings text);
@@ -447,7 +464,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		OMenu priorityMenu;
 		OMenu priorityDirMenu;
 
-		CContainedWindow statusContainer;
 		CContainedWindow treeContainer;
 		CContainedWindow listContainer;
 
@@ -456,8 +472,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		string downloadDirIP;
 		vector<string> contextMenuHubUrl;
 
-		deque<string> history;
-		size_t historyIndex;
+		deque<string> navHistory;
+		size_t navHistoryIndex;
+		int changingPath;
+
+		deque<string> typedHistory;
+		uint64_t typedHistoryState;
 
 		CTreeViewCtrl ctrlTree;
 		TypedListViewCtrl<ItemInfo> ctrlList;
@@ -468,9 +488,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		HTREEITEM treeRoot;
 		HTREEITEM selectedDir;
 
-		CButton ctrlFind, ctrlFindNext, ctrlFindPrev;
-		CButton ctrlListDiff;
-		CButton ctrlMatchQueue;
+		int updatingLayout;
+		DirectoryListingNavWnd navWnd;
 
 		FileStatusColorsEx colors;
 
@@ -499,6 +518,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		DirectoryListing::TTHToFileMap dupFiles;
 		bool showingDupFiles;
 		const bool browsing;
+		const bool ownList;
 
 		static const int columnId[];
 

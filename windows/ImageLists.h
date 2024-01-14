@@ -168,6 +168,12 @@ class TransferArrowsImage : public BaseImageList
 		void init();
 };
 
+class NavigationImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern GenderImage g_genderImage;
@@ -178,6 +184,7 @@ extern FavUserImage g_favUserImage;
 extern EditorImage g_editorImage;
 extern TransfersImage g_transfersImage;
 extern TransferArrowsImage g_transferArrowsImage;
+extern NavigationImage g_navigationImage;
 
 class TransferTreeImage : public BaseImageList
 {
@@ -309,6 +316,7 @@ class IconBitmaps
 			FINGER,
 			KEY,
 			GOTO_FILELIST,
+			FOLDER,
 			EDITOR_SEND,
 			EDITOR_MULTILINE,
 			EDITOR_EMOTICON,
@@ -347,7 +355,8 @@ class IconBitmaps
 			SOURCE_FAVUSERS,
 			SOURCE_OTHER,
 			SOURCE_ARROWS,
-			SOURCE_EDITOR
+			SOURCE_EDITOR,
+			SOURCE_FILES
 		};
 
 		Image data[MAX_BITMAPS];

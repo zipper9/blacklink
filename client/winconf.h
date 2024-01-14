@@ -19,9 +19,7 @@
 # define _WIN32_WINNT _WIN32_WINNT_WINBLUE
 #else
 #ifndef _WIN32_WINNT
-# ifdef OSVER_WIN_XP
-#  define _WIN32_WINNT _WIN32_WINNT_WINXP
-# elif defined(OSVER_WIN_VISTA)
+# if defined(OSVER_WIN_XP) || defined(OSVER_WIN_VISTA)
 #  define _WIN32_WINNT _WIN32_WINNT_VISTA
 # else // Win7+
 #  define _WIN32_WINNT _WIN32_WINNT_WIN7

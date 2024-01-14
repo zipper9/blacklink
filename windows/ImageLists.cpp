@@ -23,6 +23,7 @@ FavUserImage g_favUserImage;
 EditorImage g_editorImage;
 TransfersImage g_transfersImage;
 TransferArrowsImage g_transferArrowsImage;
+NavigationImage g_navigationImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -304,6 +305,11 @@ void TransferArrowsImage::init()
 	ResourceLoader::LoadImageList(IDR_ARROWS, images, 16, 16);
 }
 
+void NavigationImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_NAVIGATION, images, 16, 16);
+}
+
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)
 {
 	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
@@ -313,7 +319,7 @@ static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int
 	bi.bmiHeader.biBitCount = 32;
 	bi.bmiHeader.biCompression = BI_RGB;
 	HBITMAP hBitmap = ::CreateDIBSection(hDCSource, &bi, DIB_RGB_COLORS, nullptr, nullptr, 0);
-	ATLASSERT(hBitmap);
+	dcassert(hBitmap);
 
 	if (hBitmap)
 	{
@@ -331,6 +337,34 @@ static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int
 	return hBitmap;
 }
 
+static HBITMAP createBitmapFromDIB(int iconSize, const BITMAP& info, const RECT& rc)
+{
+	if (rc.top < 0 || rc.top >= info.bmHeight || rc.bottom - rc.top < iconSize) return nullptr;
+	int srcStride = info.bmWidth * 4;
+	int destStride = iconSize * 4;
+	if (destStride > srcStride) return nullptr;
+
+	uint8_t* imgDest = nullptr;
+	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
+	bi.bmiHeader.biWidth = iconSize;
+	bi.bmiHeader.biHeight = -iconSize;
+	bi.bmiHeader.biPlanes = 1;
+	bi.bmiHeader.biBitCount = 32;
+	bi.bmiHeader.biCompression = BI_RGB;
+	HBITMAP hBitmap = ::CreateDIBSection(nullptr, &bi, DIB_RGB_COLORS, (void**) &imgDest, nullptr, 0);
+	dcassert(hBitmap);
+
+	const uint8_t* pIn = (const uint8_t *) info.bmBits + (info.bmHeight - 1 - rc.top) * srcStride + rc.left * 4;
+	uint8_t* pOut = imgDest;
+	for (int y = 0; y < iconSize; ++y)
+	{
+		memcpy(pOut, pIn, destStride);
+		pIn -= srcStride;
+		pOut += destStride;
+	}
+	return hBitmap;
+}
+
 static HBITMAP createBitmapFromIcon(HICON hIcon, int iconSize, HDC hDCSource, HDC hDCTarget)
 {
 	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
@@ -340,7 +374,7 @@ static HBITMAP createBitmapFromIcon(HICON hIcon, int iconSize, HDC hDCSource, HD
 	bi.bmiHeader.biBitCount = 32;
 	bi.bmiHeader.biCompression = BI_RGB;
 	HBITMAP hBitmap = ::CreateDIBSection(hDCSource, &bi, DIB_RGB_COLORS, nullptr, nullptr, 0);
-	ATLASSERT(hBitmap);
+	dcassert(hBitmap);
 
 	if (hBitmap)
 	{
@@ -445,6 +479,7 @@ IconBitmaps::IconBitmaps()
 	init(FINGER,                  SOURCE_OTHER,    32);
 	init(KEY,                     SOURCE_OTHER,    33);
 	init(GOTO_FILELIST,           SOURCE_OTHER,    35);
+	init(FOLDER,                  SOURCE_FILES,    0);
 	init(EDITOR_SEND,             SOURCE_EDITOR,   0);
 	init(EDITOR_MULTILINE,        SOURCE_EDITOR,   1);
 	init(EDITOR_EMOTICON,         SOURCE_EDITOR,   2);
@@ -483,6 +518,8 @@ HIMAGELIST IconBitmaps::getImageList(MainFrame* mainFrame, int type, int size)
 			return g_hubImage.getIconList();
 		case SOURCE_FILELIST:
 			return g_fileListImage.getIconList();
+		case SOURCE_FILES:
+			return g_fileImage.getIconList();
 		case SOURCE_SETTINGS:
 			return mainFrame->getSettingsImages();
 		case SOURCE_FAVUSERS:
@@ -519,13 +556,27 @@ HBITMAP IconBitmaps::getBitmap(int index, int size)
 	else
 	{
 		HIMAGELIST imageList = getImageList(mainFrame, data[index].source, size);
-		HDC hdc = GetDC(mainFrame->m_hWnd);
-		if (!hdc) return nullptr;
-		HDC hdcTemp = CreateCompatibleDC(hdc);
-		int iconSize = (size + 1)*16;
-		data[index].bitmap[size] = createBitmapFromImageList(imageList, iconSize, data[index].id, hdc, hdcTemp);
-		ReleaseDC(mainFrame->m_hWnd, hdc);
-		DeleteDC(hdcTemp);
+		IMAGEINFO info;
+		if (!ImageList_GetImageInfo(imageList, data[index].id, &info)) return nullptr;
+
+		BITMAP bi;
+		HBITMAP hBitmap;
+		if (!GetObject(info.hbmImage, sizeof(bi), &bi)) return nullptr;
+
+		int iconSize = (size + 1) * 16;
+		if (bi.bmBitsPixel == 32 && bi.bmPlanes == 1 && bi.bmWidth > 0 && bi.bmHeight > 0)
+			hBitmap = createBitmapFromDIB(iconSize, bi, info.rcImage);
+		else
+		{
+			HDC hdc = GetDC(mainFrame->m_hWnd);
+			if (!hdc) return nullptr;
+			HDC hdcTemp = CreateCompatibleDC(hdc);
+			if (!hdcTemp) return nullptr;
+			hBitmap = createBitmapFromImageList(imageList, iconSize, data[index].id, hdc, hdcTemp);
+			ReleaseDC(mainFrame->m_hWnd, hdc);
+			DeleteDC(hdcTemp);
+		}
+		data[index].bitmap[size] = hBitmap;
 	}
 	return data[index].bitmap[size];
 }

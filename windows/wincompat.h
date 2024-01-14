@@ -7,6 +7,7 @@
 #define HDS_NOSIZING 0x0800
 #endif
 
+#if _WIN32_WINNT < 0x600
 // Button
 
 #define BS_SPLITBUTTON          0x0000000CL
@@ -175,6 +176,8 @@ typedef struct _TASKDIALOGCONFIG
 
 #ifdef _WIN32
 #include <poppack.h>
+#endif
+
 #endif
 
 #endif // WINCOMPAT_H_
