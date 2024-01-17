@@ -2,6 +2,7 @@
 #include "FlatTabCtrl.h"
 #include "ColorUtil.h"
 #include "Fonts.h"
+#include "BackingStore.h"
 
 FlatTabCtrl::FlatTabCtrl() :
 	closing(nullptr),
@@ -10,8 +11,18 @@ FlatTabCtrl::FlatTabCtrl() :
 	showIcons(true), showCloseButton(true), useBoldNotif(false), nonHubsFirst(true),
 	closeButtonPressedTab(nullptr), closeButtonHover(false), hoverTab(nullptr),
 	rows(1), height(0),	xdu(0), ydu(0),
-	textHeight(0), edgeHeight(0), horizIconSpace(0), horizPadding(0), chevronWidth(0)
+	textHeight(0), edgeHeight(0), horizIconSpace(0), horizPadding(0), chevronWidth(0),
+	backingStore(nullptr)
 {
+}
+
+void FlatTabCtrl::cleanup()
+{
+	if (backingStore)
+	{
+		backingStore->release();
+		backingStore = nullptr;
+	}
 }
 
 COLORREF FlatTabCtrl::getLighterColor(COLORREF color)
@@ -556,6 +567,12 @@ LRESULT FlatTabCtrl::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	return 0;
 }
 
+LRESULT FlatTabCtrl::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/)
+{
+	cleanup();
+	return 0;
+}
+
 LRESULT FlatTabCtrl::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/)
 {
 	calcRows();
@@ -577,13 +594,18 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	if (GetUpdateRect(&rc, FALSE))
 	{
-		CPaintDC dc(m_hWnd);
-		CDC memDC;
-		memDC.CreateCompatibleDC(dc);
-		CBitmap memBitmap;
-		memBitmap.CreateCompatibleBitmap(dc, rc.Width(), rc.Height());
-		HBITMAP oldBitmap = memDC.SelectBitmap(memBitmap);
-		memDC.SetWindowOrg(rc.left, rc.top);
+		PAINTSTRUCT ps;
+		HDC paintDC = BeginPaint(&ps);
+		HDC hdc = paintDC;
+		if (!backingStore) backingStore = BackingStore::getBackingStore();
+		if (backingStore)
+		{
+			HDC hMemDC = backingStore->getCompatibleDC(hdc, rc.Width(), rc.Height());
+			if (hMemDC) hdc = hMemDC;
+		}
+
+		POINT org;
+		SetWindowOrgEx(hdc, rc.left, rc.top, &org);
 
 		CRect rcEdge, rcBackground;
 		rcEdge.left = rcBackground.left = 0;
@@ -604,14 +626,14 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		}
 
 		HBRUSH brush = CreateSolidBrush(colors[ACTIVE_BACKGROUND_COLOR]);
-		memDC.FillRect(&rcEdge, brush);
+		FillRect(hdc, &rcEdge, brush);
 		DeleteObject(brush);
 
 		brush = CreateSolidBrush(colors[INACTIVE_BACKGROUND_COLOR]);
-		memDC.FillRect(&rcBackground, brush);
+		FillRect(hdc, &rcBackground, brush);
 		DeleteObject(brush);
 
-		HFONT oldfont = memDC.SelectFont(Fonts::g_systemFont);
+		HGDIOBJ oldfont = SelectObject(hdc, Fonts::g_systemFont);
 
 		int drawActiveOpt = 0;
 		int lastRow = tabs.empty() ? -1 : tabs.back()->row;
@@ -630,30 +652,32 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 				if (t == active)
 					drawActiveOpt = options | DRAW_TAB_ACTIVE;
 				else
-					drawTab(memDC, t, options);
+					drawTab(hdc, t, options);
 			}
 		}
 
-		HPEN oldpen = memDC.SelectPen(::CreatePen(PS_SOLID, 1, colors[BORDER_COLOR]));
+		HGDIOBJ oldpen = SelectObject(hdc, ::CreatePen(PS_SOLID, 1, colors[BORDER_COLOR]));
 		int ypos = edgeHeight;
 		if (tabsPosition == SettingsManager::TABS_TOP) ypos += getTabHeight()-1;
 		for (int r = 0; r < rows; r++)
 		{
-			memDC.MoveTo(rc.left, ypos);
-			memDC.LineTo(rc.right, ypos);
+			MoveToEx(hdc, rc.left, ypos, nullptr);
+			LineTo(hdc, rc.right, ypos);
 			ypos += getTabHeight();
 		}
-		::DeleteObject(memDC.SelectPen(oldpen));
+		DeleteObject(SelectObject(hdc, oldpen));
 
 		if (drawActiveOpt & DRAW_TAB_ACTIVE)
 		{
 			dcassert(active);
-			drawTab(memDC, active, drawActiveOpt);
+			drawTab(hdc, active, drawActiveOpt);
 		}
 
-		memDC.SelectFont(oldfont);
-		dc.BitBlt(rc.left, rc.top, rc.Width(), rc.Height(), memDC, rc.left, rc.top, SRCCOPY);
-		memDC.SelectBitmap(oldBitmap);
+		SelectObject(hdc, oldfont);
+		if (hdc != paintDC)
+			BitBlt(paintDC, rc.left, rc.top, rc.Width(), rc.Height(), hdc, rc.left, rc.top, SRCCOPY);
+		SetWindowOrgEx(hdc, org.x, org.y, nullptr);
+		EndPaint(&ps);
 	}
 	return 0;
 }
@@ -823,13 +847,13 @@ void FlatTabCtrl::getCloseButtonRect(const TabInfo* t, CRect& rc) const
 	rc.bottom = rc.top + CLOSE_BUTTON_SIZE;
 }
 
-void FlatTabCtrl::drawTab(CDC &dc, const TabInfo *tab, int options)
+void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 {
 	int ypos = getTopPos(tab);
 	int pos = tab->xpos;
 
 	HPEN borderPen = ::CreatePen(PS_SOLID, 1, colors[BORDER_COLOR]);
-	HPEN oldPen = dc.SelectPen(borderPen);
+	HGDIOBJ oldPen = SelectObject(hdc, borderPen);
 
 	CRect rc(pos, ypos, pos + getWidth(tab), ypos + getTabHeight());
 
@@ -858,7 +882,7 @@ void FlatTabCtrl::drawTab(CDC &dc, const TabInfo *tab, int options)
 	}
 
 	HBRUSH brBackground = CreateSolidBrush(bgColor);
-	dc.FillRect(rc, brBackground);
+	FillRect(hdc, rc, brBackground);
 	DeleteObject(brBackground);
 
 	if (options & DRAW_TAB_ACTIVE)
@@ -867,48 +891,48 @@ void FlatTabCtrl::drawTab(CDC &dc, const TabInfo *tab, int options)
 		{
 			if (tabsPosition == SettingsManager::TABS_TOP)
 			{
-				dc.MoveTo(rc.left, rc.top);
-				dc.LineTo(rc.left, getHeight());
+				MoveToEx(hdc, rc.left, rc.top, nullptr);
+				LineTo(hdc, rc.left, getHeight());
 			}
 			else
 			{
-				dc.MoveTo(rc.left, 0);
-				dc.LineTo(rc.left, rc.bottom);
+				MoveToEx(hdc, rc.left, 0, nullptr);
+				LineTo(hdc, rc.left, rc.bottom);
 			}
 		}
 		else
 		{
-			dc.MoveTo(rc.left, rc.top);
-			dc.LineTo(rc.left, rc.bottom);
+			MoveToEx(hdc, rc.left, rc.top, nullptr);
+			LineTo(hdc, rc.left, rc.bottom);
 		}
 
-		dc.MoveTo(rc.right, rc.top);
-		dc.LineTo(rc.right, rc.bottom);
+		MoveToEx(hdc, rc.right, rc.top, nullptr);
+		LineTo(hdc, rc.right, rc.bottom);
 
 		if (tabsPosition == SettingsManager::TABS_TOP)
 		{
-			dc.MoveTo(rc.left, rc.top-1);
-			dc.LineTo(rc.right+1, rc.top-1);
+			MoveToEx(hdc, rc.left, rc.top-1, nullptr);
+			LineTo(hdc, rc.right+1, rc.top-1);
 		}
 		else
 		{
-			dc.MoveTo(rc.left, rc.bottom);
-			dc.LineTo(rc.right+1, rc.bottom);
+			MoveToEx(hdc, rc.left, rc.bottom, nullptr);
+			LineTo(hdc, rc.right+1, rc.bottom);
 		}
 	}
 	else
 	{
 		if (!(options & DRAW_TAB_FIRST_IN_ROW))
 		{
-			dc.MoveTo(rc.left, rc.top + 3);
-			dc.LineTo(rc.left, rc.bottom - 3);
+			MoveToEx(hdc, rc.left, rc.top + 3, nullptr);
+			LineTo(hdc, rc.left, rc.bottom - 3);
 		}
-		dc.MoveTo(rc.right, rc.top + 3);
-		dc.LineTo(rc.right, rc.bottom - 3);
+		MoveToEx(hdc, rc.right, rc.top + 3, nullptr);
+		LineTo(hdc, rc.right, rc.bottom - 3);
 	}
 
-	dc.SetBkMode(TRANSPARENT);
-	COLORREF oldTextColor = dc.SetTextColor(textColor);
+	SetBkMode(hdc, TRANSPARENT);
+	COLORREF oldTextColor = SetTextColor(hdc, textColor);
 
 	pos += horizPadding;
 
@@ -916,27 +940,27 @@ void FlatTabCtrl::drawTab(CDC &dc, const TabInfo *tab, int options)
 	{
 		int iconIndex = tab->disconnected ? 1 : 0;
 		if (tab->hIcons[iconIndex])
-		dc.DrawIconEx(pos, ypos + (height - ICON_SIZE) / 2, tab->hIcons[iconIndex], ICON_SIZE, ICON_SIZE, 0, nullptr, DI_NORMAL | DI_COMPAT);
+		DrawIconEx(hdc, pos, ypos + (height - ICON_SIZE) / 2, tab->hIcons[iconIndex], ICON_SIZE, ICON_SIZE, 0, nullptr, DI_NORMAL | DI_COMPAT);
 		pos += ICON_SIZE + horizIconSpace;
 	}
 
-	HFONT oldFont = nullptr;
+	HGDIOBJ oldFont = nullptr;
 	if (tab->dirty && useBoldNotif)
-		oldFont = dc.SelectFont(Fonts::g_boldFont);
+		oldFont = SelectObject(hdc, Fonts::g_boldFont);
 
-	dc.TextOut(pos, ypos + (height - textHeight) / 2, tab->textEllip.c_str(), tab->textEllip.length());
+	TextOut(hdc, pos, ypos + (height - textHeight) / 2, tab->textEllip.c_str(), tab->textEllip.length());
 
 	if (hoverTab == tab)
 	{
 		CRect rcButton;
 		getCloseButtonRect(tab, rcButton);
 		int image = closeButtonPressedTab == tab ? 1 : 0;
-		closeButtonImages.Draw(dc, image, rcButton.left, rcButton.top, ILD_NORMAL);
+		closeButtonImages.Draw(hdc, image, rcButton.left, rcButton.top, ILD_NORMAL);
 	}
 
-	dc.SetTextColor(oldTextColor);
-	dc.SelectPen(oldPen);
-	if (oldFont) dc.SelectFont(oldFont);
+	SetTextColor(hdc, oldTextColor);
+	SelectObject(hdc, oldPen);
+	if (oldFont) SelectObject(hdc, oldFont);
 
 	DeleteObject(borderPen);
 }

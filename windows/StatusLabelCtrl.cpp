@@ -1,15 +1,12 @@
 #include <stdafx.h>
 #include "StatusLabelCtrl.h"
+#include "GdiUtil.h"
+#include "BackingStore.h"
 #include "ImageLists.h"
 #include "WinUtil.h"
 #include "Colors.h"
 
 static const int ICON_SPACE = 2; // dialog units
-
-LRESULT StatusLabelCtrl::onCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
-{
-	return 0;
-}
 
 LRESULT StatusLabelCtrl::onSetText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
@@ -31,23 +28,28 @@ LRESULT StatusLabelCtrl::onGetFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 
 LRESULT StatusLabelCtrl::onPaint(UINT, WPARAM, LPARAM, BOOL&)
 {
-	CPaintDC hDC(m_hWnd);
-	if (textWidth == -1) updateTextSize(hDC);
 	RECT rc;
 	GetClientRect(&rc);
-	LRESULT br = GetParent().SendMessage(WM_CTLCOLORSTATIC, (WPARAM) hDC.m_hDC, (LPARAM) m_hWnd);
-	if (br) hDC.FillRect(&rc, (HBRUSH) br);
-	int x = rc.left;
-	if (hIcon)
+
+	bool drawn = false;
+	PAINTSTRUCT ps;
+	HDC hdc = BeginPaint(&ps);
+
+	if (textWidth == -1) updateTextSize(hdc);
+	if (!backingStore) backingStore = BackingStore::getBackingStore();
+	if (backingStore)
 	{
-		DrawIconEx(hDC, x, (rc.top + rc.bottom - bitmapHeight) / 2, hIcon, bitmapWidth, bitmapHeight, 0, nullptr, DI_NORMAL);
-		x += bitmapWidth + iconSpace;
+		HDC hMemDC = backingStore->getCompatibleDC(hdc, rc.right, rc.bottom);
+		if (hMemDC)
+		{
+			draw(hMemDC, rc);
+			BitBlt(hdc, 0, 0, rc.right, rc.bottom, hMemDC, 0, 0, SRCCOPY);
+			drawn = true;
+		}
 	}
-	HFONT prevFont = hDC.SelectFont(font ? font : (HFONT) GetStockObject(DEFAULT_GUI_FONT));
-	int prevMode = hDC.SetBkMode(TRANSPARENT);
-	ExtTextOut(hDC, x, rc.top + (rc.bottom - rc.top - textHeight) / 2, ETO_CLIPPED, &rc, text.c_str(), text.length(), nullptr);
-	hDC.SelectFont(prevFont);
-	hDC.SetBkMode(prevMode);
+	if (!drawn) draw(hdc, rc);
+
+	EndPaint(&ps);
 	return 0;
 }
 
@@ -66,8 +68,8 @@ void StatusLabelCtrl::updateTextSize(HDC hdc)
 
 void StatusLabelCtrl::setImage(int index, int size)
 {
-	hIcon = index < 0 ? nullptr : g_iconBitmaps.getIcon(index, 0);
-	if (hIcon)
+	hBitmap = index < 0 ? nullptr : g_iconBitmaps.getBitmap(index, 0);
+	if (hBitmap)
 		bitmapWidth = bitmapHeight = 16;
 	else
 		bitmapWidth = bitmapHeight = 0;
@@ -77,7 +79,7 @@ SIZE StatusLabelCtrl::getIdealSize(HDC hdc)
 {
 	if (textWidth == -1) updateTextSize(hdc);
 	int width = textWidth;
-	if (hIcon) width += iconSpace + bitmapWidth;
+	if (hBitmap) width += iconSpace + bitmapWidth;
 	return SIZE{width, std::max(textHeight, bitmapHeight)};
 }
 
@@ -85,4 +87,30 @@ void StatusLabelCtrl::setText(const tstring& s)
 {
 	text = s;
 	textWidth = textHeight = -1;
+}
+
+void StatusLabelCtrl::draw(HDC hdc, const RECT& rc)
+{
+	LRESULT br = GetParent().SendMessage(WM_CTLCOLORSTATIC, (WPARAM) hdc, (LPARAM) m_hWnd);
+	if (br) FillRect(hdc, &rc, (HBRUSH) br);
+	int x = rc.left;
+	if (hBitmap)
+	{
+		WinUtil::drawAlphaBitmap(hdc, hBitmap, x, (rc.top + rc.bottom - bitmapHeight) / 2, bitmapWidth, bitmapHeight);
+		x += bitmapWidth + iconSpace;
+	}
+	HGDIOBJ prevFont = SelectObject(hdc, font ? font : (HFONT) GetStockObject(DEFAULT_GUI_FONT));
+	int prevMode = SetBkMode(hdc, TRANSPARENT);
+	ExtTextOut(hdc, x, rc.top + (rc.bottom - rc.top - textHeight) / 2, ETO_CLIPPED, &rc, text.c_str(), text.length(), nullptr);
+	SelectObject(hdc, prevFont);
+	SetBkMode(hdc, prevMode);
+}
+
+void StatusLabelCtrl::cleanup()
+{
+	if (backingStore)
+	{
+		backingStore->release();
+		backingStore = nullptr;
+	}
 }

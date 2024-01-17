@@ -1,10 +1,11 @@
 #include <stdafx.h>
 #include "RichTextLabel.h"
 #include <atlmisc.h>
-#include "StrUtil.h"
-#include "BaseUtil.h"
 #include "WinUtil.h"
 #include "Colors.h"
+#include "BackingStore.h"
+#include "../client/StrUtil.h"
+#include "../client/BaseUtil.h"
 
 enum
 {
@@ -97,31 +98,29 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		return 0;
 	}
 
-	if (width != bitmapWidth || height != bitmapHeight)
+	HDC hdc = paintDC;
+	if (!backingStore)
+		backingStore = BackingStore::getBackingStore();
+	if (backingStore)
 	{
-		cleanup();
-		memDC = CreateCompatibleDC(paintDC);
-		memBitmap = CreateCompatibleBitmap(paintDC, width, height);
-		bitmapWidth = width;
-		bitmapHeight = height;
-		oldBitmap = (HBITMAP) SelectObject(memDC, memBitmap);
+		HDC hMemDC = backingStore->getCompatibleDC(paintDC, rc.right, rc.bottom);
+		if (hMemDC) hdc = hMemDC;
 	}
-
 	if (calcSizeFlag)
-		calcSize(memDC);
+		calcSize(hdc);
 	if (layoutFlag)
-		layout(memDC, width);
+		layout(hdc, width);
 
 	if (!bgBrush)
 		bgBrush = CreateSolidBrush(useSystemColors ? GetSysColor(COLOR_BTNFACE) : colorBackground);
 	if (useDialogBackground)
 	{
-		if (FAILED(DrawThemeParentBackground(m_hWnd, memDC, nullptr)))
-			FillRect(memDC, &rc, bgBrush);
+		if (FAILED(DrawThemeParentBackground(m_hWnd, hdc, nullptr)))
+			FillRect(hdc, &rc, bgBrush);
 	}
 	else
-		FillRect(memDC, &rc, bgBrush);
-	SetBkMode(memDC, TRANSPARENT);
+		FillRect(hdc, &rc, bgBrush);
+	SetBkMode(hdc, TRANSPARENT);
 
 	HRGN hrgn = nullptr;
 	int bottom = rc.bottom;
@@ -129,7 +128,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 	{
 		RECT rcClip = { margins[MARGIN_LEFT], margins[MARGIN_TOP], width - margins[MARGIN_RIGHT], height - margins[MARGIN_BOTTOM] };
 		hrgn = CreateRectRgnIndirect(&rcClip);
-		SelectClipRgn(memDC, hrgn);
+		SelectClipRgn(hdc, hrgn);
 		bottom -= margins[MARGIN_BOTTOM];
 	}
 
@@ -141,15 +140,15 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		if (fragment.y >= bottom) break;
 		if (fragment.text[0] == _T('\n')) continue;
 		const StyleInstance& style = styles[fragment.style];
-		HFONT prevFont = (HFONT) SelectObject(memDC, style.hFont);
+		HFONT prevFont = (HFONT) SelectObject(hdc, style.hFont);
 		if (!oldFont) oldFont = prevFont;
 		COLORREF color;
 		if (fragment.link != -1)
 			color = fragment.link == hoverLink ? colorLinkHover : colorLink;
 		else
 			color = style.color;
-		SetTextColor(memDC, color);
-		ExtTextOut(memDC, fragment.x, fragment.y, ETO_CLIPPED, &rc, fragment.text.c_str(), static_cast<UINT>(fragment.text.length()), nullptr);
+		SetTextColor(hdc, color);
+		ExtTextOut(hdc, fragment.x, fragment.y, ETO_CLIPPED, &rc, fragment.text.c_str(), static_cast<UINT>(fragment.text.length()), nullptr);
 		if ((style.font.lfUnderline || (fragment.link != -1 && fragment.link == hoverLink)) && underlinePos == -1)
 			underlinePos = static_cast<int>(i);
 	}
@@ -183,7 +182,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 				{
 					if (fragment.x > xEnd) xEnd = fragment.x;
 					if (y >= bottom) break;
-					drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : style.color);
+					drawUnderline(hdc, xStart, xEnd, y, bottom, isLink ? colorLinkHover : style.color);
 					y = yBaseLine;
 					xStart = fragment.x;
 					xEnd = fragment.x + fragment.width - fragment.spaceWidth;
@@ -193,7 +192,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 			else if (xStart != -1)
 			{
 				if (y >= bottom) break;
-				drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : style.color);
+				drawUnderline(hdc, xStart, xEnd, y, bottom, isLink ? colorLinkHover : style.color);
 				xStart = -1;
 			}
 		}
@@ -201,18 +200,18 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		{
 			const Fragment& fragment = fragments.back();
 			COLORREF color = styles[fragment.style].color;
-			drawUnderline(memDC, xStart, fragment.x + fragment.width - fragment.spaceWidth,
+			drawUnderline(hdc, xStart, fragment.x + fragment.width - fragment.spaceWidth,
 				y, bottom, isLink ? colorLinkHover : color);
 		}
 	}
 
 	if (hrgn)
 	{
-		SelectClipRgn(memDC, nullptr);
+		SelectClipRgn(hdc, nullptr);
 		DeleteObject(hrgn);
 	}
-	if (oldFont) SelectObject(memDC, oldFont);
-	BitBlt(paintDC, rc.left, rc.top, width, height, memDC, 0, 0, SRCCOPY);
+	if (oldFont) SelectObject(hdc, oldFont);
+	if (hdc != paintDC) BitBlt(paintDC, rc.left, rc.top, width, height, hdc, 0, 0, SRCCOPY);
 
 	EndPaint(&ps);
 	return 0;
@@ -808,16 +807,10 @@ void RichTextLabel::unescape(tstring& text)
 
 void RichTextLabel::cleanup()
 {
-	if (memDC)
+	if (backingStore)
 	{
-		if (oldBitmap) SelectObject(memDC, oldBitmap);
-		DeleteDC(memDC);
-		memDC = nullptr;
-	}
-	if (memBitmap)
-	{
-		DeleteObject(memBitmap);
-		memBitmap = nullptr;
+		backingStore->release();
+		backingStore = nullptr;
 	}
 	if (bgBrush)
 	{

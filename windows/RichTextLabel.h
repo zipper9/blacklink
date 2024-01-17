@@ -10,10 +10,16 @@
 #include "../client/Text.h"
 #include "UserMessages.h"
 
+class BackingStore;
+
 class RichTextLabel: public CWindowImpl<RichTextLabel>
 {
 	public:
+		RichTextLabel() {}
 		~RichTextLabel();
+
+		RichTextLabel(const RichTextLabel&) = delete;
+		RichTextLabel& operator= (const RichTextLabel&) = delete;
 
 		BEGIN_MSG_MAP(RichTextLabel)
 		MESSAGE_HANDLER(WM_SETCURSOR, onSetCursor)
@@ -118,12 +124,8 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		COLORREF colorText = RGB(0, 0, 0);
 		COLORREF colorLink = RGB(0, 0x66, 0xCC);
 		COLORREF colorLinkHover = RGB(0, 0x86, 0xFF);
-		HDC memDC = nullptr;
-		HBITMAP memBitmap = nullptr;
-		HBITMAP oldBitmap = nullptr;
+		BackingStore* backingStore = nullptr;
 		HBRUSH bgBrush = nullptr;
-		int bitmapWidth = 0;
-		int bitmapHeight = 0;
 		HCURSOR linkCursor = nullptr;
 		HCURSOR defaultCursor = nullptr;
 		HFONT font = nullptr;

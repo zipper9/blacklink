@@ -70,7 +70,7 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	};
 
 	FlatTabCtrl();
-	virtual ~FlatTabCtrl() {}
+	virtual ~FlatTabCtrl() { cleanup(); }
 
 	static LPCTSTR GetWndClassName()
 	{
@@ -105,6 +105,7 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	BEGIN_MSG_MAP(thisClass)
 	MESSAGE_HANDLER(WM_SIZE, onSize)
 	MESSAGE_HANDLER(WM_CREATE, onCreate)
+	MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 	MESSAGE_HANDLER(WM_PAINT, onPaint)
 	MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBkgnd)
 	MESSAGE_HANDLER(WM_LBUTTONDOWN, onLButtonDown)
@@ -134,6 +135,7 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	int getRows() const { return rows; }
 
 	LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/);
+	LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/);
 	LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/);
 	LRESULT onEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/);
 	LRESULT onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/);
@@ -213,6 +215,7 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	CToolTipCtrl tooltip;
 	CImageList closeButtonImages;
 	CMenu menu;
+	class BackingStore* backingStore;
 
 	int rows;
 	int height;
@@ -232,11 +235,8 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	bool closeButtonHover;
 	tstring tooltipText;
 
-	typedef list<HWND> WindowList;
-	typedef WindowList::iterator WindowIter;
-
-	WindowList viewOrder;
-	WindowIter nextTab;
+	list<HWND> viewOrder;
+	list<HWND>::iterator nextTab;
 
 	bool inTab;
 
@@ -255,7 +255,8 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 		DRAW_TAB_LAST_ROW     = 8
 	};
 
-	void drawTab(CDC &dc, const TabInfo *tab, int options);
+	void drawTab(HDC hdc, const TabInfo *tab, int options);
+	void cleanup();
 };
 
 template <class T, class TBase = CMDIWindow, class TWinTraits = CMDIChildWinTraits>
@@ -280,6 +281,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 
 	typedef MDITabChildWindowImpl<T, TBase, TWinTraits> thisClass;
 	typedef CMDIChildWindowImpl<T, TBase, TWinTraits> baseClass;
+
 	BEGIN_MSG_MAP(thisClass)
 	MESSAGE_HANDLER(WM_CLOSE, onClose)
 	MESSAGE_HANDLER(WM_SYSCOMMAND, onSysCommand)
