@@ -52,83 +52,57 @@ static const char* STRING(int error)
 
 const string SimpleXML::utf8Header = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>\r\n";
 
-string& SimpleXML::escape(string& aString, bool aAttrib, bool aLoading /* = false */, int encoding)
+string& SimpleXML::escape(string& str, bool isAttrib, bool isLoading, int encoding)
 {
 	string::size_type i = 0;
-	const char* chars = aAttrib ? "<&>'\"" : "<&>";
-	
-	if (aLoading)
+	const char* chars = isAttrib ? "<&>'\"" : "<&>";
+
+	if (isLoading)
 	{
-		while ((i = aString.find('&', i)) != string::npos)
+		while ((i = str.find('&', i)) != string::npos)
 		{
-			if (aString.compare(i + 1, 3, "lt;", 3) == 0)
+			if (str.compare(i + 1, 3, "lt;", 3) == 0)
+				str.replace(i, 4, 1, '<');
+			else if (str.compare(i + 1, 4, "amp;", 4) == 0)
+				str.replace(i, 5, 1, '&');
+			else if (str.compare(i + 1, 3, "gt;", 3) == 0)
+				str.replace(i, 4, 1, '>');
+			else if (isAttrib)
 			{
-				aString.replace(i, 4, 1, '<');
-			}
-			else if (aString.compare(i + 1, 4, "amp;", 4) == 0)
-			{
-				aString.replace(i, 5, 1, '&');
-			}
-			else if (aString.compare(i + 1, 3, "gt;", 3) == 0)
-			{
-				aString.replace(i, 4, 1, '>');
-			}
-			else if (aAttrib)
-			{
-				if (aString.compare(i + 1, 5, "apos;", 5) == 0)
-				{
-					aString.replace(i, 6, 1, '\'');
-				}
-				else if (aString.compare(i + 1, 5, "quot;", 5) == 0)
-				{
-					aString.replace(i, 6, 1, '"');
-				}
+				if (str.compare(i + 1, 5, "apos;", 5) == 0)
+					str.replace(i, 6, 1, '\'');
+				else if (str.compare(i + 1, 5, "quot;", 5) == 0)
+					str.replace(i, 6, 1, '"');
 			}
 			i++;
 		}
-		i = 0;
-		if ((i = aString.find('\n')) != string::npos)
-		{
-			if (i > 0 && aString[i - 1] != '\r')
-			{
-				// This is a unix \n thing...convert it...
-				i = 0;
-				while ((i = aString.find('\n', i)) != string::npos)
-				{
-					if (aString[i - 1] != '\r')
-						aString.insert(i, 1, '\r');
-						
-					i += 2;
-				}
-			}
-		}
 		if (encoding != Text::CHARSET_UTF8)
-			aString = Text::toUtf8(aString, encoding);
+			str = Text::toUtf8(str, encoding);
 	}
 	else
 	{
-		while ((i = aString.find_first_of(chars, i)) != string::npos)
+		while ((i = str.find_first_of(chars, i)) != string::npos)
 		{
-			switch (aString[i])
+			switch (str[i])
 			{
 				case '<':
-					aString.replace(i, 1, "&lt;");
+					str.replace(i, 1, "&lt;");
 					i += 4;
 					break;
 				case '&':
-					aString.replace(i, 1, "&amp;");
+					str.replace(i, 1, "&amp;");
 					i += 5;
 					break;
 				case '>':
-					aString.replace(i, 1, "&gt;");
+					str.replace(i, 1, "&gt;");
 					i += 4;
 					break;
 				case '\'':
-					aString.replace(i, 1, "&apos;");
+					str.replace(i, 1, "&apos;");
 					i += 6;
 					break;
 				case '"':
-					aString.replace(i, 1, "&quot;");
+					str.replace(i, 1, "&quot;");
 					i += 6;
 					break;
 				default:
@@ -138,36 +112,29 @@ string& SimpleXML::escape(string& aString, bool aAttrib, bool aLoading /* = fals
 		// No need to convert back to acp since our utf8Header denotes we
 		// should store it as utf8.
 	}
-	return aString;
+	return str;
 }
 
-void SimpleXML::Tag::appendAttribString(string& tmp)
+void SimpleXML::Tag::appendAttribString(string& tmp) const
 {
 	for (auto i = attribs.cbegin(); i != attribs.cend(); ++i)
 	{
 		tmp.append(i->first);
 		tmp.append("=\"", 2);
-		if (needsEscape(i->second, true))
+		if (needsEscape(i->second, true, false))
 		{
 			string tmp2(i->second);
-			escape(tmp2, true);
+			escape(tmp2, true, false);
 			tmp.append(tmp2);
 		}
 		else
-		{
 			tmp.append(i->second);
-		}
 		tmp.append("\" ", 2);
 	}
 	tmp.erase(tmp.size() - 1);
 }
 
-/**
- * The same as the version above, but writes to a file instead...yes, this could be made
- * with streams and only one code set but streams are slow...the file f should be a buffered
- * file, otherwise things will be very slow (I assume write is not expensive and call it a lot
- */
-void SimpleXML::Tag::toXML(int indent, OutputStream* f)
+void SimpleXML::Tag::toXML(int indent, OutputStream* f) const
 {
 	if (children.empty() && data.empty())
 	{
@@ -192,16 +159,14 @@ void SimpleXML::Tag::toXML(int indent, OutputStream* f)
 		if (children.empty())
 		{
 			tmp.append(1, '>');
-			if (needsEscape(data, false))
+			if (needsEscape(data, false, false))
 			{
 				string tmp2(data);
-				escape(tmp2, false);
+				escape(tmp2, false, false);
 				tmp.append(tmp2);
 			}
 			else
-			{
 				tmp.append(data);
-			}
 		}
 		else
 		{
@@ -209,9 +174,7 @@ void SimpleXML::Tag::toXML(int indent, OutputStream* f)
 			f->write(tmp);
 			tmp.clear();
 			for (auto i = children.cbegin(); i != children.cend(); ++i)
-			{
 				(*i)->toXML(indent + 1, f);
-			}
 			tmp.append(indent, '\t');
 		}
 		tmp.append("</", 2);
@@ -221,24 +184,23 @@ void SimpleXML::Tag::toXML(int indent, OutputStream* f)
 	}
 }
 
-bool SimpleXML::findChild(const string& aName) noexcept
+bool SimpleXML::findChild(const string& name) noexcept
 {
 	dcassert(current != nullptr);
 	if (!current)
 		return false;
-		
+
 	if (found && currentChild != current->children.end())
 		++currentChild;
-		
+
 	while (currentChild != current->children.end())
 	{
-		if ((*currentChild)->name == aName)
+		if ((*currentChild)->name == name)
 		{
 			found = true;
 			return true;
 		}
-		else
-			++currentChild;
+		++currentChild;
 	}
 	return false;
 }
@@ -256,55 +218,46 @@ bool SimpleXML::getNextChild() noexcept
 	return found;
 }
 
-void SimpleXML::addTag(const string& aName, const string& aData /* = "" */)
+void SimpleXML::addTag(const string& name, const string& data /* = "" */)
 {
-	if (aName.empty())
-	{
+	if (name.empty())
 		throw SimpleXMLException(STRING(SXML_EMPTY_TAG_NAME));
-	}
-	
+
 	if (current == &root && !current->children.empty())
-	{
 		throw SimpleXMLException(STRING(SXML_ONLY_ONE_ROOT));
-	}
-	else
-	{
-		current->children.push_back(new Tag(aName, aData, current));
-		currentChild = current->children.end() - 1;
-	}
+
+	current->children.push_back(new Tag(name, data, current));
+	currentChild = current->children.end() - 1;
 }
 
-void SimpleXML::addAttrib(const string& aName, const string& aData)
+void SimpleXML::addAttrib(const string& name, const string& data)
 {
 	if (current == &root)
 		throw SimpleXMLException(STRING(SXML_NO_TAG_SELECTED));
-		
-	current->attribs.push_back(make_pair(aName, aData));
+
+	current->attribs.push_back(make_pair(name, data));
 }
 
-void SimpleXML::addChildAttrib(const string& aName, const string& aData)
+void SimpleXML::addChildAttrib(const string& name, const string& data)
 {
 	checkChildSelected();
-	
-	(*currentChild)->attribs.push_back(make_pair(aName, aData));
+	(*currentChild)->attribs.push_back(make_pair(name, data));
 }
 
-void SimpleXML::fromXML(const string& aXML)
+void SimpleXML::fromXML(const string& xml)
 {
 	if (!root.children.empty())
 	{
 		delete root.children[0];
 		root.children.clear();
 	}
-	
+
 	TagReader t(&root);
-	SimpleXMLReader(&t).parse(aXML.c_str(), aXML.size(), false);
-	
+	SimpleXMLReader(&t).parse(xml.c_str(), xml.size(), false);
+
 	if (root.children.size() != 1)
-	{
 		throw SimpleXMLException(STRING(SXML_INVALID_FILE));
-	}
-	
+
 	current = &root;
 	resetCurrentChild();
 }
@@ -321,14 +274,12 @@ void SimpleXML::stepOut()
 {
 	if (current == &root)
 		throw SimpleXMLException(STRING(SXML_ALREADY_LOWEST));
-		
+
 	dcassert(current && current->parent);
-	if (!current)
-		return;
-	if (!current->parent)
+	if (!(current && current->parent))
 		return;
 	currentChild = find(current->parent->children.begin(), current->parent->children.end(), current);
-	
+
 	current = current->parent;
 	found = true;
 }
@@ -339,6 +290,6 @@ void SimpleXML::resetCurrentChild()
 	dcassert(current != nullptr);
 	if (!current)
 		return;
-		
+
 	currentChild = current->children.begin();
 }

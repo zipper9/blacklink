@@ -94,8 +94,8 @@ class MerkleCheckOutputStream : public OutputStream
 			{
 				dcassert(bufPos == 0);
 				size_t left = len - pos;
-				size_t part = left - (left %  TreeType::BASE_BLOCK_SIZE);
-				if (part > 0)
+				size_t part = left - (left % TreeType::BASE_BLOCK_SIZE);
+				if (part)
 				{
 					cur.update(xb + pos, part);
 					pos += part;

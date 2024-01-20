@@ -25,7 +25,6 @@
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "Text.h"
-#include <boost/algorithm/string/trim.hpp>
 
 /**
  * A simple XML class that loads an XML-ish structure into an internal tree
@@ -34,64 +33,49 @@
 class SimpleXML
 {
 	public:
-		SimpleXML() : root("BOGUSROOT", Util::emptyString, NULL), current(&root), found(false)
+		SimpleXML() : root("BOGUSROOT", Util::emptyString, nullptr), current(&root), found(false)
 		{
 			resetCurrentChild();
 		}
-		~SimpleXML() { }
-		
-		void addTag(const string& aName, const string& aData = Util::emptyString);
-		void addTag(const string& aName, int aData)
-		{
-			addTag(aName, Util::toString(aData));
-		}
-		void addTag(const string& aName, int64_t aData)
-		{
-			addTag(aName, Util::toString(aData));
-		}
-		
+
+		void addTag(const string& name, const string& data = Util::emptyString);
+		void addTag(const string& name, int data) { addTag(name, Util::toString(data)); }
+		void addTag(const string& name, int64_t data) { addTag(name, Util::toString(data)); }
+
 		template<typename T>
-		void addAttrib(const string& aName, const T& aData)
-		{
-			addAttrib(aName, Util::toString(aData));
-		}
-		
-		void addAttrib(const string& aName, const string& aData);
-		void addAttrib(const string& aName, bool aData)
-		{
-			addAttrib(aName, string(aData ? "1" : "0"));
-		}
-		
+		void addAttrib(const string& name, const T& data) { addAttrib(name, Util::toString(data)); }
+
+		void addAttrib(const string& name, const string& data);
+
+		void addAttrib(const string& name, bool data) { addAttrib(name, string(data ? "1" : "0")); }
+
 		template <typename T>
-		void addChildAttrib(const string& aName, const T& aData)
+		void addChildAttrib(const string& name, const T& data)
 		{
-			addChildAttrib(aName, Util::toString(aData));
+			addChildAttrib(name, Util::toString(data));
 		}
-		void addChildAttrib(const string& aName, const string& aData);
-		void addChildAttribIfNotEmpty(const string& aName, const string& aData)
+
+		void addChildAttrib(const string& name, const string& data);
+
+		void addChildAttribIfNotEmpty(const string& name, const string& data)
 		{
-			if (!aData.empty())
-			{
-				addChildAttrib(aName, aData);
-			}
+			if (!data.empty()) addChildAttrib(name, data);
 		}
-		void addChildAttrib(const string& aName, bool aData)
-		{
-			addChildAttrib(aName, string(aData ? "1" : "0"));
-		}
-		
+
+		void addChildAttrib(const string& name, bool data) { addChildAttrib(name, string(data ? "1" : "0")); }
+
 		const string& getData() const
 		{
-			dcassert(current != NULL);
+			dcassert(current);
 			return current->data;
 		}
-		
+
 		void stepIn();
-		
+
 		void stepOut();
 		void resetCurrentChild();
 
-		bool findChild(const string& aName) noexcept;
+		bool findChild(const string& name) noexcept;
 		bool getNextChild() noexcept;
 
 		const string& getChildTag() const
@@ -106,91 +90,97 @@ class SimpleXML
 			return (*currentChild)->data;
 		}
 
-		const string& getChildAttrib(const string& aName, const string& aDefault = Util::emptyString) const
+		const string& getChildAttrib(const string& name, const string& defValue = Util::emptyString) const
 		{
 			checkChildSelected();
-			return (*currentChild)->getAttrib(aName, aDefault);
+			return (*currentChild)->getAttrib(name, defValue);
 		}
-		int getIntChildAttrib(const string& aName,  const string& aDefault) const
+
+		int getIntChildAttrib(const string& name,  const string& defValue) const
 		{
 			checkChildSelected();
-			return Util::toInt(getChildAttrib(aName, aDefault));
+			return Util::toInt(getChildAttrib(name, defValue));
 		}
-		int getIntChildAttrib(const string& aName) const
+
+		int getIntChildAttrib(const string& name) const
 		{
 			checkChildSelected();
-			return Util::toInt(getChildAttrib(aName));
+			return Util::toInt(getChildAttrib(name));
 		}
-		int64_t getInt64ChildAttrib(const string& aName, const string& aDefault) const
+
+		int64_t getInt64ChildAttrib(const string& name, const string& defValue) const
 		{
 			checkChildSelected();
-			return Util::toInt64(getChildAttrib(aName, aDefault));
+			return Util::toInt64(getChildAttrib(name, defValue));
 		}
-		int64_t getInt64ChildAttrib(const string& aName) const
+
+		int64_t getInt64ChildAttrib(const string& name) const
 		{
 			checkChildSelected();
-			return Util::toInt64(getChildAttrib(aName));
+			return Util::toInt64(getChildAttrib(name));
 		}
-		string getChildAttribTrim(const string& aName, const string& aDefault = Util::emptyString) const
-		{
-			string tmp = getChildAttrib(aName, aDefault);
-			boost::algorithm::trim(tmp);
-			return tmp;
-		}
-		bool getBoolChildAttrib(const string& aName) const
+
+		bool getBoolChildAttrib(const string& name) const
 		{
 			checkChildSelected();
-			const string& tmp = getChildAttrib(aName);
+			const string& tmp = getChildAttrib(name);
 			return !tmp.empty() && tmp[0] == '1';
 		}
-		
-		void fromXML(const string& aXML);
-		string toXML()
+
+		void fromXML(const string& xml);
+
+		string toXML() const
 		{
 			string tmp;
 			StringOutputStream os(tmp);
 			toXML(&os);
 			return tmp;
 		}
-		void toXML(OutputStream* f)
+
+		void toXML(OutputStream* f) const
 		{
 			if (!root.children.empty())
 				root.children[0]->toXML(0, f);
 		}
-		
+
 		static const string& escapeAttrib(const string& str, string& tmp)
 		{
 			if (needsEscapeAttrib(str))
 			{
 				tmp = str;
-				return escape(tmp, true);
+				return escape(tmp, true, false);
 			}
 			return str;
 		}
-		static const string& escape(const string& str, string& tmp, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8)
+
+		static const string& escape(const string& str, string& tmp, bool isAttrib, bool isLoading = false, int encoding = Text::CHARSET_UTF8)
 		{
-			if (needsEscape(str, aAttrib, aLoading, encoding))
+			if (needsEscape(str, isAttrib, isLoading, encoding))
 			{
 				tmp = str;
-				return escape(tmp, aAttrib, aLoading, encoding);
+				return escape(tmp, isAttrib, isLoading, encoding);
 			}
 			return str;
 		}
-		static string& escape(string& aString, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8);
+
+		static string& escape(string& str, bool isAttrib, bool isLoading = false, int encoding = Text::CHARSET_UTF8);
+
 		/**
 		 * This is a heuristic for whether escape needs to be called or not. The results are
 		 * only guaranteed for false, i e sometimes true might be returned even though escape
 		 * was not needed...
 		 */
-		inline static bool needsEscape(const string& aString, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8)
+		inline static bool needsEscape(const string& str, bool isAttrib, bool isLoading, int encoding = Text::CHARSET_UTF8)
 		{
 			return encoding != Text::CHARSET_UTF8 ||
-				((aLoading ? aString.find('&') : aString.find_first_of(aAttrib ? "<&>'\"" : "<&>")) != string::npos);
+				((isLoading ? str.find('&') : str.find_first_of(isAttrib ? "<&>'\"" : "<&>")) != string::npos);
 		}
-		inline static bool needsEscapeAttrib(const string& aString)
+
+		inline static bool needsEscapeAttrib(const string& str)
 		{
-			return aString.find_first_of("<&>'\"") != string::npos;
+			return str.find_first_of("<&>'\"") != string::npos;
 		}
+
 		static const string utf8Header;
 
 		SimpleXML(const SimpleXML&) = delete;
@@ -203,7 +193,7 @@ class SimpleXML
 				typedef Tag* Ptr;
 				typedef vector<Ptr> List;
 				typedef List::const_iterator Iter;
-				
+
 				/**
 				 * A simple list of children. To find a tag, one must search the entire list.
 				 */
@@ -215,45 +205,45 @@ class SimpleXML
 				 * calls to the memory allocator...)
 				 */
 				StringPairList attribs;
-				
+
 				/** Tag name */
 				string name;
-				
+
 				/** Tag data, may be empty. */
 				string data;
-				
+
 				/** Parent tag, for easy traversal */
 				Ptr parent;
-				
-				Tag(const string& aName, const StringPairList& a, Ptr aParent) : attribs(a), name(aName), data(), parent(aParent)
+
+				Tag(const string& name, const StringPairList& a, Ptr parent) : attribs(a), name(name), data(), parent(parent)
 				{
 				}
-				
-				Tag(const string& aName, const string& d, Ptr aParent) : name(aName), data(d), parent(aParent)
+
+				Tag(const string& name, const string& d, Ptr parent) : name(name), data(d), parent(parent)
 				{
 				}
-				
-				const string& getAttrib(const string& aName, const string& aDefault = Util::emptyString) const
+
+				const string& getAttrib(const string& name, const string& defValue = Util::emptyString) const
 				{
-					StringPairList::const_iterator i = find_if(attribs.begin(), attribs.end(), [&](const auto& p) { return p.first == aName; });
-					return i == attribs.end() ? aDefault : i->second;
+					StringPairList::const_iterator i = find_if(attribs.begin(), attribs.end(), [&](const auto& p) { return p.first == name; });
+					return i == attribs.end() ? defValue : i->second;
 				}
-				void toXML(int indent, OutputStream* f);
-				
-				void appendAttribString(string& tmp);
+
+				void toXML(int indent, OutputStream* f) const;
+
+				void appendAttribString(string& tmp) const;
+
 				/** Delete all children! */
 				~Tag()
 				{
 					for (auto i = children.cbegin(); i != children.cend(); ++i)
-					{
 						delete *i;
-					}
 				}
 
 				Tag(const Tag&) = delete;
 				Tag& operator= (const Tag&) = delete;
 		};
-		
+
 		class TagReader : public SimpleXMLReader::CallBack
 		{
 			public:
@@ -271,30 +261,30 @@ class SimpleXML
 				virtual void endTag(const string&, const string& d)
 				{
 					cur->data = d;
-					if (cur->parent == NULL)
+					if (cur->parent == nullptr)
 						throw SimpleXMLException("Invalid end tag");
 					cur = cur->parent;
 				}
-				
+
 				Tag* cur;
 		};
-		
+
 		/** Bogus root tag, should have only one child! */
 		Tag root;
-		
+
 		/** Current position */
 		Tag::Ptr current;
-		
+
 		Tag::Iter currentChild;
-		
+
 		void checkChildSelected() const noexcept
 		{
-			dcassert(current != NULL);
+			dcassert(current);
 			if (!current)
 				return;
 			dcassert(currentChild != current->children.end());
 		}
-		
+
 		bool found;
 };
 

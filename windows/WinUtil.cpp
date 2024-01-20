@@ -45,6 +45,7 @@
 #include "SearchFrm.h"
 #include "DirectoryListingFrm.h"
 #include "WinSysHandlers.h"
+#include <boost/algorithm/string/trim.hpp>
 
 const WinUtil::FileMaskItem WinUtil::fileListsMask[] =
 {

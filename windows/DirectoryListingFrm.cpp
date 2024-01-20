@@ -36,6 +36,7 @@
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include <boost/algorithm/string/trim.hpp>
 
 static const size_t MAX_NAVIGATION_HISTORY = 25;
 static const size_t MAX_TYPED_HISTORY = 64;

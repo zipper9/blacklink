@@ -495,7 +495,7 @@ wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 			i += result;
 			if (wc >= 0x10000)
 			{
-			    wc -= 0x10000;
+				wc -= 0x10000;
 				out[0] = (wchar_t) (0xD800 | (wc >> 10));
 				out[1] = (wchar_t) (0xDC00 | (wc & 0x3FF));
 				out += 2;

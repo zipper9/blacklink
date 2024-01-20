@@ -21,6 +21,7 @@
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include <boost/algorithm/string/trim.hpp>
 
 static const unsigned SESSION_EXPIRE_TIME = 10; // minutes
 

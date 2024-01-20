@@ -8,6 +8,7 @@
 #include "../client/AppPaths.h"
 #include "../client/LogManager.h"
 #include "../GdiOle/GDIImageOle.h"
+#include <boost/algorithm/string/trim.hpp>
 
 EmoticonPackList emoticonPackList;
 

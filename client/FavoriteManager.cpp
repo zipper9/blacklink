@@ -1310,7 +1310,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setHeaderSort(xml.getIntChildAttrib("HeaderSort", "-1"));
 			e->setHeaderSortAsc(xml.getBoolChildAttrib("HeaderSortAsc"));
 			e->setMode(Util::toInt(xml.getChildAttrib("Mode")));
-			e->setIP(xml.getChildAttribTrim("IP"));
+			e->setIP(boost::algorithm::trim_copy(xml.getChildAttrib("IP")));
 			e->setOpChat(xml.getChildAttrib("OpChat"));
 					
 			if (clientName.empty())
