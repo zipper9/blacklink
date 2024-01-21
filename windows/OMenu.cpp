@@ -21,10 +21,13 @@
 #include "WinUtil.h"
 #include "ColorUtil.h"
 #include "BarShader.h"
+#include "GdiUtil.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
 #endif
+
+#define THEME_NAME L"MENU"
 
 static const size_t MAX_CAPTION_LEN = 40;
 
@@ -73,19 +76,22 @@ enum
 OMenu::OMenu() :
 	ownerDrawMode(OD_DEFAULT),
 	themeInitialized(false), hTheme(nullptr),
-	fontNormal(nullptr), fontBold(nullptr),
+	fontNormal(nullptr), fontBold(nullptr), bgBrush(nullptr),
 	textMeasured(false)
 {
 	marginCheck = { 0 };
 	marginCheckBackground = { 0 };
 	marginItem = { 0 };
 	marginText = { 0 };
-	marginAccelerator = { 0 };
 	marginSubmenu = { 0 };
 	sizeCheck = { 0 };
 	sizeSeparator = { 0 };
 	sizeSubmenu = { 0 };
 	maxTextWidth = maxAccelWidth = maxBitmapWidth = 0;
+	minBitmapWidth = minBitmapHeight = 0;
+	accelSpace = avgCharWidth = 0;
+	for (int i = 0; i < _countof(bitmaps); ++i)
+		bitmaps[i] = nullptr;
 }
 
 OMenu::~OMenu()
@@ -97,9 +103,37 @@ OMenu::~OMenu()
 	dcassert(items.empty());
 	for (auto i = items.cbegin(); i != items.cend(); ++i)
 		delete *i;
-	if (fontNormal) DeleteObject(fontNormal);
-	if (fontBold) DeleteObject(fontBold);
-	if (hTheme) CloseThemeData(hTheme);
+	destroyResources();
+}
+
+void OMenu::destroyResources()
+{
+	if (fontNormal)
+	{
+		DeleteObject(fontNormal);
+		fontNormal = nullptr;
+	}
+	if (fontBold)
+	{
+		DeleteObject(fontBold);
+		fontBold = nullptr;
+	}
+	if (hTheme)
+	{
+		CloseThemeData(hTheme);
+		hTheme = nullptr;
+	}
+	for (int i = 0; i < _countof(bitmaps); ++i)
+		if (bitmaps[i])
+		{
+			DeleteObject(bitmaps[i]);
+			bitmaps[i] = nullptr;
+		}
+	if (bgBrush)
+	{
+		DeleteObject(bgBrush);
+		bgBrush = nullptr;
+	}
 }
 
 void OMenu::SetOwnerDraw(int mode)
@@ -117,11 +151,7 @@ BOOL OMenu::CreatePopupMenu()
 	if (ownerDrawMode == OD_DEFAULT)
 	{
 		if (BOOLSETTING(USE_CUSTOM_MENU))
-			ownerDrawMode =
-#ifdef OSVER_WIN_XP
-				SysVersion::isOsVistaPlus() &&
-#endif
-				IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
+			ownerDrawMode = OD_ALWAYS;
 		else
 			ownerDrawMode = OD_NEVER;
 	}
@@ -158,7 +188,7 @@ void OMenu::checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition)
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
 	mii.fMask = MIIM_FTYPE | MIIM_DATA | MIIM_SUBMENU;
 	GetMenuItemInfo(uItem, byPosition, &mii);
-	
+
 	if (mii.dwItemData != NULL)
 	{
 		OMenuItem* mi = (OMenuItem*) mii.dwItemData;
@@ -182,7 +212,7 @@ BOOL OMenu::InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii)
 		omi->data = (void*) lpmii->dwItemData;
 	omi->extType = 0;
 	MENUITEMINFO mii;
-	memcpy(&mii, lpmii, sizeof(MENUITEMINFO));	
+	memcpy(&mii, lpmii, sizeof(MENUITEMINFO));
 	mii.fMask |= MIIM_DATA;
 	if (ownerDrawMode == OD_ALWAYS)
 		mii.fType |= MFT_OWNERDRAW;
@@ -211,7 +241,7 @@ BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem, HB
 		if (hBitmap) SetBitmap(index, TRUE, hBitmap);
 		return TRUE;
 	}
-	ATLASSERT(::IsMenu(m_hMenu));
+	dcassert(::IsMenu(m_hMenu));
 	int pos = GetMenuItemCount();
 	OMenuItem* omi = new OMenuItem(this);
 	if (lpszNewItem) omi->text = lpszNewItem;
@@ -245,7 +275,7 @@ BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem, HB
 	}
 	if (ownerDrawMode == OD_ALWAYS)
 		mii.fType |= MFT_OWNERDRAW;
-	mii.fType |= nFlags;	
+	mii.fType |= nFlags;
 	omi->type = mii.fType;
 	omi->bitmap = hBitmap;
 	if (!CMenu::InsertMenuItem(pos, TRUE, &mii))
@@ -388,6 +418,23 @@ void OMenu::createBoldFont()
 	fontBold = CreateFontIndirect(&lf);
 }
 
+void OMenu::updateFontMetrics(HWND hwnd)
+{
+	dcassert(fontNormal);
+	dcassert(hwnd);
+	HDC hdc = GetDC(hwnd);
+	if (!hdc) return;
+	HGDIOBJ oldFont = SelectObject(hdc, fontNormal);
+	int dx, dy;
+	if (WinUtil::getDialogUnits(hdc, dx, dy))
+	{
+		avgCharWidth = dx;
+		accelSpace = hTheme ? avgCharWidth * 2 : avgCharWidth;
+	}
+	SelectObject(hdc, oldFont);
+	ReleaseDC(hwnd, hdc);
+}
+
 static inline int totalWidth(const MARGINS& m)
 {
 	return m.cxLeftWidth + m.cxRightWidth;
@@ -404,7 +451,8 @@ void OMenu::measureText(HDC hdc)
 	HFONT font;
 	HGDIOBJ oldFont;
 	maxTextWidth = maxAccelWidth = 0;
-	maxBitmapWidth = sizeCheck.cx + totalWidth(marginCheck) + marginCheckBackground.cxLeftWidth;
+	maxBitmapWidth = minBitmapWidth;
+
 	for (OMenuItem* omi : items)
 	{
 		rc.left = rc.top = rc.right = rc.bottom = 0;
@@ -421,7 +469,7 @@ void OMenu::measureText(HDC hdc)
 			}
 		}
 		else
-		{			
+		{
 			int len = static_cast<int>(omi->text.length());
 			omi->accelPos = omi->text.find(_T('\t'));
 			if (omi->extType & EXT_TYPE_DEFAULT_ITEM)
@@ -456,8 +504,7 @@ void OMenu::measureText(HDC hdc)
 				{
 					omi->sizeBitmap.cx = bitmap.bmWidth;
 					omi->sizeBitmap.cy = bitmap.bmHeight;
-					int bitmapWidth = omi->sizeBitmap.cx + totalWidth(marginBitmap);
-					if (bitmapWidth > maxBitmapWidth) maxBitmapWidth = bitmapWidth;
+					if (bitmap.bmWidth > maxBitmapWidth) maxBitmapWidth = bitmap.bmWidth;
 				}
 			}
 		}
@@ -512,17 +559,41 @@ LRESULT OMenu::onMeasureItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lPa
 				}
 				else
 				{
+					if (parent->hTheme)
+					{
+						width = parent->sizeCheck.cx + totalWidth(parent->marginCheck) + parent->marginCheckBackground.cxLeftWidth;
+						if (parent->maxBitmapWidth)
+						{
+							int maxBitmapWidth = parent->maxBitmapWidth + totalWidth(parent->marginBitmap);
+							if (maxBitmapWidth > width) width = maxBitmapWidth;
+						}
+						width += parent->marginCheckBackground.cxRightWidth;
+					}
+					else
+					{
+						width = parent->sizeCheck.cx + totalWidth(parent->marginCheck);
+						if (parent->maxBitmapWidth)
+						{
+							int maxBitmapWidth = parent->maxBitmapWidth + totalWidth(parent->marginBitmap);
+							if (maxBitmapWidth > width) width = maxBitmapWidth;
+						}
+					}
 					height = parent->sizeCheck.cy + totalHeight(parent->marginCheckBackground) + totalHeight(parent->marginCheck);
-					width = parent->maxBitmapWidth + parent->marginCheckBackground.cxRightWidth;
-					width += parent->maxTextWidth + totalWidth(parent->marginText) + parent->maxAccelWidth;
+					width += parent->maxTextWidth + totalWidth(parent->marginText);
 					int partHeight = omi->sizeText.cy + totalHeight(parent->marginText);
 					if (partHeight > height) height = partHeight;
 					partHeight = omi->sizeBitmap.cy + totalHeight(parent->marginBitmap);
 					if (partHeight > height) height = partHeight;
 					width += totalWidth(parent->marginItem);
 					width += totalWidth(parent->marginSubmenu) + parent->sizeSubmenu.cx;
+					if (parent->maxAccelWidth) width += parent->maxAccelWidth + parent->accelSpace;
+					if (parent->minBitmapHeight > 0)
+					{
+						int bitmapHeight = parent->minBitmapHeight + totalHeight(parent->marginBitmap);
+						if (bitmapHeight > height) height = bitmapHeight;
+					}
 				}
-				mis->itemWidth = width;
+				mis->itemWidth = width - 2 * parent->avgCharWidth;
 				mis->itemHeight = height;
 				return TRUE;
 			}
@@ -557,7 +628,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 				}
 
 				CRect rc(dis->rcItem);
-				
+
 				if ((omi->type & MFT_SEPARATOR) && (omi->extType & EXT_TYPE_HEADER))
 				{
 					bHandled = TRUE;
@@ -567,7 +638,6 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					rc.right -= parent->marginItem.cxRightWidth;
 					rc.bottom -= parent->marginItem.cyBottomHeight;
 					*/
-				
 					if (BOOLSETTING(MENUBAR_TWO_COLORS))
 						OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
 					else
@@ -582,15 +652,20 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					DrawText(dis->hDC, omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
 					SelectObject(dis->hDC, prevFont);
 				}
-				else
-				if (parent->hTheme)
+				else if (parent->hTheme)
 				{
 					bHandled = TRUE;
 					POPUPITEMSTATES stateId = toItemStateId(dis->itemState);
 					if (IsThemeBackgroundPartiallyTransparent(parent->hTheme, MENU_POPUPITEM, stateId))
 						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPBACKGROUND, 0, &rc, nullptr);
 
-					int xCheck = rc.left + parent->marginItem.cxLeftWidth + parent->maxBitmapWidth;
+					int gapSize = parent->sizeCheck.cx + totalWidth(parent->marginCheck) + parent->marginCheckBackground.cxLeftWidth;
+					if (parent->maxBitmapWidth)
+					{
+						int bitmapSize = parent->maxBitmapWidth + totalWidth(parent->marginBitmap);
+						if (bitmapSize > gapSize) gapSize = bitmapSize;
+					}
+					int xCheck = rc.left + parent->marginItem.cxLeftWidth + gapSize;
 
 					RECT rcGutter;
 					rcGutter.left = rc.left;
@@ -618,20 +693,10 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 						HBITMAP bitmap = omi->bitmap;
 						if (bitmap)
 						{
-							if (dis->itemState & ODS_DISABLED) bitmap = omi->getGrayBitmap(dis->hDC);
-							BLENDFUNCTION bf;
-							bf.BlendOp = AC_SRC_OVER;
-							bf.BlendFlags = 0;
-							bf.SourceConstantAlpha = 255;
-							bf.AlphaFormat = AC_SRC_ALPHA;
-							HDC bitmapDC = CreateCompatibleDC(dis->hDC);
-							HGDIOBJ oldBitmap = SelectObject(bitmapDC, (HGDIOBJ) bitmap);
+							if (dis->itemState & ODS_GRAYED) bitmap = omi->getGrayBitmap(dis->hDC);
 							int x = xCheck - parent->marginBitmap.cxRightWidth - omi->sizeBitmap.cx;
 							int y = (rc.top + rc.bottom - omi->sizeBitmap.cy) / 2;
-							AlphaBlend(dis->hDC, x, y, omi->sizeBitmap.cx, omi->sizeBitmap.cy, bitmapDC, 0, 0,
-								omi->sizeBitmap.cx, omi->sizeBitmap.cy, bf);
-							SelectObject(bitmapDC, oldBitmap);
-							DeleteDC(bitmapDC);
+							WinUtil::drawAlphaBitmap(dis->hDC, bitmap, x, y, omi->sizeBitmap.cx, omi->sizeBitmap.cy);
 						}
 
 						if (dis->itemState & ODS_CHECKED)
@@ -657,32 +722,155 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 								checkStateId = (stateId == MPI_DISABLED || stateId == MPI_DISABLEDHOT) ? MC_CHECKMARKDISABLED : MC_CHECKMARKNORMAL;
 							DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPCHECK, checkStateId, &rcDraw, nullptr);
 						}
-						
+
 						rcDraw.left = rcGutter.right + parent->marginText.cxLeftWidth;
 						rcDraw.top = (rc.top + rc.bottom - omi->sizeText.cy) / 2;
 						rcDraw.bottom = rcDraw.top + omi->sizeText.cy;
 						rcDraw.right = rcDraw.left + omi->sizeText.cx;
 						DWORD flags = DT_SINGLELINE | DT_LEFT;
 						if (dis->itemState & ODS_NOACCEL) flags |= DT_HIDEPREFIX;
+#ifdef USE_DRAW_THEME_TEXT
 						DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
 							omi->text.c_str(), omi->getTextLength(), flags, 0, &rcDraw);
+#else
+						HFONT oldFont;
+						int oldBkMode = GetBkMode(dis->hDC);
+						HFONT hFont = (omi->extType & EXT_TYPE_DEFAULT_ITEM) ? parent->fontBold : parent->fontNormal;
+						oldFont = (HFONT) SelectObject(dis->hDC, hFont);
+						SetBkMode(dis->hDC, TRANSPARENT);
+						DrawText(dis->hDC, omi->text.c_str(), omi->getTextLength(), &rcDraw, flags);
+#endif
+
+						if (omi->accelPos != -1)
+						{
+							rcDraw.right = rc.right - parent->marginItem.cxRightWidth - totalWidth(parent->marginSubmenu) - parent->sizeSubmenu.cx;
+							rcDraw.left = rcDraw.right - parent->maxAccelWidth;
+#ifdef USE_DRAW_THEME_TEXT
+							DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
+								omi->text.c_str() + omi->accelPos + 1, -1, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX, 0, &rcDraw);
+#else
+							DrawText(dis->hDC,  omi->text.c_str() + omi->accelPos + 1, -1, &rcDraw, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX);
+#endif
+						}
+#ifndef USE_DRAW_THEME_TEXT
+						SelectObject(dis->hDC, oldFont);
+						SetBkMode(dis->hDC, oldBkMode);
+#endif
+						if (omi->extType & EXT_TYPE_SUBMENU)
+						{
+							POPUPSUBMENUSTATES submenuStateId = (dis->itemState & (ODS_INACTIVE | ODS_DISABLED)) ? MSM_DISABLED : MSM_NORMAL;
+							rcDraw.right = rc.right - parent->marginItem.cxRightWidth - parent->marginSubmenu.cxRightWidth;
+							rcDraw.left = rcDraw.right - parent->sizeSubmenu.cx;
+							rcDraw.top = (rc.top + rc.bottom - parent->sizeSubmenu.cy) / 2;
+							rcDraw.bottom = rcDraw.top + parent->sizeSubmenu.cy;
+							DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPSUBMENU, submenuStateId, &rcDraw, nullptr);
+						}
+					}
+				}
+				else
+				{
+					static const int FLAG_SHOW_CHECKS = 1;
+					static const int flags = FLAG_SHOW_CHECKS;
+
+					if (omi->type & MFT_SEPARATOR)
+					{
+						// Non-themed separator has 1px left and right padding
+						RECT rcSep;
+						rcSep.left = rc.left + parent->marginItem.cxLeftWidth + 1;
+						rcSep.right = rc.right - parent->marginItem.cxRightWidth - 1;
+						rcSep.top = (rc.top + rc.bottom - 2) / 2;
+						rcSep.bottom = rcSep.top + 2;
+						DrawEdge(dis->hDC, &rcSep, EDGE_ETCHED, BF_TOP);
+					}
+					else
+					{
+						bool isSelected = (dis->itemState & (ODS_HOTLIGHT | ODS_SELECTED)) != 0;
+						int bgSysColor = isSelected ? COLOR_HIGHLIGHT : COLOR_MENU;
+						FillRect(dis->hDC, &rc, GetSysColorBrush(bgSysColor));
+
+						int xText = rc.left + parent->marginItem.cxLeftWidth;
+						int gapSize = 0;
+						if ((flags & FLAG_SHOW_CHECKS) || parent->maxBitmapWidth)
+						{
+							if (flags & FLAG_SHOW_CHECKS)
+								gapSize = totalWidth(parent->marginCheck) + parent->sizeCheck.cx;
+							if (parent->maxBitmapWidth)
+							{
+								int bitmapSize = parent->maxBitmapWidth + totalWidth(parent->marginBitmap);
+								if (bitmapSize > gapSize) gapSize = bitmapSize;
+							}
+							xText += gapSize;
+						}
+
+						COLORREF textColor;
+						if (dis->itemState & ODS_GRAYED)
+						{
+							textColor = GetSysColor(COLOR_GRAYTEXT);
+							if (textColor == GetSysColor(bgSysColor))
+								textColor = GetSysColor(COLOR_HIGHLIGHTTEXT);
+						}
+						else
+							textColor = GetSysColor(isSelected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT);
+						if ((flags & FLAG_SHOW_CHECKS) && (dis->itemState & ODS_CHECKED))
+						{
+							int y = rc.top + (rc.bottom - rc.top - parent->sizeCheck.cy) / 2;
+							int x = rc.left + parent->marginItem.cxLeftWidth + parent->marginCheck.cxLeftWidth;
+#ifndef USE_EXACT_LOOKS
+							if (parent->maxBitmapWidth)
+								x = rc.left + parent->marginItem.cxLeftWidth + (gapSize - parent->sizeCheck.cx) / 2;
+#endif
+							parent->drawCompatBitmap(dis->hDC,
+								x, y, parent->sizeCheck,
+								(omi->type & MFT_RADIOCHECK) ? DFCS_MENUBULLET : DFCS_MENUCHECK,
+								textColor);
+						}
+
+						HBITMAP bitmap = omi->bitmap;
+						if (bitmap)
+						{
+							if (dis->itemState & ODS_GRAYED) bitmap = omi->getGrayBitmap(dis->hDC);
+							int x = rc.left + parent->marginItem.cxLeftWidth + parent->marginBitmap.cxLeftWidth;
+							int y = (rc.top + rc.bottom - omi->sizeBitmap.cy) / 2;
+							WinUtil::drawAlphaBitmap(dis->hDC, bitmap, x, y, omi->sizeBitmap.cx, omi->sizeBitmap.cy);
+						}
+
+						RECT rcDraw;
+						rcDraw.left = xText + parent->marginText.cxLeftWidth;
+						rcDraw.top = rc.top + parent->marginText.cyTopHeight;
+						rcDraw.bottom = rc.bottom - parent->marginText.cyBottomHeight;
+						rcDraw.right = rc.right - parent->marginText.cxRightWidth;
+						HGDIOBJ oldFont = SelectObject(dis->hDC,
+							(omi->extType & EXT_TYPE_DEFAULT_ITEM) ? parent->fontBold : parent->fontNormal);
+						int oldMode = SetBkMode(dis->hDC, TRANSPARENT);
+						COLORREF oldColor = SetTextColor(dis->hDC, textColor);
+						DWORD drawTextFlags = DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOCLIP;
+						if (dis->itemState & ODS_NOACCEL) drawTextFlags |= DT_HIDEPREFIX;
+						DrawText(dis->hDC, omi->text.c_str(), omi->getTextLength(), &rcDraw, drawTextFlags);
 
 						if (omi->accelPos != -1)
 						{
 							rcDraw.right = rc.right - totalWidth(parent->marginSubmenu) - parent->sizeSubmenu.cx;
 							rcDraw.left = rcDraw.right - parent->maxAccelWidth;
-							DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
-								omi->text.c_str() + omi->accelPos + 1, -1, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX, 0, &rcDraw);
+#ifdef USE_EXACT_LOOKS
+							drawTextFlags = DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX;
+#else
+							drawTextFlags = DT_SINGLELINE | DT_RIGHT | DT_VCENTER | DT_NOPREFIX;
+#endif
+							DrawText(dis->hDC, omi->text.c_str() + omi->accelPos + 1, -1, &rcDraw, drawTextFlags);
 						}
+
+						SelectObject(dis->hDC, oldFont);
+						SetBkMode(dis->hDC, oldMode);
+						SetTextColor(dis->hDC, oldColor);
 
 						if (omi->extType & EXT_TYPE_SUBMENU)
 						{
-							POPUPSUBMENUSTATES submenuStateId = (dis->itemState & (ODS_INACTIVE | ODS_DISABLED)) ? MSM_DISABLED : MSM_NORMAL;
-							rcDraw.right = rc.right - parent->marginSubmenu.cxRightWidth;
-							rcDraw.left = rcDraw.right - parent->sizeSubmenu.cx;
-							rcDraw.top = (rc.top + rc.bottom - parent->sizeSubmenu.cy) / 2;
-							rcDraw.bottom = rcDraw.top + parent->sizeSubmenu.cy;
-							DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPSUBMENU, submenuStateId, &rcDraw, nullptr);
+							int right = rc.right - parent->marginSubmenu.cxRightWidth;
+							int left = right - parent->sizeSubmenu.cx;
+							int top = (rc.top + rc.bottom - parent->sizeSubmenu.cy) / 2;
+							parent->drawCompatBitmap(dis->hDC,
+								left, top, parent->sizeSubmenu,
+								DFCS_MENUARROW, textColor);
 						}
 					}
 				}
@@ -696,54 +884,118 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 
 void OMenu::openTheme(HWND hwnd)
 {
-	hTheme = OpenThemeData(hwnd, VSCLASS_MENU);
+#ifndef DISABLE_UXTHEME
+	hTheme = OpenThemeData(hwnd, THEME_NAME);
+#else
+	hTheme = nullptr;
+#endif
+	createNormalFont();
+	updateFontMetrics(hwnd);
 	if (!hTheme)
 	{
 		initFallbackParams();
-		return;
 	}
+	else
+	{
+		GetThemeMargins(hTheme, NULL, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck);
+		GetThemeMargins(hTheme, NULL, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
+		GetThemeMargins(hTheme, NULL, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
+		GetThemeMargins(hTheme, NULL, MENU_POPUPSUBMENU, 0, TMT_CONTENTMARGINS, NULL, &marginSubmenu);
+		GetThemePartSize(hTheme, NULL, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
+		GetThemePartSize(hTheme, NULL, MENU_POPUPSEPARATOR, 0, nullptr, TS_TRUE, &sizeSeparator);
+		GetThemePartSize(hTheme, NULL, MENU_POPUPSUBMENU, 0, NULL, TS_TRUE, &sizeSubmenu);
+		MARGINS margins;
+		HRESULT hr = GetThemeMargins(hTheme, NULL, MENU_POPUPBORDERS, 0, TMT_CONTENTMARGINS, nullptr, &margins);
+		SIZE size;
+		hr = GetThemePartSize(hTheme, NULL, MENU_POPUPBORDERS, 0, NULL, TS_TRUE, &size);
+		marginBitmap.cxLeftWidth = marginBitmap.cxRightWidth = size.cx;
+		marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = size.cy;
 
-	GetThemeMargins(hTheme, NULL, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck); 
-	GetThemeMargins(hTheme, NULL, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
-	GetThemeMargins(hTheme, NULL, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
-	GetThemeMargins(hTheme, NULL, MENU_POPUPSUBMENU, 0, TMT_CONTENTMARGINS, NULL, &marginSubmenu); 
-	GetThemePartSize(hTheme, NULL, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
-	GetThemePartSize(hTheme, NULL, MENU_POPUPSEPARATOR, 0, nullptr,  TS_TRUE, &sizeSeparator);
-	GetThemePartSize(hTheme, NULL, MENU_POPUPSUBMENU, 0, NULL, TS_TRUE, &sizeSubmenu);
+		int popupBorderSize, popupBackgroundBorderSize;
+		GetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE,  &popupBorderSize);
+		GetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
 
-	SIZE size;
-	GetThemePartSize(hTheme, NULL, MENU_POPUPBORDERS, 0, NULL, TS_TRUE, &size);	
-	marginBitmap.cxLeftWidth = marginBitmap.cxRightWidth = size.cx;
-	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = size.cy;
-	
-	int popupBorderSize, popupBackgroundBorderSize;
-	GetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE,  &popupBorderSize);
-	GetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
-
-	marginText.cxLeftWidth = popupBackgroundBorderSize;
-	marginText.cxRightWidth = popupBorderSize;
-	marginText.cyTopHeight = marginItem.cyTopHeight;
-	marginText.cyBottomHeight = marginItem.cyBottomHeight;
+		marginText.cxLeftWidth = popupBackgroundBorderSize;
+		marginText.cxRightWidth = popupBorderSize; // FIXME
+		marginText.cyTopHeight = marginItem.cyTopHeight;
+		marginText.cyBottomHeight = marginItem.cyBottomHeight;
+	}
 }
+
+#ifndef OBM_MNARROW
+#define OBM_MNARROW 32739
+#endif
 
 void OMenu::initFallbackParams()
 {
-	marginCheck.cxLeftWidth = marginCheck.cxRightWidth = GetSystemMetrics(SM_CXEDGE);
-	marginCheck.cyTopHeight = marginCheck.cyBottomHeight = GetSystemMetrics(SM_CYEDGE);
+	int cxEdge = GetSystemMetrics(SM_CXEDGE);
+	int cyEdge = GetSystemMetrics(SM_CYEDGE);
+	marginCheck.cxLeftWidth = marginCheck.cxRightWidth = 0;
+	marginCheck.cyTopHeight = marginCheck.cyBottomHeight = 0;
 	sizeCheck.cx = GetSystemMetrics(SM_CXMENUCHECK);
 	sizeCheck.cy = GetSystemMetrics(SM_CYMENUCHECK);
 
-	marginText.cxLeftWidth = marginText.cxRightWidth = 8;
-	marginText.cyTopHeight = marginText.cyBottomHeight = 4;
+	HBITMAP hOemBitmap = LoadBitmap(NULL, (LPCTSTR) OBM_MNARROW);
+	BITMAP bm;
+	if (hOemBitmap && GetObject(hOemBitmap, sizeof(bm), &bm))
+	{
+		sizeSubmenu.cx = bm.bmWidth;
+		sizeSubmenu.cy = bm.bmHeight;
+	}
 
-	marginBitmap.cxLeftWidth = marginBitmap.cxRightWidth = 2;
-	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = 2;
+	marginText.cxLeftWidth = marginText.cxRightWidth = cxEdge;
+	marginText.cyTopHeight = marginText.cyBottomHeight = cyEdge;
+
+#ifdef USE_EXACT_LOOKS
+	int cyBorder = GetSystemMetrics(SM_CYBORDER);
+	marginBitmap.cxLeftWidth = cxEdge;
+	marginBitmap.cxRightWidth = 0;
+	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = cyBorder;
+#else
+	marginBitmap.cxLeftWidth = std::max(3, cxEdge);
+	marginBitmap.cxRightWidth = cxEdge;
+	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = std::max(3, cyEdge);
+#endif
+
+	memset(&marginCheckBackground, 0, sizeof(marginCheckBackground));
+	memset(&marginItem, 0, sizeof(marginItem));
+	//marginItem.cxLeftWidth = marginItem.cxRightWidth = 0;
+	//marginItem.cyTopHeight = marginItem.cyBottomHeight = 1;
+	marginCheck.cxLeftWidth = cxEdge;
+
+	sizeSeparator.cx = 0;
+	sizeSeparator.cy = GetSystemMetrics(SM_CYMENUSIZE) / 2;
+
+	marginSubmenu.cxLeftWidth = avgCharWidth;
 }
+
+#if 0
+void OMenu::updateBackgroundBrush()
+{
+	HTHEME hTheme = OpenThemeData(nullptr, THEME_NAME);
+	if (hTheme)
+	{
+		COLORREF color;
+		if (FAILED(GetThemeColor(hTheme, MENU_POPUPBACKGROUND, 0, TMT_FILLCOLOR, &color)))
+			color = getColorFromTheme(hTheme, 5, 5, MENU_POPUPBORDERS, 0);
+		CloseThemeData(hTheme);
+		if (color != CLR_INVALID)
+		{
+			if (bgBrush) DeleteObject(bgBrush);
+			bgBrush = CreateSolidBrush(color);
+			MENUINFO mi = { sizeof(mi) };
+			mi.fMask = MIM_BACKGROUND;
+			mi.hbrBack = bgBrush;
+			::SetMenuInfo(m_hMenu, &mi);
+		}
+	}
+}
+#endif
 
 bool OMenu::SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap)
 {
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
-	if (ownerDrawMode == OD_NEVER)
+	if (ownerDrawMode == OD_NEVER || ownerDrawMode == OD_IF_NEEDED)
 	{
 #ifdef OSVER_WIN_XP
 		if (!SysVersion::isOsVistaPlus()) return false;
@@ -804,4 +1056,19 @@ HBITMAP OMenuItem::getGrayBitmap(HDC hdc) const
 	SetDIBits(hdc, grayBitmap, 0, height, bits, &bmi, DIB_RGB_COLORS);
 	delete[] bits;
 	return grayBitmap;
+}
+
+void OMenu::drawCompatBitmap(HDC hdc, int x, int y, SIZE size, int flags, COLORREF color)
+{
+	int index = 0;
+	if (flags == DFCS_MENUARROW)
+		index = 2;
+	else if (flags == DFCS_MENUBULLET)
+		index = 1;
+	if (!bitmaps[index])
+	{
+		bitmaps[index] = WinUtil::createFrameControlBitmap(hdc, size.cx, size.cy, DFC_MENU, flags);
+		if (!bitmaps[index]) return;
+	}
+	WinUtil::drawMonoBitmap(hdc, bitmaps[index], x, y, size.cx, size.cy, color);
 }

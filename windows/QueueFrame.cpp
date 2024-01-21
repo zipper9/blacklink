@@ -1662,7 +1662,6 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				bool isFileList = qi->isUserList();
 
 				OMenu singleMenu;
-				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				singleMenu.CreatePopupMenu();
 				int indexPreview = -1;
 				int indexSegments = -1;
@@ -1815,7 +1814,6 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			else
 			{
 				OMenu multiMenu;
-				multiMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				multiMenu.CreatePopupMenu();
 				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 				multiMenu.AppendMenu(MF_POPUP, segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));

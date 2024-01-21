@@ -39,12 +39,12 @@ class OMenu final : private CMenu
 
 		OMenu();
 		~OMenu();
-		
+
 		OMenu(const OMenu&) = delete;
 		OMenu& operator= (const OMenu&) = delete;
-		
+
 		BOOL CreatePopupMenu();
-		
+
 		BOOL InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption);
 		BOOL InsertSeparatorFirst(const tstring& caption)
 		{
@@ -54,7 +54,7 @@ class OMenu final : private CMenu
 		{
 			return InsertSeparator(GetMenuItemCount(), TRUE, caption);
 		}
-		
+
 		void RemoveFirstItem()
 		{
 			RemoveMenu(0, MF_BYPOSITION);
@@ -85,9 +85,9 @@ class OMenu final : private CMenu
 				checkOwnerDrawOnRemove(i, MF_BYPOSITION);
 			return CMenu::DestroyMenu();
 		}
-		
+
 		BOOL InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii);
-		
+
 		BOOL AppendMenu(UINT nFlags, UINT_PTR nIDNewItem = 0, LPCTSTR lpszNewItem = nullptr, HBITMAP hBitmap = nullptr);
 
 		BOOL AppendMenu(UINT nFlags, HMENU hSubMenu, LPCTSTR lpszNewItem, HBITMAP hBitmap = nullptr)
@@ -105,10 +105,13 @@ class OMenu final : private CMenu
 
 		void SetOwnerDraw(int mode);
 
+		void setMinBitmapWidth(int width) { minBitmapWidth = width; }
+		void setMinBitmapHeight(int width) { minBitmapHeight = width; }
+
 		static LRESULT onInitMenuPopup(HWND hWnd, UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		static LRESULT onMeasureItem(HWND hWnd, UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		static LRESULT onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
-		
+
 		using CMenu::m_hMenu;
 		using CMenu::operator HMENU;
 		using CMenu::CheckMenuItem;
@@ -121,7 +124,7 @@ class OMenu final : private CMenu
 
 	private:
 		int ownerDrawMode;
-		vector<OMenuItem*> items;
+		std::vector<OMenuItem*> items;
 
 		bool    themeInitialized;
 		HTHEME  hTheme;
@@ -129,7 +132,6 @@ class OMenu final : private CMenu
 		MARGINS marginCheckBackground;
 		MARGINS marginItem;
 		MARGINS marginText;
-		MARGINS marginAccelerator;
 		MARGINS marginSubmenu;
 		MARGINS marginBitmap;
 		SIZE    sizeCheck;
@@ -138,19 +140,30 @@ class OMenu final : private CMenu
 
 		HFONT   fontNormal;
 		HFONT   fontBold;
+		HBRUSH  bgBrush;
 
 		bool    textMeasured;
 		int     maxTextWidth;
 		int     maxAccelWidth;
 		int     maxBitmapWidth;
-		
+		int     minBitmapWidth;
+		int     minBitmapHeight;
+		int     accelSpace;
+		int     avgCharWidth;
+
+		HBITMAP bitmaps[3];
+
 		void checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition);
 		void openTheme(HWND hwnd);
 		void initFallbackParams();
 		bool getMenuFont(LOGFONT& lf) const;
+		void updateFontMetrics(HWND hwnd);
 		void createNormalFont();
 		void createBoldFont();
 		void measureText(HDC hdc);
+		void makeOwnerDraw();
+		void drawCompatBitmap(HDC hdc, int x, int y, SIZE size, int flags, COLORREF color);
+		void destroyResources();
 };
 
 #define MESSAGE_HANDLER_HWND(msg, func) \
