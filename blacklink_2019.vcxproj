@@ -945,6 +945,7 @@
     <ClCompile Include="windows\UserListColorsTab.cpp" />
     <ClCompile Include="windows\UserListWindow.cpp" />
     <ClCompile Include="windows\UsersFrame.cpp" />
+    <ClCompile Include="windows\UxThemeLib.cpp" />
     <ClCompile Include="windows\WaitingUsersFrame.cpp" />
     <ClCompile Include="windows\WebServerPage.cpp" />
     <ClCompile Include="windows\WindowsPage.cpp" />
@@ -1091,6 +1092,7 @@
     <ClInclude Include="windows\UserListColorsTab.h" />
     <ClInclude Include="windows\UserListWindow.h" />
     <ClInclude Include="windows\UserMessages.h" />
+    <ClInclude Include="windows\UxThemeLib.h" />
     <ClInclude Include="windows\WinFirewall.h" />
     <ClInclude Include="windows\WinSysHandlers.h" />
     <ClInclude Include="windows\wmp.h" />

@@ -469,6 +469,9 @@
     <ClCompile Include="windows\DirectoryListingNavWnd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\UxThemeLib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -1072,6 +1075,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\DirectoryListingNavWnd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\UxThemeLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

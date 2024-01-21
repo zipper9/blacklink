@@ -6,7 +6,9 @@
 
 DirectoryListingNavWnd::DirectoryListingNavWnd() : navBarHeight(-1), isAppThemed(false), isVisible(true)
 {
-	navBarMinWidth = 160 * WinUtil::getDisplayDpi() / 96;
+	int dpi = WinUtil::getDisplayDpi();
+	navBarMinWidth = 160 * dpi / 96;
+	space = 4 * dpi / 96;
 }
 
 LRESULT DirectoryListingNavWnd::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -50,7 +52,7 @@ LRESULT DirectoryListingNavWnd::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	SIZE size1, size2;
 	ctrlNavigation.GetMaxSize(&size1);
 	ctrlButtons.GetMaxSize(&size2);
-	if (size1.cx + navBarMinWidth > rcParent.right)
+	if (size1.cx + navBarMinWidth + space > rcParent.right)
 	{
 		hideControl(ctrlNavigation);
 		hideControl(navBar);
@@ -60,9 +62,10 @@ LRESULT DirectoryListingNavWnd::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	}
 
 	isVisible = true;
-	if (size1.cx + navBarMinWidth + size2.cx > rcParent.right)
+	int buttonsSize = size2.cx + 2 * space;
+	if (size1.cx + navBarMinWidth + size2.cx + 3 * space > rcParent.right)
 	{
-		size2.cx = 0;
+		buttonsSize = 0;
 		hideControl(ctrlButtons);
 	}
 
@@ -73,15 +76,15 @@ LRESULT DirectoryListingNavWnd::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	rc.bottom = rc.top + size1.cy;
 	ctrlNavigation.SetWindowPos(nullptr, &rc, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
 
-	rc.left = rc.right;
-	rc.right = rcParent.right - size2.cx;
+	rc.left = rc.right + space;
+	rc.right = rcParent.right - buttonsSize;
 	rc.top = (rcParent.top + rcParent.bottom - navBarHeight) / 2;
 	rc.bottom = rc.top + navBarHeight;
 	navBar.SetWindowPos(nullptr, &rc, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
 
-	if (size2.cx)
+	if (buttonsSize)
 	{
-		rc.left = rc.right;
+		rc.left = rc.right + space;
 		rc.right = rcParent.right;
 		rc.top = (rcParent.top + rcParent.bottom - size2.cy) / 2;
 		rc.bottom = rc.top + size2.cy;
@@ -188,6 +191,7 @@ void DirectoryListingNavWnd::initToolbars(const DirectoryListingFrame* frame)
 
 	enableNavigationButton(IDC_NAVIGATION_BACK, false);
 	enableNavigationButton(IDC_NAVIGATION_FORWARD, false);
+	enableNavigationButton(IDC_NAVIGATION_UP, false);
 	enableControlButton(IDC_PREV, false);
 	enableControlButton(IDC_NEXT, false);
 }

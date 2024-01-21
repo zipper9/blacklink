@@ -24,6 +24,7 @@
 #include "ThemeManager.h"
 #include "WinFirewall.h"
 #include "BackingStore.h"
+#include "UxThemeLib.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
@@ -374,6 +375,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	hRes = _Module.Init(NULL, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
 
+	UxThemeLib::instance.init();
 	BackingStore::globalInit();
 
 	HINSTANCE hRichEditNew;

@@ -3,11 +3,14 @@
 #include "BackingStore.h"
 #include "GdiUtil.h"
 #include "WinUtil.h"
+#include "UxThemeLib.h"
 #include <vsstyle.h>
 #include <vssym32.h>
 
 #undef min
 #undef max
+
+#define UX UxThemeLib::instance
 
 using std::vector;
 
@@ -222,6 +225,12 @@ void NavigationBar::layout(const RECT& rc)
 			}
 			b0.width = width0;
 		}
+		// Special case: don't show chevron if only the first "arrow" item is hidden
+		if (visibleCount + 1 == numItems && !(crumbs[0].flags & BF_TEXT))
+		{
+			crumbs[0].width = crumbs[0].autoWidth;
+			visibleCount++;
+		}
 		if (visibleCount < numItems)
 		{
 			flags |= FLAG_HAS_CHEVRON;
@@ -394,8 +403,8 @@ void NavigationBar::drawBackground(HDC hdc, const RECT& rc)
 	{
 		FillRect(hdc, &rc, GetSysColorBrush(COLOR_BTNFACE));
 		int stateId = (flags & (FLAG_UNDER_MOUSE | FLAG_POPUP_VISIBLE)) ? SBB_FOCUSED : SBB_NORMAL;
-		themeAddressBar.pDrawThemeParentBackground(m_hWnd, hdc, &rc);
-		themeAddressBar.pDrawThemeBackground(themeAddressBar.hTheme, hdc, SBP_ABBACKGROUND, stateId, &rc, nullptr);
+		UX.pDrawThemeParentBackground(m_hWnd, hdc, &rc);
+		UX.pDrawThemeBackground(themeAddressBar.hTheme, hdc, SBP_ABBACKGROUND, stateId, &rc, nullptr);
 	}
 	else
 	{
@@ -425,12 +434,12 @@ void NavigationBar::drawThemeButton(HDC hdc, const RECT& rcButton, const Item& i
 	if (item.flags & BF_CHEVRON)
 	{
 		if (themeBreadcrumbs.hTheme)
-			themeBreadcrumbs.pDrawThemeBackground(themeBreadcrumbs.hTheme, hdc, 1, stateId, &rc, nullptr);
+			UX.pDrawThemeBackground(themeBreadcrumbs.hTheme, hdc, 1, stateId, &rc, nullptr);
 		return;
 	}
 	if (item.flags & BF_PUSH)
 	{
-		themeToolbar.pDrawThemeBackground(themeToolbar.hTheme, hdc, TP_BUTTON, stateId, &rc, nullptr);
+		UX.pDrawThemeBackground(themeToolbar.hTheme, hdc, TP_BUTTON, stateId, &rc, nullptr);
 		if (item.data == BUTTON_DROPDOWN)
 		{
 			if (flags & FLAG_INIT_DD_BITMAP)
@@ -464,7 +473,7 @@ void NavigationBar::drawThemeButton(HDC hdc, const RECT& rcButton, const Item& i
 			rc.right -= glyphSize;
 			partId = TP_SPLITBUTTON;
 		}
-		themeToolbar.pDrawThemeBackground(themeToolbar.hTheme, hdc, partId, stateId, &rc, nullptr);
+		UX.pDrawThemeBackground(themeToolbar.hTheme, hdc, partId, stateId, &rc, nullptr);
 		HGDIOBJ oldFont = SelectObject(hdc, hFont);
 		RECT rcText = rc;
 		rcText.left += paddingLeft;
@@ -478,7 +487,7 @@ void NavigationBar::drawThemeButton(HDC hdc, const RECT& rcButton, const Item& i
 			rcText.right += xoffset;
 			rcText.bottom += yoffset;
 		}
-		themeToolbar.pDrawThemeText(themeToolbar.hTheme, hdc, partId, stateId, item.text.c_str(), item.text.length(),
+		UX.pDrawThemeText(themeToolbar.hTheme, hdc, partId, stateId, item.text.c_str(), item.text.length(),
 			DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS, 0, &rcText);
 		SelectObject(hdc, oldFont);
 		if (item.flags & BF_ARROW)
@@ -490,7 +499,7 @@ void NavigationBar::drawThemeButton(HDC hdc, const RECT& rcButton, const Item& i
 	if (item.flags & BF_ARROW)
 	{
 		if (stateId == TS_OTHERSIDEHOT) stateId = TS_HOT;
-		themeToolbar.pDrawThemeBackground(themeToolbar.hTheme, hdc, TP_SPLITBUTTONDROPDOWN, stateId, &rc, nullptr);
+		UX.pDrawThemeBackground(themeToolbar.hTheme, hdc, TP_SPLITBUTTONDROPDOWN, stateId, &rc, nullptr);
 	}
 }
 
@@ -814,7 +823,7 @@ void NavigationBar::initMetrics(HDC hdc)
 		static const int WIDTH = 100;
 		static const int HEIGHT = 80;
 		RECT rc = { 0, 0, WIDTH, HEIGHT };
-		if (SUCCEEDED(themeToolbar.pGetThemeBackgroundContentRect(themeToolbar.hTheme, hdc, TP_SPLITBUTTON, TS_NORMAL, &rc, &rc)))
+		if (SUCCEEDED(UX.pGetThemeBackgroundContentRect(themeToolbar.hTheme, hdc, TP_SPLITBUTTON, TS_NORMAL, &rc, &rc)))
 		{
 			paddingLeft += rc.left;
 			paddingRight += WIDTH - rc.right;
@@ -831,7 +840,7 @@ void NavigationBar::initMetrics(HDC hdc)
 		static const int HEIGHT = 80;
 		RECT rc = { 0, 0, WIDTH, HEIGHT };
 		//themeAddressBar.GetThemeMargins();
-		if (SUCCEEDED(themeAddressBar.pGetThemeBackgroundContentRect(themeAddressBar.hTheme, hdc, SBP_ABBACKGROUND, SBB_FOCUSED, &rc, &rc)))
+		if (SUCCEEDED(UX.pGetThemeBackgroundContentRect(themeAddressBar.hTheme, hdc, SBP_ABBACKGROUND, SBB_FOCUSED, &rc, &rc)))
 		{
 			margins.cxLeftWidth = rc.left;
 			margins.cxRightWidth = WIDTH - rc.right;
@@ -1366,7 +1375,7 @@ void NavigationBar::fillHistoryComboBox()
 HBITMAP NavigationBar::getThemeDropDownBitmap()
 {
 	ThemeWrapper themeComboBox;
-	if (themeComboBox.openTheme(m_hWnd, L"Combobox") && themeComboBox.pGetThemeBitmap)
+	if (themeComboBox.openTheme(m_hWnd, L"Combobox") && UX.pGetThemeBitmap)
 	{
 		HBITMAP hBitmap;
 		int values[] =
@@ -1375,7 +1384,7 @@ HBITMAP NavigationBar::getThemeDropDownBitmap()
 			TMT_GLYPHDIBDATA // Windows Vista
 		};
 		for (int i = 0; i < _countof(values); ++i)
-			if (SUCCEEDED(themeComboBox.pGetThemeBitmap(themeComboBox.hTheme, CP_DROPDOWNBUTTON, CBXS_NORMAL, values[i], GBF_COPY, &hBitmap)))
+			if (SUCCEEDED(UX.pGetThemeBitmap(themeComboBox.hTheme, CP_DROPDOWNBUTTON, CBXS_NORMAL, values[i], GBF_COPY, &hBitmap)))
 			{
 				BITMAP bm;
 				if (GetObject(hBitmap, sizeof(bm), &bm) && !(abs(bm.bmHeight) % 4))
@@ -1714,8 +1723,8 @@ int NavigationBar::getTransitionDuration(int oldState, int newState) const
 		return animationDuration;
 
 	DWORD duration;
-	if (themeToolbar.hTheme && themeToolbar.pGetThemeTransitionDuration &&
-	    SUCCEEDED(themeToolbar.pGetThemeTransitionDuration(themeToolbar.hTheme, TP_SPLITBUTTON, oldState, newState, TMT_TRANSITIONDURATIONS, &duration)))
+	if (themeToolbar.hTheme && UX.pGetThemeTransitionDuration &&
+	    SUCCEEDED(UX.pGetThemeTransitionDuration(themeToolbar.hTheme, TP_SPLITBUTTON, oldState, newState, TMT_TRANSITIONDURATIONS, &duration)))
 	{
 #ifdef DEBUG_NAV_BAR
 		ATLTRACE("Transition duration %d -> %d is %d\n", oldState, newState, duration);

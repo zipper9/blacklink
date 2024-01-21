@@ -30,6 +30,7 @@ class DirectoryListingNavWnd : public CWindowImpl<DirectoryListingNavWnd>
 	private:
 		int navBarHeight;
 		int navBarMinWidth;
+		int space;
 		bool isAppThemed;
 		bool isVisible;
 

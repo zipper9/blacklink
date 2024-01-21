@@ -2,11 +2,14 @@
 #include "ListPopup.h"
 #include "BackingStore.h"
 #include "GdiUtil.h"
+#include "UxThemeLib.h"
 #include <vssym32.h>
 #include <algorithm>
 
 #undef min
 #undef max
+
+#define UX UxThemeLib::instance
 
 static inline int totalWidth(const MARGINS& m)
 {
@@ -201,7 +204,7 @@ void ListPopup::updateFonts()
 	clearFonts();
 	LOGFONT lf;
 	HRESULT hr = E_FAIL;
-	if (hTheme) hr = pGetThemeSysFont(hTheme, TMT_MENUFONT, &lf);
+	if (hTheme) hr = UX.pGetThemeSysFont(hTheme, TMT_MENUFONT, &lf);
 	if (FAILED(hr))
 	{
 		NONCLIENTMETRICS ncm = { offsetof(NONCLIENTMETRICS, lfMessageFont) + sizeof(NONCLIENTMETRICS::lfMessageFont) };
@@ -293,26 +296,24 @@ void ListPopup::initTheme()
 	flags &= ~FLAG_APP_THEMED;
 
 #ifndef DISABLE_THEME
-	loadLibrary();
-	if (pIsAppThemed && pIsAppThemed()) flags |= FLAG_APP_THEMED;
 	openTheme(m_hWnd, VSCLASS_MENU);
-	//openTheme(m_hWnd, L"ImmersiveStartDark::Menu");
+	if (UX.pIsAppThemed && UX.pIsAppThemed()) flags |= FLAG_APP_THEMED;
 #endif
 	if (!hTheme) return;
 
-	pGetThemeMargins(hTheme, nullptr, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck);
-	pGetThemeMargins(hTheme, nullptr, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
-	pGetThemeMargins(hTheme, nullptr, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
-	pGetThemePartSize(hTheme, nullptr, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
+	UX.pGetThemeMargins(hTheme, nullptr, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck);
+	UX.pGetThemeMargins(hTheme, nullptr, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
+	UX.pGetThemeMargins(hTheme, nullptr, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
+	UX.pGetThemePartSize(hTheme, nullptr, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
 
 	SIZE size;
-	pGetThemePartSize(hTheme, nullptr, MENU_POPUPBORDERS, 0, nullptr, TS_TRUE, &size);
+	UX.pGetThemePartSize(hTheme, nullptr, MENU_POPUPBORDERS, 0, nullptr, TS_TRUE, &size);
 	marginBitmap.cxLeftWidth = marginBitmap.cxRightWidth = size.cx;
 	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = size.cy;
 
 	int popupBorderSize, popupBackgroundBorderSize;
-	pGetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE, &popupBorderSize);
-	pGetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
+	UX.pGetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE, &popupBorderSize);
+	UX.pGetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
 
 	marginText.cxLeftWidth = popupBackgroundBorderSize;
 	marginText.cxRightWidth = popupBorderSize;
@@ -343,6 +344,9 @@ void ListPopup::sendNotification(int index)
 
 void ListPopup::drawBorder(HDC hdc, const RECT& rc)
 {
+	if (hTheme && SUCCEEDED(UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPBORDERS, 0, &rc, nullptr)))
+		return;
+
 	int cxBaseBorder = GetSystemMetrics(SM_CXBORDER);
 	int cyBaseBorder = GetSystemMetrics(SM_CYBORDER);
 
@@ -363,7 +367,7 @@ void ListPopup::drawBorder(HDC hdc, const RECT& rc)
 void ListPopup::drawBackground(HDC hdc, const RECT& rc)
 {
 	if (hTheme)
-		pDrawThemeBackground(hTheme, hdc, MENU_POPUPBACKGROUND, 0, &rc, nullptr);
+		UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPBACKGROUND, 0, &rc, nullptr);
 #if 0
 	else
 		FillRect(hdc, &rc, GetSysColorBrush(COLOR_MENU));
@@ -390,14 +394,14 @@ void ListPopup::drawItem(HDC hdc, const RECT& rc, int index)
 			rcGutter.top = rc.top;
 			rcGutter.right = xCheck + marginCheckBackground.cxRightWidth;
 			rcGutter.bottom = rc.bottom;
-			pDrawThemeBackground(hTheme, hdc, MENU_POPUPGUTTER, 0, &rcGutter, nullptr);
+			UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPGUTTER, 0, &rcGutter, nullptr);
 			xText = rcGutter.right;
 		}
 
 		rcDraw = rc;
 		rcDraw.left += marginItem.cxLeftWidth;
 		rcDraw.right -= marginItem.cxRightWidth;
-		pDrawThemeBackground(hTheme, hdc, MENU_POPUPITEM, stateId, &rcDraw, nullptr);
+		UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPITEM, stateId, &rcDraw, nullptr);
 
 		if ((flags & FLAG_SHOW_CHECKS) && (item.flags & IF_CHECKED))
 		{
@@ -407,13 +411,13 @@ void ListPopup::drawItem(HDC hdc, const RECT& rc, int index)
 			rcDraw.right = xCheck;
 			rcDraw.top = (rc.top + rc.bottom - checkHeight) / 2;
 			rcDraw.bottom = rcDraw.top + checkHeight;
-			pDrawThemeBackground(hTheme, hdc, MENU_POPUPCHECKBACKGROUND, MCB_NORMAL, &rcDraw, nullptr);
+			UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPCHECKBACKGROUND, MCB_NORMAL, &rcDraw, nullptr);
 
 			rcDraw.left += marginCheck.cxLeftWidth;
 			rcDraw.top += marginCheck.cyTopHeight;
 			rcDraw.right -= marginCheck.cxRightWidth;
 			rcDraw.bottom -= marginCheck.cyBottomHeight;
-			pDrawThemeBackground(hTheme, hdc, MENU_POPUPCHECK, MC_CHECKMARKNORMAL, &rcDraw, nullptr);
+			UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPCHECK, MC_CHECKMARKNORMAL, &rcDraw, nullptr);
 		}
 		else if (item.icon && item.iconWidth && item.iconHeight)
 		{
@@ -427,7 +431,7 @@ void ListPopup::drawItem(HDC hdc, const RECT& rc, int index)
 		rcDraw.bottom = rc.bottom - marginText.cyBottomHeight;
 		rcDraw.right = rc.right - marginText.cxRightWidth;
 		HGDIOBJ oldFont = SelectObject(hdc, (item.flags & IF_DEFAULT) ? hFontBold : hFont);
-		pDrawThemeText(hTheme, hdc, MENU_POPUPITEM, stateId, item.text.c_str(), (int) item.text.length(),
+		UX.pDrawThemeText(hTheme, hdc, MENU_POPUPITEM, stateId, item.text.c_str(), (int) item.text.length(),
 			DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_HIDEPREFIX | DT_END_ELLIPSIS, 0, &rcDraw);
 		SelectObject(hdc, oldFont);
 	}
