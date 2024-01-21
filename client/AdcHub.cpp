@@ -604,7 +604,8 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 				tmp = victim->getIdentity().getNick() + " was kicked: " + tmp;
 			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_KICK_MSG);
 		}
-		putUser(s, c.getParam("DI", 1, tmp));
+		bool disconnectFlag = BOOLSETTING(USE_DI_PARAM) ? c.getParam("DI", 1, tmp) : false;
+		putUser(s, disconnectFlag);
 	}
 
 	if (s == sid)

@@ -278,6 +278,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			CCPM_AUTO_START,
 			CCPM_IDLE_TIMEOUT,
 			USE_TTH_LIST,
+			USE_DI_PARAM,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			MAX_HUB_USER_COMMANDS,

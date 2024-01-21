@@ -318,6 +318,7 @@ static const char* settingTags[] =
 	"CCPMAutoStart",
 	"CCPMIdleTimeout",
 	"UseTL",
+	"UseDIParam",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"MaxHubUserCommands",
