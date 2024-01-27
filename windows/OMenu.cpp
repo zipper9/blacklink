@@ -285,6 +285,7 @@ BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem, HB
 		return FALSE;
 	}
 	items.push_back(omi);
+	updateBitmapHeight(hBitmap);
 	return TRUE;
 }
 
@@ -992,6 +993,18 @@ void OMenu::updateBackgroundBrush()
 }
 #endif
 
+void OMenu::updateBitmapHeight(HBITMAP hBitmap)
+{
+#ifndef USE_EXACT_LOOKS
+	if (!minBitmapHeight && hBitmap)
+	{
+		BITMAP bm;
+		if (GetObject(hBitmap, sizeof(bm), &bm))
+			minBitmapHeight = abs(bm.bmHeight);
+	}
+#endif
+}
+
 bool OMenu::SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap)
 {
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
@@ -1012,6 +1025,7 @@ bool OMenu::SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap)
 		{
 			OMenuItem* mi = (OMenuItem*) mii.dwItemData;
 			mi->bitmap = hBitmap;
+			updateBitmapHeight(hBitmap);
 			return true;
 		}
 	}

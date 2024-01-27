@@ -164,6 +164,7 @@ class OMenu final : private CMenu
 		void makeOwnerDraw();
 		void drawCompatBitmap(HDC hdc, int x, int y, SIZE size, int flags, COLORREF color);
 		void destroyResources();
+		void updateBitmapHeight(HBITMAP hBitmap);
 };
 
 #define MESSAGE_HANDLER_HWND(msg, func) \
