@@ -234,7 +234,7 @@ void ListPopup::updateScrollBar()
 		si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
 		si.nMin = 0;
 		si.nMax = numItems - 1;
-		si.nPage = maxVisibleItems < maxScroll ? maxVisibleItems : 1;
+		si.nPage = maxVisibleItems;
 		si.nPos = 0;
 		si.nTrackPos = 0;
 		::SetScrollInfo(hWndScroll, SB_CTL, &si, TRUE);
