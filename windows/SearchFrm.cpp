@@ -1706,8 +1706,13 @@ void SearchFrame::runUserCommand(UserCommand & uc)
 	}
 }
 
-LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
+	if (!Colors::isAppThemed)
+	{
+		bHandled = FALSE;
+		return 0;
+	}
 	const HWND hWnd = (HWND)lParam;
 	const HDC hDC = (HDC)wParam;
 	if (hWnd == searchLabel.m_hWnd || hWnd == sizeLabel.m_hWnd || hWnd == optionLabel.m_hWnd || hWnd == typeLabel.m_hWnd

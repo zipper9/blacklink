@@ -340,7 +340,9 @@ LRESULT OtherColorsTab::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 				dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, backgroundColor);
 			}
 			dc.SetTextColor(ColorUtil::textFromBackground(backgroundColor));
+			int oldMode = dc.SetBkMode(TRANSPARENT);
 			dc.DrawText(CTSTRING(SETTINGS_MENUHEADER_EXAMPLE), -1, rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+			dc.SetBkMode(oldMode);
 		}
 		else
 			bHandled = FALSE;

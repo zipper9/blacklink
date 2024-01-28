@@ -12,6 +12,8 @@ COLORREF Colors::g_bgColor = 0;
 COLORREF Colors::g_tabBackground = 0;
 COLORREF Colors::g_tabText = 0;
 
+bool Colors::isAppThemed = false;
+
 CHARFORMAT2 Colors::charFormat[Colors::MAX_TEXT_STYLES];
 
 struct NamedColor
@@ -44,6 +46,7 @@ static const NamedColor namedColors[] =
 
 void Colors::init()
 {
+	isAppThemed = IsAppThemed();
 	g_textColor = SETTING(TEXT_COLOR);
 	g_bgColor = SETTING(BACKGROUND_COLOR);
 	g_tabBackground = SETTING(TABS_ACTIVE_BACKGROUND_COLOR);
@@ -53,7 +56,7 @@ void Colors::init()
 	g_bgBrush = CreateSolidBrush(g_bgColor);
 
 	if (g_tabBackgroundBrush) DeleteObject(g_tabBackgroundBrush);
-	g_tabBackgroundBrush = CreateSolidBrush(g_tabBackground);
+	g_tabBackgroundBrush = CreateSolidBrush(isAppThemed ? g_tabBackground : GetSysColor(COLOR_BTNFACE));
 
 	CHARFORMAT2 cf;
 	memset(&cf, 0, sizeof(CHARFORMAT2));
