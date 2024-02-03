@@ -1188,14 +1188,14 @@ void SettingsManager::setDefaults()
 	// Menu settings
 #ifdef _WIN32
 	bool useFlatMenuHeader = SysVersion::isOsWin8Plus();
-	bool useCustomMenu = !SysVersion::isOsWin11Plus();
+	uint32_t menuHeaderColor = SysVersion::isOsWin11Plus() ? RGB(185, 220, 255) : RGB(0, 128, 255);
 #else
 	int useFlatMenuHeader = FALSE;
-	int useCustomMenu = FALSE;
+	uint32_t menuHeaderColor = RGB(0, 128, 255);
 #endif
-	setDefault(USE_CUSTOM_MENU, useCustomMenu);
+	setDefault(USE_CUSTOM_MENU, TRUE);
 	setDefault(MENUBAR_TWO_COLORS, !useFlatMenuHeader);
-	setDefault(MENUBAR_LEFT_COLOR, RGB(0, 128, 255));
+	setDefault(MENUBAR_LEFT_COLOR, menuHeaderColor);
 	setDefault(MENUBAR_RIGHT_COLOR, RGB(168, 211, 255));
 	setDefault(MENUBAR_BUMPED, !useFlatMenuHeader);
 	setDefault(UC_SUBMENU, TRUE);
