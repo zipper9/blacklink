@@ -25,6 +25,7 @@
 #include "WinFirewall.h"
 #include "BackingStore.h"
 #include "UxThemeLib.h"
+#include "DwmApiLib.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
@@ -376,6 +377,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ATLASSERT(SUCCEEDED(hRes));
 
 	UxThemeLib::instance.init();
+	if (SysVersion::isOsWin11Plus()) DwmApiLib::instance.init();
 	BackingStore::globalInit();
 
 	HINSTANCE hRichEditNew;

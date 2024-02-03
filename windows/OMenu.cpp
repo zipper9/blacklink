@@ -22,14 +22,69 @@
 #include "ColorUtil.h"
 #include "BarShader.h"
 #include "GdiUtil.h"
-
-#ifdef OSVER_WIN_XP
+#include "DwmApiLib.h"
 #include "../client/SysVersion.h"
-#endif
 
 #define THEME_NAME L"MENU"
+#define USE_DRAW_THEME_TEXT
+#define DWM DwmApiLib::instance
 
 static const size_t MAX_CAPTION_LEN = 40;
+
+#ifndef DWMWA_COLOR_DEFAULT
+
+enum
+{
+    DWMWA_WINDOW_CORNER_PREFERENCE = 33,
+    DWMWA_BORDER_COLOR,
+    DWMWA_CAPTION_COLOR,
+    DWMWA_TEXT_COLOR,
+    DWMWA_VISIBLE_FRAME_BORDER_THICKNESS
+};
+
+typedef enum
+{
+    DWMWCP_DEFAULT = 0,
+    DWMWCP_DONOTROUND = 1,
+    DWMWCP_ROUND = 2,
+    DWMWCP_ROUNDSMALL = 3
+
+} DWM_WINDOW_CORNER_PREFERENCE;
+
+#define DWMWA_COLOR_DEFAULT 0xFFFFFFFF
+#define DWMWA_COLOR_NONE    0xFFFFFFFE
+
+#endif
+
+static COLORREF getColorFromTheme(HTHEME hTheme, int width, int height, int partId, int stateId)
+{
+	COLORREF color = CLR_INVALID;
+	HDC hDCDisplay = CreateIC(_T("DISPLAY"), nullptr, nullptr, nullptr);
+	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
+	bi.bmiHeader.biWidth = width;
+	bi.bmiHeader.biHeight = height;
+	bi.bmiHeader.biPlanes = 1;
+	bi.bmiHeader.biBitCount = 32;
+	bi.bmiHeader.biCompression = BI_RGB;
+	void* bits = nullptr;
+	HBITMAP hBitmap = CreateDIBSection(hDCDisplay, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+	HDC hdc = CreateCompatibleDC(hDCDisplay);
+	HGDIOBJ oldBitmap = SelectObject(hdc, hBitmap);
+	RECT rc = { 0, 0, width, height };
+	if (SUCCEEDED(DrawThemeBackground(hTheme, hdc, partId, stateId, &rc, nullptr)))
+	{
+		GdiFlush();
+		int x = width / 2;
+		int y = height / 2;
+		uint8_t* p = (uint8_t*) bits + ((width * y + x) << 2);
+		color = RGB(p[2], p[1], p[0]);
+	}
+	SelectObject(hdc, oldBitmap);
+	DeleteObject(hBitmap);
+	DeleteDC(hdc);
+	DeleteDC(hDCDisplay);
+	return color;
+}
 
 struct OMenuItem
 {
@@ -77,7 +132,7 @@ OMenu::OMenu() :
 	ownerDrawMode(OD_DEFAULT),
 	themeInitialized(false), hTheme(nullptr),
 	fontNormal(nullptr), fontBold(nullptr), bgBrush(nullptr),
-	textMeasured(false)
+	textMeasured(false), updateMenuWindowFlag(false)
 {
 	marginCheck = { 0 };
 	marginCheckBackground = { 0 };
@@ -87,6 +142,7 @@ OMenu::OMenu() :
 	sizeCheck = { 0 };
 	sizeSeparator = { 0 };
 	sizeSubmenu = { 0 };
+	marginHeader = { 0 };
 	maxTextWidth = maxAccelWidth = maxBitmapWidth = 0;
 	minBitmapWidth = minBitmapHeight = 0;
 	accelSpace = avgCharWidth = 0;
@@ -155,7 +211,11 @@ BOOL OMenu::CreatePopupMenu()
 		else
 			ownerDrawMode = OD_NEVER;
 	}
-	return CMenu::CreatePopupMenu();
+	if (!CMenu::CreatePopupMenu())
+		return FALSE;
+	if (ownerDrawMode != OD_NEVER && SysVersion::isOsWin11Plus())
+		updateBackgroundBrush();
+	return TRUE;
 }
 
 BOOL OMenu::InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption)
@@ -352,6 +412,52 @@ void* OMenu::GetItemData(UINT id) const
 	return ((const OMenuItem* ) mii.dwItemData)->data;
 }
 
+struct FindMenuWindowInfo
+{
+	HWND hWndResult;
+	HMENU hMenu;
+};
+
+static BOOL CALLBACK enumProc(HWND hWnd, LPARAM lParam)
+{
+	if (GetClassLong(hWnd, GCW_ATOM) == 0x8000)
+	{
+		HMENU hMenu = (HMENU) SendMessage(hWnd, MN_GETHMENU, 0, 0);
+		if (hMenu)
+		{
+			FindMenuWindowInfo* info = reinterpret_cast<FindMenuWindowInfo*>(lParam);
+			if (info->hMenu == hMenu)
+			{
+				info->hWndResult = hWnd;
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
+static HWND findMenuWindow(HMENU hMenu)
+{
+	FindMenuWindowInfo info;
+	info.hWndResult = NULL;
+	info.hMenu = hMenu;
+	EnumThreadWindows(GetCurrentThreadId(), enumProc, reinterpret_cast<LPARAM>(&info));
+	return info.hWndResult;
+}
+
+static void updateMenuDecorations(HWND hWnd, HTHEME hTheme)
+{
+	DWM.init();
+	if (DWM.pDwmSetWindowAttribute)
+	{
+		DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_ROUND;
+		DWM.pDwmSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+		COLORREF color;
+		if (hTheme && SUCCEEDED(GetThemeColor(hTheme, MENU_POPUPBORDERS, 0, TMT_FILLCOLORHINT, &color)))
+			DWM.pDwmSetWindowAttribute(hWnd, DWMWA_BORDER_COLOR, &color, sizeof(color));
+	}
+}
+
 LRESULT OMenu::onInitMenuPopup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bHandled = TRUE;
@@ -360,6 +466,7 @@ LRESULT OMenu::onInitMenuPopup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	int count = ::GetMenuItemCount(menu);
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
 	mii.fMask = MIIM_FTYPE | MIIM_DATA;
+	OMenu* parent = nullptr;
 	for (int i = 0; i < count; ++i)
 	{
 		if (!::GetMenuItemInfo(menu, i, TRUE, &mii))
@@ -370,15 +477,36 @@ LRESULT OMenu::onInitMenuPopup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		if ((mii.fType & MFT_OWNERDRAW) && mii.dwItemData)
 		{
 			OMenuItem* omi = (OMenuItem*) mii.dwItemData;
-			omi->parent->textMeasured = false;
-			if (!omi->parent->themeInitialized)
+			parent = omi->parent;
+			parent->textMeasured = false;
+			if (!parent->themeInitialized)
 			{
-				omi->parent->openTheme(hWnd);
-				omi->parent->themeInitialized = true;
+				parent->openTheme(hWnd);
+				parent->themeInitialized = true;
 			}
 		}
 	}
+	if (parent && SysVersion::isOsWin11Plus())
+	{
+		HWND hWndMenu = findMenuWindow(menu);
+		if (hWndMenu)
+		{
+			updateMenuDecorations(hWndMenu, parent->hTheme);
+			parent->updateMenuWindowFlag = false;
+		}
+		else
+			parent->updateMenuWindowFlag = true;
+	}
 	return FALSE;
+}
+
+void OMenu::updateMenuWindow()
+{
+	if (SysVersion::isOsWin11Plus())
+	{
+		HWND hWndMenu = findMenuWindow(m_hMenu);
+		if (hWndMenu) updateMenuDecorations(hWndMenu, hTheme);
+	}
 }
 
 bool OMenu::getMenuFont(LOGFONT& lf) const
@@ -627,18 +755,21 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					parent->themeInitialized = true;
 					parent->openTheme(hWnd);
 				}
+				if (parent->updateMenuWindowFlag)
+				{
+					parent->updateMenuWindowFlag = false;
+					parent->updateMenuWindow();
+				}
 
 				CRect rc(dis->rcItem);
 
 				if ((omi->type & MFT_SEPARATOR) && (omi->extType & EXT_TYPE_HEADER))
 				{
 					bHandled = TRUE;
-					/*
-					rc.left += parent->marginItem.cxLeftWidth;
-					rc.top += parent->marginItem.cyTopHeight;
-					rc.right -= parent->marginItem.cxRightWidth;
-					rc.bottom -= parent->marginItem.cyBottomHeight;
-					*/
+					rc.left += parent->marginHeader.cxLeftWidth;
+					rc.right -= parent->marginHeader.cxRightWidth;
+					rc.top += parent->marginHeader.cyTopHeight;
+					rc.bottom -= parent->marginHeader.cyBottomHeight;
 					if (BOOLSETTING(MENUBAR_TWO_COLORS))
 						OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
 					else
@@ -730,18 +861,15 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 						rcDraw.right = rcDraw.left + omi->sizeText.cx;
 						DWORD flags = DT_SINGLELINE | DT_LEFT;
 						if (dis->itemState & ODS_NOACCEL) flags |= DT_HIDEPREFIX;
+						HFONT hFont = (omi->extType & EXT_TYPE_DEFAULT_ITEM) ? parent->fontBold : parent->fontNormal;
+						HGDIOBJ oldFont = SelectObject(dis->hDC, hFont);
 #ifdef USE_DRAW_THEME_TEXT
 						DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
 							omi->text.c_str(), omi->getTextLength(), flags, 0, &rcDraw);
 #else
-						HFONT oldFont;
-						int oldBkMode = GetBkMode(dis->hDC);
-						HFONT hFont = (omi->extType & EXT_TYPE_DEFAULT_ITEM) ? parent->fontBold : parent->fontNormal;
-						oldFont = (HFONT) SelectObject(dis->hDC, hFont);
-						SetBkMode(dis->hDC, TRANSPARENT);
+						int oldBkMode = SetBkMode(dis->hDC, TRANSPARENT);
 						DrawText(dis->hDC, omi->text.c_str(), omi->getTextLength(), &rcDraw, flags);
 #endif
-
 						if (omi->accelPos != -1)
 						{
 							rcDraw.right = rc.right - parent->marginItem.cxRightWidth - totalWidth(parent->marginSubmenu) - parent->sizeSubmenu.cx;
@@ -750,13 +878,14 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 							DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
 								omi->text.c_str() + omi->accelPos + 1, -1, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX, 0, &rcDraw);
 #else
-							DrawText(dis->hDC,  omi->text.c_str() + omi->accelPos + 1, -1, &rcDraw, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX);
+							DrawText(dis->hDC, omi->text.c_str() + omi->accelPos + 1, -1, &rcDraw, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX);
 #endif
 						}
 #ifndef USE_DRAW_THEME_TEXT
-						SelectObject(dis->hDC, oldFont);
 						SetBkMode(dis->hDC, oldBkMode);
 #endif
+						SelectObject(dis->hDC, oldFont);
+
 						if (omi->extType & EXT_TYPE_SUBMENU)
 						{
 							POPUPSUBMENUSTATES submenuStateId = (dis->itemState & (ODS_INACTIVE | ODS_DISABLED)) ? MSM_DISABLED : MSM_NORMAL;
@@ -920,6 +1049,16 @@ void OMenu::openTheme(HWND hwnd)
 		marginText.cxRightWidth = popupBorderSize; // FIXME
 		marginText.cyTopHeight = marginItem.cyTopHeight;
 		marginText.cyBottomHeight = marginItem.cyBottomHeight;
+
+		if (SysVersion::isOsWin11Plus())
+		{
+			marginHeader.cxLeftWidth = marginItem.cxLeftWidth + marginBitmap.cxLeftWidth;
+			marginHeader.cxRightWidth = marginItem.cxRightWidth + marginBitmap.cxRightWidth;
+			marginHeader.cyTopHeight = marginItem.cyTopHeight;
+			marginHeader.cyBottomHeight = marginItem.cyBottomHeight;
+		}
+		else
+			memset(&marginHeader, 0, sizeof(marginHeader));
 	}
 }
 
@@ -968,9 +1107,9 @@ void OMenu::initFallbackParams()
 	sizeSeparator.cy = GetSystemMetrics(SM_CYMENUSIZE) / 2;
 
 	marginSubmenu.cxLeftWidth = avgCharWidth;
+	memset(&marginHeader, 0, sizeof(marginHeader));
 }
 
-#if 0
 void OMenu::updateBackgroundBrush()
 {
 	HTHEME hTheme = OpenThemeData(nullptr, THEME_NAME);
@@ -991,7 +1130,6 @@ void OMenu::updateBackgroundBrush()
 		}
 	}
 }
-#endif
 
 void OMenu::updateBitmapHeight(HBITMAP hBitmap)
 {

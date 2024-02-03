@@ -134,6 +134,7 @@ class OMenu final : private CMenu
 		MARGINS marginText;
 		MARGINS marginSubmenu;
 		MARGINS marginBitmap;
+		MARGINS marginHeader;
 		SIZE    sizeCheck;
 		SIZE    sizeSeparator;
 		SIZE    sizeSubmenu;
@@ -153,6 +154,8 @@ class OMenu final : private CMenu
 
 		HBITMAP bitmaps[3];
 
+		bool updateMenuWindowFlag;
+
 		void checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition);
 		void openTheme(HWND hwnd);
 		void initFallbackParams();
@@ -161,10 +164,11 @@ class OMenu final : private CMenu
 		void createNormalFont();
 		void createBoldFont();
 		void measureText(HDC hdc);
-		void makeOwnerDraw();
 		void drawCompatBitmap(HDC hdc, int x, int y, SIZE size, int flags, COLORREF color);
 		void destroyResources();
+		void updateBackgroundBrush();
 		void updateBitmapHeight(HBITMAP hBitmap);
+		void updateMenuWindow();
 };
 
 #define MESSAGE_HANDLER_HWND(msg, func) \
