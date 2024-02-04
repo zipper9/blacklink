@@ -352,7 +352,7 @@ void OperaColors::drawBar(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c1, 
 	{
 		for (int x = 0; x < w; ++x)
 		{
-			uint32_t color = swapColorBytes(blendColors(c2, c1, double(x - x1) / double(w)));
+			uint32_t color = swapColorBytes(blendColors(c2, c1, double(x) / double(w)));
 			uint8_t* p = p0;
 			for (int y = 0; y < h; ++y)
 			{
