@@ -5,6 +5,7 @@ EmoPacks
 Flags
 Themes\*_x64.dll
 Themes\*.dctheme
+Plugins\x86_64
 Sounds
 Settings\CustomLocations.ini
 Settings\CustomLocations
