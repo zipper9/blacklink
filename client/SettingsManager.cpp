@@ -335,6 +335,8 @@ static const char* settingTags[] =
 	"SaveTthInNtfsFilestream",
 	"SetMinLengthTthInNtfsFilestream",
 	"FastHash",
+	"MediaInfoOptions",
+	"MediaInfoForceUpdate",
 
 	// File lists
 	"FileListUseUploadCount",

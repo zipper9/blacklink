@@ -272,7 +272,7 @@ void DclstGenDlg::writeFile(const DirectoryListing::File* file)
 	{
 		xml += " TS=\"" + Util::toString(file->getTS()) + '\"';
 	}
-	const DirectoryListing::MediaInfo *media = file->getMedia();
+	const MediaInfoUtil::Info *media = file->getMedia();
 	if (media)
 	{
 		if (media->bitrate)

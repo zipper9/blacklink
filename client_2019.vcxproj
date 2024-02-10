@@ -520,6 +520,7 @@
     <ClCompile Include="client\DirectoryListing.cpp" />
     <ClCompile Include="client\Download.cpp" />
     <ClCompile Include="client\DownloadManager.cpp" />
+    <ClCompile Include="client\DynamicLibrary.cpp" />
     <ClCompile Include="client\Exception.cpp" />
     <ClCompile Include="client\FavoriteManager.cpp" />
     <ClCompile Include="client\File.cpp" />
@@ -583,6 +584,8 @@
     <ClCompile Include="client\IpGrant.cpp" />
     <ClCompile Include="client\IpGuard.cpp" />
     <ClCompile Include="client\IpList.cpp" />
+    <ClCompile Include="client\MediaInfoLib.cpp" />
+    <ClCompile Include="client\MediaInfoUtil.cpp" />
     <ClCompile Include="client\NetworkDevices.cpp" />
     <ClCompile Include="client\NetworkUtil.cpp" />
     <ClCompile Include="client\NmdcExtJson.cpp" />
@@ -744,6 +747,7 @@
     <ClInclude Include="client\dht\NodeAddress.h" />
     <ClInclude Include="client\dht\TaskManager.h" />
     <ClInclude Include="client\dht\Utils.h" />
+    <ClInclude Include="client\DynamicLibrary.h" />
     <ClInclude Include="client\FeatureDef.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\FinishedItem.h" />
@@ -782,6 +786,8 @@
     <ClInclude Include="client\Mapper.h" />
     <ClInclude Include="client\Mapper_MiniUPnPc.h" />
     <ClInclude Include="client\Mapper_NATPMP.h" />
+    <ClInclude Include="client\MediaInfoLib.h" />
+    <ClInclude Include="client\MediaInfoUtil.h" />
     <ClInclude Include="client\NetworkDevices.h" />
     <ClInclude Include="client\NetworkUtil.h" />
     <ClInclude Include="client\NmdcExtJson.h" />

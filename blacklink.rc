@@ -1316,6 +1316,18 @@ BEGIN
     LTEXT           "@Mbps",IDC_SETTINGS_MBS,151,196,35,8
 END
 
+IDD_SHARE_MISC_PAGE3 DIALOGEX 0, 0, 302, 167
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CONTROL | WS_CHILD
+EXSTYLE WS_EX_CONTROLPARENT
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    CONTROL         "@SettingsMediaInfoEnable",IDC_ENABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,7,144,12
+    LTEXT           "Static",IDC_STATUS,19,20,278,12,NOT WS_VISIBLE
+    CONTROL         "@SettingsMediaInfoParseAudio",IDC_PARSE_AUDIO,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,19,33,144,12
+    CONTROL         "@SettingsMediaInfoParseVideo",IDC_PARSE_VIDEO,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,19,47,144,12
+    CONTROL         "@SettingsMediaInfoForceUpdate",IDC_FORCE_UPDATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,19,61,144,12
+END
+
 IDD_SHARE_MISC_PAGE DIALOGEX 0, 0, 325, 300
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_VISIBLE | WS_CAPTION
 EXSTYLE WS_EX_STATICEDGE
@@ -2302,6 +2314,10 @@ BEGIN
         BOTTOMMARGIN, 224
     END
 
+    IDD_SHARE_MISC_PAGE3, DIALOG
+    BEGIN
+    END
+
     IDD_SHARE_MISC_PAGE, DIALOG
     BEGIN
         LEFTMARGIN, 8
@@ -2575,6 +2591,7 @@ IDR_FAV_USERS_STATES    PNG                     "res\\FavUserStates.png"
 IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
 
 IDR_NAVIGATION          PNG                     "res\\Navigation.png"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

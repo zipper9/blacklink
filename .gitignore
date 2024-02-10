@@ -52,6 +52,8 @@ vc17
 
 /compiled/Lang/en_example.xml
 
+/compiled/Plugins
+
 /client/StringDefs.cpp
 /compiled/*.exp
 

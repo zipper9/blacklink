@@ -22,6 +22,7 @@
 
 #include "SimpleXML.h"
 #include "QueueItem.h"
+#include "MediaInfoUtil.h"
 #include <atomic>
 #include <regex>
 
@@ -64,20 +65,6 @@ class DirectoryListing
 			SCAN_OPTION_CANCELED   = 1 << 2
 		};
 
-		struct MediaInfo
-		{
-			uint16_t width;
-			uint16_t height;
-			uint16_t bitrate;
-			string audio;
-			string video;
-
-			uint32_t getSize() const
-			{
-				return (uint32_t) width << 16 | height;
-			}
-		};
-
 		typedef boost::unordered_map<TTHValue, int64_t> TTHMap;
 
 		class File : public BaseFlags<uint16_t>
@@ -85,11 +72,11 @@ class DirectoryListing
 			public:
 				typedef vector<File*> List;
 				
-				File(Directory* dir, const string& name, int64_t size, const TTHValue& tth, uint32_t uploadCount, int64_t ts, const MediaInfo *media) noexcept :
+				File(Directory* dir, const string& name, int64_t size, const TTHValue& tth, uint32_t uploadCount, int64_t ts, const MediaInfoUtil::Info *media) noexcept :
 					name(name), size(size), parent(dir), tthRoot(tth),
 					uploadCount(uploadCount), ts(ts), userData(nullptr)
 				{
-					if (media) this->media = std::make_shared<MediaInfo>(*media);
+					if (media) this->media = std::make_shared<MediaInfoUtil::Info>(*media);
 				}
 
 				File(const File& rhs) :
@@ -106,7 +93,7 @@ class DirectoryListing
 				Directory* getParent() { return parent; }
 				void setParent(Directory* dir) { parent = dir; }
 				const Directory* getParent() const { return parent; }
-				const MediaInfo* getMedia() const { return media.get(); }
+				const MediaInfoUtil::Info* getMedia() const { return media.get(); }
 				virtual bool getAdls() const { return false; }
 				virtual File* clone() const { return new File(*this); }
 
@@ -125,7 +112,7 @@ class DirectoryListing
 				string name;
 				string path;
 				Directory *parent;
-				std::shared_ptr<MediaInfo> media;
+				std::shared_ptr<MediaInfoUtil::Info> media;
 		};
 
 		typedef boost::unordered_map<TTHValue, list<File*>> TTHToFileMap;

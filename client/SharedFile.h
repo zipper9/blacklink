@@ -3,6 +3,7 @@
 
 #include "Text.h"
 #include "HashValue.h"
+#include "MediaInfoUtil.h"
 #include "debug.h"
 
 class SharedDir;
@@ -64,20 +65,24 @@ class SharedFile: public BaseDirItem
 		}
 
 		typedef boost::unordered_map<string, SharedFilePtr> FileMap;
+		typedef std::unique_ptr<MediaInfoUtil::Info> MediaInfoPtr;
 	
 	private:
-		int64_t size;
+		const int64_t size;
 		const uint16_t typesMask;
 		TTHValue tth;
 		uint16_t flags;
-		uint64_t timestamp;
+		const uint64_t timestamp;
 		uint64_t timeShared;
+		MediaInfoPtr mediaInfo;
 
 	public:
 		uint16_t getFileTypes() const { return typesMask; }
 		bool hasType(int type) const noexcept;
 		const TTHValue& getTTH() const { return tth; }
 		int64_t getSize() const { return size; }
+		void setMediaInfo(const MediaInfoUtil::Info& info) { mediaInfo.reset(new MediaInfoUtil::Info(info)); }
+		const MediaInfoUtil::Info* getMediaInfo() const { return mediaInfo.get(); }
 };
 
 class SharedDir: public BaseDirItem

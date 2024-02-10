@@ -36,6 +36,8 @@ namespace Util
 		PATH_SOUNDS,
 		// Default download directory for HttpClient
 		PATH_HTTP_DOWNLOADS,
+		// Plugin DLLs
+		PATH_PLUGINS,
 		PATH_LAST
 	};
 
@@ -103,6 +105,7 @@ namespace Util
 	inline const string& getExePath() { return getPath(PATH_EXE); }
 	inline const string& getSoundsPath() { return getPath(PATH_SOUNDS); }
 	inline const string& getHttpDownloadsPath() { return getPath(PATH_HTTP_DOWNLOADS); }
+	inline const string& getPluginsPath() { return getPath(PATH_PLUGINS); }
 
 	void loadBootConfig();
 	bool locatedInSysPath(SysPaths sysPath, const string& path);

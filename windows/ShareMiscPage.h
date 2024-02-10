@@ -7,6 +7,7 @@
 
 #include <atlcrack.h>
 #include "PropPage.h"
+#include "StatusLabelCtrl.h"
 #include "../client/CID.h"
 #include "../client/Text.h"
 
@@ -83,6 +84,34 @@ class ShareOptionsPage : public CDialogImpl<ShareOptionsPage>
 		void fixControls();
 };
 
+class ShareMediaInfoPage : public CDialogImpl<ShareMediaInfoPage>
+{
+	public:
+		enum { IDD = IDD_SHARE_MISC_PAGE3 };
+
+		BEGIN_MSG_MAP(ShareMediaInfoPage)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ENABLE, onEnable)
+		END_MSG_MAP()
+
+		StatusLabelCtrl ctrlStatus;
+		CButton ctrlEnable;
+		CButton ctrlParseAudio;
+		CButton ctrlParseVideo;
+		CButton ctrlForceUpdate;
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onEnable(WORD, WORD, HWND, BOOL&);
+		void readSettings();
+		void writeSettings();
+		void fixControls();
+		void updateStatus();
+
+	private:
+		void disableControls();
+		void showStatus();
+};
+
 class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 {
 	public:
@@ -91,12 +120,12 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP(ShareMiscPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_TABS, TCN_SELCHANGE, onChangeTab)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
 
@@ -109,6 +138,7 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 		CTabCtrl ctrlTabs;
 		std::unique_ptr<ShareGroupsPage> pageShareGroups;
 		std::unique_ptr<ShareOptionsPage> pageShareOptions;
+		std::unique_ptr<ShareMediaInfoPage> pageShareMediaInfo;
 
 		void changeTab();
 };

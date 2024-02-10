@@ -415,6 +415,15 @@
     <ClCompile Include="client\JsonParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\DynamicLibrary.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\MediaInfoLib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\MediaInfoUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -981,9 +990,6 @@
     <ClInclude Include="client\SearchUrl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\NetworkDevices.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\Base32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1033,6 +1039,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\SimpleXMLException.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\DynamicLibrary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\NetworkDevices.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\MediaInfoUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\MediaInfoLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

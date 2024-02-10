@@ -263,6 +263,16 @@ class ShareManager :
 			bool hasShare(const ShareListItem& share) const;
 		};
 
+		struct SharedItemAttribs
+		{
+			string name;
+			int64_t fileSize = 0;
+			uint64_t timestamp = 0;
+			uint64_t timeShared = 0;
+			TTHValue tth;
+			MediaInfoUtil::Info mediaInfo;
+		};
+
 		typedef vector<ShareListItem> ShareList;
 		std::unique_ptr<RWLock> csShare;
 		ShareList shares;
@@ -302,6 +312,8 @@ class ShareManager :
 		vector<FileToHash> filesToHash;
 		bool optionShareHidden, optionShareSystem, optionShareVirtual;
 		mutable bool optionIncludeUploadCount, optionIncludeTimestamp;
+		bool optionForceUpdateMediaInfo;
+		uint16_t mediaInfoFileTypes;
 		HashDatabaseConnection* hashDb;
 
 #if 0
@@ -352,7 +364,7 @@ class ShareManager :
 		bool hasShareL(const string& virtualName, const string& realName, bool& foundVirtual) const noexcept;
 		void loadShareList(SimpleXML& xml);
 		void loadShareData(File& file);
-		void loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared) noexcept;
+		void loadSharedFile(SharedDir* current, const SharedItemAttribs& attr, unsigned attribMask) noexcept;
 		void loadSharedDir(SharedDir* &current, const string& filename) noexcept;
 		bool addExcludeFolderL(const string& path) noexcept;
 		void addShareGroupL(const string& name, const CID& id, const list<string>& shares, const FileAttr* attr);

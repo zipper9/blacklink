@@ -7,6 +7,36 @@
 #include "w.h"
 #endif
 
+#if defined(_MSC_VER)
+
+#if defined(_M_IX86)
+#define COMPILED_ARCH_STRING "x86"
+#elif defined(_M_X64)
+#define COMPILED_ARCH_STRING "x86_64"
+#elif defined(_M_ARM)
+#define COMPILED_ARCH_STRING "ARM"
+#elif defined(_M_ARM64)
+#define COMPILED_ARCH_STRING "ARM64"
+#endif
+
+#elif defined(__GNUC__)
+
+#if defined(__i386__)
+#define COMPILED_ARCH_STRING "x86"
+#elif defined(__amd64__)
+#define COMPILED_ARCH_STRING "x86_64"
+#elif defined(__arm__)
+#define COMPILED_ARCH_STRING "ARM"
+#elif defined(__aarch64__)
+#define COMPILED_ARCH_STRING "ARM64"
+#endif
+
+#endif
+
+#ifndef COMPILED_ARCH_STRING
+#define COMPILED_ARCH_STRING "-"
+#endif
+
 namespace SysVersion
 {
 	void initialize();

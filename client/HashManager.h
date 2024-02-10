@@ -162,10 +162,13 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				size_t totalFilesHashed;
 				int64_t startTick;
 				int64_t startTickSavedSize;
-		
+				MediaInfoUtil::Parser mediaInfoParser;
+				MediaInfoUtil::Info mediaInfo;
+
 			protected:
 				virtual int run() override;
 				void waitResume();
+				void processMediaFile(HashTaskItem& item);
 		};
 		
 		friend class Hasher;

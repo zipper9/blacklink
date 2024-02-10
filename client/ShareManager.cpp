@@ -37,6 +37,7 @@
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "MediaInfoUtil.h"
 #include "Tag16.h"
 #include "unaligned.h"
 #include "version.h"
@@ -78,6 +79,16 @@ enum
 	MODE_FULL_LIST,
 	MODE_PARTIAL_LIST,
 	MODE_RECURSIVE_PARTIAL_LIST
+};
+
+enum
+{
+	ATTRIB_MASK_NAME        = 0x01,
+	ATTRIB_MASK_SIZE        = 0x02,
+	ATTRIB_MASK_TTH         = 0x04,
+	ATTRIB_MASK_TIMESTAMP   = 0x08,
+	ATTRIB_MASK_TIME_SHARED = 0x10,
+	ATTRIB_MASK_MEDIA_INFO  = 0x20
 };
 
 static const size_t MAX_PARTIAL_LIST_SIZE = 512 * 1024;
@@ -132,27 +143,27 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (!valSize) return;
 			if (!valTTH || valTTH->length() != 39) return;
 			
-			TTHValue tth;
+			ShareManager::SharedItemAttribs attr;
 			bool error;
-			Util::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
+			Util::fromBase32(valTTH->c_str(), attr.tth.data, sizeof(attr.tth.data), &error);
 			if (error) return;
 
-			int64_t size = Util::toInt64(*valSize);
-			if (size < 0) return;
+			attr.fileSize = Util::toInt64(*valSize);
+			if (attr.fileSize < 0) return;
 
-			uint64_t timeShared = 0;
 			if (valShared)
 			{
 				int64_t val = Util::toInt64(*valShared);
-				if (val > 0) timeShared = val;
+				if (val > 0) attr.timeShared = val;
 			} else
 			if (valTS)
 			{
 				int64_t val = Util::toInt64(*valTS);
-				if (val > 0) timeShared = val * (int64_t) Util::FILETIME_UNITS_PER_SEC + 116444736000000000ll;
+				if (val > 0) attr.timeShared = val * (int64_t) Util::FILETIME_UNITS_PER_SEC + 116444736000000000ll;
 			}
 
-			manager.loadSharedFile(current, *valFilename, size, tth, 0, timeShared);
+			attr.name = *valFilename;
+			manager.loadSharedFile(current, attr, 0);
 		}
 		else if (name == tagDirectory)
 		{
@@ -199,9 +210,14 @@ string ShareManager::validateVirtual(const string& virt) noexcept
 	return tmp;
 }
 
-void ShareManager::loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared) noexcept
+void ShareManager::loadSharedFile(SharedDir* current, const SharedItemAttribs& attr, unsigned attribMask) noexcept
 {
-	SharedFilePtr file = std::make_shared<SharedFile>(filename, tth, size, timestamp, timeShared, getFileTypesFromFileName(filename));
+	SharedFilePtr file = std::make_shared<SharedFile>(attr.name, attr.tth, attr.fileSize, attr.timestamp,
+		(attribMask & ATTRIB_MASK_TIME_SHARED) ? attr.timeShared : 0,
+		getFileTypesFromFileName(attr.name));
+	if ((attribMask & ATTRIB_MASK_MEDIA_INFO) && attr.mediaInfo.hasData())
+		file->setMediaInfo(attr.mediaInfo);
+
 	current->files.insert(make_pair(file->getLowerName(), file));
 	current->filesTypesMask |= file->getFileTypes();
 	current->totalSize += file->getSize();	
@@ -211,7 +227,7 @@ void ShareManager::loadSharedFile(SharedDir* current, const string& filename, in
 	ShareManager::TTHMapItem tthItem;
 	tthItem.dir = current;
 	tthItem.file = file;
-	tthIndex.insert(make_pair(tth, tthItem));
+	tthIndex.insert(make_pair(attr.tth, tthItem));
 }
 
 void ShareManager::loadSharedDir(SharedDir* &current, const string& filename) noexcept
@@ -286,7 +302,7 @@ void ShareManager::loadShareList(SimpleXML& xml)
 			string excludePath = xml.getChildData();
 			Util::appendPathSeparator(excludePath);
 			addExcludeFolderL(excludePath);
-		}			
+		}
 		xml.stepOut();
 	}
 
@@ -366,6 +382,7 @@ ShareManager::ShareManager() :
 	nextFileID(0), maxSharedFileID(0), maxHashedFileID(0),
 	optionShareHidden(false), optionShareSystem(false), optionShareVirtual(false),
 	optionIncludeUploadCount(false), optionIncludeTimestamp(false),
+	optionForceUpdateMediaInfo(false),
 	hashDb(nullptr),
 	tickUpdateList(std::numeric_limits<uint64_t>::max()),
 	tickLastRefresh(0),
@@ -419,11 +436,15 @@ static const uint8_t SHARE_DATA_DIR_START = 1;
 static const uint8_t SHARE_DATA_DIR_END   = 2;
 static const uint8_t SHARE_DATA_FILE      = 3;
 
-static const uint8_t SHARE_DATA_ATTRIB_NAME        = 1;
-static const uint8_t SHARE_DATA_ATTRIB_SIZE        = 2;
-static const uint8_t SHARE_DATA_ATTRIB_TTH         = 3;
-static const uint8_t SHARE_DATA_ATTRIB_TIMESTAMP   = 4;
-static const uint8_t SHARE_DATA_ATTRIB_TIME_SHARED = 5;
+static const uint8_t SHARE_DATA_ATTRIB_NAME               = 1;
+static const uint8_t SHARE_DATA_ATTRIB_SIZE               = 2;
+static const uint8_t SHARE_DATA_ATTRIB_TTH                = 3;
+static const uint8_t SHARE_DATA_ATTRIB_TIMESTAMP          = 4;
+static const uint8_t SHARE_DATA_ATTRIB_TIME_SHARED        = 5;
+static const uint8_t SHARE_DATA_ATTRIB_MEDIA_INFO_AUDIO   = 10;
+static const uint8_t SHARE_DATA_ATTRIB_MEDIA_INFO_VIDEO   = 11;
+static const uint8_t SHARE_DATA_ATTRIB_MEDIA_INFO_BITRATE = 12;
+static const uint8_t SHARE_DATA_ATTRIB_MEDIA_INFO_SIZE    = 13;
 
 void ShareManager::loadShareData(File& file)
 {
@@ -434,24 +455,11 @@ void ShareManager::loadShareData(File& file)
 		MODE_DIR
 	};
 
-	enum
-	{
-		ATTRIB_MASK_NAME        = 0x01,
-		ATTRIB_MASK_SIZE        = 0x02,
-		ATTRIB_MASK_TTH         = 0x04,
-		ATTRIB_MASK_TIMESTAMP   = 0x08,
-		ATTRIB_MASK_TIME_SHARED = 0x10
-	};
-
 	BufferedInputStream<false> bs(&file, 256 * 1024);
 	uint8_t buf[64 * 1024];
 	ShareLoaderMode mode = MODE_NONE;
 	SharedDir* current = nullptr;
-	string name;
-	int64_t fileSize = 0;
-	uint64_t timestamp = 0;
-	uint64_t timeShared = 0;
-	TTHValue tth;
+	SharedItemAttribs attr;
 	unsigned attribMask = 0;
 	for (;;)
 	{
@@ -518,15 +526,15 @@ void ShareManager::loadShareData(File& file)
 		{
 			if (!(attribMask & ATTRIB_MASK_NAME))
 				throw ShareLoaderException(mode == MODE_DIR ? "Directory name is missing" : "File name is missing");
-			dcassert(!name.empty());
+			dcassert(!attr.name.empty());
 			if (mode == MODE_DIR)
 			{
-				loadSharedDir(current, name);
+				loadSharedDir(current, attr.name);
 				if (!current)
 				{
-					current = new SharedDir(name, nullptr);
+					current = new SharedDir(attr.name, nullptr);
 					current->flags |= BaseDirItem::FLAG_SHARE_LOST;
-					LogManager::message("Share " + name + " was removed but kept in " + fileShareData, false);
+					LogManager::message("Share " + attr.name + " was removed but kept in " + fileShareData, false);
 				}
 			}
 			else
@@ -535,8 +543,7 @@ void ShareManager::loadShareData(File& file)
 				if ((attribMask & reqMask) != reqMask)
 					throw ShareLoaderException("Required file attributes are missing");
 				if (!(current->flags & BaseDirItem::FLAG_SHARE_LOST))
-					loadSharedFile(current, name, fileSize, tth, timestamp,
-						(attribMask & ATTRIB_MASK_TIME_SHARED) ? timeShared : 0);
+					loadSharedFile(current, attr, attribMask);
 			}
 			mode = MODE_NONE;
 			bs.rewind(size-1);
@@ -559,28 +566,69 @@ void ShareManager::loadShareData(File& file)
 		{
 			case SHARE_DATA_ATTRIB_NAME:
 				if (!attribSize) { invalidSize = true; break; }
-				name.assign((const char*) buf, attribSize);
+				attr.name.assign((const char*) buf, attribSize);
 				attribMask |= ATTRIB_MASK_NAME;
 				break;
 			case SHARE_DATA_ATTRIB_SIZE:
 				if (attribSize != 8) { invalidSize = true; break; }
-				fileSize = loadUnaligned64(buf);
+				attr.fileSize = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_SIZE;
 				break;
 			case SHARE_DATA_ATTRIB_TTH:
 				if (attribSize != TTHValue::BYTES) { invalidSize = true; break; }
-				memcpy(tth.data, buf, TTHValue::BYTES);
+				memcpy(attr.tth.data, buf, TTHValue::BYTES);
 				attribMask |= ATTRIB_MASK_TTH;
 				break;
 			case SHARE_DATA_ATTRIB_TIMESTAMP:
 				if (attribSize != 8) { invalidSize = true; break; }
-				timestamp = loadUnaligned64(buf);
+				attr.timestamp = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_TIMESTAMP;
 				break;
 			case SHARE_DATA_ATTRIB_TIME_SHARED:
 				if (attribSize != 8) { invalidSize = true; break; }
-				timeShared = loadUnaligned64(buf);
+				attr.timeShared = loadUnaligned64(buf);
 				attribMask |= ATTRIB_MASK_TIME_SHARED;
+				break;
+			case SHARE_DATA_ATTRIB_MEDIA_INFO_AUDIO:
+				if (!attribSize) break;
+				if (!(attribMask & ATTRIB_MASK_MEDIA_INFO))
+				{
+					attribMask |= ATTRIB_MASK_MEDIA_INFO;
+					attr.mediaInfo.clear();
+				}
+				attr.mediaInfo.audio.assign((const char*) buf, attribSize);
+				break;
+			case SHARE_DATA_ATTRIB_MEDIA_INFO_VIDEO:
+				if (!attribSize) break;
+				if (!(attribMask & ATTRIB_MASK_MEDIA_INFO))
+				{
+					attribMask |= ATTRIB_MASK_MEDIA_INFO;
+					attr.mediaInfo.clear();
+				}
+				attr.mediaInfo.video.assign((const char*) buf, attribSize);
+				break;
+			case SHARE_DATA_ATTRIB_MEDIA_INFO_SIZE:
+			{
+				if (attribSize != 4) { invalidSize = true; break; }
+				if (!(attribMask & ATTRIB_MASK_MEDIA_INFO))
+				{
+					attribMask |= ATTRIB_MASK_MEDIA_INFO;
+					attr.mediaInfo.clear();
+				}
+				uint32_t val = loadUnaligned32(buf);
+				attr.mediaInfo.width = val >> 16;
+				attr.mediaInfo.height = val & 0xFFFF;
+				break;
+			}
+			case SHARE_DATA_ATTRIB_MEDIA_INFO_BITRATE:
+				if (attribSize != 2) { invalidSize = true; break; }
+				if (!(attribMask & ATTRIB_MASK_MEDIA_INFO))
+				{
+					attribMask |= ATTRIB_MASK_MEDIA_INFO;
+					attr.mediaInfo.clear();
+				}
+				attr.mediaInfo.bitrate = loadUnaligned16(buf);
+				break;
 		}
 		if (invalidSize)
 			throw ShareLoaderException("Invalid size of attribute " + Util::toString(type));
@@ -607,7 +655,16 @@ static bool addAttribValue(uint8_t outBuf[], size_t& ptr, uint8_t type, const vo
 	return true;
 }
 
-#if 0
+static bool addAttribValue16(uint8_t outBuf[], size_t& ptr, uint8_t type, uint16_t data)
+{
+	if (ptr + 4 > TEMP_BUF_SIZE) return false;
+	outBuf[ptr] = type;
+	outBuf[ptr + 1] = 2;
+	storeUnaligned16(outBuf + ptr + 2, data);
+	ptr += 4;
+	return true;
+}
+
 static bool addAttribValue32(uint8_t outBuf[], size_t& ptr, uint8_t type, uint32_t data)
 {
 	if (ptr + 6 > TEMP_BUF_SIZE) return false;
@@ -617,7 +674,6 @@ static bool addAttribValue32(uint8_t outBuf[], size_t& ptr, uint8_t type, uint32
 	ptr += 6;
 	return true;
 }
-#endif
 
 static bool addAttribValue64(uint8_t outBuf[], size_t& ptr, uint8_t type, uint64_t data)
 {
@@ -647,8 +703,25 @@ void ShareManager::writeShareDataFile(OutputStream* os, const SharedFilePtr& fil
 	    !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_SIZE, file->size) ||
 	    !addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TTH, file->tth.data, TTHValue::BYTES) ||
 	    !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_TIMESTAMP, file->timestamp) ||
-	    (file->timeShared && !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_TIME_SHARED, file->timeShared)) ||
-	    !addAttribValue(tempBuf, ptr, 0, nullptr, 0))
+	    (file->timeShared && !addAttribValue64(tempBuf, ptr, SHARE_DATA_ATTRIB_TIME_SHARED, file->timeShared)))
+	{
+		throw ShareWriterException("Can't write file attributes");
+	}
+	const MediaInfoUtil::Info* mediaInfo = file->getMediaInfo();
+	if (mediaInfo)
+	{
+		uint32_t imageSize = mediaInfo->getSize();
+		if ((!mediaInfo->audio.empty() &&
+			!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_MEDIA_INFO_AUDIO, mediaInfo->audio.data(), mediaInfo->audio.length())) ||
+			(!mediaInfo->video.empty() &&
+			!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_MEDIA_INFO_VIDEO, mediaInfo->video.data(), mediaInfo->video.length())) ||
+			(imageSize && !addAttribValue32(tempBuf, ptr, SHARE_DATA_ATTRIB_MEDIA_INFO_SIZE, imageSize)) ||
+			(mediaInfo->bitrate && !addAttribValue16(tempBuf, ptr, SHARE_DATA_ATTRIB_MEDIA_INFO_BITRATE, mediaInfo->bitrate)))
+		{
+			throw ShareWriterException("Can't write MediaInfo attributes");
+		}
+	}
+	if (!addAttribValue(tempBuf, ptr, 0, nullptr, 0))
 		throw ShareWriterException("Can't write file attributes");
 	os->write(tempBuf, ptr);
 }
@@ -1761,7 +1834,7 @@ void ShareManager::writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string
 	if (mode == MODE_FULL_LIST ||
 		(mode == MODE_RECURSIVE_PARTIAL_LIST && static_cast<StringOutputStream&>(xmlFile).getOutputSize() < MAX_PARTIAL_LIST_SIZE))
 	{
-		xmlFile.write(LITERAL("\">\r\n"));		
+		xmlFile.write(LITERAL("\">\r\n"));
 		indent += '\t';
 
 		for (auto i = dir->dirs.cbegin(); i != dir->dirs.cend(); ++i)
@@ -1815,9 +1888,42 @@ void ShareManager::writeXmlFilesL(const SharedDir* dir, OutputStream& xmlFile, s
 		{
 			xmlFile.write(LITERAL("\" Shared=\""));
 			xmlFile.write(Util::toString(f->timeShared));
+#if 0
+			int64_t val = f->timeShared - 116444736000000000ll;
+			if (val > 0)
+			{
+				val /= 10000000;
+				xmlFile.write(LITERAL("\" TS=\""));
+				xmlFile.write(Util::toString(val));
+			}
+#endif
 		}
-		//xmlFile.write(LITERAL("\" TS=\""));
-		//xmlFile.write(Util::toString(f->getTS()));
+		const MediaInfoUtil::Info* mediaInfo = f->getMediaInfo();
+		if (mediaInfo)
+		{
+			if (mediaInfo->bitrate)
+			{
+				xmlFile.write(LITERAL("\" BR=\""));
+				xmlFile.write(Util::toString(mediaInfo->bitrate));
+			}
+			if (mediaInfo->width && mediaInfo->height)
+			{
+				xmlFile.write(LITERAL("\" WH=\""));
+				xmlFile.write(Util::toString(mediaInfo->width));
+				xmlFile.write(LITERAL("x"));
+				xmlFile.write(Util::toString(mediaInfo->height));
+			}
+			if (!mediaInfo->audio.empty())
+			{
+				xmlFile.write(LITERAL("\" MA=\""));
+				xmlFile.write(SimpleXML::escapeAttrib(mediaInfo->audio, tmp));
+			}
+			if (!mediaInfo->video.empty())
+			{
+				xmlFile.write(LITERAL("\" MV=\""));
+				xmlFile.write(SimpleXML::escapeAttrib(mediaInfo->video, tmp));
+			}
+		}
 		xmlFile.write(LITERAL("\"/>\r\n"));
 	}
 }
@@ -2094,7 +2200,7 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 			if (first)
 			{
 				first = false;
-				auto it = getByVirtualL(dir.substr(j, i - j));				
+				auto it = getByVirtualL(dir.substr(j, i - j));
 				if (it == shares.cend())
 					return nullptr;
 				auto itShareGroup = shareGroups.find(shareGroup);
@@ -2745,7 +2851,8 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 				SharedFilePtr& file = itFile->second;
 				filesTypesMask |= file->getFileTypes();
 				oldSize = file->size;
-				if (oldSize == size && file->timestamp == timestamp)
+				if (oldSize == size && file->timestamp == timestamp &&
+				    (!optionForceUpdateMediaInfo || file->getMediaInfo() || !(mediaInfoFileTypes & file->getFileTypes())))
 				{
 					file->flags &= ~BaseDirItem::FLAG_NOT_FOUND;
 					TTHMapItem tthItem;
@@ -2825,6 +2932,10 @@ void ShareManager::scanDirs()
 	optionShareHidden = BOOLSETTING(SHARE_HIDDEN);
 	optionShareSystem = BOOLSETTING(SHARE_SYSTEM);
 	optionShareVirtual = BOOLSETTING(SHARE_VIRTUAL);
+
+	optionForceUpdateMediaInfo = BOOLSETTING(MEDIA_INFO_FORCE_UPDATE);
+	SET_SETTING(MEDIA_INFO_FORCE_UPDATE, false);
+	mediaInfoFileTypes = MediaInfoUtil::getMediaInfoFileTypes();
 
 	scanProgress[0] = scanProgress[1] = 0;
 

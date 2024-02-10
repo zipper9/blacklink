@@ -6,9 +6,11 @@
 #include "ShareMiscPage.h"
 #include "../client/SettingsManager.h"
 #include "../client/ShareManager.h"
+#include "../client/MediaInfoLib.h"
 #include "LineDlg.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "ImageLists.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -58,6 +60,14 @@ static const DialogLayout::Item layoutItems2[] =
 	{ IDC_SETTINGS_MBS, FLAG_TRANSLATE, AUTO, UNSPEC, 0, &align6 }
 };
 
+static const DialogLayout::Item layoutItems3[] =
+{
+	{ IDC_ENABLE, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_PARSE_AUDIO, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_PARSE_VIDEO, FLAG_TRANSLATE, AUTO, UNSPEC },
+	{ IDC_FORCE_UPDATE, FLAG_TRANSLATE, AUTO, UNSPEC }
+};
+
 static const PropPage::Item items[] =
 {
 	{ IDC_SHAREHIDDEN, SettingsManager::SHARE_HIDDEN, PropPage::T_BOOL },
@@ -89,12 +99,15 @@ LRESULT ShareMiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	int n = 0;
 	ADD_TAB(pageShareGroups, ShareGroupsPage, SETTINGS_SHARE_GROUPS);
 	ADD_TAB(pageShareOptions, ShareOptionsPage, SETTINGS_OPTIONS);
+	ADD_TAB(pageShareMediaInfo, ShareMediaInfoPage, SETTINGS_MEDIA_INFO_PAGE);
 
 	ctrlTabs.SetCurSel(0);
 	changeTab();
 
 	PropPage::read(pageShareOptions->m_hWnd, items);
 	pageShareOptions->fixControls();
+	pageShareMediaInfo->readSettings();
+	pageShareMediaInfo->fixControls();
 	return TRUE;
 }
 
@@ -103,6 +116,7 @@ void ShareMiscPage::changeTab()
 	int pos = ctrlTabs.GetCurSel();
 	pageShareGroups->ShowWindow(SW_HIDE);
 	pageShareOptions->ShowWindow(SW_HIDE);
+	pageShareMediaInfo->ShowWindow(SW_HIDE);
 
 	CRect rc;
 	ctrlTabs.GetClientRect(&rc);
@@ -116,8 +130,13 @@ void ShareMiscPage::changeTab()
 			hwnd = pageShareGroups->m_hWnd;
 			break;
 
-		default:
+		case 1:
 			hwnd = pageShareOptions->m_hWnd;
+			break;
+
+		default:
+			hwnd = pageShareMediaInfo->m_hWnd;
+			pageShareMediaInfo->updateStatus();
 	}
 	::MoveWindow(hwnd, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 	::ShowWindow(hwnd, SW_SHOW);
@@ -126,6 +145,7 @@ void ShareMiscPage::changeTab()
 void ShareMiscPage::write()
 {
 	PropPage::write(pageShareOptions->m_hWnd, items);
+	pageShareMediaInfo->writeSettings();
 }
 
 void ShareMiscPage::onShow()
@@ -137,7 +157,7 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 	WinUtil::translate(*this, texts1);
-	
+
 	ctrlGroup.Attach(GetDlgItem(IDC_SHARE_GROUPS));
 	ctrlDirs.Attach(GetDlgItem(IDC_LIST1));
 	ctrlAction.Attach(GetDlgItem(IDC_REMOVE));
@@ -159,7 +179,7 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlDirs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	WinUtil::setExplorerTheme(ctrlDirs);
 	CRect rc;
-	ctrlDirs.GetClientRect(rc);	
+	ctrlDirs.GetClientRect(rc);
 	ctrlDirs.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 	ctrlDirs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 
@@ -384,7 +404,7 @@ LRESULT ShareGroupsPage::onSplitAction(int, LPNMHDR pnmh, BOOL&)
 	menu.CreatePopupMenu();
 	menu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
 	menu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
-	
+
 	POINT pt = { 0, nm->rcButton.bottom };
 	CButton(pnmh->hwndFrom).ClientToScreen(&pt);
 	menu.TrackPopupMenu(0, pt.x, pt.y, m_hWnd);
@@ -410,7 +430,109 @@ LRESULT ShareOptionsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 void ShareOptionsPage::fixControls()
 {
 	const BOOL state = IsDlgButtonChecked(IDC_TTH_IN_STREAM) != 0;
-	::EnableWindow(GetDlgItem(IDC_CAPTION_MIN_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_MIN_FILE_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_MB), state);
+	GetDlgItem(IDC_CAPTION_MIN_SIZE).EnableWindow(state);
+	GetDlgItem(IDC_MIN_FILE_SIZE).EnableWindow(state);
+	GetDlgItem(IDC_SETTINGS_MB).EnableWindow(state);
+}
+
+LRESULT ShareMediaInfoPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	DialogLayout::layout(m_hWnd, layoutItems3, _countof(layoutItems3));
+
+	CStatic placeholder(GetDlgItem(IDC_STATUS));
+	RECT rc;
+	placeholder.GetWindowRect(&rc);
+	placeholder.DestroyWindow();
+	ScreenToClient(&rc);
+	ctrlStatus.Create(m_hWnd, rc, nullptr, WS_CHILD | WS_VISIBLE, 0, IDC_STATUS);
+
+	ctrlEnable.Attach(GetDlgItem(IDC_ENABLE));
+	ctrlParseAudio.Attach(GetDlgItem(IDC_PARSE_AUDIO));
+	ctrlParseVideo.Attach(GetDlgItem(IDC_PARSE_VIDEO));
+	ctrlForceUpdate.Attach(GetDlgItem(IDC_FORCE_UPDATE));
+
+	return 0;
+}
+
+LRESULT ShareMediaInfoPage::onEnable(WORD, WORD, HWND, BOOL&)
+{
+	if (ctrlEnable.GetCheck() == BST_CHECKED && !MediaInfoLib::instance.isOpen())
+	{
+		MediaInfoLib::instance.init();
+		showStatus();
+	}
+	fixControls();
+	return 0;
+}
+
+void ShareMediaInfoPage::readSettings()
+{
+	unsigned options = SETTING(MEDIA_INFO_OPTIONS);
+	ctrlEnable.SetCheck((options & SettingsManager::MEDIA_INFO_OPTION_ENABLE) ? BST_CHECKED : BST_UNCHECKED);
+	ctrlParseAudio.SetCheck((options & SettingsManager::MEDIA_INFO_OPTION_SCAN_AUDIO) ? BST_CHECKED : BST_UNCHECKED);
+	ctrlParseVideo.SetCheck((options & SettingsManager::MEDIA_INFO_OPTION_SCAN_VIDEO) ? BST_CHECKED : BST_UNCHECKED);
+	ctrlForceUpdate.SetCheck(BOOLSETTING(MEDIA_INFO_FORCE_UPDATE) ? BST_CHECKED : BST_UNCHECKED);
+}
+
+void ShareMediaInfoPage::writeSettings()
+{
+	int options = 0;
+	if (ctrlEnable.GetCheck() == BST_CHECKED) options |= SettingsManager::MEDIA_INFO_OPTION_ENABLE;
+	if (ctrlParseAudio.GetCheck() == BST_CHECKED) options |= SettingsManager::MEDIA_INFO_OPTION_SCAN_AUDIO;
+	if (ctrlParseVideo.GetCheck() == BST_CHECKED) options |= SettingsManager::MEDIA_INFO_OPTION_SCAN_VIDEO;
+	SET_SETTING(MEDIA_INFO_OPTIONS, options);
+	SET_SETTING(MEDIA_INFO_FORCE_UPDATE, ctrlForceUpdate.GetCheck() == BST_CHECKED);
+}
+
+void ShareMediaInfoPage::fixControls()
+{
+	const BOOL state = ctrlEnable.GetCheck() == BST_CHECKED;
+	ctrlParseAudio.EnableWindow(state);
+	ctrlParseVideo.EnableWindow(state);
+	ctrlForceUpdate.EnableWindow(state);
+}
+
+void ShareMediaInfoPage::disableControls()
+{
+	ctrlEnable.SetCheck(BST_UNCHECKED);
+	ctrlEnable.EnableWindow(FALSE);
+	ctrlParseAudio.EnableWindow(FALSE);
+	ctrlParseVideo.EnableWindow(FALSE);
+	ctrlForceUpdate.EnableWindow(FALSE);
+}
+
+void ShareMediaInfoPage::showStatus()
+{
+	int icon = -1;
+	tstring text;
+	if (MediaInfoLib::instance.isOpen())
+	{
+		icon = IconBitmaps::STATUS_SUCCESS;
+		text = TSTRING_F(MEDIA_INFO_STATUS_SUCCESS, MediaInfoLib::instance.getLibraryVersion());
+	}
+	else if (!File::isExist(MediaInfoLib::getLibraryPath()))
+	{
+		icon = IconBitmaps::WARNING;
+		text = TSTRING(MEDIA_INFO_STATUS_NOT_FOUND);
+		disableControls();
+	}
+	else if (MediaInfoLib::instance.isError())
+	{
+		icon = IconBitmaps::STATUS_FAILURE;
+		text = TSTRING(MEDIA_INFO_STATUS_ERROR);
+		disableControls();
+	}
+	else
+		return;
+	ctrlStatus.setImage(icon);
+	ctrlStatus.setText(text);
+	ctrlStatus.Invalidate();
+}
+
+void ShareMediaInfoPage::updateStatus()
+{
+	unsigned options = SETTING(MEDIA_INFO_OPTIONS);
+	if (options & SettingsManager::MEDIA_INFO_OPTION_ENABLE) MediaInfoLib::instance.init();
+	showStatus();
 }

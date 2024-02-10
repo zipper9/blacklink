@@ -2566,7 +2566,7 @@ LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BO
 			int column = ctrlList.findColumn(plvcd->iSubItem);
 			if (column == COLUMN_MEDIA_XY && ii->type == ItemInfo::FILE)
 			{
-				const DirectoryListing::MediaInfo* media = ii->file->getMedia();
+				const MediaInfoUtil::Info* media = ii->file->getMedia();
 				if (media)
 				{
 					CustomDrawHelpers::drawVideoResIcon(customDrawState, plvcd, ii->columns[COLUMN_MEDIA_XY], media->width, media->height);
@@ -2617,70 +2617,6 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 	return CDRF_DODEFAULT;
 }
 
-static unsigned getUnit(const string& s)
-{
-	if (s == "ms" || s == "msec") return 1;
-	if (s == "s" || s == "sec") return 1000;
-	if (s == "mn" || s == "min") return 60000;
-	if (s == "h" || s == "hr") return 3600000;
-	return 0;
-}
-
-static bool parseDuration(const string& s, unsigned& msec)
-{
-	msec = 0;
-	bool getNum = true;
-	bool hasNum = false;
-	bool found = false;
-	unsigned val = 0;
-	string::size_type i = 0;
-	string::size_type j = string::npos;
-	while (i < s.length())
-	{
-		if (getNum)
-		{
-			if (s[i] == ' ')
-			{
-				++i;
-				continue;
-			}
-			if (s[i] >= '0' && s[i] <= '9')
-			{
-				val = val*10 + s[i]-'0';
-				hasNum = true;
-				++i;
-				continue;
-			}
-			if (!hasNum) return false;
-			getNum = false;
-		}
-		if (s[i] != ' ' && j == string::npos) j = i;
-		if (j != string::npos && (s[i] == ' ' || (s[i] >= '0' && s[i] <= '9')))
-		{
-			unsigned unit = getUnit(s.substr(j, i-j));
-			if (!unit) return false;
-			msec += val * unit;
-			val = 0;
-			getNum = true;
-			hasNum = false;
-			found = true;
-			j = string::npos;
-		}
-		++i;
-	}
-	if (j != string::npos)
-	{
-		unsigned unit = getUnit(s.substr(j));
-		if (!unit) return false;
-		msec += val * unit;
-		getNum = true;
-		hasNum = false;
-		found = true;
-	}
-	if (getNum && hasNum) return false;
-	return found;
-}
-
 static void parseDuration(const string& src, unsigned& msec, tstring& columnAudio, tstring& columnDuration)
 {
 	unsigned val;
@@ -2690,7 +2626,7 @@ static void parseDuration(const string& src, unsigned& msec, tstring& columnAudi
 	auto pos = src.find('|');
 	if (pos != string::npos)
 	{
-		result = parseDuration(src.substr(0, pos), val);
+		result = MediaInfoUtil::parseDuration(src.substr(0, pos), val);
 		if (result)
 		{
 			Text::toT(src.substr(pos + 1), columnAudio);
@@ -2698,7 +2634,7 @@ static void parseDuration(const string& src, unsigned& msec, tstring& columnAudi
 		}
 	}
 	else
-		result = parseDuration(src, val);
+		result = MediaInfoUtil::parseDuration(src, val);
 	if (!result)
 	{
 		Text::toT(src, columnAudio);
@@ -2734,7 +2670,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 		columns[COLUMN_UPLOAD_COUNT] = Util::toStringT(f->getUploadCount());
 	if (f->getTS())
 		columns[COLUMN_TS] = Text::toT(Util::formatDateTime(static_cast<time_t>(f->getTS())));
-	const DirectoryListing::MediaInfo *media = f->getMedia();
+	const MediaInfoUtil::Info *media = f->getMedia();
 	if (media)
 	{
 		if (media->bitrate)
@@ -2821,8 +2757,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 			return compare(a->file->getTS(), b->file->getTS());
 		case COLUMN_BITRATE:
 		{
-			const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
-			const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
+			const MediaInfoUtil::Info* aMedia = a->file->getMedia();
+			const MediaInfoUtil::Info* bMedia = b->file->getMedia();
 			if (aMedia && bMedia)
 				return compare(aMedia->bitrate, bMedia->bitrate);
 			if (aMedia) return 1;
@@ -2831,8 +2767,8 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 		}
 		case COLUMN_MEDIA_XY:
 		{
-			const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
-			const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
+			const MediaInfoUtil::Info* aMedia = a->file->getMedia();
+			const MediaInfoUtil::Info* bMedia = b->file->getMedia();
 			if (aMedia && bMedia)
 				return compare(aMedia->getSize(), bMedia->getSize());
 			if (aMedia) return 1;

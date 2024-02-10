@@ -7,11 +7,11 @@
 #include "ParamExpander.h"
 #include "Random.h"
 #include "LogManager.h"
+#include "SysVersion.h"
 #include "version.h"
 
 #ifdef _WIN32
 #include "CompatibilityManager.h"
-#include "SysVersion.h"
 #include <shlobj.h>
 #endif
 
@@ -228,6 +228,7 @@ void Util::initAppPaths()
 	paths[PATH_HTTP_DOWNLOADS] = paths[PATH_USER_LOCAL] + "HttpDownloads" PATH_SEPARATOR_STR;
 	paths[PATH_NOTEPAD] = paths[PATH_USER_CONFIG] + "Notepad.txt";
 	paths[PATH_EMOPACKS] = paths[PATH_GLOBAL_CONFIG] + "EmoPacks" PATH_SEPARATOR_STR;
+	paths[PATH_PLUGINS] = paths[PATH_GLOBAL_CONFIG] + "Plugins" PATH_SEPARATOR_STR COMPILED_ARCH_STRING PATH_SEPARATOR_STR;
 
 	for (int i = 0; i < PATH_LAST; ++i)
 		paths[i].shrink_to_fit();

@@ -480,6 +480,13 @@ static void freeBuffer(uint8_t* buf)
 #endif
 }
 
+void HashManager::Hasher::processMediaFile(HashManager::Hasher::HashTaskItem& item)
+{
+	mediaInfoParser.init();
+	if (mediaInfoParser.parseFile(item.path, mediaInfo))
+		item.file->setMediaInfo(mediaInfo);
+}
+
 int HashManager::Hasher::run()
 {
 	bool wait = false;
@@ -491,9 +498,11 @@ int HashManager::Hasher::run()
 	uint8_t* buf = nullptr;
 	TigerTree tree;
 
+	uint16_t mediaInfoFileTypes = MediaInfoUtil::getMediaInfoFileTypes();
+
 	auto hashManager = HashManager::getInstance();
 	setThreadPriority(Thread::IDLE);
-	
+
 	while (!stopFlag)
 	{
 		if (wait)
@@ -501,6 +510,8 @@ int HashManager::Hasher::run()
 			semaphore.wait();
 			semaphore.reset();
 			if (stopFlag) break;
+			// update settings
+			mediaInfoFileTypes = MediaInfoUtil::getMediaInfoFileTypes();
 		}
 		HashTaskItem currentItem;
 		{
@@ -565,6 +576,8 @@ int HashManager::Hasher::run()
 		if (size > 0 && BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) && HashManager::loadTree(filename, tree, size))
 		{
 			LogManager::message(STRING(LOAD_TTH_FROM_NTFS) + ' ' + filename, false);
+			if (mediaInfoFileTypes & currentItem.file->getFileTypes())
+				processMediaFile(currentItem);
 			hashManager->hashDone(GET_TICK(), currentItem.fileID, currentItem.file, filename, tree, 0, size);
 			continue;
 		}
@@ -583,6 +596,8 @@ int HashManager::Hasher::run()
 			if (result == RESULT_STOPPED) break;
 			if (result == RESULT_OK)
 			{
+				if (mediaInfoFileTypes & currentItem.file->getFileTypes())
+					processMediaFile(currentItem);
 				const uint64_t speed = end > start ? size * 1000 / (end - start) : 0;
 				hashManager->hashDone(end, currentItem.fileID, currentItem.file, filename, tree, speed, size);
 #ifdef _WIN32
@@ -607,16 +622,15 @@ int HashManager::Hasher::run()
 			hashManager->reportError(currentItem.fileID, currentItem.file, filename, e.getError());
 		}
 	}
+
 	freeBuffer(buf);
-	{
-		LOCK(cs);
-		wl.clear();
-		currentFile.clear();
-		currentFileRemaining = totalBytesToHash = totalBytesHashed = 0;
-		totalFilesHashed = 0;
-		startTick = 0;
-		startTickSavedSize = 0;
-	}
+	LOCK(cs);
+	wl.clear();
+	currentFile.clear();
+	currentFileRemaining = totalBytesToHash = totalBytesHashed = 0;
+	totalFilesHashed = 0;
+	startTick = 0;
+	startTickSavedSize = 0;
 	return 0;
 }
 

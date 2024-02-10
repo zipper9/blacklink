@@ -381,8 +381,8 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			if (valHit && !ownList)
 				uploadCount = Util::toUInt32(*valHit);
 
-			DirectoryListing::MediaInfo tempMedia;
-			DirectoryListing::MediaInfo *media = nullptr;
+			MediaInfoUtil::Info tempMedia;
+			MediaInfoUtil::Info *media = nullptr;
 			
 			if (valBR || valWH || valAudio || valVideo)
 			{
@@ -394,8 +394,8 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					string::size_type pos = valWH->find('x');
 					if (pos != string::npos)
 					{
-						tempMedia.width = atoi(valWH->c_str());
-						tempMedia.height = atoi(valWH->c_str() + pos + 1);
+						tempMedia.width = Util::toUInt32(valWH->c_str());
+						tempMedia.height = Util::toUInt32(valWH->c_str() + pos + 1);
 					}
 				}
 				if (valAudio)
@@ -951,7 +951,7 @@ void DirectoryListing::Directory::updateFiles(MaskType& updatedFlags)
 		totalUploadCount += file->getUploadCount();
 		auto shared = file->getTS();
 		if (shared > maxTS) maxTS = shared;
-		const MediaInfo *media = file->getMedia();
+		const MediaInfoUtil::Info *media = file->getMedia();
 		if (media && media->bitrate)
 		{
 			if (media->bitrate < minBitrate) minBitrate = media->bitrate;
@@ -1182,7 +1182,7 @@ void DirectoryListing::Directory::addFile(DirectoryListing::File *f)
 	totalSize += f->getSize();
 	totalUploadCount += f->getUploadCount();
 	if (f->getTS() > maxTS) maxTS = f->getTS();
-	const MediaInfo *media = f->getMedia();
+	const MediaInfoUtil::Info *media = f->getMedia();
 	if (media && media->bitrate)
 	{
 		if (media->bitrate < minBitrate) minBitrate = media->bitrate;

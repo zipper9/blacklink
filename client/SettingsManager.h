@@ -208,7 +208,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			
 			STR_LAST
 		};
-		                
+
 		enum IntSetting
 		{
 			INT_FIRST = STR_LAST + 1,
@@ -295,6 +295,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SAVE_TTH_IN_NTFS_FILESTREAM,
 			SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM,
 			FAST_HASH,
+			MEDIA_INFO_OPTIONS,
+			MEDIA_INFO_FORCE_UPDATE,
 
 			// File lists
 			FILELIST_INCLUDE_UPLOAD_COUNT,
@@ -740,7 +742,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			INT_LAST,
 			SETTINGS_LAST = INT_LAST
 		};
-		                
+
 		enum
 		{
 			INCOMING_DIRECT, INCOMING_FIREWALL_UPNP, INCOMING_FIREWALL_NAT,
@@ -752,15 +754,22 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		enum { MAGNET_ACTION_SEARCH, MAGNET_ACTION_DOWNLOAD, MAGNET_ACTION_DOWNLOAD_AND_OPEN, MAGNET_ACTION_OPEN_EXISTING };
 
 		enum { TE_ACTION_ASK, TE_ACTION_REPLACE, TE_ACTION_RENAME, TE_ACTION_SKIP };
-		
+
 		enum { POS_LEFT, POS_RIGHT };
-		
+
 		enum { TABS_TOP, TABS_BOTTOM };
 
 		enum
 		{
 			BIND_OPTION_NO_FALLBACK = 1,
 			BIND_OPTION_USE_DEV = 2
+		};
+
+		enum
+		{
+			MEDIA_INFO_OPTION_ENABLE = 1,
+			MEDIA_INFO_OPTION_SCAN_AUDIO = 2,
+			MEDIA_INFO_OPTION_SCAN_VIDEO = 4
 		};
 
 		enum
