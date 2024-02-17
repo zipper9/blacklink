@@ -312,7 +312,7 @@ class ShareManager :
 		vector<FileToHash> filesToHash;
 		bool optionShareHidden, optionShareSystem, optionShareVirtual;
 		mutable bool optionIncludeUploadCount, optionIncludeTimestamp;
-		bool optionForceUpdateMediaInfo;
+		bool optionUseMediaInfo, optionForceUpdateMediaInfo;
 		uint16_t mediaInfoFileTypes;
 		HashDatabaseConnection* hashDb;
 

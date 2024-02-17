@@ -382,7 +382,7 @@ ShareManager::ShareManager() :
 	nextFileID(0), maxSharedFileID(0), maxHashedFileID(0),
 	optionShareHidden(false), optionShareSystem(false), optionShareVirtual(false),
 	optionIncludeUploadCount(false), optionIncludeTimestamp(false),
-	optionForceUpdateMediaInfo(false),
+	optionUseMediaInfo(false), optionForceUpdateMediaInfo(false),
 	hashDb(nullptr),
 	tickUpdateList(std::numeric_limits<uint64_t>::max()),
 	tickLastRefresh(0),
@@ -1898,30 +1898,33 @@ void ShareManager::writeXmlFilesL(const SharedDir* dir, OutputStream& xmlFile, s
 			}
 #endif
 		}
-		const MediaInfoUtil::Info* mediaInfo = f->getMediaInfo();
-		if (mediaInfo)
+		if (optionUseMediaInfo)
 		{
-			if (mediaInfo->bitrate)
+			const MediaInfoUtil::Info* mediaInfo = f->getMediaInfo();
+			if (mediaInfo)
 			{
-				xmlFile.write(LITERAL("\" BR=\""));
-				xmlFile.write(Util::toString(mediaInfo->bitrate));
-			}
-			if (mediaInfo->width && mediaInfo->height)
-			{
-				xmlFile.write(LITERAL("\" WH=\""));
-				xmlFile.write(Util::toString(mediaInfo->width));
-				xmlFile.write(LITERAL("x"));
-				xmlFile.write(Util::toString(mediaInfo->height));
-			}
-			if (!mediaInfo->audio.empty())
-			{
-				xmlFile.write(LITERAL("\" MA=\""));
-				xmlFile.write(SimpleXML::escapeAttrib(mediaInfo->audio, tmp));
-			}
-			if (!mediaInfo->video.empty())
-			{
-				xmlFile.write(LITERAL("\" MV=\""));
-				xmlFile.write(SimpleXML::escapeAttrib(mediaInfo->video, tmp));
+				if (mediaInfo->bitrate)
+				{
+					xmlFile.write(LITERAL("\" BR=\""));
+					xmlFile.write(Util::toString(mediaInfo->bitrate));
+				}
+				if (mediaInfo->width && mediaInfo->height)
+				{
+					xmlFile.write(LITERAL("\" WH=\""));
+					xmlFile.write(Util::toString(mediaInfo->width));
+					xmlFile.write(LITERAL("x"));
+					xmlFile.write(Util::toString(mediaInfo->height));
+				}
+				if (!mediaInfo->audio.empty())
+				{
+					xmlFile.write(LITERAL("\" MA=\""));
+					xmlFile.write(SimpleXML::escapeAttrib(mediaInfo->audio, tmp));
+				}
+				if (!mediaInfo->video.empty())
+				{
+					xmlFile.write(LITERAL("\" MV=\""));
+					xmlFile.write(SimpleXML::escapeAttrib(mediaInfo->video, tmp));
+				}
 			}
 		}
 		xmlFile.write(LITERAL("\"/>\r\n"));
@@ -2933,7 +2936,8 @@ void ShareManager::scanDirs()
 	optionShareSystem = BOOLSETTING(SHARE_SYSTEM);
 	optionShareVirtual = BOOLSETTING(SHARE_VIRTUAL);
 
-	optionForceUpdateMediaInfo = BOOLSETTING(MEDIA_INFO_FORCE_UPDATE);
+	optionUseMediaInfo = (SETTING(MEDIA_INFO_OPTIONS) & SettingsManager::MEDIA_INFO_OPTION_ENABLE) != 0;
+	optionForceUpdateMediaInfo = optionUseMediaInfo ? BOOLSETTING(MEDIA_INFO_FORCE_UPDATE) : false;
 	SET_SETTING(MEDIA_INFO_FORCE_UPDATE, false);
 	mediaInfoFileTypes = MediaInfoUtil::getMediaInfoFileTypes();
 
