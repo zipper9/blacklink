@@ -2022,6 +2022,13 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 					bool hasTree = download->getTigerTree().getLeaves().size() >= 2;
 					if (hashDb && hasTree)
 						db->addTree(hashDb, download->getTigerTree());
+					else
+					{
+						QueueWLock(*QueueItem::g_cs);
+						auto i = q->findSourceL(user);
+						if (i != q->sources.end())
+							i->second.setFlag(QueueItem::Source::FLAG_NO_TREE);
+					}
 					userQueue.removeDownload(q, download->getUser());
 					if (hasTree)
 						q->changeExtraFlags(QueueItem::XFLAG_ALLOW_SEGMENTS, QueueItem::XFLAG_ALLOW_SEGMENTS);
