@@ -190,7 +190,7 @@ class ListLoader : public SimpleXMLReader::CallBack
 			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
 			list->basePath = "/";
 			scanFlags = 0;
-			useUploadCounter = BOOLSETTING(ENABLE_UPLOAD_COUNTER);
+			useUploadCounter = BOOLSETTING(ENABLE_UPLOAD_COUNTER) && BOOLSETTING(FILELIST_SHOW_MY_UPLOADS);
 			if (scanOptions & DirectoryListing::SCAN_OPTION_SHARED)
 				scanFlags |= DatabaseManager::FLAG_SHARED;
 			if (scanOptions & DirectoryListing::SCAN_OPTION_DOWNLOADED)

@@ -344,6 +344,7 @@ static const char* settingTags[] =
 	"FileListShowShared",
 	"FileListShowDownloaded",
 	"FileListShowCanceled",
+	"FileListShowMyUploads",
 
 	// Downloads & Queue
 	"DownloadSlots",
@@ -1001,6 +1002,7 @@ void SettingsManager::setDefaults()
 	setDefault(FILELIST_SHOW_SHARED, TRUE);
 	setDefault(FILELIST_SHOW_DOWNLOADED, TRUE);
 	setDefault(FILELIST_SHOW_CANCELED, TRUE);
+	setDefault(FILELIST_SHOW_MY_UPLOADS, TRUE);
 
 	// Downloads & Queue
 	setDefault(EXTRA_DOWNLOAD_SLOTS, 3);

@@ -304,6 +304,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			FILELIST_SHOW_SHARED,
 			FILELIST_SHOW_DOWNLOADED,
 			FILELIST_SHOW_CANCELED,
+			FILELIST_SHOW_MY_UPLOADS,
 
 			// Downloads & Queue (Ints)
 			DOWNLOAD_SLOTS,

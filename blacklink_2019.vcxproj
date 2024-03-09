@@ -1174,6 +1174,7 @@
     <Image Include="res\MediaToolbar24.png" />
     <Image Include="res\MediaToolbarHot16.png" />
     <Image Include="res\MediaToolbarHot24.png" />
+    <Image Include="res\Navigation.png" />
     <Image Include="res\Other.png" />
     <Image Include="res\padlock_closed.ico" />
     <Image Include="res\padlock_open.ico" />

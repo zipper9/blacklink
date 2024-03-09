@@ -1691,6 +1691,7 @@ enum Strings   // @DontAdd
 	FILE_LIST_GENERATION_OPTIONS, // "File list generation options"
 	FILE_LIST_INCLUDE_TIMESTAMP, // "Add file timestamp"
 	FILE_LIST_INCLUDE_UPLOAD_COUNT, // "Add file upload count"
+	FILE_LIST_SHOW_MY_UPLOAD_COUNT, // "Show upload count in my file list"
 	EMOTICONS_NOT_AVAILABLE, // "Emoticons not available."
 	EMOTICONS_DISABLED, // "Emoticons disabled.\nUse right click to select an icon set."
 	ENABLE_EMOTICONS, // "Enable emoticons"
