@@ -4,7 +4,6 @@
 #include "BackingStore.h"
 #include "ImageLists.h"
 #include "WinUtil.h"
-#include "Colors.h"
 
 static const int ICON_SPACE = 2; // dialog units
 

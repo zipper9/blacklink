@@ -127,6 +127,7 @@ class OMenu final : private CMenu
 		std::vector<OMenuItem*> items;
 
 		bool    themeInitialized;
+		int     partId;
 		HTHEME  hTheme;
 		MARGINS marginCheck;
 		MARGINS marginCheckBackground;

@@ -56,6 +56,10 @@ typedef enum
 
 #endif
 
+#if !(defined(NTDDI_VERSION) && NTDDI_VERSION >= 0x0A00000C)
+#define MENU_POPUPITEM_FOCUSABLE 27
+#endif
+
 static COLORREF getColorFromTheme(HTHEME hTheme, int width, int height, int partId, int stateId)
 {
 	COLORREF color = CLR_INVALID;
@@ -130,7 +134,7 @@ enum
 
 OMenu::OMenu() :
 	ownerDrawMode(OD_DEFAULT),
-	themeInitialized(false), hTheme(nullptr),
+	themeInitialized(false), partId(0), hTheme(nullptr),
 	fontNormal(nullptr), fontBold(nullptr), bgBrush(nullptr),
 	textMeasured(false), updateMenuWindowFlag(false)
 {
@@ -445,12 +449,12 @@ static HWND findMenuWindow(HMENU hMenu)
 	return info.hWndResult;
 }
 
-static void updateMenuDecorations(HWND hWnd, HTHEME hTheme)
+static void updateMenuDecorations(HWND hWnd, HTHEME hTheme, int partId)
 {
 	DWM.init();
 	if (DWM.pDwmSetWindowAttribute)
 	{
-		DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_ROUND;
+		DWM_WINDOW_CORNER_PREFERENCE preference = partId == MENU_POPUPITEM_FOCUSABLE ? DWMWCP_ROUNDSMALL : DWMWCP_ROUND;
 		DWM.pDwmSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
 		COLORREF color;
 		if (hTheme && SUCCEEDED(GetThemeColor(hTheme, MENU_POPUPBORDERS, 0, TMT_FILLCOLORHINT, &color)))
@@ -491,7 +495,7 @@ LRESULT OMenu::onInitMenuPopup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		HWND hWndMenu = findMenuWindow(menu);
 		if (hWndMenu)
 		{
-			updateMenuDecorations(hWndMenu, parent->hTheme);
+			updateMenuDecorations(hWndMenu, parent->hTheme, parent->partId);
 			parent->updateMenuWindowFlag = false;
 		}
 		else
@@ -505,7 +509,7 @@ void OMenu::updateMenuWindow()
 	if (SysVersion::isOsWin11Plus())
 	{
 		HWND hWndMenu = findMenuWindow(m_hMenu);
-		if (hWndMenu) updateMenuDecorations(hWndMenu, hTheme);
+		if (hWndMenu) updateMenuDecorations(hWndMenu, hTheme, partId);
 	}
 }
 
@@ -788,7 +792,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 				{
 					bHandled = TRUE;
 					POPUPITEMSTATES stateId = toItemStateId(dis->itemState);
-					if (IsThemeBackgroundPartiallyTransparent(parent->hTheme, MENU_POPUPITEM, stateId))
+					if (IsThemeBackgroundPartiallyTransparent(parent->hTheme, parent->partId, stateId))
 						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPBACKGROUND, 0, &rc, nullptr);
 
 					int gapSize = parent->sizeCheck.cx + totalWidth(parent->marginCheck) + parent->marginCheckBackground.cxLeftWidth;
@@ -809,8 +813,8 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					if (omi->type & MFT_SEPARATOR)
 					{
 						RECT rcSep;
-						rcSep.left = rcGutter.right + parent->marginItem.cxLeftWidth + parent->marginItem.cxLeftWidth;
-						rcSep.right = rc.right - parent->marginItem.cxRightWidth - parent->marginItem.cxRightWidth;
+						rcSep.left = (parent->partId == MENU_POPUPITEM_FOCUSABLE ? rc.left : rcGutter.right) + parent->marginItem.cxLeftWidth + parent->sizeSeparator.cx;
+						rcSep.right = rc.right - parent->marginItem.cxRightWidth - parent->sizeSeparator.cx;
 						rcSep.top = (rc.top + rc.bottom - parent->sizeSeparator.cy) / 2;
 						rcSep.bottom = rcSep.top + parent->sizeSeparator.cy;
 						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPSEPARATOR, 0, &rcSep, nullptr);
@@ -820,7 +824,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 						RECT rcDraw = rc;
 						rcDraw.left += parent->marginItem.cxLeftWidth;
 						rcDraw.right -= parent->marginItem.cxRightWidth;
-						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId, &rcDraw, nullptr);
+						DrawThemeBackground(parent->hTheme, dis->hDC, parent->partId, stateId, &rcDraw, nullptr);
 
 						HBITMAP bitmap = omi->bitmap;
 						if (bitmap)
@@ -864,7 +868,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 						HFONT hFont = (omi->extType & EXT_TYPE_DEFAULT_ITEM) ? parent->fontBold : parent->fontNormal;
 						HGDIOBJ oldFont = SelectObject(dis->hDC, hFont);
 #ifdef USE_DRAW_THEME_TEXT
-						DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
+						DrawThemeText(parent->hTheme, dis->hDC, parent->partId, stateId,
 							omi->text.c_str(), omi->getTextLength(), flags, 0, &rcDraw);
 #else
 						int oldBkMode = SetBkMode(dis->hDC, TRANSPARENT);
@@ -875,7 +879,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 							rcDraw.right = rc.right - parent->marginItem.cxRightWidth - totalWidth(parent->marginSubmenu) - parent->sizeSubmenu.cx;
 							rcDraw.left = rcDraw.right - parent->maxAccelWidth;
 #ifdef USE_DRAW_THEME_TEXT
-							DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
+							DrawThemeText(parent->hTheme, dis->hDC, parent->partId, stateId,
 								omi->text.c_str() + omi->accelPos + 1, -1, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX, 0, &rcDraw);
 #else
 							DrawText(dis->hDC, omi->text.c_str() + omi->accelPos + 1, -1, &rcDraw, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX);
@@ -1014,6 +1018,7 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 
 void OMenu::openTheme(HWND hwnd)
 {
+	partId = MENU_POPUPITEM;
 #ifndef DISABLE_UXTHEME
 	hTheme = OpenThemeData(hwnd, THEME_NAME);
 #else
@@ -1027,9 +1032,11 @@ void OMenu::openTheme(HWND hwnd)
 	}
 	else
 	{
+		if (IsThemePartDefined(hTheme, MENU_POPUPITEM_FOCUSABLE, MPI_HOT))
+			partId = MENU_POPUPITEM_FOCUSABLE;
 		GetThemeMargins(hTheme, NULL, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck);
 		GetThemeMargins(hTheme, NULL, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
-		GetThemeMargins(hTheme, NULL, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
+		GetThemeMargins(hTheme, NULL, partId, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
 		GetThemeMargins(hTheme, NULL, MENU_POPUPSUBMENU, 0, TMT_CONTENTMARGINS, NULL, &marginSubmenu);
 		GetThemePartSize(hTheme, NULL, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
 		GetThemePartSize(hTheme, NULL, MENU_POPUPSEPARATOR, 0, nullptr, TS_TRUE, &sizeSeparator);
@@ -1042,7 +1049,7 @@ void OMenu::openTheme(HWND hwnd)
 		marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = size.cy;
 
 		int popupBorderSize, popupBackgroundBorderSize;
-		GetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE,  &popupBorderSize);
+		GetThemeInt(hTheme, partId, 0, TMT_BORDERSIZE,  &popupBorderSize);
 		GetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
 
 		marginText.cxLeftWidth = popupBackgroundBorderSize;
@@ -1059,6 +1066,13 @@ void OMenu::openTheme(HWND hwnd)
 		}
 		else
 			memset(&marginHeader, 0, sizeof(marginHeader));
+	
+		sizeSeparator.cx = 0;
+		if (partId == MENU_POPUPITEM_FOCUSABLE &&
+		    SUCCEEDED(GetThemeMargins(hTheme, NULL, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &margins)))
+		{
+			sizeSeparator.cx = std::max(margins.cxLeftWidth, margins.cxRightWidth);
+		}
 	}
 }
 
