@@ -5,6 +5,7 @@
 #include "BufferedSocketListener.h"
 #include "Thread.h"
 #include "Locks.h"
+#include "ThrottleState.h"
 
 class UnZFilter;
 class InputStream;
@@ -94,11 +95,6 @@ class BufferedSocket : private Thread
 		{
 			if (hasSocket())
 				sock->setMaxSpeed(maxSpeed);
-		}
-		void updateSocketBucket(int connectionCount, uint64_t tick) const
-		{
-			if (hasSocket())
-				sock->updateSocketBucket(connectionCount, tick);
 		}
 
 		void write(const string& data)
@@ -212,6 +208,7 @@ class BufferedSocket : private Thread
 		uint64_t gracefulDisconnectTimeout;
 		BufferedSocketListener* listener;
 		int ipVersion;
+		std::unique_ptr<ThrottleState> readLimiter, writeLimiter;
 
 		BufferedSocket(char separator, BufferedSocketListener* listener);
 		virtual ~BufferedSocket();
@@ -229,6 +226,8 @@ class BufferedSocket : private Thread
 		void createSocksMessage(const ConnectInfo* ci);
 		void checkSocksReply();
 		void printSockName(string& sockName) const;
+		int writeThrottled(const void* data, int len);
+		int readThrottled(void* data, int len);
 
 	protected:
 		virtual int run() override;

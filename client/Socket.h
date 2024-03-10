@@ -68,12 +68,13 @@ class Socket
 	public:
 		enum
 		{
-			WAIT_NONE    = 0x00,
-			WAIT_CONNECT = 0x01,
-			WAIT_READ    = 0x02,
-			WAIT_WRITE   = 0x04,
-			WAIT_ACCEPT  = 0x08,
-			WAIT_CONTROL = 0x10
+			WAIT_NONE     = 0x00,
+			WAIT_CONNECT  = 0x01,
+			WAIT_READ     = 0x02,
+			WAIT_WRITE    = 0x04,
+			WAIT_ACCEPT   = 0x08,
+			WAIT_CONTROL  = 0x10,
+			WAIT_THROTTLE = 0x20
 		};
 
 		enum SocketType
@@ -106,8 +107,7 @@ class Socket
 			bool resolveNames;
 		};
 
-		Socket() : sock(INVALID_SOCKET), connected(false),
-			maxSpeed(0), currentBucket(0), bucketUpdateTick(0),
+		Socket() : sock(INVALID_SOCKET), connected(false), maxSpeed(0),
 			type(TYPE_TCP), port(0), proto(PROTO_DEFAULT)
 		{
 			ip.type = 0;
@@ -128,7 +128,6 @@ class Socket
 			ip = std::move(src.ip);
 			port = src.port;
 			maxSpeed = src.maxSpeed;
-			currentBucket = src.currentBucket;
 			src.sock = INVALID_SOCKET;
 			return *this;
 		}
@@ -241,22 +240,6 @@ class Socket
 		void setMaxSpeed(int64_t maxSpeed) { this->maxSpeed = maxSpeed; }
 		int64_t getMaxSpeed() const { return maxSpeed; }
 
-		void setCurrentBucket(int64_t currentBucket) { this->currentBucket = currentBucket; }
-		int64_t getCurrentBucket() const { return currentBucket; }
-
-		void updateSocketBucket(int connectionCount, uint64_t tick)
-		{
-			if (connectionCount <= 0)
-			{
-				connectionCount = 1;
-				dcassert(0);
-			}
-			currentBucket = getMaxSpeed() / connectionCount;
-			bucketUpdateTick = tick;
-		}
-
-		uint64_t getBucketUpdateTick() const { return bucketUpdateTick; }
-
 		static bool getProxyConfig(ProxyConfig& proxy);
 		void createControlEvent();
 		void signalControlEvent();
@@ -271,8 +254,6 @@ class Socket
 		IpAddress ip;
 		uint16_t port;
 		int64_t maxSpeed;
-		int64_t currentBucket;
-		uint64_t bucketUpdateTick;
 #ifdef _WIN32
 		unsigned lastWaitResult;
 #endif

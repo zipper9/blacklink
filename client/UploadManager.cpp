@@ -1171,11 +1171,10 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 			{
 				TransferData td;
 				initTransferData(td, u.get());
-				td.dumpToLog();					
+				td.dumpToLog();
 				tickList.push_back(td);
 				u->updateSpeed(tick);
 			}
-			u->getUserConnection()->getSocket()->updateSocketBucket(u->getUser()->getUploadCount(), tick);
 		}
 	}
 	if (!tickList.empty())

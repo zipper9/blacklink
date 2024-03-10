@@ -19,90 +19,41 @@
 #ifndef _THROTTLEMANAGER_H
 #define _THROTTLEMANAGER_H
 
-#include "Socket.h"
 #include "TimerManager.h"
-#include "SettingsManager.h"
-#include <boost/thread/condition_variable.hpp>
 
-/**
- * Manager for throttling traffic flow speed.
- * Inspired by Token Bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
- */
-class ThrottleManager :
-	public Singleton<ThrottleManager>, private TimerManagerListener
+class ThrottleManager : public Singleton<ThrottleManager>, private TimerManagerListener
 {
 	public:
-	
-		/*
-		 * Limits a traffic and reads a packet from the network
-		 */
-		int read(Socket* sock, void* buffer, size_t len);
-		
-		/*
-		 * Limits a traffic and writes a packet to the network
-		 * We must handle this a little bit differently than downloads, because of that stupidity in OpenSSL
-		 */
-		int write(Socket* sock, const void* buffer, size_t& len);
-		
-		size_t getDownloadLimitInKBytes() const
-		{
-			return downLimit / 1024;
-		}
-		
-		size_t getDownloadLimitInBytes() const
-		{
-			return downLimit;
-		}
-		
-		void setDownloadLimit(size_t limitKb)
-		{
-			downLimit = limitKb * 1024;
-		}
-		
-		size_t getUploadLimitInKBytes() const
-		{
-			return upLimit / 1024;
-		}
-		
-		size_t getUploadLimitInBytes() const
-		{
-			return upLimit;
-		}
-		
-		void setUploadLimit(size_t limitKb)
-		{
-			upLimit = limitKb * 1024;
-		}
-		
-		void updateLimits();
-		
-		void startup()
+		size_t getDownloadLimitInKBytes() const { return downLimit >> 10; }
+		size_t getDownloadLimitInBytes() const { return downLimit; }
+		void setDownloadLimit(size_t limitKb) { downLimit = limitKb << 10; }
+
+		size_t getUploadLimitInKBytes() const { return upLimit >> 10; }
+		size_t getUploadLimitInBytes() const { return upLimit; }
+		void setUploadLimit(size_t limitKb) { upLimit = limitKb << 10; }
+
+		void updateLimits() noexcept;
+
+		void startup() noexcept
 		{
 			TimerManager::getInstance()->addListener(this);
 			updateLimits();
 		}
 
+		int64_t getSocketUploadLimit() noexcept;
+		int64_t getSocketDownloadLimit() noexcept;
+
 	private:
-		// download limiter
-		size_t downLimit;
-		size_t downTokens;
-		boost::condition_variable downCond;
-		boost::mutex downMutex;
-		
-		// upload limiter
-		size_t upLimit;
-		size_t upTokens;
-		boost::condition_variable upCond;
-		boost::mutex upMutex;
-		
 		friend class Singleton<ThrottleManager>;
-		
+
+		size_t downLimit;
+		size_t upLimit;
+
 		ThrottleManager();
 		~ThrottleManager();
-		
+
 		// TimerManagerListener
 		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
 };
 
 #endif  // _THROTTLEMANAGER_H

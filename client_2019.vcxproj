@@ -633,6 +633,7 @@
     <ClCompile Include="client\Text.cpp" />
     <ClCompile Include="client\Thread.cpp" />
     <ClCompile Include="client\ThrottleManager.cpp" />
+    <ClCompile Include="client\ThrottleState.cpp" />
     <ClCompile Include="client\TigerHash.cpp" />
     <ClCompile Include="client\TimerManager.cpp" />
     <ClCompile Include="client\TimeUtil.cpp" />
@@ -874,6 +875,7 @@
     <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\TagCollector.h" />
     <ClInclude Include="client\Thread.h" />
+    <ClInclude Include="client\ThrottleState.h" />
     <ClInclude Include="client\TimeUtil.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\tstring.h" />

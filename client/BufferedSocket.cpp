@@ -38,6 +38,7 @@ static const int POLL_TIMEOUT = 250;
 static const int LONG_TIMEOUT = 30000;
 static const int SHORT_TIMEOUT = 1000;
 static const int DISCONNECT_TIMEOUT = 10000;
+static const int THROTTLE_TIMEOUT = 100;
 
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 static std::atomic<int> socketCounter(0);
@@ -184,10 +185,20 @@ int BufferedSocket::run()
 		{
 			if (state == RUNNING || state == CONNECT_PROXY)
 			{
-				int waitMask = pollState ^ (Socket::WAIT_READ | Socket::WAIT_WRITE);
+				int waitMask;
+				int timeout = -1;
+				if (pollState & Socket::WAIT_THROTTLE)
+				{
+					waitMask = Socket::WAIT_CONTROL;
+					pollState ^= Socket::WAIT_THROTTLE;
+					timeout = THROTTLE_TIMEOUT;
+				}
+				else
+					waitMask = pollState ^ (Socket::WAIT_READ | Socket::WAIT_WRITE);
 				if (waitMask)
 				{
-					int timeout = mode == MODE_DATA ? POLL_TIMEOUT : DISCONNECT_TIMEOUT;
+					if (timeout < 0)
+						timeout = mode == MODE_DATA ? POLL_TIMEOUT : DISCONNECT_TIMEOUT;
 					int waitResult = sock->wait(timeout, waitMask | Socket::WAIT_CONTROL);
 					if (waitResult & Socket::WAIT_WRITE)
 						pollState |= Socket::WAIT_WRITE;
@@ -255,14 +266,18 @@ void BufferedSocket::readData()
 			if (state == CONNECT_PROXY)
 				result = sock->read(readBuf, readSize);
 			else	
-				result = ThrottleManager::getInstance()->read(sock.get(), readBuf, readSize);
+				result = readThrottled(readBuf, readSize);
 		}
 		else
 			result = sock->read(readBuf, readSize);
 		if (result == 0)
 			throw SocketException(STRING(CONNECTION_CLOSED));
 		if (result < 0)
+		{
+			if (pollState & Socket::WAIT_THROTTLE)
+				return;
 			pollState &= ~Socket::WAIT_READ; // EWOULDBLOCK
+		}
 		else
 		{
 			rb.writePtr += result;
@@ -360,11 +375,11 @@ void BufferedSocket::writeData()
 			while (sb.readPtr < sb.writePtr)
 			{
 				size_t writeSize = sb.writePtr - sb.readPtr;
-				int result = ThrottleManager::getInstance()->write(sock.get(), sb.buf + sb.readPtr, writeSize);
+				int result = writeThrottled(sb.buf + sb.readPtr, writeSize);
 				if (result < 0)
 				{
-					// EWOULDBLOCK
-					pollState &= ~Socket::WAIT_WRITE;
+					if (!(pollState & Socket::WAIT_THROTTLE))
+						pollState &= ~Socket::WAIT_WRITE; // EWOULDBLOCK
 					return;
 				}
 				if (result)
@@ -1075,3 +1090,48 @@ void BufferedSocket::getBindAddress(IpAddressEx& ip, int af)
 	getBindAddress(ip, af,
 		SettingsManager::get(ip.type == AF_INET6 ? SettingsManager::BIND_ADDRESS6 : SettingsManager::BIND_ADDRESS));
 }
+
+int BufferedSocket::writeThrottled(const void* data, int len)
+{
+	int64_t maxSpeed = sock->getMaxSpeed();
+	if (maxSpeed < 0) // Bypass limit
+		return sock->write(data, len);
+	if (maxSpeed == 0)
+	{
+		maxSpeed = ThrottleManager::getInstance()->getSocketUploadLimit();
+		if (!maxSpeed)
+			return sock->write(data, len);
+	}
+	if (!writeLimiter) writeLimiter.reset(new ThrottleState);
+	writeLimiter->setCurrentTick(Util::getTick());
+	int maxSize = writeLimiter->getAvailSize(maxSpeed);
+	if (!maxSize)
+	{
+		pollState |= Socket::WAIT_THROTTLE;
+		return -1;
+	}
+	if (len > maxSize) len = maxSize;
+	len = sock->write(data, len);
+	if (len > 0) writeLimiter->addSize(len);
+	return len;
+}
+
+int BufferedSocket::readThrottled(void* data, int len)
+{
+	int64_t maxSpeed = ThrottleManager::getInstance()->getSocketDownloadLimit();
+	if (!maxSpeed)
+		return sock->read(data, len);
+	if (!readLimiter) readLimiter.reset(new ThrottleState);
+	readLimiter->setCurrentTick(Util::getTick());
+	int maxSize = readLimiter->getAvailSize(maxSpeed);
+	if (!maxSize)
+	{
+		pollState |= Socket::WAIT_THROTTLE;
+		return -1;
+	}
+	if (len > maxSize) len = maxSize;
+	len = sock->read(data, len);
+	if (len > 0) readLimiter->addSize(len);
+	return len;
+}
+
