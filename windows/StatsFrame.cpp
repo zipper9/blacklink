@@ -24,6 +24,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "Fonts.h"
+#include "BackingStore.h"
 #include "../client/FormatUtil.h"
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
@@ -34,8 +35,13 @@ static const float PEN_WIDTH = 1.4f;
 
 using namespace Gdiplus;
 
-StatsWindow::StatsWindow() : lastTick(GET_TICK()), maxValue(1024), maxItems(0), showLegend(true)
+StatsWindow::StatsWindow() : lastTick(GET_TICK()), maxValue(1024), maxItems(0), showLegend(true), backingStore(nullptr)
 {
+}
+
+StatsWindow::~StatsWindow()
+{
+	if (backingStore) backingStore->release();
 }
 
 LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -50,8 +56,14 @@ LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	int width = rc.Width();
 	int height = rc.Height();
 
-	Bitmap bmp(width, height);
-	Graphics* graph = Graphics::FromImage(&bmp);
+	if (!backingStore)
+	{
+		backingStore = BackingStore::getBackingStore();	
+		if (!backingStore) return 0;
+	}
+
+	HDC hdc = backingStore->getCompatibleDC(paintDC, width, height);
+	Graphics* graph = Graphics::FromHDC(hdc);
 	graph->SetSmoothingMode(SmoothingModeHighQuality);
 	graph->Clear(Color(255, 255, 255));
 	
@@ -184,8 +196,8 @@ LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		graph->DrawString(s2.c_str(), s2.length(), &font, PointF(xtext, y), &blackBrush);
 	}
 
-	Graphics graphics(paintDC);
-	graphics.DrawImage(&bmp, 0, 0, width, height);
+	delete graph;
+	BitBlt(paintDC, 0, 0, rc.right, rc.bottom, hdc, 0, 0, SRCCOPY);
 	return 0;
 }
 

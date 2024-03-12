@@ -32,8 +32,12 @@ class StatsWindow : public CWindowImpl<StatsWindow>
 {
 	public:
 		StatsWindow();
+		~StatsWindow();
 		void updateStats();
 		void setShowLegend(bool flag) { showLegend = flag; }
+
+		StatsWindow(const StatsWindow&) = delete;
+		StatsWindow& operator= (const StatsWindow&) = delete;
 
 		BEGIN_MSG_MAP(StatsWindow)
 		MESSAGE_HANDLER(WM_PAINT, onPaint)
@@ -67,6 +71,7 @@ class StatsWindow : public CWindowImpl<StatsWindow>
 
 		vector<Gdiplus::Point> tmp;
 		bool showLegend;
+		class BackingStore* backingStore;
 };
 
 class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
