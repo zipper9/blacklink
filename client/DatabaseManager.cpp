@@ -450,7 +450,7 @@ void DatabaseConnection::loadTransferHistorySummary(eTypeTransfer type, vector<T
 		}
 
 		initQuery(selectTransfersSummary,
-			"select day,count(*),sum(actual) "
+			"select day,count(*),sum(size) "
 			"from transfer_db.fly_transfer_file where type=? group by day order by day desc");
 		selectTransfersSummary.bind(1, type);
 		sqlite3_reader reader = selectTransfersSummary.executereader();
