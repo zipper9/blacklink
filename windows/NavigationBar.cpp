@@ -1790,19 +1790,19 @@ bool NavigationBar::StateTransition::update(int64_t time, int64_t frequency)
 
 void NavigationBar::StateTransition::updateAlpha()
 {
-	int intVal = (int) (255 * currentValue);
-	clampValue(intVal, 0, 255);
+	int intVal = (int) (256 * currentValue);
+	clampValue(intVal, 0, 256);
 	if (currentAlpha == intVal) return;
 	currentAlpha = intVal;
-	if (currentAlpha != 0 && currentAlpha != 255) updateImage();
+	if (currentAlpha != 0 && currentAlpha != 256) updateImage();
 }
 
 void NavigationBar::StateTransition::updateImage()
 {
-	dcassert(currentAlpha >= 0 && currentAlpha <= 255);
+	dcassert(currentAlpha >= 0 && currentAlpha <= 256);
 	unsigned width = rc.right - rc.left;
 	unsigned height = rc.bottom - rc.top;
-	WinUtil::blend32(bits[0], bits[1], bits[2], width * height, 255 - currentAlpha);
+	WinUtil::blend32(bits[0], bits[1], bits[2], width * height, 256 - currentAlpha);
 	GdiFlush();
 }
 
@@ -1811,7 +1811,7 @@ void NavigationBar::StateTransition::draw(HDC hdc)
 	int index = 2;
 	if (currentAlpha == 0)
 		index = 0;
-	else if (currentAlpha == 255)
+	else if (currentAlpha == 256)
 		index = 1;
 	int width = rc.right - rc.left;
 	int height = rc.bottom - rc.top;
