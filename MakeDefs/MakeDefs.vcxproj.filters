@@ -9,9 +9,6 @@
       <UniqueIdentifier>{b5aaa6b7-67fa-4411-aa8e-05321b0f8f22}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl</Extensions>
     </Filter>
-    <Filter Include="Source Files\boost-system">
-      <UniqueIdentifier>{21ae591f-650c-4d7c-aa1e-5df671a947df}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\client\File.cpp">
@@ -32,9 +29,6 @@
     <ClCompile Include="..\client\Text.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\boost\libs\system\src\error_code.cpp">
-      <Filter>Source Files\boost-system</Filter>
-    </ClCompile>
     <ClCompile Include="..\client\Exception.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -51,9 +45,6 @@
     </ClInclude>
     <ClInclude Include="..\client\Text.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\boost\libs\system\src\local_free_on_destruction.hpp">
-      <Filter>Source Files\boost-system</Filter>
     </ClInclude>
     <ClInclude Include="..\client\Exception.h">
       <Filter>Header Files</Filter>

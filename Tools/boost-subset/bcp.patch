@@ -1,0 +1,35 @@
+--- boost_1_84_0.dist/tools/bcp/add_path.cpp
++++ boost_1_84_0/tools/bcp/add_path.cpp
+@@ -19,17 +19,29 @@
+ #include <boost/filesystem/exception.hpp>
+ #include <iostream>
+ 
++static bool exclude_directory(const fs::path& p)
++{
++   if (!(p.leaf() == "test" || p.leaf() == "fuzzing" || p.leaf() == "example")) return false;
++   return p.begin()->string() == "libs";
++}
+ 
+ void bcp_implementation::add_path(const fs::path& p)
+ {
+    if (m_excluded.find(p) != m_excluded.end())
+       return;
+    fs::path normalized_path = p;
+-    normalized_path.normalize();
+-   if(fs::exists(m_boost_path / normalized_path))
++   normalized_path.normalize();
++   if (fs::exists(m_boost_path / normalized_path))
+    {
+-      if(fs::is_directory(m_boost_path / normalized_path))
++      if (fs::is_directory(m_boost_path / normalized_path))
++      {
++         if (exclude_directory(normalized_path))
++         {
++             std::cout << "Directory " << p.string() << " excluded\n";
++             return;
++         }
+          add_directory(normalized_path);
++      }
+       else
+          add_file(normalized_path);
+    }
