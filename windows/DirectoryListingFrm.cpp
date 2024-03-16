@@ -2975,8 +2975,8 @@ void DirectoryListingFrame::updateSearchButtons()
 
 LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	searchOptions.enableSharedDays = dl->hasTimestamps();
 	if (WinUtil::isShift()) searchOptions.clear();
+	searchOptions.enableSharedDays = dl->hasTimestamps();
 	SearchDlg dlg(searchOptions);
 	if (dlg.DoModal(*this) != IDOK) return 0;
 
