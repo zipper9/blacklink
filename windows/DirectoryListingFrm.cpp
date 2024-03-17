@@ -3343,6 +3343,8 @@ int ThreadedDirectoryListing::run()
 					adls->matchListing(window->dl.get(), &window->abortFlag);
 					if (window->abortFlag) throw AbortException("ADL search aborted");
 				}
+				if (window->getDclstFlag() && window->dl->getIncludeSelf())
+					window->dl->addDclstSelf(filePath, window->abortFlag);
 				window->refreshTree(window->dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}

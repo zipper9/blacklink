@@ -28,6 +28,7 @@
 #include "TimeUtil.h"
 #include "FormatUtil.h"
 #include "BZUtils.h"
+#include "HashUtil.h"
 #include "SimpleXMLReader.h"
 #include "User.h"
 #include "ShareManager.h"
@@ -1685,6 +1686,21 @@ void DirectoryListing::markAsFound(File* file) noexcept
 		d->setFlag(FLAG_HAS_FOUND);
 		d = d->getParent();
 	}
+}
+
+void DirectoryListing::addDclstSelf(const string& filePath, std::atomic_bool& stopFlag)
+{
+	if (!root || root->directories.empty()) return;
+	Directory* d = root->directories.front();
+	TigerTree tree;
+	if (!Util::getTTH(filePath, true, 512 * 1024, stopFlag, tree))
+		throw AbortException("Unable to get TTH of " + filePath);
+	if (stopFlag)
+		throw AbortException("DirectoryListing::addDcLstSelf - " + STRING(ABORT_EM));
+	File* f = new File(nullptr, Util::getFileName(filePath), tree.getFileSize(), tree.getRoot(), 0, 0, nullptr);
+	f->setFlag(FLAG_DCLST_SELF);
+	d->addFile(f);
+	d->setFlag(FLAG_HAS_OTHER);
 }
 
 void DirectoryListing::getFileParams(const File* f, StringMap& ucParams) const noexcept

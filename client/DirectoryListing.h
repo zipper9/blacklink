@@ -54,6 +54,7 @@ class DirectoryListing
 			FLAG_FOUND          = 1 << 9,  // files and dirs
 			FLAG_HAS_FOUND      = 1 << 10, // dirs only
 			FLAG_DIR_TIMESTAMP  = 1 << 11, // temporary flag used during parsing
+			FLAG_DCLST_SELF     = 1 << 12, // files
 			FILE_STATUS_FLAGS   = FLAG_QUEUED | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED,
 			DIR_STATUS_FLAGS    = FLAG_HAS_QUEUED | FLAG_HAS_SHARED | FLAG_HAS_DOWNLOADED | FLAG_HAS_CANCELED | FLAG_HAS_OTHER
 		};
@@ -337,6 +338,7 @@ class DirectoryListing
 		bool hasTimestamps() const { return hasTimestampsFlag; }
 
 		static void markAsFound(File* file) noexcept;
+		void addDclstSelf(const string& filePath, std::atomic_bool& stopFlag);
 		void getFileParams(const File* f, StringMap& ucParams) const noexcept;
 		void getDirectoryParams(const Directory* d, StringMap& ucParams) const noexcept;
 

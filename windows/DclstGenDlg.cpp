@@ -251,8 +251,9 @@ void DclstGenDlg::writeFolder(const DirectoryListing::Directory* dir)
 	
 	for (auto i = dir->files.cbegin(); i != dir->files.cend(); ++i)
 	{
-		dcassert(*i);
-		writeFile(*i);
+		const DirectoryListing::File* f = *i;
+		dcassert(f);
+		if (!f->isAnySet(DirectoryListing::FLAG_DCLST_SELF)) writeFile(f);
 		if (abortFlag.load()) return;
 	}
 	
