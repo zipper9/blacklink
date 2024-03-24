@@ -11,6 +11,10 @@
 
 #define UX UxThemeLib::instance
 
+#if !(defined(NTDDI_VERSION) && NTDDI_VERSION >= 0x0A00000C)
+#define MENU_POPUPITEM_FOCUSABLE 27
+#endif
+
 static inline int totalWidth(const MARGINS& m)
 {
 	return m.cxLeftWidth + m.cxRightWidth;
@@ -266,6 +270,7 @@ void ListPopup::changeTheme()
 
 void ListPopup::initFallbackMetrics()
 {
+	partId = 0;
 	maxTextWidth = maxTextWidthUnscaled * WinUtil::getDisplayDpi() / 96;
 	scrollBarSize = GetSystemMetrics(SM_CXVSCROLL);
 	cxBorder = 3*GetSystemMetrics(SM_CXBORDER);
@@ -301,9 +306,12 @@ void ListPopup::initTheme()
 #endif
 	if (!hTheme) return;
 
+	partId = MENU_POPUPITEM;
+	if (IsThemePartDefined(hTheme, MENU_POPUPITEM_FOCUSABLE, MPI_HOT))
+		partId = MENU_POPUPITEM_FOCUSABLE;
 	UX.pGetThemeMargins(hTheme, nullptr, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck);
 	UX.pGetThemeMargins(hTheme, nullptr, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
-	UX.pGetThemeMargins(hTheme, nullptr, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
+	UX.pGetThemeMargins(hTheme, nullptr, partId, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
 	UX.pGetThemePartSize(hTheme, nullptr, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
 
 	SIZE size;
@@ -312,7 +320,7 @@ void ListPopup::initTheme()
 	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = size.cy;
 
 	int popupBorderSize, popupBackgroundBorderSize;
-	UX.pGetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE, &popupBorderSize);
+	UX.pGetThemeInt(hTheme, partId, 0, TMT_BORDERSIZE, &popupBorderSize);
 	UX.pGetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
 
 	marginText.cxLeftWidth = popupBackgroundBorderSize;
@@ -401,7 +409,7 @@ void ListPopup::drawItem(HDC hdc, const RECT& rc, int index)
 		rcDraw = rc;
 		rcDraw.left += marginItem.cxLeftWidth;
 		rcDraw.right -= marginItem.cxRightWidth;
-		UX.pDrawThemeBackground(hTheme, hdc, MENU_POPUPITEM, stateId, &rcDraw, nullptr);
+		UX.pDrawThemeBackground(hTheme, hdc, partId, stateId, &rcDraw, nullptr);
 
 		if ((flags & FLAG_SHOW_CHECKS) && (item.flags & IF_CHECKED))
 		{
@@ -431,7 +439,7 @@ void ListPopup::drawItem(HDC hdc, const RECT& rc, int index)
 		rcDraw.bottom = rc.bottom - marginText.cyBottomHeight;
 		rcDraw.right = rc.right - marginText.cxRightWidth;
 		HGDIOBJ oldFont = SelectObject(hdc, (item.flags & IF_DEFAULT) ? hFontBold : hFont);
-		UX.pDrawThemeText(hTheme, hdc, MENU_POPUPITEM, stateId, item.text.c_str(), (int) item.text.length(),
+		UX.pDrawThemeText(hTheme, hdc, partId, stateId, item.text.c_str(), (int) item.text.length(),
 			DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_HIDEPREFIX | DT_END_ELLIPSIS, 0, &rcDraw);
 		SelectObject(hdc, oldFont);
 	}
@@ -511,7 +519,6 @@ void ListPopup::draw(HDC hdc, const RECT& rc)
 		index++;
 		count--;
 	}
-
 }
 
 int ListPopup::hitTest(POINT pt, int& index) const
@@ -555,10 +562,8 @@ void ListPopup::ensureVisible(int index, bool moveUp)
 		if (topIndex + maxVisibleItems > totalItems) topIndex = totalItems - maxVisibleItems;
 	}
 	else
-	{
 		topIndex = index - (maxVisibleItems - 1);
-		if (topIndex < 0) topIndex = 0;
-	}
+	if (topIndex < 0) topIndex = 0;
 }
 
 void ListPopup::clearBitmaps()

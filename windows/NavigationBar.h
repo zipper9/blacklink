@@ -12,6 +12,7 @@
 #include "ThemeWrapper.h"
 #include "AutoImageList.h"
 #include "ListPopup.h"
+#include "VistaAnimations.h"
 
 class BackingStore;
 
@@ -103,6 +104,7 @@ class NavigationBar : public CWindowImpl<NavigationBar>
 		MESSAGE_HANDLER(WM_MOUSELEAVE, onMouseLeave)
 		MESSAGE_HANDLER(WM_THEMECHANGED, onThemeChanged)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
+		MESSAGE_HANDLER(WM_KEYDOWN, onKeyDown)
 		MESSAGE_HANDLER(WMU_LIST_POPUP_RESULT, onPopupResult)
 		MESSAGE_HANDLER(WMU_EXIT_EDIT_MODE, onExitEditMode)
 		COMMAND_CODE_HANDLER(CBN_KILLFOCUS, onComboKillFocus)
@@ -120,6 +122,7 @@ class NavigationBar : public CWindowImpl<NavigationBar>
 		LRESULT onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onMouseLeave(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onThemeChanged(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onKeyDown(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onTimer(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onPopupResult(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onExitEditMode(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
@@ -170,37 +173,6 @@ class NavigationBar : public CWindowImpl<NavigationBar>
 
 		struct Item;
 
-		struct StateTransition
-		{
-			HBITMAP bitmaps[3];
-			uint8_t* bits[3];
-			int states[2];
-			int nextState;
-			RECT rc;
-			int64_t startTime;
-			double currentValue;
-			double startValue;
-			double endValue;
-			int currentAlpha;
-			int duration;
-			bool running;
-
-			StateTransition();
-			~StateTransition() { cleanup(); }
-
-			void cleanup();
-			bool update(int64_t time, int64_t frequency);
-			void updateAlpha();
-			void updateImage();
-			void draw(HDC hdc);
-			void createBitmaps(NavigationBar* navBar, HDC hdc, const RECT& rcClient, const Item& item);
-			void start(int64_t time, int duration);
-			void reverse(int64_t time, int totalDuration);
-			bool isForward() const { return startValue < endValue; }
-			bool nextTransition();
-			int getCompletedState() const;
-		};
-
 		struct Item
 		{
 			tstring text;
@@ -210,17 +182,7 @@ class NavigationBar : public CWindowImpl<NavigationBar>
 			int width;
 			int flags;
 			int currentState;
-			StateTransition* trans;
-		};
-
-		struct UpdateAnimationState
-		{
-			HDC hdc;
-			RECT rc;
-			int64_t timestamp;
-			int64_t frequency;
-			bool update;
-			bool running;
+			VistaAnimations::StateTransition* trans;
 		};
 
 		Callback* callback;
@@ -241,6 +203,7 @@ class NavigationBar : public CWindowImpl<NavigationBar>
 		int hotType;
 		int pressedType;
 		int popupIndex;
+		int lastMouseX, lastMouseY;
 		MARGINS margins;
 		bool animationEnabled;
 		int animationDuration;
@@ -313,9 +276,10 @@ class NavigationBar : public CWindowImpl<NavigationBar>
 		void removeStateTransitions(std::vector<Item>& v);
 		void removeStateTransition(Item& item);
 		void cancelStateTransitions(bool remove);
-		void cleanupAnimationState(Item& item, UpdateAnimationState& uas, int64_t delay);
-		void updateAnimationState(Item& item, UpdateAnimationState& uas);
+		void cleanupAnimationState(Item& item, VistaAnimations::UpdateParams& up, int64_t delay);
+		void updateAnimationState(Item& item, VistaAnimations::UpdateParams& up);
 		int getTransitionDuration(int oldState, int newState) const;
+		void initStateTransitionBitmaps(Item& item, HDC hdc, const RECT& rcClient);
 		void startTimer(int id, int flag, int time);
 		void stopTimer(int id, int flag);
 };

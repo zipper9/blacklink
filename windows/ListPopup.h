@@ -119,6 +119,7 @@ class ListPopup : public CWindowImpl<ListPopup>, private ThemeWrapper
 		MARGINS marginText;
 		MARGINS marginBitmap;
 		SIZE sizeCheck;
+		int partId;
 
 		int hotIndex;
 		int topIndex;

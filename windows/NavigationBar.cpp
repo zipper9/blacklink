@@ -13,6 +13,7 @@
 #define UX UxThemeLib::instance
 
 using std::vector;
+using namespace VistaAnimations;
 
 enum
 {
@@ -55,15 +56,6 @@ static inline int64_t getHighResTimestamp()
 	return x.QuadPart;
 }
 
-template<typename T>
-void clampValue(T& val, T minVal, T maxVal)
-{
-	if (val < minVal)
-		val = minVal;
-	else if (val > maxVal)
-		val = maxVal;
-}
-
 static inline bool operator== (const RECT& r1, const RECT& r2)
 {
 	return r1.left == r2.left && r1.right == r2.right && r1.top == r2.top && r1.bottom == r2.bottom;
@@ -98,6 +90,7 @@ NavigationBar::NavigationBar()
 	iconBitmapWidth = iconBitmapHeight = 0;
 	hotIndex = popupIndex = -1;
 	hotType = pressedType = HT_EMPTY;
+	lastMouseX = lastMouseY = INT_MAX;
 	margins.cxLeftWidth = margins.cxRightWidth = margins.cyTopHeight = margins.cyBottomHeight = 1;
 	hFont = nullptr;
 	iconBmp = nullptr;
@@ -183,7 +176,7 @@ void NavigationBar::layout(const RECT& rc)
 		for (Item& item : crumbs)
 			item.width = 0;
 		int totalSize = 0;
-		int numItems = crumbs.size();
+		int numItems = (int) crumbs.size();
 		for (int i = numItems-1; i >= 0; --i)
 		{
 			totalSize += crumbs[i].autoWidth;
@@ -290,7 +283,7 @@ int NavigationBar::hitTest(POINT pt, int& index) const
 		xpos += chevron.width;
 		if (pt.x < xpos) return HT_CHEVRON;
 	}
-	int numItems = crumbs.size();
+	int numItems = (int) crumbs.size();
 	for (int i = 0; i < numItems; ++i)
 	{
 		const Item& item = crumbs[i];
@@ -301,10 +294,10 @@ int NavigationBar::hitTest(POINT pt, int& index) const
 			return HT_ITEM;
 		}
 	}
-	int numButtons = buttons.size();
+	int numButtons = (int) buttons.size();
 	for (int i = 0; i < numButtons; ++i)
 	{
-		const Item& item= buttons[i];
+		const Item& item = buttons[i];
 		if (pt.x >= item.xpos && pt.x < item.xpos + item.width)
 		{
 			index = i;
@@ -323,7 +316,7 @@ void NavigationBar::updateAutoWidth(HDC hdc)
 			if (!item.text.empty())
 			{
 				CRect rc(0, 0, 0, 0);
-				DrawText(hdc, item.text.c_str(), item.text.length(), &rc, DT_SINGLELINE | DT_CALCRECT);
+				DrawText(hdc, item.text.c_str(), (int) item.text.length(), &rc, DT_SINGLELINE | DT_CALCRECT);
 				item.autoWidth = rc.Width() + paddingLeft + paddingRight;
 				if (item.flags & BF_ARROW) item.autoWidth += glyphSize;
 			}
@@ -487,7 +480,7 @@ void NavigationBar::drawThemeButton(HDC hdc, const RECT& rcButton, const Item& i
 			rcText.right += xoffset;
 			rcText.bottom += yoffset;
 		}
-		UX.pDrawThemeText(themeToolbar.hTheme, hdc, partId, stateId, item.text.c_str(), item.text.length(),
+		UX.pDrawThemeText(themeToolbar.hTheme, hdc, partId, stateId, item.text.c_str(), (int) item.text.length(),
 			DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS, 0, &rcText);
 		SelectObject(hdc, oldFont);
 		if (item.flags & BF_ARROW)
@@ -574,7 +567,7 @@ void NavigationBar::drawButton(HDC hdc, const RECT& rcClient, Item& item)
 				rcText.right += xoffset;
 				rcText.bottom += yoffset;
 			}
-			DrawText(hdc, item.text.c_str(), item.text.length(), &rcText, DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
+			DrawText(hdc, item.text.c_str(), (int) item.text.length(), &rcText, DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
 			SelectObject(hdc, oldFont);
 			if (item.flags & BF_ARROW)
 			{
@@ -899,6 +892,119 @@ LRESULT NavigationBar::onSize(UINT, WPARAM, LPARAM, BOOL&)
 	return 0;
 }
 
+LRESULT NavigationBar::onKeyDown(UINT, WPARAM wParam, LPARAM, BOOL& bHandled)
+{
+	if (pressedType != HT_EMPTY || crumbs.empty())
+		return 0;
+	if (wParam == VK_LEFT || wParam == VK_RIGHT)
+	{
+		int firstIndex = 0;
+		int lastIndex = (int) crumbs.size() - 1;
+		for (size_t i = 0; i < crumbs.size(); i++)
+			if (crumbs[i].width)
+			{
+				firstIndex = i;
+				break;
+			}
+		if (hotType == HT_ITEM || hotType == HT_ITEM_DD || hotType == HT_CHEVRON)
+		{
+			int prevIndex = hotIndex;
+			if (hotType == HT_CHEVRON)
+				hotIndex = wParam == VK_RIGHT ? firstIndex : lastIndex;
+			else
+				hotIndex = hotIndex + (wParam == VK_RIGHT ? 1 : -1);
+			Item* prevItem = hotType == HT_CHEVRON ? &chevron : &crumbs[prevIndex];
+			prevItem->flags &= ~BF_HOT;
+			cancelStateTransition(*prevItem);
+			hotType = HT_ITEM;
+			if (hotIndex > lastIndex || hotIndex < firstIndex)
+			{
+				if (flags & FLAG_HAS_CHEVRON)
+				{
+					hotType = HT_CHEVRON;
+					hotIndex = -1;
+					chevron.flags |= BF_HOT;
+				}
+				else
+					hotIndex = hotIndex > lastIndex ? firstIndex : lastIndex;
+			}
+			if (hotType == HT_ITEM)
+				crumbs[hotIndex].flags |= BF_HOT;
+			Invalidate();
+		}
+		if (hotType == HT_EMPTY || hotType == HT_ICON)
+		{
+			if (wParam == VK_RIGHT)
+			{
+				if (flags & FLAG_HAS_CHEVRON)
+				{
+					hotType = HT_CHEVRON;
+					hotIndex = -1;
+					chevron.flags |= BF_HOT;
+				}
+				else
+				{
+					hotType = HT_ITEM;
+					hotIndex = firstIndex;
+				}
+			}
+			else
+			{
+				hotType = HT_ITEM;
+				hotIndex = lastIndex;
+			}
+			if (hotType == HT_ITEM)
+				crumbs[hotIndex].flags |= BF_HOT;
+			Invalidate();
+		}
+		return 0;
+	}
+	if (wParam == VK_DOWN || wParam == VK_UP)
+	{		
+		if ((hotType == HT_ITEM || hotType == HT_ITEM_DD || hotType == HT_CHEVRON) && !(flags & FLAG_POPUP_VISIBLE))
+		{
+			POINT pt;
+			GetCursorPos(&pt);
+			ScreenToClient(&pt);
+			lastMouseX = pt.x;
+			lastMouseY = pt.y;
+			if (hotType == HT_CHEVRON)
+			{
+				showChevronPopup();
+			}
+			else
+			{
+				if (!(hotIndex >= 0 && hotIndex < (int) crumbs.size()))
+					return 0;
+				showPopup(hotIndex);
+				if (!(flags & FLAG_POPUP_VISIBLE)) return 0;
+			}
+			pressedType = hotType;
+			flags |= FLAG_PRESSED;
+			Invalidate();
+		}
+		return 0;
+	}
+	if (wParam == VK_SPACE || wParam == VK_RETURN)
+	{
+		if (hotType == HT_CHEVRON)
+		{
+			enterEditMode(false);
+		}
+		else if ((hotType == HT_ITEM || hotType == HT_ITEM_DD) && hotIndex >= 0 && hotIndex < (int) crumbs.size())
+		{
+			if (callback)
+			{
+				callback->selectItem(hotIndex);
+				Invalidate();
+			}
+		}
+		return 0;
+	}
+	bHandled = FALSE;
+	return 0;
+}
+
 LRESULT NavigationBar::onThemeChanged(UINT, WPARAM, LPARAM, BOOL&)
 {
 	popup.changeTheme();
@@ -1031,6 +1137,12 @@ LRESULT NavigationBar::onMouseMove(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 	if (flags & FLAG_EDIT_MODE) return 0;
 	POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
 	//ATLTRACE("onMouseMove: hWnd=0x%X, x=%d, y=%d\n", m_hWnd, pt.x, pt.y);
+	if (lastMouseX != INT_MAX || lastMouseY != INT_MAX)
+	{
+		if (pt.x == lastMouseX && pt.y == lastMouseY)
+			return 0;
+		lastMouseX = lastMouseY = INT_MAX;
+	}
 	bool update = false;
 	int newIndex;
 	int ht = hitTest(pt, newIndex);
@@ -1109,6 +1221,7 @@ LRESULT NavigationBar::onPopupResult(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 #ifdef DEBUG_NAV_BAR
 	ATLTRACE("NavigationBar::onPopupResult\n");
 #endif
+	lastMouseX = lastMouseY = INT_MAX;
 	if (flags & FLAG_HIDING_POPUP)
 	{
 		// Ignore ListPopup's WM_KILLFOCUS when we are hiding popup manually
@@ -1520,19 +1633,19 @@ void NavigationBar::createNonThemeResources(int flags)
 
 void NavigationBar::updateAnimationState()
 {
-	UpdateAnimationState uas;
-	uas.hdc = nullptr;
-	uas.timestamp = getHighResTimestamp();
-	uas.frequency = getHighResFrequency();
-	uas.update = uas.running = false;
+	UpdateParams up;
+	up.hdc = nullptr;
+	up.timestamp = getHighResTimestamp();
+	up.frequency = getHighResFrequency();
+	up.update = up.running = false;
 	for (Item& item : crumbs)
-		updateAnimationState(item, uas);
+		updateAnimationState(item, up);
 	for (Item& item : buttons)
-		updateAnimationState(item, uas);
-	updateAnimationState(chevron, uas);
-	if (uas.hdc) ReleaseDC(uas.hdc);
-	if (uas.update) Invalidate();
-	if (!uas.running)
+		updateAnimationState(item, up);
+	updateAnimationState(chevron, up);
+	if (up.hdc) ReleaseDC(up.hdc);
+	if (up.update) Invalidate();
+	if (!up.running)
 	{
 		stopTimer(TIMER_UPDATE_ANIMATION, FLAG_TIMER_ANIMATION);
 		startTimer(TIMER_CLEANUP, FLAG_TIMER_CLEANUP, CLEANUP_TIME);
@@ -1569,23 +1682,8 @@ void NavigationBar::updateStateTransition(Item& item, int newState)
 	{
 		if (item.trans->running)
 		{
-			if (item.trans->states[0] == newState || item.trans->states[1] == newState)
-			{
-				int duration = getTransitionDuration(item.trans->states[0], item.trans->states[1]);
-				item.trans->nextState = -1;
-				if (item.trans->states[0] == newState)
-				{
-					if (item.trans->isForward())
-						item.trans->reverse(timestamp, duration);
-				}
-				else
-				{
-					if (!item.trans->isForward())
-						item.trans->reverse(timestamp, duration);
-				}
-			}
-			else
-				item.trans->nextState = newState;
+			int duration = getTransitionDuration(item.trans->states[0], item.trans->states[1]);
+			item.trans->setNewState(timestamp, newState, duration);
 			return;
 		}
 	}
@@ -1602,7 +1700,7 @@ void NavigationBar::updateStateTransition(Item& item, int newState)
 	RECT rc;
 	GetClientRect(&rc);
 	HDC hdc = GetDC();
-	item.trans->createBitmaps(this, hdc, rc, item);
+	initStateTransitionBitmaps(item, hdc, rc);
 	ReleaseDC(hdc);
 	item.trans->start(timestamp, duration);
 	startTimer(TIMER_UPDATE_ANIMATION, FLAG_TIMER_ANIMATION, 10);
@@ -1657,10 +1755,10 @@ void NavigationBar::cancelStateTransitions(bool remove)
 	}
 }
 
-void NavigationBar::cleanupAnimationState(Item& item, UpdateAnimationState& uas, int64_t delay)
+void NavigationBar::cleanupAnimationState(Item& item, UpdateParams& up, int64_t delay)
 {
 	if (!item.trans) return;
-	if (!item.trans->running && uas.timestamp - item.trans->startTime > delay)
+	if (!item.trans->running && up.timestamp - item.trans->startTime > delay)
 	{
 #ifdef DEBUG_NAV_BAR
 		ATLTRACE("Removing transition state %p\n", item.trans);
@@ -1668,28 +1766,28 @@ void NavigationBar::cleanupAnimationState(Item& item, UpdateAnimationState& uas,
 		removeStateTransition(item);
 	}
 	else
-		uas.running = true;
+		up.running = true;
 }
 
 void NavigationBar::cleanupAnimationState()
 {
 	int64_t delay = 15 * getHighResFrequency();
-	UpdateAnimationState uas;
-	uas.running = false;
-	uas.timestamp = getHighResTimestamp();
+	UpdateParams up;
+	up.running = false;
+	up.timestamp = getHighResTimestamp();
 	for (Item& item : crumbs)
-		cleanupAnimationState(item, uas, delay);
+		cleanupAnimationState(item, up, delay);
 	for (Item& item : buttons)
-		cleanupAnimationState(item, uas, delay);
-	cleanupAnimationState(chevron, uas, delay);
-	if (!uas.running)
+		cleanupAnimationState(item, up, delay);
+	cleanupAnimationState(chevron, up, delay);
+	if (!up.running)
 		stopTimer(TIMER_CLEANUP, FLAG_TIMER_CLEANUP);
 }
 
-void NavigationBar::updateAnimationState(Item& item, UpdateAnimationState& uas)
+void NavigationBar::updateAnimationState(Item& item, UpdateParams& up)
 {
 	if (!item.trans) return;
-	if (item.trans->update(uas.timestamp, uas.frequency))
+	if (item.trans->update(up.timestamp, up.frequency))
 	{
 		if (!item.trans->running)
 		{
@@ -1698,19 +1796,19 @@ void NavigationBar::updateAnimationState(Item& item, UpdateAnimationState& uas)
 			ATLTRACE("Transition %p: current state is now %d\n", item.trans, item.currentState);
 #endif
 		}
-		uas.update = true;
+		up.update = true;
 	}
 	if (!item.trans->running && item.trans->nextTransition())
 	{
-		if (!uas.hdc)
+		if (!up.hdc)
 		{
-			GetClientRect(&uas.rc);
-			uas.hdc = GetDC();
+			GetClientRect(&up.rc);
+			up.hdc = GetDC();
 		}
-		item.trans->createBitmaps(this, uas.hdc, uas.rc, item);
-		item.trans->start(uas.timestamp, getTransitionDuration(item.trans->states[0], item.trans->states[1]));
+		initStateTransitionBitmaps(item, up.hdc, up.rc);
+		item.trans->start(up.timestamp, getTransitionDuration(item.trans->states[0], item.trans->states[1]));
 	}
-	if (item.trans->running) uas.running = true;
+	if (item.trans->running) up.running = true;
 }
 
 int NavigationBar::getTransitionDuration(int oldState, int newState) const
@@ -1734,191 +1832,27 @@ int NavigationBar::getTransitionDuration(int oldState, int newState) const
 	return 0;
 }
 
-NavigationBar::StateTransition::StateTransition()
-{
-	for (int i = 0; i < _countof(bitmaps); i++)
-	{
-		bitmaps[i] = nullptr;
-		bits[i] = 0;
-	}
-	rc.left = rc.right = rc.top = rc.bottom = 0;
-	states[0] = states[1] = nextState = -1;
-	startTime = 0;
-	currentValue = 0;
-	currentAlpha = -1;
-	duration = 0;
-	startValue = 0;
-	endValue = 1;
-	running = true;
-}
-
-void NavigationBar::StateTransition::cleanup()
-{
-	for (int i = 0; i < _countof(bitmaps); ++i)
-		if (bitmaps[i])
-		{
-			DeleteObject(bitmaps[i]);
-			bitmaps[i] = nullptr;
-		}
-}
-
-bool NavigationBar::StateTransition::update(int64_t time, int64_t frequency)
-{
-	if (!running || time <= startTime || frequency <= 0) return false;
-	double elapsed = double(time - startTime) * 1000 / double(frequency);
-	if (elapsed <= duration && duration > 0)
-	{
-		currentValue = startValue + (endValue - startValue) * (elapsed / duration);
-		if (endValue > startValue)
-		{
-			if (currentValue > endValue) running = false;
-		}
-		else
-			if (currentValue < endValue) running = false;
-	}
-	else
-	{
-		currentValue = endValue;
-		running = false;
-	}
-#ifdef DEBUG_NAV_BAR
-	if (!running) ATLTRACE("Transition %p finished\n", this);
-#endif
-	updateAlpha();
-	return true;
-}
-
-void NavigationBar::StateTransition::updateAlpha()
-{
-	int intVal = (int) (256 * currentValue);
-	clampValue(intVal, 0, 256);
-	if (currentAlpha == intVal) return;
-	currentAlpha = intVal;
-	if (currentAlpha != 0 && currentAlpha != 256) updateImage();
-}
-
-void NavigationBar::StateTransition::updateImage()
-{
-	dcassert(currentAlpha >= 0 && currentAlpha <= 256);
-	unsigned width = rc.right - rc.left;
-	unsigned height = rc.bottom - rc.top;
-	WinUtil::blend32(bits[0], bits[1], bits[2], width * height, 256 - currentAlpha);
-	GdiFlush();
-}
-
-void NavigationBar::StateTransition::draw(HDC hdc)
-{
-	int index = 2;
-	if (currentAlpha == 0)
-		index = 0;
-	else if (currentAlpha == 256)
-		index = 1;
-	int width = rc.right - rc.left;
-	int height = rc.bottom - rc.top;
-	HDC bitmapDC = CreateCompatibleDC(hdc);
-	HGDIOBJ oldBitmap = SelectObject(bitmapDC, bitmaps[index]);
-	BitBlt(hdc, rc.left, rc.top, width, height, bitmapDC, 0, 0, SRCCOPY);
-	oldBitmap = SelectObject(bitmapDC, oldBitmap);
-	SelectObject(bitmapDC, oldBitmap);
-	DeleteDC(bitmapDC);
-}
-
-void NavigationBar::StateTransition::createBitmaps(NavigationBar* navBar, HDC hdc, const RECT& rcClient, const Item& item)
+void NavigationBar::initStateTransitionBitmaps(Item& item, HDC hdc, const RECT& rcClient)
 {
 	RECT rcBackground = rcClient;
 	RECT rcButton;
 	rcButton.left = item.xpos;
 	rcButton.right = rcButton.left + item.width;
-	rcButton.top = rcClient.top + navBar->margins.cyTopHeight;
-	rcButton.bottom = rcClient.bottom - navBar->margins.cyBottomHeight;
+	rcButton.top = rcClient.top + margins.cyTopHeight;
+	rcButton.bottom = rcClient.bottom - margins.cyBottomHeight;
 
-	int width = rc.right - rc.left;
-	int height = rc.bottom - rc.top;
-	if (width != rcButton.right - rcButton.left || height != rcButton.bottom - rcButton.top)
-	{
-		width = rcButton.right - rcButton.left;
-		height = rcButton.bottom - rcButton.top;
-		cleanup();
-	}
-
-	rc = rcButton;
-
-	OffsetRect(&rcBackground, -rc.left, -rc.top);
-	OffsetRect(&rcButton, -rc.left, -rc.top);
-
-	BITMAPINFOHEADER bmi = {};
-	bmi.biWidth = width;
-	bmi.biHeight = -height;
-	bmi.biBitCount = 32;
-	bmi.biCompression = BI_RGB;
-	bmi.biPlanes = 1;
-	bmi.biSize = sizeof(bmi);
-	bmi.biSizeImage = width * height << 2;
+	item.trans->createBitmaps(hdc, rcButton);
+	OffsetRect(&rcBackground, -rcButton.left, -rcButton.top);
+	OffsetRect(&rcButton, -rcButton.left, -rcButton.top);
 
 	HDC bitmapDC = CreateCompatibleDC(hdc);
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 2; i++)
 	{
-		if (!bitmaps[i])
-			bitmaps[i] = CreateDIBSection(nullptr, (BITMAPINFO*) &bmi, DIB_RGB_COLORS, (void **) &bits[i], nullptr, 0);
-		if (i < 2)
-		{
-			HGDIOBJ oldBitmap = SelectObject(bitmapDC, bitmaps[i]);
-			navBar->drawBackground(bitmapDC, rcBackground);
-			navBar->drawThemeButton(bitmapDC, rcButton, item, states[i]);
-			GdiFlush();
-			SelectObject(bitmapDC, oldBitmap);
-		}
+		HGDIOBJ oldBitmap = SelectObject(bitmapDC, item.trans->bitmaps[i]);
+		drawBackground(bitmapDC, rcBackground);
+		drawThemeButton(bitmapDC, rcButton, item, item.trans->states[i]);
+		GdiFlush();
+		SelectObject(bitmapDC, oldBitmap);
 	}
 	DeleteDC(bitmapDC);
-}
-
-void NavigationBar::StateTransition::start(int64_t time, int duration)
-{
-	startTime = time;
-	currentValue = 0;
-	startValue = 0;
-	endValue = 1;
-	currentAlpha = 0;
-	nextState = -1;
-	this->duration = duration;
-	running = true;
-#ifdef DEBUG_NAV_BAR
-	ATLTRACE("Transition %p started\n", this);
-#endif
-}
-
-void NavigationBar::StateTransition::reverse(int64_t time, int totalDuration)
-{
-	if (startValue < endValue)
-	{
-		endValue = 0;
-		duration = (int) (totalDuration * currentValue);
-	}
-	else
-	{
-		endValue = 1;
-		duration = (int) (totalDuration * (1 - currentValue));
-	}
-	startTime = time;
-	startValue = currentValue;
-#ifdef DEBUG_NAV_BAR
-	ATLTRACE("Transition %p reversed: start=%f, end=%f\n", this, startValue, endValue);
-#endif
-}
-
-bool NavigationBar::StateTransition::nextTransition()
-{
-	if (nextState == -1) return false;
-	if (isForward()) states[0] = states[1];
-#ifdef DEBUG_NAV_BAR
-	ATLTRACE("Transition %p: next state is %d\n", this, nextState);
-#endif
-	states[1] = nextState;
-	nextState = -1;
-	return true;
-}
-
-int NavigationBar::StateTransition::getCompletedState() const
-{
-	return states[isForward() ? 1 : 0];
 }
