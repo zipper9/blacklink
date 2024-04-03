@@ -9,12 +9,6 @@
 #include "../client/QueueManager.h"
 #include "../client/dht/DHT.h"
 
-#ifdef OSVER_WIN_XP
-#include "../client/SysVersion.h"
-#endif
-
-static const int BUTTON_SIZE = 26;
-
 static const int columnSizes[] =
 {
 	100,    // COLUMN_NICK
@@ -129,14 +123,13 @@ enum Mask
 	IS_IGNORED_USER_ON  = 0x0001 << 8
 };
 
-UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) :
-	ctrlFilterContainer(WC_EDIT, this, FILTER_MESSAGE_MAP),
-	ctrlFilterSelContainer(WC_COMBOBOX, this, FILTER_MESSAGE_MAP),
-	hubFrame(hubFrame)
+UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) : hubFrame(hubFrame)
 {
 	showUsers = false; // can't be set to true until ctrlUsers is created
 	shouldUpdateStats = shouldSort = false;
 	isOp = false;
+
+	xdu = ydu = 0;
 
 	filterSelPos = COLUMN_NICK;
 	csUserMap = std::unique_ptr<RWLock>(RWLock::create());
@@ -187,23 +180,13 @@ LRESULT UserListWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	setListViewColors(ctrlUsers);
 	ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
 
-	dcassert(!ctrlFilterContainer);
-	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
-	ctrlFilter.SetCueBannerText(CTSTRING(FILTER_HINT));
-	ctrlFilterContainer.SubclassWindow(ctrlFilter.m_hWnd);
-	ctrlFilter.SetFont(Fonts::g_systemFont);
-	if (!filter.empty())
-		ctrlFilter.SetWindowText(filter.c_str());
-
-	ctrlClearFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_ICON | BS_CENTER, 0, IDC_CLEAR);
-#ifdef OSVER_WIN_XP
-	if (!SysVersion::isOsVistaPlus())
-		clearFilterSubclass.SubclassWindow(ctrlClearFilter);
-#endif
-	ctrlClearFilter.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::CLEAR, 0));
+	ctrlSearchBox.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_TABSTOP, 0, IDC_EDIT);
+	ctrlSearchBox.setHint(TSTRING(FILTER_HINT));
+	ctrlSearchBox.SetFont(Fonts::g_systemFont);
+	ctrlSearchBox.setBitmap(g_iconBitmaps.getBitmap(IconBitmaps::FILTER, 0));
+	ctrlSearchBox.setCloseBitmap(g_iconBitmaps.getBitmap(IconBitmaps::CLEAR_SEARCH, 0));
 
 	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
-	ctrlFilterSelContainer.SubclassWindow(ctrlFilterSel.m_hWnd);
 	ctrlFilterSel.SetFont(Fonts::g_systemFont);
 
 	for (size_t j = 0; j < COLUMN_LAST; ++j)
@@ -643,29 +626,33 @@ LRESULT UserListWindow::onEnterUsers(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /
 	return 0;
 }
 
-LRESULT UserListWindow::onFilterChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT UserListWindow::onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	dcassert(ctrlFilter);
-	if (ctrlFilter)
-	{
-		if (wParam == VK_RETURN || !BOOLSETTING(FILTER_ENTER))
-		{
-			WinUtil::getWindowText(ctrlFilter, filter);
-			filterLower = Text::toLower(filter);
-			updateUserList();
-		}
-	}
-	bHandled = FALSE;
+	MSG msg = {};
+	msg.hwnd = ctrlSearchBox.m_hWnd;
+	msg.message = WM_KEYDOWN;
+	msg.wParam = VK_TAB;
+	IsDialogMessage(&msg);
 	return 0;
 }
 
-LRESULT UserListWindow::onClearFilter(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT UserListWindow::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	ctrlFilter.SetWindowText(_T(""));
-	if (!filter.empty())
+	if (!BOOLSETTING(FILTER_ENTER))
 	{
-		filter.clear();
-		filterLower.clear();
+		filter = ctrlSearchBox.getText();
+		filterLower = Text::toLower(filter);
+		updateUserList();
+	}
+	return 0;
+}
+
+LRESULT UserListWindow::onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	if (BOOLSETTING(FILTER_ENTER))
+	{
+		filter = ctrlSearchBox.getText();
+		filterLower = Text::toLower(filter);
 		updateUserList();
 	}
 	return 0;
@@ -673,15 +660,11 @@ LRESULT UserListWindow::onClearFilter(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 LRESULT UserListWindow::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
 {
-	dcassert(ctrlFilter);
-	if (ctrlFilter)
-	{
-		WinUtil::getWindowText(ctrlFilter, filter);
-		filterLower = Text::toLower(filter);
-		if (ctrlFilterSel)
-			filterSelPos = ctrlFilterSel.GetCurSel();
-		updateUserList();
-	}
+	filter = ctrlSearchBox.getText();
+	filterLower = Text::toLower(filter);
+	if (ctrlFilterSel)
+		filterSelPos = ctrlFilterSel.GetCurSel();
+	updateUserList();
 	bHandled = FALSE;
 	return 0;
 }
@@ -943,38 +926,42 @@ bool UserListWindow::checkSortFlag()
 
 void UserListWindow::updateLayout()
 {
-	if (!ctrlUsers || !ctrlFilter) return;
+	if (!ctrlUsers || !ctrlSearchBox) return;
 
 	CRect rect;
 	GetClientRect(&rect);
 
-	int xdu, ydu;
-	WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+	if (!xdu) WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
 	int comboWidth = WinUtil::dialogUnitsToPixelsX(80, xdu);
 	int comboHeight = WinUtil::getComboBoxHeight(ctrlFilterSel, nullptr);
-	int editHeight = std::max(comboHeight, BUTTON_SIZE);
+	int editHeight = comboHeight;
+	int minSearchBoxWidth = WinUtil::dialogUnitsToPixelsX(60, xdu);
 	
-	HDWP dwp = BeginDeferWindowPos(4);
-	CRect rc;
-	rc.right = rect.right - 2;
-	rc.top = rect.bottom - 4 - editHeight + 1;
-	rc.bottom = rc.top + 256;
-	rc.left = rc.right - comboWidth;
-	ctrlFilterSel.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER);
+	if (minSearchBoxWidth + comboWidth + 6 <= rect.Width())
+	{
+		HDWP dwp = BeginDeferWindowPos(4);
+		CRect rc;
+		rc.right = rect.right - 2;
+		rc.top = rect.bottom - 4 - editHeight + 1;
+		rc.bottom = rc.top + 256;
+		rc.left = rc.right - comboWidth;
+		ctrlFilterSel.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER | SWP_SHOWWINDOW);
 
-	rc.right = rc.left - 2;
-	rc.left = rc.right - editHeight;
-	rc.top--;
-	rc.bottom = rc.top + editHeight;
-	ctrlClearFilter.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER);
+		rc.right = rc.left - 2;
+		rc.left = 2;
+		rc.bottom = rc.top + editHeight;
+		ctrlSearchBox.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER | SWP_SHOWWINDOW);
 
-	rc.right = rc.left - 2;
-	rc.left = 2;
-	ctrlFilter.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER);
-
-	rect.bottom = rc.top - 4;
-	ctrlUsers.DeferWindowPos(dwp, nullptr, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOZORDER);
-	EndDeferWindowPos(dwp);
+		rect.bottom = rc.top - 4;
+		ctrlUsers.DeferWindowPos(dwp, nullptr, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOZORDER);
+		EndDeferWindowPos(dwp);
+	}
+	else
+	{
+		ctrlSearchBox.ShowWindow(SW_HIDE);
+		ctrlFilterSel.ShowWindow(SW_HIDE);
+		ctrlUsers.SetWindowPos(nullptr, &rect, SWP_NOZORDER | SWP_NOACTIVATE);
+	}
 }
 
 bool UserListWindow::showHeaderMenu(POINT pt)

@@ -24,6 +24,7 @@ EditorImage g_editorImage;
 TransfersImage g_transfersImage;
 TransferArrowsImage g_transferArrowsImage;
 NavigationImage g_navigationImage;
+FilterImage g_filterImage;
 IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
@@ -310,6 +311,11 @@ void NavigationImage::init()
 	ResourceLoader::LoadImageList(IDR_NAVIGATION, images, 16, 16);
 }
 
+void FilterImage::init()
+{
+	ResourceLoader::LoadImageList(IDR_FILTER, images, 16, 16);
+}
+
 static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)
 {
 	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
@@ -491,6 +497,8 @@ IconBitmaps::IconBitmaps()
 	init(EDITOR_COLOR,            SOURCE_EDITOR,   8);
 	init(EDITOR_LINK,             SOURCE_EDITOR,   9);
 	init(EDITOR_FIND,             SOURCE_EDITOR,   10);
+	init(FILTER,                  SOURCE_FILTER,   0);
+	init(CLEAR_SEARCH,            SOURCE_FILTER,   1);
 	init(PM,                      SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
 	init(MAGNET,                  SOURCE_ICON,     IDR_MAGNET);
 	init(DCLST,                   SOURCE_ICON,     IDR_DCLST);
@@ -530,6 +538,8 @@ HIMAGELIST IconBitmaps::getImageList(MainFrame* mainFrame, int type, int size)
 			return g_transferArrowsImage.getIconList();
 		case SOURCE_EDITOR:
 			return g_editorImage.getIconList();
+		case SOURCE_FILTER:
+			return g_filterImage.getIconList();
 	}
 	return nullptr;
 }

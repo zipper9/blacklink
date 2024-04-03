@@ -33,6 +33,7 @@
 #include "UCHandler.h"
 
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...
+#define FILTER_MESSAGE_MAP 11
 #define HUBSTATUS_MESSAGE_MAP 12 // Status frame
 
 static const int HUB_FRAME_TRAITS = UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG;

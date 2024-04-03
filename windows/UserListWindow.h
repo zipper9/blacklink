@@ -10,16 +10,9 @@
 #include "UserInfo.h"
 #include "UserInfoBaseHandler.h"
 #include "TaskQueue.h"
+#include "SearchBoxCtrl.h"
 #include "../client/ClientManager.h"
 #include "../client/FavoriteManager.h"
-
-#ifdef OSVER_WIN_XP
-#include "ImageButton.h"
-#endif
-
-#ifndef FILTER_MESSAGE_MAP
-#define FILTER_MESSAGE_MAP 11
-#endif
 
 class UserListWindow : public CWindowImpl<UserListWindow>
 {
@@ -70,27 +63,29 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		BEGIN_MSG_MAP(UserListWindow)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
+		MESSAGE_HANDLER(WM_CLOSE, onClose)
+		MESSAGE_HANDLER(WM_NEXTDLGCTL, onNextDlgCtl)
+		MESSAGE_HANDLER(WMU_RETURN, onFilterReturn)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, ctrlUsers.onColumnClick)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETINFOTIP, ctrlUsers.onInfoTip)
 		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClickUsers)
 		NOTIFY_HANDLER(IDC_USERS, NM_RETURN, onEnterUsers)
 		NOTIFY_HANDLER(IDC_USERS, NM_CUSTOMDRAW, onCustomDraw)
-		COMMAND_ID_HANDLER(IDC_CLEAR, onClearFilter)
 		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
-		ALT_MSG_MAP(FILTER_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_CHAR, onFilterChar)
-		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
+		COMMAND_CODE_HANDLER(EN_CHANGE, onFilterChanged)
 		END_MSG_MAP()
 
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) { return 0; }
+		LRESULT onNextDlgCtl(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onEnterUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT onFilterChar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClearFilter(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	private:
 		enum FilterModes
@@ -111,14 +106,10 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		static const int columnId[COLUMN_LAST];
 		
-		CEdit ctrlFilter;
+		SearchBoxCtrl ctrlSearchBox;
 		CComboBox ctrlFilterSel;
-		CContainedWindow ctrlFilterContainer;
-		CContainedWindow ctrlFilterSelContainer;
-		CButton ctrlClearFilter;
-#ifdef OSVER_WIN_XP
-		ImageButton clearFilterSubclass;
-#endif
+
+		int xdu, ydu;
 
 		int filterSelPos;
 		tstring filter;

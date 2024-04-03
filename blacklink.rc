@@ -2593,6 +2593,7 @@ IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
 
 IDR_NAVIGATION          PNG                     "res\\Navigation.png"
 
+IDR_FILTER              PNG                     "res\\Filter.png"
 
 /////////////////////////////////////////////////////////////////////////////
 //

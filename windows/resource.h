@@ -78,6 +78,7 @@
 #define IDR_DCLST                       223
 #define IDR_GENDER_USERS                234
 #define IDR_NAVIGATION                  235
+#define IDR_FILTER                      236
 #define IDD_SPEEDLIMIT_DLG              240
 #define IDD_INTEGRATION_PAGE            241
 #define IDR_TRAY_AND_TASKBAR_PM         255

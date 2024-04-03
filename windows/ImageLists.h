@@ -174,6 +174,12 @@ class NavigationImage : public BaseImageList
 		void init();
 };
 
+class FilterImage : public BaseImageList
+{
+	public:
+		void init();
+};
+
 extern UserImage g_userImage;
 extern UserStateImage g_userStateImage;
 extern GenderImage g_genderImage;
@@ -185,6 +191,7 @@ extern EditorImage g_editorImage;
 extern TransfersImage g_transfersImage;
 extern TransferArrowsImage g_transferArrowsImage;
 extern NavigationImage g_navigationImage;
+extern FilterImage g_filterImage;
 
 class TransferTreeImage : public BaseImageList
 {
@@ -328,6 +335,8 @@ class IconBitmaps
 			EDITOR_COLOR,
 			EDITOR_LINK,
 			EDITOR_FIND,
+			FILTER,
+			CLEAR_SEARCH,
 			PM,
 			MAGNET,
 			DCLST,
@@ -356,7 +365,8 @@ class IconBitmaps
 			SOURCE_OTHER,
 			SOURCE_ARROWS,
 			SOURCE_EDITOR,
-			SOURCE_FILES
+			SOURCE_FILES,
+			SOURCE_FILTER
 		};
 
 		Image data[MAX_BITMAPS];

@@ -163,6 +163,7 @@ void WinUtil::init(HWND hWnd)
 	g_transfersImage.init();
 	g_transferArrowsImage.init();
 	g_navigationImage.init();
+	g_filterImage.init();
 
 	Colors::init();
 	Fonts::init();
@@ -199,6 +200,7 @@ void WinUtil::uninit()
 	g_editorImage.uninit();
 	g_TransferTreeImage.uninit();
 	g_navigationImage.uninit();
+	g_filterImage.uninit();
 
 	Fonts::uninit();
 	Colors::uninit();

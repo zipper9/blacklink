@@ -898,6 +898,7 @@
     <ClCompile Include="windows\ResourceLoader.cpp" />
     <ClCompile Include="windows\RichTextLabel.cpp" />
     <ClCompile Include="windows\SDCPage.cpp" />
+    <ClCompile Include="windows\SearchBoxCtrl.cpp" />
     <ClCompile Include="windows\SearchDlg.cpp" />
     <ClCompile Include="windows\SearchFrm.cpp" />
     <ClCompile Include="windows\SearchHistory.cpp" />
@@ -1069,6 +1070,7 @@
     <ClInclude Include="windows\QCDCtrlMsgs.h" />
     <ClInclude Include="windows\RegKey.h" />
     <ClInclude Include="windows\RichTextLabel.h" />
+    <ClInclude Include="windows\SearchBoxCtrl.h" />
     <ClInclude Include="windows\SearchDlg.h" />
     <ClInclude Include="windows\SearchHistory.h" />
     <ClInclude Include="windows\SearchPage.h" />
