@@ -29,6 +29,7 @@
 #include "FileStatusColors.h"
 #include "DialogLayout.h"
 #include "StatusLabelCtrl.h"
+#include "SearchBoxCtrl.h"
 
 #include "../client/ClientManagerListener.h"
 #include "../client/FavoriteManagerListener.h"
@@ -43,8 +44,7 @@
 #include "ImageButton.h"
 #endif
 
-#define SHOWUI_MESSAGE_MAP 7
-#define SEARCH_FILTER_MESSAGE_MAP 11
+#define CHECKBOX_MESSAGE_MAP 7
 
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private ClientManagerListener,
@@ -89,6 +89,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		MESSAGE_HANDLER(WM_MEASUREITEM, onMeasure)
 		MESSAGE_HANDLER(DM_GETDEFID, onGetDefID)
+		MESSAGE_HANDLER(WM_NEXTDLGCTL, onNextDlgCtl)
+		MESSAGE_HANDLER(WMU_RETURN, onFilterReturn)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
@@ -127,24 +129,21 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + 499, onDownloadWhole)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET, IDC_DOWNLOAD_TARGET + 499, onDownload)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onDownloadWithPrio)
-		
+		COMMAND_HANDLER(IDC_FILTER_SEL, CBN_SELCHANGE, onFilterSelChange)
+		COMMAND_CODE_HANDLER(EN_CHANGE, onFilterChanged)
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uicBase)
 		CHAIN_MSG_MAP(baseClass)
-		ALT_MSG_MAP(SHOWUI_MESSAGE_MAP)
-		MESSAGE_HANDLER(BM_SETCHECK, onShowUI)
-		ALT_MSG_MAP(SEARCH_FILTER_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
-		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
-		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onFilterChange)
+		ALT_MSG_MAP(CHECKBOX_MESSAGE_MAP)
+		MESSAGE_HANDLER(BM_SETCHECK, onShowOptions)
 		END_MSG_MAP()
-		
+
 		SearchFrame();
 		~SearchFrame();
 
 		SearchFrame(const SearchFrame&) = delete;
 		SearchFrame& operator= (const SearchFrame&) = delete;
-		
+
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -161,8 +160,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT onFilterChar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onFilterChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onFilterSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -172,9 +171,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onDownloadWhole(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenFileOrFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onShowOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-		
+
 		void UpdateLayout(BOOL resizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void onSizeMode();
@@ -222,19 +224,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			}
 			return 0;
 		}
-		
+
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			if (::IsWindow(ctrlSearch))
 				ctrlSearch.SetFocus();
-			return 0;
-		}
-		
-		LRESULT onShowUI(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-		{
-			bHandled = FALSE;
-			showUI = (wParam == BST_CHECKED);
-			UpdateLayout(FALSE);
 			return 0;
 		}
 
@@ -246,13 +240,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			initialType = type;
 			running = true;
 		}
-		
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-
 
 		LRESULT onCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -435,26 +428,23 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 
 		CToolTipCtrl tooltip;
-		
+
 #ifdef BL_FEATURE_IP_DATABASE
 		CButton ctrlStoreIP;
 		bool storeIP;
 #endif
-		CContainedWindow showUIContainer;
-		
-		CContainedWindow ctrlFilterContainer;
-		CContainedWindow ctrlFilterSelContainer;
+		CContainedWindow showOptionsContainer;
 		tstring filter;
-		
+
 		COLORREF colorBackground;
 		COLORREF colorText;
-		CStatic searchLabel, sizeLabel, optionLabel, typeLabel, hubsLabel, srLabel;
+		CStatic searchLabel, sizeLabel, optionLabel, typeLabel, hubsLabel;
 		CButton ctrlSlots;
 		bool onlyFree;
 
-		CButton ctrlShowUI;
-		bool showUI;
-		
+		CButton ctrlShowOptions;
+		bool showOptions;
+
 		CButton ctrlCollapsed;
 		bool expandSR;
 		
@@ -504,7 +494,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CMenu tabMenu;
 
 		StringList targets;
-		CEdit ctrlFilter;
+		SearchBoxCtrl ctrlFilter;
 		CComboBox ctrlFilterSel;
 
 		bool running;

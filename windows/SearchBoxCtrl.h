@@ -59,6 +59,13 @@ class SearchBoxCtrl: public CWindowImpl<SearchBoxCtrl>, private ThemeWrapper
 			MAX_BRUSHES = CLR_BACKGROUND + 1
 		};
 
+		enum
+		{
+			NOTIF_RETURN = 1,
+			NOTIF_TAB    = 2,
+			NOTIF_ESCAPE = 4
+		};
+
 		SearchBoxCtrl();
 		~SearchBoxCtrl() { cleanup(); }
 
@@ -77,6 +84,7 @@ class SearchBoxCtrl: public CWindowImpl<SearchBoxCtrl>, private ThemeWrapper
 		void setBorderType(int type);
 		void setAnimationEnabled(bool flag);
 		void setAnimationDuration(int value) { animationDuration = value; } // -1 = use default for this theme
+		void setNotifMask(int mask) { notifMask = mask; }
 
 	private:
 		BEGIN_MSG_MAP(SearchBoxCtrl)
@@ -145,6 +153,7 @@ class SearchBoxCtrl: public CWindowImpl<SearchBoxCtrl>, private ThemeWrapper
 		BackingStore* backingStore;
 		int flags;
 		int borderType;
+		int notifMask;
 		int animationDuration;
 		int borderCurrentState;
 		VistaAnimations::StateTransition* borderTrans;

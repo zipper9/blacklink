@@ -185,6 +185,7 @@ LRESULT UserListWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlSearchBox.SetFont(Fonts::g_systemFont);
 	ctrlSearchBox.setBitmap(g_iconBitmaps.getBitmap(IconBitmaps::FILTER, 0));
 	ctrlSearchBox.setCloseBitmap(g_iconBitmaps.getBitmap(IconBitmaps::CLEAR_SEARCH, 0));
+	ctrlSearchBox.setNotifMask(SearchBoxCtrl::NOTIF_RETURN | SearchBoxCtrl::NOTIF_TAB);
 
 	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
 	ctrlFilterSel.SetFont(Fonts::g_systemFont);

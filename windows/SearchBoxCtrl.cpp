@@ -73,6 +73,7 @@ SearchBoxCtrl::SearchBoxCtrl()
 	iconSpace = 4;
 	backingStore = nullptr;
 	flags = FLAG_ENABLE_ANIMATION;
+	notifMask = NOTIF_RETURN | NOTIF_TAB | NOTIF_ESCAPE;
 	for (int i = 0; i < MAX_BRUSHES; i++)
 		hBrush[i] = nullptr;
 	borderType = BORDER_TYPE_FRAME;
@@ -732,16 +733,18 @@ void SearchBoxCtrl::updateCheckMouseTimer()
 
 void SearchBoxCtrl::returnPressed()
 {
-	GetParent().SendMessage(WMU_RETURN);
+	if (notifMask & NOTIF_RETURN)
+		GetParent().SendMessage(WMU_RETURN);
 }
 
 void SearchBoxCtrl::tabPressed()
 {
-	if (!(GetKeyState(VK_CONTROL) & 0x8000))
+	if ((notifMask & NOTIF_TAB) && !(GetKeyState(VK_CONTROL) & 0x8000))
 		GetParent().SendMessage(WM_NEXTDLGCTL, (GetKeyState(VK_SHIFT) & 0x8000) != 0);
 }
 
 void SearchBoxCtrl::escapePressed()
 {
-	GetParent().PostMessage(WM_CLOSE);
+	if (notifMask & NOTIF_ESCAPE)
+		GetParent().PostMessage(WM_CLOSE);
 }

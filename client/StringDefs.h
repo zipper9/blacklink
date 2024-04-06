@@ -917,7 +917,7 @@ enum Strings   // @DontAdd
 	SEARCH_ENABLED, // "Search enabled again"
 	SEARCH_FOR, // "Search for"
 	SEARCH_FOR_ALTERNATES, // "Search for alternates"
-	SEARCH_IN_RESULTS, // "Search in results"
+	SEARCH_IN_RESULTS, // "Filter results..."
 	SEARCH_OPTIONS, // "Search options"
 	SEARCH_SHOWHIDEPANEL, // "Show/hide settings panel"
 	SEARCH_SPY, // "Search spy"

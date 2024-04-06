@@ -205,7 +205,6 @@
 #define IDC_DIRECTORIES                 1070
 #define IDC_PORT_TCP                    1071
 #define IDC_REMOVE_ALL                  1072
-#define IDC_UPDATE_IP_INTERVAL          1073
 #define IDC_ADD                         1074
 #define IDC_REMOVE                      1075
 #define IDC_SLOTS                       1077
@@ -1212,6 +1211,8 @@
 #define IDC_CAPTION_MAPPER              2425
 #define IDC_LIST1                       2426
 #define IDC_GOTO                        2427
+#define IDC_FILTER_BOX                  2428
+#define IDC_FILTER_SEL                  2429
 #define IDC_DOWNLOAD_ANY                2494
 #define IDC_DOWNLOAD_BY_PATH            2495
 #define IDC_DOWNLOADTO_USER             2496

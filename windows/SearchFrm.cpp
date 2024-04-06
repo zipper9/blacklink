@@ -168,15 +168,13 @@ static const ResourceManager::Strings hubsColumnNames[] =
 SearchFrame::SearchFrame() :
 	id(WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_SEARCH)),
 	TimerHelper(m_hWnd),
-	showUIContainer(WC_COMBOBOX, this, SHOWUI_MESSAGE_MAP),
+	showOptionsContainer(WC_COMBOBOX, this, CHECKBOX_MESSAGE_MAP),
 #ifdef BL_FEATURE_IP_DATABASE
 	storeIP(false),
 #endif
-	ctrlFilterContainer(WC_EDIT, this, SEARCH_FILTER_MESSAGE_MAP),
-	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
 	colorText(0), colorBackground(0),
 	initialSize(0), initialMode(SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
-	showUI(true), onlyFree(false), droppedResults(0), resultsCount(0),
+	showOptions(true), onlyFree(false), droppedResults(0), resultsCount(0),
 	expandSR(false),
 	storeSettings(false),
 	autoSwitchToTTH(false),
@@ -411,41 +409,35 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ResourceLoader::LoadImageList(IDR_FOLDERS, images, 16, 16);
 		ctrlResults.SetImageList(images, LVSIL_SMALL);
 	}
-	
-	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                  ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE);
-	                  
-	ctrlFilterContainer.SubclassWindow(ctrlFilter.m_hWnd);
+
+	ctrlFilter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_TABSTOP, 0, IDC_FILTER_BOX);
+	ctrlFilter.setHint(TSTRING(SEARCH_IN_RESULTS));
 	ctrlFilter.SetFont(Fonts::g_systemFont);
-	
+	ctrlFilter.setBitmap(g_iconBitmaps.getBitmap(IconBitmaps::FILTER, 0));
+	ctrlFilter.setCloseBitmap(g_iconBitmaps.getBitmap(IconBitmaps::CLEAR_SEARCH, 0));
+	ctrlFilter.setNotifMask(SearchBoxCtrl::NOTIF_RETURN | SearchBoxCtrl::NOTIF_TAB);
+
 	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
-	                     WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE);
-	                     
-	ctrlFilterSelContainer.SubclassWindow(ctrlFilterSel.m_hWnd);
+	                     WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILTER_SEL);
 	ctrlFilterSel.SetFont(Fonts::g_systemFont);
-	
-	ctrlShowUI.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX);
-	ctrlShowUI.SetCheck(BST_CHECKED);
-	ctrlShowUI.SetFont(Fonts::g_systemFont);
-	showUIContainer.SubclassWindow(ctrlShowUI.m_hWnd);
-	WinUtil::addTool(tooltip, ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
+	ctrlShowOptions.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX);
+	ctrlShowOptions.SetCheck(BST_CHECKED);
+	ctrlShowOptions.SetFont(Fonts::g_systemFont);
+	showOptionsContainer.SubclassWindow(ctrlShowOptions.m_hWnd);
+	WinUtil::addTool(tooltip, ctrlShowOptions, ResourceManager::SEARCH_SHOWHIDEPANEL);
 
 	searchLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	searchLabel.SetFont(Fonts::g_systemFont, FALSE);
 	searchLabel.SetWindowText(CTSTRING(SEARCH_FOR));
-	
+
 	sizeLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	sizeLabel.SetFont(Fonts::g_systemFont, FALSE);
 	sizeLabel.SetWindowText(CTSTRING(SIZE));
-	
+
 	typeLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	typeLabel.SetFont(Fonts::g_systemFont, FALSE);
 	typeLabel.SetWindowText(CTSTRING(FILE_TYPE));
-	
-	srLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	srLabel.SetFont(Fonts::g_systemFont, FALSE);
-	srLabel.SetWindowText(CTSTRING(SEARCH_IN_RESULTS));
-	
+
 	optionLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	optionLabel.SetFont(Fonts::g_systemFont, FALSE);
 	optionLabel.SetWindowText(CTSTRING(SEARCH_OPTIONS));
@@ -1530,17 +1522,19 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	int xdu, ydu;
 	WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
 	const int width = WinUtil::dialogUnitsToPixelsX(145, xdu);
-	const int comboBoxHeight = WinUtil::dialogUnitsToPixelsY(120, ydu);
+	const int comboExpandedHeight = WinUtil::dialogUnitsToPixelsY(120, ydu);
 	static const int labelH = 16;
 	static const int lMargin = 4;
 	static const int rMargin = 4;
 	static const int vertLabelOffset = 3;
 	static const int bottomMargin = 5;
+	static const int paneSpace = 7;
 
-	const int textHeight = WinUtil::getTextHeight(m_hWnd, Fonts::g_systemFont);
-	const int controlHeight = textHeight + 9;
+	const int controlHeight = WinUtil::getComboBoxHeight(ctrlFilterSel, Fonts::g_systemFont);
 	const int searchInResultsHeight = 2*bottomMargin + controlHeight;
-	
+	const int comboWidth = WinUtil::dialogUnitsToPixelsX(80, xdu);
+	const int paneWidth = WinUtil::dialogUnitsToPixelsX(110, xdu);
+
 	if (ctrlStatus.IsWindow())
 	{
 		CRect sr;
@@ -1560,12 +1554,12 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		ctrlStatus.GetRect(0, sr);
 		sr.left += 4;
 		sr.right += 4;
-		ctrlShowUI.MoveWindow(sr);
+		ctrlShowOptions.MoveWindow(sr);
 	}
-	if (showUI)
+	if (showOptions)
 	{
+		const int treeWidth = useTree ? paneWidth + paneSpace : 0;
 		CRect rc = rect;
-		const int treeWidth = useTree ? 200 : 0;
 		rc.left += width + treeWidth;
 		rc.bottom -= searchInResultsHeight;
 		ctrlResults.MoveWindow(rc);
@@ -1574,7 +1568,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		{
 			CRect rcTree = rc;
 			rcTree.left -= treeWidth;
-			rcTree.right = rcTree.left + treeWidth - 5;
+			rcTree.right = rcTree.left + treeWidth - paneSpace;
 			ctrlSearchFilterTree.MoveWindow(rcTree);
 			ctrlSearchFilterTree.ShowWindow(SW_SHOW);
 		}
@@ -1582,9 +1576,9 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 			ctrlSearchFilterTree.ShowWindow(SW_HIDE);
 
 		// required for DialogLayout
-		ctrlSearchBox.MoveWindow(0, 0, 0, comboBoxHeight);
-		ctrlMode.MoveWindow(0, 0, 0, comboBoxHeight);
-		ctrlSizeMode.MoveWindow(0, 0, 0, comboBoxHeight);
+		ctrlSearchBox.MoveWindow(0, 0, 0, comboExpandedHeight);
+		ctrlMode.MoveWindow(0, 0, 0, comboExpandedHeight);
+		ctrlSizeMode.MoveWindow(0, 0, 0, comboExpandedHeight);
 
 		DialogLayout::Options opt;
 		opt.width = U_PX(width);
@@ -1624,32 +1618,29 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		optionLabel.ShowWindow(SW_HIDE);
 	}
 
-	// "Search in results"
 	CRect rc;
-	rc.left = rect.left + lMargin;
-	if (showUI)
-		rc.left += width;
-	rc.top = rect.bottom - searchInResultsHeight + bottomMargin + vertLabelOffset;
-	rc.bottom = rc.top + labelH;
-	rc.right = rc.left + WinUtil::getTextWidth(CTSTRING(SEARCH_IN_RESULTS), srLabel) + 10;
-	srLabel.MoveWindow(rc);
-	
-	// Input field
 	rc.top = rect.bottom - searchInResultsHeight + bottomMargin;
 	rc.bottom = rc.top + controlHeight;
-	rc.left = rc.right;
-	rc.right = rc.left + 150;
-	ctrlFilter.MoveWindow(rc);
-
-	// Combo box
-	rc.left = rc.right + lMargin;
-	rc.right = rc.left + 120;
-	ctrlFilterSel.MoveWindow(rc);
 
 	// Port status
-	rc.left = rc.right + WinUtil::dialogUnitsToPixelsX(6, xdu);
-	rc.right = std::min(rect.right, rc.left + WinUtil::dialogUnitsToPixelsX(200, xdu));
+	HDC hDC = GetDC();
+	SIZE size = ctrlPortStatus.getIdealSize(hDC);
+	ReleaseDC(hDC);
+	rc.right = rect.right - rMargin;
+	rc.left = rc.right - size.cx;
 	ctrlPortStatus.MoveWindow(rc);
+
+	// Filter box
+	rc.left = rect.left + (showOptions ? width : lMargin);
+	rc.right = rc.left + paneWidth;
+	ctrlFilter.MoveWindow(rc);
+	ctrlFilter.Invalidate();
+
+	// Combo box
+	rc.left = rc.right + paneSpace;
+	rc.right = rc.left + comboWidth;
+	rc.bottom = rc.top + comboExpandedHeight;
+	ctrlFilterSel.MoveWindow(rc);
 
 	if (!ctrlSearch)
 	{
@@ -1706,7 +1697,7 @@ void SearchFrame::runUserCommand(UserCommand & uc)
 	}
 }
 
-LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+LRESULT SearchFrame::onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	if (!Colors::isAppThemed)
 	{
@@ -1714,6 +1705,11 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		return 0;
 	}
 	const HWND hWnd = (HWND)lParam;
+	if (uMsg == WM_CTLCOLOREDIT && !(hWnd == ctrlSearch.m_hWnd || hWnd == ctrlSize.m_hWnd))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
 	const HDC hDC = (HDC)wParam;
 	if (hWnd == searchLabel.m_hWnd || hWnd == sizeLabel.m_hWnd || hWnd == optionLabel.m_hWnd || hWnd == typeLabel.m_hWnd
 	        || hWnd == hubsLabel.m_hWnd || hWnd == ctrlSlots.m_hWnd ||
@@ -1722,7 +1718,7 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 #endif
 	        hWnd == ctrlStoreSettings.m_hWnd ||
 	        hWnd == ctrlUseGroupTreeSettings.m_hWnd ||
-	        hWnd == ctrlCollapsed.m_hWnd || hWnd == srLabel.m_hWnd ||
+	        hWnd == ctrlCollapsed.m_hWnd ||
 			hWnd == ctrlPortStatus.m_hWnd)
 	{
 		SetTextColor(hDC, colorText);
@@ -2560,15 +2556,42 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 //	return CDRF_DODEFAULT; /// all case have a return, this return never run.
 }
 
-LRESULT SearchFrame::onFilterChar(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT SearchFrame::onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	if (!BOOLSETTING(FILTER_ENTER) || wParam == VK_RETURN)
+	MSG msg = {};
+	msg.hwnd = ctrlFilter.m_hWnd;
+	msg.message = WM_KEYDOWN;
+	msg.wParam = VK_TAB;
+	IsDialogMessage(&msg);
+	return 0;
+}
+
+LRESULT SearchFrame::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (!BOOLSETTING(FILTER_ENTER))
 	{
-		WinUtil::getWindowText(ctrlFilter, filter);
+		filter = ctrlFilter.getText();
 		Text::makeLower(filter);
 		updateSearchList();
 	}
-	bHandled = false;
+	return 0;
+}
+
+LRESULT SearchFrame::onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	if (BOOLSETTING(FILTER_ENTER))
+	{
+		filter = ctrlFilter.getText();
+		Text::makeLower(filter);
+		updateSearchList();
+	}
+	return 0;
+}
+
+LRESULT SearchFrame::onFilterSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	WinUtil::getWindowText(ctrlFilter, filter);
+	updateSearchList();
 	return 0;
 }
 
@@ -2762,14 +2785,6 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 	}
 }
 
-LRESULT SearchFrame::onFilterChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
-{
-	WinUtil::getWindowText(ctrlFilter, filter);
-	updateSearchList();
-	bHandled = FALSE;
-	return 0;
-}
-
 LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring searchString;
@@ -2822,6 +2837,14 @@ LRESULT SearchFrame::onEditSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 		ctrlFiletype.SetCurSel(FILE_TYPE_ANY);
 		autoSwitchToTTH = false;
 	}
+	return 0;
+}
+
+LRESULT SearchFrame::onShowOptions(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	bHandled = FALSE;
+	showOptions = wParam == BST_CHECKED;
+	UpdateLayout(FALSE);
 	return 0;
 }
 
@@ -2948,7 +2971,7 @@ void SearchFrame::showPortStatus()
 	if (newText != ctrlPortStatus.getText())
 	{
 		ctrlPortStatus.setText(newText);
-		ctrlPortStatus.Invalidate();
+		UpdateLayout(FALSE);
 	}
 	ClientManager::infoUpdated(true);
 }
