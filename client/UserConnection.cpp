@@ -706,8 +706,8 @@ void UserConnection::onTransmitDone() noexcept
 
 void UserConnection::onFailed(const string& line) noexcept
 {
-	if (state != STATE_UNUSED)
-		state = STATE_UNCONNECTED;
+	if (state == STATE_UNUSED) return;
+	state = STATE_UNCONNECTED;
 	failed(line);
 }
 
