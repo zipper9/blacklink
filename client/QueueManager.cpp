@@ -910,6 +910,9 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 	const bool testIP = (flags & QueueItem::FLAG_USER_GET_IP) != 0;
 	bool newItem = !(testIP || fileList);
 
+	if (!(params.size == -1 && (fileList || testIP)) && (params.size < 0 || params.size > FILE_SIZE_LIMIT))
+		throw QueueException(QueueException::BAD_FILE_SIZE, STRING(INVALID_SIZE));
+
 	string targetPath;
 	string tempTarget;
 	if (fileList)

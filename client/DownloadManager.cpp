@@ -254,7 +254,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 	dcdebug("Preparing " I64_FMT ":" I64_FMT ", " I64_FMT ":" I64_FMT "\n", d->getStartPos(), start, d->getSize(), bytes);
 	if (d->getSize() == -1)
 	{
-		if (bytes >= 0)
+		if (bytes >= 0 && bytes <= QueueManager::FILE_SIZE_LIMIT)
 		{
 			d->setSize(bytes);
 		}

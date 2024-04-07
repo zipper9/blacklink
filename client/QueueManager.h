@@ -60,6 +60,8 @@ class QueueManager : public Singleton<QueueManager>,
 	private SearchManagerListener, private ClientManagerListener
 {
 	public:
+		static const int64_t FILE_SIZE_LIMIT = (int64_t) 500 << 40; // 500 TiB
+
 		enum
 		{
 			DIR_FLAG_DOWNLOAD_DIRECTORY = 1,
