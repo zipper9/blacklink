@@ -1612,7 +1612,7 @@ void TransferView::collapseAll()
 	{
 		ItemInfo* parent = i->second->parent;
 		if (parent && (parent->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
-			ctrlTransfers.Collapse(parent, ctrlTransfers.findItem(parent));
+			ctrlTransfers.collapse(parent, ctrlTransfers.findItem(parent));
 	}
 }
 
@@ -1623,7 +1623,7 @@ void TransferView::expandAll()
 	{
 		ItemInfo* parent = i->second->parent;
 		if (parent && !(parent->stateFlags & ItemInfoList::STATE_FLAG_EXPANDED))
-			ctrlTransfers.Expand(parent, ctrlTransfers.findItem(parent));
+			ctrlTransfers.expand(parent, ctrlTransfers.findItem(parent));
 	}
 }
 

@@ -80,9 +80,9 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					if (i->groupInfo && i->groupInfo->parent == i)
 					{
 						if (i->getStateFlags() & STATE_FLAG_EXPANDED)
-							Collapse(i, pos);
+							collapse(i, pos);
 						else
-							Expand(i, pos);
+							expand(i, pos);
 					}
 				}
 			}
@@ -116,18 +116,18 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			if (mode == 1)
 			{
 				if (!(ii->getStateFlags() & STATE_FLAG_EXPANDED))
-					Expand(ii, pos);
+					expand(ii, pos);
 			}
 			else
 			{
 				if (ii->getStateFlags() & STATE_FLAG_EXPANDED)
-					Collapse(ii, pos);
+					collapse(ii, pos);
 			}
 			bHandled = TRUE;
 			return 0;
 		}
 
-		void Collapse(T* parent, int itemPos)
+		void collapse(T* parent, int itemPos)
 		{
 			this->SetRedraw(FALSE);
 			if (parent->groupInfo)
@@ -144,7 +144,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			this->SetRedraw(TRUE);
 		}
 
-		void Expand(T* parent, int itemPos)
+		void expand(T* parent, int itemPos)
 		{
 			this->SetRedraw(FALSE);
 			if (parent->groupInfo && !parent->groupInfo->children.empty())
@@ -233,7 +233,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					for (T* child : gi->children)
 						if (child->getStateFlags() & STATE_FLAG_VISIBLE)
 						{
-							this->deleteItem(child);
+							int pos = this->deleteItem(child);
+							if (pos != -1 && pos < parentPos) parentPos--;
 							child->setStateFlags(child->getStateFlags() & ~STATE_FLAG_VISIBLE);
 						}
 					this->SetItemState(parentPos, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
