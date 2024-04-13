@@ -19,8 +19,8 @@
 #include "stdafx.h"
 #include "IntegrationPage.h"
 #include "WinUtil.h"
+#include "ShellExt.h"
 #include "../client/AppPaths.h"
-#include "../ShellExt.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"

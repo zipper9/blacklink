@@ -63,7 +63,7 @@ class SharedFileStream : public IOStream
 		int64_t getFastFileSize();
 		void setSize(int64_t newSize);
 
-		size_t flushBuffers(bool aForce) override;
+		size_t flushBuffers(bool force) override;
 
 		static CriticalSection csPool;
 		static std::map<std::string, unsigned> filesToDelete;

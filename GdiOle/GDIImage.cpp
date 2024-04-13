@@ -280,7 +280,6 @@ void CGDIImage::DrawFrame()
 	dcassert(!isShutdown());
 	
 	EnterCriticalSection(&m_csCallback);
-	static int g_count = 0;
 	for (auto i = m_Callbacks.cbegin(); i != m_Callbacks.cend(); ++i)
 	{
 		if (!i->pOnFrameChangedProc(this, i->lParam))

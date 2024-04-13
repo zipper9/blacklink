@@ -1123,7 +1123,7 @@ void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& ou)
 }
 
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
-void ClientManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
+void ClientManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
 	if (!isBeforeShutdown())
 	{

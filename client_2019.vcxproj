@@ -609,9 +609,9 @@
     <ClCompile Include="client\SearchQueue.cpp" />
     <ClCompile Include="client\SearchResult.cpp" />
     <ClCompile Include="client\SettingsManager.cpp" />
-    <ClCompile Include="client\SharedFile.cpp" />
     <ClCompile Include="client\SharedFileStream.cpp" />
     <ClCompile Include="client\ShareManager.cpp" />
+    <ClCompile Include="client\ShareManagerItems.cpp" />
     <ClCompile Include="client\SimpleXML.cpp" />
     <ClCompile Include="client\SimpleXMLReader.cpp" />
     <ClCompile Include="client\Socket.cpp" />
@@ -807,7 +807,7 @@
     <ClInclude Include="client\SearchParam.h" />
     <ClInclude Include="client\SearchUrl.h" />
     <ClInclude Include="client\SettingsManagerListener.h" />
-    <ClInclude Include="client\SharedFile.h" />
+    <ClInclude Include="client\ShareManagerItems.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
     <ClInclude Include="client\SimpleXMLException.h" />
     <ClInclude Include="client\SockDefs.h" />

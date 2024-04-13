@@ -349,16 +349,16 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	return 0;
 }
 
-void SharePage::addDirectory(const tstring& aPath)
+void SharePage::addDirectory(const tstring& path)
 {
-	tstring path = aPath;
-	Util::appendPathSeparator(path);
+	tstring pathTmp = path;
+	Util::appendPathSeparator(pathTmp);
 	try
 	{
 		LineDlg virt;
 		virt.title = TSTRING(VIRTUAL_NAME);
 		virt.description = TSTRING(VIRTUAL_NAME_LONG);
-		virt.line = Text::toT(ShareManager::validateVirtual(Util::getLastDir(Text::fromT(path))));
+		virt.line = Text::toT(ShareManager::validateVirtual(Util::getLastDir(Text::fromT(pathTmp))));
 		virt.allowEmpty = false;
 		virt.checkBox = virt.checked = true;
 		virt.checkBoxText = ResourceManager::ADD_TO_DEFAULT_SHARE_GROUP;
@@ -367,9 +367,9 @@ void SharePage::addDirectory(const tstring& aPath)
 		{
 			CWaitCursor waitCursor;
 			ShareManager* sm = ShareManager::getInstance();
-			string realPath = Text::fromT(path);
+			string realPath = Text::fromT(pathTmp);
 			sm->addDirectory(realPath, Text::fromT(virt.line));
-			insertDirectoryItem(GROUP_NORMAL, virt.line, path, -1);
+			insertDirectoryItem(GROUP_NORMAL, virt.line, pathTmp, -1);
 			showInfo();
 			if (virt.checked)
 			{

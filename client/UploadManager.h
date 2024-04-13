@@ -150,7 +150,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		/** @internal */
 		void addConnection(UserConnection* conn);
 		void removeFinishedUpload(const UserPtr& user);
-		void abortUpload(const string& aFile, bool waiting = true);
+		void abortUpload(const string& file, bool waiting = true);
 		
 		GETSET(int, extraPartial, ExtraPartial);
 		GETSET(int, extra, Extra);
@@ -221,8 +221,8 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
 		// TimerManagerListener
-		void on(Second, uint64_t aTick) noexcept override;
-		void on(Minute, uint64_t aTick) noexcept override;
+		void on(Second, uint64_t tick) noexcept override;
+		void on(Minute, uint64_t tick) noexcept override;
 		
 		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive, int& compressionType, string& errorText);
 		bool isCompressedFile(const string& target);

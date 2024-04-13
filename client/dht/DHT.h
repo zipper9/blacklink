@@ -91,7 +91,7 @@ namespace dht
 		size_t getNodesCount() const;
 
 		/** Removes dead nodes */
-		void checkExpiration(uint64_t aTick);
+		void checkExpiration(uint64_t tick);
 
 		/** Starts TTH search, returns time to wait in the queue */
 		unsigned findFile(const string& tth, uint32_t token, uint64_t owner);

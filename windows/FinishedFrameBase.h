@@ -158,7 +158,7 @@ class FinishedFrameBase
 		
 		HTREEITEM createRootItem(TreeItemType nodeType);
 		void insertData();
-		void addStatusLine(const tstring& aLine);
+		void addStatusLine(const tstring& line);
 		void updateStatus();
 		void updateList(const FinishedItemList& fl);		
 		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);

@@ -20,7 +20,7 @@
 #define PROP_PAGE_H
 
 #include <atlcrack.h>
-#include "typedefs.h"
+#include "../client/typedefs.h"
 #include "resource.h"
 #include "PropPageIcons.h"
 #include "../client/ResourceManager.h"

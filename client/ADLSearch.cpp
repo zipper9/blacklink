@@ -557,7 +557,7 @@ void ADLSearchManager::matchListing(DirectoryListing* dl, std::atomic_bool* abor
 	ctx.abortFlag = abortFlag;
 	prepare(ctx, dl);
 	ctx.match();
-	if (!(abortFlag&& abortFlag->load()))
+	if (!(abortFlag && abortFlag->load()))
 		ctx.insertResults();
 }
 

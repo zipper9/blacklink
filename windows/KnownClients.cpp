@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "KnownClients.h"
-#include "version.h"
+#include "../client/version.h"
 
 const KnownClients::Client KnownClients::clients[] =
 {

@@ -1230,10 +1230,10 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="blacklink.rc">
+    <ResourceCompile Include="windows\resources.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
-    <ResourceCompile Include="version.rc">
+    <ResourceCompile Include="windows\version.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

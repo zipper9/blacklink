@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "CommandLine.h"
-#include "Util.h"
+#include "../client/Util.h"
 
 bool parseCommandLine(ParsedCommandLine& out, const WCHAR* cmdLine)
 {

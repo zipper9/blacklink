@@ -61,14 +61,14 @@ class DownloadManagerListener
 		 * This is the first message sent before a download starts.
 		 * No other messages will be sent before this.
 		 */
-		virtual void on(Requesting, const DownloadPtr& aDownload) noexcept { }
-		virtual void on(RemoveToken, const std::string& p_token) noexcept { }
+		virtual void on(Requesting, const DownloadPtr& download) noexcept { }
+		virtual void on(RemoveToken, const std::string& token) noexcept { }
 		
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
 		/**
 		 * This is the first message sent before a download starts.
 		 */
-		virtual void on(Starting, const DownloadPtr& aDownload) noexcept { }
+		virtual void on(Starting, const DownloadPtr& download) noexcept { }
 #endif
 		
 		/**
@@ -80,7 +80,7 @@ class DownloadManagerListener
 		 * This is the last message sent before a download is deleted.
 		 * No more messages will be sent after it.
 		 */
-		virtual void on(Complete, const DownloadPtr& aDownload) noexcept { }
+		virtual void on(Complete, const DownloadPtr& download) noexcept { }
 		
 		/**
 		 * This indicates some sort of failure with a particular download.
@@ -89,7 +89,7 @@ class DownloadManagerListener
 		 * @remarks Should send an error code instead of a string and let the GUI
 		 * display an error string.
 		 */
-		virtual void on(Failed, const DownloadPtr& aDownload, const string&) noexcept { }
+		virtual void on(Failed, const DownloadPtr& download, const string&) noexcept { }
 		
 		virtual void on(Status, const UserConnection*, const Download::ErrorInfo&) noexcept { }
 };

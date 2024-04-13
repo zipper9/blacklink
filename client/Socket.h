@@ -129,6 +129,10 @@ class Socket
 			port = src.port;
 			maxSpeed = src.maxSpeed;
 			src.sock = INVALID_SOCKET;
+#ifdef _WIN32
+			currentMask = src.currentMask;
+			lastWaitResult = src.lastWaitResult;
+#endif
 			return *this;
 		}
 

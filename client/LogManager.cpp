@@ -221,7 +221,7 @@ void LogManager::getOptions(int area, TStringPair& p) noexcept
 void LogManager::setOptions(int area, const TStringPair& p) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	LogArea& la = types[area];
+	const LogArea& la = types[area];
 	string filename = Text::fromT(p.first);
 	SettingsManager::set((SettingsManager::StrSetting) la.fileOption, filename);
 	SettingsManager::set((SettingsManager::StrSetting) la.formatOption, Text::fromT(p.second));

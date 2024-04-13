@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Fonts.h"
 #include "WinUtil.h"
-#include "StringTokenizer.h"
+#include "../client/StringTokenizer.h"
 
 HFONT Fonts::g_font = nullptr;
 int Fonts::g_fontHeight = 0;

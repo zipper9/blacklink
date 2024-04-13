@@ -20,9 +20,9 @@
 #define DCLST_GEN_DLG_H
 
 #include "../client/DirectoryListing.h"
-#include "Resource.h"
+#include "../client/Thread.h"
+#include "resource.h"
 #include "TimerHelper.h"
-#include "Thread.h"
 #include <atomic>
 
 #define WM_FINISHED  WM_USER+102

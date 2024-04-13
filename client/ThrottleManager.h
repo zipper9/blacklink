@@ -53,7 +53,7 @@ class ThrottleManager : public Singleton<ThrottleManager>, private TimerManagerL
 		~ThrottleManager();
 
 		// TimerManagerListener
-		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
+		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
 };
 
 #endif  // _THROTTLEMANAGER_H

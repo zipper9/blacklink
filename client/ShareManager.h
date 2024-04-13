@@ -20,7 +20,7 @@
 #define SHARE_MANAGER_H_
 
 #include "File.h"
-#include "SharedFile.h"
+#include "ShareManagerItems.h"
 #include "Singleton.h"
 #include "HashManagerListener.h"
 #include "SettingsManager.h"

@@ -214,10 +214,10 @@ class ClientManager : public Speaker<ClientManagerListener>,
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 		static OnlineUserList g_UserUpdateQueue;
 		static std::unique_ptr<RWLock> g_csOnlineUsersUpdateQueue;
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
+		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 #endif
 
-		void addAsyncOnlineUserUpdated(const OnlineUserPtr& p_ou);
+		void addAsyncOnlineUserUpdated(const OnlineUserPtr& ou);
 		static CID cid;
 		static CID pid;
 		

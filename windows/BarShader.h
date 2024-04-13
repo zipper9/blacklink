@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Client/typedefs.h"
-#include "atlapp.h"
-#include "atlwin.h"
-#include "atlctrls.h"
-#include "atlcoll.h"
+#include "../client/typedefs.h"
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlctrls.h>
+#include <atlcoll.h>
 
 class CBarShader
 {

@@ -1,5 +1,5 @@
 #include "stdinc.h"
-#include "SharedFile.h"
+#include "ShareManagerItems.h"
 #include "FileTypes.h"
 
 bool SharedFile::hasType(int type) const noexcept

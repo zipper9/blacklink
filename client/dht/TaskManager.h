@@ -50,8 +50,8 @@ namespace dht
 		uint64_t nextXmlSave;
 
 		// TimerManagerListener
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept;
-		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept;
+		void on(TimerManagerListener::Second, uint64_t tick) noexcept;
+		void on(TimerManagerListener::Minute, uint64_t tick) noexcept;
 	};
 
 }

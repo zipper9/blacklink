@@ -1207,8 +1207,8 @@
     <Image Include="res\zz.png" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="blacklink.rc" />
-    <ResourceCompile Include="version.rc" />
+    <ResourceCompile Include="windows\resources.rc" />
+    <ResourceCompile Include="windows\version.rc" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuildStep Include="res\blacklink.manifest">

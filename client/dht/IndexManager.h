@@ -86,7 +86,7 @@ namespace dht
 		void processPublishSourceRequest(const Node::Ptr& node, const AdcCommand& cmd);
 
 		/** Removes old sources */
-		void checkExpiration(uint64_t aTick);
+		void checkExpiration(uint64_t tick);
 
 		/** Publishes shared file */
 		void publishFile(const TTHValue& tth, int64_t size);

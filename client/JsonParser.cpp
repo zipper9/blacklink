@@ -362,10 +362,7 @@ int JsonParser::process(const char* data, size_t size) noexcept
 	}
 	totalProcessed += size;
 	if (state >= STATE_STRING && tokenStart < size)
-	{
 		token.append(data + tokenStart, size - tokenStart);
-		tokenStart = 0;
-	}
 	return NO_ERROR;
 }
 

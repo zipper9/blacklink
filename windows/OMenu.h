@@ -21,7 +21,7 @@
 
 #include <atlapp.h>
 #include <atluser.h>
-#include "typedefs.h"
+#include "../client/typedefs.h"
 
 class OMenu;
 struct OMenuItem;

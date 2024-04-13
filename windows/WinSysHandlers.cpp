@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "WinSysHandlers.h"
-#include "LogManager.h"
+#include "../client/LogManager.h"
 #include "../client/ResourceManager.h"
 #include "../client/BaseUtil.h"
 #include "../client/Text.h"

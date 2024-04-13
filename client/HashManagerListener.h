@@ -1,7 +1,7 @@
 #ifndef HASH_MANAGER_LISTENER_H_
 #define HASH_MANAGER_LISTENER_H_
 
-#include "SharedFile.h"
+#include "ShareManagerItems.h"
 
 class HashManagerListener
 {

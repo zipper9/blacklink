@@ -195,14 +195,14 @@ LRESULT FavoriteDirsPage::onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	return 0;
 }
 
-void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*/)
+void FavoriteDirsPage::addDirectory(const tstring& path /*= Util::emptyStringT*/)
 {
-	tstring path = aPath;
-	Util::appendPathSeparator(path);
+	tstring tmp = path;
+	Util::appendPathSeparator(tmp);
 	
 	FavDirDlg dlg(true);
-	dlg.name = Util::getLastDir(path);
-	dlg.dir = path;
+	dlg.name = Util::getLastDir(tmp);
+	dlg.dir = tmp;
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
 		Util::appendPathSeparator(dlg.dir);		

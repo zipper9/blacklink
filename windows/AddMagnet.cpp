@@ -20,7 +20,7 @@
 #include "Resource.h"
 #include "WinUtil.h"
 #include "AddMagnet.h"
-#include "SimpleStringTokenizer.h"
+#include "../client/SimpleStringTokenizer.h"
 #include <boost/algorithm/string/trim.hpp>
 
 static const WinUtil::TextItem texts[] =

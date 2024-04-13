@@ -1,6 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include "windows\resource.h"
+#include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -2511,25 +2511,25 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDR_MAINFRAME           ICON                    "res\\app.ico"
+IDR_MAINFRAME           ICON                    "..\\res\\app.ico"
 
-IDR_MAGNET              ICON                    "res\\Magnet.ico"
+IDR_MAGNET              ICON                    "..\\res\\Magnet.ico"
 
-IDR_DCLST               ICON                    "res\\DcLst.ico"
+IDR_DCLST               ICON                    "..\\res\\DcLst.ico"
 
-IDR_TRAY_AND_TASKBAR_PM ICON                    "res\\PM.ico"
+IDR_TRAY_AND_TASKBAR_PM ICON                    "..\\res\\PM.ico"
 
-IDR_SKULL_ICO           ICON                    "res\\skull.ico"
+IDR_SKULL_ICO           ICON                    "..\\res\\skull.ico"
 
-IDR_SKULL_RED_ICO       ICON                    "res\\skull_red.ico"
+IDR_SKULL_RED_ICO       ICON                    "..\\res\\skull_red.ico"
 
-IDR_SKULL2_ICO          ICON                    "res\\skull2.ico"
+IDR_SKULL2_ICO          ICON                    "..\\res\\skull2.ico"
 
-IDR_SKULL2_RED_ICO      ICON                    "res\\skull2_red.ico"
+IDR_SKULL2_RED_ICO      ICON                    "..\\res\\skull2_red.ico"
 
-IDR_PADLOCK_CLOSED      ICON                    "res\\padlock_closed.ico"
+IDR_PADLOCK_CLOSED      ICON                    "..\\res\\padlock_closed.ico"
 
-IDR_PADLOCK_OPEN        ICON                    "res\\padlock_open.ico"
+IDR_PADLOCK_OPEN        ICON                    "..\\res\\padlock_open.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2537,70 +2537,70 @@ IDR_PADLOCK_OPEN        ICON                    "res\\padlock_open.ico"
 // PNG
 //
 
-IDR_TOOLBAR             PNG                     "res\\Toolbar24.png"
+IDR_TOOLBAR             PNG                     "..\\res\\Toolbar24.png"
 
-IDR_TOOLBAR_HOT         PNG                     "res\\ToolbarHot24.png"
+IDR_TOOLBAR_HOT         PNG                     "..\\res\\ToolbarHot24.png"
 
-IDR_TOOLBAR_SMALL       PNG                     "res\\Toolbar16.png"
+IDR_TOOLBAR_SMALL       PNG                     "..\\res\\Toolbar16.png"
 
-IDR_TOOLBAR_SMALL_HOT   PNG                     "res\\ToolbarHot16.png"
+IDR_TOOLBAR_SMALL_HOT   PNG                     "..\\res\\ToolbarHot16.png"
 
-IDR_MEDIA_TOOLBAR       PNG                     "res\\MediaToolbar24.png"
+IDR_MEDIA_TOOLBAR       PNG                     "..\\res\\MediaToolbar24.png"
 
-IDR_MEDIA_TOOLBAR_HOT   PNG                     "res\\MediaToolbarHot24.png"
+IDR_MEDIA_TOOLBAR_HOT   PNG                     "..\\res\\MediaToolbarHot24.png"
 
-IDR_MEDIA_TOOLBAR_SMALL PNG                     "res\\MediaToolbar16.png"
+IDR_MEDIA_TOOLBAR_SMALL PNG                     "..\\res\\MediaToolbar16.png"
 
-IDR_MEDIA_TOOLBAR_SMALL_HOT PNG                     "res\\MediaToolbarHot16.png"
+IDR_MEDIA_TOOLBAR_SMALL_HOT PNG                     "..\\res\\MediaToolbarHot16.png"
 
-IDR_SETTINGS_ICONS      PNG                     "res\\Settings.png"
+IDR_SETTINGS_ICONS      PNG                     "..\\res\\Settings.png"
 
-IDR_HUB_ICONS           PNG                     "res\\Hub.png"
+IDR_HUB_ICONS           PNG                     "..\\res\\Hub.png"
 
-IDR_FILELIST_ICONS      PNG                     "res\\FileList.png"
+IDR_FILELIST_ICONS      PNG                     "..\\res\\FileList.png"
 
-IDR_OTHER_ICONS         PNG                     "res\\Other.png"
+IDR_OTHER_ICONS         PNG                     "..\\res\\Other.png"
 
-IDR_EDITOR_ICONS        PNG                     "res\\Editor.png"
+IDR_EDITOR_ICONS        PNG                     "..\\res\\Editor.png"
 
-IDR_USERS               PNG                     "res\\Users.png"
+IDR_USERS               PNG                     "..\\res\\Users.png"
 
-IDR_TRANSFER_TREE       PNG                     "res\\TransferTree.png"
+IDR_TRANSFER_TREE       PNG                     "..\\res\\TransferTree.png"
 
-IDR_STATE_USERS         PNG                     "res\\StateUsers.png"
+IDR_STATE_USERS         PNG                     "..\\res\\StateUsers.png"
 
-IDR_GENDER_USERS        PNG                     "res\\Gender.png"
+IDR_GENDER_USERS        PNG                     "..\\res\\Gender.png"
 
-IDR_BAD_FLAG            PNG                     "res\\zz.png"
+IDR_BAD_FLAG            PNG                     "..\\res\\zz.png"
 
-IDR_ARROWS              PNG                     "res\\Arrows.png"
+IDR_ARROWS              PNG                     "..\\res\\Arrows.png"
 
-IDR_TRANSFERS           PNG                     "res\\Transfers.png"
+IDR_TRANSFERS           PNG                     "..\\res\\Transfers.png"
 
-IDR_TORRENT_PNG         PNG                     "res\\torrent.png"
+IDR_TORRENT_PNG         PNG                     "..\\res\\torrent.png"
 
-IDR_FOLDERS             PNG                     "res\\Folders.png"
+IDR_FOLDERS             PNG                     "..\\res\\Folders.png"
 
-IDR_MEDIAFILES          PNG                     "res\\MediaFiles.png"
+IDR_MEDIAFILES          PNG                     "..\\res\\MediaFiles.png"
 
-IDR_SEARCH_TYPES        PNG                     "res\\SearchTypes.png"
+IDR_SEARCH_TYPES        PNG                     "..\\res\\SearchTypes.png"
 
-IDR_STATE               PNG                     "res\\State.png"
+IDR_STATE               PNG                     "..\\res\\State.png"
 
-IDR_FAV_USERS_STATES    PNG                     "res\\FavUserStates.png"
+IDR_FAV_USERS_STATES    PNG                     "..\\res\\FavUserStates.png"
 
-IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
+IDR_CLOSE_PNG           PNG                     "..\\res\\CloseIcon.png"
 
-IDR_NAVIGATION          PNG                     "res\\Navigation.png"
+IDR_NAVIGATION          PNG                     "..\\res\\Navigation.png"
 
-IDR_FILTER              PNG                     "res\\Filter.png"
+IDR_FILTER              PNG                     "..\\res\\Filter.png"
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // RAW
 //
 
-IDR_LOGO                RAW                     "res\\logo.dat"
+IDR_LOGO                RAW                     "..\\res\\logo.dat"
 
 #endif    // English resources
 /////////////////////////////////////////////////////////////////////////////

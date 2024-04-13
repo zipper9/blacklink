@@ -113,7 +113,7 @@ class MerkleTree
 		 */
 		void update(const void* data, size_t len)
 		{
-			uint8_t* buf = (uint8_t*)data;
+			const uint8_t* buf = (const uint8_t*) data;
 			uint8_t zero = 0;
 			size_t i = 0;
 			

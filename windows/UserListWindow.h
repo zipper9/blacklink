@@ -9,8 +9,8 @@
 #include "CustomDrawHelpers.h"
 #include "UserInfo.h"
 #include "UserInfoBaseHandler.h"
-#include "TaskQueue.h"
 #include "SearchBoxCtrl.h"
+#include "../client/TaskQueue.h"
 #include "../client/ClientManager.h"
 #include "../client/FavoriteManager.h"
 

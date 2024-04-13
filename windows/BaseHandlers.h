@@ -2,9 +2,9 @@
 #define BASE_HANDLERS_H_
 
 #include "PreviewMenu.h"
-#include "SearchUrl.h"
 #include "resource.h"
 #include "../client/Text.h"
+#include "../client/SearchUrl.h"
 
 class PreviewBaseHandler : public PreviewMenu
 {

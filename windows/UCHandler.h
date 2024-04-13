@@ -20,8 +20,8 @@
 #define UC_HANDLER_H
 
 #include "OMenu.h"
-#include "UserCommand.h"
 #include "resource.h"
+#include "../client/UserCommand.h"
 
 class UCHandlerBase
 {

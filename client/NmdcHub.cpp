@@ -1158,9 +1158,9 @@ void NmdcHub::userCommandParse(const string& param)
 	}
 }
 
-void NmdcHub::lockParse(const string& aLine)
+void NmdcHub::lockParse(const string& line)
 {
-	if (aLine.size() < 6)
+	if (line.size() < 6)
 		return;
 
 	{
@@ -1173,7 +1173,7 @@ void NmdcHub::lockParse(const string& aLine)
 	dcassert(users.empty());
 
 	// Param must not be toUtf8'd...
-	const string param = aLine.substr(6);
+	const string param = line.substr(6);
 	
 	if (!param.empty())
 	{

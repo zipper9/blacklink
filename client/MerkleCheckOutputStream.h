@@ -26,21 +26,21 @@ template<class TreeType, bool managed>
 class MerkleCheckOutputStream : public OutputStream
 {
 	public:
-		MerkleCheckOutputStream(const TreeType& aTree, OutputStream* aStream, int64_t start) : s(aStream), real(aTree), cur(aTree.getBlockSize()), verified(0), bufPos(0)
+		MerkleCheckOutputStream(const TreeType& tree, OutputStream* os, int64_t start) : s(os), real(tree), cur(tree.getBlockSize()), verified(0), bufPos(0)
 		{
 			//dcdebug("[==========================] MerkleCheckOutputStream() start = %d s = %d this = %d\r\n\r\n", start, s, this);
 			// Only start at block boundaries
-			const auto blocksize = aTree.getBlockSize();
+			const auto blocksize = tree.getBlockSize();
 			dcassert(start % blocksize == 0);
 			cur.setFileSize(start);
 			
 			const size_t nBlocks = static_cast<size_t>(start / blocksize);
-			if (nBlocks > aTree.getLeaves().size())
+			if (nBlocks > tree.getLeaves().size())
 			{
 				dcdebug("Invalid tree / parameters");
 				return;
 			}
-			cur.getLeaves().insert(cur.getLeaves().begin(), aTree.getLeaves().begin(), aTree.getLeaves().begin() + nBlocks);
+			cur.getLeaves().insert(cur.getLeaves().begin(), tree.getLeaves().begin(), tree.getLeaves().begin() + nBlocks);
 		}
 		
 		~MerkleCheckOutputStream()
@@ -52,7 +52,7 @@ class MerkleCheckOutputStream : public OutputStream
 			}
 		}
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
 			if (bufPos != 0)
 				cur.update(buf, bufPos);
@@ -68,7 +68,7 @@ class MerkleCheckOutputStream : public OutputStream
 			{
 				checkTrees();
 			}
-			return s->flushBuffers(aForce);
+			return s->flushBuffers(force);
 		}
 		
 		void commitBytes(const void* b, size_t len)

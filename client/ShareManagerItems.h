@@ -1,5 +1,5 @@
-#ifndef SHARED_FILE_H_
-#define SHARED_FILE_H_
+#ifndef SHARE_MANAGER_ITEMS_H_
+#define SHARE_MANAGER_ITEMS_H_
 
 #include "Text.h"
 #include "HashValue.h"
@@ -118,4 +118,4 @@ class SharedDir: public BaseDirItem
 		static SharedDir* copyTree(const SharedDir* root);
 };
 
-#endif // SHARED_FILE_H_
+#endif // SHARE_MANAGER_ITEMS_H_

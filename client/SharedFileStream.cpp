@@ -299,7 +299,7 @@ void SharedFileStream::setSize(int64_t newSize)
 	sfh->lastFileSize = newSize;
 }
 
-size_t SharedFileStream::flushBuffers(bool aForce)
+size_t SharedFileStream::flushBuffers(bool force)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -310,7 +310,7 @@ size_t SharedFileStream::flushBuffers(bool aForce)
 			if (sfh->mappingPtr)
 				return 0;
 #endif
-			return sfh->file.flushBuffers(aForce);
+			return sfh->file.flushBuffers(force);
 		}
 		catch (const Exception&)
 		{

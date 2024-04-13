@@ -24,6 +24,7 @@ namespace WinUtil
 				close();
 				hKey = x.hKey;
 				x.hKey = nullptr;
+				return *this;
 			}
 			void close() noexcept;
 			void attach(HKEY hKey) noexcept

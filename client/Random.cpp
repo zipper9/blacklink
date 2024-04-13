@@ -31,21 +31,18 @@ uint32_t Util::rand()
 	return randState.getValue();
 }
 
+void Util::MT19937::randomize()
+{
 #ifdef HAVE_OPENSSL
-void Util::MT19937::randomize()
-{
-	RAND_pseudo_bytes((unsigned char*) mt, (N + 1)*sizeof(uint32_t));
+	RAND_pseudo_bytes((unsigned char*) mt, sizeof(mt));
 	mti = N + 1;
-}
 #else
-void Util::MT19937::randomize()
-{
 	uint32_t seed = 0;
 	while (seed == 0)
 		seed = (uint32_t) time(nullptr) ^ (uint32_t) Util::getHighResTimestamp();
 	setSeed(seed);
-}
 #endif
+}
 
 void Util::MT19937::setSeed(uint32_t seed)
 {

@@ -1682,25 +1682,25 @@ void AdcHub::onConnected() noexcept
 	send(cmd);
 }
 
-void AdcHub::onDataLine(const string& aLine) noexcept
+void AdcHub::onDataLine(const string& line) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		Client::onDataLine(aLine);
+		Client::onDataLine(line);
 		
-		if (!Text::validateUtf8(aLine))
+		if (!Text::validateUtf8(line))
 		{
 			// @todo report to user?
 			return;
 		}
-		dispatch(aLine);
+		dispatch(line);
 	}
 }
 
-void AdcHub::onFailed(const string& aLine) noexcept
+void AdcHub::onFailed(const string& line) noexcept
 {
 	clearUsers();
-	Client::onFailed(aLine);
+	Client::onFailed(line);
 }
 
 void AdcHub::getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const noexcept

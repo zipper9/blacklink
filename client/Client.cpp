@@ -526,12 +526,10 @@ void Client::fireUserListUpdated(const OnlineUserList& userList)
 	}
 }
 
-void Client::fireUserUpdated(const OnlineUserPtr& aUser)
+void Client::fireUserUpdated(const OnlineUserPtr& user)
 {
 	if (!ClientManager::isBeforeShutdown())
-	{
-		fire(ClientListener::UserUpdated(), aUser);
-	}
+		fire(ClientListener::UserUpdated(), user);
 }
 
 void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
@@ -647,10 +645,10 @@ unsigned Client::searchInternal(const SearchParam& sp)
 	return 0;
 }
 
-void Client::onDataLine(const string& aLine) noexcept
+void Client::onDataLine(const string& line) noexcept
 {
 	updateActivityL();
-	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(aLine, DebugTask::HUB_IN, getIpPort());
+	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(line, DebugTask::HUB_IN, getIpPort());
 }
 
 void Client::on(Second, uint64_t tick) noexcept
@@ -720,11 +718,11 @@ void Client::on(Second, uint64_t tick) noexcept
 }
 
 #if 0 // Not used
-OnlineUserPtr Client::getUser(const UserPtr& aUser)
+OnlineUserPtr Client::getUser(const UserPtr& user)
 {
 	// for generic client, use ClientManager, but it does not correctly handle ClientManager::me
 	ClientManager::LockInstanceOnlineUsers lockedInstance;
-	return lockedInstance->getOnlineUserL(aUser);
+	return lockedInstance->getOnlineUserL(user);
 }
 #endif
 
