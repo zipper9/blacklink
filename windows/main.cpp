@@ -269,8 +269,9 @@ BOOL setProcessDPIAware()
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	ASSERT_MAIN_THREAD_INIT();
+	SetErrorMode(SEM_FAILCRITICALERRORS);
 	CompatibilityManager::init();
-	
+
 #ifndef _DEBUG
 	SingleInstance dcapp(_T("{BLDC-C8052503-235C-486A-A7A2-1D614A9A4242}"));
 #else
