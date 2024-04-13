@@ -4,6 +4,7 @@
 #include "BackingStore.h"
 #include "WinUtil.h"
 #include "UxThemeLib.h"
+#include "../client/SysVersion.h"
 #include <vssym32.h>
 
 #define UX UxThemeLib::instance
@@ -72,7 +73,14 @@ SearchBoxCtrl::SearchBoxCtrl()
 	textHeight = -1;
 	iconSpace = 4;
 	backingStore = nullptr;
+#ifdef OSVER_WIN_XP
+	if (SysVersion::isOsVistaPlus())
+		flags = FLAG_ENABLE_ANIMATION;
+	else
+		flags = 0;
+#else
 	flags = FLAG_ENABLE_ANIMATION;
+#endif
 	notifMask = NOTIF_RETURN | NOTIF_TAB | NOTIF_ESCAPE;
 	for (int i = 0; i < MAX_BRUSHES; i++)
 		hBrush[i] = nullptr;

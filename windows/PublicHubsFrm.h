@@ -22,10 +22,8 @@
 #include "FlatTabCtrl.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
+#include "SearchBoxCtrl.h"
 #include "../client/HublistManager.h"
-
-#define HUB_FILTER_MESSAGE_MAP 8
-#define HUB_LIST_MESSAGE_MAP 10
 
 class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, IDC_PUBLIC_HUBS>,
@@ -78,6 +76,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(WM_NEXTDLGCTL, onNextDlgCtl)
+		MESSAGE_HANDLER(WMU_RETURN, onFilterReturn)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_FILTER_FOCUS, onFilterFocus)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
@@ -95,13 +95,11 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_DBLCLK, onDoubleClickHublist)
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, onCustomDraw)
 		COMMAND_HANDLER(IDC_PUB_LIST_DROPDOWN, CBN_SELCHANGE, onListSelChanged)
+		COMMAND_HANDLER(IDC_FILTER_SEL, CBN_SELCHANGE, onFilterSelChange)
+		COMMAND_CODE_HANDLER(EN_CHANGE, onFilterChanged)
 		CHAIN_MSG_MAP(baseClass)
-		ALT_MSG_MAP(HUB_LIST_MESSAGE_MAP)
-		ALT_MSG_MAP(HUB_FILTER_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
 		END_MSG_MAP()
 		
-		LRESULT onFilterChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickHublist(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
@@ -119,7 +117,11 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		LRESULT onOpenFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
+		LRESULT onFilterSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
+		LRESULT onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
+		LRESULT onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -201,12 +203,9 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CStatusBarCtrl ctrlStatus;
 		CButton ctrlConfigure;
 		CButton ctrlRefresh;
-		CButton ctrlLists;	
-		CButton ctrlFilterDesc;
-		CEdit ctrlFilter;
+		SearchBoxCtrl ctrlFilter;
 		OMenu copyMenu;
 		
-		CContainedWindow filterContainer;
 		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
 		TypedListViewCtrl<HubInfo> ctrlHubs;
@@ -214,15 +213,11 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 
 		int xdu, ydu;
 		int buttonWidth, buttonHeight;
-		int comboHeight;
-		int editHeight;
-		int boxHeight;
-		int groupBoxOffset;
+		int minComboWidth, comboHeight;
+		int filterWidth;
 		int horizOffset, vertOffset;
-		int margin;
+		int horizSpace, smallHorizSpace;
 
-		CContainedWindow listContainer;
-		
 		vector<HublistManager::HubListInfo> hubLists;
 		uint64_t selectedHubList;
 		string filter; // converted to lowercase

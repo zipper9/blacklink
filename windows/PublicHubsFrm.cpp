@@ -95,9 +95,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::HUB_NETWORK
 };
 
-PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
-	filterContainer(WC_EDIT, this, HUB_FILTER_MESSAGE_MAP),
-	listContainer(WC_LISTVIEW, this, HUB_LIST_MESSAGE_MAP)
+PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0)
 {
 	ctrlHubs.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlHubs.setColumnFormat(COLUMN_USERS, LVCFMT_RIGHT);
@@ -118,10 +116,11 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
-	
+	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
+
 	int w[3] = { 0, 0, 0 };
 	ctrlStatus.SetParts(3, w);
-	
+
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
 	                WS_EX_CLIENTEDGE, IDC_HUBLIST);
@@ -137,22 +136,6 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetImageList(g_otherImage.getIconList(), LVSIL_SMALL);
 
-	ctrlFilterDesc.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | BS_GROUPBOX, WS_EX_TRANSPARENT);
-	ctrlFilterDesc.SetWindowText(CTSTRING(FILTER));
-	ctrlFilterDesc.SetFont(Fonts::g_systemFont);
-
-	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
-	filterContainer.SubclassWindow(ctrlFilter.m_hWnd);
-	ctrlFilter.SetFont(Fonts::g_systemFont);
-
-	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
-	                     WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
-	ctrlFilterSel.SetFont(Fonts::g_systemFont, FALSE);
-
-	ctrlLists.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | BS_GROUPBOX, WS_EX_TRANSPARENT);
-	ctrlLists.SetFont(Fonts::g_systemFont);
-	ctrlLists.SetWindowText(CTSTRING(CONFIGURED_HUB_LISTS));
-
 	ctrlPubLists.Create(m_hWnd, rcDefault, NULL,
 	                    WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_HSCROLL |
 	                    WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE, IDC_PUB_LIST_DROPDOWN);
@@ -166,6 +149,17 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlRefresh.SetWindowText(CTSTRING(REFRESH));
 	ctrlRefresh.SetFont(Fonts::g_systemFont);
 
+	ctrlFilter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_TABSTOP, 0, IDC_FILTER_BOX);
+	ctrlFilter.setHint(TSTRING(FILTER_HUBS_HINT));
+	ctrlFilter.SetFont(Fonts::g_systemFont);
+	ctrlFilter.setBitmap(g_iconBitmaps.getBitmap(IconBitmaps::FILTER, 0));
+	ctrlFilter.setCloseBitmap(g_iconBitmaps.getBitmap(IconBitmaps::CLEAR_SEARCH, 0));
+	ctrlFilter.setNotifMask(SearchBoxCtrl::NOTIF_RETURN | SearchBoxCtrl::NOTIF_TAB);
+
+	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
+	                     WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILTER_SEL);
+	ctrlFilterSel.SetFont(Fonts::g_systemFont, FALSE);
+
 	// populate the filter list with the column names
 	for (int j = 0; j < COLUMN_LAST; j++)
 		ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
@@ -176,7 +170,7 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.SetFocus();
 
 	HublistManager *hublistManager = HublistManager::getInstance();
-	
+
 	hublistManager->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	ClientManager::getInstance()->addListener(this);
@@ -383,77 +377,79 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		ctrlStatus.SetParts(3, w);
 	}
 
+	const int buttonOffset = 1;
+
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
-		editHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
+		comboHeight = WinUtil::getComboBoxHeight(ctrlPubLists, nullptr);
 		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
-		int comboHeight = WinUtil::getComboBoxHeight(ctrlPubLists, nullptr);
-		buttonHeight = comboHeight;
-		boxHeight = buttonHeight + WinUtil::dialogUnitsToPixelsY(16, ydu);
-		groupBoxOffset = WinUtil::dialogUnitsToPixelsY(10, ydu);
-		margin = WinUtil::dialogUnitsToPixelsX(4, xdu);
+		buttonHeight = comboHeight + 2*buttonOffset;
+		filterWidth = WinUtil::dialogUnitsToPixelsX(110, xdu);
+		minComboWidth = WinUtil::dialogUnitsToPixelsX(90, xdu);
+		smallHorizSpace = WinUtil::dialogUnitsToPixelsX(2, xdu);
+		horizSpace = WinUtil::dialogUnitsToPixelsX(8, xdu);
 		horizOffset = WinUtil::dialogUnitsToPixelsX(2, xdu);
-		vertOffset = WinUtil::dialogUnitsToPixelsY(2, ydu);
+		vertOffset = WinUtil::dialogUnitsToPixelsY(3, ydu);
 	}
 
-	static const int expandedComboHeight = 140;
-	int panelHeight = boxHeight + 2*vertOffset;
+	int panelHeight = comboHeight + 2*vertOffset;
+	const int fixedWidth = minComboWidth + filterWidth + horizSpace + 3*smallHorizSpace+ 2*buttonWidth;
+	const int minWidth = fixedWidth + minComboWidth + 2*horizOffset;
+
+	if (rect.right - rect.left < minWidth)
+		panelHeight = 0;
 
 	// listview
 	CRect rc = rect;
 	rc.bottom -= panelHeight;
 	ctrlHubs.MoveWindow(rc);
 
-	// filter box
-	rc = rect;
-	rc.top = rc.bottom - panelHeight + vertOffset;
-	rc.bottom = rc.top + boxHeight;
-	rc.right -= buttonWidth + 2*margin;
-	rc.right -= ((rc.right - rc.left) / 2) + 1;
-	int filterBoxRight = rc.right;
-	ctrlFilterDesc.MoveWindow(rc);
+	if (panelHeight)
+	{
+		const int comboExpandedHeight = WinUtil::dialogUnitsToPixelsY(120, ydu);
 
-	// filter edit
-	rc.top += groupBoxOffset;
-	rc.bottom = rc.top + editHeight;
-	rc.left += margin;
-	rc.right -= ((rc.right - rc.left - horizOffset) / 3);
-	ctrlFilter.MoveWindow(rc);
+		// lists dropdown
+		rc.top = rect.bottom - panelHeight + vertOffset;
+		rc.left = rect.left + horizOffset;
+		rc.bottom = rc.top + comboExpandedHeight;
+		rc.right = rect.right - (horizOffset + fixedWidth);
+		ctrlPubLists.SetWindowPos(nullptr, &rc, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-	// filter sel
-	rc.bottom += expandedComboHeight;
-	rc.left = rc.right + horizOffset;
-	rc.right = filterBoxRight - margin;
-	ctrlFilterSel.MoveWindow(rc);
+		// configure button
+		rc.left = rc.right + smallHorizSpace;
+		rc.right = rc.left + buttonWidth;
+		rc.top -= buttonOffset;
+		rc.bottom = rc.top + buttonHeight;
+		ctrlConfigure.SetWindowPos(nullptr, &rc, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-	// lists box
-	rc = rect;
-	rc.top = rc.bottom - panelHeight + vertOffset;
-	rc.bottom = rc.top + boxHeight;
-	rc.right -= buttonWidth + 2*margin;
-	rc.left += ((rc.right - rc.left) / 2) + 1;
-	int listsBoxLeft = rc.left;
-	ctrlLists.MoveWindow(rc);
+		// refresh button
+		rc.left = rc.right + smallHorizSpace;
+		rc.right = rc.left + buttonWidth;
+		ctrlRefresh.SetWindowPos(nullptr, &rc, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-	// configure button
-	rc.top += groupBoxOffset;
-	rc.right -= margin;
-	rc.left = rc.right - buttonWidth;
-	rc.bottom = rc.top + buttonHeight;
-	ctrlConfigure.MoveWindow(rc);
+		// filter edit
+		rc.top += buttonOffset;
+		rc.bottom = rc.top + comboHeight;
+		rc.left = rc.right + horizSpace;
+		rc.right = rc.left + filterWidth;
+		ctrlFilter.SetWindowPos(nullptr, &rc, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+		ctrlFilter.Invalidate(); // TODO: check SetWindowPos flags to invalidate it
 
-	// lists dropdown
-	rc.bottom = rc.top + expandedComboHeight;
-	rc.right = rc.left - horizOffset;
-	rc.left = listsBoxLeft + margin;
-	ctrlPubLists.MoveWindow(rc);
-
-	// refresh button
-	rc.right = rect.right - margin;
-	rc.left = rc.right - buttonWidth;
-	rc.bottom = rc.top + buttonHeight;
-	ctrlRefresh.MoveWindow(rc);
+		// filter sel
+		rc.left = rc.right + smallHorizSpace;
+		rc.right = rc.left + minComboWidth;
+		rc.bottom = rc.top + comboExpandedHeight;
+		ctrlFilterSel.SetWindowPos(nullptr, &rc, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+	}
+	else
+	{
+		ctrlPubLists.ShowWindow(SW_HIDE);
+		ctrlConfigure.ShowWindow(SW_HIDE);
+		ctrlRefresh.ShowWindow(SW_HIDE);
+		ctrlFilter.ShowWindow(SW_HIDE);
+		ctrlFilterSel.ShowWindow(SW_HIDE);
+	}
 }
 
 void PublicHubsFrame::openHub(int ind)
@@ -653,22 +649,55 @@ void PublicHubsFrame::updateStatus()
 	ctrlStatus.SetText(2, (TSTRING(USERS) + _T(": ") + Util::toStringT(users)).c_str());
 }
 
-LRESULT PublicHubsFrame::onFilterChar(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT PublicHubsFrame::onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	tstring tmp;
-	WinUtil::getWindowText(ctrlFilter, tmp);
-	Text::makeLower(tmp);
-	filter = Text::fromT(tmp);
-	if (wParam == VK_RETURN)
+	MSG msg = {};
+	msg.hwnd = ctrlFilter.m_hWnd;
+	msg.message = WM_KEYDOWN;
+	msg.wParam = VK_TAB;
+	IsDialogMessage(&msg);
+	return 0;
+}
+
+LRESULT PublicHubsFrame::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int index = ctrlPubLists.GetCurSel();
+	if (index < 0) return 0;
+
+	if (!BOOLSETTING(FILTER_ENTER))
 	{
-		int index = ctrlPubLists.GetCurSel();
-		if (index < 0) return 0;
+		tstring text = ctrlFilter.getText();
+		Text::makeLower(text);
+		filter = Text::fromT(text);
 		updateList(hubLists[index].list);
 	}
-	else
+	return 0;
+}
+
+LRESULT PublicHubsFrame::onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	int index = ctrlPubLists.GetCurSel();
+	if (index < 0) return 0;
+
+	if (BOOLSETTING(FILTER_ENTER))
 	{
-		bHandled = FALSE;
+		tstring text = ctrlFilter.getText();
+		Text::makeLower(text);
+		filter = Text::fromT(text);
+		updateList(hubLists[index].list);
 	}
+	return 0;
+}
+
+LRESULT PublicHubsFrame::onFilterSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/)
+{
+	int index = ctrlPubLists.GetCurSel();
+	if (index < 0) return 0;
+
+	tstring text = ctrlFilter.getText();
+	Text::makeLower(text);
+	filter = Text::fromT(text);
+	updateList(hubLists[index].list);
 	return 0;
 }
 
