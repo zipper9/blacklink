@@ -4,6 +4,7 @@
 
 #ifdef OSVER_WIN_XP
 #include "../client/Util.h"
+#include "../client/SysVersion.h"
 
 static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData)
 {
@@ -16,7 +17,7 @@ static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPAR
 	return 0;
 }
 
-bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID*)
+static bool browseDirectoryLegacy(tstring& target, HWND owner)
 {
 	TCHAR buf[MAX_PATH];
 	BROWSEINFO bi = {0};
@@ -39,7 +40,7 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID*)
 	return result;
 }
 
-bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
+static bool browseFileLegacy(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt)
 {
 	OPENFILENAME ofn = { 0 }; // common dialog box structure
 	target = Text::toT(Util::validateFileName(Text::fromT(target)));
@@ -75,7 +76,7 @@ bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& 
 	return false;
 }
 
-#else
+#endif
 
 static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTIONS options)
 {
@@ -85,7 +86,7 @@ static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTION
 	return SUCCEEDED(fileOpen->SetOptions(fos));
 }
 
-bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID* id)
+static bool browseDirectoryNew(tstring& target, HWND owner, const GUID* id)
 {
 	bool result = false;
 	IFileOpenDialog *pFileOpen = nullptr;
@@ -145,7 +146,7 @@ static void setFolder(IFileOpenDialog* fileOpen, const tstring& path)
 	}
 }
 
-bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
+static bool browseFileNew(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
 {
 	bool result = false;
 	IFileOpenDialog *pFileOpen = nullptr;
@@ -215,4 +216,20 @@ bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& 
 	return result;
 }
 
+bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
+{
+#ifdef OSVER_WIN_XP
+	if (!SysVersion::isOsVistaPlus())
+		return browseFileLegacy(target, owner, save, initialDir, types, defExt);
 #endif
+	return browseFileNew(target, owner, save, initialDir, types, defExt, id);
+}
+
+bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID* id)
+{
+#ifdef OSVER_WIN_XP
+	if (!SysVersion::isOsVistaPlus())
+		return browseDirectoryLegacy(target, owner);
+#endif
+	return browseDirectoryNew(target, owner, id);
+}
