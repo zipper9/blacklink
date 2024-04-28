@@ -375,6 +375,7 @@ static const char* settingTags[] =
 	"CopyExistingMaxSize",
 	"UseMemoryMappedFiles",
 	"SearchMagnetSources",
+	"AutoMatchDownloadedLists",
 
 	// Slow sources auto disconnect
 	"AutoDisconnectEnable",
@@ -1025,6 +1026,7 @@ void SettingsManager::setDefaults()
 	setDefault(COPY_EXISTING_MAX_SIZE, 100);
 	setDefault(USE_MEMORY_MAPPED_FILES, TRUE);
 	setDefault(SEARCH_MAGNET_SOURCES, TRUE);
+	setDefault(AUTO_MATCH_DOWNLOADED_LISTS, TRUE);
 
 	// Slow sources auto disconnect
 	setDefault(AUTO_DISCONNECT_SPEED, 5);

@@ -3331,21 +3331,24 @@ int ThreadedDirectoryListing::run()
 			case MODE_LOAD_FILE:
 			{
 				dcassert(!filePath.empty());
+				DirectoryListing* dl = window->dl.get();
 				const string filename = Util::getFileName(filePath);
-				const UserPtr& user = window->dl->getUser();
+				const UserPtr& user = dl->getUser();
 				window->updateWindowTitle();
-				window->dl->loadFile(filePath, this, user->isMe());
+				dl->loadFile(filePath, this, user->isMe());
 				window->updateWindowTitle();
 				auto adls = ADLSearchManager::getInstance();
 				if (!adls->isEmpty())
 				{
 					window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ADL_SEARCH);
-					adls->matchListing(window->dl.get(), &window->abortFlag);
+					adls->matchListing(dl, &window->abortFlag);
 					if (window->abortFlag) throw AbortException("ADL search aborted");
 				}
-				if (window->getDclstFlag() && window->dl->getIncludeSelf())
-					window->dl->addDclstSelf(filePath, window->abortFlag);
-				window->refreshTree(window->dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
+				if (!dl->isOwnList() && BOOLSETTING(AUTO_MATCH_DOWNLOADED_LISTS))
+					QueueManager::getInstance()->matchListing(*dl);
+				if (window->getDclstFlag() && dl->getIncludeSelf())
+					dl->addDclstSelf(filePath, window->abortFlag);
+				window->refreshTree(dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}
 			case MODE_SUBTRACT_FILE:

@@ -1172,6 +1172,7 @@
     <Image Include="res\Editor.png" />
     <Image Include="res\FavUserStates.png" />
     <Image Include="res\FileList.png" />
+    <Image Include="res\Filter.png" />
     <Image Include="res\Gender.png" />
     <Image Include="res\Hub.png" />
     <Image Include="res\MediaToolbar16.png" />

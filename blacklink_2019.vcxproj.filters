@@ -1228,6 +1228,7 @@
     <Image Include="res\Navigation.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="res\Filter.png" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="windows\resources.rc">

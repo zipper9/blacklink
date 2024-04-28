@@ -931,6 +931,7 @@
 #define IDC_FINISHED_DB_UP              2025
 #define IDC_FINISHED_DB_DOWN            2026
 #define IDC_SHOW_MY_UPLOADS             2027
+#define IDC_AUTO_MATCH_LISTS            2028
 #define IDC_SPEEDLIMITDLG_SLIDER        2044
 #define IDC_SPEEDLIMITDLG_EDIT          2045
 #define IDC_SECURITY_GROUP              2046

@@ -1256,6 +1256,7 @@ enum Strings   // @DontAdd
 	SETTINGS_SHOW_PASSWORDS, // "Show passwords"
 	SETTINGS_HIDE_PASSWORDS, // "Hide passwords"
 	SETTINGS_SEARCH_MAGNET_SOURCES, // "Automatically search for sources when downloading magnets"
+	SETTINGS_AUTO_MATCH_LISTS, // "Automatically match downloaded file lists against the queue"
 	SETTINGS_MEDIA_INFO_PAGE, // "Media information"
 	SETTINGS_MEDIA_INFO_ENABLE, // "Use MediaInfo library to get properties of media files"
 	SETTINGS_MEDIA_INFO_PARSE_AUDIO, // "Parse audio files"
