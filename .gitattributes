@@ -1,0 +1,13 @@
+boost/* linguist-vendored
+bzip2/* linguist-vendored
+lmdb/* linguist-vendored
+lua/* linguist-vendored
+maxminddb/* linguist-vendored
+miniupnpc/* linguist-vendored
+nasm/* linguist-vendored
+natpmp/*  linguist-vendored
+openssl/* linguist-vendored
+selene/* linguist-vendored
+sqlite/* linguist-vendored
+wtl/* linguist-vendored
+zlib/* linguist-vendored
