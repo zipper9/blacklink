@@ -55,6 +55,7 @@ uint64_t HttpClient::addRequest(const HttpClient::Request& req)
 	rs->outputPath = req.outputPath;
 	rs->userAgent = req.userAgent;
 	rs->closeConn = req.closeConn;
+	rs->noCache = req.noCache;
 	rs->ipVersion = req.ipVersion;
 	rs->maxRespBodySize = req.maxRespBodySize;
 	rs->maxErrorBodySize = req.maxErrorBodySize;

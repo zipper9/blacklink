@@ -100,7 +100,7 @@ bool HttpConnection::startRequest(uint64_t reqId, int type, const string& url, i
 bool HttpConnection::checkUrl(const string& url)
 {
 	Util::ParsedUrl p;
-	Util::decodeUrl(url, p, protoHttp);	
+	Util::decodeUrl(url, p, protoHttp);
 	return !p.host.empty() && p.port && checkProtocol(p.protocol);
 }
 
@@ -134,7 +134,7 @@ void HttpConnection::prepareRequest(int type) noexcept
 	{
 		Util::decodeUrl(proxyServer, p, protoHttp);
 		proxyServerHost = std::move(p.host);
-		connectPort = p.port;
+		connectPort = proxyServerPort = p.port;
 		connectServer = proxyServerHost;
 		requestUri = currentUrl;
 		if (path.empty())
@@ -156,6 +156,11 @@ void HttpConnection::prepareRequest(int type) noexcept
 		}
 	}
 
+	if (p.protocol == protoHttps)
+		reqFlags |= FLAG_HTTPS;
+	else
+		reqFlags &= ~FLAG_HTTPS;
+
 	if (socket)
 	{
 		sendRequest();
@@ -167,7 +172,7 @@ void HttpConnection::prepareRequest(int type) noexcept
 
 	try
 	{
-		bool secure = p.protocol == protoHttps;
+		bool secure = (reqFlags & FLAG_HTTPS) != 0;
 		if (!connectPort) connectPort = secure ? 443 : 80;
 		socket->connect(connectServer, connectPort, secure, true, true, Socket::PROTO_HTTP);
 		socket->start();
@@ -207,14 +212,20 @@ void HttpConnection::sendRequest() noexcept
 	req.setUri(requestUri);
 
 	if (!userAgent.empty()) req.addHeader(Http::HEADER_USER_AGENT, userAgent);
+	string host;
 	if (proxyServer.empty())
 	{
-		req.addHeader(Http::HEADER_HOST, server);
+		host = server;
+		int defPort = (reqFlags & FLAG_HTTPS) ? 443 : 80;
+		if (port != defPort) host += ':' + Util::toString(port);
+		req.addHeader(Http::HEADER_HOST, host);
 		req.addHeader(Http::HEADER_CONNECTION, (reqFlags & FLAG_CLOSE_CONN) ? "close" : "keep-alive");
 	}
 	else
 	{
-		req.addHeader(Http::HEADER_HOST, proxyServerHost);
+		host = proxyServerHost;
+		if (proxyServerPort) host += ':' + Util::toString(proxyServerPort);
+		req.addHeader(Http::HEADER_HOST, host);
 		req.addHeader(Http::HEADER_PROXY_CONNECTION, (reqFlags & FLAG_CLOSE_CONN) ? "close" : "keep-alive");
 	}
 	if (reqFlags & FLAG_NO_CACHE) req.addHeader(Http::HEADER_CACHE_CONTROL, "no-cache");

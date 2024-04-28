@@ -42,7 +42,8 @@ public:
 	enum Flags
 	{
 		FLAG_CLOSE_CONN = 1,
-		FLAG_NO_CACHE   = 2
+		FLAG_NO_CACHE   = 2,
+		FLAG_HTTPS      = 4
 	};
 
 	HttpConnection(int id, HttpClientCallback* client): id(id), client(client), receivingData(false) {}
@@ -101,6 +102,7 @@ private:
 	string path;
 	string query;
 	uint16_t port = 80;
+	uint16_t proxyServerPort = 0;
 
 	int64_t bodySize = -1;
 	int64_t receivedBodySize = 0;

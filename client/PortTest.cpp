@@ -12,7 +12,7 @@
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
 static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
-static const string userAgent = "FlylinkDC++ r504 build 22345";
+static const string userAgent = "FlylinkDC++ r600-x64 build 22434";
 
 PortTest g_portTest;
 

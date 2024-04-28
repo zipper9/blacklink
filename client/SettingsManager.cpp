@@ -836,7 +836,7 @@ void SettingsManager::setDefaults()
 	
 	// URLs
 	setDefault(HUBLIST_SERVERS, HUBLIST_SERVERS_DEFAULT);
-	setDefault(URL_PORT_TEST, "http://test2.fly-server.ru:37015/fly-test-port");
+	setDefault(URL_PORT_TEST, "http://media.fly-server.ru:37015/fly-test-port");
 	setDefault(URL_GET_IP, URL_GET_IP_DEFAULT);
 	setDefault(URL_GET_IP6, URL_GET_IP6_DEFAULT);
 	setDefault(URL_DHT_BOOTSTRAP, "http://strongdc.sourceforge.net/bootstrap/");
