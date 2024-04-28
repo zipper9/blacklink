@@ -22,12 +22,9 @@
 
 #ifdef _WIN32
 #include <process.h>
+#include "CompatibilityManager.h"
 #else
 #include <errno.h>
-#endif
-
-#if !defined(USE_WIN_THREAD_NAME) && defined(_WIN32) && defined(_DEBUG) && !defined(OSVER_WIN_XP)
-#define USE_WIN_THREAD_NAME
 #endif
 
 #ifdef USE_WIN_THREAD_NAME
@@ -42,17 +39,17 @@ typedef struct tagTHREADNAME_INFO
 } THREADNAME_INFO;
 #pragma pack(pop)
 
-static void SetThreadName(DWORD threadId, const char* threadName)
+static void setThreadName(DWORD threadId, const char* threadName)
 {
 	THREADNAME_INFO info;
 	info.dwType = 0x1000;
 	info.szName = threadName;
 	info.dwThreadID = threadId;
 	info.dwFlags = 0;
-	
+
 	__try
 	{
-		RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+		RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*) &info);
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
@@ -98,8 +95,11 @@ void Thread::start(unsigned stackSize, const char* name)
 	else
 	{
 		threadHandle = h;
+		if (name)
 #ifdef USE_WIN_THREAD_NAME
-		if (name) SetThreadName(GetThreadId(h), name);
+			setThreadName((DWORD) -1, name);
+#else
+			CompatibilityManager::setThreadName(h, name);
 #endif
 	}
 }

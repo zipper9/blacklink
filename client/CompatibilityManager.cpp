@@ -651,3 +651,19 @@ uint64_t CompatibilityManager::getTickCount()
 	return GetTickCount64();
 #endif
 }
+
+bool CompatibilityManager::setThreadName(HANDLE h, const char* name)
+{
+	typedef HRESULT (*fnSetThreadDescription)(HANDLE, const WCHAR*);
+	static bool resolved;
+	static fnSetThreadDescription pSetThreadDescription;
+	if (!resolved)
+	{
+		HMODULE kernel32lib = GetModuleHandle(_T("kernel32"));
+		if (kernel32lib) pSetThreadDescription = (fnSetThreadDescription) GetProcAddress(kernel32lib, "SetThreadDescription");
+		resolved = true;
+	}
+	if (!pSetThreadDescription) return false;
+	wstring wsName = Text::utf8ToWide(name);
+	return SUCCEEDED(pSetThreadDescription(h, wsName.c_str()));
+}

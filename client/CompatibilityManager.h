@@ -102,6 +102,7 @@ class CompatibilityManager
 		static string getCPUInfo();
 		static uint64_t getTickCount();
 		static uint64_t getSysUptime() { return getTickCount() / 1000; }
+		static bool setThreadName(HANDLE h, const char* name);
 };
 
 #endif // _WIN32

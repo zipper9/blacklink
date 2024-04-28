@@ -43,6 +43,8 @@ static const size_t MAX_TYPED_HISTORY = 64;
 
 static const int STATUS_PART_PADDING = 12;
 
+static const char* THREAD_NAME = "DirectoryListingLoader";
+
 DirectoryListingFrame::FrameMap DirectoryListingFrame::activeFrames;
 
 const int DirectoryListingFrame::columnId[] =
@@ -295,7 +297,7 @@ void DirectoryListingFrame::loadFile(const tstring& name, const tstring& dir)
 	loading = true;
 	try
 	{
-		tdl->start(0);
+		tdl->start(0, THREAD_NAME);
 	}
 	catch (const ThreadException& e)
 	{
@@ -315,7 +317,7 @@ void DirectoryListingFrame::loadXML(const string& txt)
 	loading = true;
 	try
 	{
-		tdl->start(0);
+		tdl->start(0, THREAD_NAME);
 	}
 	catch (const ThreadException& e)
 	{
@@ -1424,7 +1426,7 @@ LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD wID, HWND /
 	startLoading();
 	ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_SUBTRACT_FILE);
 	tdl->setFile(selectedFile);
-	tdl->start();
+	tdl->start(0, THREAD_NAME);
 	return 0;
 }
 
@@ -1436,7 +1438,7 @@ LRESULT DirectoryListingFrame::onListCompare(WORD /*wNotifyCode*/, WORD /*wID*/,
 	startLoading();
 	ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_COMPARE_FILE);
 	tdl->setFile(Text::fromT(file));
-	tdl->start();
+	tdl->start(0, THREAD_NAME);
 	return 0;
 }
 
