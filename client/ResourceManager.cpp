@@ -85,7 +85,9 @@ bool ResourceManager::loadLanguage(const string& filePath)
 	}
 	catch (Exception& ex)
 	{
+#if 0
 		LogManager::message("Error loading language file " + filePath + ": " + ex.getError(), false);
+#endif
 		result = false;
 	}
 #ifdef _UNICODE

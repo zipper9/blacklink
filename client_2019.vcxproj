@@ -595,6 +595,7 @@
     <ClCompile Include="client\OnlineUser.cpp" />
     <ClCompile Include="client\ParamExpander.cpp" />
     <ClCompile Include="client\PortTest.cpp" />
+    <ClCompile Include="client\ProfileLocker.cpp" />
     <ClCompile Include="client\QueueItem.cpp" />
     <ClCompile Include="client\QueueManager.cpp" />
     <ClCompile Include="client\Random.cpp" />
@@ -796,6 +797,7 @@
     <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />
     <ClInclude Include="client\PreviewApplication.h" />
+    <ClInclude Include="client\ProfileLocker.h" />
     <ClInclude Include="client\Random.h" />
     <ClInclude Include="client\RequestCounter.h" />
     <ClInclude Include="client\Resolver.h" />

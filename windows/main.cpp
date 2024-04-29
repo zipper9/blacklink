@@ -34,6 +34,8 @@
 #include "../client/AppPaths.h"
 #include "../client/FormatUtil.h"
 #include "../client/SysVersion.h"
+#include "../client/ProfileLocker.h"
+#include "../client/PathUtil.h"
 #include "SplashWindow.h"
 #include "CommandLine.h"
 #include "KnownClients.h"
@@ -322,8 +324,23 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	LogManager::init();
 
 	SettingsManager::loadLanguage();
-	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
+	SettingsManager::getInstance()->setDefaults(); // Allow localized defaults in string settings
 	if (BOOLSETTING(APP_DPI_AWARE)) setProcessDPIAware();
+
+	ProfileLocker profileLocker;
+	profileLocker.setPath(Util::getConfigPath());
+	if (!profileLocker.lock())
+	{
+		if (Util::isLocalMode())
+		{
+			tstring path = Text::toT(Util::getConfigPath());
+			Util::removePathSeparator(path);
+			MessageBox(NULL, CTSTRING_F(PROFILE_LOCKED, path), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+		}
+		else
+			MessageBox(NULL, CTSTRING(ALREADY_RUNNING_LOCKED), getAppNameVerT().c_str(), MB_ICONINFORMATION | MB_OK);
+		return 1;
+	}
 
 	TimerManager::newInstance();
 	ClientManager::newInstance();
@@ -336,7 +353,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		bool hasAction = !cmdLine.openFile.empty() || !cmdLine.openMagnet.empty() || !cmdLine.openHub.empty() || !cmdLine.shareFolder.empty();
 		if (!cmdLine.multipleInstances && !hasAction)
 		{
-			if (MessageBox(NULL, CTSTRING(ALREADY_RUNNING), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
+			if (MessageBox(NULL, CTSTRING(ALREADY_RUNNING_NOT_LOCKED), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 				multiple = true;
 		}
 		else

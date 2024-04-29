@@ -427,6 +427,9 @@
     <ClCompile Include="client\ShareManagerItems.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\ProfileLocker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1057,6 +1060,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\ShareManagerItems.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\ProfileLocker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
