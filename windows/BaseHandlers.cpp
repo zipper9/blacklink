@@ -29,9 +29,10 @@ class WebSearchParamExpander : public Util::ParamExpander
 	public:
 		WebSearchParamExpander(const string& query) : query(query) {}
 
-		virtual const string& expandBracket(const string& param) noexcept
+		virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept
 		{
-			return param == "s" ? query : Util::emptyString;
+			if (endPos == pos + 1 && str[pos] == 's') return query;
+			return Util::emptyString;
 		}
 
 		virtual const string& expandCharSequence(const string& str, string::size_type pos, string::size_type& usedChars) noexcept
@@ -48,7 +49,6 @@ class WebSearchParamExpander : public Util::ParamExpander
 	private:
 		const string query;
 };
-
 
 int InternetSearchBaseHandler::appendWebSearchItems(OMenu& menu, SearchUrl::Type type, bool subMenu, ResourceManager::Strings subMenuTitle)
 {

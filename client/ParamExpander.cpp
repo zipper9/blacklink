@@ -58,7 +58,7 @@ string Util::formatParams(const string& s, ParamExpander* ex, bool filter) noexc
 			pos++;
 			auto endPos = s.find(']', pos);
 			if (endPos == string::npos) break;
-			const string& value = ex->expandBracket(s.substr(pos, endPos - pos));
+			const string& value = ex->expandBracket(s, pos, endPos);
 			if (filter)
 				appendFiltered(out, value);
 			else
@@ -248,13 +248,14 @@ const string& Util::TimeParamExpander::expandCharSequence(const string& str, str
 
 #undef FORMAT_VALUE
 
-const string& Util::TimeParamExpander::expandBracket(const string& param) noexcept
+const string& Util::TimeParamExpander::expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept
 {
 	return Util::emptyString;
 }
 
-const string& Util::MapParamExpander::expandBracket(const string& param) noexcept
+const string& Util::MapParamExpander::expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept
 {
+	string param = str.substr(pos, endPos - pos);
 	if (param.empty()) return Util::emptyString;
 	auto i = m.find(param);
 	if (i == m.end()) return Util::emptyString;

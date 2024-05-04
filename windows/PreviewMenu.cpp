@@ -65,9 +65,9 @@ void PreviewMenu::setupPreviewMenu(const string& target)
 {
 	dcassert(previewAppsSize == 0);
 	previewAppsSize = 0;
-	
+
 	const auto targetLower = Text::toLower(target);
-	
+
 	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();
 	size_t size = std::min<size_t>(lst.size(), MAX_PREVIEW_APPS);
 	for (size_t i = 0; i < size; ++i)
@@ -91,19 +91,84 @@ void PreviewMenu::setupPreviewMenu(const string& target)
 	}
 }
 
-// FIXME
-template <class string_type>
-static void AppendQuotesToPath(string_type& path)
+class PreviewParamsExpander : public Util::TimeParamExpander
 {
-	if (path.length() < 1)
-		return;
-		
-	if (path[0] != '"')
-		path = '\"' + path;
-		
-	if (path.back() != '"')
-		path += '\"';
-}
+	public:
+		PreviewParamsExpander(const string& path) :
+			TimeParamExpander(time(nullptr)),
+			path(path), dir(Util::getFilePath(path))
+		{
+		}
+
+		virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept
+		{
+			string param = str.substr(pos, endPos - pos);
+			if (param == "file") return maybeQuote(path, str, pos, endPos);
+			if (param == "dir") return maybeQuote(dir, str, pos, endPos);
+			return Util::emptyString;
+		}
+
+		const string& getDir() const { return dir; }
+
+		const string& maybeQuote(const string& subst, const string& str, string::size_type pos, string::size_type endPos)
+		{
+			char c = pos >= 3 ? str[pos-3] : 0;
+			bool hasQuotes = c == '"';
+			if (!hasQuotes)
+			{
+				c = endPos + 1 < str.length() ? str[endPos+1] : 0;
+				hasQuotes = c == '"';
+			}
+			bool insertQuotes = !hasQuotes && subst.find_first_of(" \"") != string::npos;
+			if (!hasQuotes && !insertQuotes) return subst;
+			tmp = subst;
+			escapeCommandLineParam(tmp);
+			if (insertQuotes)
+			{
+				tmp.insert(0, 1, '"');
+				tmp += '"';
+			}
+			return tmp;
+		}
+
+		static void escapeCommandLineParam(string& s)
+		{
+			string::size_type startPos = 0;
+			while (startPos < s.length())
+			{
+				string::size_type pos = s.find_first_of("\"\\", startPos);
+				if (pos == string::npos) break;
+				if (s[pos] == '\\')
+				{
+					string::size_type oldPos = pos;
+					char c = '\\';
+					for (++pos; pos < s.length(); ++pos)
+					{
+						c = s[pos];
+						if (c != '\\') break;
+					}
+					if (c == '"' || c == '\\')
+					{
+						size_t count = pos - oldPos;
+						if (c == '"') count++;
+						s.insert(oldPos, count, '\\');
+						pos += count;
+					}
+				}
+				else if (s[pos] == '"')
+				{
+					s.insert(pos, 1, '\\');
+					pos++;
+				}
+				startPos = pos + 1;
+			}
+		}
+
+	private:
+		const string path;
+		const string dir;
+		string tmp;
+};
 
 void PreviewMenu::runPreviewCommand(WORD wID, const string& file)
 {
@@ -114,20 +179,12 @@ void PreviewMenu::runPreviewCommand(WORD wID, const string& file)
 
 	const auto& application = lst[wID]->application;
 	const auto& arguments = lst[wID]->arguments;
-	StringMap fileParams;
-		
-	string dir = Util::getFilePath(file);
-	AppendQuotesToPath(dir);
-	fileParams["dir"] = dir;
+	PreviewParamsExpander ex(file);
+	string expandedArguments = Util::formatParams(arguments, &ex, false);
 
-	string quotedFile = file;
-	AppendQuotesToPath(quotedFile);
-	fileParams["file"] = quotedFile;
-	
-	string expandedArguments = Util::formatParams(arguments, fileParams, false);
 	if (BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("Running command: " + application + " " + expandedArguments, false);
-	::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(expandedArguments).c_str(), Text::toT(dir).c_str(), SW_SHOWNORMAL);
+	::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(expandedArguments).c_str(), Text::toT(ex.getDir()).c_str(), SW_SHOWNORMAL);
 }
 
 void PreviewMenu::runPreview(WORD wID, const QueueItemPtr& qi)

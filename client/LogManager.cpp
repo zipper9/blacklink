@@ -175,8 +175,9 @@ class LogMessageExpander : public Util::TimeParamExpander
 	public:	
 		LogMessageExpander(const string& msg, const string& ipPort, const string& ip, time_t t) :
 			Util::TimeParamExpander(t), msg(msg), ipPort(ipPort), ip(ip) {}
-		virtual const string& expandBracket(const string& param) noexcept override
+		virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept override
 		{
+			string param = str.substr(pos, endPos - pos);
 			if (param == "message") return msg;
 			if (param == "ipPort") return ipPort;
 			if (param == "IP" || param == "ip") return ip;

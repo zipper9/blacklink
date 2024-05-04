@@ -9,7 +9,7 @@ namespace Util
 	class ParamExpander
 	{
 		public:
-			virtual const string& expandBracket(const string& param) noexcept = 0;
+			virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept = 0;
 			virtual const string& expandCharSequence(const string& str, string::size_type pos, string::size_type& usedChars) noexcept = 0;
 	};
 
@@ -28,7 +28,7 @@ namespace Util
 
 		public:
 			TimeParamExpander(time_t t, bool useGMT = false) : t(t), useGMT(useGMT), initialized(false) {}
-			virtual const string& expandBracket(const string& param) noexcept;
+			virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept;
 			virtual const string& expandCharSequence(const string& str, string::size_type pos, string::size_type& usedChars) noexcept;
 
 		private:
@@ -42,7 +42,7 @@ namespace Util
 
 		public:
 			MapParamExpander(const StringMap& m, time_t t) : TimeParamExpander(t), m(m) {}
-			virtual const string& expandBracket(const string& param) noexcept override;
+			virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept override;
 	};
 
 	string formatParams(const string& s, ParamExpander* ex, bool filter) noexcept;

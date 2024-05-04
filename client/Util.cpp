@@ -305,10 +305,11 @@ class UserParamExpander : public Util::TimeParamExpander
 
 	public:
 		UserParamExpander(const UserPtr& user, time_t t) : TimeParamExpander(t), user(user) {}
-		virtual const string& expandBracket(const string& param) noexcept override
+		virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept override
 		{
 			if (user)
 			{
+				string param = str.substr(pos, endPos - pos);
 				if (param == "userNI")
 				{
 					value = user->getLastNick();
