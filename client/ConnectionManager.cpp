@@ -1320,7 +1320,7 @@ void ConnectionManager::processKey(UserConnection* source) noexcept
 void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd) noexcept
 {
 	string cidStr;
-	if (!cmd.getParam("ID", 0, cidStr))
+	if (!cmd.getParam(TAG('I', 'D'), 0, cidStr))
 	{
 		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_INF_MISSING, "ID missing").addParam("FL", "ID"));
 		source->disconnect();
@@ -1331,7 +1331,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 	string token;
 	if (source->isSet(UserConnection::FLAG_INCOMING))
 	{
-		if (!cmd.getParam("TO", 0, token))
+		if (!cmd.getParam(TAG('T', 'O'), 0, token))
 		{
 			source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "TO missing"));
 			putConnection(source);
@@ -1392,7 +1392,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 		return;
 	}
 
-	if (cmd.hasFlag("PM", 0))
+	if (cmd.hasFlag(TAG('P', 'M'), 0))
 		source->setFlag(UserConnection::FLAG_CCPM);
 	if (source->isSet(UserConnection::FLAG_CCPM))
 	{
@@ -1494,9 +1494,9 @@ void ConnectionManager::processMSG(UserConnection* source, const AdcCommand& cmd
 	if (cmd.getCommand() == AdcCommand::CMD_PMI)
 	{
 		string valTyping, valSeen, valQuit;
-		bool resTyping = cmd.getParam("TP", 0, valTyping);
-		bool resSeen = cmd.getParam("SN", 0, valSeen);
-		bool resQuit = cmd.getParam("QU", 0, valQuit);
+		bool resTyping = cmd.getParam(TAG('T', 'P'), 0, valTyping);
+		bool resSeen = cmd.getParam(TAG('S', 'N'), 0, valSeen);
+		bool resQuit = cmd.getParam(TAG('Q', 'U'), 0, valQuit);
 		CPMINotification info;
 		bool notify = false;
 		if (resTyping || resSeen || resQuit)

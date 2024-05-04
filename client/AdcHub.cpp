@@ -212,7 +212,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	OnlineUserPtr ou;
 	bool newUser = false;
 	string cidStr;
-	if (c.getParam("ID", 0, cidStr))
+	if (c.getParam(TAG('I', 'D'), 0, cidStr))
 	{
 		const CID cid(cidStr);
 		ou = findUser(cid);
@@ -262,7 +262,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		if (i->length() < 2)
 			continue;
 
-		switch (*(const uint16_t*)i->c_str())
+		switch (AdcCommand::toCode(i->c_str()))
 		{
 			case TAG('S', 'L'):
 			{
@@ -518,17 +518,17 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 
 	bool isPM = false;
 	string pmSID;
-	if (c.getParam("PM", 1, pmSID))
+	if (c.getParam(TAG('P', 'M'), 1, pmSID))
 	{
 		if (user->getUser()->isMe()) return;
 		isPM = true;
 	}
 
 	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), user));
-	message->thirdPerson = c.hasFlag("ME", 1);
+	message->thirdPerson = c.hasFlag(TAG('M', 'E'), 1);
 
 	string timestamp;
-	if (c.getParam("TS", 1, timestamp))
+	if (c.getParam(TAG('T', 'S'), 1, timestamp))
 		message->setTimestamp(Util::toInt64(timestamp));
 
 	if (isPM) // add PM<group-cid> as well
@@ -557,7 +557,7 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 void AdcHub::processCCPMMessage(const AdcCommand& c, const OnlineUserPtr& ou) noexcept
 {
 	dcassert(!c.getParameters().empty());
-	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), ou, nullptr, nullptr, c.hasFlag("ME", 1)));
+	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), ou, nullptr, nullptr, c.hasFlag(TAG('M', 'E'), 1)));
 	message->to = getMyOnlineUser();
 	message->replyTo = ou;
 	string response;
@@ -588,11 +588,11 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 	if (victim)
 	{
 		string tmp;
-		if (c.getParam("MS", 1, tmp))
+		if (c.getParam(TAG('M', 'S'), 1, tmp))
 		{
 			OnlineUserPtr source = nullptr;
 			string tmp2;
-			if (c.getParam("ID", 1, tmp2))
+			if (c.getParam(TAG('I', 'D'), 1, tmp2))
 			{
 				//dcassert(tmp2.size() == 39);
 				source = findUser(AdcCommand::toSID(tmp2));
@@ -604,7 +604,7 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 				tmp = victim->getIdentity().getNick() + " was kicked: " + tmp;
 			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_KICK_MSG);
 		}
-		bool disconnectFlag = BOOLSETTING(USE_DI_PARAM) ? c.getParam("DI", 1, tmp) : false;
+		bool disconnectFlag = BOOLSETTING(USE_DI_PARAM) ? c.getParam(TAG('D', 'I'), 1, tmp) : false;
 		putUser(s, disconnectFlag);
 	}
 
@@ -612,10 +612,10 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 	{
 		// this QUI is directed to us
 		string tmp;
-		if (c.getParam("TL", 1, tmp))
+		if (c.getParam(TAG('T', 'L'), 1, tmp))
 		{
 			if (tmp == "-1")
-			{				
+			{
 				if ((lastErrorCode == AdcCommand::ERROR_NICK_INVALID || lastErrorCode == AdcCommand::ERROR_NICK_TAKEN) && hasRandomTempNick())
 					setReconnDelay(30);
 				else
@@ -627,11 +627,11 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 				setReconnDelay(Util::toUInt32(tmp));
 			}
 		}
-		if (!victim && c.getParam("MS", 1, tmp))
+		if (!victim && c.getParam(TAG('M', 'S'), 1, tmp))
 		{
 			fire(ClientListener::StatusMessage(), this, tmp);
 		}
-		if (c.getParam("RD", 1, tmp))
+		if (c.getParam(TAG('R', 'D'), 1, tmp))
 		{
 			fire(ClientListener::Redirect(), this, tmp);
 		}
@@ -764,14 +764,14 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 	if (!isFeatureSupported(FEATURE_FLAG_USER_COMMANDS))
 		return;
 	const string& name = c.getParam(0);
-	if (c.hasFlag("RM", 1))
+	if (c.hasFlag(TAG('R', 'M'), 1))
 	{
 		removeUserCommand(name);
 		return;
 	}
-	bool sep = c.hasFlag("SP", 1);
+	bool sep = c.hasFlag(TAG('S', 'P'), 1);
 	string sctx;
-	if (!c.getParam("CT", 1, sctx))
+	if (!c.getParam(TAG('C', 'T'), 1, sctx))
 		return;
 	int ctx = Util::toInt(sctx);
 	if (ctx <= 0)
@@ -783,9 +783,9 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 			name, Util::emptyString, Util::emptyString, Util::emptyString));
 		return;
 	}
-	bool once = c.hasFlag("CO", 1);
+	bool once = c.hasFlag(TAG('C', 'O'), 1);
 	string txt;
-	if (!c.getParam("TT", 1, txt))
+	if (!c.getParam(TAG('T', 'T'), 1, txt))
 		return;
 	addUserCommand(UserCommand(0, once ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW, ctx,
 		UserCommand::FLAG_FROM_ADC_HUB | UserCommand::FLAG_NOSAVE,
@@ -857,7 +857,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		case AdcCommand::ERROR_COMMAND_ACCESS:
 		{
 			string tmp;
-			if (c.getParam("FC", 1, tmp) && tmp.size() == 4)
+			if (c.getParam(TAG('F', 'C'), 1, tmp) && tmp.size() == 4)
 				forbiddenCommands.insert(AdcCommand::toFourCC(tmp.c_str()));
 				
 			break;
@@ -866,7 +866,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		case AdcCommand::ERROR_PROTOCOL_UNSUPPORTED:
 		{
 			string tmp;
-			if (c.getParam("PR", 1, tmp))
+			if (c.getParam(TAG('P', 'R'), 1, tmp))
 			{
 				if (tmp == AdcSupports::CLIENT_PROTOCOL)
 				{
@@ -952,7 +952,7 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 	}
 	
 	string sk, sh;
-	if (c.getParameters().size() < 5 || !c.getParam("BK", 4, sk) || !c.getParam("BH", 4, sh))
+	if (c.getParameters().size() < 5 || !c.getParam(TAG('B', 'K'), 4, sk) || !c.getParam(TAG('B', 'H'), 4, sh))
 	{
 		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "Too few parameters for blom", AdcCommand::TYPE_HUB));
 		return;

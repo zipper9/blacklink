@@ -241,9 +241,9 @@ void DownloadManager::processSND(UserConnection* source, const AdcCommand& cmd) 
 		return;
 	}
 	
-	if (cmd.hasFlag("TL", 4))
+	if (cmd.hasFlag(TAG('T', 'L'), 4))
 		d->setFlag(Download::FLAG_TTH_LIST);
-	startData(source, start, bytes, cmd.hasFlag("ZL", 4));
+	startData(source, start, bytes, cmd.hasFlag(TAG('Z', 'L'), 4));
 }
 
 void DownloadManager::startData(UserConnection* source, int64_t start, int64_t bytes, bool z)
@@ -545,7 +545,7 @@ void DownloadManager::processSTA(UserConnection* source, const AdcCommand& cmd) 
 					return;
 				case AdcCommand::ERROR_SLOTS_FULL:
 					string param;
-					cmd.getParam("QP", 1, param);
+					cmd.getParam(TAG('Q', 'P'), 1, param);
 					noSlots(source, param);
 					return;
 			}

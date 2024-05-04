@@ -232,15 +232,15 @@ namespace dht
 	void SearchManager::processSearchRequest(const Node::Ptr& node, const AdcCommand& cmd)
 	{
 		string token;
-		if (!cmd.getParam("TO", 1, token))
+		if (!cmd.getParam(TAG('T', 'O'), 1, token))
 			return;	// missing search token?
 
 		string term;
-		if (!cmd.getParam("TR", 1, term))
+		if (!cmd.getParam(TAG('T', 'R'), 1, term))
 			return;	// nothing to search?
 
 		string type;
-		if (!cmd.getParam("TY", 1, type))
+		if (!cmd.getParam(TAG('T', 'Y'), 1, type))
 			return;	// type not specified?
 
 		AdcCommand res(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
@@ -350,11 +350,11 @@ namespace dht
 	bool SearchManager::processSearchResult(const Node::Ptr& node, const AdcCommand& cmd)
 	{
 		string token;
-		if (!cmd.getParam("TO", 1, token))
+		if (!cmd.getParam(TAG('T', 'O'), 1, token))
 			return false; // missing search token?
 
 		string nodes;
-		if (!cmd.getParam("NX", 1, nodes))
+		if (!cmd.getParam(TAG('N', 'X'), 1, nodes))
 			return false; // missing search token?
 
 		uint32_t intToken = Util::toUInt32(token);

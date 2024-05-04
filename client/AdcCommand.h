@@ -22,6 +22,7 @@
 #include "typedefs.h"
 #include "CID.h"
 #include "BaseUtil.h"
+#include "Tag16.h"
 
 class AdcCommand
 {
@@ -31,7 +32,7 @@ class AdcCommand
 		{
 			enum { CMD = T };
 		};
-		
+
 		enum Error
 		{
 			SUCCESS = 0,
@@ -64,7 +65,7 @@ class AdcCommand
 			ERROR_SLOTS_FULL = 53,
 			ERROR_NO_CLIENT_HASH = 54
 		};
-		
+
 		enum Severity
 		{
 			SEV_SUCCESS = 0,
@@ -85,7 +86,7 @@ class AdcCommand
 			PARSE_ERROR_MISSING_TO_SID,
 			PARSE_ERROR_MISSING_FEATURE
 		};
-		
+
 		static const char TYPE_BROADCAST = 'B';
 		static const char TYPE_CLIENT = 'C';
 		static const char TYPE_DIRECT = 'D';
@@ -94,7 +95,7 @@ class AdcCommand
 		static const char TYPE_INFO = 'I';
 		static const char TYPE_HUB = 'H';
 		static const char TYPE_UDP = 'U';
-		
+
 #define C(n, a, b, c) static const uint32_t CMD_##n = (((uint32_t)a) | (((uint32_t)b)<<8) | (((uint32_t)c)<<16)); typedef Type<CMD_##n> n
 		// Base commands
 		C(SUP, 'S', 'U', 'P');
@@ -126,26 +127,26 @@ class AdcCommand
 
 		static const uint32_t HUB_SID = UINT32_MAX; // No client will have this sid
 
-		static uint32_t toFourCC(const char* x)
+		static uint32_t toFourCC(const char* x) noexcept
 		{
 			return *reinterpret_cast<const uint32_t*>(x);
 		}
-		static std::string fromFourCC(uint32_t x)
+		static std::string fromFourCC(uint32_t x) noexcept
 		{
 			return std::string(reinterpret_cast<const char*>(&x), sizeof(x));
 		}
-		
+
 		explicit AdcCommand(uint32_t cmd, char type = TYPE_CLIENT);
 		explicit AdcCommand(uint32_t cmd, const uint32_t target, char type);
 		explicit AdcCommand(Severity sev, Error err, const string& desc, char type = TYPE_CLIENT);
-		
+
 		AdcCommand(const AdcCommand&) = delete;
 		AdcCommand& operator= (const AdcCommand&) = delete;
 
-		uint32_t getCommand() const { return cmdInt; }
-		char getType() const { return type; }
-		void setType(char t) { type = t; }
-		string getFourCC() const
+		uint32_t getCommand() const noexcept { return cmdInt; }
+		char getType() const noexcept { return type; }
+		void setType(char t) noexcept { type = t; }
+		string getFourCC() const noexcept
 		{
 			string tmp(4, 0);
 			tmp[0] = type;
@@ -156,72 +157,78 @@ class AdcCommand
 		}
 
 		int parse(const string& line, bool nmdc = false) noexcept;
-		
-		const string& getFeatures() const
+
+		const string& getFeatures() const noexcept
 		{
 			return features;
 		}
-		
-		AdcCommand& setFeatures(const string& feat)
+
+		AdcCommand& setFeatures(const string& feat) noexcept
 		{
 			features = feat;
 			return *this;
 		}
-		
-		StringList& getParameters() { return parameters; }
-		const StringList& getParameters() const { return parameters; }
-		
-		string toString(const CID& cid, bool nmdc = false) const;
-		string toString(uint32_t sid, bool nmdc = false) const;
-		
-		AdcCommand& addParam(const string& name, const string& value)
+
+		StringList& getParameters() noexcept { return parameters; }
+		const StringList& getParameters() const noexcept { return parameters; }
+
+		string toString(const CID& cid, bool nmdc = false) const noexcept;
+		string toString(uint32_t sid, bool nmdc = false) const noexcept;
+
+		AdcCommand& addParam(const string& name, const string& value) noexcept
 		{
 			parameters.push_back(name);
 			parameters.back() += value;
 			return *this;
 		}
-		AdcCommand& addParam(const string& str)
+		AdcCommand& addParam(const string& str) noexcept
 		{
 			parameters.push_back(str);
 			return *this;
 		}
-		const string& getParam(size_t n) const
+		const string& getParam(size_t n) const noexcept
 		{
 			dcassert(parameters.size() > n);
 			return parameters.size() > n ? parameters[n] : Util::emptyString;
 		}
-		/** Return a named parameter where the name is a two-letter code */
-		bool getParam(const char* name, size_t start, string& ret) const;
-		bool hasFlag(const char* name, size_t start) const;
-		static uint16_t toCode(const char* x) { return *((uint16_t*)x); }
-		
-		static string escape(const string& str, bool old);
-		uint32_t getTo() const { return to; }
-		AdcCommand& setTo(const uint32_t sid) { to = sid; return *this; }
-		uint32_t getFrom() const { return from; }
-		void setFrom(const uint32_t sid) { from = sid; }
-		string getNick() const
+		// Return a named parameter where the name is a two-letter code
+		bool getParam(uint16_t name, size_t start, string& value) const noexcept;
+		bool getParam(const char* name, size_t start, string& value) const noexcept;
+		bool hasFlag(uint16_t name, size_t start) const noexcept;
+		bool hasFlag(const char* name, size_t start) const noexcept;
+
+		static uint16_t toCode(const char* x) noexcept
+		{
+			return *reinterpret_cast<const uint16_t*>(x);
+		}
+
+		static string escape(const string& str, bool old) noexcept;
+		uint32_t getTo() const noexcept { return to; }
+		AdcCommand& setTo(const uint32_t sid) noexcept { to = sid; return *this; }
+		uint32_t getFrom() const noexcept { return from; }
+		void setFrom(const uint32_t sid) noexcept { from = sid; }
+		string getNick() const noexcept
 		{
 			string nick;
-			if (!getParam("NI", 0, nick))
+			if (!getParam(TAG('N', 'I'), 0, nick))
 				nick = "[nick unknown]"; // FIXME FIXME
 			return nick;
 		}
-		static uint32_t toSID(const string& sid)
+		static uint32_t toSID(const string& sid) noexcept
 		{
 			if (sid.length() != 4) return 0;
 			return *reinterpret_cast<const uint32_t*>(sid.data());
 		}
-		static string fromSID(const uint32_t sid)
+		static string fromSID(const uint32_t sid) noexcept
 		{
 			return string(reinterpret_cast<const char*>(&sid), sizeof(sid));
 		}
-		
-		string getParamString(bool nmdc) const;
-		
+
+		string getParamString(bool nmdc) const noexcept;
+
 	private:
-		string getHeaderString(const CID& cid) const;
-		string getHeaderString(uint32_t sid, bool nmdc) const;
+		string getHeaderString(const CID& cid) const noexcept;
+		string getHeaderString(uint32_t sid, bool nmdc) const noexcept;
 		StringList parameters;
 		string features;
 		union

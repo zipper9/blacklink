@@ -177,12 +177,12 @@ namespace dht
 
 		// all communication to this node will be encrypted with this key
 		string udpKey;
-		if (cmd.getParam("UK", 1, udpKey))
+		if (cmd.getParam(TAG('U', 'K'), 1, udpKey))
 			node->setUdpKey(CID(udpKey));
 
 		// node is requiring FW check
 		string internalUdpPort;
-		if (cmd.getParam("FW", 1, internalUdpPort))
+		if (cmd.getParam(TAG('F', 'W'), 1, internalUdpPort))
 		{
 			bool firewalled = Util::toInt(internalUdpPort) != port;
 			if (firewalled)
@@ -767,7 +767,7 @@ namespace dht
 		if (code == 0)
 		{
 			string resTo;
-			if (!c.getParam("FC", 2, resTo))
+			if (!c.getParam(TAG('F', 'C'), 2, resTo))
 				return true;
 
 			if (resTo == "PUB")
@@ -775,7 +775,7 @@ namespace dht
 /*#ifndef NDEBUG
 				// don't do anything
 				string tth;
-				if (!c.getParam("TR", 1, tth))
+				if (!c.getParam(TAG('T', 'R'), 1, tth))
 					return;
 
 				try
@@ -951,7 +951,7 @@ namespace dht
 			return; // already received firewall check from this node
 
 		string i4, u4;
-		if (!c.getParam("I4", 1, i4) || !c.getParam("U4", 1, u4))
+		if (!c.getParam(TAG('I', '4'), 1, i4) || !c.getParam(TAG('U', '4'), 1, u4))
 			return; // no IP and port in response
 
 		Ip4Address externalIP;

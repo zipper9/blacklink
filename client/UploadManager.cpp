@@ -789,8 +789,8 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 	getShareGroup(source, hideShare, shareGroup);
 
 	string errorText;
-	int compressionType = (SETTING(MAX_COMPRESSION) && c.hasFlag("ZL", 4)) ? COMPRESSION_CHECK_FILE_TYPE : COMPRESSION_DISABLED;
-	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag("RE", 4), compressionType, errorText))
+	int compressionType = (SETTING(MAX_COMPRESSION) && c.hasFlag(TAG('Z', 'L'), 4)) ? COMPRESSION_CHECK_FILE_TYPE : COMPRESSION_DISABLED;
+	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag(TAG('R', 'E'), 4), compressionType, errorText))
 	{
 		auto u = source->getUpload();
 		dcassert(u != nullptr);
@@ -804,7 +804,7 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 			cmd.addParam("ZL1");
 
 		string downloadedBytesStr;
-		if (c.getParam("DB", 4, downloadedBytesStr))
+		if (c.getParam(TAG('D', 'B'), 4, downloadedBytesStr))
 		{
 			int64_t downloadedBytes = Util::toInt64(downloadedBytesStr);
 			if (downloadedBytes >= 0)

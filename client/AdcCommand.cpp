@@ -64,22 +64,22 @@ int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 		cmdChar[1] = line[2];
 		cmdChar[2] = line[3];
 	}
-	
+
 	if (type != TYPE_BROADCAST && type != TYPE_CLIENT && type != TYPE_DIRECT && type != TYPE_ECHO && type != TYPE_FEATURE && type != TYPE_INFO && type != TYPE_HUB && type != TYPE_UDP)
 		return PARSE_ERROR_INVALID_TYPE;
-	
+
 	if (type == TYPE_INFO)
 		from = HUB_SID;
-	
+
 	string::size_type len = line.length();
 	const char* buf = line.c_str();
 	string cur;
 	cur.reserve(128);
-	
+
 	bool toSet = false;
 	bool featureSet = false;
 	bool fromSet = nmdc; // $ADCxxx never have a from CID...
-	
+
 	while (i < len)
 	{
 		switch (buf[i])
@@ -158,30 +158,30 @@ int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 			parameters.push_back(cur);
 		}
 	}
-	
+
 	if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 		return PARSE_ERROR_MISSING_FROM_SID;
-	
+
 	if (type == TYPE_FEATURE && !featureSet)
 		return PARSE_ERROR_MISSING_FEATURE;
-	
+
 	if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 		return PARSE_ERROR_MISSING_TO_SID;
 
 	return PARSE_OK;
 }
 
-string AdcCommand::toString(const CID& cid, bool nmdc /* = false */) const
+string AdcCommand::toString(const CID& cid, bool nmdc /* = false */) const noexcept
 {
 	return getHeaderString(cid) + getParamString(nmdc);
 }
 
-string AdcCommand::toString(uint32_t sid /* = 0 */, bool nmdc /* = false */) const
+string AdcCommand::toString(uint32_t sid /* = 0 */, bool nmdc /* = false */) const noexcept
 {
 	return getHeaderString(sid, nmdc) + getParamString(nmdc);
 }
 
-string AdcCommand::escape(const string& str, bool old)
+string AdcCommand::escape(const string& str, bool old) noexcept
 {
 	string tmp = str;
 	string::size_type i = 0;
@@ -211,28 +211,28 @@ string AdcCommand::escape(const string& str, bool old)
 	return tmp;
 }
 
-string AdcCommand::getHeaderString(uint32_t sid, bool nmdc) const
+string AdcCommand::getHeaderString(uint32_t sid, bool nmdc) const noexcept
 {
 	string tmp;
 	if (nmdc)
 		tmp = "$ADC";
 	else
 		tmp = getType();
-	
+
 	tmp += cmdChar;
-	
+
 	if (type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE)
 	{
 		tmp += ' ';
 		tmp += fromSID(sid);
 	}
-	
+
 	if (type == TYPE_DIRECT || type == TYPE_ECHO)
 	{
 		tmp += ' ';
 		tmp += fromSID(to);
 	}
-	
+
 	if (type == TYPE_FEATURE)
 	{
 		tmp += ' ';
@@ -241,7 +241,7 @@ string AdcCommand::getHeaderString(uint32_t sid, bool nmdc) const
 	return tmp;
 }
 
-string AdcCommand::getHeaderString(const CID& cid) const
+string AdcCommand::getHeaderString(const CID& cid) const noexcept
 {
 	dcassert(type == TYPE_UDP);
 	string tmp;
@@ -253,7 +253,7 @@ string AdcCommand::getHeaderString(const CID& cid) const
 	return tmp;
 }
 
-string AdcCommand::getParamString(bool nmdc) const
+string AdcCommand::getParamString(bool nmdc) const noexcept
 {
 	string tmp;
 	tmp.reserve(65);
@@ -269,27 +269,31 @@ string AdcCommand::getParamString(bool nmdc) const
 	return tmp;
 }
 
-bool AdcCommand::getParam(const char* name, size_t start, string& ret) const
+bool AdcCommand::getParam(uint16_t name, size_t start, string& value) const noexcept
 {
-	uint16_t code = toCode(name);
 	for (string::size_type i = start; i < parameters.size(); ++i)
-	{
-		if (parameters[i].length() >= 2 && code == toCode(parameters[i].c_str()))
+		if (parameters[i].length() >= 2 && name == toCode(parameters[i].c_str()))
 		{
-			ret = parameters[i].substr(2);
+			value = parameters[i].substr(2);
 			return true;
 		}
-	}
 	return false;
 }
 
-bool AdcCommand::hasFlag(const char* name, size_t start) const
+bool AdcCommand::getParam(const char* name, size_t start, string& value) const noexcept
 {
-	uint16_t code = toCode(name);
+	return getParam(toCode(name), start, value);
+}
+
+bool AdcCommand::hasFlag(uint16_t name, size_t start) const noexcept
+{
 	for (string::size_type i = start; i < parameters.size(); ++i)
-	{
-		if (parameters[i].length() == 3 && code == toCode(parameters[i].c_str()) && parameters[i][2] == '1')
+		if (parameters[i].length() == 3 && name == toCode(parameters[i].c_str()) && parameters[i][2] == '1')
 			return true;
-	}
 	return false;
+}
+
+bool AdcCommand::hasFlag(const char* name, size_t start) const noexcept
+{
+	return hasFlag(toCode(name), start);
 }
