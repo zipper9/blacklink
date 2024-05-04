@@ -193,6 +193,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	POINT cr = { 0 };
 	GetScrollPos(&cr);
 
+	SetRedraw(FALSE);
 	LONG selBegin = 0;
 	LONG selEnd = 0;
 
@@ -235,6 +236,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	appendTextInternal(text, message, maxEmoticons, highlightNick);
 	SetSel(selBeginSaved, selEndSaved);
 	goToEnd(cr, false);
+	SetRedraw(TRUE);
 }
 
 void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
@@ -253,7 +255,6 @@ void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsign
 
 void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
-	SetRedraw(FALSE);
 	const auto& cf = message.myMessage ? Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE] : Colors::getCharFormat(message.textStyle);
 #ifdef BL_UI_FEATURE_BB_CODES
 	const bool formatBBCodes = BOOLSETTING(FORMAT_BB_CODES) && (message.isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE));
@@ -344,9 +345,6 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 		if (nickFound)
 			PLAY_SOUND(SOUND_CHATNAMEFILE);
 	}
-
-	SetRedraw(TRUE);
-	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 	chatTextParser.clear();
 }
 
