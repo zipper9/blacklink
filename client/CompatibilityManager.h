@@ -33,16 +33,7 @@ class CompatibilityManager
 	public:
 		// Call this function as soon as possible (immediately after the start of the program).
 		static void init();
-		
-		static bool isIncompatibleSoftwareFound()
-		{
-			return !g_incopatibleSoftwareList.empty();
-		}
-		static const string& getIncompatibleSoftwareList()
-		{
-			return g_incopatibleSoftwareList;
-		}
-		static string getIncompatibleSoftwareMessage();
+
 		static string getGlobalMemoryStatusMessage();
 		static string generateFullSystemStatusMessage();
 		static string getStats();
@@ -93,8 +84,6 @@ class CompatibilityManager
 		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* status);
 
 	public:
-		static void detectIncompatibleSoftware();
-
 		static string getSpeedInfo();
 		static string getDiskSpaceInfo(bool onlyTotal = false);
 		static string getDiskInfo();

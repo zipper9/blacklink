@@ -485,7 +485,6 @@ enum Strings   // @DontAdd
 	IGNORE_TTH_SEARCHES, // "Ignore TTH searches"
 	ADD_TO_FAV_IGNORE_PM, // "Ignore user PM"
 	IGNORE_USER_BY_NAME, // "Ignore user by name"
-	INCOMPATIBLE_SOFTWARE_FOUND, // "Found incompatible software: %s\nThe program may be unstable. Show details?"
 	INCOMPLETE_FAV_HUB, // "Hub address cannot be empty."
 	INTEGRATION_AUTOSTART_ADD, // "Add BlackLink to system startup"
 	INTEGRATION_AUTOSTART_REMOVE, // "Remove BlackLink from system startup"

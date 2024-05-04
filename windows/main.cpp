@@ -344,7 +344,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	TimerManager::newInstance();
 	ClientManager::newInstance();
-	CompatibilityManager::detectIncompatibleSoftware();
 	ThrottleManager::getInstance()->startup();
 	if (dcapp.IsAnotherInstanceRunning())
 	{

@@ -90,7 +90,7 @@ enum DBRegistryType
 	e_CMDDebugFilterState = 6,
 	e_TimeStampGeoIP = 7,
 	e_TimeStampCustomLocation = 8,
-	e_IncopatibleSoftwareList = 10,
+	e_IncompatibleSoftwareList = 10,
 	e_TimeStampIBlockListCom = 17,
 	e_TimeStampP2PGuard = 18,
 	e_FileListSearchHistory = 73

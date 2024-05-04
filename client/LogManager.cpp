@@ -82,14 +82,7 @@ void LogManager::init()
 	
 #ifdef _WIN32
 	if (!CompatibilityManager::getStartupInfo().empty())
-	{
 		message(CompatibilityManager::getStartupInfo());
-	}
-	
-	if (CompatibilityManager::isIncompatibleSoftwareFound())
-	{
-		message(CompatibilityManager::getIncompatibleSoftwareMessage());
-	}
 #endif
 }
 

@@ -47,7 +47,6 @@
 #endif
 
 
-string CompatibilityManager::g_incopatibleSoftwareList;
 string CompatibilityManager::g_startupInfo;
 DWORDLONG CompatibilityManager::g_TotalPhysMemory;
 DWORDLONG CompatibilityManager::g_FreePhysMemory;
@@ -102,81 +101,6 @@ void CompatibilityManager::init()
 		compareFlags = SORT_DIGITSASNUMBERS;
 #endif
 	}
-}
-
-struct DllInfo
-{
-	const TCHAR* dllName;
-	const char* info;
-};
-
-// TODO - config
-static const DllInfo g_IncompatibleDll[] =
-{
-	_T("nvappfilter.dll"), "NVIDIA ActiveArmor (NVIDIA Firewall)",
-	_T("nvlsp.dll"), "NVIDIA Application Filter",
-	_T("nvlsp64.dll"), "NVIDIA Application Filter",
-	_T("chtbrkg.dll"), "Adskip or Internet Download Manager integration",
-	_T("adguard.dll"), "Adguard", // Latest verion 5.1 not bad.
-	_T("pcapwsp.dll"), "ProxyCap",
-	_T("NetchartFilter.dll"), "NetchartFilter",
-	_T("vlsp.dll"), "Venturi Wireless Software",
-	_T("radhslib.dll"), "Naomi web filter",
-	_T("AmlMaple.dll"), "Aml Maple",
-	_T("sdata.dll"), "Trojan-PSW.Win32.LdPinch.ajgw",
-	_T("browsemngr.dll"), "Browser Manager",
-	_T("owexplorer_10616.dll"), "Overwolf Overlay",
-	_T("owexplorer_10615.dll"), "Overwolf Overlay",
-	_T("owexplorer_20125.dll"), "Overwolf Overlay",
-	_T("owexplorer_2006.dll"), "Overwolf Overlay",
-	_T("owexplorer_20018.dll"), "Overwolf Overlay",
-	_T("owexplorer_2000.dll"), "Overwolf Overlay",
-	_T("owexplorer_20018.dll"), "Overwolf Overlay",
-	_T("owexplorer_20015.dll"), "Overwolf Overlay",
-	_T("owexplorer_1069.dll"), "Overwolf Overlay",
-	_T("owexplorer_10614.dll"), "Overwolf Overlay",
-	_T("am32_33707.dll"), "Ad Muncher",
-	_T("am32_32562.dll"), "Ad Muncher",
-	_T("am64_33707.dll"), "Ad Muncher x64",
-	_T("am64_32130.dll"), "Ad Muncher x64",
-	_T("browserprotect.dll"), "Browserprotect",
-	_T("searchresultstb.dll"), "DTX Toolbar",
-	_T("networx.dll"), "NetWorx",
-	nullptr, nullptr
-};
-
-void CompatibilityManager::detectIncompatibleSoftware()
-{
-	const DllInfo* currentDllInfo = g_IncompatibleDll;
-	// TODO http://stackoverflow.com/questions/420185/how-to-get-the-version-info-of-a-dll-in-c
-	for (; currentDllInfo->dllName; ++currentDllInfo)
-	{
-		const HMODULE hIncompatibleDll = GetModuleHandle(currentDllInfo->dllName);
-		if (hIncompatibleDll)
-		{
-			g_incopatibleSoftwareList += '\n';
-			const auto l_dll = Text::fromT(currentDllInfo->dllName);
-			g_incopatibleSoftwareList += l_dll;
-			if (currentDllInfo->info)
-			{
-				g_incopatibleSoftwareList += " - ";
-				g_incopatibleSoftwareList += currentDllInfo->info;
-			}
-		}
-	}
-	g_incopatibleSoftwareList.shrink_to_fit();
-}
-
-string CompatibilityManager::getIncompatibleSoftwareMessage()
-{
-	if (isIncompatibleSoftwareFound())
-	{
-		string temp;
-		temp.resize(32768);
-		temp.resize(sprintf_s(&temp[0], temp.size() - 1, CSTRING(INCOMPATIBLE_SOFTWARE_FOUND), g_incopatibleSoftwareList.c_str()));
-		return temp;
-	}
-	return Util::emptyString;
 }
 
 void CompatibilityManager::generateSystemInfoForApp()
@@ -266,8 +190,7 @@ string CompatibilityManager::generateFullSystemStatusMessage()
 {
 	return
 	    getStartupInfo() +
-	    STRING(CURRENT_SYSTEM_STATE) + ":\n" + getGlobalMemoryStatusMessage() +
-	    getIncompatibleSoftwareMessage() + "\n" +
+	    STRING(CURRENT_SYSTEM_STATE) + ":\n" + getGlobalMemoryStatusMessage() + "\n" +
 	    DatabaseManager::getInstance()->getDBInfo();
 }
 

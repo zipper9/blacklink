@@ -366,19 +366,6 @@ void MainFrame::createTrayMenu()
 LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	LogManager::message("Main window created (Thread: " + Util::toString(BaseThread::getCurrentThreadId()) + ')', false);
-	if (CompatibilityManager::isIncompatibleSoftwareFound())
-	{
-		auto conn = DatabaseManager::getInstance()->getDefaultConnection();
-		if (conn && conn->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
-		{
-			conn->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
-			LogManager::message("CompatibilityManager: " + CompatibilityManager::getIncompatibleSoftwareList());
-			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
-			{
-				//WinUtil::openLink(WinUtil::GetWikiLink() + _T("incompatiblesoftware"));
-			}
-		}
-	}
 
 	if (BOOLSETTING(DETECT_PREVIEW_APPS))
 	{
