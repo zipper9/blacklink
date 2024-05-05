@@ -25,7 +25,6 @@
 #include "Download.h"
 #include "MerkleCheckOutputStream.h"
 #include "UploadManager.h"
-#include "FinishedManager.h"
 #include "IpTrust.h"
 #include "MappingManager.h"
 #include "ZUtils.h"

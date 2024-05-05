@@ -575,7 +575,7 @@ int HashManager::Hasher::run()
 #ifdef _WIN32
 		if (size > 0 && BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) && HashManager::loadTree(filename, tree, size))
 		{
-			LogManager::message(STRING(LOAD_TTH_FROM_NTFS) + ' ' + filename, false);
+			LogManager::message(STRING(LOAD_TTH_FROM_NTFS) + filename, false);
 			if (mediaInfoFileTypes & currentItem.file->getFileTypes())
 				processMediaFile(currentItem);
 			hashManager->hashDone(GET_TICK(), currentItem.fileID, currentItem.file, filename, tree, 0, size);
@@ -601,7 +601,7 @@ int HashManager::Hasher::run()
 				const uint64_t speed = end > start ? size * 1000 / (end - start) : 0;
 				hashManager->hashDone(end, currentItem.fileID, currentItem.file, filename, tree, speed, size);
 #ifdef _WIN32
-				if (!SysVersion::isWine() && size >= SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576)
+				if (!SysVersion::isWine() && size >= (int64_t) SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) << 20)
 				{
 					if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))
 					{

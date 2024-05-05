@@ -112,14 +112,11 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 #ifdef _WIN32
 		static bool doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept;
 		static bool loadTree(const string& filePath, TigerTree& tree, int64_t fileSize = -1) noexcept;
-#endif
-
-	private:
-#ifdef _WIN32
 		static bool saveTree(const string& filePath, const TigerTree& tree) noexcept;
 		static void deleteTree(const string& filePath) noexcept;
 #endif
 
+	private:
 		class Hasher : public Thread
 		{
 			public:

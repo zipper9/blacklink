@@ -42,6 +42,11 @@
 #include "Random.h"
 #include "version.h"
 
+#ifdef _WIN32
+#include "SysVersion.h"
+#include "HashManager.h"
+#endif
+
 static const unsigned SAVE_QUEUE_TIME = 300000; // 5 minutes
 static const int64_t MOVER_LIMIT = 10 * 1024 * 1024;
 static const int MAX_MATCH_QUEUE_ITEMS = 10;
@@ -2099,6 +2104,20 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 
 						if (hashDb && !q->getTTH().isZero() && !(q->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)))
 							hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, q->getSize(), path.empty() ? nullptr : &path, false);
+#ifdef _WIN32
+						if (isFinishedFile && !SysVersion::isWine() &&
+						    BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) &&
+						    q->getSize() >= (int64_t) SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) << 20)
+						{
+							const string directory = Util::getFilePath(path);
+							if (!directory.empty() && ShareManager::getInstance()->isDirectoryShared(directory))
+							{
+								const TigerTree& tree = download->getTigerTree();
+								if (!tree.getRoot().isZero() && tree.getLeaves().size() > 1)
+									HashManager::saveTree(path, tree);
+							}
+						}
+#endif
 
 						if (!ClientManager::isBeforeShutdown())
 						{
