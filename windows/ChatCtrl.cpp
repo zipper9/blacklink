@@ -237,6 +237,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	SetSel(selBeginSaved, selEndSaved);
 	goToEnd(cr, false);
 	SetRedraw(TRUE);
+	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
 void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
