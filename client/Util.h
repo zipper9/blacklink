@@ -67,7 +67,6 @@ namespace Util
 	bool isMagnetLink(const string& url);
 	bool isMagnetLink(const wchar_t* url);
 	bool isMagnetLink(const wstring& url);
-	bool isTorrentLink(const tstring& url);
 	bool isHttpLink(const string& url);
 	bool isHttpLink(const wstring& url);
 

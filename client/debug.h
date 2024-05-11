@@ -51,6 +51,7 @@ static inline void debugTrace(const char* format, ...)
 #define dcdebug debugTrace
 
 #ifdef _MSC_VER
+#include <crtdbg.h>
 #define dcassert(exp) \
 	do { \
 		if (!(exp)) \

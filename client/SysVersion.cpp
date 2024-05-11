@@ -213,6 +213,11 @@ string SysVersion::getFormattedOsName()
 				text += ' ';
 				text += name;
 			}
+			else
+			{
+				text += " 0x";
+				text += Util::toHexString(dwType);
+			}
 		}
 	}
 	if (major == 5)

@@ -344,8 +344,8 @@ string Util::getSystemDownloadsPath(const string& def)
 string Util::getTempPath()
 {
 #ifdef _WIN32
-	TCHAR buf[MAX_PATH + 1];
-	DWORD size = GetTempPath(MAX_PATH + 1, buf);
+	WCHAR buf[MAX_PATH + 1];
+	DWORD size = GetTempPathW(MAX_PATH + 1, buf);
 	string tmp;
 	return Text::wideToUtf8(buf, static_cast<size_t>(size), tmp);
 #else

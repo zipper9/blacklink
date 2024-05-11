@@ -66,9 +66,9 @@ static int getLinkType(const tstring& link)
 }
 #endif
 
-static tstring getMagnetDescription(const tstring& link, const MagnetLink& magnet)
+static tstring getMagnetDescription(const MagnetLink& magnet)
 {
-	bool isTorrentLink = Util::isTorrentLink(link);
+	bool isTorrentLink = magnet.isBitTorrent() && !magnet.getTTH();
 	tstring result = Text::toT(magnet.getFileName());
 	tstring details;
 	if (magnet.exactLength > 0)
@@ -223,7 +223,7 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 						{
 							MagnetLink magnet;
 							if (magnet.parse(Text::fromT(url)))
-								description = getMagnetDescription(url, magnet);
+								description = getMagnetDescription(magnet);
 						}
 						if (description.empty()) description = url;
 						li.updatedText = std::move(description);
@@ -473,7 +473,7 @@ void ChatTextParser::processLink(const tstring& text, ChatTextParser::LinkItem& 
 			li.updatedText.clear();
 			return;
 		}
-		li.updatedText = getMagnetDescription(link, magnet);
+		li.updatedText = getMagnetDescription(magnet);
 		li.updatedText += HIDDEN_TEXT_SEP;
 		li.updatedText += link;
 		li.updatedText += HIDDEN_TEXT_SEP;

@@ -10,7 +10,10 @@ class MagnetLink
 		bool isValid() const;
 		void clear();
 		const char* getTTH() const;
+		const char* getSHA1(int *hashSize = nullptr) const;
+		const char* getSHA256() const;
 		const string& getFileName() const;
+		bool isBitTorrent() const { return getSHA1() || getSHA256(); }
 
 		std::list<string> exactTopic;
 		string displayName;

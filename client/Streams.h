@@ -21,6 +21,7 @@
 #define DCPLUSPLUS_DCPP_STREAMS_H
 
 #include "BaseStreams.h"
+#include <algorithm>
 
 #ifndef NO_RESOURCE_MANAGER
 #include "ResourceManager.h"
@@ -46,7 +47,7 @@ class MemoryInputStream : public InputStream
 		
 		size_t read(void* tgt, size_t& len) override
 		{
-			len = min(len, bufSize - pos);
+			len = std::min(len, bufSize - pos);
 			memcpy(tgt, buf + pos, len);
 			pos += len;
 			return len;
@@ -131,7 +132,7 @@ class LimitedInputStream : public InputStream
 		size_t read(void* buf, size_t& len) override
 		{
 			dcassert(maxBytes >= 0);
-			len = (size_t)min(maxBytes, (int64_t)len);
+			len = (size_t) std::min(maxBytes, (int64_t) len);
 			if (len == 0)
 				return 0;
 			size_t x = s->read(buf, len);
@@ -239,7 +240,7 @@ class BufferedOutputStream : public OutputStream
 					s->write(b, len);
 					break;
 				}
-				size_t n = min(bufSize - pos, len);
+				size_t n = std::min(bufSize - pos, len);
 				memcpy(buf + pos, b, n);
 				b += n;
 				pos += n;

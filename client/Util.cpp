@@ -694,12 +694,6 @@ bool Util::isMagnetLink(const wstring& url)
 	return strnicmp(url.c_str(), L"magnet:?", 8) == 0;
 }
 
-bool Util::isTorrentLink(const tstring& url)
-{
-	return url.find(_T("xt=urn:btih:")) != tstring::npos &&
-	       url.find(_T("xt=urn:tree:tiger:")) == tstring::npos;
-}
-
 bool Util::isHttpLink(const string& url)
 {
 	return strnicmp(url.c_str(), "http://", 7) == 0 ||

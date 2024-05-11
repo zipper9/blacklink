@@ -4,6 +4,7 @@
 #include "BaseUtil.h"
 #include "StrUtil.h"
 #include "UriUtil.h"
+#include "Base32.h"
 #include "SimpleStringTokenizer.h"
 
 void MagnetLink::clear()
@@ -75,12 +76,13 @@ const string& MagnetLink::getFileName() const
 	return Util::emptyString;
 }
 
-static bool isTTH(const char* c)
+static bool isHex(const char* c, int size)
 {
-	while (*c)
+	while (size)
 	{
-		if (!((*c >= 'A' && *c <= 'Z') || (*c >= '2' && *c <= '7'))) return false;
+		if (!((*c >= 'a' && *c <= 'f') || (*c >= 'A' && *c <= 'F') || (*c >= '0' && *c <= '9'))) return false;
 		++c;
+		size--;
 	}
 	return true;
 }
@@ -112,7 +114,56 @@ static const char* getTTHFromParam(const string& param)
 		c += 16;
 	else
 		return nullptr;
-	return isTTH(c) ? c : nullptr;
+	return Util::isBase32(c, 39) ? c : nullptr;
+}
+
+static const char* getSHA1FromParam(const string& param, int& hashSize)
+{
+	size_t len = param.length();
+	if (len < 4) return nullptr;
+	const char* c = param.c_str();
+	if (Text::isAsciiPrefix2(c, "urn:", 4))
+	{
+		len -= 4;
+		c += 4;
+		if (len < 4) return nullptr;
+	}
+	if (len == 32 + 1 + 39 + 9 && Text::isAsciiPrefix2(c, "bitprint:", 9))
+	{
+		c += 9;
+		hashSize = 32;
+	}
+	else
+	if ((len == 40 + 5 || len == 32 + 5) && Text::isAsciiPrefix2(c, "btih:", 5))
+	{
+		c += 5;
+		hashSize = len - 5;
+	}
+	else
+		return nullptr;
+	if (hashSize == 40) return isHex(c, 40) ? c : nullptr;
+	return Util::isBase32(c, hashSize) ? c : nullptr;
+}
+
+static const char* getSHA256FromParam(const string& param, int& hashSize)
+{
+	size_t len = param.length();
+	if (len < 4) return nullptr;
+	const char* c = param.c_str();
+	if (Text::isAsciiPrefix2(c, "urn:", 4))
+	{
+		len -= 4;
+		c += 4;
+		if (len < 4) return nullptr;
+	}
+	if (len == 64 + 9 && Text::isAsciiPrefix2(c, "btmh:1220", 9))
+	{
+		c += 9;
+		hashSize = 64;
+	}
+	else
+		return nullptr;
+	return isHex(c, 64) ? c : nullptr;
 }
 
 const char* MagnetLink::getTTH() const
@@ -125,4 +176,31 @@ const char* MagnetLink::getTTH() const
 	const char* hash = getTTHFromParam(exactSource);
 	if (hash) return hash;
 	return getTTHFromParam(acceptableSource);
+}
+
+const char* MagnetLink::getSHA1(int *hashSize) const
+{
+	int tmp;
+	if (!hashSize) hashSize = &tmp;
+	for (const string& s : exactTopic)
+	{
+		const char* hash = getSHA1FromParam(s, *hashSize);
+		if (hash) return hash;
+	}
+	const char* hash = getSHA1FromParam(exactSource, *hashSize);
+	if (hash) return hash;
+	return getSHA1FromParam(acceptableSource, *hashSize);
+}
+
+const char* MagnetLink::getSHA256() const
+{
+	int tmp;
+	for (const string& s : exactTopic)
+	{
+		const char* hash = getSHA256FromParam(s, tmp);
+		if (hash) return hash;
+	}
+	const char* hash = getSHA256FromParam(exactSource, tmp);
+	if (hash) return hash;
+	return getSHA1FromParam(acceptableSource, tmp);
 }
