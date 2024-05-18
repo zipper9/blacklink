@@ -577,7 +577,7 @@ uint64_t CompatibilityManager::getTickCount()
 
 bool CompatibilityManager::setThreadName(HANDLE h, const char* name)
 {
-	typedef HRESULT (*fnSetThreadDescription)(HANDLE, const WCHAR*);
+	typedef HRESULT (WINAPI *fnSetThreadDescription)(HANDLE, const WCHAR*);
 	static bool resolved;
 	static fnSetThreadDescription pSetThreadDescription;
 	if (!resolved)

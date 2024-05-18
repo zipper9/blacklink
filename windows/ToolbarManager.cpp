@@ -15,6 +15,12 @@
 #include "../client/ClientManager.h"
 #include "../client/SimpleXML.h"
 
+#ifdef REBARBANDINFOW_V6_SIZE
+#define COMPAT_REBARBANDINFO_SIZE REBARBANDINFOW_V6_SIZE
+#else
+#define COMPAT_REBARBANDINFO_SIZE sizeof(REBARBANDINFO)
+#endif
+
 ToolbarManager::~ToolbarManager()
 {
 	for_each(toolbarEntries.begin(), toolbarEntries.end(), [](auto p) { delete p; });
@@ -83,14 +89,14 @@ void ToolbarManager::getFrom(HWND rebarWnd, const string& name)
 		for (int i = 0; i < t->getBandCount(); i++)
 		{
 			dl = i > 0 ? "," : "";
-			REBARBANDINFO rbi = { 0 };
-			rbi.cbSize = sizeof(rbi);
+			REBARBANDINFO rbi = {};
+			rbi.cbSize = COMPAT_REBARBANDINFO_SIZE;
 			rbi.fMask = RBBIM_ID | RBBIM_SIZE | RBBIM_STYLE;
 			rebar.GetBandInfo(i, &rbi);
 			id += dl + Util::toString(rbi.wID);
 			cx += dl + Util::toString(rbi.cx);
 			bl += dl + (((rbi.fStyle & RBBS_BREAK) != 0) ? "1" : "0");
-			
+
 		}
 		
 		t->setID(id);
@@ -119,17 +125,17 @@ void ToolbarManager::applyTo(HWND rebarWnd, const string& name) const
 			for (int i = 0; i < t->getBandCount(); i++)
 			{
 				rebar.MoveBand(rebar.IdToIndex(Util::toInt(idList[i])), i);
-				REBARBANDINFO rbi = { 0 };
-				rbi.cbSize = sizeof(rbi);
+				REBARBANDINFO rbi = {};
+				rbi.cbSize = COMPAT_REBARBANDINFO_SIZE;
 				rbi.fMask = RBBIM_ID | RBBIM_SIZE | RBBIM_STYLE;
 				rebar.GetBandInfo(i, &rbi);
-				
+
 				rbi.cx = Util::toInt(cxList[i]);
 				if (Util::toInt(blList[i]) > 0)
 					rbi.fStyle |= RBBS_BREAK;
 				else
 					rbi.fStyle &= (~RBBS_BREAK);
-					
+
 				rebar.SetBandInfo(i, &rbi);
 			}
 		}
