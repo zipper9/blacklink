@@ -443,7 +443,6 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 			WinUtil::getContextMenuPos(ctrlList, pt);
 				
 		int copyMenuPos;
-		bool shellMenuShown = false;
 		tstring filePath;
 		CID userCid;
 		if (ctrlList.GetSelectedCount() == 1)
@@ -456,6 +455,8 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 				filePath = Text::toT(itemData->entry->getTarget());
 				if (!File::isExist(filePath))
 					filePath.clear();
+				if (!ClientManager::findOnlineUser(userCid, Util::emptyString, false))
+					userCid.init();
 			}
 		}
 		if (BOOLSETTING(SHOW_SHELL_MENU) && !filePath.empty())
@@ -473,10 +474,8 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 			ctxMenu.RemoveMenu(copyMenuPos, MF_BYPOSITION);
 			if (idCommand != 0)
 				::PostMessage(hwnd, WM_COMMAND, idCommand, 0);
-			shellMenuShown = true;
 		}
-
-		if (!shellMenuShown)
+		else
 		{
 			OMenu ctxMenu;
 			ctxMenu.CreatePopupMenu();
