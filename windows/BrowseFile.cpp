@@ -86,6 +86,28 @@ static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTION
 	return SUCCEEDED(fileOpen->SetOptions(fos));
 }
 
+static IShellItem* createItemFromParsingName(const wstring& path)
+{
+	IShellItem* shellItem = nullptr;
+#ifdef OSVER_WIN_XP
+	typedef HRESULT (STDAPICALLTYPE *fnCreateItemFromParsingName)(const WCHAR*, IBindCtx*, REFIID, void**);
+	static fnCreateItemFromParsingName pCreateItemFromParsingName = nullptr;
+	static bool resolved = false;
+	if (!resolved)
+	{
+		HMODULE shell32lib = LoadLibrary(_T("shell32.dll"));
+		if (shell32lib)
+			pCreateItemFromParsingName = (fnCreateItemFromParsingName) GetProcAddress(shell32lib, "SHCreateItemFromParsingName");
+		resolved = true;
+	}
+	if (pCreateItemFromParsingName)
+		pCreateItemFromParsingName(path.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
+#else
+	SHCreateItemFromParsingName(path.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
+#endif
+	return shellItem;
+}
+
 static bool browseDirectoryNew(tstring& target, HWND owner, const GUID* id)
 {
 	bool result = false;
@@ -101,9 +123,8 @@ static bool browseDirectoryNew(tstring& target, HWND owner, const GUID* id)
 		{
 			if (!target.empty())
 			{
-				IShellItem* shellItem;
-				hr = SHCreateItemFromParsingName(target.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
-				if (SUCCEEDED(hr) && shellItem)
+				IShellItem* shellItem = createItemFromParsingName(target);
+				if (shellItem)
 				{
 					pFileOpen->SetFolder(shellItem);
 					shellItem->Release();
@@ -135,11 +156,10 @@ static bool browseDirectoryNew(tstring& target, HWND owner, const GUID* id)
 	return result;
 }
 
-static void setFolder(IFileOpenDialog* fileOpen, const tstring& path)
+static void setFolder(IFileOpenDialog* fileOpen, const wstring& path)
 {
-	IShellItem* shellItem;
-	HRESULT hr = SHCreateItemFromParsingName(path.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
-	if (SUCCEEDED(hr) && shellItem)
+	IShellItem* shellItem = createItemFromParsingName(path);
+	if (shellItem)
 	{
 		fileOpen->SetFolder(shellItem);
 		shellItem->Release();
