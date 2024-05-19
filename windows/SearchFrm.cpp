@@ -708,7 +708,9 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 
 void SearchFrame::initSearchHistoryBox()
 {
-	ctrlSearchBox.ResetContent();
+	int count = ctrlSearchBox.GetCount();
+	while (count > 0)
+		ctrlSearchBox.DeleteString(--count);
 	const auto& data = lastSearches.getData();
 	for (const tstring& s : data)
 		ctrlSearchBox.AddString(s.c_str());
