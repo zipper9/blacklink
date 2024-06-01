@@ -204,29 +204,17 @@ bool QueueItem::isBadSourceExceptL(const UserPtr& user, MaskType exceptions) con
 	return false;
 }
 
-bool QueueItem::countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const
+bool QueueItem::hasOnlineSourcesL(size_t count) const
 {
-	if (sources.size() < maxValue)
-	{
+	if (sources.size() < count)
 		return false;
-	}
-	size_t count = 0;
+	size_t onlineCount = 0;
 	for (auto i = sources.cbegin(); i != sources.cend(); ++i)
-	{
 		if (i->first->isOnline())
 		{
-			if (++count == maxValue)
-			{
+			if (++onlineCount == count)
 				return true;
-			}
 		}
-		/* TODO: needs?
-		else if (maxValue - count > static_cast<size_t>(sources.cend() - i))
-		{
-		    return false;
-		}
-		/*/
-	}
 	return false;
 }
 

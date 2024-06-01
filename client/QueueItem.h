@@ -223,7 +223,6 @@ class QueueItem
 
 		static void getPFSSourcesL(const QueueItemPtr& qi, SourceList& sourceList, uint64_t now, size_t maxCount);
 
-		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const;
 		void getOnlineUsers(UserList& l) const;
 		UserPtr getFirstSource() const;
 
@@ -255,6 +254,7 @@ class QueueItem
 		}
 		bool isBadSourceExceptL(const UserPtr& user, MaskType exceptions) const;
 		size_t getOnlineSourceCountL() const;
+		bool hasOnlineSourcesL(size_t count) const;
 		uint32_t getSourcesVersion() const { return sourcesVersion.load(); }
 		void updateSourcesVersion() { ++sourcesVersion; }
 		void getChunksVisualisation(vector<SegmentEx>& running, vector<Segment>& done) const;

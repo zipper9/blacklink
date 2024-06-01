@@ -291,6 +291,7 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 {
 	QueueItemPtr cand = nullptr;
 
+	size_t limit = SETTING(AUTO_SEARCH_LIMIT);
 	for (auto i = start; i != end; ++i)
 	{
 		const QueueItemPtr& q = i->second;
@@ -310,8 +311,8 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 		if (p == QueueItem::PAUSED)
 			continue;
 		// No files that already have more than AUTO_SEARCH_LIMIT online sources
-		//if (q->countOnlineUsersGreatOrEqualThanL(SETTING(AUTO_SEARCH_LIMIT)))
-		//  continue;
+		if (limit && q->hasOnlineSourcesL(limit))
+			continue;
 		// Did we search for it recently?
 		if (find(recent.begin(), recent.end(), q->getTarget()) != recent.end())
 			continue;
@@ -2993,7 +2994,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 							break;  // don't add sources to already finished files
 						try
 						{
-							downloadFileList = BOOLSETTING(AUTO_SEARCH_DL_LIST) && !qi->countOnlineUsersGreatOrEqualThanL(SETTING(AUTO_SEARCH_MAX_SOURCES));
+							downloadFileList = BOOLSETTING(AUTO_SEARCH_DL_LIST) && !qi->hasOnlineSourcesL(SETTING(AUTO_SEARCH_MAX_SOURCES));
 							wantConnection = addSourceL(qi, sr.getHintedUser(), 0);
 							added = true;
 						}
@@ -3126,7 +3127,7 @@ bool QueueManager::dropSource(const DownloadPtr& d)
 		if (!(q->getExtraFlags() & QueueItem::XFLAG_AUTODROP))
 			return false;
 
-		if (!q->countOnlineUsersGreatOrEqualThanL(2))
+		if (!q->hasOnlineSourcesL(2))
 			return false;
 
 		multipleSegments = q->isMultipleSegments();
