@@ -24,7 +24,6 @@
 #ifdef _WIN32
 
 #include <ws2tcpip.h>
-#include "WinEvent.h"
 
 #else
 
@@ -35,12 +34,12 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "PipeEvent.h"
 
 #endif
 
 #include "Exception.h"
 #include "BaseUtil.h"
+#include "WaitableEvent.h"
 
 class SocketException : public Exception
 {
@@ -313,7 +312,7 @@ class Socket
 		WinEvent<TRUE> controlEvent;
 		unsigned currentMask;
 #else
-		PipeEvent controlEvent;
+		WaitableEvent controlEvent;
 #endif
 };
 

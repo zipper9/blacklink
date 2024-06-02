@@ -7,6 +7,7 @@
 #define INVALID_THREAD_HANDLE INVALID_HANDLE_VALUE
 #else
 #include <pthread.h>
+#include <unistd.h>
 #define INVALID_THREAD_HANDLE 0
 #endif
 

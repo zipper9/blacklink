@@ -365,7 +365,7 @@ void Socket::setSocketOpt(int level, int option, int val)
 	check(::setsockopt(sock, level, option, (char*)&val, len));
 }
 
-int Socket::read(void* aBuffer, int aBufLen)
+int Socket::read(void* buffer, int bufLen)
 {
 	int len = 0;
 
@@ -376,11 +376,11 @@ int Socket::read(void* aBuffer, int aBufLen)
 	{
 #ifdef _WIN32
 		lastWaitResult &= ~WAIT_READ;
-		len = ::recv(sock, (char*)aBuffer, aBufLen, 0);
+		len = ::recv(sock, (char*)buffer, bufLen, 0);
 #else
 		do
 		{
-			len = ::recv(sock, (char*)aBuffer, aBufLen, 0);
+			len = ::recv(sock, (char*)buffer, bufLen, 0);
 		}
 		while (len < 0 && getLastError() == EINTR);
 #endif
@@ -388,11 +388,11 @@ int Socket::read(void* aBuffer, int aBufLen)
 	else
 	{
 #ifdef _WIN32
-		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, NULL, NULL);
+		len = ::recvfrom(sock, (char*)buffer, bufLen, 0, NULL, NULL);
 #else
 		do
 		{
-			len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, NULL, NULL);
+			len = ::recvfrom(sock, (char*)buffer, bufLen, 0, NULL, NULL);
 		}
 		while (len < 0 && getLastError() == EINTR);
 #endif

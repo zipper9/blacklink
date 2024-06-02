@@ -64,6 +64,7 @@
 #include <time.h>
 #include <locale.h>
 #include <stdint.h>
+#include <limits.h>
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -84,7 +85,6 @@
 #include <set>
 #include <string>
 #include <numeric>
-#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
