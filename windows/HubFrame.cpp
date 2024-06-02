@@ -312,8 +312,7 @@ void HubFrame::onDeactivate()
 
 void HubFrame::onActivate()
 {
-	if (!ClientManager::isBeforeShutdown())
-		showActiveFrame();
+	if (!isClosedOrShutdown()) showActiveFrame();
 }
 
 void HubFrame::showActiveFrame()
