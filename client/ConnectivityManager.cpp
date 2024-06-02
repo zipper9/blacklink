@@ -426,8 +426,10 @@ void ConnectivityManager::listenTCP(int af)
 	SettingsManager::IPSettings ips;
 	SettingsManager::getIPSettings(ips, af == AF_INET6);
 	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
+	int connMode = SettingsManager::get(ips.incomingConnections);
 
-	bool fixedPort = af == AF_INET6 || (!autoDetectFlag && SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_NAT);
+	bool fixedPort = af == AF_INET6 ||
+		(!autoDetectFlag && (connMode == SettingsManager::INCOMING_FIREWALL_NAT || connMode == SettingsManager::INCOMING_FIREWALL_PASSIVE));
 	auto cm = ConnectionManager::getInstance();
 	cm->stopServer(af);
 
