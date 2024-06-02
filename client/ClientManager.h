@@ -153,8 +153,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static int privateMessage(const HintedUser& user, const string& msg, int flags);
 		static void userCommand(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		
-		static int getConnectivityMode(int af, int favHubMode);
-		static bool isActive(int af, int favHubMode);
+		static bool isActiveMode(int af, int favHubMode, bool udp);
 		static const CID& getMyCID();
 		static const CID& getMyPID();
 		static void setMyPID(const string& pid);

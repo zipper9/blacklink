@@ -89,7 +89,7 @@ class Client : public ClientBase,
 			STATE_NORMAL,        // Running
 			STATE_DISCONNECTED,  // Idle
 			STATE_WAIT_PORT_TEST // Waiting for port test to complete
-		} state;
+		};
 
 		virtual ~Client();
 
@@ -272,6 +272,14 @@ class Client : public ClientBase,
 		OnlineUserPtr hubOnlineUser;
 
 		std::atomic_bool userListLoaded;
+		States state;
+		uint16_t connMode;
+
+		enum
+		{
+			CONN_MODE_TCP_ACTIVE = 1,
+			CONN_MODE_UDP_ACTIVE = 2
+		};
 
 	public:
 		bool isMe(const OnlineUserPtr& ou) const

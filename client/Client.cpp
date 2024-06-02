@@ -51,6 +51,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	nextUserCheck(0),
 	autoReconnect(false),
 	state(STATE_DISCONNECTED),
+	connMode(0),
 	connSuccess(false),
 	clientSock(nullptr),
 	hubURL(hubURL),
@@ -382,10 +383,10 @@ void Client::connectIfNetworkOk()
 
 bool Client::isActive() const
 {
-	extern bool g_DisableTestPort; // TODO: remove this
-	if (!g_DisableTestPort)
-		return ClientManager::isActive(ip.type, favMode);
-	return true; // Manual active
+	csState.lock();
+	bool result = (connMode & CONN_MODE_TCP_ACTIVE) != 0;
+	csState.unlock();
+	return result;
 }
 
 void Client::send(const char* message, size_t len)
@@ -409,6 +410,7 @@ void Client::onConnected() noexcept
 	csState.lock();
 	updateActivityL();
 	ip = clientSock->getIp();
+	int af = ip.type;
 	if (clientSock->isSecure() && keyprint.compare(0, 7, "SHA256/", 7) == 0)
 	{
 		const auto kp = clientSock->getKeyprint();
@@ -425,8 +427,18 @@ void Client::onConnected() noexcept
 			}
 		}
 	}
+	csState.unlock();
+	
+	uint16_t newConnMode = 0;
+	if (ClientManager::isActiveMode(af, favMode, false))
+		newConnMode |= CONN_MODE_TCP_ACTIVE;
+	if (ClientManager::isActiveMode(af, favMode, true))
+		newConnMode |= CONN_MODE_UDP_ACTIVE;
+	csState.lock();
+	connMode = newConnMode;
 	state = STATE_PROTOCOL;
 	csState.unlock();
+
 	fire(ClientListener::Connected(), this);
 }
 

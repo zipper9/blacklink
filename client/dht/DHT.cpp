@@ -91,7 +91,7 @@ namespace dht
 		myUdpKey = CID(SETTING(DHT_KEY));
 
 		// start with global firewalled status
-		firewalled = !ClientManager::isActive(AF_INET, 0);
+		firewalled = !ClientManager::isActiveMode(AF_INET, 0, true);
 		requestFWCheck = true;
 
 		if (!bucket)
@@ -501,7 +501,7 @@ namespace dht
 			su = AdcSupports::ADCS_FEATURE;
 
 		// TCP status according to global status
-		if (ClientManager::isActive(AF_INET, 0))
+		if (ClientManager::isActiveMode(AF_INET, 0, false))
 		{
 			if (!su.empty()) su += ',';
 			su += AdcSupports::TCP4_FEATURE;

@@ -1206,15 +1206,28 @@ string ClientManager::findMyNick(const string& hubUrl)
 	return Util::emptyString;
 }
 
-int ClientManager::getConnectivityMode(int af, int favHubMode)
+bool ClientManager::isActiveMode(int af, int favHubMode, bool udp)
 {
+	int portTestType, mappingType;
+	if (udp)
+	{
+		if (SearchManager::getUdpPort() == 0) return false;
+		portTestType = PortTest::PORT_UDP;
+		mappingType = MappingManager::PORT_UDP;
+	}
+	else
+	{
+		if (ConnectionManager::getInstance()->getPort() == 0) return false;
+		portTestType = PortTest::PORT_TCP;
+		mappingType = MappingManager::PORT_TCP;
+	}
 	switch (favHubMode)
 	{
-		case 1: return SettingsManager::INCOMING_DIRECT;
-		case 2: return SettingsManager::INCOMING_FIREWALL_PASSIVE;
+		case 1: return true;
+		case 2: return false;
 	}
 	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
-		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
+		return false;
 	int portTestState = PortTest::STATE_UNKNOWN;
 	int type;
 	if (af == AF_INET6)
@@ -1225,20 +1238,15 @@ int ClientManager::getConnectivityMode(int af, int favHubMode)
 	{
 		type = SETTING(INCOMING_CONNECTIONS);
 		int unused;
-		portTestState = g_portTest.getState(PortTest::PORT_TCP, unused, nullptr);
+		portTestState = g_portTest.getState(portTestType, unused, nullptr);
 		if (portTestState == PortTest::STATE_FAILURE)
-			return SettingsManager::INCOMING_FIREWALL_PASSIVE;
+			return false;
 	}
 	if (type == SettingsManager::INCOMING_FIREWALL_UPNP &&
 	    portTestState != PortTest::STATE_SUCCESS &&
-		ConnectivityManager::getInstance()->getMapper(af).getState(MappingManager::PORT_TCP) == MappingManager::STATE_FAILURE)
-		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
-	return type;
-}
-
-bool ClientManager::isActive(int af, int favHubMode)
-{
-	return getConnectivityMode(af, favHubMode) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
+		ConnectivityManager::getInstance()->getMapper(af).getState(mappingType) == MappingManager::STATE_FAILURE)
+		return false;
+	return type != SettingsManager::INCOMING_FIREWALL_PASSIVE;
 }
 
 void ClientManager::cancelSearch(uint64_t owner)

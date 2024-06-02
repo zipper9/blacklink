@@ -53,7 +53,7 @@ namespace dht
 			return;
 		}
 
-		bool active = ClientManager::isActive(AF_INET, 0);
+		bool active = ClientManager::isActiveMode(AF_INET, 0, false);
 
 		// if I am not active, send reverse connect to me request
 		AdcCommand cmd(active ? AdcCommand::CMD_CTM : AdcCommand::CMD_RCM, AdcCommand::TYPE_UDP);
@@ -132,7 +132,7 @@ namespace dht
 		//	return;
 
 		// this is valid for active-passive connections only
-		if (!ClientManager::isActive(AF_INET, 0))
+		if (!ClientManager::isActiveMode(AF_INET, 0, false))
 			return;
 
 		const string& protocol = cmd.getParam(1);
