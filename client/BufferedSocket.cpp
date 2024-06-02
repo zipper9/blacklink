@@ -31,6 +31,10 @@
 #include "SocketPool.h"
 #include "NetworkDevices.h"
 
+#ifdef _WIN32
+#include "CompatibilityManager.h"
+#endif
+
 static const size_t INITIAL_CAPACITY = 8 * 1024;
 static const size_t STREAM_BUF_SIZE = 256 * 1024;
 
@@ -170,7 +174,17 @@ BufferedSocket::~BufferedSocket()
 
 void BufferedSocket::start()
 {
+#ifdef _WIN32
+	if (sock.get())
+	{
+		string threadName = "BufferedSocket-" + Util::toHexString(sock->getSock());
+		Thread::start(64, threadName.c_str());
+	}
+	else
+		Thread::start(64, "BufferedSocket");
+#else
 	Thread::start(64, "BufferedSocket");
+#endif
 }
 
 int BufferedSocket::run()
@@ -597,6 +611,13 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 	}
 	dcassert(!sock.get());
 	sock = move(s);
+#ifdef _WIN32
+	if (sock.get() && isRunning())
+	{
+		string threadName = "BufferedSocket-" + Util::toHexString(sock->getSock());
+		CompatibilityManager::setThreadName(threadHandle, threadName.c_str());
+	}
+#endif
 	if (doLog)
 		LogManager::message("BufferedSocket " + Util::toHexString(this) +
 			": Assigned socket " + Util::toHexString(sock.get() ? sock->getSock() : 0), false);
