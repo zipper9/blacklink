@@ -98,6 +98,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		DWORD getFindFlags() const { return currentFindFlags; }
 		void setFindFlags(DWORD flags) { currentFindFlags = flags; }
 		void resetFindPos() { findInit = true; }
+		static void removeHiddenText(tstring& s);
 
 		static const tstring nickBoundaryChars;
 

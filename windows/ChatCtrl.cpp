@@ -68,7 +68,7 @@ void ChatCtrl::adjustTextSize()
 	int maxLines = SETTING(CHAT_BUFFER_SIZE);
 	if (maxLines <= 0) return;
 	int lineCount = GetLineCount();
-	if (lineCount > maxLines)	
+	if (lineCount > maxLines)
 	{
 		dcdebug("Removing %d lines\n", lineCount - maxLines);
 		int pos = LineIndex(lineCount - maxLines);
@@ -388,11 +388,11 @@ bool ChatCtrl::hitIP(const POINT& p, tstring& result, int& startPos, int& endPos
 	int len = LineLength(charPos) + 1;
 	if (len < 7) // 1.1.1.1
 		return false;
-		
+
 	DWORD posBegin = FindWordBreak(WB_LEFT, charPos);
 	DWORD posEnd = FindWordBreak(WB_RIGHTBREAK, charPos);
 	len = (int) posEnd - (int) posBegin;
-	
+
 	if (len < 7) // 1.1.1.1
 		return false;
 		
@@ -427,11 +427,7 @@ void ChatCtrl::goToEnd(POINT& scrollPos, bool force)
 	si.fMask = SIF_PAGE | SIF_RANGE | SIF_POS;
 	GetScrollInfo(SB_VERT, &si);
 	if (autoScroll || force)
-	{
-		// this must be called twice to work properly :(
 		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
-		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
-	}
 	SetScrollPos(&scrollPos);
 }
 
@@ -441,11 +437,7 @@ void ChatCtrl::goToEnd(bool force)
 	GetScrollPos(&pt);
 	goToEnd(pt, force);
 	if (autoScroll || force)
-	{
-		// this must be called twice to work properly :(
 		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
-		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
-	}
 }
 
 void ChatCtrl::invertAutoScroll()
@@ -741,6 +733,20 @@ long ChatCtrl::findAndSelect(DWORD flags, FINDTEXTEX& ft)
 	return index;
 }
 
+void ChatCtrl::removeHiddenText(tstring& s)
+{
+	tstring::size_type pos = 0;
+	while (pos < s.length())
+	{
+		auto start = s.find(HIDDEN_TEXT_SEP, pos);
+		if (start == tstring::npos) break;
+		auto end = s.find(HIDDEN_TEXT_SEP, start + 1);
+		if (end == tstring::npos) break;
+		s.erase(start, end - start + 1);
+		pos = start;
+	}
+}
+
 #ifdef BL_UI_FEATURE_EMOTICONS
 void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 {
@@ -796,17 +802,7 @@ LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 #ifdef BL_UI_FEATURE_EMOTICONS
 				replaceObjects(line, startIndex);
 #endif
-				// remove hidden text
-				tstring::size_type pos = 0;
-				while (pos < line.length())
-				{
-					auto start = line.find(HIDDEN_TEXT_SEP, pos);
-					if (start == tstring::npos) break;
-					auto end = line.find(HIDDEN_TEXT_SEP, start + 1);
-					if (end == tstring::npos) break;
-					line.erase(start, end - start + 1);
-					pos = start;
-				}
+				removeHiddenText(line);
 				WinUtil::setClipboard(line);
 			}
 		}
@@ -866,6 +862,7 @@ LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 #ifdef BL_UI_FEATURE_EMOTICONS
 				replaceObjects(s, start);
 #endif
+				removeHiddenText(s);
 				WinUtil::setClipboard(s);
 			}
 			pRange->Release();
