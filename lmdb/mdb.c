@@ -5150,7 +5150,7 @@ const PIMAGE_TLS_CALLBACK mdb_tls_cbp __attribute__((section (".CRT$XLB"))) = md
 PIMAGE_TLS_CALLBACK mdb_tls_cbp __attribute__((section (".CRT$XLB"))) = mdb_tls_callback;
 #endif
 #else
-#ifdef _WIN64
+#if defined(_WIN64) || defined(_M_ARM)
 /* Force some symbol references.
  *	_tls_used forces the linker to create the TLS directory if not already done
  *	mdb_tls_cbp prevents whole-program-optimizer from dropping the symbol.
