@@ -19,52 +19,6 @@
 #ifndef FEATURE_DEF_H_
 #define FEATURE_DEF_H_
 
-#ifndef BOOST_NO_RTTI
-#define BOOST_NO_RTTI
-#endif
-
-#ifndef BOOST_ALL_NO_LIB
-#define BOOST_ALL_NO_LIB
-#endif
-
-#ifdef _WIN32
-#ifndef BOOST_USE_WINDOWS_H
-#define BOOST_USE_WINDOWS_H
-#endif
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(disable: 4996)
-#pragma warning(disable: 4127) // conditional expression is constant
-#pragma warning(disable: 4244) // 'argument' : conversion from 'int' to 'unsigned short', possible loss of data
-#pragma warning(disable: 4100) // unreferenced formal parameter
-#pragma warning(disable: 4456) // declaration of 'l_lock' hides previous local declaration
-
-#ifdef _WIN64
-# pragma warning(disable: 4267) // conversion from 'xxx' to 'yyy', possible loss of data
-#endif
-
-#if _MSC_VER == 1900
-#if _MSC_FULL_VER < 190023918
-#error Visual Studio 2015 Update 2 is required
-// https://www.visualstudio.com/en-us/news/vs2015-update2-vs.aspx
-#endif
-
-# pragma warning(disable: 4592) // 'trustedKeyprint' : symbol will be dynamically initialized(implementation limitation)
-
-// https://connect.microsoft.com/VisualStudio/feedback/details/1892487/code-generated-by-msvc-doesnt-operate-atomically-on-std-atomic-t-object-when-sizeof-t-n-alignof-t-n-n-2-4-8
-// Enable a bugfix in VS2015 update 2, remove in the next version of VS2015
-#define _ENABLE_ATOMIC_ALIGNMENT_FIX
-#endif
-
-#if _MSC_VER >= 1900
-# pragma warning(disable: 4458) // C4458: declaration of 'nativeImage' hides class member
-#endif
-
-#define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE 1
-
-#endif
-
 #ifdef _DEBUG
 #define BL_FEATURE_COLLECT_UNKNOWN_TAGS
 #define BL_FEATURE_COLLECT_UNKNOWN_FEATURES
@@ -125,19 +79,6 @@
 #define HAVE_NATPMP_H
 #define HAVE_OPENSSL
 
-#if defined _POSIX_SOURCE || defined _GNU_SOURCE || defined _POSIX_C_SOURCE || defined _XOPEN_SOURCE || defined _BSD_SOURCE
-#define HAVE_TIME_R
-#define HAVE_STRERROR_R
-#endif
-
 #define USE_QUEUE_RWLOCK
-
-// Make sure we're using the templates from algorithm...
-#ifdef min
-# undef min
-#endif
-#ifdef max
-# undef max
-#endif
 
 #endif // FEATURE_DEF_H_

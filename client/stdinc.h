@@ -19,37 +19,6 @@
 #ifndef DCPLUSPLUS_DCPP_STDINC_H
 #define DCPLUSPLUS_DCPP_STDINC_H
 
-#ifndef TORRENT_USE_BOOST_DATE_TIME
-#define TORRENT_USE_BOOST_DATE_TIME
-#endif
-#ifndef TORRENT_BUILDING_SHARED
-#define TORRENT_BUILDING_SHARED
-#endif
-#ifndef TORRENT_LINKING_SHARED
-#define TORRENT_LINKING_SHARED
-#endif
-#ifndef BOOST_ASIO_HEADER_ONLY
-#define BOOST_ASIO_HEADER_ONLY
-#endif
-#ifndef BOOST_ASIO_ENABLE_CANCELIO
-#define BOOST_ASIO_ENABLE_CANCELIO
-#endif
-#ifndef BOOST_ASIO_SEPARATE_COMPILATION
-#define BOOST_ASIO_SEPARATE_COMPILATION
-#endif
-#ifndef TORRENT_DISABLE_GEO_IP
-#define TORRENT_DISABLE_GEO_IP
-#endif
-#ifndef TORRENT_DISABLE_ENCRYPTION
-#define TORRENT_DISABLE_ENCRYPTION
-#endif
-
-// --- Shouldn't have to change anything under here...
-
-#ifndef BZ_NO_STDIO
-#define BZ_NO_STDIO 1
-#endif
-
 #ifdef _WIN32
 #include "w.h"
 #endif
