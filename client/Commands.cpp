@@ -94,6 +94,7 @@ static const CommandDescription desc[] =
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        ResourceManager::CMD_HELP_PG_INFO             }, // COMMAND_PG_INFO
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     2, UINT_MAX, 0                                             }, // COMMAND_USER
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_USER_CONNECTIONS
+	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 1,        0                                             }, // COMMAND_USER_IP
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, 2,        0                                             }, // COMMAND_QUEUE
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_DHT
 	{ CTX_SYSTEM | FLAG_SPLIT_ARGS,                     1, UINT_MAX, 0                                             }, // COMMAND_TTH
@@ -208,6 +209,7 @@ static const CommandName names[] =
 	{ "unknowntags",    COMMAND_DEBUG_UNKNOWN_TAGS  },
 	{ "uptime",         COMMAND_INFO_UPTIME         },
 	{ "user",           COMMAND_USER                },
+	{ "userip",         COMMAND_USER_IP             },
 	{ "userlist",       COMMAND_TOGGLE_USER_LIST    },
 	{ "ut",             COMMAND_INFO_UPTIME         },
 	{ "ver",            COMMAND_INFO_VERSION        },
@@ -1368,6 +1370,38 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			res.what = RESULT_LOCAL_TEXT;
 			return true;
 		}
+		case COMMAND_USER_IP:
+		{
+			IpAddress addr;
+			const string& ipAddrText = pc.args[1];
+			if (!Util::parseIpAddress(addr, ipAddrText))
+			{
+				res.text = STRING(COMMAND_INVALID_IP);
+				res.what = RESULT_ERROR_MESSAGE;
+				return true;
+			}
+			vector<DBCIDStatItem> items;
+			auto db = DatabaseManager::getInstance();
+			auto conn = db->getConnection();
+			if (conn)
+			{
+				conn->loadIPStatByIP(ipAddrText, items);
+				db->putConnection(conn);
+			}
+			for (const DBCIDStatItem& item : items)
+			{
+				res.text += item.cid.toBase32();
+				res.text += ": downloaded=" + Util::toString(item.download);
+				res.text += ", uploaded=" + Util::toString(item.upload);
+				res.text += '\n';
+			}
+			if (res.text.empty())
+				res.text = "IP not found";
+			else
+				res.text.insert(0, "IP statistics:\n");
+			res.what = RESULT_LOCAL_TEXT;
+			return true;
+		}
 #endif
 #ifdef _DEBUG
 		case COMMAND_DEBUG_DISABLE:
@@ -1465,7 +1499,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				auto sm = ShareManager::getInstance();
 				res.text = "Total size: " + Util::formatExactSize(sm->getTotalSharedSize()) +
 					", Total files: " + Util::toString(sm->getTotalSharedFiles()) +
-					", TTH map size: " + Util::toString(sm->getSharedTTHCount());;
+					", TTH map size: " + Util::toString(sm->getSharedTTHCount());
 				res.what = RESULT_LOCAL_TEXT;
 				return true;
 			}

@@ -232,11 +232,11 @@ void DatabaseConnection::upgradeDatabase()
 	bool hasNewStatTables = hasTable("ip_stat") || hasTable("user_stat", "user_db");
 
 	connection.executenonquery("CREATE TABLE IF NOT EXISTS ip_stat("
-	                              "cid blob not null, ip text not null, upload integer not null, download integer not null)");;
+	                              "cid blob not null, ip text not null, upload integer not null, download integer not null)");
 	connection.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_ip_stat ON ip_stat(cid, ip);");
 
 	connection.executenonquery("CREATE TABLE IF NOT EXISTS user_db.user_stat("
-		                              "cid blob primary key, nick text not null, last_ip text not null, message_count integer not null, pm_in integer not null, pm_out integer not null)");
+	                              "cid blob primary key, nick text not null, last_ip text not null, message_count integer not null, pm_in integer not null, pm_out integer not null)");
 #endif
 
 	int userVersion = connection.executeint("PRAGMA user_version");
@@ -888,6 +888,30 @@ IPStatMap* DatabaseConnection::loadIPStat(const CID& cid)
 		DatabaseManager::getInstance()->reportError("SQLite - loadIPStat: " + e.getError(), e.getErrorCode());
 	}
 	return ipStat;
+}
+
+void DatabaseConnection::loadIPStatByIP(const string& ip, vector<DBCIDStatItem>& items)
+{
+	try
+	{
+		DBCIDStatItem item;
+		initQuery(selectIPStatByIP, "select cid, upload, download from ip_stat where ip=?");
+		selectIPStatByIP.bind(1, ip, SQLITE_STATIC);
+		sqlite3_reader reader = selectIPStatByIP.executereader();
+		while (reader.read())
+		{
+			if (reader.getblob(0, item.cid.writableData(), CID::SIZE))
+			{
+				item.upload = reader.getint64(1);
+				item.download = reader.getint64(2);
+				items.push_back(item);
+			}
+		}
+	}
+	catch (const database_error& e)
+	{
+		DatabaseManager::getInstance()->reportError("SQLite - loadIPStatByIP: " + e.getError(), e.getErrorCode());
+	}
 }
 
 void DatabaseConnection::removeIPStat(const CID& cid)

@@ -138,6 +138,13 @@ struct DBUserStatItem
 	CID cid;
 	UserStatItem stat;
 };
+
+struct DBCIDStatItem
+{
+	CID cid;
+	uint64_t download;
+	uint64_t upload;
+};
 #endif
 
 class DatabaseConnection
@@ -174,6 +181,7 @@ class DatabaseConnection
 		IPStatMap* loadIPStat(const CID& cid);
 		void saveIPStats(const vector<DBIPStatItem>& items);
 		void removeIPStat(const CID& cid);
+		void loadIPStatByIP(const string& ip, vector<DBCIDStatItem>& items);
 		bool loadGlobalRatio(uint64_t values[]);
 #endif
 
@@ -238,6 +246,7 @@ class DatabaseConnection
 		sqlite3_command selectUserStat;
 		sqlite3_command deleteUserStat;
 		sqlite3_command selectGlobalRatio;
+		sqlite3_command selectIPStatByIP;
 #endif
 };
 
