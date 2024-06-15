@@ -175,6 +175,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_NAVIGATION_BACK, onNavigation)
 		COMMAND_ID_HANDLER(IDC_NAVIGATION_FORWARD, onNavigation)
 		COMMAND_ID_HANDLER(IDC_NAVIGATION_UP, onNavigation)
+		COMMAND_ID_HANDLER(IDC_EDIT_ADDRESS, onEditAddress)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET + 1, IDC_DOWNLOAD_TARGET + LastDir::get().size(), onDownloadToLastDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_TREE + 1, IDC_DOWNLOAD_TARGET_TREE + LastDir::get().size(), onDownloadToLastDirTree)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
@@ -193,8 +194,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		MESSAGE_HANDLER(WM_XBUTTONUP, onXButtonUp)
 		END_MSG_MAP()
 
-		LRESULT onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // !SMT!-UI
-		LRESULT onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+] NightOrion
+		LRESULT onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -299,19 +300,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		{
 			NMTVKEYDOWN* kd = (NMTVKEYDOWN*) pnmh;
 			if (kd->wVKey == VK_TAB)
-			{
 				onTab();
-			}
 			return 0;
-		}
-
-		void onTab()
-		{
-			HWND focus = ::GetFocus();
-			if (focus == ctrlTree.m_hWnd)
-				ctrlList.SetFocus();
-			else if (focus == ctrlList.m_hWnd)
-				ctrlTree.SetFocus();
 		}
 
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -329,6 +319,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCloseOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAllOffline();
+			return 0;
+		}
+
+		LRESULT onEditAddress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			navWnd.navBar.setEditMode(true);
 			return 0;
 		}
 
@@ -408,6 +404,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void createFileMenus();
 		void createDirMenus();
 		void destroyMenus();
+		void performDefaultAction(int index);
+		void onTab();
 
 		class ItemInfo
 		{

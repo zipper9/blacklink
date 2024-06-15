@@ -33,7 +33,7 @@ enum
 
 static const unsigned BUTTON_DROPDOWN = 1;
 
-static const int HEIGHT_EXTRA = 8; // dialog units
+static const int HEIGHT_EXTRA = 6; // dialog units
 static const int POPUP_DATA_CHEVRON = -16;
 static const int IMAGE_LIST_ICON_SIZE = 16;
 static const int TIMER_UPDATE_ANIMATION = 5;

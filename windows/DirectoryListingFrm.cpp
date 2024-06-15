@@ -936,55 +936,58 @@ LRESULT DirectoryListingFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*w
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onDoubleClickFiles(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+void DirectoryListingFrame::performDefaultAction(int index)
 {
-	const NMITEMACTIVATE* item = (NMITEMACTIVATE*) pnmh;
 	const HTREEITEM t = ctrlTree.GetSelectedItem();
-	if (t != NULL && item->iItem != -1)
+	if (!t || index == -1) return;
+	const ItemInfo* ii = ctrlList.getItemData(index);
+	if (ii->type == ItemInfo::FILE)
 	{
-		const ItemInfo* ii = ctrlList.getItemData(item->iItem);
-		if (ii->type == ItemInfo::FILE)
+		const tstring& path = ii->columns[COLUMN_PATH];
+		if (!path.empty())
 		{
-			const tstring& path = ii->columns[COLUMN_PATH];
-			if (!path.empty())
-			{
-				openFileFromList(path);
-			}
-			else
-			{
-				DirectoryListing::Directory* parent = nullptr;
-				try
-				{
-					QueueItem::Priority prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
-					bool getConnFlag = true;
-					parent = ii->file->getParent();
-					if (Util::isDclstFile(ii->file->getName()))
-						dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), true, prio, true, getConnFlag);
-					else
-						dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), false, prio, false, getConnFlag);
-				}
-				catch (const Exception& e)
-				{
-					ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
-				}
-				if (parent) DirectoryListing::Directory::updateFlags(parent);
-				redraw();
-			}
+			openFileFromList(path);
 		}
 		else
 		{
-			HTREEITEM ht = ctrlTree.GetChildItem(t);
-			while (ht != NULL)
+			DirectoryListing::Directory* parent = nullptr;
+			try
 			{
-				if ((DirectoryListing::Directory*)ctrlTree.GetItemData(ht) == ii->dir)
-				{
-					ctrlTree.SelectItem(ht);
-					break;
-				}
-				ht = ctrlTree.GetNextSiblingItem(ht);
+				QueueItem::Priority prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
+				bool getConnFlag = true;
+				parent = ii->file->getParent();
+				if (Util::isDclstFile(ii->file->getName()))
+					dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), true, prio, true, getConnFlag);
+				else
+					dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), false, prio, false, getConnFlag);
 			}
+			catch (const Exception& e)
+			{
+				ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
+			}
+			if (parent) DirectoryListing::Directory::updateFlags(parent);
+			redraw();
 		}
 	}
+	else
+	{
+		HTREEITEM ht = ctrlTree.GetChildItem(t);
+		while (ht)
+		{
+			if ((DirectoryListing::Directory*)ctrlTree.GetItemData(ht) == ii->dir)
+			{
+				ctrlTree.SelectItem(ht);
+				break;
+			}
+			ht = ctrlTree.GetNextSiblingItem(ht);
+		}
+	}
+}
+
+LRESULT DirectoryListingFrame::onDoubleClickFiles(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+{
+	const NMITEMACTIVATE* item = (NMITEMACTIVATE*) pnmh;
+	performDefaultAction(item->iItem);
 	return 0;
 }
 
@@ -1666,7 +1669,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
 		{
 			if (!hasTTH)
-				fileMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MF_BYCOMMAND | MFS_DISABLED);;
+				fileMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MF_BYCOMMAND | MFS_DISABLED);
 			if (!hasTTH || ii->file->isAnySet(DirectoryListing::FLAG_DOWNLOADED | DirectoryListing::FLAG_SHARED))
 				fileMenu.EnableMenuItem(IDC_MARK_AS_DOWNLOADED, MF_BYCOMMAND | MFS_DISABLED);
 			fileMenu.EnableMenuItem(IDC_GENERATE_DCLST_FILE, MF_BYCOMMAND | MFS_DISABLED);
@@ -3411,6 +3414,27 @@ int ThreadedDirectoryListing::run()
 	return 0;
 }
 
+void DirectoryListingFrame::onTab()
+{
+	HWND focus = ::GetFocus();
+	HWND hWnd[] = { ctrlTree.m_hWnd, ctrlList.m_hWnd };
+	int index = -1;
+	for (int i = 0; i < _countof(hWnd); i++)
+		if (focus == hWnd[i])
+		{
+			index = i;
+			break;
+		}
+	if (index >= 0)
+	{
+		index += WinUtil::isCtrl() ? -1 : 1;
+		index %= _countof(hWnd);
+	}
+	else
+		index = 0;
+	::SetFocus(hWnd[index]);
+}
+
 void ThreadedDirectoryListing::notify(int progress)
 {
 	window->PostMessage(WM_SPEAKER, DirectoryListingFrame::PROGRESS | progress);
@@ -3418,13 +3442,9 @@ void ThreadedDirectoryListing::notify(int progress)
 
 BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)
 {
-	MainFrame* mainFrame = MainFrame::getMainFrame();
-	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
-	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
-	if (WinUtil::isCtrl()) return FALSE;
-	if (navWnd.navBar.isEditMode() && GetFocus() == navWnd.navBar.getEditCtrl()) return FALSE;
-	return IsDialogMessage(pMsg);
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	return TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg);
 }
 
 CFrameWndClassInfo& DirectoryListingFrame::GetWndClassInfo()

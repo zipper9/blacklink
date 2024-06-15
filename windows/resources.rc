@@ -2738,6 +2738,7 @@ END
 IDR_FILELIST ACCELERATORS
 BEGIN
     VK_F3,          IDC_FIND,               VIRTKEY, NOINVERT
+    "L",            IDC_EDIT_ADDRESS,       VIRTKEY, CONTROL, NOINVERT
 END
 
 #endif    // English (United States) resources

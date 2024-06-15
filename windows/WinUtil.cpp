@@ -651,8 +651,8 @@ void WinUtil::getContextMenuPos(const CListViewCtrl& list, POINT& pt)
 	{
 		CRect rc;
 		list.GetItemRect(pos, &rc, LVIR_LABEL);
-		pt.x = rc.left;
-		pt.y = rc.top + rc.Height() / 2;
+		pt.x = 16;
+		pt.y = (rc.top + rc.bottom) / 2;
 	}
 	else
 		pt.x = pt.y = 0;
@@ -661,13 +661,13 @@ void WinUtil::getContextMenuPos(const CListViewCtrl& list, POINT& pt)
 
 void WinUtil::getContextMenuPos(const CTreeViewCtrl& tree, POINT& pt)
 {
-	CRect rc;
 	HTREEITEM ht = tree.GetSelectedItem();
 	if (ht)
 	{
+		CRect rc;
 		tree.GetItemRect(ht, &rc, TRUE);
-		pt.x = rc.left;
-		pt.y = rc.top + rc.Height() / 2;
+		pt.x = std::max<int>(rc.left, 16);
+		pt.y = (rc.top + rc.bottom) / 2;
 	}
 	else
 		pt.x = pt.y = 0;

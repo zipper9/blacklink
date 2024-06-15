@@ -120,6 +120,7 @@ int DirectoryListingNavWnd::updateNavBarHeight()
 
 void DirectoryListingNavWnd::updateNavBar(const DirectoryListing::Directory* dir, const string& path, const DirectoryListingFrame* frame)
 {
+	navBar.setEditMode(false);
 	int icon = IconBitmaps::FOLDER;
 	if (!dir->getParent())
 		icon = frame->getDclstFlag() ? IconBitmaps::DCLST : IconBitmaps::FILELIST;
