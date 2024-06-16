@@ -285,7 +285,6 @@ class Identity
 		}
 		bool isBotOrHub() const // "CT"
 		{
-			dcassert(getClientTypeBit(CT_BOT | CT_HUB) == isBot() || isHub());
 			return getClientTypeBit(CT_BOT | CT_HUB);
 		}
 		
@@ -295,7 +294,6 @@ class Identity
 		}
 		bool isOp() const  // "CT"
 		{
-			// TODO: please fix me.
 			return getClientTypeBit(CT_OP /*| CT_SU*/ | CT_OWNER);
 		}
 		

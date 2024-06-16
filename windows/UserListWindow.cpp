@@ -4,10 +4,13 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "LockRedraw.h"
+#include "UserTypeColors.h"
 #include "../client/UserManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
 #include "../client/dht/DHT.h"
+
+using namespace UserTypeColors;
 
 static const int columnSizes[] =
 {
@@ -109,18 +112,6 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::FLY_HUB_TIMES,           // COLUMN_FLY_HUB_TIMES
 	ResourceManager::FLY_HUB_SUPPORT_INFO     // COLUMN_FLY_HUB_SUPPORT_INFO
 #endif
-};
-
-enum Mask
-{
-	IS_FAVORITE         = 0x0003 << 2,
-	IS_FAVORITE_ON      = 0x0001 << 2,
-	IS_BAN              = 0x0003 << 4,
-	IS_BAN_ON           = 0x0001 << 4,
-	IS_RESERVED_SLOT    = 0x0003 << 6,
-	IS_RESERVED_SLOT_ON = 0x0001 << 6,
-	IS_IGNORED_USER     = 0x0003 << 8,
-	IS_IGNORED_USER_ON  = 0x0001 << 8
 };
 
 UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) : hubFrame(hubFrame)
@@ -276,7 +267,7 @@ void UserListWindow::insertUser(UserInfo* ui)
 		FilterModes mode = NONE;
 		const int sel = getFilterSelPos();
 		bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
-		
+
 		if (matchFilter(*ui, sel, doSizeCompare, mode, size))
 		{
 			dcassert(ctrlUsers.findItem(ui) == -1);
@@ -600,11 +591,12 @@ LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 					}
 				}
 				ui->flags |= IS_FAVORITE | IS_BAN | IS_RESERVED_SLOT;
-				getUserColor(cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
+				cd->clrTextBk = Colors::g_bgColor;
+				cd->clrText = getColor(ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
 		}
-		
+
 		default:
 			return CDRF_DODEFAULT;
 	}
@@ -807,95 +799,6 @@ bool UserListWindow::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, Filt
 	return insert;
 }
 
-void UserListWindow::getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
-{
-	const UserPtr& user = onlineUser->getUser();
-	auto statusFlags = onlineUser->getIdentity().getStatus();
-	bg = Colors::g_bgColor;
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-	if (isOp)
-	{
-	
-		const auto fc = onlineUser->getIdentity().getFakeCard();
-		if (fc & Identity::BAD_CLIENT)
-		{
-			fg = SETTING(BAD_CLIENT_COLOR);
-			return;
-		}
-		else if (fc & Identity::BAD_LIST)
-		{
-			fg = SETTING(BAD_FILELIST_COLOR);
-			return;
-		}
-		else if (fc & Identity::CHECKED && BOOLSETTING(SHOW_SHARE_CHECKED_USERS))
-		{
-			fg = SETTING(FULL_CHECKED_COLOR);
-			return;
-		}
-	}
-#endif // FLYLINKDC_USE_DETECT_CHEATING
-	dcassert(user);
-	const auto userFlags = user->getFlags();
-	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
-	{
-		flags &= ~IS_IGNORED_USER;
-		if (UserManager::getInstance()->isInIgnoreList(onlineUser->getIdentity().getNick()))
-			flags |= IS_IGNORED_USER_ON;
-	}
-	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
-	{
-		flags &= ~IS_RESERVED_SLOT;
-		if (userFlags & User::RESERVED_SLOT)
-			flags |= IS_RESERVED_SLOT_ON;
-	}
-	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
-	{
-		flags &= ~(IS_FAVORITE | IS_BAN);
-		if (userFlags & User::FAVORITE)
-		{
-			flags |= IS_FAVORITE_ON;
-			if (userFlags & User::BANNED)
-				flags |= IS_BAN_ON;
-		}
-	}
-	
-	if (flags & IS_RESERVED_SLOT)
-	{
-		fg = SETTING(RESERVED_SLOT_COLOR);
-	}
-	else if (flags & IS_FAVORITE_ON)
-	{
-		if (flags & IS_BAN_ON)
-			fg = SETTING(FAV_BANNED_COLOR);
-		else
-			fg = SETTING(FAVORITE_COLOR);
-	}
-	else if (onlineUser->getIdentity().isOp())
-	{
-		fg = SETTING(OP_COLOR);
-	}
-	else if (flags & IS_IGNORED_USER)
-	{
-		fg = SETTING(IGNORED_COLOR);
-	}
-	else if (statusFlags & Identity::SF_FIREBALL)
-	{
-		fg = SETTING(FIREBALL_COLOR);
-	}
-	else if (statusFlags & Identity::SF_SERVER)
-	{
-		fg = SETTING(SERVER_COLOR);
-	}
-	else if (statusFlags & Identity::SF_PASSIVE)
-	{
-		fg = SETTING(PASSIVE_COLOR);
-	}
-	else
-	{
-		fg = SETTING(NORMAL_COLOR);
-	}
-}
-
 void UserListWindow::onIgnoreListChanged()
 {
 	WRITE_LOCK(*csUserMap);
@@ -937,7 +840,7 @@ void UserListWindow::updateLayout()
 	int comboHeight = WinUtil::getComboBoxHeight(ctrlFilterSel, nullptr);
 	int editHeight = comboHeight;
 	int minSearchBoxWidth = WinUtil::dialogUnitsToPixelsX(60, xdu);
-	
+
 	if (minSearchBoxWidth + comboWidth + 6 <= rect.Width())
 	{
 		HDWP dwp = BeginDeferWindowPos(4);

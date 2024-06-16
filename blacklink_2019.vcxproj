@@ -947,6 +947,7 @@
     <ClCompile Include="windows\UserListColorsTab.cpp" />
     <ClCompile Include="windows\UserListWindow.cpp" />
     <ClCompile Include="windows\UsersFrame.cpp" />
+    <ClCompile Include="windows\UserTypeColors.cpp" />
     <ClCompile Include="windows\UxThemeLib.cpp" />
     <ClCompile Include="windows\VistaAnimations.cpp" />
     <ClCompile Include="windows\WaitingUsersFrame.cpp" />
@@ -1097,6 +1098,7 @@
     <ClInclude Include="windows\UserListColorsTab.h" />
     <ClInclude Include="windows\UserListWindow.h" />
     <ClInclude Include="windows\UserMessages.h" />
+    <ClInclude Include="windows\UserTypeColors.h" />
     <ClInclude Include="windows\UxThemeLib.h" />
     <ClInclude Include="windows\VistaAnimations.h" />
     <ClInclude Include="windows\WinFirewall.h" />

@@ -22,9 +22,8 @@
 #include "../client/DownloadManagerListener.h"
 #include "../client/UploadManagerListener.h"
 #include "../client/ConnectionManagerListener.h"
-#include "../client/forward.h"
-#include "../client/Download.h"
-#include "../client/Upload.h"
+#include "../client/FavoriteManagerListener.h"
+#include "../client/UserManagerListener.h"
 #include "../client/TaskQueue.h"
 #include "../client/UserInfoBase.h"
 
@@ -45,6 +44,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	public PreviewBaseHandler,
 	public InternetSearchBaseHandler,
 	public UCHandler<TransferView>,
+	private FavoriteManagerListener,
+	private UserManagerListener,
 	private SettingsManagerListener
 {
 	public:
@@ -186,9 +187,10 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	private:
 		enum Tasks
 		{
-			TRANSFER_ADD_TOKEN,
-			TRANSFER_REMOVE_TOKEN,
-			TRANSFER_UPDATE_TOKEN
+			ADD_TOKEN,
+			REMOVE_TOKEN,
+			UPDATE_TOKEN,
+			REPAINT
 		};
 
 		enum
@@ -508,6 +510,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void createMenus();
 		void destroyMenus();
 
+		// ConnectionManagerListener
 		void on(ConnectionManagerListener::Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
 		void on(ConnectionManagerListener::FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept override;
 		void on(ConnectionManagerListener::FailedUpload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept override;
@@ -518,6 +521,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(ConnectionManagerListener::ListenerStarted) noexcept override;
 		void on(ConnectionManagerListener::ListenerFailed, const char* type, int af, int errorCode, const string& errorText) noexcept override;
 
+		// DownloadManagerListener
 		void on(DownloadManagerListener::RemoveToken, const string& token) noexcept override;
 		void on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept override;
 		void on(DownloadManagerListener::Complete, const DownloadPtr& download) noexcept override;
@@ -528,6 +532,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(DownloadManagerListener::Tick, const DownloadArray& download) noexcept override;
 		void on(DownloadManagerListener::Status, const UserConnection*, const Download::ErrorInfo&) noexcept override;
 
+		// UploadManagerListener
 		void on(UploadManagerListener::Starting, const UploadPtr& upload) noexcept override;
 		void on(UploadManagerListener::Tick, const UploadArray& upload) noexcept override;
 		void on(UploadManagerListener::Complete, const UploadPtr& upload) noexcept override
@@ -539,6 +544,27 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			onTransferComplete(upload.get(), false, upload->getPath(), true);
 		}
 
+		// FavoriteManagerListener
+		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept override
+		{
+			addTask(REPAINT, nullptr);
+		}
+		void on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept override
+		{
+			addTask(REPAINT, nullptr);
+		}
+		void on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept override
+		{
+			addTask(REPAINT, nullptr);
+		}
+
+		// UserManagerListener
+		void on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept override
+		{
+			addTask(REPAINT, nullptr);
+		}
+
+		// SettingsManagerListener
 		void on(SettingsManagerListener::Repaint) override;
 
 		void onTransferComplete(const Transfer* t, bool download, const string& filename, bool failed);

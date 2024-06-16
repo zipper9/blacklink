@@ -26,10 +26,13 @@
 #include "../client/QueueManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/FavoriteManager.h"
+#include "../client/UserManager.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
 
 #include "TransferView.h"
+#include "UserTypeColors.h"
 #include "MainFrm.h"
 #include "QueueFrame.h"
 #include "WaitingUsersFrame.h"
@@ -150,6 +153,8 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ConnectionManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
 	UploadManager::getInstance()->addListener(this);
+	FavoriteManager::getInstance()->addListener(this);
+	UserManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	timer.createTimer(TIMER_VAL, 4);
 	return 0;
@@ -225,6 +230,8 @@ void TransferView::prepareClose()
 	SET_SETTING(TRANSFER_FRAME_SORT, ctrlTransfers.getSortForSettings());
 
 	SettingsManager::getInstance()->removeListener(this);
+	UserManager::getInstance()->removeListener(this);
+	FavoriteManager::getInstance()->removeListener(this);
 	UploadManager::getInstance()->removeListener(this);
 	DownloadManager::getInstance()->removeListener(this);
 	ConnectionManager::getInstance()->removeListener(this);
@@ -548,16 +555,22 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			const ItemInfo* ii = reinterpret_cast<const ItemInfo*>(cd->nmcd.lItemlParam);
 			if (!ii) return CDRF_DODEFAULT;
 			const int colIndex = ctrlTransfers.findColumn(cd->iSubItem);
-			cd->clrText = Colors::g_textColor;
 			cd->clrTextBk = Colors::g_bgColor;
-			if (colIndex != COLUMN_USER &&
-			    colIndex != COLUMN_HUB &&
-			    colIndex != COLUMN_STATUS &&
-			    colIndex != COLUMN_LOCATION &&
-			    ii->status != ItemInfo::STATUS_RUNNING)
+			if (colIndex == COLUMN_USER)
 			{
-				cd->clrText = OperaColors::blendColors(Colors::g_bgColor, Colors::g_textColor, 0.4);
+				if (ii->isParent() || !ii->getUser())
+					cd->clrText = Colors::g_textColor;
+				else
+				{
+					using namespace UserTypeColors;
+					unsigned short flags = IS_FAVORITE | IS_BAN | IS_RESERVED_SLOT;
+					cd->clrText = getColor(flags, ii->getUser());
+				}
 			}
+			else if (colIndex != COLUMN_HUB && colIndex != COLUMN_STATUS && colIndex != COLUMN_LOCATION && ii->status != ItemInfo::STATUS_RUNNING)
+				cd->clrText = OperaColors::blendColors(Colors::g_bgColor, Colors::g_textColor, 0.4);
+			else
+				cd->clrText = Colors::g_textColor;
 
 			if (cd->iSubItem == 0)
 			{
@@ -796,12 +809,13 @@ void TransferView::processTasks()
 	tasks.get(t);
 	if (t.empty()) return;
 
+	bool update = false;
 	CLockRedraw<> lockRedraw(ctrlTransfers);
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
 		switch (i->first)
 		{
-			case TRANSFER_ADD_TOKEN:
+			case ADD_TOKEN:
 			{
 				const auto &ui = static_cast<UpdateInfo&>(*i->second);
 				int index;
@@ -817,7 +831,7 @@ void TransferView::processTasks()
 				break;
 			}
 
-			case TRANSFER_REMOVE_TOKEN:
+			case REMOVE_TOKEN:
 			{
 				const auto &st = static_cast<StringTask&>(*i->second);
 				int index;
@@ -833,7 +847,7 @@ void TransferView::processTasks()
 				break;
 			}
 
-			case TRANSFER_UPDATE_TOKEN:
+			case UPDATE_TOKEN:
 			{
 				auto &ui = static_cast<UpdateInfo&>(*i->second);
 				int index;
@@ -905,17 +919,25 @@ void TransferView::processTasks()
 				}
 				break;
 			}
+
+			case REPAINT:
+				update = true;
+				break;
+
 			default:
 				dcassert(0);
 				break;
-		};
+		}
 		delete i->second;
 	}
 	if (shouldSort && !MainFrame::isAppMinimized())
 	{
 		shouldSort = false;
+		update = false;
 		ctrlTransfers.resort();
 	}
+	if (update)
+		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 LRESULT TransferView::onSearchAlternates(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -1099,24 +1121,24 @@ TransferView::UpdateInfo* TransferView::createUpdateInfoForNewItem(const HintedU
 void TransferView::on(ConnectionManagerListener::Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
 {
 	auto task = createUpdateInfoForNewItem(hintedUser, isDownload, token);
-	if (task) addTask(TRANSFER_ADD_TOKEN, task);
+	if (task) addTask(ADD_TOKEN, task);
 }
 
 void TransferView::on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
 {
 	auto task = createUpdateInfoForNewItem(hintedUser, isDownload, token);
-	if (task) addTask(TRANSFER_UPDATE_TOKEN, task);
+	if (task) addTask(UPDATE_TOKEN, task);
 }
 
 void TransferView::on(ConnectionManagerListener::UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
 {
 	auto task = createUpdateInfoForNewItem(hintedUser, isDownload, token);
-	if (task) addTask(TRANSFER_UPDATE_TOKEN, task);
+	if (task) addTask(UPDATE_TOKEN, task);
 }
 
 void TransferView::on(ConnectionManagerListener::Removed, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
 {
-	addTask(TRANSFER_REMOVE_TOKEN, new StringTask(token));
+	addTask(REMOVE_TOKEN, new StringTask(token));
 }
 
 void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept
@@ -1142,14 +1164,14 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 #endif
 	ui->setStatus(ItemInfo::STATUS_WAITING);
 	ui->setSpeed(0);
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept
 {
 	if (onlyActiveUploads)
 	{
-		addTask(TRANSFER_REMOVE_TOKEN, new StringTask(token));
+		addTask(REMOVE_TOKEN, new StringTask(token));
 		return;
 	}
 	UpdateInfo* ui = new UpdateInfo(hintedUser, false);
@@ -1157,7 +1179,7 @@ void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser&
 	ui->setStatusString(Text::toT(reason));
 	ui->setSpeed(0);
 	ui->setStatus(ItemInfo::STATUS_WAITING);
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
@@ -1396,7 +1418,7 @@ void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& do
 	ui->setStatusString(TSTRING(REQUESTING) + _T(' ') + getFile(download->getType(), Text::toT(Util::getFileName(download->getPath()))) + _T("..."));
 	const string& token = download->getConnectionQueueToken();
 	ui->setToken(token);
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 void TransferView::on(DownloadManagerListener::Complete, const DownloadPtr& download) noexcept
@@ -1430,7 +1452,7 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& downlo
 	            TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target) + _T('\n') +
 	            TSTRING(USER) + _T(": ") + WinUtil::getNicks(ui->hintedUser) + _T('\n') +
 	            TSTRING(REASON) + _T(": ") + tmpReason, TSTRING(DOWNLOAD_FAILED) + _T(' '), NIIF_WARNING);
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 static const tstring& getReasonText(int error)
@@ -1461,7 +1483,7 @@ void TransferView::on(DownloadManagerListener::Status, const UserConnection* con
 	ui->setType(status.type);
 	const string& token = conn->getConnectionQueueToken();
 	ui->setToken(token);
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 void TransferView::on(UploadManagerListener::Starting, const UploadPtr& upload) noexcept
@@ -1483,7 +1505,7 @@ void TransferView::on(UploadManagerListener::Starting, const UploadPtr& upload) 
 	const string& token = upload->getConnectionQueueToken();
 	ui->setToken(token);
 
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) noexcept
@@ -1502,7 +1524,7 @@ void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) no
 		ui->setQueueItem(j->qi);
 		ui->statusString = ItemInfo::formatStatusString(j->transferFlags, j->startTime, j->pos, j->size);
 		ui->updateMask |= UpdateInfo::MASK_STATUS_STRING;
-		addTask(TRANSFER_UPDATE_TOKEN, ui);
+		addTask(UPDATE_TOKEN, ui);
 	}
 }
 
@@ -1526,7 +1548,7 @@ void TransferView::on(UploadManagerListener::Tick, const UploadArray& ul) noexce
 		ui->setToken(j->token);
 		ui->statusString = ItemInfo::formatStatusString(j->transferFlags, j->startTime, j->pos, j->size);
 		ui->updateMask |= UpdateInfo::MASK_STATUS_STRING;
-		addTask(TRANSFER_UPDATE_TOKEN, ui);
+		addTask(UPDATE_TOKEN, ui);
 	}
 }
 
@@ -1556,7 +1578,7 @@ void TransferView::onTransferComplete(const Transfer* t, bool download, const st
 		           TSTRING(USER) + _T(": ") + Text::toT(ClientManager::getNick(t->getHintedUser())), TSTRING(UPLOAD_FINISHED_IDLE));
 	}
 
-	addTask(TRANSFER_UPDATE_TOKEN, ui);
+	addTask(UPDATE_TOKEN, ui);
 }
 
 void TransferView::ItemInfo::disconnectAndBlock()
@@ -1800,12 +1822,12 @@ void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, co
 
 void TransferView::on(DownloadManagerListener::RemoveToken, const string& token) noexcept
 {
-	addTask(TRANSFER_REMOVE_TOKEN, new StringTask(token));
+	addTask(REMOVE_TOKEN, new StringTask(token));
 }
 
 void TransferView::on(ConnectionManagerListener::RemoveToken, const string& token) noexcept
 {
-	addTask(TRANSFER_REMOVE_TOKEN, new StringTask(token));
+	addTask(REMOVE_TOKEN, new StringTask(token));
 }
 
 LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

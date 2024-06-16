@@ -26,7 +26,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		};
 
 		DECLARE_WND_CLASS_EX(_T("UserListWindow"), CS_HREDRAW | CS_VREDRAW, COLOR_3DFACE);
-		
+
 		UserListWindow(HubFrameCallbacks* hubFrame);
 		~UserListWindow();
 
@@ -103,7 +103,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		CtrlUsers ctrlUsers;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		static const int columnId[COLUMN_LAST];
-		
+
 		SearchBoxCtrl ctrlSearchBox;
 		CComboBox ctrlFilterSel;
 
@@ -135,8 +135,6 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
-
-		void getUserColor(COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser);
 };
 
 #endif // USER_LIST_WINDOW_H_
