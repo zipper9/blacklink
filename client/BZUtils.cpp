@@ -104,3 +104,8 @@ bool UnBZFilter::operator()(const void* in, size_t& insize, void* out, size_t& o
 	insize = insize - zs.avail_in;
 	return err == BZ_OK;
 }
+
+extern "C" void bz_internal_error(int errcode)
+{
+	dcdebug("bzip2 internal error: %d\n", errcode);
+}

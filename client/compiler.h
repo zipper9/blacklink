@@ -129,10 +129,6 @@
 #endif
 #endif
 
-#ifndef BZ_NO_STDIO
-#define BZ_NO_STDIO 1
-#endif
-
 #include "FeatureDef.h"
 
 #endif // DCPLUSPLUS_DCPP_COMPILER_H

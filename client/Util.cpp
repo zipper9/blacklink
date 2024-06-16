@@ -77,14 +77,8 @@ const tstring& getAppVersionT()
 	return s;
 }
 
-extern "C" void bz_internal_error(int errcode)
-{
-	dcdebug("bzip2 internal error: %d\n", errcode);
-	// TODO - логирование?
-}
-
-#if (_MSC_VER >= 1400 )
-void WINAPI invalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_t*, unsigned int, uintptr_t)
+#ifdef _MSC_VER
+static void invalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_t*, unsigned int, uintptr_t)
 {
 	//do nothing, this exist because vs2k5 crt needs it not to crash on errors.
 }
@@ -92,13 +86,11 @@ void WINAPI invalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_
 
 void Util::initialize()
 {
-	initRand();
-
-#if defined _MSC_VER && _MSC_VER >= 1400
-	_set_invalid_parameter_handler(reinterpret_cast<_invalid_parameter_handler>(invalidParameterHandler));
+#ifdef _MSC_VER
+	_set_invalid_parameter_handler(invalidParameterHandler);
 #endif
+	initRand();
 	setlocale(LC_ALL, "");
-
 	Util::initAppPaths();
 }
 	

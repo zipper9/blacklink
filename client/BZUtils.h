@@ -19,6 +19,10 @@
 #ifndef BZ_UTILS_H_
 #define BZ_UTILS_H_
 
+#ifndef BZ_NO_STDIO
+#define BZ_NO_STDIO 1
+#endif
+
 #include <bzlib.h>
 
 class BZFilter
