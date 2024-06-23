@@ -5,9 +5,12 @@ set(CMAKE_CXX_FLAGS "-std=c++14 -D_CONSOLE -DNO_RESOURCE_MANAGER -DBOOST_ALL_NO_
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
+if(APPLE)
+  add_compile_definitions(_DARWIN_C_SOURCE)
+endif()
+
 set(SOURCES
   MakeDefs.cpp
-  ../boost/libs/system/src/error_code.cpp
   ../client/BaseUtil.cpp
   ../client/debug.cpp
   ../client/Exception.cpp
@@ -19,3 +22,8 @@ set(SOURCES
 
 include_directories(../boost)
 add_executable(MakeDefs ${SOURCES})
+
+find_library(ICONV_LIB iconv)
+if(ICONV_LIB)
+  target_link_libraries(MakeDefs ${ICONV_LIB})
+endif()
