@@ -31,6 +31,9 @@
 #ifndef _WIN32
 #include <fnmatch.h>
 #include <sys/statvfs.h>
+#ifdef _DARWIN_C_SOURCE
+#define st_mtim st_mtimespec
+#endif
 #endif
 
 #if defined(_WIN32) && defined(_CONSOLE)

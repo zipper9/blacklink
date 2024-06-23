@@ -81,8 +81,7 @@ static int64_t posixTimeToLocal(int64_t pt)
 #else
 	local = *localtime(&t);
 #endif
-	t = timegm(&local);
-	return t == (time_t) -1 ? pt : t;
+	return Util::gmtToUnixTime(&local);
 }
 #endif
 

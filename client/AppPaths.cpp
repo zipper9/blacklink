@@ -13,9 +13,9 @@
 #ifdef _WIN32
 #include "CompatibilityManager.h"
 #include <shlobj.h>
-#endif
-
-#ifdef __FreeBSD__
+#elif defined __APPLE__
+#include <mach-o/dyld.h>
+#elif defined __FreeBSD__
 #include <sys/sysctl.h>
 #endif
 
@@ -41,7 +41,11 @@ tstring Util::getModuleFileName()
 string Util::getModuleFileName()
 {
 	string result;
-#ifdef __FreeBSD__
+#ifdef __APPLE__
+	char path[PATH_MAX];
+	uint32_t size = sizeof(path);
+	if (_NSGetExecutablePath(path, &size) == 0) result = path;
+#elif defined __FreeBSD__
 	int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
 	char buf[PATH_MAX];
 	size_t cb = sizeof(buf);
