@@ -54,8 +54,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		enum Tasks
 		{
 			ADD_FILE,
-			REMOVE_USER,
-			UPDATE_ITEMS
+			REMOVE_USER
 		};
 		
 		typedef MDITabChildWindowImpl<WaitingUsersFrame> baseClass;
@@ -104,7 +103,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 				return 0;
 			}
 			if (!isClosedOrShutdown())
-				processTasks();
+				onTimerInternal();
 			return 0;
 		}
 		
@@ -262,7 +261,9 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		void addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser);
 		void removeUser(const UserPtr& user);
 
+		void onTimerInternal();
 		void updateStatus();
+		void updateListItems();
 		void initProgressBar(bool check);
 
 		bool shouldUpdateStatus;
@@ -297,7 +298,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		{
 			addTask(REMOVE_USER, new UserTask(user));
 		}
-		void on(UploadManagerListener::QueueUpdate) noexcept override;
 
 		// SettingsManagerListener
 		void on(SettingsManagerListener::Repaint) override;

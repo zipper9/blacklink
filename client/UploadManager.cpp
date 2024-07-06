@@ -38,8 +38,9 @@
 #include "Wildcards.h"
 #include "FilteredFile.h"
 
-static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;
-static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;
+static const unsigned WAIT_TIME_LAST_CHUNK     = 3000;
+static const unsigned WAIT_TIME_OTHER_CHUNK    = 8000;
+static const unsigned WAITING_USER_EXPIRE_TIME = 5 * 60000;
 
 #ifdef _DEBUG
 std::atomic_int UploadQueueFile::g_upload_queue_item_count(0);
@@ -380,7 +381,8 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		auto i = reservedSlots.find(source->getUser());
 		if (i != reservedSlots.end()) slotTimeout = i->second;
 	}
-	bool hasReserved = slotTimeout == 0 ? false : slotTimeout > GET_TICK();
+	uint64_t tick = GET_TICK();
+	bool hasReserved = slotTimeout > tick;
 	if (!hasReserved)
 	{
 		if (slotTimeout) source->getUser()->unsetFlag(User::RESERVED_SLOT);
@@ -397,10 +399,10 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			LOCK(csQueue);
 			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty()) || notifiedUsers.find(source->getUser()) != notifiedUsers.end();
 		}
-		
-		bool isAutoSlot = getAutoSlot();
+
+		bool isAutoSlot = getAutoSlot(tick);
 		bool isLeecher = (hasReserved || isFavGrant) ? false : hasUpload(source);
-		
+
 #ifdef SSA_IPGRANT_FEATURE
 		bool hasSlotByIP = false;
 		if (BOOLSETTING(EXTRA_SLOT_BY_IP))
@@ -433,7 +435,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				delete is;
 				errorText = STRING(ALL_UPLOAD_SLOTS_TAKEN);
 				source->setUpload(nullptr);
-				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
+				source->maxedOut(addToQueue(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
 				return false;
 			}
 		}
@@ -445,24 +447,23 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 #endif
 			slotType = hasReserved ? UserConnection::RESSLOT : UserConnection::STDSLOT;
 		}
-		
-		setLastGrant(GET_TICK());
+		setLastGrant(tick);
 	}
 	
+	bool notifyRemove;
 	{
 		LOCK(csQueue);
-		
 		// remove file from upload queue
-		clearUserFilesL(source->getUser());
-		
+		notifyRemove = clearUserFilesL(source->getUser());
+
 		// remove user from notified list
-		const auto cu = notifiedUsers.find(source->getUser());
-		if (cu != notifiedUsers.end())
-		{
-			notifiedUsers.erase(cu);
-		}
+		auto it = notifiedUsers.find(source->getUser());
+		if (it != notifiedUsers.end())
+			notifiedUsers.erase(it);
 	}
-	
+	if (notifyRemove)
+		fireUserRemoved(source->getUser());
+
 	bool resumed = false;
 	{
 		WRITE_LOCK(*csFinishedUploads);
@@ -538,7 +539,7 @@ bool UploadManager::isCompressedFile(const string& target)
 	return result;
 }
 
-bool UploadManager::getAutoSlot() const
+bool UploadManager::getAutoSlot(uint64_t tick) const
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	/** A 0 in settings means disable */
@@ -548,7 +549,7 @@ bool UploadManager::getAutoSlot() const
 	if (getSlots() + SETTING(AUTO_SLOTS) < g_running)
 		return false;
 	/** Only grant one slot per 30 sec */
-	if (GET_TICK() < getLastGrant() + 30 * 1000)
+	if (tick < getLastGrant() + 30 * 1000)
 		return false;
 	/** Grant if upload speed is less than the threshold speed */
 	return getRunningAverage() < SETTING(AUTO_SLOT_MIN_UL_SPEED) * 1024;
@@ -575,7 +576,6 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 				upload->getUser()->modifyUploadCount(-1);
 			}
 		}
-	
 		if (delay)
 		{
 			finishedUploads.push_back(upload);
@@ -911,12 +911,13 @@ void UploadManager::logUpload(const UploadPtr& upload)
 	}
 }
 
-size_t UploadManager::addFailedUpload(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags)
+size_t UploadManager::addToQueue(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	size_t queuePosition = 0;
 	
 	UploadQueueFilePtr uqi;
+	uint64_t expires = GET_TICK() + WAITING_USER_EXPIRE_TIME;
 	HintedUser hintedUser = source->getHintedUser();
 	{
 		LOCK(csQueue);
@@ -929,6 +930,7 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 			{
 				uqfp->setPos(pos);
 				uqfp->setFlags(flags);
+				it->setExpires(expires);
 				return queuePosition;
 			}
 		}
@@ -936,10 +938,14 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 		if (it == slotQueue.end())
 		{
 			++queuePosition;
-			slotQueue.push_back(WaitingUser(hintedUser, source->getConnectionQueueToken(), uqi));
+			slotQueue.emplace_back(hintedUser, source->getConnectionQueueToken(), uqi, expires);
 		}
 		else
-			it->addWaitingFile(uqi);
+		{
+			auto& wu = *it;
+			wu.addWaitingFile(uqi);
+			wu.setExpires(expires);
+		}
 		++slotQueueId;
 	}
 	if (g_count_WaitingUsersFrame)
@@ -947,22 +953,23 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 	return queuePosition;
 }
 
-void UploadManager::clearUserFilesL(const UserPtr& user)
+bool UploadManager::clearUserFilesL(const UserPtr& user)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
 	auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr& u)
 	{
 		return u == user;
 	});
-	if (it != slotQueue.end())
-	{
-		if (g_count_WaitingUsersFrame && !ClientManager::isBeforeShutdown())
-		{
-			fire(UploadManagerListener::QueueRemove(), user);
-		}
-		slotQueue.erase(it);
-		if (slotQueue.empty()) slotQueueId = 0; else ++slotQueueId;
-	}
+	if (it == slotQueue.end()) return false;
+	slotQueue.erase(it);
+	if (slotQueue.empty()) slotQueueId = 0; else ++slotQueueId;
+	return true;
+}
+
+void UploadManager::fireUserRemoved(const UserPtr& user) noexcept
+{
+	if (g_count_WaitingUsersFrame && !ClientManager::isBeforeShutdown())
+		fire(UploadManagerListener::QueueRemove(), user);
 }
 
 void UploadManager::clearUploads() noexcept
@@ -1080,19 +1087,34 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		
 		{
 			LOCK(csQueue);
-			
 			for (auto i = notifiedUsers.cbegin(); i != notifiedUsers.cend();)
 			{
 				if (i->second + 90 * 1000 < tick)
 				{
-					clearUserFilesL(i->first);
-					notifiedUsers.erase(i++);
+					const UserPtr& user = i->first;
+					if (clearUserFilesL(user)) tmpUsers.push_back(user);
+					i = notifiedUsers.erase(i);
 				}
 				else
 					++i;
 			}
+			for (auto i = slotQueue.begin(); i != slotQueue.end();)
+				if (i->isExpired(tick))
+				{
+					tmpUsers.push_back(i->getUser());
+					i = slotQueue.erase(i);
+				}
+				else
+					++i;
 		}
 		
+		if (!tmpUsers.empty())
+		{
+			for (const auto& user : tmpUsers)
+				fireUserRemoved(user);
+			tmpUsers.clear();
+		}
+
 		if (BOOLSETTING(AUTO_KICK))
 		{
 			READ_LOCK(*csFinishedUploads);
@@ -1181,9 +1203,6 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		fire(UploadManagerListener::Tick(), tickList);
 	notifyQueuedUsers(tick);
 	
-	if (g_count_WaitingUsersFrame)
-		fire(UploadManagerListener::QueueUpdate());
-	
 	if (!isFireball)
 	{
 		if (getRunningAverage() >= 1024 * 1024)
@@ -1217,12 +1236,13 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 
 void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
+	bool notifyRemove = false;
 	if (!user->isOnline())
 	{
 		LOCK(csQueue);
-		clearUserFilesL(user);
+		notifyRemove = clearUserFilesL(user);
 	}
+	if (notifyRemove) fireUserRemoved(user);
 }
 
 void UploadManager::removeFinishedUpload(const UserPtr& user)

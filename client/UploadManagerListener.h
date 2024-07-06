@@ -22,7 +22,6 @@ class UploadManagerListener
 		typedef X<3> Tick;
 		typedef X<4> QueueAdd;
 		typedef X<5> QueueRemove;
-		typedef X<7> QueueUpdate;
 		
 		virtual void on(Starting, const UploadPtr&) noexcept { }
 		virtual void on(Tick, const UploadArray&) noexcept {}
@@ -30,7 +29,6 @@ class UploadManagerListener
 		virtual void on(Failed, const UploadPtr&, const string&) noexcept { }
 		virtual void on(QueueAdd, const HintedUser&, const UploadQueueFilePtr&) noexcept { }
 		virtual void on(QueueRemove, const UserPtr&) noexcept { }
-		virtual void on(QueueUpdate) noexcept { }
 };
 
 #endif /*UPLOADMANAGERLISTENER_H_*/

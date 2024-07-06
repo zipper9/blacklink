@@ -509,6 +509,46 @@ void WaitingUsersFrame::updateStatus()
 	}
 }
 
+void WaitingUsersFrame::updateListItems()
+{
+	const int itemCount = ctrlList.GetItemCount();
+	if (!itemCount) return;
+
+	const int topIndex = ctrlList.GetTopIndex();
+	const int countPerPage = ctrlList.GetCountPerPage();
+	int64_t itime = GET_TIME();
+	for (int i = topIndex; i < countPerPage; i++)
+	{
+		auto ii = ctrlList.getItemData(i);
+		if (ii)
+		{
+			const UploadQueueFilePtr& file = ii->getFile();
+			ii->setText(UploadQueueItem::COLUMN_TRANSFERRED, Util::formatBytesT(file->getPos()) + _T(" (") + Util::toStringT((double) file->getPos() * 100.0 / (double) file->getSize()) + _T("%)"));
+			ii->setText(UploadQueueItem::COLUMN_WAITING, Util::formatSecondsT(itime - file->getTime()));
+			ctrlList.updateItem(i, UploadQueueItem::COLUMN_TRANSFERRED);
+			ctrlList.updateItem(i, UploadQueueItem::COLUMN_WAITING);
+		}
+	}
+}
+
+void WaitingUsersFrame::onTimerInternal()
+{
+	processTasks();
+	updateListItems();
+	if (shouldSort)
+	{
+		ctrlList.resort();
+		shouldSort = false;
+	}
+	if (shouldUpdateStatus)
+	{
+		if (BOOLSETTING(BOLD_WAITING_USERS))
+			setDirty();
+		updateStatus();
+		shouldUpdateStatus = false;
+	}
+}
+
 void WaitingUsersFrame::removeSelected()
 {
 	int j = -1;
@@ -551,58 +591,19 @@ void WaitingUsersFrame::processTasks()
 		{
 			case REMOVE_USER:
 				removeUser(static_cast<UserTask&>(*j->second).user);
+				shouldUpdateStatus = true;
 				break;
 
 			case ADD_FILE:
 			{
 				auto uqt = static_cast<UploadQueueTask*>(j->second);
 				addFile(uqt->hintedUser, uqt->item, true);
-				shouldSort = true;
+				shouldSort = shouldUpdateStatus = true;
 				break;
 			}
 
-			case UPDATE_ITEMS:
-			{
-				const int itemCount = ctrlList.GetItemCount();
-				if (itemCount)
-				{
-					const int topIndex = ctrlList.GetTopIndex();
-					const int countPerPage = ctrlList.GetCountPerPage();
-					int64_t itime = GET_TIME();
-					for (int i = topIndex; i < countPerPage; i++)
-					{
-						auto ii = ctrlList.getItemData(i);
-						if (ii)
-						{
-							const UploadQueueFilePtr& file = ii->getFile();
-							ii->setText(UploadQueueItem::COLUMN_TRANSFERRED, Util::formatBytesT(file->getPos()) + _T(" (") + Util::toStringT((double) file->getPos() * 100.0 / (double) file->getSize()) + _T("%)"));
-							ii->setText(UploadQueueItem::COLUMN_WAITING, Util::formatSecondsT(itime - file->getTime()));
-							ctrlList.updateItem(i, UploadQueueItem::COLUMN_TRANSFERRED);
-							ctrlList.updateItem(i, UploadQueueItem::COLUMN_WAITING);
-						}
-					}
-				}
-				if (shouldSort)
-				{
-					ctrlList.resort();
-					shouldSort = false;
-				}
-				if (shouldUpdateStatus)
-				{
-					if (BOOLSETTING(BOLD_WAITING_USERS))
-						setDirty();
-					updateStatus();
-					shouldUpdateStatus = false;
-				}
-			}
-			break;
-
 			default:
 				dcassert(0);
-		}
-		if (j->first != UPDATE_ITEMS)
-		{
-			shouldUpdateStatus = true;
 		}
 		delete j->second;
 	}
@@ -620,12 +621,6 @@ void WaitingUsersFrame::on(SettingsManagerListener::Repaint)
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}
-}
-
-void WaitingUsersFrame::on(UploadManagerListener::QueueUpdate) noexcept
-{
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown())
-		addTask(UPDATE_ITEMS, nullptr);
 }
 
 LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)

@@ -68,7 +68,8 @@ class WaitingUser
 	public:
 		static const size_t MAX_WAITING_FILES = 50;
 
-		WaitingUser(const HintedUser& hintedUser, const std::string& token, const UploadQueueFilePtr& uqi) : hintedUser(hintedUser), token(token)
+		WaitingUser(const HintedUser& hintedUser, const std::string& token, const UploadQueueFilePtr& uqi, uint64_t expires) :
+			hintedUser(hintedUser), expires(expires), token(token)
 		{
 			waitingFiles.push_back(uqi);
 		}
@@ -78,10 +79,13 @@ class WaitingUser
 		void addWaitingFile(const UploadQueueFilePtr& uqi);
 		UploadQueueFilePtr findWaitingFile(const string& file) const;
 		const vector<UploadQueueFilePtr>& getWaitingFiles() const { return waitingFiles; }
+		void setExpires(uint64_t value) { expires = value; }
+		bool isExpired(uint64_t tick) const { return tick > expires; }
 
 	private:
 		vector<UploadQueueFilePtr> waitingFiles;
 		const HintedUser hintedUser;
+		uint64_t expires;
 
 		GETSET(string, token, Token);
 };
@@ -114,7 +118,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		/** @param user Reserve an upload slot for this user and connect. */
 		void reserveSlot(const HintedUser& hintedUser, uint64_t seconds);
 		void unreserveSlot(const HintedUser& hintedUser);
-		void clearUserFilesL(const UserPtr&);
+		bool clearUserFilesL(const UserPtr&);
 
 		class LockInstanceQueue
 		{
@@ -202,15 +206,16 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		SlotQueue slotQueue;
 		mutable CriticalSection csQueue;
 		uint64_t slotQueueId;
+		vector<UserPtr> tmpUsers;
 
 		std::regex reCompressedFiles;
 		string compressedFilesPattern;
 		FastCriticalSection csCompressedFiles;
 
-		size_t addFailedUpload(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags);
+		size_t addToQueue(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags);
 		void notifyQueuedUsers(int64_t tick);
 		
-		bool getAutoSlot() const;
+		bool getAutoSlot(uint64_t tick) const;
 		void removeConnectionSlot(UserConnection* conn);
 		void removeUpload(UploadPtr& upload, bool delay = false);
 		void logUpload(const UploadPtr& u);
@@ -228,6 +233,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		bool isCompressedFile(const string& target);
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);
+		void fireUserRemoved(const UserPtr& user) noexcept;
 
 		UploadManager() noexcept;
 		~UploadManager();
