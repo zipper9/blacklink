@@ -1166,7 +1166,7 @@ void AdcHub::hubMessage(const string& message, bool thirdPerson)
 	AdcCommand cmd(AdcCommand::CMD_MSG, AdcCommand::TYPE_BROADCAST);
 	cmd.addParam(message);
 	if (thirdPerson)
-		cmd.addParam("ME", "1");
+		cmd.addParam(TAG('M', 'E'), "1");
 	send(cmd);
 }
 
@@ -1180,8 +1180,8 @@ bool AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, in
 	AdcCommand cmd(AdcCommand::CMD_MSG, user->getIdentity().getSID(), AdcCommand::TYPE_ECHO);
 	cmd.addParam(message);
 	if (flags & PM_FLAG_THIRD_PERSON)
-		cmd.addParam("ME", "1");
-	cmd.addParam("PM", getMySID());
+		cmd.addParam(TAG('M', 'E'), "1");
+	cmd.addParam(TAG('P', 'M'), getMySID());
 	send(cmd);
 
 	fireOutgoingPM(user, message, flags);
@@ -1242,42 +1242,42 @@ void AdcHub::searchToken(const SearchParam& sp)
 	AdcCommand cmd(AdcCommand::CMD_SCH, AdcCommand::TYPE_BROADCAST);
 	
 	//dcassert(aToken);
-	cmd.addParam("TO", Util::toString(sp.token));
+	cmd.addParam(TAG('T', 'O'), Util::toString(sp.token));
 	
 	if (sp.fileType == FILE_TYPE_TTH)
 	{
-		cmd.addParam("TR", sp.filter);
+		cmd.addParam(TAG('T', 'R'), sp.filter);
 	}
 	else
 	{
 		switch (sp.sizeMode)
 		{
 			case SIZE_ATLEAST:
-				if (sp.size > 0) cmd.addParam("GE", Util::toString(sp.size));
+				if (sp.size > 0) cmd.addParam(TAG('G', 'E'), Util::toString(sp.size));
 				break;
 			case SIZE_ATMOST:
-				cmd.addParam("LE", Util::toString(sp.size));
+				cmd.addParam(TAG('L', 'E'), Util::toString(sp.size));
 				break;
 			case SIZE_EXACT:
 			{
 				string size = Util::toString(sp.size);
-				cmd.addParam("GE", size);
-				cmd.addParam("LE", size);
+				cmd.addParam(TAG('G', 'E'), size);
+				cmd.addParam(TAG('L', 'E'), size);
 			}
 		}
 
 		SimpleStringTokenizer<char> include(sp.filter, ' ');
 		string tok;
 		while (include.getNextNonEmptyToken(tok))
-			cmd.addParam("AN", tok);
+			cmd.addParam(TAG('A', 'N'), tok);
 		
 		SimpleStringTokenizer<char> exclude(sp.filterExclude, ' ');
 		while (exclude.getNextNonEmptyToken(tok))
-			cmd.addParam("NO", tok);
+			cmd.addParam(TAG('N', 'O'), tok);
 
 		if (sp.fileType == FILE_TYPE_DIRECTORY)
 		{
-			cmd.addParam("TY", "2");
+			cmd.addParam(TAG('T', 'Y'), "2");
 		}
 		
 		if (sp.extList.size() > 2)
@@ -1344,10 +1344,10 @@ void AdcHub::searchToken(const SearchParam& sp)
 					c_gr.addParam(*i);
 					
 				for (auto i = exts.cbegin(), iend = exts.cend(); i != iend; ++i)
-					c_gr.addParam("EX", *i);
-				c_gr.addParam("GR", Util::toString(gr));
+					c_gr.addParam(TAG('E', 'X'), *i);
+				c_gr.addParam(TAG('G', 'R'), Util::toString(gr));
 				for (auto i = rx.cbegin(), iend = rx.cend(); i != iend; ++i)
-					c_gr.addParam("RX", *i);
+					c_gr.addParam(TAG('R', 'X'), *i);
 					
 				sendSearch(c_gr, sp.searchMode);
 				
@@ -1359,7 +1359,7 @@ void AdcHub::searchToken(const SearchParam& sp)
 		
 		for (auto i = sp.extList.cbegin(), iend = sp.extList.cend(); i != iend; ++i)
 		{
-			cmd.addParam("EX", *i);
+			cmd.addParam(TAG('E', 'X'), *i);
 		}
 	}
 	sendSearch(cmd, sp.searchMode);
@@ -1419,10 +1419,10 @@ void AdcHub::password(const string& pwd, bool setPassword)
 	send(c);
 }
 
-void AdcHub::addInfoParam(AdcCommand& c, const string& var, const string& value)
+void AdcHub::addInfoParam(AdcCommand& c, uint16_t param, const string& value)
 {
 	LOCK(csState);
-	auto i = lastInfoMap.find(var);
+	auto i = lastInfoMap.find(param);
 	
 	if (i != lastInfoMap.end())
 	{
@@ -1432,13 +1432,13 @@ void AdcHub::addInfoParam(AdcCommand& c, const string& var, const string& value)
 				lastInfoMap.erase(i);
 			else
 				i->second = value;
-			c.addParam(var, value);
+			c.addParam(param, value);
 		}
 	}
 	else if (!value.empty())
 	{
-		lastInfoMap.emplace(var, value);
-		c.addParam(var, value);
+		lastInfoMap.emplace(param, value);
+		c.addParam(param, value);
 	}
 }
 
@@ -1465,46 +1465,46 @@ void AdcHub::info(bool/* forceUpdate*/)
 	if (state == STATE_NORMAL)
 		updateCounts(false);
 	
-	addInfoParam(c, "ID", ClientManager::getMyCID().toBase32());
-	addInfoParam(c, "PD", ClientManager::getMyPID().toBase32());
-	addInfoParam(c, "NI", nick);
-	addInfoParam(c, "DE", getCurrentDescription());
-	addInfoParam(c, "SL", Util::toString(getSlots()));
-	addInfoParam(c, "FS", Util::toString(getFreeSlots()));
+	addInfoParam(c, TAG('I', 'D'), ClientManager::getMyCID().toBase32());
+	addInfoParam(c, TAG('P', 'D'), ClientManager::getMyPID().toBase32());
+	addInfoParam(c, TAG('N', 'I'), nick);
+	addInfoParam(c, TAG('D', 'E'), getCurrentDescription());
+	addInfoParam(c, TAG('S', 'L'), Util::toString(getSlots()));
+	addInfoParam(c, TAG('F', 'S'), Util::toString(getFreeSlots()));
 	if (hideShare)
 	{
-		addInfoParam(c, "SS", "0");
-		addInfoParam(c, "SF", "0");
+		addInfoParam(c, TAG('S', 'S'), "0");
+		addInfoParam(c, TAG('S', 'F'), "0");
 	}
 	else if (fakeShareSize >= 0)
 	{
-		addInfoParam(c, "SS", Util::toString(fakeShareSize));
+		addInfoParam(c, TAG('S', 'S'), Util::toString(fakeShareSize));
 		int64_t fileCount = 0;
 		if (fakeShareSize)
 		{
 			fileCount = fakeShareFiles;
 			if (fileCount <= 0) fileCount = (fakeShareSize + averageFakeFileSize - 1)/averageFakeFileSize;
 		}
-		addInfoParam(c, "SF", Util::toString(fileCount));
+		addInfoParam(c, TAG('S', 'F'), Util::toString(fileCount));
 	}
 	else
 	{
 		int64_t size, files;
 		ShareManager::getInstance()->getShareGroupInfo(shareGroup, size, files);
-		addInfoParam(c, "SS", Util::toString(size));
-		addInfoParam(c, "SF", Util::toString(files));
+		addInfoParam(c, TAG('S', 'S'), Util::toString(size));
+		addInfoParam(c, TAG('S', 'F'), Util::toString(files));
 	}
 	
 	
-	addInfoParam(c, "EM", SETTING(EMAIL));
+	addInfoParam(c, TAG('E', 'M'), SETTING(EMAIL));
 	// Exclusive hub mode
 	if (fakeHubCount)
 	{
 		unsigned normal, registered, op;
 		getFakeCounts(normal, registered, op);
-		addInfoParam(c, "HN", Util::toString(normal));
-		addInfoParam(c, "HR", Util::toString(registered));
-		addInfoParam(c, "HO", Util::toString(op));
+		addInfoParam(c, TAG('H', 'N'), Util::toString(normal));
+		addInfoParam(c, TAG('H', 'R'), Util::toString(registered));
+		addInfoParam(c, TAG('H', 'O'), Util::toString(op));
 	}
 	else
 	{
@@ -1512,32 +1512,32 @@ void AdcHub::info(bool/* forceUpdate*/)
 		uint32_t registered = g_counts[COUNT_REGISTERED];
 		uint32_t op = g_counts[COUNT_OP];
 		if (normal + registered + op == 0) normal = 1; // fix H:0/0/0
-		addInfoParam(c, "HN", Util::toString(normal));
-		addInfoParam(c, "HR", Util::toString(registered));
-		addInfoParam(c, "HO", Util::toString(op));
+		addInfoParam(c, TAG('H', 'N'), Util::toString(normal));
+		addInfoParam(c, TAG('H', 'R'), Util::toString(registered));
+		addInfoParam(c, TAG('H', 'O'), Util::toString(op));
 	}
-	addInfoParam(c, "AP", getClientName());
-	addInfoParam(c, "VE", getClientVersion());
-	addInfoParam(c, "AW", Util::getAway() ? "1" : Util::emptyString);
+	addInfoParam(c, TAG('A', 'P'), getClientName());
+	addInfoParam(c, TAG('V', 'E'), getClientVersion());
+	addInfoParam(c, TAG('A', 'W'), Util::getAway() ? "1" : Util::emptyString);
 	
 	size_t limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getDownloadLimitInBytes() : 0;
 	if (limit > 0)
 	{
-		addInfoParam(c, "DS", Util::toString(limit));
+		addInfoParam(c, TAG('D', 'S'), Util::toString(limit));
 	}
 	
 	limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInBytes() : 0;
 	if (limit > 0)
 	{
-		addInfoParam(c, "US", Util::toString(limit));
+		addInfoParam(c, TAG('U', 'S'), Util::toString(limit));
 	}
 	else
 	{
 		limit = Util::toInt64(SETTING(UPLOAD_SPEED)) * 1024 * 1024 / 8;
-		addInfoParam(c, "US", Util::toString(limit));
+		addInfoParam(c, TAG('U', 'S'), Util::toString(limit));
 	}
 	
-	addInfoParam(c, "LC", Util::getIETFLang()); // http://adc.sourceforge.net/ADC-EXT.html#_lc_locale_specification
+	addInfoParam(c, TAG('L', 'C'), Util::getIETFLang()); // http://adc.sourceforge.net/ADC-EXT.html#_lc_locale_specification
 	
 	string su(AdcSupports::SEGA_FEATURE);
 	
@@ -1548,7 +1548,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 		ByteVector kp;
 		cryptoManager->getCertFingerprint(kp);
 		if (!kp.empty())
-			addInfoParam(c, "KP", "SHA256/" + Util::toBase32(kp.data(), kp.size()));
+			addInfoParam(c, TAG('K', 'P'), "SHA256/" + Util::toBase32(kp.data(), kp.size()));
 	}
 	
 	const bool optionNatTraversal = BOOLSETTING(ALLOW_NAT_TRAVERSAL);
@@ -1569,13 +1569,13 @@ void AdcHub::info(bool/* forceUpdate*/)
 	if (ip4)
 	{
 		hasIP = true;
-		addInfoParam(c, "I4", Util::printIpAddress(ip4));
+		addInfoParam(c, TAG('I', '4'), Util::printIpAddress(ip4));
 		if (active)
 		{
 			su += "," + AdcSupports::TCP4_FEATURE;
 			if (udpPort)
 			{
-				addInfoParam(c, "U4", Util::toString(udpPort));
+				addInfoParam(c, TAG('U', '4'), Util::toString(udpPort));
 				su += "," + AdcSupports::UDP4_FEATURE;
 			}
 		}
@@ -1583,13 +1583,13 @@ void AdcHub::info(bool/* forceUpdate*/)
 	if (!Util::isEmpty(ip6))
 	{
 		hasIP = true;
-		addInfoParam(c, "I6", Util::printIpAddress(ip6));
+		addInfoParam(c, TAG('I', '6'), Util::printIpAddress(ip6));
 		if (active)
 		{
 			su += "," + AdcSupports::TCP6_FEATURE;
 			if (udpPort)
 			{
-				addInfoParam(c, "U6", Util::toString(udpPort));
+				addInfoParam(c, TAG('U', '6'), Util::toString(udpPort));
 				su += "," + AdcSupports::UDP6_FEATURE;
 			}
 		}
@@ -1599,7 +1599,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	if (BOOLSETTING(USE_CCPM))
 		su += ',' + AdcSupports::CCPM_FEATURE;
 
-	addInfoParam(c, "SU", su);
+	addInfoParam(c, TAG('S', 'U'), su);
 
 	if (!c.getParameters().empty())
 		send(c);
@@ -1642,8 +1642,8 @@ void AdcHub::unknownProtocol(uint32_t target, const string& protocol, const stri
 {
 	AdcCommand cmd(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_UNSUPPORTED, "Protocol unknown", AdcCommand::TYPE_DIRECT);
 	cmd.setTo(target);
-	cmd.addParam("PR", protocol);
-	cmd.addParam("TO", token);
+	cmd.addParam(TAG('P', 'R'), protocol);
+	cmd.addParam(TAG('T', 'O'), token);
 	
 	send(cmd);
 }

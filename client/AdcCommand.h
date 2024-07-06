@@ -175,6 +175,12 @@ class AdcCommand
 		string toString(const CID& cid, bool nmdc = false) const noexcept;
 		string toString(uint32_t sid, bool nmdc = false) const noexcept;
 
+		AdcCommand& addParam(uint16_t name, const string& value) noexcept
+		{
+			parameters.emplace_back(reinterpret_cast<const char*>(&name), 2);
+			parameters.back() += value;
+			return *this;
+		}
 		AdcCommand& addParam(const string& name, const string& value) noexcept
 		{
 			parameters.push_back(name);

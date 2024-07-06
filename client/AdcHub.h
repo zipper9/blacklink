@@ -84,14 +84,14 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void connectUser(const OnlineUser& user, const string& token, bool secure, bool revConnect);
 		void getUserList(OnlineUserList& list) const override;
 		bool resendMyINFO(bool alwaysSend, bool forcePassive) override;
-		
+
 		unsigned featureFlags;
 		int lastErrorCode;
 		SIDMap users;
 		std::unique_ptr<RWLock> csUsers;
-		StringMap lastInfoMap;
+		boost::unordered_map<uint16_t, string> lastInfoMap;
 
-		void addInfoParam(AdcCommand& c, const string& var, const string& value);
+		void addInfoParam(AdcCommand& c, uint16_t param, const string& value);
 
 		bool isFeatureSupported(unsigned feature) const
 		{
