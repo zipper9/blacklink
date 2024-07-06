@@ -492,8 +492,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PASSIVE_COLOR,
 			OP_COLOR,
 			CHECKED_COLOR,
-			BAD_CLIENT_COLOR,
-			BAD_FILELIST_COLOR, 
+			CHECKED_FAIL_COLOR,
 
 			// Other colors
 			DOWNLOAD_BAR_COLOR,
@@ -661,7 +660,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			PROMPT_HUB_PASSWORD,
 			FILTER_MESSAGES,
 			ENABLE_COUNTRY_FLAG,
-			SHOW_CHECKED_USERS, // not implemented yet
+			SHOW_CHECKED_USERS,
 			HUB_POSITION,
 			SORT_FAVUSERS_FIRST,
 			FILTER_ENTER,

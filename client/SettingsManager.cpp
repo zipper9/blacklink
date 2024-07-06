@@ -520,7 +520,7 @@ static const char* settingTags[] =
 	"TextOPBackColor", "TextOPForeColor", "TextOPBold", "TextOPItalic",
 	"TextURLBackColor", "TextURLForeColor", "TextURLBold", "TextURLItalic",
 	"TextEnemyBackColor", "TextEnemyForeColor", "TextEnemyBold", "TextEnemyItalic",
-	
+
 	// User list colors
 	"ReservedSlotColor",
 	"IgnoredColor",
@@ -532,9 +532,8 @@ static const char* settingTags[] =
 	"PassiveColor",
 	"OpColor",
 	"CheckedColor",
-	"BadClientColor",
-	"BadFileListColor",
-	
+	"CheckedFailColor",
+
 	// Other colors
 	"DownloadBarColor",
 	"UploadBarColor",
@@ -1140,9 +1139,8 @@ void SettingsManager::setDefaults()
 	setDefault(SERVER_COLOR, RGB(0, 0, 0));
 	setDefault(PASSIVE_COLOR, RGB(67, 98, 154));
 	setDefault(OP_COLOR, RGB(0, 128, 64));
-	setDefault(CHECKED_COLOR, RGB(0, 160, 0));
-	setDefault(BAD_CLIENT_COLOR, RGB(204, 0, 0));
-	setDefault(BAD_FILELIST_COLOR, RGB(204, 0, 0));
+	setDefault(CHECKED_COLOR, RGB(104, 32, 238));
+	setDefault(CHECKED_FAIL_COLOR, RGB(204, 0, 0));
 
 	// Other colors
 	setDefault(DOWNLOAD_BAR_COLOR, RGB(0x36, 0xDB, 0x24));

@@ -37,8 +37,7 @@ static const SettingsManager::IntSetting settings[] =
 	SettingsManager::OP_COLOR,
 	SettingsManager::PASSIVE_COLOR,
 	SettingsManager::CHECKED_COLOR,
-	SettingsManager::BAD_CLIENT_COLOR,
-	SettingsManager::BAD_FILELIST_COLOR
+	SettingsManager::CHECKED_FAIL_COLOR
 };
 
 static const ResourceManager::Strings strings[] =
@@ -53,8 +52,7 @@ static const ResourceManager::Strings strings[] =
 	ResourceManager::COLOR_OP,
 	ResourceManager::COLOR_PASSIVE,
 	ResourceManager::SETTINGS_COLOR_FULL_CHECKED,
-	ResourceManager::SETTINGS_COLOR_BAD_CLIENT,
-	ResourceManager::SETTINGS_COLOR_BAD_FILELIST
+	ResourceManager::SETTINGS_COLOR_CHECK_FAILED
 };
 
 LRESULT UserListColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

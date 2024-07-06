@@ -6,18 +6,9 @@
 COLORREF UserTypeColors::getColor(unsigned short& flags, const OnlineUserPtr& onlineUser)
 {
 	const UserPtr& user = onlineUser->getUser();
-	auto statusFlags = onlineUser->getIdentity().getStatus();
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-	const auto fc = onlineUser->getIdentity().getFakeCard();
-	if (fc & Identity::BAD_CLIENT)
-		return SETTING(BAD_CLIENT_COLOR);
-	if (fc & Identity::BAD_LIST)
-		return SETTING(BAD_FILELIST_COLOR);
-	if (fc & Identity::CHECKED && BOOLSETTING(SHOW_SHARE_CHECKED_USERS))
-		return SETTING(FULL_CHECKED_COLOR);
-#endif // FLYLINKDC_USE_DETECT_CHEATING
 	dcassert(user);
 	const auto userFlags = user->getFlags();
+	const auto statusFlags = onlineUser->getIdentity().getStatus();
 	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
 	{
 		flags &= ~IS_IGNORED_USER;
@@ -49,6 +40,13 @@ COLORREF UserTypeColors::getColor(unsigned short& flags, const OnlineUserPtr& on
 		return SETTING(OP_COLOR);
 	if (flags & IS_IGNORED_USER)
 		return SETTING(IGNORED_COLOR);
+	if (BOOLSETTING(SHOW_CHECKED_USERS) && user->getLastCheckTime())
+	{
+		if (userFlags & User::USER_CHECK_FAILED)
+			return SETTING(CHECKED_FAIL_COLOR);
+		if (!(userFlags & User::USER_CHECK_RUNNING))
+			return SETTING(CHECKED_COLOR);
+	}
 	if (statusFlags & Identity::SF_FIREBALL)
 		return SETTING(FIREBALL_COLOR);
 	if (statusFlags & Identity::SF_SERVER)

@@ -54,8 +54,7 @@ class UserListColorsTab : public CDialogImpl<UserListColorsTab>
 			opColor,
 			passiveColor,
 			checkedColor,
-			badClientColor,
-			badFileListColor,
+			checkedFailColor,
 			numberOfColors
 		};
 
