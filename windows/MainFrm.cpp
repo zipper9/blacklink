@@ -2161,9 +2161,6 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	{
 		if (!closing)
 		{
-#ifdef _DEBUG
-			dcdebug("MainFrame::OnClose first - User::g_user_counts = %d\n", int(User::g_user_counts)); // [!] IRainman fix: Issue 1037 иногда теряем объект User?
-#endif
 			bool dontQuit = false;
 			if (!endSession && hasPasswordClose())
 			{

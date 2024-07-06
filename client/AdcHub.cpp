@@ -655,7 +655,7 @@ void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 	{
 		// Nothing special
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -719,7 +719,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	{
 		secure = false;
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -872,7 +872,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 				{
 					ou->getUser()->setFlag(User::NO_ADC_1_0_PROTOCOL);
 				}
-				else if (tmp == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST)
+				else if (tmp == AdcSupports::SECURE_CLIENT_PROTOCOL)
 				{
 					ou->getUser()->changeFlags(User::NO_ADCS_0_10_PROTOCOL, User::ADCS);
 				}
@@ -1024,7 +1024,7 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	{
 		secure = false;
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -1077,7 +1077,7 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	{
 		secure = false;
 	}
-	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
+	else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL && CryptoManager::getInstance()->isInitialized())
 	{
 		secure = true;
 	}
@@ -1122,7 +1122,7 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 			/// @todo log
 			return;
 		}
-		proto = &AdcSupports::SECURE_CLIENT_PROTOCOL_TEST;
+		proto = &AdcSupports::SECURE_CLIENT_PROTOCOL;
 	}
 	else
 	{

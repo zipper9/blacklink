@@ -197,7 +197,7 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 
 static inline int getBindOptions(int af)
 {
-	return SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);;
+	return SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);
 }
 
 uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)

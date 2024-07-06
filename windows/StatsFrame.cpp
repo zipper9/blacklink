@@ -260,7 +260,7 @@ LRESULT StatsFrame::onShowLegend(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 LRESULT StatsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NETWORK_STATISTICS, 0);;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NETWORK_STATISTICS, 0);
 	opt->isHub = false;
 	return TRUE;
 }

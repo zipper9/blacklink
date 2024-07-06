@@ -860,7 +860,7 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 	COLORREF bgColor, textColor;
 	if (options & DRAW_TAB_ACTIVE)
 	{
-		bgColor = colors[tab->disconnected ? OFFLINE_ACTIVE_BACKGROUND_COLOR : ACTIVE_BACKGROUND_COLOR];;
+		bgColor = colors[tab->disconnected ? OFFLINE_ACTIVE_BACKGROUND_COLOR : ACTIVE_BACKGROUND_COLOR];
 		textColor = colors[ACTIVE_TEXT_COLOR];
 	}
 	else

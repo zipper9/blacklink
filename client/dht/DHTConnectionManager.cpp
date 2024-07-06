@@ -57,7 +57,7 @@ namespace dht
 
 		// if I am not active, send reverse connect to me request
 		AdcCommand cmd(active ? AdcCommand::CMD_CTM : AdcCommand::CMD_RCM, AdcCommand::TYPE_UDP);
-		cmd.addParam(secure ? AdcSupports::SECURE_CLIENT_PROTOCOL_TEST : AdcSupports::CLIENT_PROTOCOL);
+		cmd.addParam(secure ? AdcSupports::SECURE_CLIENT_PROTOCOL : AdcSupports::CLIENT_PROTOCOL);
 
 		if (active)
 		{
@@ -96,7 +96,7 @@ namespace dht
 		{
 			// Nothing special
 		}
-		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
+		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL && CryptoManager::getInstance()->isInitialized())
 		{
 			secure = true;
 		}
@@ -143,7 +143,7 @@ namespace dht
 		{
 			secure = false;
 		}
-		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST && CryptoManager::getInstance()->isInitialized())
+		else if (protocol == AdcSupports::SECURE_CLIENT_PROTOCOL && CryptoManager::getInstance()->isInitialized())
 		{
 			secure = true;
 		}

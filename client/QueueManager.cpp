@@ -3134,7 +3134,7 @@ bool QueueManager::dropSource(const DownloadPtr& d)
 		overallSpeed = q->getAverageSpeed();
 	}
 
-	if (multipleSegments || !SETTING(AUTO_DISCONNECT_MULTISOURCE_ONLY))
+	if (multipleSegments || !BOOLSETTING(AUTO_DISCONNECT_MULTISOURCE_ONLY))
 	{
 		uint64_t highSpeed = SETTING(AUTO_DISCONNECT_FILE_SPEED);
 		if (highSpeed == 0 || overallSpeed > highSpeed * 1024)

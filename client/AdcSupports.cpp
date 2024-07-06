@@ -27,7 +27,7 @@
 #endif
 
 const string AdcSupports::CLIENT_PROTOCOL("ADC/1.0");
-const string AdcSupports::SECURE_CLIENT_PROTOCOL_TEST("ADCS/0.10");
+const string AdcSupports::SECURE_CLIENT_PROTOCOL("ADCS/0.10");
 const string AdcSupports::ADCS_FEATURE("ADC0");
 const string AdcSupports::TCP4_FEATURE("TCP4");
 const string AdcSupports::TCP6_FEATURE("TCP6");

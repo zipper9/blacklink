@@ -1996,32 +1996,7 @@ LRESULT DirectoryListingFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 	else if (kd->wVKey == VK_RETURN)
 	{
 		if (ctrlList.GetSelectedCount() == 1)
-		{
-			const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-			if (ii->type == ItemInfo::DIRECTORY)
-			{
-				HTREEITEM ht = ctrlTree.GetChildItem(ctrlTree.GetSelectedItem());
-				while (ht != NULL)
-				{
-					if ((DirectoryListing::Directory*)ctrlTree.GetItemData(ht) == ii->dir)
-					{
-						ctrlTree.SelectItem(ht);
-						break;
-					}
-					ht = ctrlTree.GetNextSiblingItem(ht);
-				}
-			}
-			else
-			{
-				string dir = Util::getDownloadDir(dl->getUser());
-				downloadSelected(Text::toT(dir));
-			}
-		}
-		else
-		{
-			string dir = Util::getDownloadDir(dl->getUser());
-			downloadSelected(Text::toT(dir));
-		}
+			performDefaultAction(ctrlList.GetSelectedIndex());
 	}
 	return 0;
 }

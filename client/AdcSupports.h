@@ -26,7 +26,7 @@ class AdcSupports
 {
 	public:
 		static const string CLIENT_PROTOCOL;
-		static const string SECURE_CLIENT_PROTOCOL_TEST;
+		static const string SECURE_CLIENT_PROTOCOL;
 		static const string ADCS_FEATURE;
 		static const string TCP4_FEATURE;
 		static const string TCP6_FEATURE;

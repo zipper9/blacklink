@@ -212,7 +212,7 @@ void HashProgressDlg::updateStats()
 	setProgressMarquee(false);
 	if (paused)
 	{
-		tstring timeStr = _T("(") + TSTRING(PAUSED) + _T(")");;
+		tstring timeStr = _T("(") + TSTRING(PAUSED) + _T(")");
 		infoTimeText.SetWindowText(timeStr.c_str());
 		infoTimeLabel.ShowWindow(SW_SHOW);
 		infoTimeText.ShowWindow(SW_SHOW);
