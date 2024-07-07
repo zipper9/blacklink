@@ -129,6 +129,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + 499, onDownloadWhole)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET, IDC_DOWNLOAD_TARGET + 499, onDownload)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onDownloadWithPrio)
+		COMMAND_RANGE_HANDLER(IDC_LOCATE_FILE_IN_QUEUE, IDC_LOCATE_FILE_IN_QUEUE + 9, onLocateInQueue)
 		COMMAND_HANDLER(IDC_FILTER_SEL, CBN_SELCHANGE, onFilterSelChange)
 		COMMAND_CODE_HANDLER(EN_CHANGE, onFilterChanged)
 		CHAIN_COMMANDS(ucBase)
@@ -170,6 +171,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWhole(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenFileOrFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onShowOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);

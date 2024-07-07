@@ -1641,7 +1641,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 					CMenu locateMenu;
 					locateMenu.CreatePopupMenu();
 					for (size_t i = 0; i < targets.size(); ++i)
-						locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + i, Text::toT(targets[i]).c_str());
+					{
+						tstring target = Text::toT(targets[i]);
+						WinUtil::escapeMenu(target);
+						locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + i, target.c_str());
+					}
 					fileMenu.AppendMenu(MF_POPUP, locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
 					locateMenu.Detach();
 				}

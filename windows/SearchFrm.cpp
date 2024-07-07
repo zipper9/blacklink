@@ -29,6 +29,7 @@
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
 #include "LockRedraw.h"
+#include "QueueFrame.h"
 
 #include "../client/Client.h"
 #include "../client/QueueManager.h"
@@ -1418,6 +1419,20 @@ LRESULT SearchFrame::onDownloadWhole(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 	return 0;
 }
 
+LRESULT SearchFrame::onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int index = (int) wID - IDC_LOCATE_FILE_IN_QUEUE;
+	if (index < 0 || index >= (int) targets.size())
+	{
+		dcassert(0);
+		return 0;
+	}
+	QueueFrame::openWindow();
+	if (QueueFrame::g_frame)
+		QueueFrame::g_frame->showQueueItem(targets[index], false);
+	return 0;
+}
+
 LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	const LPNMITEMACTIVATE item = (LPNMITEMACTIVATE)pnmh;
@@ -2098,11 +2113,9 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 	if (reinterpret_cast<HWND>(wParam) == ctrlResults && ctrlResults.GetSelectedCount() > 0)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-		
 		if (pt.x == -1 && pt.y == -1)
-		{
 			WinUtil::getContextMenuPos(ctrlResults, pt);
-		}
+
 		const auto selCount = ctrlResults.GetSelectedCount();
 		if (selCount)
 		{
@@ -2122,6 +2135,11 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 			resultsMenu.CreatePopupMenu();
 			int defaultItem = IDC_DOWNLOAD_TO_FAV;
+
+			targets.clear();
+			const SearchInfo::CheckTTH check = ctrlResults.forEachSelectedT(SearchInfo::CheckTTH());
+			if (check.hasTTH)
+				QueueManager::getTargets(TTHValue(Text::fromT(check.tth)), targets);
 
 			if (sr && isValidFile(*sr))
 			{
@@ -2144,13 +2162,35 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				resultsMenu.AppendMenu(MF_POPUP, targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
 			}
 #endif
+
+			if (!targets.empty())
+			{
+				if (targets.size() > 1)
+				{
+					CMenu locateMenu;
+					locateMenu.CreatePopupMenu();
+					int n = 0;
+					for (auto i = targets.cbegin(); i != targets.cend(); ++i)
+					{
+						tstring target = Text::toT(*i);
+						WinUtil::escapeMenu(target);
+						locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + n, target.c_str());
+						n++;
+					}
+					resultsMenu.AppendMenu(MF_POPUP, locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
+					locateMenu.Detach();
+				}
+				else
+					resultsMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE, CTSTRING(LOCATE_FILE_IN_QUEUE));
+			}
+
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT), g_iconBitmaps.getBitmap(IconBitmaps::NOTEPAD, 0));
 #endif
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
-			
+
 			resultsMenu.AppendMenu(MF_POPUP, copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			appendAndActivateUserItems(resultsMenu, true);
@@ -2159,29 +2199,22 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 			// Add target menu
 			dlTargets.clear();
-			int n = makeTargetMenu(si, targetMenu, IDC_DOWNLOAD_TO_FAV, ResourceManager::DOWNLOAD_TO);
-			
-			const SearchInfo::CheckTTH SIcheck = ctrlResults.forEachSelectedT(SearchInfo::CheckTTH());
-			
-			if (SIcheck.hasTTH)
+			makeTargetMenu(si, targetMenu, IDC_DOWNLOAD_TO_FAV, ResourceManager::DOWNLOAD_TO);
+
+			if (!targets.empty())
 			{
-				targets.clear();
-				QueueManager::getTargets(TTHValue(Text::fromT(SIcheck.tth)), targets);
-				
-				if (!targets.empty())
+				targetMenu.InsertSeparatorLast(TSTRING(ADD_AS_SOURCE));
+				int n = 0;
+				for (auto i = targets.cbegin(); i != targets.cend(); ++i)
 				{
-					targetMenu.InsertSeparatorLast(TSTRING(ADD_AS_SOURCE));
-					for (auto i = targets.cbegin(); i != targets.cend(); ++i)
-					{
-						tstring target = Text::toT(*i);
-						dlTargets[IDC_DOWNLOAD_TARGET + n] = DownloadTarget(target, DownloadTarget::PATH_DEFAULT);
-						WinUtil::escapeMenu(target);
-						targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + n, target.c_str());
-						n++;
-					}
+					tstring target = Text::toT(*i);
+					dlTargets[IDC_DOWNLOAD_TARGET + n] = DownloadTarget(target, DownloadTarget::PATH_DEFAULT);
+					WinUtil::escapeMenu(target);
+					targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + n, target.c_str());
+					n++;
 				}
 			}
-			
+
 #ifdef USE_DOWNLOAD_DIR
 			// second sub-menu
 			if (sr)
@@ -2196,7 +2229,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			{
 				copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FOLDERNAME));
 			}
-			appendUcMenu(resultsMenu, UserCommand::CONTEXT_SEARCH, SIcheck.hubs);
+			appendUcMenu(resultsMenu, UserCommand::CONTEXT_SEARCH, check.hubs);
 
 			tstring caption;
 			if (sr && !sr->getFileName().empty())
