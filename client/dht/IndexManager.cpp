@@ -213,8 +213,8 @@ namespace dht
 
 		// send response
 		AdcCommand res(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, "File published", AdcCommand::TYPE_UDP);
-		res.addParam("FC", "PUB");
-		res.addParam("TR", tth);
+		res.addParam("FCPUB");
+		res.addParam(TAG('T', 'R'), tth);
 		DHT::getInstance()->send(res, node->getIdentity().getIP4(),
 			node->getIdentity().getUdp4Port(), node->getUser()->getCID(), node->getUdpKey());
 	}

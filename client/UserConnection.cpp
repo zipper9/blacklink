@@ -612,9 +612,9 @@ void UserConnection::handle(AdcCommand::PMI t, const AdcCommand& cmd)
 void UserConnection::inf(bool withToken)
 {
 	AdcCommand c(AdcCommand::CMD_INF);
-	c.addParam("ID", ClientManager::getMyCID().toBase32());
+	c.addParam(TAG('I', 'D'), ClientManager::getMyCID().toBase32());
 	if (withToken)
-		c.addParam("TO", getUserConnectionToken());
+		c.addParam(TAG('T', 'O'), getUserConnectionToken());
 	if (isSet(FLAG_CCPM))
 		c.addParam("PM1");
 	send(c);
@@ -624,7 +624,7 @@ void UserConnection::sup(const StringList& features)
 {
 	AdcCommand c(AdcCommand::CMD_SUP);
 	for (const string& feature : features)
-		c.addParam("AD" + feature);
+		c.addParam(TAG('A', 'D'), feature);
 	send(c);
 }
 
@@ -661,7 +661,7 @@ void UserConnection::onConnected() noexcept
 	{
 		StringList features = ConnectionManager::getInstance()->getAdcFeatures();
 		sup(features);
-		send(AdcCommand(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, Util::emptyString).addParam("RF", getHubUrl()));
+		send(AdcCommand(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, Util::emptyString).addParam(TAG('R', 'F'), getHubUrl()));
 	}
 	setState(UserConnection::STATE_SUPNICK);
 }
@@ -827,7 +827,7 @@ void UserConnection::maxedOut(size_t queuePosition)
 	{
 		AdcCommand cmd(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_SLOTS_FULL, "Slots full");
 		if (BOOLSETTING(SEND_QP_PARAM))
-			cmd.addParam("QP", Util::toString(queuePosition));
+			cmd.addParam(TAG('Q', 'P'), Util::toString(queuePosition));
 		send(cmd);
 	}
 }

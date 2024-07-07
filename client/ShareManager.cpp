@@ -1436,9 +1436,9 @@ bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename, bool hid
 		{
 			const FileAttr& fa = fileAttr[fileAttrIndex];
 			if (fa.size < 0) return false;
-			cmd.addParam("FN", filename);
-			cmd.addParam("SI", Util::toString(fa.size));
-			cmd.addParam("TR", fa.root.toBase32());
+			cmd.addParam(TAG('F', 'N'), filename);
+			cmd.addParam(TAG('S', 'I'), Util::toString(fa.size));
+			cmd.addParam(TAG('T', 'R'), fa.root.toBase32());
 			return true;
 		}
 		TTHValue tth;
@@ -1446,9 +1446,9 @@ bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename, bool hid
 		bool isCompressed = fileAttrIndex == FILE_ATTR_EMPTY_FILES_BZ_XML;
 		if (!getXmlFileInfo(CID(shareGroup), isCompressed, tth, size) && !getXmlFileInfo(CID(), isCompressed, tth, size))
 			return false;
-		cmd.addParam("FN", filename);
-		cmd.addParam("SI", Util::toString(size));
-		cmd.addParam("TR", tth.toBase32());
+		cmd.addParam(TAG('F', 'N'), filename);
+		cmd.addParam(TAG('S', 'I'), Util::toString(size));
+		cmd.addParam(TAG('T', 'R'), tth.toBase32());
 		return true;
 	}
 
@@ -1470,9 +1470,9 @@ bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename, bool hid
 		
 	const SharedDir* dir = i->second.dir;
 	const SharedFilePtr& f = i->second.file;
-	cmd.addParam("FN", getADCPathL(dir) + f->getName());
-	cmd.addParam("SI", Util::toString(f->getSize()));
-	cmd.addParam("TR", f->getTTH().toBase32());
+	cmd.addParam(TAG('F', 'N'), getADCPathL(dir) + f->getName());
+	cmd.addParam(TAG('S', 'I'), Util::toString(f->getSize()));
+	cmd.addParam(TAG('T', 'R'), f->getTTH().toBase32());
 	return true;
 }
 

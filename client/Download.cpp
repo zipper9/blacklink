@@ -114,7 +114,7 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	{
 		int64_t bytes = getDownloadedBytes();
 		if (bytes > 0)
-			cmd.addParam("DB", Util::toString(bytes));
+			cmd.addParam(TAG('D', 'B'), Util::toString(bytes));
 	}
 	if (isSet(FLAG_MATCH_QUEUE) && BOOLSETTING(USE_TTH_LIST))
 		cmd.addParam("TL1");

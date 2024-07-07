@@ -103,8 +103,8 @@ namespace dht
 		else
 		{
 			AdcCommand response(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_UNSUPPORTED, "Protocol unknown", AdcCommand::TYPE_UDP);
-			response.addParam("PR", protocol);
-			response.addParam("TO", token);
+			response.addParam(TAG('P', 'R'), protocol);
+			response.addParam(TAG('T', 'O'), token);
 
 			DHT::getInstance()->send(response, node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				node->getUser()->getCID(), node->getUdpKey());
@@ -150,8 +150,8 @@ namespace dht
 		else
 		{
 			AdcCommand sta(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_UNSUPPORTED, "Protocol unknown", AdcCommand::TYPE_UDP);
-			sta.addParam("PR", protocol);
-			sta.addParam("TO", token);
+			sta.addParam(TAG('P', 'R'), protocol);
+			sta.addParam(TAG('T', 'O'), token);
 
 			DHT::getInstance()->send(sta, node->getIdentity().getIP4(), node->getIdentity().getUdp4Port(),
 				node->getUser()->getCID(), node->getUdpKey());

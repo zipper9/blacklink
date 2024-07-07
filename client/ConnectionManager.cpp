@@ -1322,7 +1322,7 @@ void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd
 	string cidStr;
 	if (!cmd.getParam(TAG('I', 'D'), 0, cidStr))
 	{
-		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_INF_MISSING, "ID missing").addParam("FL", "ID"));
+		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_INF_MISSING, "ID missing").addParam(TAG('F', 'L'), "ID"));
 		source->disconnect();
 		return;
 	}

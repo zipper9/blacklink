@@ -80,9 +80,9 @@ namespace dht
 
 			// send SCH command
 			AdcCommand cmd(AdcCommand::CMD_SCH, AdcCommand::TYPE_UDP);
-			cmd.addParam("TR", term);
-			cmd.addParam("TY", Util::toString(type));
-			cmd.addParam("TO", Util::toString(token));
+			cmd.addParam(TAG('T', 'R'), term);
+			cmd.addParam(TAG('T', 'Y'), Util::toString(type));
+			cmd.addParam(TAG('T', 'O'), Util::toString(token));
 
 			//node->setTimeout();
 			DHT::getInstance()->send(cmd, node->getIdentity().getIP4(),
@@ -244,7 +244,7 @@ namespace dht
 			return;	// type not specified?
 
 		AdcCommand res(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
-		res.addParam("TO", token);
+		res.addParam(TAG('T', 'O'), token);
 
 		SimpleXML xml;
 		xml.addTag("Nodes");
@@ -336,7 +336,7 @@ namespace dht
 		StringOutputStream sos(nodes);
 		xml.toXML(&sos);
 
-		res.addParam("NX", Utils::compressXML(nodes));
+		res.addParam(TAG('N', 'X'), Utils::compressXML(nodes));
 
 		// send search result
 		DHT::getInstance()->send(res, node->getIdentity().getIP4(),
@@ -411,8 +411,8 @@ namespace dht
 
 						// ask for partial file
 						AdcCommand request(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-						request.addParam("U4", Util::toString(::SearchManager::getInstance()->getUdpPort()));
-						request.addParam("TR", s->term);
+						request.addParam(TAG('U', '4'), Util::toString(::SearchManager::getInstance()->getUdpPort()));
+						request.addParam(TAG('T', 'R'), s->term);
 
 						DHT::getInstance()->send(request, address.data.v4, u4, cid, source->getUdpKey());
 					}
@@ -511,11 +511,11 @@ namespace dht
 			const Node::Ptr& node = i->second;
 
 			AdcCommand cmd(AdcCommand::CMD_PUB, AdcCommand::TYPE_UDP);
-			cmd.addParam("TR", tth);
-			cmd.addParam("SI", Util::toString(size));
+			cmd.addParam(TAG('T', 'R'), tth);
+			cmd.addParam(TAG('S', 'I'), Util::toString(size));
 
 			if (partial)
-				cmd.addParam("PF", "1");
+				cmd.addParam("PF1");
 
 			//i->second->setTimeout();
 			DHT::getInstance()->send(cmd, node->getIdentity().getIP4(),

@@ -190,9 +190,9 @@ namespace dht
 
 			// send him his external ip and port
 			AdcCommand cmd(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, !firewalled ? "UDP port opened" : "UDP port closed", AdcCommand::TYPE_UDP);
-			cmd.addParam("FC", "FWCHECK");
-			cmd.addParam("I4", Util::printIpAddress(address));
-			cmd.addParam("U4", Util::toString(port));
+			cmd.addParam(TAG('F', 'C'), "FWCHECK");
+			cmd.addParam(TAG('I', '4'), Util::printIpAddress(address));
+			cmd.addParam(TAG('U', '4'), Util::toString(port));
 			send(cmd, address, port, user->getCID(), node->getUdpKey());
 		}
 
@@ -231,14 +231,14 @@ namespace dht
 				if (firewalledWanted.find(address) == firewalledWanted.end()) // only when not requested from this node yet
 				{
 					firewalledWanted.insert(address);
-					cmd.addParam("FW", Util::toString(getPort()));
+					cmd.addParam(TAG('F', 'W'), Util::toString(getPort()));
 				}
 			}
 		}
 		Utils::trackOutgoingPacket(address, cmd);
 
 		// pack data
-		cmd.addParam("UK", getUdpKey(Util::printIpAddress(address)).toBase32()); // add our key for the IP address
+		cmd.addParam(TAG('U', 'K'), getUdpKey(Util::printIpAddress(address)).toBase32()); // add our key for the IP address
 		string command = cmd.toString(ClientManager::getMyCID());
 		if (command.length() > PACKET_BUF_SIZE - 3)
 		{
@@ -484,17 +484,17 @@ namespace dht
 			clientVersion = VERSION_STR;
 		}
 
-		cmd.addParam("TY", Util::toString(type));
-		cmd.addParam("AP", clientName);
-		cmd.addParam("VE", clientVersion);
-		cmd.addParam("NI", SETTING(NICK));
-		cmd.addParam("SL", Util::toString(UploadManager::getSlots()));
+		cmd.addParam(TAG('T', 'Y'), Util::toString(type));
+		cmd.addParam(TAG('A', 'P'), clientName);
+		cmd.addParam(TAG('V', 'E'), clientVersion);
+		cmd.addParam(TAG('N', 'I'), SETTING(NICK));
+		cmd.addParam(TAG('S', 'L'), Util::toString(UploadManager::getSlots()));
 
 		int64_t limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInKBytes() : 0;
 		if (limit > 0)
-			cmd.addParam("US", Util::toString(limit * 1024));
+			cmd.addParam(TAG('U', 'S'), Util::toString(limit * 1024));
 		else
-			cmd.addParam("US", Util::toString((long)(Util::toDouble(SETTING(UPLOAD_SPEED))*1024*1024/8)));
+			cmd.addParam(TAG('U', 'S'), Util::toString((long)(Util::toDouble(SETTING(UPLOAD_SPEED))*1024*1024/8)));
 
 		string su;
 		if (CryptoManager::getInstance()->isInitialized())
@@ -514,7 +514,7 @@ namespace dht
 			su += AdcSupports::UDP4_FEATURE;
 		}
 
-		cmd.addParam("SU", su);
+		cmd.addParam(TAG('S', 'U'), su);
 
 		send(cmd, ip, port, targetCID, udpKey);
 	}

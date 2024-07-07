@@ -715,7 +715,7 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
 			i->toRES(cmd, UploadManager::getFreeSlots());
 			if (!param.token.empty())
-				cmd.addParam("TO", param.token);
+				cmd.addParam(TAG('T', 'O'), param.token);
 			ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0);
 		}
 		sr = ClientManagerListener::SEARCH_HIT;
@@ -740,13 +740,13 @@ void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNi
 {
 	cmd.getParameters().reserve(6);
 	if (!myNick.empty())
-		cmd.addParam("NI", myNick);
+		cmd.addParam(TAG('N', 'I'), myNick);
 
-	cmd.addParam("HI", hubIpPort);
-	cmd.addParam(af == AF_INET6 ? "U6" : "U4", Util::toString(wantResponse ? getUdpPort() : 0));
-	cmd.addParam("TR", tth);
-	cmd.addParam("PC", Util::toString(partialInfo.size() / 2));
-	cmd.addParam("PI", getPartsString(partialInfo));
+	cmd.addParam(TAG('H', 'I'), hubIpPort);
+	cmd.addParam(af == AF_INET6 ? TAG('U', '6') : TAG('U', '4'), Util::toString(wantResponse ? getUdpPort() : 0));
+	cmd.addParam(TAG('T', 'R'), tth);
+	cmd.addParam(TAG('P', 'C'), Util::toString(partialInfo.size() / 2));
+	cmd.addParam(TAG('P', 'I'), getPartsString(partialInfo));
 }
 
 bool SearchManager::isShutdown() const

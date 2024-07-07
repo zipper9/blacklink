@@ -65,10 +65,10 @@ string SearchResultCore::toSR(const Client& c, unsigned freeSlots, unsigned slot
 
 void SearchResultCore::toRES(AdcCommand& cmd, unsigned freeSlots) const
 {
-	cmd.addParam("SI", Util::toString(getSize()));
-	cmd.addParam("SL", Util::toString(freeSlots));
-	cmd.addParam("FN", Util::toAdcFile(getFile()));
-	cmd.addParam("TR", getTTH().toBase32());
+	cmd.addParam(TAG('S', 'I'), Util::toString(getSize()));
+	cmd.addParam(TAG('S', 'L'), Util::toString(freeSlots));
+	cmd.addParam(TAG('F', 'N'), Util::toAdcFile(getFile()));
+	cmd.addParam(TAG('T', 'R'), getTTH().toBase32());
 }
 
 SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
