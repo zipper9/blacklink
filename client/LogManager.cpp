@@ -21,9 +21,10 @@
 #include "TimeUtil.h"
 #include "SettingsManager.h"
 #include "ParamExpander.h"
-#include "ClientManager.h"
+#include "ResourceManager.h"
 
 #ifdef _WIN32
+#include "ClientManager.h"
 #include "CompatibilityManager.h"
 #endif
 
@@ -39,7 +40,7 @@ int64_t LogManager::nextCloseTime = 0;
 HWND LogManager::g_mainWnd = nullptr;
 #endif
 
-LogManager::LogArea LogManager::types[LogManager::LAST]; 
+LogManager::LogArea LogManager::types[LogManager::LAST];
 
 void LogManager::init()
 {
@@ -77,9 +78,9 @@ void LogManager::init()
 	types[TCP_MESSAGES].formatOption    = SettingsManager::LOG_FORMAT_TCP_MESSAGES;
 	types[UDP_PACKETS].fileOption       = SettingsManager::LOG_FILE_UDP_PACKETS;
 	types[UDP_PACKETS].formatOption     = SettingsManager::LOG_FORMAT_UDP_PACKETS;
-	
+
 	g_isInit = true;
-	
+
 #ifdef _WIN32
 	if (!CompatibilityManager::getStartupInfo().empty())
 		message(CompatibilityManager::getStartupInfo());
@@ -153,20 +154,35 @@ void LogManager::log(int area, Util::ParamExpander* ex) noexcept
 	logRaw(area, msg, ex);
 }
 
-void LogManager::log(int area, const StringMap& params) noexcept
+class MapAndResourceParamExpanded : public Util::MapParamExpander
 {
-	Util::MapParamExpander ex(params, time(nullptr));
-	log(area, &ex);
-}
+	public:
+		MapAndResourceParamExpanded(const StringMap& m, time_t t) : MapParamExpander(m, t)
+		{
+		}
 
-class LogMessageExpander : public Util::TimeParamExpander
+		virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept override
+		{
+			if (endPos - pos > 1 && str[pos] == '@')
+			{
+				string param = str.substr(pos + 1, endPos - (pos + 1));
+				int id = ResourceManager::getStringByName(param);
+				if (id != -1)
+					return ResourceManager::getString((ResourceManager::Strings) id);
+				return Util::emptyString;
+			}
+			return MapParamExpander::expandBracket(str, pos, endPos);
+		}
+};
+
+class TraceMessageExpander : public Util::TimeParamExpander
 {
 		const string& msg;
 		const string& ipPort;
 		const string& ip;
 
-	public:	
-		LogMessageExpander(const string& msg, const string& ipPort, const string& ip, time_t t) :
+	public:
+		TraceMessageExpander(const string& msg, const string& ipPort, const string& ip, time_t t) :
 			Util::TimeParamExpander(t), msg(msg), ipPort(ipPort), ip(ip) {}
 		virtual const string& expandBracket(const string& str, string::size_type pos, string::size_type endPos) noexcept override
 		{
@@ -174,13 +190,26 @@ class LogMessageExpander : public Util::TimeParamExpander
 			if (param == "message") return msg;
 			if (param == "ipPort") return ipPort;
 			if (param == "IP" || param == "ip") return ip;
+			if (param.length() > 1 && param[0] == '@')
+			{
+				param.erase(0, 1);
+				int id = ResourceManager::getStringByName(param);
+				if (id != -1)
+					return ResourceManager::getString((ResourceManager::Strings) id);
+			}
 			return Util::emptyString;
 		}
 };
 
+void LogManager::log(int area, const StringMap& params) noexcept
+{
+	MapAndResourceParamExpanded ex(params, time(nullptr));
+	log(area, &ex);
+}
+
 void LogManager::log(int area, const string& msg) noexcept
 {
-	LogMessageExpander ex(msg, Util::emptyString, Util::emptyString, time(nullptr));
+	TraceMessageExpander ex(msg, Util::emptyString, Util::emptyString, time(nullptr));
 	log(area, &ex);
 }
 
@@ -209,7 +238,7 @@ void LogManager::getOptions(int area, TStringPair& p) noexcept
 	dcassert(area >= 0 && area < LAST);
 	const LogArea& la = types[area];
 	p.first = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.fileOption, true));
-	p.second = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.formatOption, true));	
+	p.second = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.formatOption, true));
 }
 
 void LogManager::setOptions(int area, const TStringPair& p) noexcept
@@ -252,7 +281,7 @@ void LogManager::commandTrace(const string& msg, int flags, const string& ip, in
 	msgFull += ipPort;
 	msgFull += ": ";
 	msgFull += msg;
-	LogMessageExpander ex(msgFull, ipPort, ip, time(nullptr));
+	TraceMessageExpander ex(msgFull, ipPort, ip, time(nullptr));
 	log((flags & FLAG_UDP) ? UDP_PACKETS : TCP_MESSAGES, &ex);
 }
 
@@ -263,7 +292,7 @@ void LogManager::speakStatusMessage(const string& message) noexcept
 	{
 		size_t len = std::min<size_t>(message.length(), 255);
 		char* data = new char[len + 1];
-		memcpy(data, message.c_str(), len); 
+		memcpy(data, message.c_str(), len);
 		data[len] = 0;
 		if (!::PostMessage(LogManager::g_mainWnd, WM_SPEAKER, g_LogMessageID, reinterpret_cast<LPARAM>(data)))
 		{
