@@ -150,7 +150,7 @@
       <ProgramDatabaseFile />
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) $(SolutionDir)Tools</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)Tools"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -191,7 +191,7 @@
       </DataExecutionPrevention>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) $(SolutionDir)Tools</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)Tools"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -244,7 +244,7 @@
       <ProgramDatabaseFile />
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) $(SolutionDir)Tools</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)Tools"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -283,7 +283,7 @@
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) $(SolutionDir)Tools</Command>
+      <Command>copy "$(TargetPath)" "$(SolutionDir)Tools"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
