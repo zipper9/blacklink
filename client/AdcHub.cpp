@@ -1533,7 +1533,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	}
 	else
 	{
-		limit = Util::toInt64(SETTING(UPLOAD_SPEED)) * 1024 * 1024 / 8;
+		limit = static_cast<int64_t>(Util::toDouble(SETTING(UPLOAD_SPEED)) * (1000000 / 8));
 		addInfoParam(c, TAG('U', 'S'), Util::toString(limit));
 	}
 	
