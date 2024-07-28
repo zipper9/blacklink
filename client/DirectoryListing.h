@@ -333,6 +333,7 @@ class DirectoryListing
 		const string& getBasePath() const { return basePath; }
 
 		Directory* findDirPath(const string& path) const;
+		const Directory* findDirPathNoCase(const string& path) const;
 
 		bool isAborted() const { return aborted; }
 		bool hasTimestamps() const { return hasTimestampsFlag; }

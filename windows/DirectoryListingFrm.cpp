@@ -3258,7 +3258,7 @@ bool DirectoryListingFrame::setCurrentPath(const tstring& path)
 	size_t len = s2.length();
 	for (size_t i = 0; i < len; ++i)
 		if (c[i] == '\\') c[i] = '/';
-	const DirectoryListing::Directory* dir = dl->findDirPath(s2);
+	const DirectoryListing::Directory* dir = dl->findDirPathNoCase(s2);
 	if (!dir) return false;
 	const HTREEITEM ht = (HTREEITEM) dir->getUserData();
 	if (!ht) return false;

@@ -1077,6 +1077,40 @@ DirectoryListing::Directory* DirectoryListing::findDirPath(const string& path) c
 	return const_cast<Directory*>(dir);
 }
 
+const DirectoryListing::Directory* DirectoryListing::findDirPathNoCase(const string& path) const
+{
+	if (!root) return nullptr;
+	SimpleStringTokenizer<char> sl(path, '/');
+	SimpleStringTokenizer<char> slBase(basePath, '/');
+	bool matchBase = basePath.length() > 1;
+	string token, basePathToken;
+	const Directory *dir = root;
+	while (sl.getNextNonEmptyToken(token))
+	{
+		if (matchBase)
+		{
+			if (slBase.getNextNonEmptyToken(basePathToken))
+			{
+				if (stricmp(basePathToken, token)) return nullptr;
+				continue;
+			}
+			matchBase = false;
+		}
+		const Directory *nextDir = nullptr;
+		for (auto j = dir->directories.cbegin(); j != dir->directories.cend(); ++j)
+		{
+			if (!stricmp((*j)->getName(), token))
+			{
+				nextDir = *j;
+				break;
+			}
+		}
+		if (!nextDir) return nullptr;
+		dir = nextDir;
+	}
+	return dir;
+}
+
 bool DirectoryListing::spliceTree(DirectoryListing& tree, SpliceTreeResult& sr)
 {
 	sr.parentUserData = nullptr;
