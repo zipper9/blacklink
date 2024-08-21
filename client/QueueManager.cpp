@@ -1298,6 +1298,7 @@ int QueueManager::matchListing(DirectoryListing& dl) noexcept
 		if (!dl.getTTHSet()) dl.buildTTHSet();
 		const DirectoryListing::TTHMap& tthMap = *dl.getTTHSet();
 		bool sourceAdded = false;
+		bool addSource = !(dl.getUser()->getFlags() & User::FAKE);
 		if (!tthMap.empty())
 		{
 			QueueWLock(*QueueItem::g_cs);
@@ -1315,14 +1316,17 @@ int QueueManager::matchListing(DirectoryListing& dl) noexcept
 					if (j != tthMap.cend() && j->second == qi->getSize())
 					{
 						matches++;
-						try
+						if (addSource)
 						{
-							addSourceL(qi, dl.getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
-							sourceAdded = true;
-						}
-						catch (const Exception&)
-						{
-							// Ignore...
+							try
+							{
+								addSourceL(qi, dl.getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
+								sourceAdded = true;
+							}
+							catch (const Exception&)
+							{
+								// Ignore...
+							}
 						}
 					}
 				}
