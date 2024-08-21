@@ -23,8 +23,10 @@
 #include "ResourceManager.h"
 #include "CryptoManager.h"
 #include "ParamExpander.h"
+#include "StrUtil.h"
 #include "TimeUtil.h"
 #include "Util.h"
+#include "ConfCore.h"
 #include <openssl/err.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
@@ -449,7 +451,8 @@ void SSLSocket::close() noexcept
 
 void SSLSocket::logInfo(bool isServer) const
 {
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	int options = LogManager::getLogOptions();
+	if (options & LogManager::OPT_LOG_SOCKET_INFO)
 	{
 		string logText;
 		string ip = Util::printIpAddress(getIp(), true);
@@ -458,10 +461,14 @@ void SSLSocket::logInfo(bool isServer) const
 		else
 			logText = "SSL: connected to " + ip + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
 		LogManager::message(logText, false);
-		if (BOOLSETTING(LOG_TLS_CERTIFICATES))
+		if (options & LogManager::OPT_LOG_CERTIFICATES)
 		{
-			const string& path = SETTING(LOG_FILE_TLS_CERT);
-			if (!path.empty())
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			const string fileFormat = ss->getString(Conf::LOG_FILE_TLS_CERT);
+			string outPath = ss->getString(Conf::LOG_DIRECTORY);
+			ss->unlockRead();
+			if (!fileFormat.empty())
 			{
 				X509* cert = SSL_get_peer_certificate(ssl);
 				if (cert)
@@ -471,9 +478,8 @@ void SSLSocket::logInfo(bool isServer) const
 					StringMap m;
 					m["IP"] = m["ip"] = Util::printIpAddress(getIp());
 					m["KP"] = m["kp"] = Util::toBase32(digest.data(), digest.size());
-					string expandedPath = SETTING(LOG_DIRECTORY);
-					expandedPath += Util::validateFileName(Util::formatParams(path, m, true));
-					if (!File::isExist(expandedPath))
+					outPath += Util::validateFileName(Util::formatParams(fileFormat, m, true));
+					if (!File::isExist(outPath))
 					{
 						unsigned char *data = nullptr;
 						int size = ASN1_item_i2d((ASN1_VALUE*) cert, &data, ASN1_ITEM_rptr(X509));
@@ -481,8 +487,8 @@ void SSLSocket::logInfo(bool isServer) const
 						{
 							try
 							{
-								File::ensureDirectory(expandedPath);
-								File f(expandedPath, File::WRITE, File::CREATE | File::TRUNCATE, true);
+								File::ensureDirectory(outPath);
+								File f(outPath, File::WRITE, File::CREATE | File::TRUNCATE, true);
 								f.write(data, size);
 							}
 							catch (Exception&)

@@ -25,6 +25,8 @@
 #include "../client/File.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 
 static const string defLangFileName("en-US.xml");
 
@@ -52,54 +54,65 @@ static const WinUtil::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_NICK,          SettingsManager::NICK,               PropPage::T_STR  },
-	{ IDC_EMAIL,         SettingsManager::EMAIL,              PropPage::T_STR  },
-	{ IDC_DESCRIPTION,   SettingsManager::DESCRIPTION,        PropPage::T_STR  },
-	{ IDC_CLIENT_ID,     SettingsManager::OVERRIDE_CLIENT_ID, PropPage::T_BOOL },
-	{ IDC_CLIENT_ID_BOX, SettingsManager::CLIENT_ID,          PropPage::T_STR  },
+	{ IDC_NICK,          Conf::NICK,               PropPage::T_STR  },
+	{ IDC_EMAIL,         Conf::EMAIL,              PropPage::T_STR  },
+	{ IDC_DESCRIPTION,   Conf::DESCRIPTION,        PropPage::T_STR  },
+	{ IDC_CLIENT_ID,     Conf::OVERRIDE_CLIENT_ID, PropPage::T_BOOL },
+	{ IDC_CLIENT_ID_BOX, Conf::CLIENT_ID,          PropPage::T_STR  },
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
-	{ IDC_CHECK_ADD_TO_DESCRIPTION, SettingsManager::ADD_TO_DESCRIPTION,    PropPage::T_BOOL },
-	{ IDC_CHECK_ADD_LIMIT,          SettingsManager::ADD_DESCRIPTION_LIMIT, PropPage::T_BOOL },
-	{ IDC_CHECK_ADD_SLOTS,          SettingsManager::ADD_DESCRIPTION_SLOTS, PropPage::T_BOOL },
+	{ IDC_CHECK_ADD_TO_DESCRIPTION, Conf::ADD_TO_DESCRIPTION,    PropPage::T_BOOL },
+	{ IDC_CHECK_ADD_LIMIT,          Conf::ADD_DESCRIPTION_LIMIT, PropPage::T_BOOL },
+	{ IDC_CHECK_ADD_SLOTS,          Conf::ADD_DESCRIPTION_SLOTS, PropPage::T_BOOL },
 #endif
 	{ 0, 0, PropPage::T_END }
 };
 
 void GeneralPage::write()
 {
-	string oldNick = SETTING(NICK);
-	string oldEmail = SETTING(EMAIL);
-	string oldDescription = SETTING(DESCRIPTION);
-	string oldUploadSpeed = SETTING(UPLOAD_SPEED);
-	int oldGender = SETTING(GENDER);
+	uint8_t oldUserInfo[TigerHash::BYTES], userInfo[TigerHash::BYTES];
+	Util::getUserInfoHash(oldUserInfo);
+
 	PropPage::write(*this, items);
 	CComboBox ctrlConnection(GetDlgItem(IDC_CONNECTION));
-	int selIndex = ctrlConnection.GetCurSel();
-	if (selIndex >= 0)
-		g_settings->set(SettingsManager::UPLOAD_SPEED, connSpeeds[selIndex]);
+	const int uploadSpeedIndex = ctrlConnection.GetCurSel();
+
+	bool updateLanguage = false;
+	string languageFile;
 	CComboBox ctrlLanguage(GetDlgItem(IDC_LANGUAGE));
-	selIndex = ctrlLanguage.GetCurSel();
+	int selIndex = ctrlLanguage.GetCurSel();
 	if (selIndex != -1)
+		languageFile = static_cast<const char*>(ctrlLanguage.GetItemDataPtr(selIndex));
+
+	const int gender = ctrlGender.GetCurSel();
+	const string defaultCodePage = Text::charsetToString(WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING))));
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	if (uploadSpeedIndex >= 0)
+		ss->setString(Conf::UPLOAD_SPEED, connSpeeds[uploadSpeedIndex]);
+	ss->setInt(Conf::GENDER, gender);
+	ss->setString(Conf::DEFAULT_CODEPAGE, defaultCodePage);
+	if (!languageFile.empty())
 	{
-		string langFile(static_cast<const char*>(ctrlLanguage.GetItemDataPtr(selIndex)));
-		if (SETTING(LANGUAGE_FILE) != langFile)
+		const string& oldLanguage = ss->getString(Conf::LANGUAGE_FILE);
+		if (oldLanguage != languageFile)
 		{
-			g_settings->set(SettingsManager::LANGUAGE_FILE, langFile);
-			SettingsManager::getInstance()->save();
-			ResourceManager::loadLanguage(Util::getLanguagesPath() + langFile);
-			if (languageList.size() != 1)
-				MessageBox(CTSTRING(CHANGE_LANGUAGE_INFO), CTSTRING(CHANGE_LANGUAGE), MB_OK | MB_ICONEXCLAMATION);
+			ss->setString(Conf::LANGUAGE_FILE, languageFile);
+			updateLanguage = true;
 		}
 	}
-	g_settings->set(SettingsManager::GENDER, ctrlGender.GetCurSel());
-	int charset = WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING)));
-	g_settings->set(SettingsManager::DEFAULT_CODEPAGE, Text::charsetToString(charset));
-	if (SETTING(NICK) != oldNick ||
-	    SETTING(EMAIL) != oldEmail ||
-	    SETTING(DESCRIPTION) != oldDescription ||
-	    SETTING(UPLOAD_SPEED) != oldUploadSpeed ||
-	    SETTING(GENDER) != oldGender)
-			ClientManager::resendMyInfo();
+	ss->unlockWrite();
+
+	Util::getUserInfoHash(userInfo);
+	if (memcmp(userInfo, oldUserInfo, TigerHash::BYTES))
+		ClientManager::resendMyInfo();
+
+	if (updateLanguage)
+	{
+		ResourceManager::loadLanguage(Util::getLanguagesPath() + languageFile);
+		if (languageList.size() != 1)
+			MessageBox(CTSTRING(CHANGE_LANGUAGE_INFO), CTSTRING(CHANGE_LANGUAGE), MB_OK | MB_ICONEXCLAMATION);
+	}
 }
 
 void GeneralPage::addGenderItem(const TCHAR* text, int imageIndex, int index)
@@ -124,15 +137,23 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 #endif	
 	WinUtil::translate(*this, texts);
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string uploadSpeed = ss->getString(Conf::UPLOAD_SPEED);
+	const string defUploadSpeed = ss->getStringDefault(Conf::UPLOAD_SPEED);
+	const string languageFile = ss->getString(Conf::LANGUAGE_FILE);
+	const int gender = ss->getInt(Conf::GENDER);
+	const string defaultCodePage = ss->getString(Conf::DEFAULT_CODEPAGE);
+	const bool overrideClientId = ss->getBool(Conf::OVERRIDE_CLIENT_ID);
+	ss->unlockRead();
+
 	CComboBox ctrlConnection(GetDlgItem(IDC_CONNECTION));
-	const string& value = SettingsManager::get(SettingsManager::UPLOAD_SPEED);
-	const string& defValue = SettingsManager::getDefault(SettingsManager::UPLOAD_SPEED);
 	int selIndex = -1, defIndex = -1;
 	for (int i = 0; i < _countof(connSpeeds); ++i)
 	{
-		if (defIndex < 0 && defValue == connSpeeds[i])
+		if (defIndex < 0 && defUploadSpeed == connSpeeds[i])
 			defIndex = i;
-		if (selIndex < 0 && value == connSpeeds[i])
+		if (selIndex < 0 && uploadSpeed == connSpeeds[i])
 			selIndex = i;
 		tstring s = Text::toT(connSpeeds[i]);
 		s += _T(' ');
@@ -168,7 +189,7 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	for (int i = 0; i < itemCount; ++i)
 	{
 		const char* text = static_cast<const char*>(ctrlLanguage.GetItemDataPtr(i));
-		if (SETTING(LANGUAGE_FILE) == text)
+		if (languageFile == text)
 		{
 			selIndex = i;
 			break;
@@ -187,27 +208,27 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	CEdit nick(GetDlgItem(IDC_NICK));
 	nick.LimitText(49);
-	
+
 	CEdit desc(GetDlgItem(IDC_DESCRIPTION));
 	desc.LimitText(100);
-	
+
 	desc.Detach();	
 	desc.Attach(GetDlgItem(IDC_SETTINGS_EMAIL));
 	desc.LimitText(64);
-	
+
 	int id = 0;
 	addGenderItem(CTSTRING(FLY_GENDER_NONE), id++, 0);
 	addGenderItem(CTSTRING(FLY_GENDER_MALE), id++, 1);
 	addGenderItem(CTSTRING(FLY_GENDER_FEMALE), id++, 2);
 	addGenderItem(CTSTRING(FLY_GENDER_ASEXUAL), id++, 3);
-	ctrlGender.SetCurSel(SETTING(GENDER));
-	
-	int charset = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
+	ctrlGender.SetCurSel(gender);
+
+	int charset = Text::charsetFromString(defaultCodePage);
 	CComboBox comboBox(GetDlgItem(IDC_ENCODING));
 	WinUtil::fillCharsetList(comboBox, charset, false, false);
 
-	comboClientId.EnableWindow(SETTING(OVERRIDE_CLIENT_ID) ? TRUE : FALSE);
-	
+	comboClientId.EnableWindow(overrideClientId ? TRUE : FALSE);
+
 	fixControls();
 	return TRUE;
 }

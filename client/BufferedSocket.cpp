@@ -20,6 +20,7 @@
 #include "BufferedSocket.h"
 #include "Resolver.h"
 #include "ThrottleManager.h"
+#include "StrUtil.h"
 #include "TimeUtil.h"
 #include "ResourceManager.h"
 #include "Streams.h"
@@ -30,6 +31,8 @@
 #include "LogManager.h"
 #include "SocketPool.h"
 #include "NetworkDevices.h"
+#include "SettingsManager.h"
+#include "ConfCore.h"
 
 #ifdef _WIN32
 #include "CompatibilityManager.h"
@@ -145,12 +148,16 @@ void BufferedSocket::Buffer::clear() noexcept
 BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener) :
 	stopFlag(false), separator(separator), listener(listener)
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	maxLineSize = ss->getInt(Conf::MAX_COMMAND_LENGTH);
+	ss->unlockRead();
+
 	protocol = Socket::PROTO_DEFAULT;
 	state = STARTING;
 	pollMask = pollState = 0;
 	mode = MODE_LINE;
 	remainingSize = (size_t) -1;
-	maxLineSize = SETTING(MAX_COMMAND_LENGTH);
 	task = TASK_NONE;
 	proxyStage = PROXY_STAGE_NONE;
 	proxyAuthMethod = 0;
@@ -189,7 +196,7 @@ void BufferedSocket::start()
 
 int BufferedSocket::run()
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 	if (doLog)
 		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread 0x" + Util::toHexString(BaseThread::getCurrentThreadId()) + " started", false);
 
@@ -412,7 +419,7 @@ void BufferedSocket::writeData()
 
 void BufferedSocket::parseData(Buffer& b)
 {
-	bool doTrace = BOOLSETTING(LOG_TCP_MESSAGES);
+	const bool doTrace = (LogManager::getLogOptions() & LogManager::OPT_LOG_TCP_MESSAGES) != 0;
 	Modes prevMode = mode;
 	while (b.readPtr < b.writePtr)
 	{
@@ -538,7 +545,8 @@ void BufferedSocket::setMode(Modes newMode) noexcept
 
 void BufferedSocket::write(const void* data, size_t size)
 {
-	if (BOOLSETTING(LOG_TCP_MESSAGES))
+	const bool doTrace = (LogManager::getLogOptions() & LogManager::OPT_LOG_TCP_MESSAGES) != 0;
+	if (doTrace)
 	{
 		if (size > 512)
 		{
@@ -602,7 +610,7 @@ int BufferedSocket::getSocketCount()
 
 void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 	if (sock.get())
 	{
 		if (doLog)
@@ -708,7 +716,7 @@ bool BufferedSocket::processTask()
 
 void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 	const bool resolveNames = ci->proxy.resolveNames && ci->addr.length() <= 255;
 	size_t userLen = std::min<size_t>(255, ci->proxy.user.length());
 	size_t passwordLen = std::min<size_t>(255, ci->proxy.password.length());
@@ -866,12 +874,12 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 	{
 		if (stopFlag)
 			return;
-			
+
 		try
 		{
 			if (!sslSocks)
 			{
-				const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+				const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 				const string* host;
 				uint16_t port;
 				if (ci->useProxy)
@@ -1013,7 +1021,7 @@ void BufferedSocket::doAccept()
 					throw SocketException(STRING(CONNECTION_TIMEOUT));
 			}
 			sock->createControlEvent();
-			const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+			const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 			if (doLog)
 				LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Upgraded to SSL", false);
 			if (listener) listener->onUpgradedToSSL();
@@ -1024,8 +1032,7 @@ void BufferedSocket::doAccept()
 void BufferedSocket::setOptions()
 {
 	dcassert(sock);
-	sock->setInBufSize();
-	sock->setOutBufSize();
+	sock->setBufSize(Socket::IN_BUFFER | Socket::OUT_BUFFER);
 }
 
 void BufferedSocket::disconnect(bool graceless /*= false */)
@@ -1099,17 +1106,21 @@ void BufferedSocket::getBindAddress(IpAddressEx& ip, int af, const string& s)
 
 void BufferedSocket::getBindAddress(IpAddressEx& ip, int af)
 {
-	static const int USE_DEV_MASK = SettingsManager::BIND_OPTION_USE_DEV | SettingsManager::BIND_OPTION_NO_FALLBACK;
-	int bindOptions = SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);
+	static const int USE_DEV_MASK = Conf::BIND_OPTION_USE_DEV | Conf::BIND_OPTION_NO_FALLBACK;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int bindOptions = ss->getInt(af == AF_INET6 ? Conf::BIND_OPTIONS6 : Conf::BIND_OPTIONS);
 	if ((bindOptions & USE_DEV_MASK) == USE_DEV_MASK)
 	{
-		const string& bindDev = SettingsManager::get(ip.type == AF_INET6 ? SettingsManager::BIND_DEVICE6 : SettingsManager::BIND_DEVICE);
+		string bindDev = ss->getString(ip.type == AF_INET6 ? Conf::BIND_DEVICE6 : Conf::BIND_DEVICE);
+		ss->unlockRead();
 		if (!networkDevices.getDeviceAddress(af, bindDev, ip))
 			throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
 		return;
 	}
-	getBindAddress(ip, af,
-		SettingsManager::get(ip.type == AF_INET6 ? SettingsManager::BIND_ADDRESS6 : SettingsManager::BIND_ADDRESS));
+	string bindAddr = ss->getString(ip.type == AF_INET6 ? Conf::BIND_ADDRESS6 : Conf::BIND_ADDRESS);
+	ss->unlockRead();
+	getBindAddress(ip, af, bindAddr);
 }
 
 int BufferedSocket::writeThrottled(const void* data, int len)

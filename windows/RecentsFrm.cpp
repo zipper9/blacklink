@@ -60,7 +60,7 @@ tstring RecentHubsFrame::ItemInfo::getText(uint8_t col) const
 	return Util::emptyStringT;
 }
 
-int RecentHubsFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col)
+int RecentHubsFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, int col, int /*flags*/)
 {
 	int result = 0;
 	switch (col)
@@ -112,8 +112,9 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
 
-	ctrlHubs.insertColumns(SettingsManager::RECENTS_FRAME_ORDER, SettingsManager::RECENTS_FRAME_WIDTHS, SettingsManager::RECENTS_FRAME_VISIBLE);
-	ctrlHubs.setSortFromSettings(SETTING(RECENTS_FRAME_SORT));
+	ctrlHubs.insertColumns(Conf::RECENTS_FRAME_ORDER, Conf::RECENTS_FRAME_WIDTHS, Conf::RECENTS_FRAME_VISIBLE);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	ctrlHubs.setSortFromSettings(ss->getInt(Conf::RECENTS_FRAME_SORT));
 
 	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_CONNECT);
 	ctrlConnect.SetWindowText(CTSTRING(CONNECT));
@@ -129,7 +130,7 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	auto fm = FavoriteManager::getInstance();
 	fm->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	updateList(fm->getRecentHubs());
 
 	hubsMenu.CreatePopupMenu();
@@ -266,15 +267,16 @@ LRESULT RecentHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	{
 		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		setButtonPressed(IDC_RECENTS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		ctrlHubs.saveHeaderOrder(SettingsManager::RECENTS_FRAME_ORDER, SettingsManager::RECENTS_FRAME_WIDTHS, SettingsManager::RECENTS_FRAME_VISIBLE);
-		SET_SETTING(RECENTS_FRAME_SORT, ctrlHubs.getSortForSettings());
+		ctrlHubs.saveHeaderOrder(Conf::RECENTS_FRAME_ORDER, Conf::RECENTS_FRAME_WIDTHS, Conf::RECENTS_FRAME_VISIBLE);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::RECENTS_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
 	}
@@ -290,7 +292,9 @@ void RecentHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 
-	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
+		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
+		GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
@@ -339,7 +343,7 @@ LRESULT RecentHubsFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 	return 0;
 }
 
-void RecentHubsFrame::on(SettingsManagerListener::Repaint)
+void RecentHubsFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())

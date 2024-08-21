@@ -37,8 +37,11 @@
 #include "ThrottleManager.h"
 #include "HublistManager.h"
 #include "DatabaseManager.h"
+#include "DatabaseOptions.h"
 #include "AdcSupports.h"
+#include "SettingsUtil.h"
 #include "dht/DHT.h"
+#include "ConfCore.h"
 
 #include "IpGuard.h"
 #include "IpTrust.h"
@@ -52,7 +55,11 @@
 
 static void initP2PGuard()
 {
-	if (BOOLSETTING(ENABLE_P2P_GUARD) && BOOLSETTING(P2P_GUARD_LOAD_INI))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool loadP2PGuard = ss->getBool(Conf::ENABLE_P2P_GUARD) && ss->getBool(Conf::P2P_GUARD_LOAD_INI);
+	ss->unlockRead();
+	if (loadP2PGuard)
 		Util::loadP2PGuardIni();
 	else
 		Util::unloadP2PGuardIni();
@@ -77,14 +84,14 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	dcassert(pProgressCallbackProc != nullptr);
 
 	LOAD_STEP_L(STARTUP_SQLITE_DATABASE, DatabaseManager::newInstance());
-	DatabaseManager::getInstance()->init(dbErrorCallback, SETTING(SQLITE_JOURNAL_MODE));
+	DatabaseManager::getInstance()->init(dbErrorCallback);
 
 	LOAD_STEP_L(STARTUP_P2P_GUARD, initP2PGuard());
 	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());
-	
-	if (BOOLSETTING(USE_CUSTOM_LOCATIONS))
+
+	if (DatabaseManager::getInstance()->getOptions() & DatabaseOptions::USE_CUSTOM_LOCATIONS)
 		LOAD_STEP_L(STARTUP_CUSTOM_LOCATIONS, Util::loadCustomLocations());
-	
+
 	HashManager::newInstance();
 
 	LOAD_STEP("SSL", CryptoManager::newInstance());
@@ -100,20 +107,23 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	FavoriteManager::newInstance();
 	LOAD_STEP_L(STARTUP_IGNORE_LIST, UserManager::newInstance());
 	if (pGuiInitProc) pGuiInitProc(pGuiParam);
-	LOAD_STEP_L(SETTINGS, SettingsManager::getInstance()->loadOtherSettings());
+	LOAD_STEP_L(SETTINGS, Util::loadOtherSettings());
+	ShareManager::getInstance()->init();
 	LOAD_STEP("IPGuard.ini", ipGuard.load());
+	ipGuard.updateSettings();
 	LOAD_STEP("IPTrust.ini", ipTrust.load());
+	ipTrust.updateSettings();
 #ifdef SSA_IPGRANT_FEATURE
 	LOAD_STEP("IPGrant.ini", ipGrant.load());
 #endif
-	
+
 	FinishedManager::newInstance();
 	LOAD_STEP_L(ADL_SEARCH, ADLSearchManager::newInstance());
 	ConnectivityManager::newInstance();
 	dht::DHT::newInstance();
-	
+
 	LOAD_STEP_L(FAVORITE_HUBS, FavoriteManager::getInstance()->load());
-	
+
 	LOAD_STEP_L(CERTIFICATES, CryptoManager::getInstance()->initializeKeyPair());
 	LOAD_STEP_L(DOWNLOAD_QUEUE, QueueManager::getInstance()->loadQueue());
 	LOAD_STEP_L(WAITING_USERS, UploadManager::getInstance()->load());
@@ -184,14 +194,11 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		User::g_user_counts.load(), OnlineUser::onlineUserCount.load(), Client::clientCount.load());
 #endif
 	QueueManager::getInstance()->saveQueue(true);
-	SettingsManager::getInstance()->save();
+	SettingsManager::instance.saveSettings();
 	ConnectionManager::getInstance()->shutdown();
 
 	preparingCoreToShutdown();
 
-#ifdef FLYLINKDC_USE_DNS
-	Socket::dnsCache.waitShutdown(); // !SMT!-IP
-#endif
 	DownloadManager::getInstance()->clearDownloads();
 	UploadManager::getInstance()->clearUploads();
 #ifdef DEBUG_SHUTDOWN
@@ -232,11 +239,7 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 	DatabaseManager::deleteInstance();
 	TimerManager::deleteInstance();
 
-	SettingsManager::getInstance()->removeListeners();
-	SettingsManager::deleteInstance();
-
-	extern SettingsManager* g_settings;
-	g_settings = nullptr;
+	SettingsManager::instance.removeListeners();
 
 #ifdef _WIN32
 	WSACleanup();

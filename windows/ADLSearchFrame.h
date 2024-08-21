@@ -129,11 +129,11 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 			COLUMN_MAX_FILE_SIZE,
 			COLUMN_LAST
 		};
-		
+
 		// Column parameters
 		static int columnIndexes[];
 		static int columnSizes[];
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 };
 
 #endif // !defined(ADL_SEARCH_FRAME_H)

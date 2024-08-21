@@ -20,6 +20,7 @@
 #include "DCLSTPage.h"
 #include "WinUtil.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/PathUtil.h"
 
@@ -35,8 +36,8 @@ static const WinUtil::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_DCLS_FOLDER, SettingsManager::DCLST_DIRECTORY, PropPage::T_STR },
-	{ IDC_DCLST_INCLUDESELF, SettingsManager::DCLST_INCLUDESELF, PropPage::T_BOOL },
+	{ IDC_DCLS_FOLDER, Conf::DCLST_DIRECTORY, PropPage::T_STR },
+	{ IDC_DCLST_INCLUDESELF, Conf::DCLST_INCLUDESELF, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -44,25 +45,24 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 {
 	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items);
-	
-	if (BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER))
-		CheckDlgButton(IDC_DCLS_CREATE_IN_FOLDER, BST_CHECKED);
-	else
-		CheckDlgButton(IDC_DCLS_ANOTHER_FOLDER, BST_CHECKED);
-	
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	CheckDlgButton(ss->getBool(Conf::DCLST_CREATE_IN_SAME_FOLDER) ?
+		IDC_DCLS_CREATE_IN_FOLDER : IDC_DCLS_ANOTHER_FOLDER, BST_CHECKED);
+
 	magnetClick.Attach(GetDlgItem(IDC_DCLST_CLICK));
 	magnetClick.AddString(CTSTRING(ASK));
 	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
 	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_DL_DCLST));
 	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_SHOW_DCLST));
 	
-	if (BOOLSETTING(DCLST_ASK))
+	if (ss->getBool(Conf::DCLST_ASK))
 	{
 		magnetClick.SetCurSel(0);
 	}
 	else
 	{
-		int action = SETTING(DCLST_ACTION);
+		int action = ss->getInt(Conf::DCLST_ACTION);
 		magnetClick.SetCurSel(action + 1);
 	}
 	
@@ -73,16 +73,18 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 void DCLSTPage::write()
 {
 	PropPage::write(*this, items);
-	SET_SETTING(DCLST_CREATE_IN_SAME_FOLDER, IsDlgButtonChecked(IDC_DCLS_CREATE_IN_FOLDER) == BST_CHECKED);
+
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(Conf::DCLST_CREATE_IN_SAME_FOLDER, IsDlgButtonChecked(IDC_DCLS_CREATE_IN_FOLDER) == BST_CHECKED);
 	int index = magnetClick.GetCurSel();
 	if (index == 0)
 	{
-		g_settings->set(SettingsManager::DCLST_ASK, true);
+		ss->setBool(Conf::DCLST_ASK, true);
 	}
 	else
 	{
-		g_settings->set(SettingsManager::DCLST_ASK, false);
-		g_settings->set(SettingsManager::DCLST_ACTION, index - 1);
+		ss->setBool(Conf::DCLST_ASK, false);
+		ss->setInt(Conf::DCLST_ACTION, index - 1);
 	}
 }
 

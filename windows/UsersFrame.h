@@ -155,9 +155,10 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 					dcassert(col >= 0 && col < COLUMN_LAST);
 					return columns[col];
 				}
-				
-				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col);
-				
+
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
+
 				int getImageIndex() const { return 2; }
 				static int getStateImageIndex() { return 0; }
 
@@ -187,9 +188,9 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		// UserManagerListener
 		void on(IgnoreListChanged) noexcept override;
 		void on(IgnoreListCleared) noexcept override;
-		
-		void on(SettingsManagerListener::Repaint) override;
-		
+
+		void on(SettingsManagerListener::ApplySettings) override;
+
 		void addUser(const FavoriteUser& user);
 		void updateUser(const UserPtr& user);
 		void updateUser(const int i, ItemInfo* ui, const FavoriteUser& favUser);

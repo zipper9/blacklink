@@ -25,9 +25,11 @@
 #include "ClientManager.h"
 #include "SysVersion.h"
 #include "ShareManager.h"
+#include "SettingsManager.h"
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "ConfCore.h"
 
 // Return values of fastHash and slowHash
 enum
@@ -196,12 +198,15 @@ void HashManager::reportError(int64_t fileID, const SharedFilePtr& file, const s
 
 HashManager::Hasher::Hasher() :
 	stopFlag(false), tempHashSpeed(0), skipFile(false),
-	maxHashSpeed(SETTING(MAX_HASH_SPEED)),
 	currentFileRemaining(0),
 	totalBytesToHash(0), totalBytesHashed(0),
 	totalFilesHashed(0), startTick(0), startTickSavedSize(0)
 {
 	semaphore.create();
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	maxHashSpeed = ss->getInt(Conf::MAX_HASH_SPEED);
+	ss->unlockRead();
 }
 
 void HashManager::Hasher::hashFile(int64_t fileID, const SharedFilePtr& file, const string& fileName, int64_t size)
@@ -543,7 +548,15 @@ int HashManager::Hasher::run()
 			couldNotWriteTree = false;
 #endif
 		}
-		maxHashSpeed = SETTING(MAX_HASH_SPEED);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		maxHashSpeed = ss->getInt(Conf::MAX_HASH_SPEED);
+#ifdef _WIN32
+		const bool optSaveTree = ss->getBool(Conf::SAVE_TTH_IN_NTFS_FILESTREAM);
+		const int64_t optSaveTreeMinSize = (int64_t) ss->getInt(Conf::SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) << 20;
+#endif
+		ss->unlockRead();
+
 		if (tempHashSpeed < 0) waitResume();
 		FileAttributes attr;
 		if (!File::getAttributes(filename, attr))
@@ -573,7 +586,7 @@ int HashManager::Hasher::run()
 		tree.clear();
 		tree.setBlockSize(TigerTree::getMaxBlockSize(size));
 #ifdef _WIN32
-		if (size > 0 && BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) && HashManager::loadTree(filename, tree, size))
+		if (size > 0 && optSaveTree && HashManager::loadTree(filename, tree, size))
 		{
 			LogManager::message(STRING(LOAD_TTH_FROM_NTFS) + filename, false);
 			if (mediaInfoFileTypes & currentItem.file->getFileTypes())
@@ -587,7 +600,7 @@ int HashManager::Hasher::run()
 			const uint64_t start = GET_TICK();
 			int result = RESULT_ERROR;
 #ifdef _WIN32
-			if (BOOLSETTING(FAST_HASH))
+			if (optSaveTree)
 				result = fastHash(filename, size, buf, tree);
 #endif
 			if (result == RESULT_ERROR)
@@ -601,9 +614,9 @@ int HashManager::Hasher::run()
 				const uint64_t speed = end > start ? size * 1000 / (end - start) : 0;
 				hashManager->hashDone(end, currentItem.fileID, currentItem.file, filename, tree, speed, size);
 #ifdef _WIN32
-				if (!SysVersion::isWine() && size >= (int64_t) SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) << 20)
+				if (!SysVersion::isWine() && size >= optSaveTreeMinSize)
 				{
-					if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))
+					if (optSaveTree)
 					{
 						if (attr.isReadOnly())
 							LogManager::message(STRING_F(SKIPPING_READ_ONLY_FILE, filename));

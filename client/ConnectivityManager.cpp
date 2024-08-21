@@ -29,6 +29,8 @@
 #include "PortTest.h"
 #include "IpTest.h"
 #include "NetworkUtil.h"
+#include "SettingsUtil.h"
+#include "ConfCore.h"
 #include "dht/DHT.h"
 
 std::atomic_bool ConnectivityManager::ipv6Supported(false);
@@ -75,27 +77,34 @@ ConnectivityManager::~ConnectivityManager()
 
 void ConnectivityManager::detectConnection(int af)
 {
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, af == AF_INET6);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, af == AF_INET6);
 
-	// restore connectivity settings to their default value.
-	SettingsManager::unset(ips.bindAddress);
-	SettingsManager::unset(ips.bindDevice);
-	SettingsManager::unset(ips.bindOptions);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	// Restore connectivity settings to their default values.
+	ss->unsetString(ips.bindAddress);
+	ss->unsetString(ips.bindDevice);
+	ss->unsetInt(ips.bindOptions);
+	ss->setInt(ips.incomingConnections, Conf::INCOMING_FIREWALL_PASSIVE);
+	ss->unlockWrite();
 
 	log(STRING(CONN_DETECT_START), SEV_INFO, af);
-	SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
 	listenTCP(af);
 
 	IpAddress ip = getLocalIP(af);
 	if (Util::isPrivateIp(ip))
 	{
-		SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_UPNP);
+		ss->lockWrite();
+		ss->setInt(ips.incomingConnections, Conf::INCOMING_FIREWALL_UPNP);
+		ss->unlockWrite();
 		log(STRING(CONN_DETECT_LOCAL), SEV_INFO, af);
 	}
 	else
 	{
-		SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_DIRECT);
+		ss->lockWrite();
+		ss->setInt(ips.incomingConnections, Conf::INCOMING_DIRECT);
+		ss->unlockWrite();
 		log(STRING_F(CONN_DETECT_PUBLIC, Util::printIpAddress(ip)), SEV_INFO, af);
 	}
 }
@@ -108,20 +117,26 @@ unsigned ConnectivityManager::testPorts()
 	std::swap(force, forcePortTest);
 	unsigned status = setupResult;
 	cs.unlock();
-	if (!force && !BOOLSETTING(AUTO_TEST_PORTS)) return 0;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool autoTestPorts = ss->getBool(Conf::AUTO_TEST_PORTS);
+	int incomingMode = ss->getInt(Conf::INCOMING_CONNECTIONS);
+	int portTCP = ss->getInt(Conf::TCP_PORT);
+	int portUDP = ss->getInt(Conf::UDP_PORT);
+	int portTLS = ss->getInt(Conf::TLS_PORT);
+	ss->unlockRead();
+
+	if (!force && !autoTestPorts) return 0;
 	if (status & STATUS_IPV4)
 	{
-		int ic = SETTING(INCOMING_CONNECTIONS);
-		if (force || ic != SettingsManager::INCOMING_FIREWALL_PASSIVE)
+		if (force || incomingMode != Conf::INCOMING_FIREWALL_PASSIVE)
 		{
-			int portTCP = SETTING(TCP_PORT);
 			g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-			int portUDP = SETTING(UDP_PORT);
 			g_portTest.setPort(PortTest::PORT_UDP, portUDP);
 			int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
 			if (CryptoManager::getInstance()->isInitialized())
 			{
-				int portTLS = SETTING(TLS_PORT);
 				g_portTest.setPort(PortTest::PORT_TLS, portTLS);
 				mask |= 1<<PortTest::PORT_TLS;
 			}
@@ -158,9 +173,15 @@ void ConnectivityManager::setupConnections(bool forcePortTest)
 	cs.unlock();
 
 	disconnect();
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool enableIP6 = ss->getBool(Conf::ENABLE_IP6);
+	ss->unlockRead();
+
 	bool hasIP4 = setup(AF_INET);
 	bool hasIP6 = false;
-	if (BOOLSETTING(ENABLE_IP6) && ipv6Supported)
+	if (enableIP6 && ipv6Supported)
 		hasIP6 = setup(AF_INET6);
 	ipv6Enabled = hasIP6;
 	if (!hasIP4 && !hasIP6)
@@ -196,17 +217,21 @@ void ConnectivityManager::setupConnections(bool forcePortTest)
 bool ConnectivityManager::setup(int af)
 {
 	int index = af == AF_INET6 ? 1 : 0;
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, af == AF_INET6);
+	
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool autoDetectFlag = ss->getBool(ips.autoDetect);
+	const string savedBindAddress = ss->getString(ips.bindAddress);
+	const string savedBindDevice = ss->getString(ips.bindDevice);
+	const int savedBindOptions = ss->getInt(ips.bindOptions);
+	ss->unlockRead();
 
 	cs.lock();
 	autoDetect[index] = autoDetectFlag;
 	cs.unlock();
 
-	const string savedBindAddress = SettingsManager::get(ips.bindAddress);
-	const string savedBindDevice = SettingsManager::get(ips.bindDevice);
-	const int savedBindOptions = SettingsManager::get(ips.bindOptions);
 	try
 	{
 		if (autoDetectFlag)
@@ -214,7 +239,10 @@ bool ConnectivityManager::setup(int af)
 		else
 			listenTCP(af);
 		listenUDP(af);
-		if (SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_UPNP && mappers[index].open())
+		ss->lockRead();
+		int incomingMode = ss->getInt(ips.incomingConnections);
+		ss->unlockRead();
+		if (incomingMode == Conf::INCOMING_FIREWALL_UPNP && mappers[index].open())
 		{
 			cs.lock();
 			running |= af == AF_INET6 ? RUNNING_IPV6 : RUNNING_IPV4;
@@ -225,11 +253,13 @@ bool ConnectivityManager::setup(int af)
 	{
 		if (autoDetectFlag)
 		{
-			SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-			SettingsManager::set(ips.bindAddress, savedBindAddress);
-			SettingsManager::set(ips.bindDevice, savedBindDevice);
-			SettingsManager::set(ips.bindOptions, savedBindOptions);
-			SettingsManager::set(ips.incomingConnections, SettingsManager::INCOMING_FIREWALL_PASSIVE);
+			ss->lockWrite();
+			ss->setBool(Conf::ALLOW_NAT_TRAVERSAL, true); // ???
+			ss->setString(ips.bindAddress, savedBindAddress);
+			ss->setString(ips.bindDevice, savedBindDevice);
+			ss->setInt(ips.bindOptions, savedBindOptions);
+			ss->setInt(ips.incomingConnections, Conf::INCOMING_FIREWALL_PASSIVE);
+			ss->unlockWrite();
 			log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, af);
 		}
 		ConnectionManager::getInstance()->fireListenerFailed(e.type, af, e.errorCode, e.getError());
@@ -238,22 +268,21 @@ bool ConnectivityManager::setup(int af)
 	return true;
 }
 
-static string getModeString(int af)
+static string getModeString(int mode, int af)
 {
-	int ic = SettingsManager::get(af == AF_INET6 ? SettingsManager::INCOMING_CONNECTIONS6 : SettingsManager::INCOMING_CONNECTIONS);
 	ResourceManager::Strings str;
-	switch (ic)
+	switch (mode)
 	{
-		case SettingsManager::INCOMING_DIRECT:
+		case Conf::INCOMING_DIRECT:
 			str = ResourceManager::CONNECTIVITY_MODE_ACTIVE;
 			break;
-		case SettingsManager::INCOMING_FIREWALL_UPNP:
+		case Conf::INCOMING_FIREWALL_UPNP:
 			str = ResourceManager::CONNECTIVITY_MODE_AUTO_FORWARDING;
 			break;
-		case SettingsManager::INCOMING_FIREWALL_NAT:
+		case Conf::INCOMING_FIREWALL_NAT:
 			str = ResourceManager::CONNECTIVITY_MODE_MANUAL_FORWARDING;
 			break;
-		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
+		case Conf::INCOMING_FIREWALL_PASSIVE:
 			str = ResourceManager::CONNECTIVITY_MODE_PASSIVE;
 			break;
 		default:
@@ -261,8 +290,8 @@ static string getModeString(int af)
 	}
 
 	int v = af == AF_INET6 ? 6 : 4;
-	string mode = STRING_I(str);
-	return STRING_F(CONNECTIVITY_MODE, v % mode);
+	string modeString = STRING_I(str);
+	return STRING_F(CONNECTIVITY_MODE, v % modeString);
 }
 
 string ConnectivityManager::getInformation() const
@@ -278,11 +307,19 @@ string ConnectivityManager::getInformation() const
 	if (!result)
 		return STRING(NO_CONNECTIVITY);
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const int incomingMode4 = ss->getInt(Conf::INCOMING_CONNECTIONS);
+	const int incomingMode6 = ss->getInt(Conf::INCOMING_CONNECTIONS6);
+	const string bindAddr4 = ss->getString(Conf::BIND_ADDRESS);
+	const string bindAddr6 = ss->getString(Conf::BIND_ADDRESS6);
+	ss->unlockRead();
+
 	string s = STRING(CONNECTIVITY_TITLE);
 	s += "\n";
 	if (result & STATUS_IPV4)
 	{
-		s += "\t" + getModeString(AF_INET);
+		s += "\t" + getModeString(incomingMode4, AF_INET);
 		s += '\n';
 		IpAddress ip = getReflectedIP(AF_INET);
 		if (!Util::isEmpty(ip))
@@ -290,16 +327,15 @@ string ConnectivityManager::getInformation() const
 			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 4 % Util::printIpAddress(ip));
 			s += '\n';
 		}
-		const string& bindV4 = SETTING(BIND_ADDRESS);
-		if (!bindV4.empty())
+		if (!bindAddr4.empty())
 		{
-			s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 4 % bindV4);
+			s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 4 % bindAddr4);
 			s += '\n';
 		}
 	}
 	if (result & STATUS_IPV6)
 	{
-		s += "\t" + getModeString(AF_INET6);
+		s += "\t" + getModeString(incomingMode6, AF_INET6);
 		s += '\n';
 		IpAddress ip = getReflectedIP(AF_INET6);
 		if (!Util::isEmpty(ip))
@@ -307,10 +343,9 @@ string ConnectivityManager::getInformation() const
 			s += "\t" + STRING_F(CONNECTIVITY_EXTERNAL_IP, 6 % Util::printIpAddress(ip));
 			s += '\n';
 		}
-		const string& bindV6 = SETTING(BIND_ADDRESS6);
-		if (!bindV6.empty())
+		if (!bindAddr6.empty())
 		{
-			s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 6 % bindV6);
+			s += "\t" + STRING_F(CONNECTIVITY_BOUND_INTERFACE, 6 % bindAddr6);
 			s += '\n';
 		}
 	}
@@ -341,7 +376,12 @@ void ConnectivityManager::mappingFinished(const string& mapper, int af)
 		if (autoDetectFlag && mapper.empty())
 			setPassiveMode(af);
 		if (!mapper.empty())
-			SettingsManager::set(af == AF_INET6 ? SettingsManager::MAPPER6 : SettingsManager::MAPPER, mapper);
+		{
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockWrite();
+			ss->setString(af == AF_INET6 ? Conf::MAPPER6 : Conf::MAPPER, mapper);
+			ss->unlockWrite();
+		}
 		if (!(runningFlags & (RUNNING_IPV4 | RUNNING_IPV6)))
 		{
 			if (!testPorts())
@@ -363,8 +403,11 @@ void ConnectivityManager::mappingFinished(const string& mapper, int af)
 
 void ConnectivityManager::setPassiveMode(int af)
 {
-	SettingsManager::set(af == AF_INET6 ? SettingsManager::INCOMING_CONNECTIONS6 : SettingsManager::INCOMING_CONNECTIONS,	SettingsManager::INCOMING_FIREWALL_PASSIVE);
-	SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(af == AF_INET6 ? Conf::INCOMING_CONNECTIONS6 : Conf::INCOMING_CONNECTIONS, Conf::INCOMING_FIREWALL_PASSIVE);
+	ss->setBool(Conf::ALLOW_NAT_TRAVERSAL, true);
+	ss->unlockWrite();
 	log(STRING(CONN_DETECT_NO_ACTIVE_MODE), SEV_WARNING, af);
 }
 
@@ -423,19 +466,29 @@ void ConnectivityManager::processGetIpResult(int req) noexcept
 
 void ConnectivityManager::listenTCP(int af)
 {
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
-	int connMode = SettingsManager::get(ips.incomingConnections);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, af == AF_INET6);
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool autoDetectFlag = ss->getBool(ips.autoDetect);
+	const int connMode = ss->getInt(ips.incomingConnections);
+	ss->unlockRead();
 
 	bool fixedPort = af == AF_INET6 ||
-		(!autoDetectFlag && (connMode == SettingsManager::INCOMING_FIREWALL_NAT || connMode == SettingsManager::INCOMING_FIREWALL_PASSIVE));
+		(!autoDetectFlag && (connMode == Conf ::INCOMING_FIREWALL_NAT || connMode == Conf::INCOMING_FIREWALL_PASSIVE));
 	auto cm = ConnectionManager::getInstance();
 	cm->stopServer(af);
 
 	bool useTLS = CryptoManager::getInstance()->isInitialized();
-	int type = (useTLS && fixedPort && SETTING(TLS_PORT) == SETTING(TCP_PORT)) ?
-		ConnectionManager::SERVER_TYPE_AUTO_DETECT : ConnectionManager::SERVER_TYPE_TCP;
+	int type = ConnectionManager::SERVER_TYPE_TCP;
+	if (useTLS && fixedPort)
+	{
+		ss->lockRead();
+		if (ss->getInt(Conf::TLS_PORT) == ss->getInt(Conf::TCP_PORT))
+			type = ConnectionManager::SERVER_TYPE_AUTO_DETECT;
+		ss->unlockRead();
+	}
 	for (int i = 0; i < 2; ++i)
 	{
 		try
@@ -449,15 +502,19 @@ void ConnectivityManager::listenTCP(int af)
 				" listener: " + e.getError() + " (i=" + Util::toString(i) + ')');
 			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 				throw ListenerException("TCP", e.getErrorCode(), e.getError());
-			SET_SETTING(TCP_PORT, 0);
+			ss->lockWrite();
+			ss->setInt(Conf::TCP_PORT, 0);
+			ss->unlockWrite();
 			continue;
 		}
 		break;
 	}
 	if (useTLS && type != ConnectionManager::SERVER_TYPE_AUTO_DETECT)
 	{
-		if (SETTING(TLS_PORT) == SETTING(TCP_PORT))
-			SET_SETTING(TLS_PORT, 0);
+		ss->lockWrite();
+		if (ss->getInt(Conf::TLS_PORT) == ss->getInt(Conf::TCP_PORT))
+			ss->setInt(Conf::TLS_PORT, 0);
+		ss->unlockWrite();
 		for (int i = 0; i < 2; ++i)
 		{
 			try
@@ -470,7 +527,9 @@ void ConnectivityManager::listenTCP(int af)
 					" listener: " + e.getError() + " (i=" + Util::toString(i) + ')');
 				if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 					throw ListenerException("TLS", e.getErrorCode(), e.getError());
-				SET_SETTING(TLS_PORT, 0);
+				ss->lockWrite();
+				ss->setInt(Conf::TLS_PORT, 0);
+				ss->unlockWrite();
 				continue;
 			}
 			break;
@@ -480,11 +539,17 @@ void ConnectivityManager::listenTCP(int af)
 
 void ConnectivityManager::listenUDP(int af)
 {
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, af == AF_INET6);
 
-	bool fixedPort = af == AF_INET6 || (!autoDetectFlag && SettingsManager::get(ips.incomingConnections) == SettingsManager::INCOMING_FIREWALL_NAT);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool autoDetectFlag = ss->getBool(ips.autoDetect);
+	const int connMode = ss->getInt(ips.incomingConnections);
+	ss->unlockRead();
+
+	bool fixedPort = af == AF_INET6 ||
+		(!autoDetectFlag && connMode == Conf::INCOMING_FIREWALL_NAT);
 	for (int i = 0; i < 2; ++i)
 	{
 		try
@@ -497,7 +562,9 @@ void ConnectivityManager::listenUDP(int af)
 				" listener: " + e.getError() + " (i=" + Util::toString(i) + ')');
 			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 				throw ListenerException("UDP", e.getErrorCode(), e.getError());
-			SET_SETTING(UDP_PORT, 0);
+			ss->lockWrite();
+			ss->setInt(Conf::UDP_PORT, 0);
+			ss->unlockWrite();
 			continue;
 		}
 		break;

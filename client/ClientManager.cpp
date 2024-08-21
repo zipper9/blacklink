@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "ClientManager.h"
+#include "SettingsManager.h"
 #include "ConnectionManager.h"
 #include "Client.h"
 #include "ShareManager.h"
@@ -30,9 +31,11 @@
 #include "QueueManager.h"
 #include "ConnectivityManager.h"
 #include "FavoriteManager.h"
+#include "DatabaseManager.h"
 #include "PortTest.h"
 #include "BusyCounter.h"
 #include "dht/DHT.h"
+#include "ConfCore.h"
 
 CID ClientManager::pid;
 CID ClientManager::cid;
@@ -45,6 +48,7 @@ ClientManager::ClientMap ClientManager::g_clients;
 OnlineUserList ClientManager::g_UserUpdateQueue;
 std::unique_ptr<RWLock> ClientManager::g_csOnlineUsersUpdateQueue = std::unique_ptr<RWLock>(RWLock::create());
 #endif
+std::atomic_int ClientManager::chatOptions(0);
 
 std::unique_ptr<RWLock> ClientManager::g_csClients = std::unique_ptr<RWLock>(RWLock::create());
 std::unique_ptr<RWLock> ClientManager::g_csOnlineUsers = std::unique_ptr<RWLock> (RWLock::create());
@@ -55,9 +59,14 @@ ClientManager::UserMap ClientManager::g_users;
 
 ClientManager::ClientManager()
 {
-	if (SETTING(NICK).empty())
-		SET_SETTING(NICK, Util::getRandomNick(15));
-	setMyPID(SETTING(PRIVATE_ID));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	string pid = ss->getString(Conf::PRIVATE_ID);
+	if (ss->getString(Conf::NICK).empty())
+		ss->setString(Conf::NICK, Util::getRandomNick(15));
+	ss->unlockWrite();
+	setMyPID(pid);
+	updateSettings();
 }
 
 ClientManager::~ClientManager()
@@ -96,10 +105,17 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 	}
 
 	Client* c = static_cast<Client*>(cb.get());
-	if (c->getType() == Client::TYPE_NMDC && BOOLSETTING(NMDC_ENCODING_FROM_DOMAIN))
+	if (c->getType() == Client::TYPE_NMDC)
 	{
-		int encoding = NmdcHub::getEncodingFromDomain(url.host);
-		if (encoding) c->setEncoding(encoding);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		bool detectEncoding = ss->getBool(Conf::NMDC_ENCODING_FROM_DOMAIN);
+		ss->unlockRead();
+		if (detectEncoding)
+		{
+			int encoding = NmdcHub::getEncodingFromDomain(url.host);
+			if (encoding) c->setEncoding(encoding);
+		}
 	}
 	if (!query.empty())
 	{
@@ -701,9 +717,7 @@ void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noexcept
 {
 #ifdef BL_FEATURE_IP_DATABASE
-	bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
-	bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
-	ou->getUser()->saveStats(ipStat, userStat);
+	ou->getUser()->saveStats(DatabaseManager::getInstance()->getOptions());
 #endif
 	if (!isBeforeShutdown())
 	{
@@ -985,12 +999,14 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	getShareGroup(ou, hideShare, shareGroup);
 	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE, shareGroup);
 	ClientManagerListener::SearchReply re;
+	auto sm = SearchManager::getInstance();
+	int options = sm->getOptions();
 	if (hideShare ||
-	    (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY)) ||
-	    (!isUdpActive && BOOLSETTING(INCOMING_SEARCH_IGNORE_PASSIVE)))
+	    (!param.hasRoot && (options & SearchManager::OPT_INCOMING_SEARCH_TTH_ONLY)) ||
+	    (!isUdpActive && (options & SearchManager::OPT_INCOMING_SEARCH_IGNORE_PASSIVE)))
 		re = ClientManagerListener::SEARCH_MISS;
 	else
-		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIp, hubPort);
+		re = sm->respond(param, ou, c->getHubUrl(), hubIp, hubPort);
 	if (searchSpyEnabled)
 	{
 		string description = param.getDescription();
@@ -1156,10 +1172,9 @@ void ClientManager::flushRatio()
 		}
 		if (!usersToFlush.empty())
 		{
-			bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
-			bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+			int options = DatabaseManager::getInstance()->getOptions();
 			for (auto& user : usersToFlush)
-				user->saveStats(ipStat, userStat);
+				user->saveStats(options);
 		}
 	}
 }
@@ -1226,27 +1241,29 @@ bool ClientManager::isActiveMode(int af, int favHubMode, bool udp)
 		case 1: return true;
 		case 2: return false;
 	}
-	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const int type = ss->getInt(af == AF_INET6 ? Conf::INCOMING_CONNECTIONS6 : Conf::INCOMING_CONNECTIONS);
+	const int ougoingConnections = ss->getInt(Conf::OUTGOING_CONNECTIONS);
+	ss->unlockRead();
+
+	if (ougoingConnections != Conf::OUTGOING_DIRECT)
 		return false;
+
 	int portTestState = PortTest::STATE_UNKNOWN;
-	int type;
-	if (af == AF_INET6)
+	if (af == AF_INET)
 	{
-		type = SETTING(INCOMING_CONNECTIONS6);
-	}
-	else
-	{
-		type = SETTING(INCOMING_CONNECTIONS);
 		int unused;
 		portTestState = g_portTest.getState(portTestType, unused, nullptr);
 		if (portTestState == PortTest::STATE_FAILURE)
 			return false;
 	}
-	if (type == SettingsManager::INCOMING_FIREWALL_UPNP &&
+	if (type == Conf::INCOMING_FIREWALL_UPNP &&
 	    portTestState != PortTest::STATE_SUCCESS &&
 		ConnectivityManager::getInstance()->getMapper(af).getState(mappingType) == MappingManager::STATE_FAILURE)
 		return false;
-	return type != SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	return type != Conf::INCOMING_FIREWALL_PASSIVE;
 }
 
 void ClientManager::cancelSearch(uint64_t owner)
@@ -1391,4 +1408,59 @@ StringList ClientManager::getNicksByIp(const IpAddress& ip)
 void ClientManager::updateUser(const OnlineUserPtr& ou)
 {
 	addAsyncOnlineUserUpdated(ou);
+}
+
+void ClientManager::updateSettings()
+{
+	int newOptions = 0;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::IP_IN_CHAT))
+		newOptions |= CHAT_OPTION_SHOW_IP;
+	if (ss->getBool(Conf::COUNTRY_IN_CHAT))
+		newOptions |= CHAT_OPTION_SHOW_COUNTRY;
+	if (ss->getBool(Conf::ISP_IN_CHAT))
+		newOptions |= CHAT_OPTION_SHOW_ISP;
+	if (ss->getBool(Conf::SEND_SLOTGRANT_MSG))
+		newOptions |= CHAT_OPTION_SEND_GRANT_MSG;
+	if (ss->getBool(Conf::SUPPRESS_MAIN_CHAT))
+		newOptions |= CHAT_OPTION_SUPPRESS_MAIN_CHAT;
+	if (ss->getBool(Conf::SUPPRESS_PMS))
+		newOptions |= CHAT_OPTION_SUPPRESS_PM;
+	if (ss->getBool(Conf::IGNORE_ME))
+		newOptions |= CHAT_OPTION_IGNORE_ME;
+	if (ss->getBool(Conf::IGNORE_HUB_PMS))
+		newOptions |= CHAT_OPTION_IGNORE_HUB_PMS;
+	if (ss->getBool(Conf::IGNORE_BOT_PMS))
+		newOptions |= CHAT_OPTION_IGNORE_BOT_PMS;
+	if (ss->getBool(Conf::PROTECT_PRIVATE))
+		newOptions |= CHAT_OPTION_PROTECT_PRIVATE;
+	if (ss->getBool(Conf::LOG_PRIVATE_CHAT))
+		newOptions |= CHAT_OPTION_LOG_PRIVATE_CHAT;
+	if (ss->getBool(Conf::LOG_IF_SUPPRESS_PMS))
+		newOptions |= CHAT_OPTION_LOG_SUPPRESSED;
+	if (ss->getBool(Conf::LOG_MAIN_CHAT))
+		newOptions |= CHAT_OPTION_LOG_MAIN_CHAT;
+	if (ss->getBool(Conf::FILTER_MESSAGES))
+		newOptions |= CHAT_OPTION_FILTER_KICK;
+	ss->unlockRead();
+	chatOptions.store(newOptions);
+}
+
+string ClientManager::getDefaultNick()
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string nick = ss->getString(Conf::NICK);
+	ss->unlockRead();
+	return nick;
+}
+
+bool ClientManager::isNickEmpty()
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool result = ss->getString(Conf::NICK).empty();
+	ss->unlockRead();
+	return result;
 }

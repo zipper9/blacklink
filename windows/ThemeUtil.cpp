@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "ThemeUtil.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/SimpleXML.h"
 #include "../client/LogManager.h"
 
-#define RANGE(first, last, isChat) { SettingsManager::first, SettingsManager::last, isChat }
+#define RANGE(first, last, isChat) { Conf::first, Conf::last, isChat }
 
 static const struct
 {
@@ -43,17 +44,18 @@ void Util::importDcTheme(const tstring& file, SettingsStore& ss)
 	xml.stepIn();
 	if (xml.findChild(("Settings")))
 	{
+		Settings::SettingInfo si;
 		xml.stepIn();
 		while (xml.getNextChild())
 		{
 			const string& name = xml.getChildTag();
-			int id = SettingsManager::getIdByName(name);
-			if (id >= 0 && getThemeAttribType(id) != ATTRIB_TYPE_NONE)
+			auto si = SettingsManager::instance.getSettingByName(name);
+			if (si && getThemeAttribType(si->id) != ATTRIB_TYPE_NONE)
 			{
-				if (SettingsManager::isIntSetting(id))
-					ss.setIntValue(id, Util::toInt(xml.getChildData()));
+				if (si->type == Settings::TYPE_INT || si->type == Settings::TYPE_BOOL)
+					ss.setIntValue(si->id, Util::toInt(xml.getChildData()));
 				else
-					ss.setStrValue(id, xml.getChildData());
+					ss.setStrValue(si->id, xml.getChildData());
 			}
 			else
 				LogManager::message("Unknown theme attribute: " + name, false);
@@ -79,21 +81,27 @@ void Util::exportDcTheme(const tstring& file, const SettingsStore* ss)
 		int idLast = themeAttrib[i].idLast;
 		for (int id = idFirst; id <= idLast; ++id)
 		{
-			string tag = SettingsManager::getNameById(id);
-			if (SettingsManager::isIntSetting(id))
+			auto si = SettingsManager::instance.getSettingById(id);
+			if (!si)
+			{
+				dcassert(0);
+				continue;
+			}
+			if (si->type == Settings::TYPE_INT || si->type == Settings::TYPE_BOOL)
 			{
 				int value;
 				if (!(ss && ss->getIntValue(id, value)))
-					value = SettingsManager::get((SettingsManager::IntSetting) id);
-				xml.addTag(tag, value);
+					value = si->type == Settings::TYPE_BOOL ?
+						(si->settings->getBool(id) ? 1 : 0) : si->settings->getInt(id);
+				xml.addTag(si->name, value);
 				xml.addChildAttrib(type, intType);
 			}
 			else
 			{
 				string value;
 				if (!(ss && ss->getStrValue(id, value)))
-					value = SettingsManager::get((SettingsManager::StrSetting) id);
-				xml.addTag(tag, value);
+					value = si->settings->getString(id);
+				xml.addTag(si->name, value);
 				xml.addChildAttrib(type, stringType);
 			}
 		}
@@ -114,10 +122,16 @@ void Util::getDefaultTheme(SettingsStore& ss)
 		int idLast = themeAttrib[i].idLast;
 		for (int id = idFirst; id <= idLast; ++id)
 		{
-			if (SettingsManager::isIntSetting(id))
-				ss.setIntValue(id, SettingsManager::getDefault((SettingsManager::IntSetting) id));
+			auto si = SettingsManager::instance.getSettingById(id);
+			if (!si)
+			{
+				dcassert(0);
+				continue;
+			}
+			if (si->type == Settings::TYPE_INT || si->type == Settings::TYPE_BOOL)
+				ss.setIntValue(id, si->settings->getIntDefault(id));
 			else
-				ss.setStrValue(id, SettingsManager::getDefault((SettingsManager::StrSetting) id));
+				ss.setStrValue(id, si->settings->getStringDefault(id));
 		}
 	}
 }

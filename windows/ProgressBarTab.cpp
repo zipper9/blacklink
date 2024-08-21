@@ -3,8 +3,10 @@
 #include "DialogLayout.h"
 #include "PropPage.h"
 #include "Colors.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/Random.h"
+#include "../client/StrUtil.h"
 
 static ProgressBarTab* instance;
 
@@ -47,80 +49,80 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SHOW_PROGRESSBARS, SettingsManager::SHOW_PROGRESS_BARS, PropPage::T_BOOL },
-	{ IDC_DL_SPEED, SettingsManager::TOP_DL_SPEED, PropPage::T_INT },
-	{ IDC_UL_SPEED, SettingsManager::TOP_UL_SPEED, PropPage::T_INT },
+	{ IDC_SHOW_PROGRESSBARS, Conf::SHOW_PROGRESS_BARS, PropPage::T_BOOL },
+	{ IDC_DL_SPEED, Conf::TOP_DL_SPEED, PropPage::T_INT },
+	{ IDC_UL_SPEED, Conf::TOP_UL_SPEED, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
-void ProgressBarTab::loadSettings()
+void ProgressBarTab::loadSettings(const BaseSettingsImpl* ss)
 {
-	progressBackground[0] = g_settings->get(SettingsManager::DOWNLOAD_BAR_COLOR);
-	progressBackground[1] = g_settings->get(SettingsManager::UPLOAD_BAR_COLOR);
-	progressText[0] = g_settings->get(SettingsManager::PROGRESS_TEXT_COLOR_DOWN);
-	progressText[1] = g_settings->get(SettingsManager::PROGRESS_TEXT_COLOR_UP);
-	progressOdc = g_settings->getBool(SettingsManager::PROGRESSBAR_ODC_STYLE);
-	progressBumped = g_settings->getBool(SettingsManager::PROGRESSBAR_ODC_BUMPED);
-	progressDepth = g_settings->get(SettingsManager::PROGRESS_3DDEPTH);
-	progressOverrideBackground = g_settings->getBool(SettingsManager::PROGRESS_OVERRIDE_COLORS);
-	progressOverrideText = g_settings->getBool(SettingsManager::PROGRESS_OVERRIDE_COLORS2);
-	speedIconEnable = g_settings->getBool(SettingsManager::STEALTHY_STYLE_ICO);
-	speedIconCustom = g_settings->getBool(SettingsManager::STEALTHY_STYLE_ICO_SPEEDIGNORE);
-	windowBackground = g_settings->get(SettingsManager::BACKGROUND_COLOR);
-	emptyBarBackground = g_settings->get(SettingsManager::PROGRESS_BACK_COLOR);
+	progressBackground[0] = ss->getInt(Conf::DOWNLOAD_BAR_COLOR);
+	progressBackground[1] = ss->getInt(Conf::UPLOAD_BAR_COLOR);
+	progressText[0] = ss->getInt(Conf::PROGRESS_TEXT_COLOR_DOWN);
+	progressText[1] = ss->getInt(Conf::PROGRESS_TEXT_COLOR_UP);
+	progressOdc = ss->getBool(Conf::PROGRESSBAR_ODC_STYLE);
+	progressBumped = ss->getBool(Conf::PROGRESSBAR_ODC_BUMPED);
+	progressDepth = ss->getInt(Conf::PROGRESS_3DDEPTH);
+	progressOverrideBackground = ss->getBool(Conf::PROGRESS_OVERRIDE_COLORS);
+	progressOverrideText = ss->getBool(Conf::PROGRESS_OVERRIDE_COLORS2);
+	speedIconEnable = ss->getBool(Conf::STEALTHY_STYLE_ICO);
+	speedIconCustom = ss->getBool(Conf::STEALTHY_STYLE_ICO_SPEEDIGNORE);
+	windowBackground = ss->getInt(Conf::BACKGROUND_COLOR);
+	emptyBarBackground = ss->getInt(Conf::PROGRESS_BACK_COLOR);
 }
 
-void ProgressBarTab::saveSettings() const
+void ProgressBarTab::saveSettings(BaseSettingsImpl* ss) const
 {
 	PropPage::write(m_hWnd, items);
-	g_settings->set(SettingsManager::DOWNLOAD_BAR_COLOR, (int) progressBackground[0]);
-	g_settings->set(SettingsManager::UPLOAD_BAR_COLOR, (int) progressBackground[1]);
-	g_settings->set(SettingsManager::PROGRESS_TEXT_COLOR_DOWN, (int) progressText[0]);
-	g_settings->set(SettingsManager::PROGRESS_TEXT_COLOR_UP, (int) progressText[1]);
-	g_settings->set(SettingsManager::PROGRESSBAR_ODC_STYLE, progressOdc);
-	g_settings->set(SettingsManager::PROGRESSBAR_ODC_BUMPED, progressBumped);
-	g_settings->set(SettingsManager::PROGRESS_3DDEPTH, progressDepth);
-	g_settings->set(SettingsManager::PROGRESS_OVERRIDE_COLORS, progressOverrideBackground);
-	g_settings->set(SettingsManager::PROGRESS_OVERRIDE_COLORS2, progressOverrideText);
-	g_settings->set(SettingsManager::STEALTHY_STYLE_ICO, speedIconEnable);
-	g_settings->set(SettingsManager::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
+	ss->setInt(Conf::DOWNLOAD_BAR_COLOR, (int) progressBackground[0]);
+	ss->setInt(Conf::UPLOAD_BAR_COLOR, (int) progressBackground[1]);
+	ss->setInt(Conf::PROGRESS_TEXT_COLOR_DOWN, (int) progressText[0]);
+	ss->setInt(Conf::PROGRESS_TEXT_COLOR_UP, (int) progressText[1]);
+	ss->setBool(Conf::PROGRESSBAR_ODC_STYLE, progressOdc);
+	ss->setBool(Conf::PROGRESSBAR_ODC_BUMPED, progressBumped);
+	ss->setInt(Conf::PROGRESS_3DDEPTH, progressDepth);
+	ss->setBool(Conf::PROGRESS_OVERRIDE_COLORS, progressOverrideBackground);
+	ss->setBool(Conf::PROGRESS_OVERRIDE_COLORS2, progressOverrideText);
+	ss->setBool(Conf::STEALTHY_STYLE_ICO, speedIconEnable);
+	ss->setBool(Conf::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
 }
 
 void ProgressBarTab::getValues(SettingsStore& ss) const
 {
-	ss.setIntValue(SettingsManager::DOWNLOAD_BAR_COLOR, progressBackground[0]);
-	ss.setIntValue(SettingsManager::UPLOAD_BAR_COLOR, progressBackground[1]);
-	ss.setIntValue(SettingsManager::PROGRESS_TEXT_COLOR_DOWN, progressText[0]);
-	ss.setIntValue(SettingsManager::PROGRESS_TEXT_COLOR_UP, progressText[1]);
-	ss.setIntValue(SettingsManager::PROGRESSBAR_ODC_STYLE, progressOdc);
-	ss.setIntValue(SettingsManager::PROGRESSBAR_ODC_BUMPED, progressBumped);
-	ss.setIntValue(SettingsManager::PROGRESS_3DDEPTH, progressDepth);
-	ss.setIntValue(SettingsManager::PROGRESS_OVERRIDE_COLORS, progressOverrideBackground);
-	ss.setIntValue(SettingsManager::PROGRESS_OVERRIDE_COLORS2, progressOverrideText);
+	ss.setIntValue(Conf::DOWNLOAD_BAR_COLOR, progressBackground[0]);
+	ss.setIntValue(Conf::UPLOAD_BAR_COLOR, progressBackground[1]);
+	ss.setIntValue(Conf::PROGRESS_TEXT_COLOR_DOWN, progressText[0]);
+	ss.setIntValue(Conf::PROGRESS_TEXT_COLOR_UP, progressText[1]);
+	ss.setIntValue(Conf::PROGRESSBAR_ODC_STYLE, progressOdc);
+	ss.setIntValue(Conf::PROGRESSBAR_ODC_BUMPED, progressBumped);
+	ss.setIntValue(Conf::PROGRESS_3DDEPTH, progressDepth);
+	ss.setIntValue(Conf::PROGRESS_OVERRIDE_COLORS, progressOverrideBackground);
+	ss.setIntValue(Conf::PROGRESS_OVERRIDE_COLORS2, progressOverrideText);
 #if 0
-	ss.setIntValue(SettingsManager::STEALTHY_STYLE_ICO, speedIconEnable);
-	ss.setIntValue(SettingsManager::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
+	ss.setIntValue(Conf::STEALTHY_STYLE_ICO, speedIconEnable);
+	ss.setIntValue(Conf::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
 #endif
 }
 
 void ProgressBarTab::setValues(const SettingsStore& ss)
 {
 	int val;
-	if (ss.getIntValue(SettingsManager::DOWNLOAD_BAR_COLOR, val)) progressBackground[0] = val;
-	if (ss.getIntValue(SettingsManager::UPLOAD_BAR_COLOR, val)) progressBackground[1] = val;
-	if (ss.getIntValue(SettingsManager::PROGRESS_TEXT_COLOR_DOWN, val)) progressText[0] = val;
-	if (ss.getIntValue(SettingsManager::PROGRESS_TEXT_COLOR_UP, val)) progressText[1] = val;
-	ss.getBoolValue(SettingsManager::PROGRESSBAR_ODC_STYLE, progressOdc);
-	ss.getBoolValue(SettingsManager::PROGRESSBAR_ODC_BUMPED, progressBumped);
-	if (ss.getIntValue(SettingsManager::PROGRESS_3DDEPTH, val) && val >= 1 && val <= 5) progressDepth = val;
-	ss.getBoolValue(SettingsManager::PROGRESS_OVERRIDE_COLORS, progressOverrideBackground);
-	ss.getBoolValue(SettingsManager::PROGRESS_OVERRIDE_COLORS2, progressOverrideText);
+	if (ss.getIntValue(Conf::DOWNLOAD_BAR_COLOR, val)) progressBackground[0] = val;
+	if (ss.getIntValue(Conf::UPLOAD_BAR_COLOR, val)) progressBackground[1] = val;
+	if (ss.getIntValue(Conf::PROGRESS_TEXT_COLOR_DOWN, val)) progressText[0] = val;
+	if (ss.getIntValue(Conf::PROGRESS_TEXT_COLOR_UP, val)) progressText[1] = val;
+	ss.getBoolValue(Conf::PROGRESSBAR_ODC_STYLE, progressOdc);
+	ss.getBoolValue(Conf::PROGRESSBAR_ODC_BUMPED, progressBumped);
+	if (ss.getIntValue(Conf::PROGRESS_3DDEPTH, val) && val >= 1 && val <= 5) progressDepth = val;
+	ss.getBoolValue(Conf::PROGRESS_OVERRIDE_COLORS, progressOverrideBackground);
+	ss.getBoolValue(Conf::PROGRESS_OVERRIDE_COLORS2, progressOverrideText);
 #if 0
-	ss.getBoolValue(SettingsManager::STEALTHY_STYLE_ICO, speedIconEnable);
-	ss.getBoolValue(SettingsManager::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
+	ss.getBoolValue(Conf::STEALTHY_STYLE_ICO, speedIconEnable);
+	ss.getBoolValue(Conf::STEALTHY_STYLE_ICO_SPEEDIGNORE, speedIconCustom);
 #endif
-	if (ss.getIntValue(SettingsManager::BACKGROUND_COLOR, val)) windowBackground = val;
-	if (ss.getIntValue(SettingsManager::PROGRESS_BACK_COLOR, val)) emptyBarBackground = val;
+	if (ss.getIntValue(Conf::BACKGROUND_COLOR, val)) windowBackground = val;
+	if (ss.getIntValue(Conf::PROGRESS_BACK_COLOR, val)) emptyBarBackground = val;
 }
 
 void ProgressBarTab::redrawBars()
@@ -149,7 +151,8 @@ void ProgressBarTab::updateControls()
 	CButton(GetDlgItem(IDC_PROGRESS_OVERRIDE2)).SetCheck(progressOverrideText ? BST_CHECKED : BST_UNCHECKED);
 	CButton(GetDlgItem(IDC_SHOW_SPEED_ICON)).SetCheck(speedIconEnable ? BST_CHECKED : BST_UNCHECKED);
 	CButton(GetDlgItem(IDC_USE_CUSTOM_SPEED)).SetCheck(speedIconCustom ? BST_CHECKED : BST_UNCHECKED);
-	setEnabled(g_settings->getBool(SettingsManager::SHOW_PROGRESS_BARS));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	setEnabled(ss->getBool(Conf::SHOW_PROGRESS_BARS));
 	initializing = false;
 }
 
@@ -216,30 +219,31 @@ LRESULT ProgressBarTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 LRESULT ProgressBarTab::onSetDefaultColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int id, index;
-	SettingsManager::IntSetting bgSetting, fgSetting;
+	int bgSetting, fgSetting;
 	if (wID == IDC_SET_DL_DEFAULT)
 	{
 		index = 0;
-		bgSetting = SettingsManager::DOWNLOAD_BAR_COLOR;
-		fgSetting = SettingsManager::PROGRESS_TEXT_COLOR_DOWN;
+		bgSetting = Conf::DOWNLOAD_BAR_COLOR;
+		fgSetting = Conf::PROGRESS_TEXT_COLOR_DOWN;
 		id = IDC_PROGRESS_COLOR_DOWN_SHOW;
 	}
 	else
 	{
 		index = 1;
-		bgSetting = SettingsManager::UPLOAD_BAR_COLOR;
-		fgSetting = SettingsManager::PROGRESS_TEXT_COLOR_UP;
+		bgSetting = Conf::UPLOAD_BAR_COLOR;
+		fgSetting = Conf::PROGRESS_TEXT_COLOR_UP;
 		id = IDC_PROGRESS_COLOR_UP_SHOW;
 	}
 	bool update = false;
-	COLORREF color = g_settings->getDefault(bgSetting);
+	const auto ss = SettingsManager::instance.getUiSettings();
+	COLORREF color = ss->getIntDefault(bgSetting);
 	if (progressBackground[index] != color)
 	{
 		progressBackground[index] = color;
 		notifyColorChange(bgSetting, color);
 		update = true;
 	}
-	color = g_settings->getDefault(fgSetting);
+	color = ss->getIntDefault(fgSetting);
 	if (progressText[index] != color)
 	{
 		progressText[index] = color;
@@ -290,31 +294,31 @@ void ProgressBarTab::getStyleOptions()
 	if (progressOdc != bval)
 	{
 		progressOdc = bval;
-		if (callback) callback->settingChanged(SettingsManager::PROGRESSBAR_ODC_STYLE);
+		if (callback) callback->settingChanged(Conf::PROGRESSBAR_ODC_STYLE);
 	}
 	bval = IsDlgButtonChecked(IDC_PROGRESS_BUMPED) == BST_CHECKED;
 	if (progressBumped != bval)
 	{
 		progressBumped = bval;
-		if (callback) callback->settingChanged(SettingsManager::PROGRESSBAR_ODC_BUMPED);
+		if (callback) callback->settingChanged(Conf::PROGRESSBAR_ODC_BUMPED);
 	}
 	int ival = GetDlgItemInt(IDC_DEPTH);
 	if (progressDepth != ival)
 	{
 		progressDepth = ival;
-		if (callback) callback->settingChanged(SettingsManager::PROGRESS_3DDEPTH);
+		if (callback) callback->settingChanged(Conf::PROGRESS_3DDEPTH);
 	}
 	bval = IsDlgButtonChecked(IDC_PROGRESS_OVERRIDE) == BST_CHECKED;
 	if (progressOverrideBackground != bval)
 	{
 		progressOverrideBackground = bval;
-		if (callback) callback->settingChanged(SettingsManager::PROGRESS_OVERRIDE_COLORS);
+		if (callback) callback->settingChanged(Conf::PROGRESS_OVERRIDE_COLORS);
 	}
 	bval = IsDlgButtonChecked(IDC_PROGRESS_OVERRIDE2) == BST_CHECKED;
 	if (progressOverrideText != bval)
 	{
 		progressOverrideText = bval;
-		if (callback) callback->settingChanged(SettingsManager::PROGRESS_OVERRIDE_COLORS2);
+		if (callback) callback->settingChanged(Conf::PROGRESS_OVERRIDE_COLORS2);
 	}
 }
 
@@ -463,22 +467,22 @@ LRESULT ProgressBarTab::onChooseColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 		case IDC_SET_DL_BACKGROUND:
 			selColor = &progressBackground[0];
 			selIndex = 0;
-			id = SettingsManager::DOWNLOAD_BAR_COLOR;
+			id = Conf::DOWNLOAD_BAR_COLOR;
 			break;
 		case IDC_SET_UL_BACKGROUND:
 			selColor = &progressBackground[1];
 			selIndex = 1;
-			id = SettingsManager::UPLOAD_BAR_COLOR;
+			id = Conf::UPLOAD_BAR_COLOR;
 			break;
 		case IDC_SET_DL_TEXT:
 			selColor = &progressText[0];
 			selIndex = 0;
-			id = SettingsManager::PROGRESS_TEXT_COLOR_DOWN;
+			id = Conf::PROGRESS_TEXT_COLOR_DOWN;
 			break;
 		case IDC_SET_UL_TEXT:
 			selColor = &progressText[1];
 			selIndex = 1;
-			id = SettingsManager::PROGRESS_TEXT_COLOR_UP;
+			id = Conf::PROGRESS_TEXT_COLOR_UP;
 			break;
 		default:
 			return 0;

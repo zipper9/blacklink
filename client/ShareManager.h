@@ -23,7 +23,7 @@
 #include "ShareManagerItems.h"
 #include "Singleton.h"
 #include "HashManagerListener.h"
-#include "SettingsManager.h"
+#include "SettingsManagerListener.h"
 #include "TimerManager.h"
 #include "HashValue.h"
 #include "SearchParam.h"
@@ -421,7 +421,8 @@ class ShareManager :
 		virtual void on(Second, uint64_t tick) noexcept override;
 
 		// SettingsManagerListener
-		virtual void on(Repaint) noexcept override;
+		virtual void on(Save, SimpleXML& xml) noexcept override;
+		virtual void on(ApplySettings) noexcept override;
 
 		// Thread
 		virtual int run() override { scanDirs(); return 0; }

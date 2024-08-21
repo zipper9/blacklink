@@ -24,6 +24,7 @@
 #include "QueueManager.h"
 #include "ShareManager.h"
 #include "DebugManager.h"
+#include "SettingsManager.h"
 #include "SSLSocket.h"
 #include "AutoDetectSocket.h"
 #include "PortTest.h"
@@ -37,6 +38,13 @@
 #include "HttpClient.h"
 #include "AdcHub.h"
 #include "Random.h"
+#include "ConfCore.h"
+#include "SettingsUtil.h"
+
+#ifdef BL_FEATURE_IP_DATABASE
+#include "DatabaseManager.h"
+#include "DatabaseOptions.h"
+#endif
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #include "TagCollector.h"
@@ -372,6 +380,7 @@ ConnectionManager::ConnectionManager() : shuttingDown(false),
 	ports[0] = ports[1] = 0;
 	timeRemoveExpired = timeCheckConnections = 0;
 
+	auto ss = SettingsManager::instance.getCoreSettings();
 	nmdcFeatures.reserve(5);
 	nmdcFeatures.push_back(UserConnection::FEATURE_MINISLOTS);
 	nmdcFeatures.push_back(UserConnection::FEATURE_XML_BZLIST);
@@ -381,15 +390,18 @@ ConnectionManager::ConnectionManager() : shuttingDown(false),
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
 	nmdcFeatures.push_back(UserConnection::FEATURE_BANMSG);
 #endif
-	modifyFeatures(nmdcFeatures, SETTING(NMDC_FEATURES_CC));
 
 	adcFeatures.reserve(4);
 	adcFeatures.push_back(UserConnection::FEATURE_ADC_BAS0);
 	adcFeatures.push_back(UserConnection::FEATURE_ADC_BASE);
 	adcFeatures.push_back(UserConnection::FEATURE_ADC_TIGR);
 	adcFeatures.push_back(UserConnection::FEATURE_ADC_BZIP);
-	modifyFeatures(adcFeatures, SETTING(ADC_FEATURES_CC));
-	
+
+	ss->lockRead();
+	modifyFeatures(nmdcFeatures, ss->getString(Conf::NMDC_FEATURES_CC));
+	modifyFeatures(adcFeatures, ss->getString(Conf::ADC_FEATURES_CC));
+	ss->unlockRead();
+
 	TimerManager::getInstance()->addListener(this);
 	ClientManager::getInstance()->addListener(this);
 }
@@ -405,41 +417,54 @@ ConnectionManager::~ConnectionManager()
 void ConnectionManager::startListen(int af, int type)
 {
 	string bind;
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	SettingsManager::IntSetting portSetting = type == SERVER_TYPE_SSL ? SettingsManager::TLS_PORT : SettingsManager::TCP_PORT;
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, af == AF_INET6);
+	int portSetting = type == SERVER_TYPE_SSL ? Conf::TLS_PORT : Conf::TCP_PORT;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int options = ss->getInt(ips.bindOptions);
+	string bindDev = ss->getString(ips.bindDevice);
+	string bindAddr = ss->getString(ips.bindAddress);
+	bool autoDetect = ss->getBool(ips.autoDetect);
+	uint16_t port = ss->getInt(portSetting);
+	ss->unlockRead();
 
 	IpAddressEx bindIp;
 	bindIp.type = 0;
-	if (!SettingsManager::get(ips.autoDetect))
+	if (!autoDetect)
 	{
-		int options = SettingsManager::get(ips.bindOptions);
-		if (options & SettingsManager::BIND_OPTION_USE_DEV)
+		if (options & Conf::BIND_OPTION_USE_DEV)
 		{
-			string bindDev = SettingsManager::get(ips.bindDevice);
 			if (!bindDev.empty())
 			{
 				if (networkDevices.getDeviceAddress(af, bindDev, bindIp, true))
 				{
-					SettingsManager::set(ips.bindAddress, Util::printIpAddress(bindIp));
+					bindAddr = Util::printIpAddress(bindIp);
+					ss->lockWrite();
+					ss->setString(ips.bindAddress, bindAddr);
+					ss->unlockWrite();
 				}
 				else
 				{
-					if (options & SettingsManager::BIND_OPTION_NO_FALLBACK)
+					if (options & Conf::BIND_OPTION_NO_FALLBACK)
 						throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
 					LogManager::message(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
-					SettingsManager::unset(ips.bindAddress);
+					ss->lockWrite();
+					ss->unsetString(ips.bindAddress);
+					ss->unlockWrite();
 				}
 			}
 		}
 		if (!bindIp.type)
-			bind = SettingsManager::get(ips.bindAddress);
+			bind = std::move(bindAddr);
 	}
-	uint16_t port = SettingsManager::get(portSetting);
 
 	if (!bindIp.type) BufferedSocket::getBindAddress(bindIp, af, bind);
 	auto newServer = new Server(type, bindIp, port);
-	SettingsManager::set(portSetting, newServer->getServerPort());
+	ss->lockWrite();
+	ss->setInt(portSetting, newServer->getServerPort());
+	ss->unlockWrite();
 	int index = type == SERVER_TYPE_SSL ? SERVER_SECURE : 0;
 	ports[index] = newServer->getServerPort();
 	if (index == 0 && newServer->getType() == SERVER_TYPE_AUTO_DETECT)
@@ -703,7 +728,10 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	updateAverageSpeed(tick);
 	flushUpdatedUsers();
 	std::vector<ConnectionQueueItemPtr> removed;
-	unsigned maxAttempts = SETTING(DOWNCONN_PER_SEC);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned maxAttempts = 	ss->getInt(Conf::DOWNCONN_PER_SEC);
+	ss->unlockRead();
 	if (!maxAttempts) maxAttempts = UINT_MAX;
 	std::vector<TokenItem> statusChanged;
 	std::vector<ReasonItem> downloadError;
@@ -839,7 +867,11 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 
 void ConnectionManager::checkConnections(uint64_t tick)
 {
-	unsigned ccpmIdleTimeout = SETTING(CCPM_IDLE_TIMEOUT) * 60000;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned ccpmIdleTimeout = (unsigned) ss->getInt(Conf::CCPM_IDLE_TIMEOUT) * 60000;
+	ss->unlockRead();
+
 	WRITE_LOCK(*csConnections);
 	for (auto j = userConnections.cbegin(); j != userConnections.cend();)
 	{
@@ -1285,7 +1317,7 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 		UploadManager::getInstance()->addConnection(conn);
 		setIP(conn, cqi);
 #ifdef DEBUG_USER_CONNECTION
-		if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 		{
 			const UserPtr& user = conn->getUser();
 			LogManager::message("UserConnection(" + Util::toString(conn->id) +
@@ -1297,7 +1329,7 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 	else
 	{
 #ifdef DEBUG_USER_CONNECTION
-		if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 		{
 			const UserPtr& user = conn->getUser();
 			LogManager::message("UserConnection(" + Util::toString(conn->id) +
@@ -1568,7 +1600,11 @@ bool ConnectionManager::checkKeyprint(UserConnection* source)
 	if (!source->isSecure() || source->isTrusted())
 		return true;
 	const string kp = ClientManager::getStringField(source->getUser()->getCID(), source->getHubUrl(), "KP");
-	return source->verifyKeyprint(kp, BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool allowUntrusted = ss->getBool(Conf::ALLOW_UNTRUSTED_CLIENTS);
+	ss->unlockRead();
+	return source->verifyKeyprint(kp, allowUntrusted);
 }
 
 void ConnectionManager::failed(UserConnection* source, const string& error, bool protocolError)
@@ -1811,9 +1847,7 @@ void ConnectionManager::shutdown()
 	{
 		READ_LOCK(*csConnections);
 		for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
-		{
 			j->second->disconnect(true);
-		}
 	}
 
 	// Wait until all connections have died out...
@@ -1860,16 +1894,15 @@ void ConnectionManager::shutdown()
 #endif
 	}
 #ifdef BL_FEATURE_IP_DATABASE
-	// Сбрасываем рейтинг в базу пока не нашли причину почему тут остаются записи.
+	int options = DatabaseManager::getInstance()->getOptions();
+	if (options & (DatabaseOptions::ENABLE_IP_STAT | DatabaseOptions::ENABLE_USER_STAT))
 	{
-		bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
-		bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 		{
 			READ_LOCK(*csDownloads);
 			for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
-				cqi->getUser()->saveStats(ipStat, userStat);
+				cqi->getUser()->saveStats(options);
 			}
 		}
 		{
@@ -1877,7 +1910,7 @@ void ConnectionManager::shutdown()
 			for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
-				cqi->getUser()->saveStats(ipStat, userStat);
+				cqi->getUser()->saveStats(options);
 			}
 		}
 	}
@@ -2021,17 +2054,23 @@ void ConnectionManager::fireListenerFailed(const char* type, int af, int errorCo
 StringList ConnectionManager::getNmdcFeatures() const
 {
 	StringList features = nmdcFeatures;
-	if (BOOLSETTING(COMPRESS_TRANSFERS))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::COMPRESS_TRANSFERS))
 		features.push_back(UserConnection::FEATURE_ZLIB_GET);
+	ss->unlockRead();
 	return features;
 }
 
 StringList ConnectionManager::getAdcFeatures() const
 {
 	StringList features = adcFeatures;
-	if (BOOLSETTING(COMPRESS_TRANSFERS))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::COMPRESS_TRANSFERS))
 		features.push_back(UserConnection::FEATURE_ZLIB_GET);
-	if (BOOLSETTING(USE_CCPM) && BOOLSETTING(USE_CPMI))
+	if (ss->getBool(Conf::USE_CCPM) && ss->getBool(Conf::USE_CPMI))
 		features.push_back(UserConnection::FEATURE_ADC_CPMI);
+	ss->unlockRead();
 	return features;
 }

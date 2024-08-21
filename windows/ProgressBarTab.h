@@ -10,6 +10,7 @@
 #include "SettingsStore.h"
 #include "PropPageCallback.h"
 #include "BarShader.h"
+#include "../client/BaseSettingsImpl.h"
 
 class ProgressBarTab : public CDialogImpl<ProgressBarTab>
 {
@@ -53,8 +54,8 @@ class ProgressBarTab : public CDialogImpl<ProgressBarTab>
 		LRESULT onSpeedIconOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-		void loadSettings();
-		void saveSettings() const;
+		void loadSettings(const BaseSettingsImpl* ss);
+		void saveSettings(BaseSettingsImpl* ss) const;
 		void getValues(SettingsStore& ss) const;
 		void setValues(const SettingsStore& ss);
 		void updateTheme();

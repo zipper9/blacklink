@@ -25,9 +25,6 @@
 #include "PropPageIcons.h"
 #include "../client/ResourceManager.h"
 
-class SettingsManager;
-extern SettingsManager* g_settings;
-
 class PropPage
 {
 	public:

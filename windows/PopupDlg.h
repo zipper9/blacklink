@@ -22,13 +22,15 @@
 #include "Resource.h"
 #include "WinUtil.h"
 #include "Fonts.h"
+#include "ConfUI.h"
 #include "../client/TimeUtil.h"
+#include "../client/SettingsManager.h"
 
 class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 {
 	public:
 		DECLARE_WND_CLASS(_T("Popup"));
-		
+
 		BEGIN_MSG_MAP(PopupWnd)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -36,23 +38,25 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onLButtonDown)
 		MESSAGE_HANDLER(WM_PAINT, onPaint)
 		END_MSG_MAP()
-		
-		PopupWnd(const tstring& aMsg, const tstring& aTitle, CRect rc, uint32_t aId, HBITMAP hBmp): id(aId), msg(aMsg), title(aTitle), m_bmp(hBmp), height(0)
+
+		PopupWnd(const tstring& text, const tstring& title, CRect rc, uint32_t id, HBITMAP hBmp): id(id), msg(text), title(title), m_bmp(hBmp), height(0)
 		{
 			timeCreated = GET_TICK();
 			memset(&logFont, 0, sizeof(logFont));
 			memset(&myFont, 0, sizeof(myFont));
-			if ((SETTING(POPUP_TYPE) == BALLOON) || (SETTING(POPUP_TYPE) == SPLASH))
+			const auto* ss = SettingsManager::instance.getUiSettings();
+			int popupType = ss->getInt(Conf::POPUP_TYPE);
+			if (popupType == BALLOON || popupType == SPLASH)
 				Create(NULL, rc, NULL, WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_TOOLWINDOW);
-			else if ((SETTING(POPUP_TYPE) == CUSTOM) && (m_bmp != NULL))
+			else if (popupType == CUSTOM && m_bmp != NULL)
 				Create(NULL, rc, NULL, WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_TOOLWINDOW);
 			else
 				Create(NULL, rc, NULL, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_TOOLWINDOW);
-				
-			Fonts::decodeFont(Text::toT(SETTING(POPUP_FONT)), logFont);
+
+			Fonts::decodeFont(Text::toT(ss->getString(Conf::POPUP_FONT)), logFont);
 			font = ::CreateFontIndirect(&logFont);
-			
-			Fonts::decodeFont(Text::toT(SETTING(POPUP_TITLE_FONT)), myFont);
+
+			Fonts::decodeFont(Text::toT(ss->getString(Conf::POPUP_TITLE_FONT)), myFont);
 			titlefont = ::CreateFontIndirect(&myFont);
 		}
 		
@@ -71,7 +75,9 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			if (m_bmp != NULL && (SETTING(POPUP_TYPE) == CUSTOM))
+			const auto* ss = SettingsManager::instance.getUiSettings();
+			int popupType = ss->getInt(Conf::POPUP_TYPE);
+			if (m_bmp != NULL && popupType == CUSTOM)
 			{
 				bHandled = FALSE;
 				return 1;
@@ -84,33 +90,33 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 			rc.top += 1;
 			rc.left += 1;
 			rc.right -= 1;
-			if ((SETTING(POPUP_TYPE) == BALLOON) || (SETTING(POPUP_TYPE) == CUSTOM) || (SETTING(POPUP_TYPE) == SPLASH))
+			if (popupType == BALLOON || popupType == CUSTOM || popupType == SPLASH)
 				rc.bottom /= 3;
 			else
-				rc.bottom /= 4; //-V112
+				rc.bottom /= 4;
 				
 			label.Create(m_hWnd, rc, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 			             SS_CENTER | SS_NOPREFIX);
 			             
 			rc.top += rc.bottom - 1;
-			if ((SETTING(POPUP_TYPE) == BALLOON) || (SETTING(POPUP_TYPE) == CUSTOM) || (SETTING(POPUP_TYPE) == SPLASH))
+			if (popupType == BALLOON || popupType == CUSTOM || popupType == SPLASH)
 				rc.bottom *= 3;
 			else
-				rc.bottom = (rc.bottom * 4) + 1; //-V112
+				rc.bottom = (rc.bottom * 4) + 1;
 				
 			label1.Create(m_hWnd, rc, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 			              SS_CENTER | SS_NOPREFIX);
-			              
-			if (SETTING(POPUP_TYPE) == BALLOON)
+
+			if (popupType == BALLOON)
 			{
 				label.SetFont(Fonts::g_boldFont);
 				label.SetWindowText(title.c_str());
 				label1.SetFont(Fonts::g_font);
 				label1.SetWindowText(msg.c_str());
-				bHandled = false;
+				bHandled = FALSE;
 				return 1;
 			}
-			else if (SETTING(POPUP_TYPE) == CUSTOM || (SETTING(POPUP_TYPE) == SPLASH))
+			if (popupType == CUSTOM || popupType == SPLASH)
 			{
 				label.SetFont(Fonts::g_boldFont);
 				label.SetWindowText(title.c_str());
@@ -121,20 +127,22 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 			label1.SetFont(font);
 			label1.SetWindowText(msg.c_str());
 			
-			bHandled = false;
+			bHandled = FALSE;
 			return 1;
 		}
 		
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			if (m_bmp == NULL || (SETTING(POPUP_TYPE) != CUSTOM))
+			const auto* ss = SettingsManager::instance.getUiSettings();
+			int popupType = ss->getInt(Conf::POPUP_TYPE);
+			if (m_bmp == NULL || popupType != CUSTOM)
 			{
 				if (label) label.DestroyWindow();
 				if (label1) label1.DestroyWindow();
 			}
 			DestroyWindow();
-			
-			bHandled = false;
+
+			bHandled = FALSE;
 			return 1;
 		}
 		
@@ -142,27 +150,30 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		{
 			const HWND hWnd = (HWND)lParam;
 			const HDC hDC = (HDC)wParam;
-			::SetBkColor(hDC, SETTING(POPUP_BACKCOLOR));
-			::SetTextColor(hDC, SETTING(POPUP_TEXTCOLOR));
+			const auto* ss = SettingsManager::instance.getUiSettings();
+			::SetBkColor(hDC, ss->getInt(Conf::POPUP_BACKCOLOR));
+			::SetTextColor(hDC, ss->getInt(Conf::POPUP_TEXTCOLOR));
 			if (hWnd == label1.m_hWnd)
 				::SelectObject(hDC, font);
-			return (LRESULT)CreateSolidBrush(SETTING(POPUP_BACKCOLOR));
+			return (LRESULT) CreateSolidBrush(ss->getInt(Conf::POPUP_BACKCOLOR));
 		}
-		
+
 		LRESULT onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			if (m_bmp == NULL || (SETTING(POPUP_TYPE) != CUSTOM))
+			const auto* ss = SettingsManager::instance.getUiSettings();
+			int popupType = ss->getInt(Conf::POPUP_TYPE);
+			if (m_bmp == NULL || popupType != CUSTOM)
 			{
 				bHandled = FALSE;
 				return 0;
 			}
-			
+
 			PAINTSTRUCT ps;
 			HDC hdc = ::BeginPaint(m_hWnd, &ps);
-			
+
 			HDC hdcMem = CreateCompatibleDC(NULL);
 			HBITMAP hbmT = (HBITMAP)::SelectObject(hdcMem, m_bmp);
-			
+
 			BITMAP bm = {0};
 			GetObject(m_bmp, sizeof(bm), &bm);
 			
@@ -182,11 +193,11 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 			//Draw the Title and Message with selected font and color
 			const tstring pmsg = _T("\r\n\r\n") + msg;
 			HFONT oldTitleFont = (HFONT)SelectObject(hdc, titlefont);
-			::SetTextColor(hdc, SETTING(POPUP_TITLE_TEXTCOLOR));
+			::SetTextColor(hdc, ss->getInt(Conf::POPUP_TITLE_TEXTCOLOR));
 			::DrawText(hdc, title.c_str(), static_cast<int>(title.length()), rc, DT_SINGLELINE | DT_TOP | DT_CENTER);
 			
 			HFONT oldFont = (HFONT)SelectObject(hdc, font);
-			::SetTextColor(hdc, SETTING(POPUP_TEXTCOLOR));
+			::SetTextColor(hdc, ss->getInt(Conf::POPUP_TEXTCOLOR));
 			::DrawText(hdc, pmsg.c_str(), static_cast<int>(pmsg.length()), rc, DT_LEFT | DT_WORDBREAK);
 			
 			SelectObject(hdc, oldTitleFont);

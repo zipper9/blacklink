@@ -24,6 +24,8 @@
 #include "ClientManager.h"
 #include "ResourceManager.h"
 #include "TimeUtil.h"
+#include "SettingsManager.h"
+#include "ConfCore.h"
 #include "version.h"
 
 #include <openssl/bn.h>
@@ -73,6 +75,7 @@ static const int64_t EXPIRED_CERT_TIME_DIFF = 3600; // seconds
 
 CryptoManager::CryptoManager()
 {
+	updateSettings();
 	keyPairInitialized = false;
 	endTime = 0;
 #if OPENSSL_VERSION_NUMBER < 0x10100000
@@ -110,6 +113,16 @@ CryptoManager::~CryptoManager()
 	CRYPTO_set_locking_callback(nullptr);
 	delete[] cs;
 #endif
+}
+
+void CryptoManager::updateSettings()
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool enable = ss->getBool(Conf::USE_TLS);
+	ss->unlockRead();
+	LOCK(contextLock);
+	useTls = enable;
 }
 
 void CryptoManager::sslRandCheck() noexcept
@@ -470,9 +483,8 @@ DH* CryptoManager::getTmpDH(int keyLen)
 
 bool CryptoManager::isInitialized() const noexcept
 {
-	if (!BOOLSETTING(USE_TLS)) return false;
 	LOCK(contextLock);
-	return keyPairInitialized && !certFingerprint.empty();
+	return useTls && keyPairInitialized && !certFingerprint.empty();
 }
 
 #ifdef _WIN32
@@ -642,8 +654,11 @@ void CryptoManager::createKeyPair(const string& certFile, const string& keyFile,
 
 bool CryptoManager::loadOrCreateKeyPair(ssl::X509& cert, ssl::EVP_PKEY& pkey, bool createOnError) noexcept
 {
-	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
-	const string& keyFile = SETTING(TLS_PRIVATE_KEY_FILE);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string certFile = ss->getString(Conf::TLS_CERTIFICATE_FILE);
+	const string keyFile = ss->getString(Conf::TLS_PRIVATE_KEY_FILE);
+	ss->unlockRead();
 
 	if (certFile.empty() || keyFile.empty())
 	{
@@ -677,11 +692,15 @@ bool CryptoManager::loadOrCreateKeyPair(ssl::X509& cert, ssl::EVP_PKEY& pkey, bo
 
 void CryptoManager::generateNewKeyPair()
 {
-	const string& keyFile = SETTING(TLS_PRIVATE_KEY_FILE);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string certFile = ss->getString(Conf::TLS_CERTIFICATE_FILE);
+	const string keyFile = ss->getString(Conf::TLS_PRIVATE_KEY_FILE);
+	ss->unlockRead();
+
 	if (keyFile.empty())
 		throw CryptoException("No private key file chosen");
 
-	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
 	if (certFile.empty())
 		throw CryptoException("No certificate file chosen");
 
@@ -759,7 +778,10 @@ bool CryptoManager::initializeKeyPair() noexcept
 
 StringList CryptoManager::loadTrustedList() noexcept
 {
-	const string& path = SETTING(TLS_TRUSTED_CERTIFICATES_PATH);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string path = ss->getString(Conf::TLS_TRUSTED_CERTIFICATES_PATH);
+	ss->unlockRead();
 	if (path.empty()) return StringList();
 	StringList certs = File::findFiles(path, "*.pem", true);
 	StringList certs2 = File::findFiles(path, "*.crt", true);

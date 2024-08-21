@@ -150,7 +150,7 @@ void TextFrame::UpdateLayout(BOOL /*bResizeBars*/ /* = TRUE */)
 	ctrlPad.MoveWindow(rc);
 }
 
-void TextFrame::on(SettingsManagerListener::Repaint)
+void TextFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())

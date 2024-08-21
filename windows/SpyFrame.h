@@ -148,7 +148,8 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 				bool addSeeker(const string& user, const string& hub);
 				void updateNickList();
 				tstring getText(uint8_t col) const;
-				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
 				static int getImageIndex() { return 0; }
 				static int getStateImageIndex() { return 0; }
 
@@ -223,7 +224,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		// ClientManagerListener
 		void on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& hub, const string& s, ClientManagerListener::SearchReply re) noexcept override;
 
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 
 		void openLogFile();
 		void closeLogFile();

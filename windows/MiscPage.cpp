@@ -19,7 +19,9 @@
 #include "stdafx.h"
 #include "MiscPage.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -44,27 +46,27 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_ENABLE_CCPM, SettingsManager::USE_CCPM, PropPage::T_BOOL },
-	{ IDC_ENABLE_CPMI, SettingsManager::USE_CPMI, PropPage::T_BOOL },
-	{ IDC_CCPM_AUTO_START, SettingsManager::CCPM_AUTO_START, PropPage::T_BOOL },
-	{ IDC_CCPM_TIMEOUT, SettingsManager::CCPM_IDLE_TIMEOUT, PropPage::T_INT },
-	{ IDC_MAX_UC, SettingsManager::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
+	{ IDC_ENABLE_CCPM, Conf::USE_CCPM, PropPage::T_BOOL },
+	{ IDC_ENABLE_CPMI, Conf::USE_CPMI, PropPage::T_BOOL },
+	{ IDC_CCPM_AUTO_START, Conf::CCPM_AUTO_START, PropPage::T_BOOL },
+	{ IDC_CCPM_TIMEOUT, Conf::CCPM_IDLE_TIMEOUT, PropPage::T_INT },
+	{ IDC_MAX_UC, Conf::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::NMDC_ENCODING_FROM_DOMAIN, ResourceManager::SETTINGS_NMDC_ENCODING_FROM_DOMAIN },
-	{ SettingsManager::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
-	{ SettingsManager::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
-	{ SettingsManager::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
-	{ SettingsManager::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
-	{ SettingsManager::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
-	{ SettingsManager::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },
-	{ SettingsManager::USE_MCTO, ResourceManager::SETTINGS_USE_MCTO },
-	{ SettingsManager::USE_TTH_LIST, ResourceManager::SETTINGS_USE_TTH_LIST },
-	{ SettingsManager::SEND_DB_PARAM, ResourceManager::SETTINGS_SEND_DB_PARAM },
-	{ SettingsManager::SEND_QP_PARAM, ResourceManager::SETTINGS_SEND_QP_PARAM },
+	{ Conf::NMDC_ENCODING_FROM_DOMAIN, ResourceManager::SETTINGS_NMDC_ENCODING_FROM_DOMAIN },
+	{ Conf::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
+	{ Conf::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
+	{ Conf::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
+	{ Conf::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
+	{ Conf::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
+	{ Conf::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },
+	{ Conf::USE_MCTO, ResourceManager::SETTINGS_USE_MCTO },
+	{ Conf::USE_TTH_LIST, ResourceManager::SETTINGS_USE_TTH_LIST },
+	{ Conf::SEND_DB_PARAM, ResourceManager::SETTINGS_SEND_DB_PARAM },
+	{ Conf::SEND_QP_PARAM, ResourceManager::SETTINGS_SEND_QP_PARAM },
 	{ 0, ResourceManager::Strings() }
 };
 

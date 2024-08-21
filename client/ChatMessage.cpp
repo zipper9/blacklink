@@ -67,16 +67,18 @@ void ChatMessage::translateMe(string& text, bool& thirdPerson)
 string ChatMessage::getExtra(const Identity& id)
 {
 	string result;
-	bool ipInChat = BOOLSETTING(IP_IN_CHAT);
+	int chatOptions = ClientManager::getChatOptions();
 	int flags = 0;
-	if (BOOLSETTING(COUNTRY_IN_CHAT)) flags |= IPInfo::FLAG_COUNTRY;
-	if (BOOLSETTING(ISP_IN_CHAT)) flags |= IPInfo::FLAG_LOCATION;
-	if (ipInChat || flags)
+	if (chatOptions & ClientManager::CHAT_OPTION_SHOW_COUNTRY)
+		flags |= IPInfo::FLAG_COUNTRY;
+	if (chatOptions & ClientManager::CHAT_OPTION_SHOW_ISP)
+		flags |= IPInfo::FLAG_LOCATION;
+	if ((chatOptions & ClientManager::CHAT_OPTION_SHOW_IP) || flags)
 	{
 		IpAddress ip = id.getConnectIP();
 		if (Util::isValidIp(ip) && !id.isIPCached(ip.type))
 		{
-			if (ipInChat)
+			if (chatOptions & ClientManager::CHAT_OPTION_SHOW_IP)
 				result += Util::printIpAddress(ip);
 			if (flags)
 			{
@@ -107,7 +109,7 @@ string ChatMessage::getExtra(const Identity& id)
 void ChatMessage::getUserParams(StringMap& params, const string& hubUrl, bool myMessage) const
 {
 	const OnlineUserPtr& ou = myMessage ? to : replyTo;
-	params["hubNI"] = ClientManager::getInstance()->getOnlineHubName(hubUrl);
+	params["hubNI"] = ClientManager::getOnlineHubName(hubUrl);
 	params["hubURL"] = hubUrl;
 	params["userCID"] = ou->getUser()->getCID().toBase32();
 	params["userNI"] = ou->getIdentity().getNick();

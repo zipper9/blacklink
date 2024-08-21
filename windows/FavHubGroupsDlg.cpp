@@ -22,7 +22,9 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "ExMessageBox.h"
+#include "ConfUI.h"
 #include "../client/FavoriteManager.h"
+#include "../client/SettingsManager.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -142,12 +144,14 @@ LRESULT FavHubGroupsDlg::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	int pos = ctrlGroups.GetSelectedIndex();
 	if (pos < 0) return 0;
 
-	if (BOOLSETTING(CONFIRM_HUBGROUP_REMOVAL))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::CONFIRM_HUBGROUP_REMOVAL))
 	{
 		UINT checkState = BST_UNCHECKED;
 		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return 0;
-		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_HUBGROUP_REMOVAL, FALSE);
+		if (checkState == BST_CHECKED)
+			ss->setBool(Conf::CONFIRM_HUBGROUP_REMOVAL, false);
 	}
 
 	tstring nameT = getText(0, pos);

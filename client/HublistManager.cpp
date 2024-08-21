@@ -20,6 +20,8 @@
 
 #include "HubEntry.h"
 #include "HublistManager.h"
+#include "SettingsManager.h"
+#include "Util.h"
 #include "AppPaths.h"
 #include "PathUtil.h"
 #include "HttpClient.h"
@@ -27,6 +29,7 @@
 #include "FilteredFile.h"
 #include "SimpleXML.h"
 #include "SimpleStringTokenizer.h"
+#include "ConfCore.h"
 
 static const unsigned MAX_CACHED_AGE = 3600 * 24 * 2; // 2 days
 
@@ -198,12 +201,16 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 		}
 	}
 	lastRedirUrl.clear();
+
+	auto ss = SettingsManager::instance.getCoreSettings();
 	HttpClient::Request req;
 	req.type = Http::METHOD_GET;
 	req.url = url;
 	req.maxRedirects = 5;
 	req.maxRespBodySize = 1024 * 1204;
-	req.userAgent = SETTING(HTTP_USER_AGENT);
+	ss->lockRead();
+	req.userAgent = ss->getString(Conf::HTTP_USER_AGENT);
+	ss->unlockRead();
 	reqId = httpClient.addRequest(req);
 	if (!reqId)
 	{

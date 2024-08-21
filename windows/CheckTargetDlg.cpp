@@ -21,6 +21,7 @@
 #include "CheckTargetDlg.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -71,19 +72,19 @@ LRESULT ClassicCheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LP
 	
 	switch (option)
 	{
-		case SettingsManager::TE_ACTION_REPLACE:
+		case Conf::TE_ACTION_REPLACE:
 		{
 			CheckDlgButton(IDC_REPLACE_REPLACE, BST_CHECKED);
 			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, fileName.c_str());
 		}
 		break;
-		case SettingsManager::TE_ACTION_SKIP:
+		case Conf::TE_ACTION_SKIP:
 		{
 			CheckDlgButton(IDC_REPLACE_SKIP, BST_CHECKED);
 			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, _T(""));
 		}
 		break;
-		case SettingsManager::TE_ACTION_RENAME:
+		case Conf::TE_ACTION_RENAME:
 		default:
 		{
 			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, newName.c_str());
@@ -101,18 +102,18 @@ LRESULT ClassicCheckTargetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /
 	{
 		if (IsDlgButtonChecked(IDC_REPLACE_REPLACE))
 		{
-			option = SettingsManager::TE_ACTION_REPLACE;
+			option = Conf::TE_ACTION_REPLACE;
 		}
 		else if (IsDlgButtonChecked(IDC_REPLACE_RENAME))
 		{
-			option = SettingsManager::TE_ACTION_RENAME;
+			option = Conf::TE_ACTION_RENAME;
 		}
 		else if (IsDlgButtonChecked(IDC_REPLACE_SKIP))
 		{
-			option = SettingsManager::TE_ACTION_SKIP;
+			option = Conf::TE_ACTION_SKIP;
 		}
 		else
-			option = SettingsManager::TE_ACTION_ASK;
+			option = Conf::TE_ACTION_ASK;
 			
 		applyForAll = IsDlgButtonChecked(IDC_REPLACE_APPLY) == TRUE;
 		EndDialog(wID);
@@ -206,16 +207,16 @@ void CheckTargetDlg::showDialog(HWND hWndParent, const string& fullPath, int64_t
 	switch (id)
 	{
 		case IDC_REPLACE_REPLACE:
-			option = SettingsManager::TE_ACTION_REPLACE;
+			option = Conf::TE_ACTION_REPLACE;
 			break;
 		case IDC_REPLACE_RENAME:
-			option = SettingsManager::TE_ACTION_RENAME;
+			option = Conf::TE_ACTION_RENAME;
 			break;
 		case IDC_REPLACE_SKIP:
-			option = SettingsManager::TE_ACTION_SKIP;
+			option = Conf::TE_ACTION_SKIP;
 			break;
 		default:
-			option = SettingsManager::TE_ACTION_ASK;
+			option = Conf::TE_ACTION_ASK;
 	}
 	applyForAll = flagChecked;
 }

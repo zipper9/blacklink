@@ -1,15 +1,15 @@
 #include "stdafx.h"
 #include "WinSysHandlers.h"
+#include "../client/SettingsManager.h"
 #include "../client/LogManager.h"
 #include "../client/ResourceManager.h"
 #include "../client/BaseUtil.h"
 #include "../client/Text.h"
 #include "../client/AppPaths.h"
 #include "RegKey.h"
+#include "ConfUI.h"
 
-bool WinUtil::hubUrlHandlersRegistered = false;
-bool WinUtil::magnetHandlerRegistered = false;
-bool WinUtil::dclstHandlerRegistered = false;
+int WinUtil::registeredHandlerMask = 0;
 
 static bool registerUrlHandler(const TCHAR* proto, const TCHAR* description)
 {
@@ -51,22 +51,22 @@ static bool registerUrlHandler(const TCHAR* proto, const TCHAR* description)
 void WinUtil::registerHubUrlHandlers()
 {
 	if (registerUrlHandler(_T("dchub"), _T("URL:Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
+		registeredHandlerMask |= REG_HANDLER_HUB_URL;
 	else
 		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "dchub"));
 
 	if (registerUrlHandler(_T("nmdcs"), _T("URL:Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
+		registeredHandlerMask |= REG_HANDLER_HUB_URL;
 	else
 		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "nmdcs"));
 
 	if (registerUrlHandler(_T("adc"), _T("URL:Advanced Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
+		registeredHandlerMask |= REG_HANDLER_HUB_URL;
 	else
 		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "adc"));
 
 	if (registerUrlHandler(_T("adcs"), _T("URL:Advanced Direct Connect Protocol")))
-		hubUrlHandlersRegistered = true;
+		registeredHandlerMask |= REG_HANDLER_HUB_URL;
 	else
 		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "adcs"));
 }
@@ -84,13 +84,13 @@ void WinUtil::unregisterHubUrlHandlers()
 	internalDeleteRegistryKey(_T("nmdcs"));
 	internalDeleteRegistryKey(_T("adc"));
 	internalDeleteRegistryKey(_T("adcs"));
-	hubUrlHandlersRegistered = false;
+	registeredHandlerMask &= ~REG_HANDLER_HUB_URL;
 }
 
 void WinUtil::registerMagnetHandler()
 {
 	if (registerUrlHandler(_T("magnet"), _T("URL:Magnet Link")))
-		magnetHandlerRegistered = true;
+		registeredHandlerMask |= REG_HANDLER_MAGNET;
 	else
 		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "magnet"));
 }
@@ -98,7 +98,7 @@ void WinUtil::registerMagnetHandler()
 void WinUtil::unregisterMagnetHandler()
 {
 	internalDeleteRegistryKey(_T("magnet"));
-	magnetHandlerRegistered = false;
+	registeredHandlerMask &= ~REG_HANDLER_MAGNET;
 }
 
 static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
@@ -157,7 +157,7 @@ static const TCHAR* dcLstNames[] = { _T("DcLst download list"), _T(".dclst"), _T
 void WinUtil::registerDclstHandler()
 {
 	if (registerFileHandler(dcLstNames, CTSTRING(DCLST_DESCRIPTION)))
-		dclstHandlerRegistered = true;
+		registeredHandlerMask |= REG_HANDLER_DCLST;
 	else
 		LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCLST));
 }
@@ -170,5 +170,43 @@ void WinUtil::unregisterDclstHandler()
 		internalDeleteRegistryKey(dcLstNames[i]);
 		i++;
 	}
-	dclstHandlerRegistered = false;
+	registeredHandlerMask &= ~REG_HANDLER_DCLST;
+}
+
+int WinUtil::getRegHandlerSettings()
+{
+	int result = 0;
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::REGISTER_URL_HANDLER))
+		result |= REG_HANDLER_HUB_URL;
+	if (ss->getBool(Conf::REGISTER_MAGNET_HANDLER))
+		result |= REG_HANDLER_MAGNET;
+	if (ss->getBool(Conf::REGISTER_DCLST_HANDLER))
+		result |= REG_HANDLER_DCLST;
+	return result;
+}
+
+void WinUtil::applyRegHandlerSettings(int settings, int mask)
+{
+	if (mask & REG_HANDLER_HUB_URL)
+	{
+		if (settings & REG_HANDLER_HUB_URL)
+			registerHubUrlHandlers();
+		else if (registeredHandlerMask & REG_HANDLER_HUB_URL)
+			unregisterHubUrlHandlers();
+	}
+	if (mask & REG_HANDLER_MAGNET)
+	{
+		if (settings & REG_HANDLER_MAGNET)
+			registerMagnetHandler();
+		else if (registeredHandlerMask & REG_HANDLER_MAGNET)
+			unregisterMagnetHandler();
+	}
+	if (mask & REG_HANDLER_DCLST)
+	{
+		if (settings & REG_HANDLER_DCLST)
+			registerDclstHandler();
+		else if (registeredHandlerMask & REG_HANDLER_DCLST)
+			unregisterDclstHandler();
+	}
 }

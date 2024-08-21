@@ -25,6 +25,7 @@
 #include "Fonts.h"
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
 #include "../client/DownloadManager.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
@@ -179,11 +180,13 @@ void QueueFrame::sortSources(vector<QueueFrame::SourceInfo>& v)
 
 LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	showTree = BOOLSETTING(QUEUE_FRAME_SHOW_TREE);
-	
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	showTree = ss->getBool(Conf::QUEUE_FRAME_SHOW_TREE);
+	showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
+
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
-	
+
 	ctrlQueue.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_QUEUE);
 	ctrlQueue.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
@@ -192,18 +195,18 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlDirs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(),
 	                WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
 	WinUtil::setExplorerTheme(ctrlDirs);
-	
+
 	ctrlDirs.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlQueue.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
-	
-	m_nProportionalPos = SETTING(QUEUE_FRAME_SPLIT);
+
+	m_nProportionalPos = ss->getInt(Conf::QUEUE_FRAME_SPLIT);
 	SetSplitterPanes(ctrlDirs.m_hWnd, ctrlQueue.m_hWnd);
-	
+
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 	
-	ctrlQueue.insertColumns(SettingsManager::QUEUE_FRAME_ORDER, SettingsManager::QUEUE_FRAME_WIDTHS, SettingsManager::QUEUE_FRAME_VISIBLE);
-	ctrlQueue.setSortFromSettings(SETTING(QUEUE_FRAME_SORT));
+	ctrlQueue.insertColumns(Conf::QUEUE_FRAME_ORDER, Conf::QUEUE_FRAME_WIDTHS, Conf::QUEUE_FRAME_VISIBLE);
+	ctrlQueue.setSortFromSettings(ss->getInt(Conf::QUEUE_FRAME_SORT));
 
 	setListViewColors(ctrlQueue);
 	setTreeViewColors(ctrlDirs);
@@ -216,7 +219,7 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	addQueueList();
 	QueueManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	
 	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
@@ -382,7 +385,7 @@ void QueueFrame::QueueItemInfo::updateIconIndex()
 	}
 }
 
-int QueueFrame::QueueItemInfo::compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col)
+int QueueFrame::QueueItemInfo::compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col, int /*flags*/)
 {
 	if (a->type != b->type)
 		return (int) a->type - (int) b->type;
@@ -1403,12 +1406,14 @@ void QueueFrame::processTasks()
 
 bool QueueFrame::confirmDelete()
 {
-	if (BOOLSETTING(CONFIRM_DELETE))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::CONFIRM_DELETE))
 	{
 		UINT checkState = BST_UNCHECKED;
 		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return false;
-		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_DELETE, FALSE);
+		if (checkState == BST_CHECKED)
+			ss->setBool(Conf::CONFIRM_DELETE, false);
 	}
 	return true;
 }
@@ -2366,25 +2371,26 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	if (!closed)
 	{
 		closed = true;
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		DownloadManager::getInstance()->removeListener(this);
 		QueueManager::getInstance()->removeListener(this);
-		
+
 		setButtonPressed(IDC_QUEUE, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		SET_SETTING(QUEUE_FRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setBool(Conf::QUEUE_FRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
 		ctrlQueue.deleteAllNoLock();
 		clearingTree++;
 		ctrlDirs.DeleteAllItems();
 		clearingTree--;
-		
-		ctrlQueue.saveHeaderOrder(SettingsManager::QUEUE_FRAME_ORDER, SettingsManager::QUEUE_FRAME_WIDTHS, SettingsManager::QUEUE_FRAME_VISIBLE);
-		SET_SETTING(QUEUE_FRAME_SORT, ctrlQueue.getSortForSettings());
-		SET_SETTING(QUEUE_FRAME_SPLIT, m_nProportionalPos);
+
+		ctrlQueue.saveHeaderOrder(Conf::QUEUE_FRAME_ORDER, Conf::QUEUE_FRAME_WIDTHS, Conf::QUEUE_FRAME_VISIBLE);
+		ss->setInt(Conf::QUEUE_FRAME_SORT, ctrlQueue.getSortForSettings());
+		ss->setInt(Conf::QUEUE_FRAME_SPLIT, m_nProportionalPos);
 		tasks.clear();
 		bHandled = FALSE;
 		return 0;
@@ -2492,7 +2498,7 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 		{
 			if (ctrlQueue.findColumn(cd->iSubItem) == COLUMN_PROGRESS)
 			{
-				if (!BOOLSETTING(SHOW_PROGRESS_BARS))
+				if (!showProgressBars)
 				{
 					bHandled = FALSE;
 					return 0;
@@ -2500,12 +2506,13 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				const QueueItemPtr& qi = ii->getQueueItem();
 				if (!qi || qi->getSize() == -1) return CDRF_DODEFAULT;
 				
+				const auto* ss = SettingsManager::instance.getUiSettings();
 				CRect rc;
 				ctrlQueue.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-				CBarShader statusBar(rc.Height(), rc.Width(), SETTING(PROGRESS_BACK_COLOR), ii->getSize());
-				COLORREF colorRunning = SETTING(COLOR_RUNNING);
-				COLORREF colorRunning2 = SETTING(COLOR_RUNNING_COMPLETED);
-				COLORREF colorDownloaded = SETTING(COLOR_DOWNLOADED);
+				CBarShader statusBar(rc.Height(), rc.Width(), ss->getInt(Conf::PROGRESS_BACK_COLOR), ii->getSize());
+				COLORREF colorRunning = ss->getInt(Conf::COLOR_RUNNING);
+				COLORREF colorRunning2 = ss->getInt(Conf::COLOR_RUNNING_COMPLETED);
+				COLORREF colorDownloaded = ss->getInt(Conf::COLOR_DOWNLOADED);
 				ii->getQueueItem()->getChunksVisualisation(runningChunks, doneChunks);
 				for (auto i = runningChunks.cbegin(); i < runningChunks.cend(); ++i)
 				{
@@ -2520,11 +2527,11 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				CDC cdc;
 				cdc.CreateCompatibleDC(cd->nmcd.hdc);
 				HBITMAP pOldBmp = cdc.SelectBitmap(CreateCompatibleBitmap(cd->nmcd.hdc,  rc.Width(),  rc.Height()));
-				
-				statusBar.Draw(cdc, 0, 0, SETTING(PROGRESS_3DDEPTH));
+
+				statusBar.Draw(cdc, 0, 0, ss->getInt(Conf::PROGRESS_3DDEPTH));
 				BitBlt(cd->nmcd.hdc, rc.left, rc.top, rc.Width(), rc.Height(), cdc.m_hDC, 0, 0, SRCCOPY);
 				DeleteObject(cdc.SelectBitmap(pOldBmp));
-				
+
 				return CDRF_SKIPDEFAULT;
 			}
 		}
@@ -2653,7 +2660,7 @@ void QueueFrame::removeSources()
 		qm->removeSource(j->first, j->second, QueueItem::Source::FLAG_REMOVED);
 }
 
-void QueueFrame::on(SettingsManagerListener::Repaint)
+void QueueFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -2663,6 +2670,8 @@ void QueueFrame::on(SettingsManagerListener::Repaint)
 			setTreeViewColors(ctrlDirs);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
+		const auto* ss = SettingsManager::instance.getUiSettings();
+		showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
 	}
 }
 

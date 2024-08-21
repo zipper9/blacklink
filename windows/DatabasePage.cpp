@@ -4,6 +4,7 @@
 #include "UserMessages.h"
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -38,21 +39,21 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_FINISHED_MEM_UP,   SettingsManager::MAX_FINISHED_UPLOADS,      PropPage::T_INT },
-	{ IDC_FINISHED_MEM_DOWN, SettingsManager::MAX_FINISHED_DOWNLOADS,    PropPage::T_INT },
-	{ IDC_FINISHED_DB_UP,    SettingsManager::DB_LOG_FINISHED_UPLOADS,   PropPage::T_INT },
-	{ IDC_FINISHED_DB_DOWN,  SettingsManager::DB_LOG_FINISHED_DOWNLOADS, PropPage::T_INT },
-	{ 0,                     0,                                          PropPage::T_END }
+	{ IDC_FINISHED_MEM_UP,   Conf::MAX_FINISHED_UPLOADS,      PropPage::T_INT },
+	{ IDC_FINISHED_MEM_DOWN, Conf::MAX_FINISHED_DOWNLOADS,    PropPage::T_INT },
+	{ IDC_FINISHED_DB_UP,    Conf::DB_LOG_FINISHED_UPLOADS,   PropPage::T_INT },
+	{ IDC_FINISHED_DB_DOWN,  Conf::DB_LOG_FINISHED_DOWNLOADS, PropPage::T_INT },
+	{ 0,                     0,                               PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::LOG_FILELIST_TRANSFERS, ResourceManager::SETTINGS_LOG_FILELIST_TRANSFERS },
+	{ Conf::LOG_FILELIST_TRANSFERS, ResourceManager::SETTINGS_LOG_FILELIST_TRANSFERS },
 #ifdef BL_FEATURE_IP_DATABASE
-	{ SettingsManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
+	{ Conf::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
 #endif
-	{ SettingsManager::ENABLE_RATIO_USER_LIST, ResourceManager::ENABLE_RATIO_USER_LIST },
-	{ SettingsManager::ENABLE_UPLOAD_COUNTER, ResourceManager::ENABLE_UPLOAD_COUNTER },
+	{ Conf::ENABLE_RATIO_USER_LIST, ResourceManager::ENABLE_RATIO_USER_LIST },
+	{ Conf::ENABLE_UPLOAD_COUNTER, ResourceManager::ENABLE_UPLOAD_COUNTER },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -68,7 +69,10 @@ LRESULT DatabasePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_LIST1));
 	ctrlJournal.Attach(GetDlgItem(IDC_JOURNAL_MODE));
-	int value = SETTING(SQLITE_JOURNAL_MODE);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int value = ss->getInt(Conf::SQLITE_JOURNAL_MODE);
+	ss->unlockRead();
 	if (!value)
 	{
 		defaultJournalMode = true;
@@ -104,5 +108,8 @@ void DatabasePage::write()
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_LIST1));
 	int value = ctrlJournal.GetCurSel() + 1;
 	if (value == DatabaseManager::DEFAULT_JOURNAL_MODE && defaultJournalMode) value = 0;
-	SET_SETTING(SQLITE_JOURNAL_MODE, value);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(Conf::SQLITE_JOURNAL_MODE, value);
+	ss->unlockWrite();
 }

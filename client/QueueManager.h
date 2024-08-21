@@ -312,7 +312,7 @@ class QueueManager : public Singleton<QueueManager>,
 				void clearAll();
 
 				bool isQueued(const TTHValue& tth) const;
-				void updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags);
+				void updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags) noexcept;
 				uint64_t getGenerationId() const;
 
 			private:

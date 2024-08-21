@@ -29,11 +29,13 @@
 #include "MappingManager.h"
 #include "ZUtils.h"
 #include "FilteredFile.h"
+#include "ConfCore.h"
 
 int64_t DownloadManager::g_runningAverage;
 
 DownloadManager::DownloadManager() : csDownloads(RWLock::create())
 {
+	updateSettings();
 	TimerManager::getInstance()->addListener(this);
 }
 
@@ -112,15 +114,21 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 			}
 			const int64_t currentSingleSpeed = d->getRunningAverage();
 #ifdef BL_FEATURE_DROP_SLOW_SOURCES
-			if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
+			if (options & OPT_AUTO_DISCONNECT)
 			{
 				if (d->getType() == Transfer::TYPE_FILE && d->getStartTime() > 0)
 				{
-					if (d->getTigerTree().getFileSize() > (SETTING(AUTO_DISCONNECT_MIN_FILE_SIZE) * 1048576))
+					auto ss = SettingsManager::instance.getCoreSettings();
+					ss->lockRead();
+					const int minFileSize = ss->getInt(Conf::AUTO_DISCONNECT_MIN_FILE_SIZE);
+					const int autoDisconnectSpeed = ss->getInt(Conf::AUTO_DISCONNECT_SPEED);
+					const unsigned autoDisconnectTime = ss->getInt(Conf::AUTO_DISCONNECT_TIME);
+					ss->unlockRead();
+					if (d->getTigerTree().getFileSize() > ((int64_t) minFileSize << 20))
 					{
-						if (currentSingleSpeed < SETTING(AUTO_DISCONNECT_SPEED) * 1024 && d->getLastNormalSpeed())
+						if (currentSingleSpeed < (autoDisconnectSpeed << 10) && d->getLastNormalSpeed())
 						{
-							if (tick - d->getLastNormalSpeed() > (uint32_t)SETTING(AUTO_DISCONNECT_TIME) * 1000)
+							if (tick - d->getLastNormalSpeed() > autoDisconnectTime * 1000)
 							{
 								if (QueueManager::getInstance()->dropSource(d))
 								{
@@ -171,14 +179,18 @@ void DownloadManager::addConnection(UserConnectionPtr& ucPtr)
 bool DownloadManager::isStartDownload(QueueItem::Priority prio) const noexcept
 {
 	const size_t downloadCount = getDownloadCount();
-	const size_t slots = SETTING(DOWNLOAD_SLOTS);
-	const int64_t maxSpeed = SETTING(MAX_DOWNLOAD_SPEED);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const size_t slots = ss->getInt(Conf::DOWNLOAD_SLOTS);
+	const size_t extraSlots = slots ? ss->getInt(Conf::EXTRA_DOWNLOAD_SLOTS) : 0;
+	const int64_t maxSpeed = ss->getInt(Conf::MAX_DOWNLOAD_SPEED);
+	ss->unlockRead();
 
 	if ((slots && downloadCount >= slots) || (maxSpeed && getRunningAverage() >= maxSpeed << 10))
 	{
 		if (prio != QueueItem::HIGHEST)
 			return false;
-		if (slots && downloadCount >= slots + SETTING(EXTRA_DOWNLOAD_SLOTS))
+		if (slots && downloadCount >= slots + extraSlots)
 			return false;
 	}
 	return true;
@@ -285,7 +297,11 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 		return;
 	}
 	
-	int64_t bufSize = (int64_t) SETTING(BUFFER_SIZE_FOR_DOWNLOADS) << 10;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int64_t bufSize = (int64_t) ss->getInt(Conf::BUFFER_SIZE_FOR_DOWNLOADS) << 10;
+	ss->unlockRead();
+
 	dcassert(bufSize > 0);
 	if (bufSize <= 0 || bufSize > 8192 * 1024)
 		bufSize = 1024 * 1024;
@@ -597,4 +613,17 @@ void DownloadManager::checkUserIP(UserConnection* source) noexcept
 	removeDownload(d);
 	QueueManager::getInstance()->putDownload(d, true);
 	source->disconnect();
+}
+
+void DownloadManager::updateSettings() noexcept
+{
+	int newOptions = 0;
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::ENABLE_AUTO_DISCONNECT))
+		newOptions |= OPT_AUTO_DISCONNECT;
+	ss->unlockRead();
+#endif
+	options.store(newOptions);
 }

@@ -3,6 +3,8 @@
 #include "LimitPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -63,21 +65,21 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_MX_UP_SP_LMT_NORMAL, SettingsManager::MAX_UPLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
-	{ IDC_MX_DW_SP_LMT_NORMAL, SettingsManager::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
-	{ IDC_TIME_LIMITING, SettingsManager::TIME_DEPENDENT_THROTTLE, PropPage::T_BOOL },
-	{ IDC_MX_UP_SP_LMT_TIME, SettingsManager::MAX_UPLOAD_SPEED_LIMIT_TIME, PropPage::T_INT },
-	{ IDC_MX_DW_SP_LMT_TIME, SettingsManager::MAX_DOWNLOAD_SPEED_LIMIT_TIME, PropPage::T_INT },
-	{ IDC_BW_START_TIME, SettingsManager::BANDWIDTH_LIMIT_START, PropPage::T_INT },
-	{ IDC_BW_END_TIME, SettingsManager::BANDWIDTH_LIMIT_END, PropPage::T_INT },
-	{ IDC_THROTTLE_ENABLE, SettingsManager::THROTTLE_ENABLE, PropPage::T_BOOL },
-	{ IDC_I_DOWN_SPEED, SettingsManager::AUTO_DISCONNECT_SPEED, PropPage::T_INT },
-	{ IDC_TIME_DOWN, SettingsManager::AUTO_DISCONNECT_TIME, PropPage::T_INT },
-	{ IDC_H_DOWN_SPEED, SettingsManager::AUTO_DISCONNECT_FILE_SPEED, PropPage::T_INT },
-	{ IDC_DISCONNECTING_ENABLE, SettingsManager::ENABLE_AUTO_DISCONNECT, PropPage::T_BOOL },
-	{ IDC_SEGMENTED_ONLY, SettingsManager::AUTO_DISCONNECT_MULTISOURCE_ONLY, PropPage::T_BOOL },
-	{ IDC_MIN_FILE_SIZE, SettingsManager::AUTO_DISCONNECT_MIN_FILE_SIZE, PropPage::T_INT },
-	{ IDC_REMOVE_IF_BELOW, SettingsManager::AUTO_DISCONNECT_REMOVE_SPEED, PropPage::T_INT },
+	{ IDC_MX_UP_SP_LMT_NORMAL, Conf::MAX_UPLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
+	{ IDC_MX_DW_SP_LMT_NORMAL, Conf::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
+	{ IDC_TIME_LIMITING, Conf::TIME_DEPENDENT_THROTTLE, PropPage::T_BOOL },
+	{ IDC_MX_UP_SP_LMT_TIME, Conf::MAX_UPLOAD_SPEED_LIMIT_TIME, PropPage::T_INT },
+	{ IDC_MX_DW_SP_LMT_TIME, Conf::MAX_DOWNLOAD_SPEED_LIMIT_TIME, PropPage::T_INT },
+	{ IDC_BW_START_TIME, Conf::BANDWIDTH_LIMIT_START, PropPage::T_INT },
+	{ IDC_BW_END_TIME, Conf::BANDWIDTH_LIMIT_END, PropPage::T_INT },
+	{ IDC_THROTTLE_ENABLE, Conf::THROTTLE_ENABLE, PropPage::T_BOOL },
+	{ IDC_I_DOWN_SPEED, Conf::AUTO_DISCONNECT_SPEED, PropPage::T_INT },
+	{ IDC_TIME_DOWN, Conf::AUTO_DISCONNECT_TIME, PropPage::T_INT },
+	{ IDC_H_DOWN_SPEED, Conf::AUTO_DISCONNECT_FILE_SPEED, PropPage::T_INT },
+	{ IDC_DISCONNECTING_ENABLE, Conf::ENABLE_AUTO_DISCONNECT, PropPage::T_BOOL },
+	{ IDC_SEGMENTED_ONLY, Conf::AUTO_DISCONNECT_MULTISOURCE_ONLY, PropPage::T_BOOL },
+	{ IDC_MIN_FILE_SIZE, Conf::AUTO_DISCONNECT_MIN_FILE_SIZE, PropPage::T_INT },
+	{ IDC_REMOVE_IF_BELOW, Conf::AUTO_DISCONNECT_REMOVE_SPEED, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -128,36 +130,47 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 
 	timeCtrlBegin.Attach(GetDlgItem(IDC_BW_START_TIME));
 	timeCtrlEnd.Attach(GetDlgItem(IDC_BW_END_TIME));
-	
+
 	WinUtil::fillTimeValues(timeCtrlBegin);
 	WinUtil::fillTimeValues(timeCtrlEnd);
-	
-	timeCtrlBegin.SetCurSel(SETTING(BANDWIDTH_LIMIT_START));
-	timeCtrlEnd.SetCurSel(SETTING(BANDWIDTH_LIMIT_END));
-	
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int bandwidthLimitStart = ss->getInt(Conf::BANDWIDTH_LIMIT_START);
+	int bandwidthLimitEnd = ss->getInt(Conf::BANDWIDTH_LIMIT_END);
+	int perUserLimit = ss->getInt(Conf::PER_USER_UPLOAD_SPEED_LIMIT);
+	ss->unlockRead();
+
+	timeCtrlBegin.SetCurSel(bandwidthLimitStart);
+	timeCtrlEnd.SetCurSel(bandwidthLimitEnd);
+
 #ifndef BL_FEATURE_DROP_SLOW_SOURCES
 	GetDlgItem(IDC_DISCONNECTING_ENABLE).EnableWindow(FALSE);
 	GetDlgItem(IDC_SEGMENTED_ONLY).EnableWindow(FALSE);
 #endif
 
-	int limit = SETTING(PER_USER_UPLOAD_SPEED_LIMIT);
-	CButton(GetDlgItem(IDC_PER_USER_LIMIT_ENABLE)).SetCheck(limit > 0 ? BST_CHECKED : BST_UNCHECKED);
-	CButton(GetDlgItem(IDC_UPLOADSPEED_USER)).SetWindowText(Util::toStringT(limit > 0 ? limit : 256).c_str());
-	
+	CButton(GetDlgItem(IDC_PER_USER_LIMIT_ENABLE)).SetCheck(perUserLimit > 0 ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_UPLOADSPEED_USER)).SetWindowText(Util::toStringT(perUserLimit > 0 ? perUserLimit : 256).c_str());
+
 	fixControls();
-	
+
 	return TRUE;
 }
 
 void LimitPage::write()
 {
 	PropPage::write(*this, items);
-	
-	g_settings->set(SettingsManager::BANDWIDTH_LIMIT_START, timeCtrlBegin.GetCurSel());
-	g_settings->set(SettingsManager::BANDWIDTH_LIMIT_END, timeCtrlEnd.GetCurSel());
 
-	int limit = IsDlgButtonChecked(IDC_PER_USER_LIMIT_ENABLE) ? GetDlgItemInt(IDC_UPLOADSPEED_USER) : 0;
-	g_settings->set(SettingsManager::PER_USER_UPLOAD_SPEED_LIMIT, limit);
+	int bandwidthLimitStart = timeCtrlBegin.GetCurSel();
+	int bandwidthLimitEnd = timeCtrlEnd.GetCurSel();
+	int perUserLimit = IsDlgButtonChecked(IDC_PER_USER_LIMIT_ENABLE) ? GetDlgItemInt(IDC_UPLOADSPEED_USER) : 0;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(Conf::BANDWIDTH_LIMIT_START, bandwidthLimitStart);
+	ss->setInt(Conf::BANDWIDTH_LIMIT_END, bandwidthLimitEnd);
+	ss->setInt(Conf::PER_USER_UPLOAD_SPEED_LIMIT, perUserLimit);
+	ss->unlockWrite();
 }
 
 void LimitPage::fixControls()

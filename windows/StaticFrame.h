@@ -2,6 +2,7 @@
 #define STATIC_FRAME_H_
 
 #include "MainFrm.h"
+#include "ConfUI.h"
 
 template < class T, int title, int ID = -1 >
 class StaticFrame
@@ -27,6 +28,7 @@ class StaticFrame
 			}
 			else
 			{
+				auto ss = SettingsManager::instance.getUiSettings();
 				// match the behavior of MainFrame::onSelected()
 				HWND hWnd = g_frame->m_hWnd;
 				if (isMDIChildActive(hWnd))
@@ -38,7 +40,7 @@ class StaticFrame
 					MainFrame::getMainFrame()->MDIActivate(hWnd);
 					setButtonPressed(ID, true);
 				}
-				else if (BOOLSETTING(TOGGLE_ACTIVE_WINDOW))
+				else if (ss->getBool(Conf::TOGGLE_ACTIVE_WINDOW))
 				{
 					::SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
 					g_frame->MDINext(hWnd);

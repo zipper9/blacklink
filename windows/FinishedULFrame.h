@@ -20,17 +20,18 @@
 #define FINISHED_UL_FRAME_H
 
 #include "FinishedFrameBase.h"
+#include "ConfUI.h"
 
 class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::FINISHED_UPLOADS, IDC_FINISHED_UL, IconBitmaps::FINISHED_UPLOADS>
 {
 	public:
 		FinishedULFrame(): FinishedFrame(e_TransferUpload)
 		{
-			boldFinished = SettingsManager::BOLD_FINISHED_UPLOADS;
-			columnOrder = SettingsManager::FINISHED_UL_FRAME_ORDER;
-			columnWidth = SettingsManager::FINISHED_UL_FRAME_WIDTHS;
-			columnVisible = SettingsManager::FINISHED_UL_FRAME_VISIBLE;
-			columnSort = SettingsManager::FINISHED_UL_FRAME_SORT;
+			boldFinished = Conf::BOLD_FINISHED_UPLOADS;
+			columnOrder = Conf::FINISHED_UL_FRAME_ORDER;
+			columnWidth = Conf::FINISHED_UL_FRAME_WIDTHS;
+			columnVisible = Conf::FINISHED_UL_FRAME_VISIBLE;
+			columnSort = Conf::FINISHED_UL_FRAME_SORT;
 		}
 
 		static CFrameWndClassInfo& GetWndClassInfo()

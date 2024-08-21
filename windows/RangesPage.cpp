@@ -3,10 +3,12 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 
+#include "../client/SettingsManager.h"
 #include "../client/IpGuard.h"
 #include "../client/IpTrust.h"
 #include "../client/File.h"
 #include "../client/DatabaseManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -38,10 +40,10 @@ static const DialogLayout::Item layoutItems3[] =
 
 static const PropPage::Item items3[] =
 {
-	{ IDC_ENABLE_P2P_GUARD, SettingsManager::ENABLE_P2P_GUARD,   PropPage::T_BOOL },
-	{ IDC_LOAD_INI_FILE,    SettingsManager::P2P_GUARD_LOAD_INI, PropPage::T_BOOL },
-	{ IDC_P2P_GUARD_BLOCK,  SettingsManager::P2P_GUARD_BLOCK,    PropPage::T_BOOL },
-	{ 0,                    0,                                   PropPage::T_END  }
+	{ IDC_ENABLE_P2P_GUARD, Conf::ENABLE_P2P_GUARD,   PropPage::T_BOOL },
+	{ IDC_LOAD_INI_FILE,    Conf::P2P_GUARD_LOAD_INI, PropPage::T_BOOL },
+	{ IDC_P2P_GUARD_BLOCK,  Conf::P2P_GUARD_BLOCK,    PropPage::T_BOOL },
+	{ 0,                    0,                        PropPage::T_END  }
 };
 
 #define ADD_TAB(name, type, text) \
@@ -112,12 +114,17 @@ LRESULT RangesPageIPGuard::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 	WinUtil::translate(*this, texts1);
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	ipGuardEnabled = ss->getBool(Conf::ENABLE_IPGUARD);
+	bool ipGuardDefaultDeny = ss->getBool(Conf::IPGUARD_DEFAULT_DENY);
+	ss->unlockRead();
+
 	ctrlMode.Attach(GetDlgItem(IDC_IPGUARD_MODE));
 	ctrlMode.AddString(CTSTRING(IPGUARD_WHITE_LIST));
 	ctrlMode.AddString(CTSTRING(IPGUARD_BLACK_LIST));
-	ctrlMode.SetCurSel(BOOLSETTING(IPGUARD_DEFAULT_DENY) ? 0 : 1);
+	ctrlMode.SetCurSel(ipGuardDefaultDeny ? 0 : 1);
 
-	ipGuardEnabled = BOOLSETTING(ENABLE_IPGUARD);
 	CButton(GetDlgItem(IDC_ENABLE_IPGUARD)).SetCheck(ipGuardEnabled ? BST_CHECKED : BST_UNCHECKED);
 	try
 	{
@@ -143,8 +150,13 @@ void RangesPageIPGuard::fixControls()
 void RangesPageIPGuard::write()
 {
 	bool enable = IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != BST_UNCHECKED;
-	g_settings->set(SettingsManager::ENABLE_IPGUARD, enable);
-	g_settings->set(SettingsManager::IPGUARD_DEFAULT_DENY, !ctrlMode.GetCurSel());
+	bool ipGuardDefaultDeny = ctrlMode.GetCurSel() == 0;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setBool(Conf::ENABLE_IPGUARD, enable);
+	ss->setBool(Conf::IPGUARD_DEFAULT_DENY, ipGuardDefaultDeny);
+	ss->unlockWrite();
 
 	tstring ts;
 	WinUtil::getWindowText(GetDlgItem(IDC_IPGUARD_DATA), ts);
@@ -178,7 +190,11 @@ LRESULT RangesPageIPTrust::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 	WinUtil::translate(*this, texts2);
 
-	ipTrustEnabled = BOOLSETTING(ENABLE_IPTRUST);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	ipTrustEnabled = ss->getBool(Conf::ENABLE_IPTRUST);
+	ss->unlockRead();
+
 	CButton(GetDlgItem(IDC_ENABLE_IPTRUST)).SetCheck(ipTrustEnabled ? BST_CHECKED : BST_UNCHECKED);
 	try
 	{
@@ -203,7 +219,10 @@ void RangesPageIPTrust::fixControls()
 void RangesPageIPTrust::write()
 {
 	bool enable = IsDlgButtonChecked(IDC_ENABLE_IPTRUST) != BST_UNCHECKED;
-	g_settings->set(SettingsManager::ENABLE_IPTRUST, enable);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setBool(Conf::ENABLE_IPTRUST, enable);
+	ss->unlockWrite();
 
 	tstring ts;
 	WinUtil::getWindowText(GetDlgItem(IDC_IPTRUST_DATA), ts);

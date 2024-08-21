@@ -10,6 +10,7 @@
 #include "ResourceLoader.h"
 #include "SettingsStore.h"
 #include "PropPageCallback.h"
+#include "../client/tstring.h"
 
 class UserListColorsTab : public CDialogImpl<UserListColorsTab>
 {
@@ -33,8 +34,8 @@ class UserListColorsTab : public CDialogImpl<UserListColorsTab>
 		LRESULT onImageBrowse(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 
-		void loadSettings();
-		void saveSettings() const;
+		void loadSettings(const BaseSettingsImpl* ss);
+		void saveSettings(BaseSettingsImpl* ss) const;
 		void getValues(SettingsStore& ss) const;
 		void setValues(const SettingsStore& ss);
 		void updateTheme();

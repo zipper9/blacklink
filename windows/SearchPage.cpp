@@ -5,9 +5,11 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "SearchPage.h"
-#include "../client/SettingsManager.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -33,21 +35,21 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SEARCH_HISTORY, SettingsManager::SEARCH_HISTORY, PropPage::T_INT },
-	{ IDC_INTERVAL, SettingsManager::MIN_SEARCH_INTERVAL, PropPage::T_INT },
-	{ IDC_MATCH, SettingsManager::AUTO_SEARCH_MAX_SOURCES, PropPage::T_INT },
-	{ IDC_AUTO_SEARCH_LIMIT, SettingsManager::AUTO_SEARCH_LIMIT, PropPage::T_INT },
+	{ IDC_SEARCH_HISTORY, Conf::SEARCH_HISTORY, PropPage::T_INT },
+	{ IDC_INTERVAL, Conf::MIN_SEARCH_INTERVAL, PropPage::T_INT },
+	{ IDC_MATCH, Conf::AUTO_SEARCH_MAX_SOURCES, PropPage::T_INT },
+	{ IDC_AUTO_SEARCH_LIMIT, Conf::AUTO_SEARCH_LIMIT, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::CLEAR_SEARCH, ResourceManager::SETTINGS_CLEAR_SEARCH },
-	{ SettingsManager::ADLS_BREAK_ON_FIRST, ResourceManager::SETTINGS_ADLS_BREAK_ON_FIRST },
-	{ SettingsManager::SEARCH_PASSIVE, ResourceManager::SETCZDC_PASSIVE_SEARCH },
-	{ SettingsManager::INCOMING_SEARCH_TTH_ONLY, ResourceManager::INCOMING_SEARCH_TTH_ONLY },
-	{ SettingsManager::INCOMING_SEARCH_IGNORE_BOTS, ResourceManager::INCOMING_SEARCH_IGNORE_BOTS },
-	{ SettingsManager::INCOMING_SEARCH_IGNORE_PASSIVE, ResourceManager::INCOMING_SEARCH_IGNORE_PASSIVE },
+	{ Conf::CLEAR_SEARCH, ResourceManager::SETTINGS_CLEAR_SEARCH },
+	{ Conf::ADLS_BREAK_ON_FIRST, ResourceManager::SETTINGS_ADLS_BREAK_ON_FIRST },
+	{ Conf::SEARCH_PASSIVE, ResourceManager::SETCZDC_PASSIVE_SEARCH },
+	{ Conf::INCOMING_SEARCH_TTH_ONLY, ResourceManager::INCOMING_SEARCH_TTH_ONLY },
+	{ Conf::INCOMING_SEARCH_IGNORE_BOTS, ResourceManager::INCOMING_SEARCH_IGNORE_BOTS },
+	{ Conf::INCOMING_SEARCH_IGNORE_PASSIVE, ResourceManager::INCOMING_SEARCH_IGNORE_PASSIVE },
 	{ 0, ResourceManager::Strings()}
 };
 
@@ -57,7 +59,8 @@ LRESULT SearchPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, ctrlList);
-	CButton(GetDlgItem(IDC_SAVE_SEARCH)).SetCheck(BOOLSETTING(FORGET_SEARCH_REQUEST) ? BST_UNCHECKED : BST_CHECKED);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	CButton(GetDlgItem(IDC_SAVE_SEARCH)).SetCheck(ss->getBool(Conf::FORGET_SEARCH_REQUEST) ? BST_UNCHECKED : BST_CHECKED);
 
 	CUpDownCtrl spin1(GetDlgItem(IDC_SEARCH_HISTORY_SPIN));
 	spin1.SetRange32(1, 100);
@@ -82,11 +85,12 @@ LRESULT SearchPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 void SearchPage::write()
 {
 	PropPage::write(*this, items, listItems, ctrlList);
-	BOOL state = IsDlgButtonChecked(IDC_SAVE_SEARCH) == BST_CHECKED;
-	SET_SETTING(FORGET_SEARCH_REQUEST, !state);
+	bool state = IsDlgButtonChecked(IDC_SAVE_SEARCH) == BST_CHECKED;
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(Conf::FORGET_SEARCH_REQUEST, !state);
 }
 
-LRESULT SearchPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // [+]NightOrion
+LRESULT SearchPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	fixControls();
 	return 0;

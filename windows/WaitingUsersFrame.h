@@ -139,7 +139,8 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 				int getImageIndex() const { return iconIndex < 0 ? 0 : iconIndex; }
 				void setImageIndex(int index) { iconIndex = index; }
 				static int getStateImageIndex() { return 0; }
-				static int compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col);
+				static int getCompareFlags() { return 0; }
+				static int compareItems(const UploadQueueItem* a, const UploadQueueItem* b, int col, int flags);
 
 				const tstring& getText(int col) const
 				{
@@ -249,6 +250,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		CtrlList ctrlList;
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		ProgressBar progressBar;
+		bool showProgressBars;
 		OMenu copyMenu;
 
 	private:
@@ -300,7 +302,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		}
 
 		// SettingsManagerListener
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 };
 
 #endif

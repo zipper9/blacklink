@@ -28,6 +28,7 @@
 #include "Fonts.h"
 #include "ExMessageBox.h"
 #include "HelpTextDlg.h"
+#include "ConfUI.h"
 
 int ADLSearchFrame::columnIndexes[] =
 {
@@ -85,14 +86,15 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	setListViewColors(ctrlList);
 	WinUtil::setExplorerTheme(ctrlList);
-	
+
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(ADLSEARCH_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(ADLSEARCH_FRAME_WIDTHS), COLUMN_LAST);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	WinUtil::splitTokens(columnIndexes, ss->getString(Conf::ADLSEARCH_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, ss->getString(Conf::ADLSEARCH_FRAME_WIDTHS), COLUMN_LAST);
 	for (size_t j = 0; j < COLUMN_LAST; j++)
 		ctrlList.InsertColumn(j, CTSTRING_I(columnNames[j]), LVCFMT_LEFT, columnSizes[j], j);
 	ctrlList.SetColumnOrderArray(COLUMN_LAST, columnIndexes);
-	
+
 	// Create buttons
 	ctrlAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_PUSHBUTTON, 0, IDC_ADD);
 	ctrlAdd.SetWindowText(CTSTRING(NEW));
@@ -128,7 +130,7 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	contextMenu.AppendMenu(MF_SEPARATOR);
 	contextMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
 
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	load();
 	
 	bHandled = FALSE;
@@ -166,15 +168,15 @@ LRESULT ADLSearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	{
 		closed = true;
 		ADLSearchManager::getInstance()->save();
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		setButtonPressed(IDC_FILE_ADL_SEARCH, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlList, SettingsManager::ADLSEARCH_FRAME_ORDER,
-		                         SettingsManager::ADLSEARCH_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
+		WinUtil::saveHeaderOrder(ctrlList, Conf::ADLSEARCH_FRAME_ORDER,
+		                         Conf::ADLSEARCH_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
 		                         
 		bHandled = FALSE;
 		return 0;
@@ -191,7 +193,9 @@ void ADLSearchFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	// Position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 
-	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
+		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
+		GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
@@ -258,9 +262,7 @@ LRESULT ADLSearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPara
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 
 		if (pt.x == -1 && pt.y == -1)
-		{
 			WinUtil::getContextMenuPos(ctrlList, pt);
-		}
 
 		int status = ctrlList.GetNextItem(-1, LVNI_SELECTED) != -1 ? MFS_ENABLED : MFS_GRAYED;
 		contextMenu.EnableMenuItem(IDC_EDIT, status);
@@ -351,12 +353,14 @@ LRESULT ADLSearchFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) >= 0) index.push_back(i);
 	if (index.empty()) return 0;
 
-	if (BOOLSETTING(CONFIRM_ADLS_REMOVAL))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::CONFIRM_ADLS_REMOVAL))
 	{
 		UINT checkState = BST_UNCHECKED;
 		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return 0;
-		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_ADLS_REMOVAL, FALSE);
+		if (checkState == BST_CHECKED)
+			ss->setBool(Conf::CONFIRM_ADLS_REMOVAL, false);
 	}
 
 	std::sort(index.begin(), index.end());
@@ -610,7 +614,7 @@ void ADLSearchFrame::showItem(int index, const ADLSearch& s)
 	setCheckState--;
 }
 
-void ADLSearchFrame::on(SettingsManagerListener::Repaint)
+void ADLSearchFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())

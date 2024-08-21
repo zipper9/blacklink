@@ -22,6 +22,7 @@
 #include "ClientManager.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
+#include "SettingsManager.h"
 #include "ParamExpander.h"
 #include "SimpleStringTokenizer.h"
 #include "ConnectionManager.h"
@@ -34,6 +35,7 @@
 #include "DebugManager.h"
 #include "Tag16.h"
 #include "SocketPool.h"
+#include "ConfCore.h"
 
 #ifdef _DEBUG
 extern bool suppressUserConn;
@@ -604,7 +606,12 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 				tmp = victim->getIdentity().getNick() + " was kicked: " + tmp;
 			fire(ClientListener::StatusMessage(), this, tmp, ClientListener::FLAG_KICK_MSG);
 		}
-		bool disconnectFlag = BOOLSETTING(USE_DI_PARAM) ? c.getParam(TAG('D', 'I'), 1, tmp) : false;
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		bool disconnectFlag = ss->getBool(Conf::USE_DI_PARAM);
+		ss->unlockRead();
+		if (disconnectFlag)
+			disconnectFlag = c.getParam(TAG('D', 'I'), 1, tmp);
 		putUser(s, disconnectFlag);
 	}
 
@@ -930,7 +937,7 @@ void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
 	if (!ou)
 	{
 		dcdebug("Invalid user in AdcHub::onPSR\n");
-		if (BOOLSETTING(LOG_PSR_TRACE))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 			LOG(PSR_TRACE, "PSR from unknown user " + Identity::getSIDString(c.getFrom()) + " on " + getHubUrl());
 		return;
 	}
@@ -1008,7 +1015,11 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 			return;
 	}
 
-	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int outgoingMode = ss->getInt(Conf::OUTGOING_CONNECTIONS);
+	ss->unlockRead();
+	if (outgoingMode != Conf::OUTGOING_DIRECT)
 		return;
 
 	OnlineUserPtr ou = findUser(c.getFrom());
@@ -1061,7 +1072,11 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 			return;
 	}
 
-	if (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_DIRECT)
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int outgoingMode = ss->getInt(Conf::OUTGOING_CONNECTIONS);
+	ss->unlockRead();
+	if (outgoingMode != Conf::OUTGOING_DIRECT)
 		return;
 
 	OnlineUserPtr ou = findUser(c.getFrom());
@@ -1495,8 +1510,16 @@ void AdcHub::info(bool/* forceUpdate*/)
 		addInfoParam(c, TAG('S', 'F'), Util::toString(files));
 	}
 	
-	
-	addInfoParam(c, TAG('E', 'M'), SETTING(EMAIL));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool optionNatTraversal = ss->getBool(Conf::ALLOW_NAT_TRAVERSAL);
+	const bool optionCCPM = ss->getBool(Conf::USE_CCPM);
+	const string lineSpeed = ss->getString(Conf::UPLOAD_SPEED);
+	const string email = ss->getString(Conf::EMAIL);
+	ss->unlockRead();
+
+	addInfoParam(c, TAG('E', 'M'), email); // FIXME
+
 	// Exclusive hub mode
 	if (fakeHubCount)
 	{
@@ -1519,21 +1542,21 @@ void AdcHub::info(bool/* forceUpdate*/)
 	addInfoParam(c, TAG('A', 'P'), getClientName());
 	addInfoParam(c, TAG('V', 'E'), getClientVersion());
 	addInfoParam(c, TAG('A', 'W'), Util::getAway() ? "1" : Util::emptyString);
-	
-	size_t limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getDownloadLimitInBytes() : 0;
-	if (limit > 0)
-	{
+
+	auto tm = ThrottleManager::getInstance();
+	size_t limit = tm->getDownloadLimitInBytes();
+	if (limit)
 		addInfoParam(c, TAG('D', 'S'), Util::toString(limit));
-	}
 	
-	limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInBytes() : 0;
-	if (limit > 0)
+	limit = tm->getUploadLimitInBytes();
+	if (limit)
 	{
 		addInfoParam(c, TAG('U', 'S'), Util::toString(limit));
 	}
 	else
 	{
-		limit = static_cast<int64_t>(Util::toDouble(SETTING(UPLOAD_SPEED)) * (1000000 / 8));
+		double speedBps = Util::toDouble(lineSpeed) * (1000000 / 8);
+		limit = (size_t) speedBps;
 		addInfoParam(c, TAG('U', 'S'), Util::toString(limit));
 	}
 	
@@ -1550,8 +1573,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 		if (!kp.empty())
 			addInfoParam(c, TAG('K', 'P'), "SHA256/" + Util::toBase32(kp.data(), kp.size()));
 	}
-	
-	const bool optionNatTraversal = BOOLSETTING(ALLOW_NAT_TRAVERSAL);
+
 	csState.lock();
 	if (optionNatTraversal)
 		featureFlags |= FEATURE_FLAG_ALLOW_NAT_TRAVERSAL;
@@ -1596,7 +1618,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	}
 	if (!active && hasIP && optionNatTraversal)
 		su += ',' + AdcSupports::NAT0_FEATURE;
-	if (BOOLSETTING(USE_CCPM))
+	if (optionCCPM)
 		su += ',' + AdcSupports::CCPM_FEATURE;
 
 	addInfoParam(c, TAG('S', 'U'), su);
@@ -1652,8 +1674,11 @@ void AdcHub::onConnected() noexcept
 {
 	Client::onConnected();
 
-	const bool optionUserCommands = BOOLSETTING(HUB_USER_COMMANDS) && SETTING(MAX_HUB_USER_COMMANDS) > 0;
-	const bool optionSendBloom = BOOLSETTING(SEND_BLOOM);
+	auto ss = SettingsManager::instance.getCoreSettings(); 
+	ss->lockRead();
+	const bool optionUserCommands = ss->getBool(Conf::HUB_USER_COMMANDS) && ss->getInt(Conf::MAX_HUB_USER_COMMANDS) > 0;
+	const bool optionSendBloom = ss->getBool(Conf::SEND_BLOOM);
+	ss->unlockRead();
 
 	userListLoaded = true;
 	{

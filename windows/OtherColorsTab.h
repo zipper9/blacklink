@@ -9,6 +9,7 @@
 #include "resource.h"
 #include "SettingsStore.h"
 #include "PropPageCallback.h"
+#include "../client/BaseSettingsImpl.h"
 
 class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 {
@@ -51,8 +52,8 @@ class OtherColorsTab : public CDialogImpl<OtherColorsTab>
 			return 0;
 		}
 
-		void loadSettings();
-		void saveSettings() const;
+		void loadSettings(const BaseSettingsImpl* ss);
+		void saveSettings(BaseSettingsImpl* ss) const;
 		void getValues(SettingsStore& ss) const;
 		void setValues(const SettingsStore& ss);
 		void updateTheme();

@@ -92,8 +92,8 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 	ctrlList.setColumnFormat(FinishedItem::COLUMN_NETWORK_TRAFFIC, LVCFMT_RIGHT);
 
 	ctrlList.insertColumns(columnOrder, columnWidth, columnVisible);
-	ctrlList.setSortFromSettings(SettingsManager::get(columnSort));
-		
+	ctrlList.setSortFromSettings(SettingsManager::instance.getUiSettings()->getInt(columnSort));
+
 	copyMenu.CreatePopupMenu();
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
@@ -459,7 +459,7 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 					userCid.init();
 			}
 		}
-		if (BOOLSETTING(SHOW_SHELL_MENU) && !filePath.empty())
+		if (!filePath.empty() && SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_SHELL_MENU))
 		{
 			ShellContextMenu shellMenu;
 			shellMenu.setPath(filePath);
@@ -511,13 +511,14 @@ LRESULT FinishedFrameBase::onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam
 	
 LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (BOOLSETTING(CONFIRM_FINISHED_REMOVAL))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::CONFIRM_FINISHED_REMOVAL))
 	{
 		UINT checkState = BST_UNCHECKED;
 		if (MessageBoxWithCheck(loader.hwnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return 0;
 		if (checkState == BST_CHECKED)
-			SET_SETTING(CONFIRM_FINISHED_REMOVAL, FALSE);
+			ss->setBool(Conf::CONFIRM_FINISHED_REMOVAL, false);
 	}
 	vector<int64_t> idDC;
 	int i = -1, p = -1;
@@ -554,13 +555,14 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 
 LRESULT FinishedFrameBase::onRemoveAll(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (BOOLSETTING(CONFIRM_FINISHED_REMOVAL))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::CONFIRM_FINISHED_REMOVAL))
 	{
 		UINT checkState = BST_UNCHECKED;
 		if (MessageBoxWithCheck(loader.hwnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return 0;
 		if (checkState == BST_CHECKED)
-			SET_SETTING(CONFIRM_FINISHED_REMOVAL, FALSE);
+			ss->setBool(Conf::CONFIRM_FINISHED_REMOVAL, false);
 	}
 	CWaitCursor waitCursor;
 	if (!currentTreeItemSelected)

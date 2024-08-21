@@ -22,11 +22,23 @@
 #include "AppPaths.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
+#include "ConfCore.h"
 
 IpTrust ipTrust;
 
-IpTrust::IpTrust() : cs(RWLock::create()), hasWhiteList(false)
+IpTrust::IpTrust() : cs(RWLock::create()), enabled(false), hasWhiteList(false)
 {
+}
+
+void IpTrust::updateSettings() noexcept
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool optEnabled = ss->getBool(Conf::ENABLE_IPTRUST);
+	ss->unlockRead();
+
+	WRITE_LOCK(*cs);
+	enabled = optEnabled;
 }
 
 string IpTrust::getFileName()
@@ -83,10 +95,9 @@ void IpTrust::clear() noexcept
 
 bool IpTrust::isBlocked(uint32_t addr) const noexcept
 {
-	if (!BOOLSETTING(ENABLE_IPTRUST))
-		return false;
-
 	READ_LOCK(*cs);
+	if (!enabled)
+		return false;
 	uint64_t payload;
 	if (ipList.find(addr, payload))
 		return payload != 0;

@@ -18,8 +18,8 @@
 
 #include "stdafx.h"
 #include "WindowsPage.h"
-#include "../client/SettingsManager.h"
 #include "WinUtil.h"
+#include "ConfUI.h"
 
 static const WinUtil::TextItem textItem[] =
 {
@@ -32,51 +32,51 @@ static const WinUtil::TextItem textItem[] =
 // Open on startup
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::OPEN_RECENT_HUBS, ResourceManager::LAST_RECENT_HUBS },
-	{ SettingsManager::OPEN_FAVORITE_HUBS, ResourceManager::FAVORITE_HUBS },
-	{ SettingsManager::OPEN_FAVORITE_USERS, ResourceManager::FAVORITE_USERS },
-	{ SettingsManager::OPEN_PUBLIC_HUBS, ResourceManager::PUBLIC_HUBS },
-	{ SettingsManager::OPEN_QUEUE, ResourceManager::DOWNLOAD_QUEUE },
-	{ SettingsManager::OPEN_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
-	{ SettingsManager::OPEN_WAITING_USERS, ResourceManager::WAITING_USERS },
-	{ SettingsManager::OPEN_FINISHED_UPLOADS, ResourceManager::FINISHED_UPLOADS },
-	{ SettingsManager::OPEN_DHT, ResourceManager::DHT_TITLE },
-	{ SettingsManager::OPEN_NETWORK_STATISTICS, ResourceManager::NETWORK_STATISTICS },
-	{ SettingsManager::OPEN_NOTEPAD, ResourceManager::NOTEPAD },
-	{ SettingsManager::OPEN_ADLSEARCH, ResourceManager::ADL_SEARCH },
+	{ Conf::OPEN_RECENT_HUBS, ResourceManager::LAST_RECENT_HUBS },
+	{ Conf::OPEN_FAVORITE_HUBS, ResourceManager::FAVORITE_HUBS },
+	{ Conf::OPEN_FAVORITE_USERS, ResourceManager::FAVORITE_USERS },
+	{ Conf::OPEN_PUBLIC_HUBS, ResourceManager::PUBLIC_HUBS },
+	{ Conf::OPEN_QUEUE, ResourceManager::DOWNLOAD_QUEUE },
+	{ Conf::OPEN_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
+	{ Conf::OPEN_WAITING_USERS, ResourceManager::WAITING_USERS },
+	{ Conf::OPEN_FINISHED_UPLOADS, ResourceManager::FINISHED_UPLOADS },
+	{ Conf::OPEN_DHT, ResourceManager::DHT_TITLE },
+	{ Conf::OPEN_NETWORK_STATISTICS, ResourceManager::NETWORK_STATISTICS },
+	{ Conf::OPEN_NOTEPAD, ResourceManager::NOTEPAD },
+	{ Conf::OPEN_ADLSEARCH, ResourceManager::ADL_SEARCH },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-	{ SettingsManager::OPEN_CDMDEBUG, ResourceManager::MENU_CDMDEBUG_MESSAGES },
+	{ Conf::OPEN_CDMDEBUG, ResourceManager::MENU_CDMDEBUG_MESSAGES },
 #endif
-	{ SettingsManager::OPEN_SEARCH_SPY, ResourceManager::SEARCH_SPY },
+	{ Conf::OPEN_SEARCH_SPY, ResourceManager::SEARCH_SPY },
 	{ 0, ResourceManager::Strings() }
 };
 
 // Window settings
 static const PropPage::ListItem optionItems[] =
 {
-	{ SettingsManager::POPUP_PMS_OTHER, ResourceManager::SETTINGS_POPUP_PMS_OTHER },
-	{ SettingsManager::POPUP_PMS_HUB, ResourceManager::SETTINGS_POPUP_PMS_HUB },
-	{ SettingsManager::POPUP_PMS_BOT, ResourceManager::SETTINGS_POPUP_PMS_BOT },
-	{ SettingsManager::POPUNDER_FILELIST, ResourceManager::SETTINGS_POPUNDER_FILELIST },
-	{ SettingsManager::POPUNDER_PM, ResourceManager::SETTINGS_POPUNDER_PM },
-	{ SettingsManager::JOIN_OPEN_NEW_WINDOW, ResourceManager::SETTINGS_OPEN_NEW_WINDOW },
-	{ SettingsManager::TOGGLE_ACTIVE_WINDOW, ResourceManager::SETTINGS_TOGGLE_ACTIVE_WINDOW },
-	{ SettingsManager::PROMPT_HUB_PASSWORD, ResourceManager::SETTINGS_PROMPT_PASSWORD },
-	{ SettingsManager::REMEMBER_SETTINGS_PAGE, ResourceManager::REMEMBER_SETTINGS_PAGE },
+	{ Conf::POPUP_PMS_OTHER, ResourceManager::SETTINGS_POPUP_PMS_OTHER },
+	{ Conf::POPUP_PMS_HUB, ResourceManager::SETTINGS_POPUP_PMS_HUB },
+	{ Conf::POPUP_PMS_BOT, ResourceManager::SETTINGS_POPUP_PMS_BOT },
+	{ Conf::POPUNDER_FILELIST, ResourceManager::SETTINGS_POPUNDER_FILELIST },
+	{ Conf::POPUNDER_PM, ResourceManager::SETTINGS_POPUNDER_PM },
+	{ Conf::JOIN_OPEN_NEW_WINDOW, ResourceManager::SETTINGS_OPEN_NEW_WINDOW },
+	{ Conf::TOGGLE_ACTIVE_WINDOW, ResourceManager::SETTINGS_TOGGLE_ACTIVE_WINDOW },
+	{ Conf::PROMPT_HUB_PASSWORD, ResourceManager::SETTINGS_PROMPT_PASSWORD },
+	{ Conf::REMEMBER_SETTINGS_PAGE, ResourceManager::REMEMBER_SETTINGS_PAGE },
 	{ 0, ResourceManager::Strings() }
 };
 
 // Confirmations
 static const PropPage::ListItem confirmItems[] =
 {
-	{ SettingsManager::CONFIRM_EXIT, ResourceManager::SETTINGS_CONFIRM_EXIT },
-	{ SettingsManager::CONFIRM_HUB_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUB_REMOVAL },
-	{ SettingsManager::CONFIRM_HUBGROUP_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUBGROUP_REMOVAL },
-	{ SettingsManager::CONFIRM_USER_REMOVAL, ResourceManager::SETTINGS_CONFIRM_USER_REMOVAL },
-	{ SettingsManager::CONFIRM_ADLS_REMOVAL, ResourceManager::SETTINGS_CONFIRM_ADLS_REMOVAL },
-	{ SettingsManager::CONFIRM_DELETE, ResourceManager::SETTINGS_CONFIRM_ITEM_REMOVAL },
-	{ SettingsManager::CONFIRM_FINISHED_REMOVAL, ResourceManager::SETTINGS_CONFIRM_FINISHED_REMOVAL },
-	{ SettingsManager::CONFIRM_CLEAR_SEARCH_HISTORY, ResourceManager::SETTINGS_CONFIRM_CLEAR_SEARCH_HISTORY },
+	{ Conf::CONFIRM_EXIT, ResourceManager::SETTINGS_CONFIRM_EXIT },
+	{ Conf::CONFIRM_HUB_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUB_REMOVAL },
+	{ Conf::CONFIRM_HUBGROUP_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUBGROUP_REMOVAL },
+	{ Conf::CONFIRM_USER_REMOVAL, ResourceManager::SETTINGS_CONFIRM_USER_REMOVAL },
+	{ Conf::CONFIRM_ADLS_REMOVAL, ResourceManager::SETTINGS_CONFIRM_ADLS_REMOVAL },
+	{ Conf::CONFIRM_DELETE, ResourceManager::SETTINGS_CONFIRM_ITEM_REMOVAL },
+	{ Conf::CONFIRM_FINISHED_REMOVAL, ResourceManager::SETTINGS_CONFIRM_FINISHED_REMOVAL },
+	{ Conf::CONFIRM_CLEAR_SEARCH_HISTORY, ResourceManager::SETTINGS_CONFIRM_CLEAR_SEARCH_HISTORY },
 	{ 0, ResourceManager::Strings() }
 };
 

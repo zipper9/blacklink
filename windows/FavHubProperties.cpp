@@ -22,8 +22,10 @@
 #include "FavHubProperties.h"
 #include "KnownClients.h"
 #include "DialogLayout.h"
-#include "../client/Random.h"
+#include "../client/SettingsManager.h"
 #include "../client/FavoriteManager.h"
+#include "../client/Random.h"
+#include "../client/ConfCore.h"
 #include <boost/algorithm/string/trim.hpp>
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -579,8 +581,14 @@ LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		ctrlSearchPassive.EnableWindow(FALSE);
 		ctrlSearchOverride.SetCheck(BST_UNCHECKED);
 	}
-	if (!searchActive) searchActive = SETTING(MIN_SEARCH_INTERVAL);
-	if (!searchPassive) searchPassive = SETTING(MIN_SEARCH_INTERVAL_PASSIVE);
+	if (!searchActive || !searchPassive)
+	{
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		if (!searchActive) searchActive = ss->getInt(Conf::MIN_SEARCH_INTERVAL);
+		if (!searchPassive) searchPassive = ss->getInt(Conf::MIN_SEARCH_INTERVAL_PASSIVE);
+		ss->unlockRead();
+	}
 
 	ctrlSearchActive.SetWindowText(Util::toStringT(searchActive).c_str());
 	ctrlSearchPassive.SetWindowText(Util::toStringT(searchPassive).c_str());

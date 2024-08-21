@@ -87,11 +87,12 @@ LRESULT StatsWindow::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	int graphHeight = rc.bottom - 1 - y;
 
-	COLORREF color = SETTING(UPLOAD_BAR_COLOR);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	COLORREF color = ss->getInt(Conf::UPLOAD_BAR_COLOR);
 	SolidBrush uploadsBrush(Color(128, GetRValue(color), GetGValue(color), GetBValue(color)));
 	Pen uploadsPen(Color(GetRValue(color), GetGValue(color), GetBValue(color)), PEN_WIDTH);
 
-	color = SETTING(DOWNLOAD_BAR_COLOR);
+	color = ss->getInt(Conf::DOWNLOAD_BAR_COLOR);
 	SolidBrush downloadsBrush(Color(128, GetRValue(color), GetGValue(color), GetBValue(color)));
 	Pen downloadsPen(Color(GetRValue(color), GetGValue(color), GetBValue(color)), PEN_WIDTH);
 
@@ -299,7 +300,9 @@ void StatsFrame::updateLayout()
 {
 	WINDOWPLACEMENT wp = { sizeof(wp) };
 	GetWindowPlacement(&wp);
-	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
+		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
+		GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!checkBoxYOffset)
 	{
 		int xdu, ydu;

@@ -19,7 +19,9 @@
 #include "stdafx.h"
 #include "QueuePage.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -53,28 +55,28 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_MULTISOURCE, SettingsManager::ENABLE_MULTI_CHUNK, PropPage::T_BOOL },
-	{ IDC_AUTOSEGMENT, SettingsManager::AUTO_SEARCH, PropPage::T_BOOL },
-	{ IDC_DONTBEGIN, SettingsManager::DONT_BEGIN_SEGMENT, PropPage::T_BOOL },
-	{ IDC_BEGIN_EDIT, SettingsManager::DONT_BEGIN_SEGMENT_SPEED, PropPage::T_INT },
-	{ IDC_AUTO_SEARCH_EDIT, SettingsManager::AUTO_SEARCH_TIME, PropPage::T_INT },
-	{ IDC_CHUNKCOUNT, SettingsManager::SEGMENTS_MANUAL, PropPage::T_BOOL },
-	{ IDC_SEG_NUMBER, SettingsManager::NUMBER_OF_SEGMENTS, PropPage::T_INT },
-	{ IDC_SKIP_EXISTING, SettingsManager::SKIP_EXISTING, PropPage::T_BOOL },
-	{ IDC_SETTINGS_COPY_FILE, SettingsManager::COPY_EXISTING_MAX_SIZE, PropPage::T_INT },
+	{ IDC_MULTISOURCE, Conf::ENABLE_MULTI_CHUNK, PropPage::T_BOOL },
+	{ IDC_AUTOSEGMENT, Conf::AUTO_SEARCH, PropPage::T_BOOL },
+	{ IDC_DONTBEGIN, Conf::DONT_BEGIN_SEGMENT, PropPage::T_BOOL },
+	{ IDC_BEGIN_EDIT, Conf::DONT_BEGIN_SEGMENT_SPEED, PropPage::T_INT },
+	{ IDC_AUTO_SEARCH_EDIT, Conf::AUTO_SEARCH_TIME, PropPage::T_INT },
+	{ IDC_CHUNKCOUNT, Conf::SEGMENTS_MANUAL, PropPage::T_BOOL },
+	{ IDC_SEG_NUMBER, Conf::NUMBER_OF_SEGMENTS, PropPage::T_INT },
+	{ IDC_SKIP_EXISTING, Conf::SKIP_EXISTING, PropPage::T_BOOL },
+	{ IDC_SETTINGS_COPY_FILE, Conf::COPY_EXISTING_MAX_SIZE, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem optionItems[] =
 {
-	{ SettingsManager::AUTO_SEARCH_DL_LIST, ResourceManager::SETTINGS_AUTO_SEARCH_AUTO_MATCH },
-	{ SettingsManager::SKIP_ZERO_BYTE, ResourceManager::SETTINGS_SKIP_ZERO_BYTE },
+	{ Conf::AUTO_SEARCH_DL_LIST, ResourceManager::SETTINGS_AUTO_SEARCH_AUTO_MATCH },
+	{ Conf::SKIP_ZERO_BYTE, ResourceManager::SETTINGS_SKIP_ZERO_BYTE },
 #if 0
-	{ SettingsManager::DONT_DL_ALREADY_SHARED, ResourceManager::SETTINGS_DONT_DL_ALREADY_SHARED },
+	{ Conf::DONT_DL_ALREADY_SHARED, ResourceManager::SETTINGS_DONT_DL_ALREADY_SHARED },
 #endif
-	{ SettingsManager::OVERLAP_CHUNKS, ResourceManager::OVERLAP_CHUNKS },
-	{ SettingsManager::REPORT_ALTERNATES, ResourceManager::REPORT_ALTERNATES },
-	{ SettingsManager::SEARCH_MAGNET_SOURCES, ResourceManager::SETTINGS_SEARCH_MAGNET_SOURCES },
+	{ Conf::OVERLAP_CHUNKS, ResourceManager::OVERLAP_CHUNKS },
+	{ Conf::REPORT_ALTERNATES, ResourceManager::REPORT_ALTERNATES },
+	{ Conf::SEARCH_MAGNET_SOURCES, ResourceManager::SETTINGS_SEARCH_MAGNET_SOURCES },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -89,7 +91,7 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	CUpDownCtrl spin1(GetDlgItem(IDC_SEG_NUMBER_SPIN));
 	spin1.SetRange32(1, 200);
 	spin1.SetBuddy(GetDlgItem(IDC_SEG_NUMBER));
-	
+
 	CUpDownCtrl spin2(GetDlgItem(IDC_AUTO_SEARCH_SPIN));
 	spin2.SetRange32(1, 60);
 	spin2.SetBuddy(GetDlgItem(IDC_AUTO_SEARCH_EDIT));
@@ -103,27 +105,32 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_RENAME));
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_SKIP));
 	
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int targetExistsAction = ss->getInt(Conf::TARGET_EXISTS_ACTION);
+	ss->unlockRead();
+
 	int index = 0;
-	switch (SETTING(TARGET_EXISTS_ACTION))
+	switch (targetExistsAction)
 	{
-		case SettingsManager::TE_ACTION_ASK:
+		case Conf::TE_ACTION_ASK:
 			index = 0;
 			break;
 
-		case SettingsManager::TE_ACTION_REPLACE:
+		case Conf::TE_ACTION_REPLACE:
 			index = 1;
 			break;
 
-		case SettingsManager::TE_ACTION_RENAME:
+		case Conf::TE_ACTION_RENAME:
 			index = 2;
 			break;
 
-		case SettingsManager::TE_ACTION_SKIP:
+		case Conf::TE_ACTION_SKIP:
 			index = 3;
 			break;
 	}
 	ctrlActionIfExists.SetCurSel(index);
-	
+
 	fixControls();
 	return TRUE;
 }
@@ -131,7 +138,7 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 void QueuePage::fixControls()
 {
 	const BOOL isChecked = IsDlgButtonChecked(IDC_MULTISOURCE) == BST_CHECKED;
-	
+
 	::EnableWindow(GetDlgItem(IDC_AUTOSEGMENT), isChecked);
 	::EnableWindow(GetDlgItem(IDC_DONTBEGIN), isChecked);
 	::EnableWindow(GetDlgItem(IDC_CHUNKCOUNT), isChecked);
@@ -146,25 +153,28 @@ void QueuePage::fixControls()
 void QueuePage::write()
 {
 	PropPage::write(*this, items, optionItems, ctrlList);
-	
-	int ct = SettingsManager::TE_ACTION_ASK;
+
+	int ct = Conf::TE_ACTION_ASK;
 	switch (ctrlActionIfExists.GetCurSel())
 	{
 		case 0:
-			ct = SettingsManager::TE_ACTION_ASK;
+			ct = Conf::TE_ACTION_ASK;
 			break;
 
 		case 1:
-			ct = SettingsManager::TE_ACTION_REPLACE;
+			ct = Conf::TE_ACTION_REPLACE;
 			break;
 
 		case 2:
-			ct = SettingsManager::TE_ACTION_RENAME;
+			ct = Conf::TE_ACTION_RENAME;
 			break;
 
 		case 3:
-			ct = SettingsManager::TE_ACTION_SKIP;
+			ct = Conf::TE_ACTION_SKIP;
 			break;
 	}
-	g_settings->set(SettingsManager::TARGET_EXISTS_ACTION, ct);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(Conf::TARGET_EXISTS_ACTION, ct);
+	ss->unlockWrite();
 }

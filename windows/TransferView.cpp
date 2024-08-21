@@ -30,6 +30,7 @@
 #include "../client/UserManager.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/ConfCore.h"
 
 #include "TransferView.h"
 #include "UserTypeColors.h"
@@ -37,6 +38,7 @@
 #include "QueueFrame.h"
 #include "WaitingUsersFrame.h"
 #include "ExMessageBox.h"
+#include "NotifUtil.h"
 
 static const unsigned TIMER_VAL = 200;
 
@@ -122,6 +124,7 @@ TransferView::TransferView() : timer(m_hWnd), shouldSort(false), onlyActiveUploa
 	ctrlTransfers.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlTransfers.setColumnFormat(COLUMN_TIME_LEFT, LVCFMT_RIGHT);
 	ctrlTransfers.setColumnFormat(COLUMN_SPEED, LVCFMT_RIGHT);
+	topUploadSpeed = topDownloadSpeed = 0;
 }
 
 TransferView::~TransferView()
@@ -142,20 +145,21 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 
-	ctrlTransfers.insertColumns(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS, SettingsManager::TRANSFER_FRAME_VISIBLE);
-	ctrlTransfers.setSortFromSettings(SETTING(TRANSFER_FRAME_SORT));
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	ctrlTransfers.insertColumns(Conf::TRANSFER_FRAME_ORDER, Conf::TRANSFER_FRAME_WIDTHS, Conf::TRANSFER_FRAME_VISIBLE);
+	ctrlTransfers.setSortFromSettings(ss->getInt(Conf::TRANSFER_FRAME_SORT));
 
 	setListViewColors(ctrlTransfers);
 
 	ctrlTransfers.SetImageList(g_transferArrowsImage.getIconList(), LVSIL_SMALL);
-	onlyActiveUploads = BOOLSETTING(TRANSFERS_ONLY_ACTIVE_UPLOADS);
+	onlyActiveUploads = ss->getBool(Conf::TRANSFERS_ONLY_ACTIVE_UPLOADS);
 
 	ConnectionManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
 	UploadManager::getInstance()->addListener(this);
 	FavoriteManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	timer.createTimer(TIMER_VAL, 4);
 	return 0;
 }
@@ -226,10 +230,11 @@ void TransferView::prepareClose()
 	tasks.setDisabled(true);
 	tasks.clear();
 
-	ctrlTransfers.saveHeaderOrder(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS, SettingsManager::TRANSFER_FRAME_VISIBLE);
-	SET_SETTING(TRANSFER_FRAME_SORT, ctrlTransfers.getSortForSettings());
+	auto ss = SettingsManager::instance.getUiSettings();
+	ctrlTransfers.saveHeaderOrder(Conf::TRANSFER_FRAME_ORDER, Conf::TRANSFER_FRAME_WIDTHS, Conf::TRANSFER_FRAME_VISIBLE);
+	ss->setInt(Conf::TRANSFER_FRAME_SORT, ctrlTransfers.getSortForSettings());
 
-	SettingsManager::getInstance()->removeListener(this);
+	SettingsManager::instance.removeListener(this);
 	UserManager::getInstance()->removeListener(this);
 	FavoriteManager::getInstance()->removeListener(this);
 	UploadManager::getInstance()->removeListener(this);
@@ -265,7 +270,8 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		{
 			createMenus();
 			int defaultItem = 0;
-			switch (SETTING(TRANSFERLIST_DBLCLICK))
+			const auto* ss = SettingsManager::instance.getUiSettings(); 
+			switch (ss->getInt(Conf::TRANSFERLIST_DBLCLICK))
 			{
 				case 0:
 					defaultItem = IDC_PRIVATE_MESSAGE;
@@ -585,7 +591,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				CustomDrawHelpers::startSubItemDraw(customDrawState, cd);
 				if (ii->status == ItemInfo::STATUS_RUNNING)
 				{
-					if (!BOOLSETTING(SHOW_PROGRESS_BARS))
+					if (!showProgressBars)
 					{
 						bHandled = FALSE;
 						return 0;
@@ -621,7 +627,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					HBITMAP pOldBmp = cdc.SelectBitmap(hBmp);
 					HDC dc = cdc.m_hDC;
 
-					if (BOOLSETTING(STEALTHY_STYLE_ICO))
+					if (showSpeedIcon)
 					{
 						if (ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST)
 						{
@@ -629,19 +635,18 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						}
 						else
 						{
+							auto tm = ThrottleManager::getInstance();
 							int64_t speedmark;
-							if (!BOOLSETTING(THROTTLE_ENABLE))
+							if (tm->getUploadLimitInBytes() == 0 && tm->getDownloadLimitInBytes() == 0)
 							{
-								const int64_t speedignore = Util::toInt64(SETTING(UPLOAD_SPEED));
-								speedmark = BOOLSETTING(STEALTHY_STYLE_ICO_SPEEDIGNORE) ?
-									(ii->download ? SETTING(TOP_DL_SPEED) : SETTING(TOP_UL_SPEED)) / 5 : speedignore * 20;
+								speedmark = ii->download ? topDownloadSpeed : topUploadSpeed;
 							}
 							else
 							{
 								if (!ii->download)
-									speedmark = ThrottleManager::getInstance()->getUploadLimitInKBytes() / 5;
+									speedmark = tm->getUploadLimitInKBytes() / 5;
 								else
-									speedmark = ThrottleManager::getInstance()->getDownloadLimitInKBytes() / 5;
+									speedmark = tm->getDownloadLimitInKBytes() / 5;
 							}
 							const int64_t speedkb = ii->speed / 1000;
 							if (speedkb >= speedmark*4) iconIndex = 4; else
@@ -733,7 +738,8 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 
 		ItemInfo* i = ctrlTransfers.getItemData(item->iItem);
 		bool isUser = !i->isParent();
-		switch (SETTING(TRANSFERLIST_DBLCLICK))
+		const auto* ss = SettingsManager::instance.getUiSettings(); 
+		switch (ss->getInt(Conf::TRANSFERLIST_DBLCLICK))
 		{
 			case 0:
 				if (isUser) i->pm(i->hintedUser.hint);
@@ -917,6 +923,33 @@ void TransferView::processTasks()
 				{
 					ii = addToken(ui);
 				}
+				break;
+			}
+
+			case POPUP_NOTIF:
+			{
+				const PopupTask* popup = static_cast<const PopupTask*>(i->second);
+				if (!NotifUtil::isPopupEnabled(popup->setting)) break;
+				tstring text;
+				if (!popup->file.empty())
+				{
+					text += TSTRING(FILE);
+					text += _T(": ");
+					text += Text::toT(popup->file);
+				}
+				if (!popup->user.empty())
+				{
+					if (!text.empty()) text += _T('\n');
+					text += TSTRING(USER);
+					text += _T(": ");
+					text += Text::toT(popup->user);
+				}
+				if (!popup->miscText.empty())
+				{
+					if (!text.empty()) text += _T('\n');
+					text += popup->miscText;
+				}
+				NotifUtil::showPopup(popup->setting, text, TSTRING_I(popup->title), popup->flags);
 				break;
 			}
 
@@ -1310,7 +1343,7 @@ int TransferView::ItemInfo::compareUsers(const ItemInfo* a, const ItemInfo* b)
 	return compare(a->hubs, b->hubs);
 }
 
-int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col)
+int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, int col, int /*flags*/)
 {
 	int res;
 	switch (col)
@@ -1448,11 +1481,16 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& downlo
 	ui->setStatusString(tmpReason);
 	ui->setSpeed(0);
 
-	SHOW_POPUPF(POPUP_ON_DOWNLOAD_FAILED,
-	            TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target) + _T('\n') +
-	            TSTRING(USER) + _T(": ") + WinUtil::getNicks(ui->hintedUser) + _T('\n') +
-	            TSTRING(REASON) + _T(": ") + tmpReason, TSTRING(DOWNLOAD_FAILED) + _T(' '), NIIF_WARNING);
+	PopupTask* popup = new PopupTask;
+	popup->setting = Conf::POPUP_ON_DOWNLOAD_FAILED;
+	popup->title = ResourceManager::DOWNLOAD_FAILED;
+	popup->flags = NIIF_WARNING;
+	popup->user = ClientManager::getNick(ui->hintedUser);
+	popup->file = Util::getFileName(download->getPath());
+	popup->miscText = tmpReason;
+
 	addTask(UPDATE_TOKEN, ui);
+	addTask(POPUP_NOTIF, popup);
 }
 
 static const tstring& getReasonText(int error)
@@ -1573,9 +1611,13 @@ void TransferView::onTransferComplete(const Transfer* t, bool download, const st
 	ui->setToken(token);
 	if (!download && !failed)
 	{
-		SHOW_POPUP(POPUP_ON_UPLOAD_FINISHED,
-		           TSTRING(FILE) + _T(": ") + Text::toT(fileName) + _T('\n') +
-		           TSTRING(USER) + _T(": ") + Text::toT(ClientManager::getNick(t->getHintedUser())), TSTRING(UPLOAD_FINISHED_IDLE));
+		PopupTask* popup = new PopupTask;
+		popup->setting = Conf::POPUP_ON_UPLOAD_FINISHED;
+		popup->title = ResourceManager::UPLOAD_FINISHED_IDLE;
+		popup->flags = NIIF_INFO;
+		popup->user = ClientManager::getNick(t->getHintedUser());
+		popup->file = fileName;
+		addTask(POPUP_NOTIF, popup);
 	}
 
 	addTask(UPDATE_TOKEN, ui);
@@ -1689,7 +1731,8 @@ LRESULT TransferView::onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 LRESULT TransferView::onOnlyActiveUploads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	onlyActiveUploads = !onlyActiveUploads;
-	SET_SETTING(TRANSFERS_ONLY_ACTIVE_UPLOADS, onlyActiveUploads);
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(Conf::TRANSFERS_ONLY_ACTIVE_UPLOADS, onlyActiveUploads);
 	if (onlyActiveUploads)
 	{
 		int count = ctrlTransfers.GetItemCount();
@@ -1706,7 +1749,7 @@ LRESULT TransferView::onOnlyActiveUploads(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	return 0;
 }
 
-void TransferView::on(SettingsManagerListener::Repaint)
+void TransferView::on(SettingsManagerListener::ApplySettings)
 {
 	initProgressBars(true);
 	if (ctrlTransfers.isRedraw())
@@ -1814,8 +1857,15 @@ void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, co
 		ui->setTarget(qi->getTarget());
 		ui->setStatus(ItemInfo::STATUS_WAITING);
 		ui->setStatusString(TSTRING(DOWNLOAD_FINISHED_IDLE));
-		SHOW_POPUP(POPUP_ON_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target), TSTRING(DOWNLOAD_FINISHED_IDLE));
+
+		PopupTask* popup = new PopupTask;
+		popup->setting = Conf::POPUP_ON_DOWNLOAD_FINISHED;
+		popup->title = ResourceManager::DOWNLOAD_FINISHED_IDLE;
+		popup->flags = NIIF_INFO;
+		popup->file = Util::getFileName(qi->getTarget());
+
 		addTask(TRANSFER_UPDATE_PARENT, ui);
+		addTask(POPUP_NOTIF, popup);
 	}
 }
 #endif
@@ -1887,12 +1937,14 @@ void TransferView::pauseSelectedTransfer(void)
 
 LRESULT TransferView::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (BOOLSETTING(CONFIRM_DELETE))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::CONFIRM_DELETE))
 	{
 		UINT checkState = BST_UNCHECKED;
 		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return 0;
-		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_DELETE, FALSE);
+		if (checkState == BST_CHECKED)
+			ss->setBool(Conf::CONFIRM_DELETE, false);
 	}
 	ctrlTransfers.forEachSelected(&ItemInfo::removeAll);
 	return 0;
@@ -1927,24 +1979,40 @@ void TransferView::getSelectedUsers(vector<UserPtr>& v) const
 
 void TransferView::initProgressBars(bool check)
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
+	showSpeedIcon = ss->getBool(Conf::STEALTHY_STYLE_ICO);
+	if (ss->getBool(Conf::STEALTHY_STYLE_ICO_SPEEDIGNORE))
+	{
+		topDownloadSpeed = ss->getInt(Conf::TOP_DL_SPEED) / 5;
+		topUploadSpeed = ss->getInt(Conf::TOP_UL_SPEED) / 5;
+	}
+	else
+	{
+		auto cs = SettingsManager::instance.getCoreSettings();
+		cs->lockRead();
+		topDownloadSpeed = topUploadSpeed = Util::toInt64(cs->getString(Conf::UPLOAD_SPEED)) * 20;
+		cs->unlockRead();
+	}
+
 	ProgressBar::Settings settings;
-	bool setColors = BOOLSETTING(PROGRESS_OVERRIDE_COLORS);
-	settings.clrBackground = setColors ? SETTING(DOWNLOAD_BAR_COLOR) : GetSysColor(COLOR_HIGHLIGHT);
-	settings.clrText = SETTING(PROGRESS_TEXT_COLOR_DOWN);
-	settings.clrEmptyBackground = SETTING(PROGRESS_BACK_COLOR);
-	settings.odcStyle = BOOLSETTING(PROGRESSBAR_ODC_STYLE);
-	settings.odcBumped = BOOLSETTING(PROGRESSBAR_ODC_BUMPED);
-	settings.depth = SETTING(PROGRESS_3DDEPTH);
-	settings.setTextColor = BOOLSETTING(PROGRESS_OVERRIDE_COLORS2);
+	bool setColors = ss->getBool(Conf::PROGRESS_OVERRIDE_COLORS);
+	settings.clrBackground = setColors ? ss->getInt(Conf::DOWNLOAD_BAR_COLOR) : GetSysColor(COLOR_HIGHLIGHT);
+	settings.clrText = ss->getInt(Conf::PROGRESS_TEXT_COLOR_DOWN);
+	settings.clrEmptyBackground = ss->getInt(Conf::PROGRESS_BACK_COLOR);
+	settings.odcStyle = ss->getBool(Conf::PROGRESSBAR_ODC_STYLE);
+	settings.odcBumped = ss->getBool(Conf::PROGRESSBAR_ODC_BUMPED);
+	settings.depth = ss->getInt(Conf::PROGRESS_3DDEPTH);
+	settings.setTextColor = ss->getBool(Conf::PROGRESS_OVERRIDE_COLORS2);
 	if (!check || progressBar[0].get() != settings) progressBar[0].set(settings);
 	progressBar[0].setWindowBackground(Colors::g_bgColor);
 
-	if (setColors) settings.clrBackground = SETTING(PROGRESS_SEGMENT_COLOR);
+	if (setColors) settings.clrBackground = ss->getInt(Conf::PROGRESS_SEGMENT_COLOR);
 	if (!check || progressBar[1].get() != settings) progressBar[1].set(settings);
 	progressBar[1].setWindowBackground(Colors::g_bgColor);
 
-	if (setColors) settings.clrBackground = SETTING(UPLOAD_BAR_COLOR);
-	settings.clrText = SETTING(PROGRESS_TEXT_COLOR_UP);
+	if (setColors) settings.clrBackground = ss->getInt(Conf::UPLOAD_BAR_COLOR);
+	settings.clrText = ss->getInt(Conf::PROGRESS_TEXT_COLOR_UP);
 	if (!check || progressBar[2].get() != settings) progressBar[2].set(settings);
 	progressBar[2].setWindowBackground(Colors::g_bgColor);
 }

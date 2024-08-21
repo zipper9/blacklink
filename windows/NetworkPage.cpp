@@ -24,12 +24,15 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "WinFirewall.h"
+#include "../client/SettingsManager.h"
+#include "../client/SettingsUtil.h"
 #include "../client/CryptoManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 #include "../client/IpTest.h"
 #include "../client/AppPaths.h"
+#include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -128,33 +131,30 @@ static const DialogLayout::Item layoutItems3[] =
 static const struct
 {
 	int id;
-	SettingsManager::IntSetting setting;
+	int setting;
 } portSettings[] =
 {
-	{ IDC_PORT_TCP, SettingsManager::TCP_PORT },
-	{ IDC_PORT_UDP, SettingsManager::UDP_PORT },
-	{ IDC_PORT_TLS, SettingsManager::TLS_PORT }
+	{ IDC_PORT_TCP, Conf::TCP_PORT },
+	{ IDC_PORT_UDP, Conf::UDP_PORT },
+	{ IDC_PORT_TLS, Conf::TLS_PORT }
 };
 
 static const struct
 {
-	SettingsManager::IntSetting setting;
+	int setting;
 	int edit;
 	int protoIcon;
 	int upnpIcon;
 } controlInfo[] =
 {
-	{ SettingsManager::UDP_PORT, IDC_PORT_UDP, IDC_NETWORK_TEST_PORT_UDP_ICO, IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP },
-	{ SettingsManager::TCP_PORT, IDC_PORT_TCP, IDC_NETWORK_TEST_PORT_TCP_ICO, IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP },
-	{ SettingsManager::TLS_PORT, IDC_PORT_TLS, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP },
+	{ Conf::UDP_PORT, IDC_PORT_UDP, IDC_NETWORK_TEST_PORT_UDP_ICO, IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP },
+	{ Conf::TCP_PORT, IDC_PORT_TCP, IDC_NETWORK_TEST_PORT_TCP_ICO, IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP },
+	{ Conf::TLS_PORT, IDC_PORT_TLS, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO, IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP },
 };
 
 LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	DialogLayout::layout(m_hWnd, layoutItems1, _countof(layoutItems1));
-
-	for (int i = 0; i < _countof(portSettings); ++i)
-		SetDlgItemInt(portSettings[i].id, SettingsManager::get(portSettings[i].setting));
 
 	int af;
 	ResourceManager::Strings enableStr;
@@ -168,21 +168,30 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		enableStr = ResourceManager::ENABLE_IPV4;
 		af = AF_INET;
 	}
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, v6);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, v6);
 
-	switch (SettingsManager::get(ips.incomingConnections))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int options = ss->getInt(ips.bindOptions);
+	const string selAdapter = ss->getString((options & Conf::BIND_OPTION_USE_DEV) ? ips.bindDevice : ips.bindAddress);
+	const string selMapper = ss->getString(ips.mapper);
+	const string externalIp = ss->getString(ips.externalIp);
+	for (int i = 0; i < _countof(portSettings); ++i)
+		SetDlgItemInt(portSettings[i].id, ss->getInt(portSettings[i].setting));
+
+	switch (ss->getInt(ips.incomingConnections))
 	{
-		case SettingsManager::INCOMING_DIRECT:
+		case Conf::INCOMING_DIRECT:
 			CheckDlgButton(IDC_DIRECT, BST_CHECKED);
 			break;
-		case SettingsManager::INCOMING_FIREWALL_UPNP:
+		case Conf::INCOMING_FIREWALL_UPNP:
 			CheckDlgButton(IDC_FIREWALL_UPNP, BST_CHECKED);
 			break;
-		case SettingsManager::INCOMING_FIREWALL_NAT:
+		case Conf::INCOMING_FIREWALL_NAT:
 			CheckDlgButton(IDC_FIREWALL_NAT, BST_CHECKED);
 			break;
-		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
+		case Conf::INCOMING_FIREWALL_PASSIVE:
 			CheckDlgButton(IDC_FIREWALL_PASSIVE, BST_CHECKED);
 			break;
 		default:
@@ -190,32 +199,31 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 			break;
 	}
 
-	options = SettingsManager::get(ips.bindOptions);
 	CButton ctrlEnable(GetDlgItem(IDC_ENABLE));
 	ctrlEnable.SetWindowText(CTSTRING_I(enableStr));
 	if (v6)
-		ctrlEnable.SetCheck(BOOLSETTING(ENABLE_IP6) ? BST_CHECKED : BST_UNCHECKED);
+		ctrlEnable.SetCheck(ss->getBool(Conf::ENABLE_IP6) ? BST_CHECKED : BST_UNCHECKED);
 	else
 	{
 		ctrlEnable.SetCheck(BST_CHECKED);
 		ctrlEnable.EnableWindow(FALSE);
 	}
 
-	CButton(GetDlgItem(IDC_CONNECTION_DETECTION)).SetCheck(SettingsManager::get(ips.autoDetect) ? BST_CHECKED : BST_UNCHECKED);
-	CButton(GetDlgItem(IDC_WAN_IP_MANUAL)).SetCheck(SettingsManager::get(ips.manualIp) ? BST_CHECKED : BST_UNCHECKED);
-	CButton(GetDlgItem(IDC_NO_IP_OVERRIDE)).SetCheck(SettingsManager::get(ips.noIpOverride) ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_CONNECTION_DETECTION)).SetCheck(ss->getBool(ips.autoDetect) ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_WAN_IP_MANUAL)).SetCheck(ss->getBool(ips.manualIp) ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_NO_IP_OVERRIDE)).SetCheck(ss->getBool(ips.noIpOverride) ? BST_CHECKED : BST_UNCHECKED);
+	ss->unlockRead();
 
 	for (int i = 0; i < 3; ++i)
 		CEdit(GetDlgItem(controlInfo[i].edit)).LimitText(5);
 
 	bindCombo.Attach(GetDlgItem(IDC_BIND_ADDRESS));
 	WinUtil::getAdapterList(af, adapters);
-	const string& selAdapter = SettingsManager::get((options & SettingsManager::BIND_OPTION_USE_DEV) ? ips.bindDevice : ips.bindAddress);
 	if (WinUtil::fillAdapterList(af, adapters, bindCombo, selAdapter, options) < 0)
-		options &= ~SettingsManager::BIND_OPTION_USE_DEV;
+		options &= ~Conf::BIND_OPTION_USE_DEV;
 
 	CEdit ctrlExternalIP(GetDlgItem(IDC_EXTERNAL_IP));
-	ctrlExternalIP.SetWindowText(Text::toT(SettingsManager::get(ips.externalIp)).c_str());
+	ctrlExternalIP.SetWindowText(Text::toT(externalIp).c_str());
 	CRect rc;
 	if (v6)
 	{
@@ -235,7 +243,7 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	for (size_t i = 0; i < mappers.size(); ++i)
 	{
 		mapperCombo.AddString(Text::toT(mappers[i]).c_str());
-		if (mappers[i] == SettingsManager::get(ips.mapper))
+		if (mappers[i] == selMapper)
 			selIndex = i;
 	}
 	mapperCombo.SetCurSel(selIndex);
@@ -288,12 +296,12 @@ LRESULT NetworkIPTab::onOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl
 {
 	CMenu menu;
 	menu.CreatePopupMenu();
-	menu.AppendMenu(MF_STRING | ((options & SettingsManager::BIND_OPTION_NO_FALLBACK) ? MF_CHECKED : 0), SettingsManager::BIND_OPTION_NO_FALLBACK, CTSTRING(SETTINGS_BIND_NO_FALLBACK));
-	menu.AppendMenu(MF_STRING | ((options & SettingsManager::BIND_OPTION_USE_DEV) ? MF_CHECKED : 0), SettingsManager::BIND_OPTION_USE_DEV, CTSTRING(SETTINGS_BIND_USE_DEV));
+	menu.AppendMenu(MF_STRING | ((options & Conf::BIND_OPTION_NO_FALLBACK) ? MF_CHECKED : 0), Conf::BIND_OPTION_NO_FALLBACK, CTSTRING(SETTINGS_BIND_NO_FALLBACK));
+	menu.AppendMenu(MF_STRING | ((options & Conf::BIND_OPTION_USE_DEV) ? MF_CHECKED : 0), Conf::BIND_OPTION_USE_DEV, CTSTRING(SETTINGS_BIND_USE_DEV));
 	RECT rc;
 	CWindow(hWndCtl).GetWindowRect(&rc);
 	int result = menu.TrackPopupMenu(TPM_NONOTIFY | TPM_RETURNCMD, rc.left, rc.bottom, m_hWnd);
-	if (result == SettingsManager::BIND_OPTION_NO_FALLBACK || SettingsManager::BIND_OPTION_USE_DEV)
+	if (result == Conf::BIND_OPTION_NO_FALLBACK || Conf::BIND_OPTION_USE_DEV)
 		options ^= result;
 	return 0;
 }
@@ -383,7 +391,10 @@ LRESULT NetworkIPTab::onKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, 
 		IpAddress ip;
 		if (!Util::parseIpAddress(ip, ipStr) || ip.type != (v6 ? AF_INET6 : AF_INET))
 		{
-			ipStr = v6 ? SETTING(EXTERNAL_IP6) : SETTING(EXTERNAL_IP);
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			ipStr = ss->getString(v6 ? Conf::EXTERNAL_IP6 : Conf::EXTERNAL_IP);
+			ss->unlockRead();
 			MessageBox(CTSTRING(BAD_IP_ADDRESS), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
 			externalIp.SetWindowText(Text::toT(ipStr).c_str());
 		}
@@ -393,13 +404,13 @@ LRESULT NetworkIPTab::onKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, 
 
 int NetworkIPTab::getConnectionType() const
 {
-	int ct = SettingsManager::INCOMING_DIRECT;
+	int ct = Conf::INCOMING_DIRECT;
 	if (IsDlgButtonChecked(IDC_FIREWALL_UPNP))
-		ct = SettingsManager::INCOMING_FIREWALL_UPNP;
+		ct = Conf::INCOMING_FIREWALL_UPNP;
 	else if (IsDlgButtonChecked(IDC_FIREWALL_NAT))
-		ct = SettingsManager::INCOMING_FIREWALL_NAT;
+		ct = Conf::INCOMING_FIREWALL_NAT;
 	else if (IsDlgButtonChecked(IDC_FIREWALL_PASSIVE))
-		ct = SettingsManager::INCOMING_FIREWALL_PASSIVE;
+		ct = Conf::INCOMING_FIREWALL_PASSIVE;
 	return ct;
 }
 
@@ -525,12 +536,16 @@ void NetworkIPTab::updatePortNumbers()
 {
 	bool updatePrevSettings = false;
 	tstring oldText, newText;
+	auto ss = SettingsManager::instance.getCoreSettings();
 	for (int type = 0; type < PortTest::MAX_PORTS; type++)
 	{
 		const auto& ci = controlInfo[type];
 		CEdit edit(GetDlgItem(ci.edit));
 		WinUtil::getWindowText(edit, oldText);
-		newText = Util::toStringT(SettingsManager::get(ci.setting));
+		ss->lockRead();
+		int port = ss->getInt(ci.setting);
+		ss->unlockRead();
+		newText = Util::toStringT(port);
 		if (oldText != newText)
 		{
 			edit.SetWindowText(newText.c_str());
@@ -556,53 +571,60 @@ void NetworkIPTab::updateTLSOption()
 void NetworkIPTab::writePortSettings()
 {
 	tstring buf;
-	for (int i = 0; i < 3; ++i)
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	for (int i = 0; i < PortTest::MAX_PORTS; ++i)
 	{
 		WinUtil::getWindowText(GetDlgItem(portSettings[i].id), buf);
-		SettingsManager::set(portSettings[i].setting, Util::toInt(buf));
+		ss->setInt(portSettings[i].setting, Util::toInt(buf));
 	}
+	ss->unlockWrite();
 }
 
 void NetworkIPTab::writeOtherSettings()
 {
 	int af = v6 ? AF_INET6 : AF_INET;
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, v6);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, v6);
 
-	if (v6) SettingsManager::set(SettingsManager::ENABLE_IP6, IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED);
-	SettingsManager::set(ips.autoDetect, IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED);
-	SettingsManager::set(ips.manualIp, IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED);
-	SettingsManager::set(ips.noIpOverride, IsDlgButtonChecked(IDC_NO_IP_OVERRIDE) == BST_CHECKED);
+	StringList mappers = ConnectivityManager::getInstance()->getMapper(af).getMappers();
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	if (v6) ss->setBool(Conf::ENABLE_IP6, IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED);
+	ss->setBool(ips.autoDetect, IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED);
+	ss->setBool(ips.manualIp, IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED);
+	ss->setBool(ips.noIpOverride, IsDlgButtonChecked(IDC_NO_IP_OVERRIDE) == BST_CHECKED);
 
 	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
 	if (externalIp.IsWindowEnabled())
 	{
 		tstring str;
 		WinUtil::getWindowText(externalIp, str);
-		SettingsManager::set(ips.externalIp, Text::fromT(str));
+		ss->setString(ips.externalIp, Text::fromT(str));
 	}
 	else
-		SettingsManager::set(ips.externalIp, Util::emptyString);
+		ss->setString(ips.externalIp, Util::emptyString);
 
-	if (options & SettingsManager::BIND_OPTION_USE_DEV)
+	if (options & Conf::BIND_OPTION_USE_DEV)
 	{
 		string dev = getDeviceName(adapters);
-		SettingsManager::set(ips.bindDevice, dev);
+		ss->setString(ips.bindDevice, dev);
 		if (dev.empty())
-			options ^= SettingsManager::BIND_OPTION_USE_DEV;
+			options ^= Conf::BIND_OPTION_USE_DEV;
 	}
-	if (!(options & SettingsManager::BIND_OPTION_USE_DEV))
-		SettingsManager::set(ips.bindAddress, WinUtil::getSelectedAdapter(bindCombo));
+	if (!(options & Conf::BIND_OPTION_USE_DEV))
+		ss->setString(ips.bindAddress, WinUtil::getSelectedAdapter(bindCombo));
 	else
-		SettingsManager::set(ips.bindAddress, Util::emptyString);
-	SettingsManager::set(ips.bindOptions, options);
-	SettingsManager::set(ips.incomingConnections, getConnectionType());
+		ss->setString(ips.bindAddress, Util::emptyString);
+	ss->setInt(ips.bindOptions, options);
+	ss->setInt(ips.incomingConnections, getConnectionType());
 
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
 	int selIndex = mapperCombo.GetCurSel();
-	StringList mappers = ConnectivityManager::getInstance()->getMapper(af).getMappers();
 	if (selIndex >= 0 && selIndex < (int) mappers.size())
-		SettingsManager::set(ips.mapper, mappers[selIndex]);
+		ss->setString(ips.mapper, mappers[selIndex]);
+	ss->unlockWrite();
 }
 
 void NetworkIPTab::getPortSettingsFromUI(NetworkSettings& settings) const
@@ -629,13 +651,13 @@ void NetworkIPTab::getOtherSettingsFromUI(NetworkSettings& settings) const
 	settings.incomingConn[index] = getConnectionType();
 
 	settings.bindOptions[index] = options;
-	if (options & SettingsManager::BIND_OPTION_USE_DEV)
+	if (options & Conf::BIND_OPTION_USE_DEV)
 	{
 		settings.bindDev[index] = getDeviceName(adapters);
 		if (settings.bindDev[index].empty())
-			settings.bindOptions[index] ^= SettingsManager::BIND_OPTION_USE_DEV;
+			settings.bindOptions[index] ^= Conf::BIND_OPTION_USE_DEV;
 	}
-	if (!(settings.bindOptions[index] & SettingsManager::BIND_OPTION_USE_DEV))
+	if (!(settings.bindOptions[index] & Conf::BIND_OPTION_USE_DEV))
 		settings.bindAddr[index] = WinUtil::getSelectedAdapter(bindCombo);
 	else
 		settings.bindAddr[index].clear();
@@ -753,10 +775,10 @@ bool NetworkFirewallTab::testWinFirewall()
 
 static const PropPage::Item itemsUrls[] =
 {
-	{ IDC_PORT_TEST_URL,     SettingsManager::URL_PORT_TEST,     PropPage::T_STR },
-	{ IDC_GET_IPV4_URL,      SettingsManager::URL_GET_IP,        PropPage::T_STR },
-	{ IDC_GET_IPV6_URL,      SettingsManager::URL_GET_IP6,       PropPage::T_STR },
-	{ IDC_DHT_BOOTSTRAP_URL, SettingsManager::URL_DHT_BOOTSTRAP, PropPage::T_STR },
+	{ IDC_PORT_TEST_URL,     Conf::URL_PORT_TEST,     PropPage::T_STR },
+	{ IDC_GET_IPV4_URL,      Conf::URL_GET_IP,        PropPage::T_STR },
+	{ IDC_GET_IPV6_URL,      Conf::URL_GET_IP6,       PropPage::T_STR },
+	{ IDC_DHT_BOOTSTRAP_URL, Conf::URL_DHT_BOOTSTRAP, PropPage::T_STR },
 	{ 0,                     0,                                  PropPage::T_END }
 };
 
@@ -780,9 +802,9 @@ void NetworkUrlsTab::writeSettings()
 
 static const PropPage::Item items[] =
 {
-	{ IDC_AUTO_TEST_PORTS, SettingsManager::AUTO_TEST_PORTS,     PropPage::T_BOOL },
-	{ IDC_NATT,            SettingsManager::ALLOW_NAT_TRAVERSAL, PropPage::T_BOOL },
-	{ IDC_USE_DHT,         SettingsManager::USE_DHT,             PropPage::T_BOOL },
+	{ IDC_AUTO_TEST_PORTS, Conf::AUTO_TEST_PORTS,     PropPage::T_BOOL },
+	{ IDC_NATT,            Conf::ALLOW_NAT_TRAVERSAL, PropPage::T_BOOL },
+	{ IDC_USE_DHT,         Conf::USE_DHT,             PropPage::T_BOOL },
 	{ 0,                   0,                                    PropPage::T_END  }
 };
 
@@ -793,7 +815,11 @@ static const PropPage::Item items[] =
 
 LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	useTLS = BOOLSETTING(USE_TLS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();	
+	useTLS = ss->getBool(Conf::USE_TLS);
+	ss->unlockRead();
+
 	applyingSettings = ConnectivityManager::getInstance()->isSetupInProgress();
 	DialogLayout::layout(m_hWnd, layoutItems2, _countof(layoutItems2));
 
@@ -826,7 +852,10 @@ void NetworkPage::write()
 	tabIP[0].writeOtherSettings();
 	tabIP[1].writeOtherSettings();
 	tabUrls.writeSettings();
-	SET_SETTING(USE_TLS, useTLS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setBool(Conf::USE_TLS, useTLS);
+	ss->unlockWrite();
 }
 
 void NetworkPage::updatePortState()
@@ -891,15 +920,19 @@ void NetworkPage::onShow()
 
 bool NetworkPage::runPortTest()
 {
-	int portTCP = SETTING(TCP_PORT);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int portTCP = ss->getInt(Conf::TCP_PORT);
+	int portUDP = ss->getInt(Conf::UDP_PORT);
+	int portTLS = ss->getInt(Conf::TLS_PORT);
+	ss->unlockRead();
+
 	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-	int portUDP = SETTING(UDP_PORT);
 	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
 	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
 	if (useTLS)
 	{
-		int portTLS = SETTING(TLS_PORT);
-		g_portTest.setPort(PortTest::PORT_TLS, portTLS);
+			g_portTest.setPort(PortTest::PORT_TLS, portTLS);
 		mask |= 1<<PortTest::PORT_TLS;
 	}
 	if (!g_portTest.runTest(mask)) return false;
@@ -946,29 +979,32 @@ void NetworkPage::getFromUI(NetworkSettings& settings) const
 
 void NetworkSettings::get()
 {
-	portTCP = SETTING(TCP_PORT);
-	portTLS = BOOLSETTING(USE_TLS) ? SETTING(TLS_PORT) : -1;
-	portUDP = SETTING(UDP_PORT);
-	enableV6 = BOOLSETTING(ENABLE_IP6);
-	autoDetect[0] = BOOLSETTING(AUTO_DETECT_CONNECTION);
-	autoDetect[1] = BOOLSETTING(AUTO_DETECT_CONNECTION6);
-	incomingConn[0] = SETTING(INCOMING_CONNECTIONS);
-	incomingConn[1] = SETTING(INCOMING_CONNECTIONS6);
-	bindAddr[0] = SETTING(BIND_ADDRESS);
-	bindAddr[1] = SETTING(BIND_ADDRESS6);
-	bindDev[0] = SETTING(BIND_DEVICE);
-	bindDev[1] = SETTING(BIND_DEVICE6);
-	bindOptions[0] = SETTING(BIND_OPTIONS);
-	bindOptions[1] = SETTING(BIND_OPTIONS6);
-	mapper[0] = SETTING(MAPPER);
-	mapper[1] = SETTING(MAPPER6);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	portTCP = ss->getInt(Conf::TCP_PORT);
+	portTLS = ss->getBool(Conf::USE_TLS) ? ss->getInt(Conf::TLS_PORT) : -1;
+	portUDP = ss->getInt(Conf::UDP_PORT);
+	enableV6 = ss->getBool(Conf::ENABLE_IP6);
+	autoDetect[0] = ss->getBool(Conf::AUTO_DETECT_CONNECTION);
+	autoDetect[1] = ss->getBool(Conf::AUTO_DETECT_CONNECTION6);
+	incomingConn[0] = ss->getInt(Conf::INCOMING_CONNECTIONS);
+	incomingConn[1] = ss->getInt(Conf::INCOMING_CONNECTIONS6);
+	bindAddr[0] = ss->getString(Conf::BIND_ADDRESS);
+	bindAddr[1] = ss->getString(Conf::BIND_ADDRESS6);
+	bindDev[0] = ss->getString(Conf::BIND_DEVICE);
+	bindDev[1] = ss->getString(Conf::BIND_DEVICE6);
+	bindOptions[0] = ss->getInt(Conf::BIND_OPTIONS);
+	bindOptions[1] = ss->getInt(Conf::BIND_OPTIONS6);
+	mapper[0] = ss->getString(Conf::MAPPER);
+	mapper[1] = ss->getString(Conf::MAPPER6);
+	ss->unlockRead();
 }
 
 static bool compareBindAddress(const NetworkSettings& s1, const NetworkSettings& s2, int af)
 {
 	int index = af == AF_INET6 ? 1 : 0;
-	if ((s1.bindOptions[index] ^ s2.bindOptions[index]) & SettingsManager::BIND_OPTION_USE_DEV) return false;
-	if (s1.bindOptions[index] & SettingsManager::BIND_OPTION_USE_DEV) return s1.bindDev[index] == s2.bindDev[index];
+	if ((s1.bindOptions[index] ^ s2.bindOptions[index]) & Conf::BIND_OPTION_USE_DEV) return false;
+	if (s1.bindOptions[index] & Conf::BIND_OPTION_USE_DEV) return s1.bindDev[index] == s2.bindDev[index];
 	if (s1.bindAddr[index] == s2.bindAddr[index]) return true;
 	if (isEmptyAddress(s1.bindAddr[index], af) && isEmptyAddress(s2.bindAddr[index], af)) return true;
 	return false;

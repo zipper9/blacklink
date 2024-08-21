@@ -26,6 +26,7 @@
 #include "BarShader.h"
 #include "ImageLists.h"
 #include "Colors.h"
+#include "ConfUI.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
@@ -117,19 +118,20 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(),
 	                  WS_EX_CLIENTEDGE, IDC_USERS);
 	WinUtil::setExplorerTheme(ctrlQueued);
-	                  
+
 	ctrlQueued.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
-	
-	m_nProportionalPos = SETTING(UPLOAD_QUEUE_FRAME_SPLIT);
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	m_nProportionalPos = ss->getInt(Conf::UPLOAD_QUEUE_FRAME_SPLIT);
 	SetSplitterPanes(ctrlQueued.m_hWnd, ctrlList.m_hWnd);
-	
+
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 
-	ctrlList.insertColumns(SettingsManager::UPLOAD_QUEUE_FRAME_ORDER, SettingsManager::UPLOAD_QUEUE_FRAME_WIDTHS, SettingsManager::UPLOAD_QUEUE_FRAME_VISIBLE);
-	ctrlList.setSortFromSettings(SETTING(UPLOAD_QUEUE_FRAME_SORT));
-	
+	ctrlList.insertColumns(Conf::UPLOAD_QUEUE_FRAME_ORDER, Conf::UPLOAD_QUEUE_FRAME_WIDTHS, Conf::UPLOAD_QUEUE_FRAME_VISIBLE);
+	ctrlList.setSortFromSettings(ss->getInt(Conf::UPLOAD_QUEUE_FRAME_SORT));
+
 	// colors
 	setListViewColors(ctrlList);
 	setTreeViewColors(ctrlQueued);
@@ -138,9 +140,9 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(4, statusSizes);
 	UpdateLayout();
-	
+
 	UploadManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 
 	loadAll();
 	timer.createTimer(TIMER_VAL);
@@ -168,9 +170,9 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	{
 		closed = true;
 		UploadManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		setButtonPressed(IDC_UPLOAD_QUEUE, false);
-		
+
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -179,12 +181,12 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		ctrlQueued.DeleteAllItems();
 		ctrlList.deleteAll();
 		userList.clear();
-		ctrlList.saveHeaderOrder(SettingsManager::UPLOAD_QUEUE_FRAME_ORDER, SettingsManager::UPLOAD_QUEUE_FRAME_WIDTHS,
-		                         SettingsManager::UPLOAD_QUEUE_FRAME_VISIBLE);
-		                           
-		SET_SETTING(UPLOAD_QUEUE_FRAME_SORT, ctrlList.getSortForSettings());
-		SET_SETTING(UPLOAD_QUEUE_FRAME_SPLIT, m_nProportionalPos);
-		
+		ctrlList.saveHeaderOrder(Conf::UPLOAD_QUEUE_FRAME_ORDER, Conf::UPLOAD_QUEUE_FRAME_WIDTHS, Conf::UPLOAD_QUEUE_FRAME_VISIBLE);
+
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::UPLOAD_QUEUE_FRAME_SORT, ctrlList.getSortForSettings());
+		ss->setInt(Conf::UPLOAD_QUEUE_FRAME_SPLIT, m_nProportionalPos);
+
 		tasks.clear();
 		bHandled = FALSE;
 		return 0;
@@ -542,7 +544,7 @@ void WaitingUsersFrame::onTimerInternal()
 	}
 	if (shouldUpdateStatus)
 	{
-		if (BOOLSETTING(BOLD_WAITING_USERS))
+		if (SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_WAITING_USERS))
 			setDirty();
 		updateStatus();
 		shouldUpdateStatus = false;
@@ -609,7 +611,7 @@ void WaitingUsersFrame::processTasks()
 	}
 }
 
-void WaitingUsersFrame::on(SettingsManagerListener::Repaint)
+void WaitingUsersFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -642,7 +644,7 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
 			int column = ctrlList.findColumn(cd->iSubItem);
-			if (column == UploadQueueItem::COLUMN_TRANSFERRED && BOOLSETTING(SHOW_PROGRESS_BARS))
+			if (column == UploadQueueItem::COLUMN_TRANSFERRED && showProgressBars)
 			{
 				const tstring& text = ii->getText(UploadQueueItem::COLUMN_TRANSFERRED);
 				ctrlList.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
@@ -689,19 +691,21 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 
 void WaitingUsersFrame::initProgressBar(bool check)
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
 	ProgressBar::Settings settings;
-	settings.clrBackground = BOOLSETTING(PROGRESS_OVERRIDE_COLORS) ? SETTING(UPLOAD_BAR_COLOR) : GetSysColor(COLOR_HIGHLIGHT);
-	settings.clrText = SETTING(PROGRESS_TEXT_COLOR_UP);
-	settings.clrEmptyBackground = SETTING(PROGRESS_BACK_COLOR);
+	settings.clrBackground = ss->getBool(Conf::PROGRESS_OVERRIDE_COLORS) ? ss->getInt(Conf::UPLOAD_BAR_COLOR) : GetSysColor(COLOR_HIGHLIGHT);
+	settings.clrText = ss->getInt(Conf::PROGRESS_TEXT_COLOR_UP);
+	settings.clrEmptyBackground = ss->getInt(Conf::PROGRESS_BACK_COLOR);
 	settings.odcStyle = false;
 	settings.odcBumped = false;
-	settings.depth = SETTING(PROGRESS_3DDEPTH);
-	settings.setTextColor = BOOLSETTING(PROGRESS_OVERRIDE_COLORS2);
+	settings.depth = ss->getInt(Conf::PROGRESS_3DDEPTH);
+	settings.setTextColor = ss->getBool(Conf::PROGRESS_OVERRIDE_COLORS2);
 	if (!check || progressBar.get() != settings) progressBar.set(settings);
 	progressBar.setWindowBackground(Colors::g_bgColor);
 }
 
-int WaitingUsersFrame::UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col)
+int WaitingUsersFrame::UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, int col, int /*flags*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	switch (col)

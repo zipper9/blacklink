@@ -27,6 +27,7 @@
 #include "../SimpleXML.h"
 #include "../ResourceManager.h"
 #include "../SettingsManager.h"
+#include "../ConfCore.h"
 #include <zlib.h>
 
 namespace dht
@@ -52,7 +53,10 @@ namespace dht
 #else
 		const CID cid = CID::generate();
 #endif
-		string url = SETTING(URL_DHT_BOOTSTRAP);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		string url = ss->getString(Conf::URL_DHT_BOOTSTRAP);
+		ss->unlockRead();
 		if (!Util::isHttpLink(url))
 		{
 			LogManager::message(STRING(DHT_INVALID_BOOTSTRAP_URL));
@@ -84,7 +88,7 @@ namespace dht
 			return;
 		}
 
-		if (BOOLSETTING(LOG_DHT_TRACE))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_DHT)
 			LOG(DHT_TRACE, "Using bootstrap URL " + url);
 		LogManager::message(STRING(DHT_BOOTSTRAPPING_STARTED));
 

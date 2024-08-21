@@ -495,6 +495,7 @@
     <ClCompile Include="client\AppPaths.cpp" />
     <ClCompile Include="client\AutoDetectSocket.cpp" />
     <ClCompile Include="client\Base32.cpp" />
+    <ClCompile Include="client\BaseSettingsImpl.cpp" />
     <ClCompile Include="client\BaseUtil.cpp" />
     <ClCompile Include="client\BufferedSocket.cpp" />
     <ClCompile Include="client\BZUtils.cpp" />
@@ -504,6 +505,7 @@
     <ClCompile Include="client\ClientManager.cpp" />
     <ClCompile Include="client\Commands.cpp" />
     <ClCompile Include="client\CompatibilityManager.cpp" />
+    <ClCompile Include="client\ConfCore.cpp" />
     <ClCompile Include="client\ConnectionManager.cpp" />
     <ClCompile Include="client\ConnectivityManager.cpp" />
     <ClCompile Include="client\CryptoManager.cpp" />
@@ -540,6 +542,7 @@
     <ClCompile Include="client\HttpHeaders.cpp" />
     <ClCompile Include="client\HttpMessage.cpp" />
     <ClCompile Include="client\HttpServerConnection.cpp" />
+    <ClCompile Include="client\HubEntry.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
     <ClCompile Include="client\inet_compat.cpp" />
     <ClCompile Include="client\Ip4Address.cpp" />
@@ -612,6 +615,7 @@
     <ClCompile Include="client\SearchQueue.cpp" />
     <ClCompile Include="client\SearchResult.cpp" />
     <ClCompile Include="client\SettingsManager.cpp" />
+    <ClCompile Include="client\SettingsUtil.cpp" />
     <ClCompile Include="client\SharedFileStream.cpp" />
     <ClCompile Include="client\ShareManager.cpp" />
     <ClCompile Include="client\ShareManagerItems.cpp" />
@@ -635,6 +639,7 @@
     <ClCompile Include="client\TagCollector.cpp" />
     <ClCompile Include="client\Text.cpp" />
     <ClCompile Include="client\Thread.cpp" />
+    <ClCompile Include="client\ThreadSafeSettingsImpl.cpp" />
     <ClCompile Include="client\ThrottleManager.cpp" />
     <ClCompile Include="client\ThrottleState.cpp" />
     <ClCompile Include="client\TigerHash.cpp" />
@@ -731,6 +736,7 @@
     <ClInclude Include="client\AppPaths.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\Base32.h" />
+    <ClInclude Include="client\BaseSettingsImpl.h" />
     <ClInclude Include="client\BaseStreams.h" />
     <ClInclude Include="client\BaseThread.h" />
     <ClInclude Include="client\BaseUtil.h" />
@@ -738,9 +744,11 @@
     <ClInclude Include="client\CommandCallback.h" />
     <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
+    <ClInclude Include="client\ConfCore.h" />
     <ClInclude Include="client\ConnectionStatus.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
     <ClInclude Include="client\DatabaseManager.h" />
+    <ClInclude Include="client\DatabaseOptions.h" />
     <ClInclude Include="client\dht\BootstrapManager.h" />
     <ClInclude Include="client\dht\Constants.h" />
     <ClInclude Include="client\dht\DHT.h" />
@@ -810,7 +818,9 @@
     <ClInclude Include="client\RWLockWrapper.h" />
     <ClInclude Include="client\SearchParam.h" />
     <ClInclude Include="client\SearchUrl.h" />
+    <ClInclude Include="client\Settings.h" />
     <ClInclude Include="client\SettingsManagerListener.h" />
+    <ClInclude Include="client\SettingsUtil.h" />
     <ClInclude Include="client\ShareManagerItems.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
     <ClInclude Include="client\SimpleXMLException.h" />
@@ -879,6 +889,7 @@
     <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\TagCollector.h" />
     <ClInclude Include="client\Thread.h" />
+    <ClInclude Include="client\ThreadSafeSettingsImpl.h" />
     <ClInclude Include="client\ThrottleState.h" />
     <ClInclude Include="client\TimeUtil.h" />
     <ClInclude Include="client\TransferData.h" />

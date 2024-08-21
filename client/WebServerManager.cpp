@@ -1,5 +1,6 @@
 #include "stdinc.h"
 #include "WebServerManager.h"
+#include "SettingsManager.h"
 #include "AppPaths.h"
 #include "HttpHeaders.h"
 #include "JsonFormatter.h"
@@ -21,6 +22,7 @@
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "ConfCore.h"
 #include <boost/algorithm/string/trim.hpp>
 
 static const unsigned SESSION_EXPIRE_TIME = 10; // minutes
@@ -247,7 +249,8 @@ WebServerManager::Server::Server(bool tls, const IpAddressEx& ip, uint16_t port)
 	sock.setSocketOpt(SOL_SOCKET, SO_REUSEADDR, 1);
 	string msg = "Starting Web server on " + Util::printIpAddress(ip, true) + ':' + Util::toString(port) + " TLS=" + Util::toString(tls);
 	LogManager::message(msg, false);
-	if (BOOLSETTING(LOG_WEBSERVER)) LogManager::log(LogManager::WEBSERVER, msg);
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER)
+		LogManager::log(LogManager::WEBSERVER, msg);
 	serverPort = sock.bind(port, bindIp);
 	sock.listen();
 	char threadName[64];
@@ -314,7 +317,8 @@ int WebServerManager::Server::run() noexcept
 	}
 	string msg = "Web server stopped";
 	LogManager::message(msg, false);
-	if (BOOLSETTING(LOG_WEBSERVER)) LogManager::log(LogManager::WEBSERVER, msg);
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER)
+		LogManager::log(LogManager::WEBSERVER, msg);
 	return 0;
 }
 
@@ -363,7 +367,12 @@ void WebServerManager::shutdown() noexcept
 
 bool WebServerManager::startListen(int af, bool tls)
 {
-	uint16_t port = SettingsManager::get(SettingsManager::WEBSERVER_PORT);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const uint16_t port = ss->getInt(Conf::WEBSERVER_PORT);
+	const string bind = ss->getString(Conf::WEBSERVER_BIND_ADDRESS);
+	ss->unlockRead();
+
 	int index = tls ? SERVER_SECURE : 0;
 	//ports[index] = newServer->getServerPort();
 	//if (index == 0 && newServer->getType() == SERVER_TYPE_AUTO_DETECT)
@@ -371,7 +380,6 @@ bool WebServerManager::startListen(int af, bool tls)
 	if (af == AF_INET6) index |= SERVER_V6;
 	if (servers[index]) return false;
 
-	string bind = SettingsManager::get(SettingsManager::WEBSERVER_BIND_ADDRESS);
 	IpAddressEx bindIp;
 	BufferedSocket::getBindAddress(bindIp, af, bind);
 	auto newServer = new Server(tls, bindIp, port);
@@ -486,7 +494,7 @@ void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request
 		string auth = createAuthCookie(expires, inf.clientId, iv);
 		cookies.set("auth", auth, expires, "/", Http::ServerCookies::FLAG_HTTP_ONLY);
 		sendRedirect(inf, "/");
-		if (BOOLSETTING(LOG_WEBSERVER))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER)
 			LogManager::log(LogManager::WEBSERVER, printClientId(inf.clientId, conn) + ": User '" + user + "' signed in");
 		return;
 	}
@@ -499,7 +507,7 @@ void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request
 			uint64_t clientId;
 			if (checkAuthCookie(auth, curTime, clientId))
 				removeClientContext(clientId);
-			if (BOOLSETTING(LOG_WEBSERVER))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER)
 				LogManager::log(LogManager::WEBSERVER, printClientId(clientId, conn) + ": User signed out");
 			cookies.remove("auth", false);
 		}
@@ -582,7 +590,7 @@ void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request
 				query = Util::decodeQuery(queryStr);
 			updateAuthCookie(cookies, inf.clientId, curTime);
 			inf.query = &query;
-			if (BOOLSETTING(LOG_WEBSERVER))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER)
 				LogManager::log(LogManager::WEBSERVER, printClientId(inf.clientId, conn) + ": " + req.getMethod() + ' ' + req.getUri());
 			handleRequest(inf, i->second);
 			return;
@@ -2244,11 +2252,21 @@ void WebServerManager::loadColorTheme(int index) noexcept
 
 uint32_t WebServerManager::checkUser(const string& user, const string& password) const noexcept
 {
-	if (user == SETTING(WEBSERVER_USER))
-		return password == SETTING(WEBSERVER_PASS) ? ROLE_USER : 0;
-	if (user == SETTING(WEBSERVER_POWER_USER))
-		return password == SETTING(WEBSERVER_POWER_PASS) ? ROLE_POWER_USER : 0;
-	return 0;
+	uint32_t role = 0;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (user == ss->getString(Conf::WEBSERVER_USER))
+	{
+		if (password == ss->getString(Conf::WEBSERVER_PASS))
+			role = ROLE_USER;
+	}
+	else if (user == ss->getString(Conf::WEBSERVER_POWER_USER))
+	{
+		if (password == ss->getString(Conf::WEBSERVER_POWER_PASS))
+			role = ROLE_POWER_USER;
+	}
+	ss->unlockRead();
+	return role;
 }
 
 uint64_t WebServerManager::createClientContext(uint32_t userId, uint64_t expires, const unsigned char iv[]) noexcept
@@ -2277,7 +2295,7 @@ void WebServerManager::removeExpired() noexcept
 	for (auto i = clients.begin(); i != clients.end();)
 		if (t > i->second.expires)
 		{
-			if (BOOLSETTING(LOG_WEBSERVER))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER)
 				LogManager::log(LogManager::WEBSERVER, printClientId(i->first, nullptr) + ": Session expired");
 			i = clients.erase(i);
 		}

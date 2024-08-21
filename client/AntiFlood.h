@@ -49,8 +49,6 @@ class HubRequestCounters
 		};
 
 		boost::unordered_map<IpPortKey, IpItem> data;
-
-		void showMessage(const IpAddress& ip, uint16_t port, const string& url, const string& what);
 };
 
 #endif // ANTI_FLOOD_H_

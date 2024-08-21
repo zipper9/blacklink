@@ -21,10 +21,13 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "BrowseFile.h"
+#include "../client/SettingsManager.h"
+#include "../client/SettingsUtil.h"
 #include "../client/LogManager.h"
 #include "../client/PathUtil.h"
 #include "../client/File.h"
 #include "../client/BusyCounter.h"
+#include "../client/ConfCore.h"
 
 static const int LOG_CERT_INDEX = LogManager::LAST;
 
@@ -48,33 +51,33 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_LOG_DIRECTORY, SettingsManager::LOG_DIRECTORY, PropPage::T_STR },
-	{ 0,                 0,                              PropPage::T_END }
+	{ IDC_LOG_DIRECTORY, Conf::LOG_DIRECTORY, PropPage::T_STR },
+	{ 0,                 0,                   PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::LOG_MAIN_CHAT,          ResourceManager::SETTINGS_LOG_MAIN_CHAT          },
-	{ SettingsManager::LOG_PRIVATE_CHAT,       ResourceManager::SETTINGS_LOG_PRIVATE_CHAT       },
-	{ SettingsManager::LOG_DOWNLOADS,          ResourceManager::SETTINGS_LOG_DOWNLOADS          },
-	{ SettingsManager::LOG_UPLOADS,            ResourceManager::SETTINGS_LOG_UPLOADS            },
-	{ SettingsManager::LOG_SYSTEM,             ResourceManager::SETTINGS_LOG_SYSTEM_MESSAGES    },
-	{ SettingsManager::LOG_STATUS_MESSAGES,    ResourceManager::SETTINGS_LOG_STATUS_MESSAGES    },
-	{ SettingsManager::LOG_WEBSERVER,          ResourceManager::SETTINGS_LOG_WEBSERVER          },
-	{ SettingsManager::LOG_SQLITE_TRACE,       ResourceManager::SETTINGS_LOG_SQLITE_TRACE       },
+	{ Conf::LOG_MAIN_CHAT,         ResourceManager::SETTINGS_LOG_MAIN_CHAT          },
+	{ Conf::LOG_PRIVATE_CHAT,      ResourceManager::SETTINGS_LOG_PRIVATE_CHAT       },
+	{ Conf::LOG_DOWNLOADS,         ResourceManager::SETTINGS_LOG_DOWNLOADS          },
+	{ Conf::LOG_UPLOADS,           ResourceManager::SETTINGS_LOG_UPLOADS            },
+	{ Conf::LOG_SYSTEM,            ResourceManager::SETTINGS_LOG_SYSTEM_MESSAGES    },
+	{ Conf::LOG_STATUS_MESSAGES,   ResourceManager::SETTINGS_LOG_STATUS_MESSAGES    },
+	{ Conf::LOG_WEBSERVER,         ResourceManager::SETTINGS_LOG_WEBSERVER          },
+	{ Conf::LOG_SQLITE_TRACE,      ResourceManager::SETTINGS_LOG_SQLITE_TRACE       },
 #ifdef FLYLINKDC_USE_TORRENT
-	{ SettingsManager::LOG_TORRENT_TRACE,      ResourceManager::SETTINGS_LOG_TORRENT_TRACE      },
+	{ Conf::LOG_TORRENT_TRACE,     ResourceManager::SETTINGS_LOG_TORRENT_TRACE      },
 #endif
-	{ SettingsManager::LOG_SEARCH_TRACE,       ResourceManager::SETTINGS_LOG_SEARCH_TRACE       },
-	{ SettingsManager::LOG_DHT_TRACE,          ResourceManager::SETTINGS_LOG_DHT_TRACE          },
-	{ SettingsManager::LOG_PSR_TRACE,          ResourceManager::SETTINGS_LOG_PSR_TRACE          },
-	{ SettingsManager::LOG_FLOOD_TRACE,        ResourceManager::SETTINGS_LOG_FLOOD_TRACE        },
-	{ SettingsManager::LOG_TCP_MESSAGES,       ResourceManager::SETTINGS_LOG_TCP_MESSAGES       },
-	{ SettingsManager::LOG_UDP_PACKETS,        ResourceManager::SETTINGS_LOG_UDP_PACKETS        },
-	{ SettingsManager::LOG_TLS_CERTIFICATES,   ResourceManager::SETTINGS_LOG_TLS_CERT           },
-	{ SettingsManager::LOG_SOCKET_INFO,        ResourceManager::SETTINGS_LOG_SOCKET_INFO        },
-	{ SettingsManager::LOG_IF_SUPPRESS_PMS,    ResourceManager::SETTINGS_LOG_IF_SUPPRESS_PMS    },
-	{ 0,                                       ResourceManager::Strings()                       }
+	{ Conf::LOG_SEARCH_TRACE,      ResourceManager::SETTINGS_LOG_SEARCH_TRACE       },
+	{ Conf::LOG_DHT_TRACE,         ResourceManager::SETTINGS_LOG_DHT_TRACE          },
+	{ Conf::LOG_PSR_TRACE,         ResourceManager::SETTINGS_LOG_PSR_TRACE          },
+	{ Conf::LOG_FLOOD_TRACE,       ResourceManager::SETTINGS_LOG_FLOOD_TRACE        },
+	{ Conf::LOG_TCP_MESSAGES,      ResourceManager::SETTINGS_LOG_TCP_MESSAGES       },
+	{ Conf::LOG_UDP_PACKETS,       ResourceManager::SETTINGS_LOG_UDP_PACKETS        },
+	{ Conf::LOG_TLS_CERTIFICATES,  ResourceManager::SETTINGS_LOG_TLS_CERT           },
+	{ Conf::LOG_SOCKET_INFO,       ResourceManager::SETTINGS_LOG_SOCKET_INFO        },
+	{ Conf::LOG_IF_SUPPRESS_PMS,   ResourceManager::SETTINGS_LOG_IF_SUPPRESS_PMS    },
+	{ 0,                                      ResourceManager::Strings()                       }
 };
 
 LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -91,7 +94,7 @@ LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 
 	// LOG_CERT_INDEX
-	options.emplace_back(Text::toT(SETTING(LOG_FILE_TLS_CERT)), Util::emptyStringT);
+	options.emplace_back(Text::toT(Util::getConfString(Conf::LOG_FILE_TLS_CERT)), Util::emptyStringT);
 
 	logOptions.Attach(GetDlgItem(IDC_LOG_OPTIONS));
 	logFile.Attach(GetDlgItem(IDC_LOG_FILE));
@@ -167,7 +170,7 @@ void LogPage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_LOG_OPTIONS));
 
-	File::ensureDirectory(SETTING(LOG_DIRECTORY));
+	File::ensureDirectory(Util::getConfString(Conf::LOG_DIRECTORY));
 
 	//make sure we save the last edit too, the user
 	//might not have changed the selection
@@ -183,12 +186,12 @@ void LogPage::write()
 	}
 
 	// LOG_CERT_INDEX
-	SET_SETTING(LOG_FILE_TLS_CERT, Text::fromT(options[LOG_CERT_INDEX].first));
+	Util::setConfString(Conf::LOG_FILE_TLS_CERT, Text::fromT(options[LOG_CERT_INDEX].first));
 }
 
 LRESULT LogPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring dir = Text::toT(SETTING(LOG_DIRECTORY));
+	tstring dir = Text::toT(Util::getConfString(Conf::LOG_DIRECTORY));
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
 		Util::appendPathSeparator(dir);

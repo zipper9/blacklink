@@ -20,6 +20,7 @@
 #include "TreePropertySheet.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
+#include "ConfUI.h"
 #include "../client/ResourceManager.h"
 
 static const TCHAR SEPARATOR = _T('\\');
@@ -154,8 +155,9 @@ void TreePropertySheet::fillTree()
 		else
 			addItem(buf, TVI_ROOT, i, image);
 	}
-	if (SETTING(REMEMBER_SETTINGS_PAGE))
-		ctrlTree.SelectItem(findItem(SETTING(SETTINGS_PAGE), ctrlTree.GetRootItem()));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::REMEMBER_SETTINGS_PAGE))
+		ctrlTree.SelectItem(findItem(ss->getInt(Conf::SETTINGS_PAGE), ctrlTree.GetRootItem()));
 	else
 		ctrlTree.SelectItem(first);
 	createTimer(1000);
@@ -259,8 +261,9 @@ LRESULT TreePropertySheet::onSelChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /* b
 		{
 			SetActivePage(page);
 			pageChanged(oldPage, page);
-			if (SETTING(REMEMBER_SETTINGS_PAGE))
-				SET_SETTING(SETTINGS_PAGE, page);
+			auto ss = SettingsManager::instance.getUiSettings();
+			if (ss->getBool(Conf::REMEMBER_SETTINGS_PAGE))
+				ss->setInt(Conf::SETTINGS_PAGE, page);
 		}
 	}
 	return 0;

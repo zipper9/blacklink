@@ -6,6 +6,8 @@
 #include "MessagesChatPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -29,41 +31,41 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_PROTECT_PRIVATE, SettingsManager::PROTECT_PRIVATE, PropPage::T_BOOL },
-	{ IDC_PASSWORD, SettingsManager::PM_PASSWORD, PropPage::T_STR },
-	{ IDC_PASSWORD_HINT, SettingsManager::PM_PASSWORD_HINT, PropPage::T_STR },
-	{ IDC_PASSWORD_OK_HINT, SettingsManager::PM_PASSWORD_OK_HINT, PropPage::T_STR },
-	{ IDC_PROTECT_PRIVATE_RND, SettingsManager::PROTECT_PRIVATE_RND, PropPage::T_BOOL },
-	{ IDC_PROTECT_PRIVATE_SAY, SettingsManager::PROTECT_PRIVATE_SAY, PropPage::T_BOOL },
+	{ IDC_PROTECT_PRIVATE, Conf::PROTECT_PRIVATE, PropPage::T_BOOL },
+	{ IDC_PASSWORD, Conf::PM_PASSWORD, PropPage::T_STR },
+	{ IDC_PASSWORD_HINT, Conf::PM_PASSWORD_HINT, PropPage::T_STR },
+	{ IDC_PASSWORD_OK_HINT, Conf::PM_PASSWORD_OK_HINT, PropPage::T_STR },
+	{ IDC_PROTECT_PRIVATE_RND, Conf::PROTECT_PRIVATE_RND, PropPage::T_BOOL },
+	{ IDC_PROTECT_PRIVATE_SAY, Conf::PROTECT_PRIVATE_SAY, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::SHOW_SEND_MESSAGE_BUTTON, ResourceManager::SHOW_SEND_MESSAGE_BUTTON},
-	{ SettingsManager::SHOW_MULTI_CHAT_BTN, ResourceManager::SHOW_MULTI_CHAT_BTN },
+	{ Conf::SHOW_SEND_MESSAGE_BUTTON, ResourceManager::SHOW_SEND_MESSAGE_BUTTON},
+	{ Conf::SHOW_MULTI_CHAT_BTN, ResourceManager::SHOW_MULTI_CHAT_BTN },
 #ifdef BL_UI_FEATURE_EMOTICONS
-	{ SettingsManager::SHOW_EMOTICONS_BTN, ResourceManager::SHOW_EMOTICONS_BTN },
+	{ Conf::SHOW_EMOTICONS_BTN, ResourceManager::SHOW_EMOTICONS_BTN },
 #endif
 #ifdef BL_UI_FEATURE_BB_CODES
-	{ SettingsManager::SHOW_BBCODE_PANEL, ResourceManager::SHOW_BBCODE_PANEL },
-	{ SettingsManager::SHOW_LINK_BTN, ResourceManager::SHOW_LINK_BTN },
+	{ Conf::SHOW_BBCODE_PANEL, ResourceManager::SHOW_BBCODE_PANEL },
+	{ Conf::SHOW_LINK_BTN, ResourceManager::SHOW_LINK_BTN },
 #endif
-	{ SettingsManager::SHOW_TRANSCODE_BTN, ResourceManager::SHOW_TRANSCODE_BTN },
-	{ SettingsManager::SHOW_FIND_BTN, ResourceManager::SHOW_FIND_BTN },
-	{ SettingsManager::MULTILINE_CHAT_INPUT, ResourceManager::MULTILINE_CHAT_INPUT },
-	{ SettingsManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, ResourceManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER },
+	{ Conf::SHOW_TRANSCODE_BTN, ResourceManager::SHOW_TRANSCODE_BTN },
+	{ Conf::SHOW_FIND_BTN, ResourceManager::SHOW_FIND_BTN },
+	{ Conf::MULTILINE_CHAT_INPUT, ResourceManager::MULTILINE_CHAT_INPUT },
+	{ Conf::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, ResourceManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER },
 #ifdef BL_UI_FEATURE_BB_CODES
-	{ SettingsManager::FORMAT_BB_CODES, ResourceManager::FORMAT_BB_CODES },
-	{ SettingsManager::FORMAT_BB_CODES_COLORS, ResourceManager::FORMAT_BB_CODES_COLORS },
-	{ SettingsManager::FORMAT_BOT_MESSAGE, ResourceManager::FORMAT_BOT_MESSAGE },
+	{ Conf::FORMAT_BB_CODES, ResourceManager::FORMAT_BB_CODES },
+	{ Conf::FORMAT_BB_CODES_COLORS, ResourceManager::FORMAT_BB_CODES_COLORS },
+	{ Conf::FORMAT_BOT_MESSAGE, ResourceManager::FORMAT_BOT_MESSAGE },
 #endif
 #ifdef BL_UI_FEATURE_EMOTICONS
-	{ SettingsManager::CHAT_ANIM_SMILES, ResourceManager::CHAT_ANIM_SMILES },
-	{ SettingsManager::SMILE_SELECT_WND_ANIM_SMILES, ResourceManager::SMILE_SELECT_WND_ANIM_SMILES },
+	{ Conf::CHAT_ANIM_SMILES, ResourceManager::CHAT_ANIM_SMILES },
+	{ Conf::SMILE_SELECT_WND_ANIM_SMILES, ResourceManager::SMILE_SELECT_WND_ANIM_SMILES },
 #endif
-	{ SettingsManager::CHAT_PANEL_SHOW_INFOTIPS, ResourceManager::CHAT_PANEL_SHOW_INFOTIPS },
-	{ SettingsManager::CHAT_REFFERING_TO_NICK, ResourceManager::CHAT_REFFERING_TO_NICK },
+	{ Conf::CHAT_PANEL_SHOW_INFOTIPS, ResourceManager::CHAT_PANEL_SHOW_INFOTIPS },
+	{ Conf::CHAT_REFFERING_TO_NICK, ResourceManager::CHAT_REFFERING_TO_NICK },
 	{ 0, ResourceManager::Strings() }
 };
 

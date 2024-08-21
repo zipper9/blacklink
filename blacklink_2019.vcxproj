@@ -772,6 +772,7 @@
     <ClCompile Include="windows\AppearancePage.cpp" />
     <ClCompile Include="windows\AutoImageList.cpp" />
     <ClCompile Include="windows\BackingStore.cpp" />
+    <ClCompile Include="windows\ConfUI.cpp" />
     <ClCompile Include="windows\DirectoryListingNavWnd.cpp" />
     <ClCompile Include="windows\DwmApiLib.cpp" />
     <ClCompile Include="windows\EmoticonPacksDlg.cpp" />
@@ -779,6 +780,7 @@
     <ClCompile Include="windows\ListPopup.cpp" />
     <ClCompile Include="windows\MenuHelper.cpp" />
     <ClCompile Include="windows\NavigationBar.cpp" />
+    <ClCompile Include="windows\NotifUtil.cpp" />
     <ClCompile Include="windows\PreviewAppsPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
@@ -973,6 +975,7 @@
     <ClInclude Include="windows\AppearancePage.h" />
     <ClInclude Include="windows\AutoImageList.h" />
     <ClInclude Include="windows\BackingStore.h" />
+    <ClInclude Include="windows\ConfUI.h" />
     <ClInclude Include="windows\DirectoryListingNavWnd.h" />
     <ClInclude Include="windows\DwmApiLib.h" />
     <ClInclude Include="windows\EmoticonPacksDlg.h" />
@@ -981,6 +984,7 @@
     <ClInclude Include="windows\LockRedraw.h" />
     <ClInclude Include="windows\MenuHelper.h" />
     <ClInclude Include="windows\NavigationBar.h" />
+    <ClInclude Include="windows\NotifUtil.h" />
     <ClInclude Include="windows\PreviewAppsPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />

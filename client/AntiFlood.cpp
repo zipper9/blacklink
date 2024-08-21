@@ -1,7 +1,9 @@
 #include "stdinc.h"
 #include "AntiFlood.h"
+#include "StrUtil.h"
 #include "Util.h"
 #include "SettingsManager.h"
+#include "ConfCore.h"
 
 IpBans udpBans;
 IpBans tcpBans;
@@ -22,7 +24,11 @@ int IpBans::checkBan(const IpPortKey& key, int64_t timestamp) const
 
 void IpBans::addBan(const IpPortKey& key, int64_t timestamp, const string& url)
 {
-	unsigned banDuration = SETTING(ANTIFLOOD_BAN_TIME) * 1000;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned banDuration = (unsigned) ss->getInt(Conf::ANTIFLOOD_BAN_TIME) * 1000;
+	ss->unlockRead();
+
 	WRITE_LOCK(*dataLock);
 	BanInfo& info = data[key];
 	info.dontBan = false;
@@ -100,15 +106,19 @@ string IpBans::getInfo(const string& type, int64_t timestamp) const
 
 bool HubRequestCounters::addRequest(IpBans& bans, const IpAddress& ip, uint16_t port, int64_t timestamp, const string& url, bool& showMsg)
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int minReqCount = ss->getInt(Conf::ANTIFLOOD_MIN_REQ_COUNT);
+	unsigned maxReqPerMinute = ss->getInt(Conf::ANTIFLOOD_MAX_REQ_PER_MIN);
+	ss->unlockRead();
+
 	showMsg = false;
 	IpPortKey key;
 	key.setIP(ip, port);
 	int res = bans.checkBan(key, timestamp);
 	auto& item = data[key];
 	item.rq.add(timestamp);
-	bool flood =
-		item.rq.getReqCount() >= SETTING(ANTIFLOOD_MIN_REQ_COUNT) &&
-		item.rq.getAvgPerMinute() > static_cast<unsigned>(SETTING(ANTIFLOOD_MAX_REQ_PER_MIN));
+	bool flood = item.rq.getReqCount() >= minReqCount && item.rq.getAvgPerMinute() > maxReqPerMinute;
 	if (flood && !item.banned && res != IpBans::DONT_BAN)
 	{
 		item.banned = true;

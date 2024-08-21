@@ -10,10 +10,12 @@
 #include "stdinc.h"
 
 #include "DatabaseManager.h"
+#include "DatabaseOptions.h"
 #include "SettingsManager.h"
 #include "AppPaths.h"
 #include "LogManager.h"
 #include "FinishedItem.h"
+#include "StrUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
 #include "NetworkUtil.h"
@@ -25,6 +27,7 @@
 #include "HttpClient.h"
 #include "ZUtils.h"
 #include "ResourceManager.h"
+#include "ConfCore.h"
 #include "version.h"
 #include <maxminddb.h>
 #include <boost/algorithm/string.hpp>
@@ -89,7 +92,7 @@ static int traceCallback(unsigned what, void* ctx, void* p, void* x)
 {
 	if (g_DisableSQLtrace == 0)
 	{
-		if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
+		if ((LogManager::getLogOptions() & LogManager::OPT_LOG_SQLITE) || g_EnableSQLtrace)
 		{
 			const char* z = static_cast<const char*>(x);
 			if (*z == '-') return 0;
@@ -199,7 +202,7 @@ void DatabaseConnection::open(const string& prefix, int journalMode)
 	for (int i = 1; i < _countof(dbNames); i++)
 		attachDatabase(dbPath, fileNames[i], prefix, dbNames[i]);
 
-	if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
+	if ((LogManager::getLogOptions() & LogManager::OPT_LOG_SQLITE) || g_EnableSQLtrace)
 		sqlite3_trace_v2(connection.getdb(), SQLITE_TRACE_STMT, traceCallback, nullptr);
 	sqlite3_busy_timeout(connection.getdb(), BUSY_TIMEOUT);
 
@@ -414,25 +417,23 @@ int64_t DatabaseConnection::getRandValForRegistry()
 	return val;
 }
 
-static string makeDeleteOldTransferHistory(const string& tableName, int currentDay)
-{
-	string sql = "delete from transfer_db.";
-	sql += tableName;
-	sql += " where (type=1 and day<" + Util::toString(currentDay - SETTING(DB_LOG_FINISHED_UPLOADS));
-	sql += ") or (type=0 and day<" + Util::toString(currentDay - SETTING(DB_LOG_FINISHED_DOWNLOADS));
-	sql += ")";
-	return sql;
-}
-
 void DatabaseConnection::deleteOldTransferHistory()
 {
-	if ((SETTING(DB_LOG_FINISHED_DOWNLOADS) || SETTING(DB_LOG_FINISHED_UPLOADS)))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int finishedDownloads = ss->getInt(Conf::DB_LOG_FINISHED_DOWNLOADS);
+	int finishedUploads = ss->getInt(Conf::DB_LOG_FINISHED_UPLOADS);
+	ss->unlockRead();
+	if (finishedDownloads || finishedUploads)
 	{
 		int64_t timestamp = posixTimeToLocal(time(nullptr));
 		int currentDay = timestamp/(60*60*24);
-
-		string sqlDC = makeDeleteOldTransferHistory("fly_transfer_file", currentDay);
-		sqlite3_command cmdDC(&connection, sqlDC);
+		string sql = "delete from transfer_db.fly_transfer_file where (type=1 and day<";
+		sql += Util::toString(currentDay - finishedUploads);
+		sql += ") or (type=0 and day<";
+		sql += Util::toString(currentDay - finishedDownloads);
+		sql += ")";
+		sqlite3_command cmdDC(&connection, sql);
 		cmdDC.executenonquery();
 	}
 }
@@ -1213,6 +1214,8 @@ DatabaseManager::DatabaseManager() noexcept
 	timeDownloadMmdb = 0;
 	mmdbFileTimestamp = 1;
 	mmdbStatus = MMDB_STATUS_MISSING;
+	geoipCheckHours = 0;
+	options = 0;
 }
 
 DatabaseManager::~DatabaseManager()
@@ -1391,8 +1394,10 @@ void DatabaseManager::closeIdleConnections(uint64_t tick)
 	lmdb.closeIdleConnections(tick);
 }
 
-void DatabaseManager::init(ErrorCallback errorCallback, int journalMode)
+void DatabaseManager::init(ErrorCallback errorCallback)
 {
+	int journalMode;
+	updateSettings(&journalMode);
 	{
 		LOCK(cs);
 		this->errorCallback = errorCallback;
@@ -1428,6 +1433,32 @@ void DatabaseManager::init(ErrorCallback errorCallback, int journalMode)
 	string dbInfo = getDBInfo();
 	if (!dbInfo.empty())
 		LogManager::message(dbInfo, false);
+}
+
+void DatabaseManager::updateSettings(int* journalMode) noexcept
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	int newOptions = 0;
+	ss->lockRead();
+	if (ss->getBool(Conf::ENABLE_RATIO_USER_LIST))
+		newOptions |= DatabaseOptions::ENABLE_IP_STAT;
+	if (ss->getBool(Conf::ENABLE_LAST_IP_AND_MESSAGE_COUNTER))
+		newOptions |= DatabaseOptions::ENABLE_USER_STAT;
+	if (ss->getBool(Conf::USE_CUSTOM_LOCATIONS))
+		newOptions |= DatabaseOptions::USE_CUSTOM_LOCATIONS;
+	if (ss->getBool(Conf::ENABLE_P2P_GUARD))
+	{
+		newOptions |= DatabaseOptions::ENABLE_P2P_GUARD;
+		if (ss->getBool(Conf::P2P_GUARD_BLOCK))
+			newOptions |= DatabaseOptions::P2P_GUARD_BLOCK;
+	}
+	unsigned hours = ss->getInt(Conf::GEOIP_CHECK_HOURS);
+	if (journalMode)
+		*journalMode = ss->getInt(Conf::SQLITE_JOURNAL_MODE);
+	ss->unlockRead();
+	options = newOptions;
+	LOCK(csDownloadMmdb);
+	geoipCheckHours = hours;
 }
 
 void DatabaseManager::getIPInfo(DatabaseConnection* conn, const IpAddress& ip, IPInfo& result, int what, bool onlyCached)
@@ -1475,7 +1506,7 @@ void DatabaseManager::getIPInfo(DatabaseConnection* conn, const IpAddress& ip, I
 	}
 	if (what & IPInfo::FLAG_LOCATION)
 	{
-		if (BOOLSETTING(USE_CUSTOM_LOCATIONS) && ip.type == AF_INET)
+		if ((options & DatabaseOptions::USE_CUSTOM_LOCATIONS) && ip.type == AF_INET)
 		{
 			if (conn) conn->loadLocation(ip.data.v4, result);
 		}
@@ -1632,7 +1663,10 @@ void DatabaseManager::loadUserStatAsync(const UserPtr& user) noexcept
 
 void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item) noexcept
 {
-	unsigned maxCount = SETTING(DB_FINISHED_BATCH);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned maxCount = ss->getInt(Conf::DB_FINISHED_BATCH);
+	ss->unlockRead();
 	if (!maxCount)
 	{
 		auto conn = getConnection();
@@ -1965,11 +1999,13 @@ void DatabaseManager::downloadGeoIPDatabase(uint64_t timestamp, bool force, cons
 {
 	if (url.empty()) return;
 	uint64_t fileTimestamp;
+	unsigned hours;
 	{
 		LOCK(csDownloadMmdb);
 		if (mmdbStatus == MMDB_STATUS_DOWNLOADING || (!force && timestamp < timeDownloadMmdb)) return;
 		mmdbStatus = MMDB_STATUS_DOWNLOADING;
 		fileTimestamp = mmdbFileTimestamp;
+		hours = geoipCheckHours;
 	}
 	if (force || fileTimestamp == 1)
 	{
@@ -1977,7 +2013,7 @@ void DatabaseManager::downloadGeoIPDatabase(uint64_t timestamp, bool force, cons
 		LOCK(csDownloadMmdb);
 		mmdbFileTimestamp = fileTimestamp;
 	}
-	if (!force && fileTimestamp && fileTimestamp + SETTING(GEOIP_CHECK_HOURS) * 3600 > static_cast<uint64_t>(time(nullptr)))
+	if (!force && fileTimestamp && fileTimestamp + hours * 3600 > static_cast<uint64_t>(time(nullptr)))
 	{
 		// File was downloaded recently
 		LOCK(csDownloadMmdb);
@@ -2100,5 +2136,5 @@ void DatabaseManager::clearDownloadRequest(bool isRetry, int newStatus) noexcept
 	LOCK(csDownloadMmdb);
 	mmdbStatus = newStatus;
 	mmdbDownloadReq = 0;
-	timeDownloadMmdb = GET_TICK() + (isRetry ? GEOIP_DOWNLOAD_RETRY_TIME : SETTING(GEOIP_CHECK_HOURS) * 3600);
+	timeDownloadMmdb = GET_TICK() + (isRetry ? GEOIP_DOWNLOAD_RETRY_TIME : (geoipCheckHours * 3600));
 }

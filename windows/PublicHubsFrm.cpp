@@ -25,6 +25,8 @@
 #include "Fonts.h"
 #include "CountryList.h"
 #include "../client/FormatUtil.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 
 const int PublicHubsFrame::columnId[] =
 {
@@ -131,8 +133,9 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 
-	ctrlHubs.insertColumns(SettingsManager::PUBLIC_HUBS_FRAME_ORDER, SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, SettingsManager::PUBLIC_HUBS_FRAME_VISIBLE);
-	ctrlHubs.setSortFromSettings(SETTING(PUBLIC_HUBS_FRAME_SORT), COLUMN_USERS, false);
+	auto ss = SettingsManager::instance.getUiSettings();
+	ctrlHubs.insertColumns(Conf::PUBLIC_HUBS_FRAME_ORDER, Conf::PUBLIC_HUBS_FRAME_WIDTHS, Conf::PUBLIC_HUBS_FRAME_VISIBLE);
+	ctrlHubs.setSortFromSettings(ss->getInt(Conf::PUBLIC_HUBS_FRAME_SORT), COLUMN_USERS, false);
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetImageList(g_otherImage.getIconList(), LVSIL_SMALL);
 
@@ -172,11 +175,11 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	HublistManager *hublistManager = HublistManager::getInstance();
 
 	hublistManager->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	ClientManager::getInstance()->addListener(this);
 	FavoriteManager::getInstance()->addListener(this);
 
-	hublistManager->setServerList(SETTING(HUBLIST_SERVERS));
+	hublistManager->setServerList(Util::getConfString(Conf::HUBLIST_SERVERS));
 	hublistManager->getHubLists(hubLists);
 	updateDropDown();
 
@@ -249,7 +252,7 @@ LRESULT PublicHubsFrame::onClickedConfigure(WORD /*wNotifyCode*/, WORD /*wID*/, 
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
 		HublistManager *hublistManager = HublistManager::getInstance();
-		hublistManager->setServerList(SETTING(HUBLIST_SERVERS));
+		hublistManager->setServerList(Util::getConfString(Conf::HUBLIST_SERVERS));
 		hublistManager->getHubLists(hubLists);
 		updateDropDown();
 	}
@@ -325,15 +328,16 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		FavoriteManager::getInstance()->removeListener(this);
 		ClientManager::getInstance()->removeListener(this);
 		HublistManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		setButtonPressed(IDC_PUBLIC_HUBS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		ctrlHubs.saveHeaderOrder(SettingsManager::PUBLIC_HUBS_FRAME_ORDER, SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, SettingsManager::PUBLIC_HUBS_FRAME_VISIBLE);
-		SET_SETTING(PUBLIC_HUBS_FRAME_SORT, ctrlHubs.getSortForSettings());
+		ctrlHubs.saveHeaderOrder(Conf::PUBLIC_HUBS_FRAME_ORDER, Conf::PUBLIC_HUBS_FRAME_WIDTHS, Conf::PUBLIC_HUBS_FRAME_VISIBLE);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::PUBLIC_HUBS_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
 	}
@@ -472,7 +476,7 @@ void PublicHubsFrame::openHub(int ind)
 
 bool PublicHubsFrame::checkNick()
 {
-	if (SETTING(NICK).empty())
+	if (ClientManager::isNickEmpty())
 	{
 		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 		return false;
@@ -664,7 +668,7 @@ LRESULT PublicHubsFrame::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	int index = ctrlPubLists.GetCurSel();
 	if (index < 0) return 0;
 
-	if (!BOOLSETTING(FILTER_ENTER))
+	if (!SettingsManager::instance.getUiSettings()->getBool(Conf::FILTER_ENTER))
 	{
 		tstring text = ctrlFilter.getText();
 		Text::makeLower(text);
@@ -679,7 +683,7 @@ LRESULT PublicHubsFrame::onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	int index = ctrlPubLists.GetCurSel();
 	if (index < 0) return 0;
 
-	if (BOOLSETTING(FILTER_ENTER))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::FILTER_ENTER))
 	{
 		tstring text = ctrlFilter.getText();
 		Text::makeLower(text);
@@ -1027,7 +1031,7 @@ bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCom
 	return insert;
 }
 
-void PublicHubsFrame::on(SettingsManagerListener::Repaint)
+void PublicHubsFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -1098,7 +1102,7 @@ const tstring& PublicHubsFrame::HubInfo::getText(int col) const
 	return Util::emptyStringT;
 }
 
-int PublicHubsFrame::HubInfo::compareItems(const HubInfo* a, const HubInfo* b, int col)
+int PublicHubsFrame::HubInfo::compareItems(const HubInfo* a, const HubInfo* b, int col, int /*flags*/)
 {
 	switch (col)
 	{

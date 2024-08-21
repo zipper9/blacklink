@@ -154,7 +154,8 @@ void UserListWindow::initialize(const FavoriteManager::WindowInfo& wi)
 	}
 	else
 	{
-		ctrlUsers.setSortFromSettings(SETTING(HUB_FRAME_SORT));
+		const auto* ss = SettingsManager::instance.getUiSettings();
+		ctrlUsers.setSortFromSettings(ss->getInt(Conf::HUB_FRAME_SORT));
 	}
 }
 
@@ -202,7 +203,9 @@ LRESULT UserListWindow::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /
 	if (item && item->iItem != -1)
 	{
 		if (UserInfo* ui = ctrlUsers.getItemData(item->iItem))
-			switch (SETTING(USERLIST_DBLCLICK))
+		{
+			const auto* ss = SettingsManager::instance.getUiSettings();
+			switch (ss->getInt(Conf::USERLIST_DBLCLICK))
 			{
 				case 0:
 					ui->getList();
@@ -233,6 +236,7 @@ LRESULT UserListWindow::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /
 					ui->browseList();
 					break;
 			}
+		}
 	}
 	return 0;
 }
@@ -631,7 +635,7 @@ LRESULT UserListWindow::onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 
 LRESULT UserListWindow::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!BOOLSETTING(FILTER_ENTER))
+	if (!SettingsManager::instance.getUiSettings()->getBool(Conf::FILTER_ENTER))
 	{
 		filter = ctrlSearchBox.getText();
 		filterLower = Text::toLower(filter);
@@ -642,7 +646,7 @@ LRESULT UserListWindow::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 
 LRESULT UserListWindow::onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	if (BOOLSETTING(FILTER_ENTER))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::FILTER_ENTER))
 	{
 		filter = ctrlSearchBox.getText();
 		filterLower = Text::toLower(filter);

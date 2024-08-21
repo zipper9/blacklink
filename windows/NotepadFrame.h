@@ -72,12 +72,12 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		}
 
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
-		
+
 	private:
 		CEdit ctrlPad;
 		CContainedWindow ctrlClientContainer;
 
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 };
 
 #endif // !defined(NOTEPAD_FRAME_H)

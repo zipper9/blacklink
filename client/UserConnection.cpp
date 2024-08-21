@@ -36,6 +36,12 @@
 #include "Random.h"
 #include "SettingsManager.h"
 #include "FavoriteManager.h"
+#include "ConfCore.h"
+
+#ifdef BL_FEATURE_IPFILTER
+#include "DatabaseManager.h"
+#include "DatabaseOptions.h"
+#endif
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 #include "TagCollector.h"
@@ -79,7 +85,7 @@ UserConnection::UserConnection() noexcept :
 	number(Util::rand() & 0x7FFF)
 {
 #ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Created, p=" +
 			Util::toHexString(this), false);
 #endif
@@ -88,7 +94,7 @@ UserConnection::UserConnection() noexcept :
 UserConnection::~UserConnection()
 {
 #ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Deleted, p=" +
 			Util::toHexString(this) + " sock=" + Util::toHexString(socket), false);
 #endif
@@ -129,7 +135,7 @@ bool UserConnection::isIpBlocked(bool isDownload)
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
 		return true;
 	}
-	if (!isDownload && BOOLSETTING(ENABLE_P2P_GUARD) && BOOLSETTING(P2P_GUARD_BLOCK))
+	if (!isDownload && (DatabaseManager::getInstance()->getOptions() & DatabaseOptions::P2P_GUARD_BLOCK))
 	{
 		IPInfo ipInfo;
 		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
@@ -273,7 +279,7 @@ void UserConnection::onDataLine(const string& line) noexcept
 				if (isSet(FLAG_UPLOAD))
 				{
 #ifdef DEBUG_USER_CONNECTION
-					if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+					if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 						LogManager::message("UserConnection(" + Util::toString(id) + "): No queued downloads", false);
 #endif
 					ConnectionManager::getInstance()->putConnection(this);
@@ -469,7 +475,7 @@ void UserConnection::connect(const IpAddress& address, uint16_t port, uint16_t l
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
 	const bool secure = isSet(FLAG_SECURE);
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
 			Util::toHexString(socket) + ", secure=" + Util::toString((int) secure), false);
 	socket->connect(Util::printIpAddress(address), port, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
@@ -480,7 +486,7 @@ void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t por
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
-	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO)
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Accepted, using sock=" +
 			Util::toHexString(socket), false);
 	socket->addAcceptedSocket(std::move(newSock), port);
@@ -770,7 +776,10 @@ void UserConnection::send(const string& str)
 
 void UserConnection::setDefaultLimit()
 {
-	int defaultLimit = SETTING(PER_USER_UPLOAD_SPEED_LIMIT);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int defaultLimit = ss->getInt(Conf::PER_USER_UPLOAD_SPEED_LIMIT);
+	ss->unlockRead();
 	setUploadLimit(defaultLimit ? defaultLimit : FavoriteUser::UL_NONE);
 }
 
@@ -815,10 +824,14 @@ void UserConnection::setUploadLimit(int lim)
 
 void UserConnection::maxedOut(size_t queuePosition)
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool sendQueuePos = ss->getBool(Conf::SEND_QP_PARAM);
+	ss->unlockRead();
 	if (isSet(FLAG_NMDC))
 	{
 		string cmd = "$MaxedOut";
-		if (BOOLSETTING(SEND_QP_PARAM))
+		if (sendQueuePos)
 			cmd += ' ' + Util::toString(queuePosition);
 		cmd += '|';
 		send(cmd);
@@ -826,7 +839,7 @@ void UserConnection::maxedOut(size_t queuePosition)
 	else
 	{
 		AdcCommand cmd(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_SLOTS_FULL, "Slots full");
-		if (BOOLSETTING(SEND_QP_PARAM))
+		if (sendQueuePos)
 			cmd.addParam(TAG('Q', 'P'), Util::toString(queuePosition));
 		send(cmd);
 	}
@@ -847,7 +860,7 @@ void UserConnection::setDownload(const DownloadPtr& d)
 {
 	dcassert(isSet(FLAG_DOWNLOAD));
 	download = d;
-	if (d && BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (d && (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Download " +
 			download->getPath() + " from " + download->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);
@@ -857,7 +870,7 @@ void UserConnection::setUpload(const UploadPtr& u)
 {
 	dcassert(isSet(FLAG_UPLOAD));
 	upload = u;
-	if (u && BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	if (u && (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Upload " +
 			upload->getPath() + " to " + upload->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);

@@ -442,7 +442,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 				ItemInfo(DirectoryListing::File* f,  const DirectoryListing* dl);
 				ItemInfo(DirectoryListing::Directory* d);
 
-				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col);
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
 				void updateIconIndex();
 				int getImageIndex() const { return iconIndex; }
 				static uint8_t getStateImageIndex() { return 0; }
@@ -523,7 +524,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		typedef std::map<HWND, DirectoryListingFrame*> FrameMap;
 		static FrameMap activeFrames;
 
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 		void redraw()
 		{
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);

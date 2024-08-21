@@ -310,7 +310,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				}
 
 				const tstring getText(int col) const;
-				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col);
+				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
 
 				void updateIconIndex();
 				int getImageIndex() const { return iconIndex; }
@@ -419,6 +420,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		CContainedWindow showTreeContainer;
 		bool showTree;
 		bool usingDirMenu;
+		bool showProgressBars;
 		size_t lastTotalCount;
 		int64_t lastTotalSize;
 
@@ -518,7 +520,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept override;
 		void on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 
 		void onRechecked(const string& target, const string& message);
 

@@ -18,10 +18,13 @@
 
 #include "stdinc.h"
 #include "LogManager.h"
+#include "Util.h"
+#include "StrUtil.h"
 #include "TimeUtil.h"
 #include "SettingsManager.h"
 #include "ParamExpander.h"
 #include "ResourceManager.h"
+#include "ConfCore.h"
 
 #ifdef _WIN32
 #include "ClientManager.h"
@@ -35,6 +38,7 @@ bool LogManager::g_isInit = false;
 int  LogManager::g_LogMessageID = 0;
 bool LogManager::g_isLogSpeakerEnabled = false;
 int64_t LogManager::nextCloseTime = 0;
+std::atomic_int LogManager::options(0);
 
 #ifdef _WIN32
 HWND LogManager::g_mainWnd = nullptr;
@@ -44,40 +48,40 @@ LogManager::LogArea LogManager::types[LogManager::LAST];
 
 void LogManager::init()
 {
-	types[UPLOAD].fileOption            = SettingsManager::LOG_FILE_UPLOAD;
-	types[UPLOAD].formatOption          = SettingsManager::LOG_FORMAT_UPLOAD;
-	types[DOWNLOAD].fileOption          = SettingsManager::LOG_FILE_DOWNLOAD;
-	types[DOWNLOAD].formatOption        = SettingsManager::LOG_FORMAT_DOWNLOAD;
-	types[CHAT].fileOption              = SettingsManager::LOG_FILE_MAIN_CHAT;
-	types[CHAT].formatOption            = SettingsManager::LOG_FORMAT_MAIN_CHAT;
-	types[PM].fileOption                = SettingsManager::LOG_FILE_PRIVATE_CHAT;
-	types[PM].formatOption              = SettingsManager::LOG_FORMAT_PRIVATE_CHAT;
-	types[SYSTEM].fileOption            = SettingsManager::LOG_FILE_SYSTEM;
-	types[SYSTEM].formatOption          = SettingsManager::LOG_FORMAT_SYSTEM;
-	types[STATUS].fileOption            = SettingsManager::LOG_FILE_STATUS;
-	types[STATUS].formatOption          = SettingsManager::LOG_FORMAT_STATUS;
-	types[WEBSERVER].fileOption         = SettingsManager::LOG_FILE_WEBSERVER;
-	types[WEBSERVER].formatOption       = SettingsManager::LOG_FORMAT_WEBSERVER;
+	types[UPLOAD].fileOption            = Conf::LOG_FILE_UPLOAD;
+	types[UPLOAD].formatOption          = Conf::LOG_FORMAT_UPLOAD;
+	types[DOWNLOAD].fileOption          = Conf::LOG_FILE_DOWNLOAD;
+	types[DOWNLOAD].formatOption        = Conf::LOG_FORMAT_DOWNLOAD;
+	types[CHAT].fileOption              = Conf::LOG_FILE_MAIN_CHAT;
+	types[CHAT].formatOption            = Conf::LOG_FORMAT_MAIN_CHAT;
+	types[PM].fileOption                = Conf::LOG_FILE_PRIVATE_CHAT;
+	types[PM].formatOption              = Conf::LOG_FORMAT_PRIVATE_CHAT;
+	types[SYSTEM].fileOption            = Conf::LOG_FILE_SYSTEM;
+	types[SYSTEM].formatOption          = Conf::LOG_FORMAT_SYSTEM;
+	types[STATUS].fileOption            = Conf::LOG_FILE_STATUS;
+	types[STATUS].formatOption          = Conf::LOG_FORMAT_STATUS;
+	types[WEBSERVER].fileOption         = Conf::LOG_FILE_WEBSERVER;
+	types[WEBSERVER].formatOption       = Conf::LOG_FORMAT_WEBSERVER;
 
-	types[SQLITE_TRACE].fileOption      = SettingsManager::LOG_FILE_SQLITE_TRACE;
-	types[SQLITE_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
-	types[SEARCH_TRACE].fileOption      = SettingsManager::LOG_FILE_SEARCH_TRACE;
-	types[SEARCH_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SEARCH_TRACE;
-	types[DHT_TRACE].fileOption         = SettingsManager::LOG_FILE_DHT_TRACE;
-	types[DHT_TRACE].formatOption       = SettingsManager::LOG_FORMAT_DHT_TRACE;
-	types[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
-	types[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
-	types[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;
-	types[FLOOD_TRACE].formatOption     = SettingsManager::LOG_FORMAT_FLOOD_TRACE;
+	types[SQLITE_TRACE].fileOption      = Conf::LOG_FILE_SQLITE_TRACE;
+	types[SQLITE_TRACE].formatOption    = Conf::LOG_FORMAT_SQLITE_TRACE;
+	types[SEARCH_TRACE].fileOption      = Conf::LOG_FILE_SEARCH_TRACE;
+	types[SEARCH_TRACE].formatOption    = Conf::LOG_FORMAT_SEARCH_TRACE;
+	types[DHT_TRACE].fileOption         = Conf::LOG_FILE_DHT_TRACE;
+	types[DHT_TRACE].formatOption       = Conf::LOG_FORMAT_DHT_TRACE;
+	types[PSR_TRACE].fileOption         = Conf::LOG_FILE_PSR_TRACE;
+	types[PSR_TRACE].formatOption       = Conf::LOG_FORMAT_PSR_TRACE;
+	types[FLOOD_TRACE].fileOption       = Conf::LOG_FILE_FLOOD_TRACE;
+	types[FLOOD_TRACE].formatOption     = Conf::LOG_FORMAT_FLOOD_TRACE;
 #ifdef FLYLINKDC_USE_TORRENT
-	types[TORRENT_TRACE].fileOption     = SettingsManager::LOG_FILE_TORRENT_TRACE;
-	types[TORRENT_TRACE].formatOption   = SettingsManager::LOG_FORMAT_TORRENT_TRACE;
+	types[TORRENT_TRACE].fileOption     = Conf::LOG_FILE_TORRENT_TRACE;
+	types[TORRENT_TRACE].formatOption   = Conf::LOG_FORMAT_TORRENT_TRACE;
 #endif
 
-	types[TCP_MESSAGES].fileOption      = SettingsManager::LOG_FILE_TCP_MESSAGES;
-	types[TCP_MESSAGES].formatOption    = SettingsManager::LOG_FORMAT_TCP_MESSAGES;
-	types[UDP_PACKETS].fileOption       = SettingsManager::LOG_FILE_UDP_PACKETS;
-	types[UDP_PACKETS].formatOption     = SettingsManager::LOG_FORMAT_UDP_PACKETS;
+	types[TCP_MESSAGES].fileOption      = Conf::LOG_FILE_TCP_MESSAGES;
+	types[TCP_MESSAGES].formatOption    = Conf::LOG_FORMAT_TCP_MESSAGES;
+	types[UDP_PACKETS].fileOption       = Conf::LOG_FILE_UDP_PACKETS;
+	types[UDP_PACKETS].formatOption     = Conf::LOG_FORMAT_UDP_PACKETS;
 
 	g_isInit = true;
 
@@ -94,23 +98,69 @@ LogManager::LogManager()
 string LogManager::getLogFileName(int area, const StringMap& params) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	string path = SETTING(LOG_DIRECTORY);
+	//string path = SETTING(LOG_DIRECTORY);
 	LogArea& la = types[area];
 	la.cs.lock();
-	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
-	path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
+	//string filenameTemplate = Conf::get((Conf::StrSetting) types[area].fileOption);
+	string path = la.logDirectory;
+	path += Util::validateFileName(Util::formatParams(la.filenameTemplate, params, true));
 	la.cs.unlock();
 	return path;
+}
+
+void LogManager::updateSettings() noexcept
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string logDirectory = ss->getString(Conf::LOG_DIRECTORY);
+	int newOptions = 0;
+	if (ss->getBool(Conf::LOG_SYSTEM))
+	{
+		newOptions |= OPT_LOG_SYSTEM;
+		if (ss->getBool(Conf::LOG_SOCKET_INFO))
+			newOptions |= OPT_LOG_SOCKET_INFO;
+	}
+	if (ss->getBool(Conf::LOG_STATUS_MESSAGES))
+		newOptions |= OPT_LOG_STATUS;
+	if (ss->getBool(Conf::LOG_TCP_MESSAGES))
+		newOptions |= OPT_LOG_TCP_MESSAGES;
+	if (ss->getBool(Conf::LOG_UDP_PACKETS))
+		newOptions |= OPT_LOG_UDP_PACKETS;
+	if (ss->getBool(Conf::LOG_TLS_CERTIFICATES))
+		newOptions |= OPT_LOG_CERTIFICATES;
+	if (ss->getBool(Conf::LOG_PSR_TRACE))
+		newOptions |= OPT_LOG_PSR;
+	if (ss->getBool(Conf::LOG_DHT_TRACE))
+		newOptions |= OPT_LOG_DHT;
+	if (ss->getBool(Conf::LOG_SEARCH_TRACE))
+		newOptions |= OPT_LOG_SEARCH;
+	if (ss->getBool(Conf::LOG_SQLITE_TRACE))
+		newOptions |= OPT_LOG_SQLITE;
+	if (ss->getBool(Conf::LOG_WEBSERVER))
+		newOptions |= OPT_LOG_WEB_SERVER;
+	ss->unlockRead();
+	options.store(newOptions);
+
+	for (int area = 0; area < LAST; ++area)
+	{
+		LogArea& la = types[area];
+		ss->lockRead();
+		string filenameTemplate = ss->getString(la.fileOption);
+		ss->unlockRead();
+		la.cs.lock();
+		la.logDirectory = logDirectory;
+		la.filenameTemplate = std::move(filenameTemplate);
+		la.cs.unlock();
+	}
 }
 
 void LogManager::logRaw(int area, const string& msg, Util::ParamExpander* ex) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	string path = SETTING(LOG_DIRECTORY);
 	LogArea& la = types[area];
 	la.cs.lock();
-	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
-	path += Util::validateFileName(Util::formatParams(filenameTemplate, ex, true));
+	string path = la.logDirectory;
+	path += Util::validateFileName(Util::formatParams(la.filenameTemplate, ex, true));
 	if (path.empty())
 	{
 		dcdebug("Empty log path for %d\n", area);
@@ -140,7 +190,10 @@ void LogManager::logRaw(int area, const string& msg, Util::ParamExpander* ex) no
 void LogManager::log(int area, Util::ParamExpander* ex) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	string msg = Util::formatParams(SettingsManager::get((SettingsManager::StrSetting) types[area].formatOption, true), ex, false);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string msg = Util::formatParams(ss->getString(types[area].formatOption), ex, false);
+	ss->unlockRead();
 	size_t len = msg.length();
 	while (len && (msg[len-1] == '\n' || msg[len-1] == '\r')) len--;
 	msg.erase(len);
@@ -237,8 +290,11 @@ void LogManager::getOptions(int area, TStringPair& p) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
 	const LogArea& la = types[area];
-	p.first = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.fileOption, true));
-	p.second = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.formatOption, true));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	p.first = Text::toT(ss->getString(la.fileOption));
+	p.second = Text::toT(ss->getString(la.formatOption));
+	ss->unlockRead();
 }
 
 void LogManager::setOptions(int area, const TStringPair& p) noexcept
@@ -246,35 +302,23 @@ void LogManager::setOptions(int area, const TStringPair& p) noexcept
 	dcassert(area >= 0 && area < LAST);
 	const LogArea& la = types[area];
 	string filename = Text::fromT(p.first);
-	SettingsManager::set((SettingsManager::StrSetting) la.fileOption, filename);
-	SettingsManager::set((SettingsManager::StrSetting) la.formatOption, Text::fromT(p.second));
+	string format = Text::fromT(p.second);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setString(la.fileOption, filename);
+	ss->setString(la.formatOption, format);
+	ss->unlockWrite();
 }
-
-void LogManager::flood_message(const string& message) noexcept
-{
-	if (BOOLSETTING(LOG_FLOOD_TRACE))
-		LOG(FLOOD_TRACE, message);
-}
-
-#ifdef FLYLINKDC_USE_TORRENT
-void LogManager::torrent_message(const string& message, bool addToSystem /*= true*/) noexcept
-{
-	if (BOOLSETTING(LOG_TORRENT_TRACE))
-		LOG(TORRENT_TRACE, message);
-	if (addToSystem)
-		LOG(SYSTEM, message);
-}
-#endif
 
 void LogManager::commandTrace(const string& msg, int flags, const string& ip, int port) noexcept
 {
 	if (flags & FLAG_UDP)
 	{
-		if (!BOOLSETTING(LOG_UDP_PACKETS)) return;
+		if (!(getLogOptions() & OPT_LOG_UDP_PACKETS)) return;
 	}
 	else
 	{
-		if (!BOOLSETTING(LOG_TCP_MESSAGES)) return;
+		if (!(getLogOptions() & OPT_LOG_TCP_MESSAGES)) return;
 	}
 	string msgFull = (flags & FLAG_IN)? "Recv from " : "Sent to   ";
 	string ipPort = ip + ':' + Util::toString(port);
@@ -307,22 +351,31 @@ void LogManager::speakStatusMessage(const string& message) noexcept
 
 void LogManager::message(const string& message, bool useStatus) noexcept
 {
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (getLogOptions() & OPT_LOG_SYSTEM)
 		log(SYSTEM, message);
 	if (useStatus)
 		speakStatusMessage(message);
 }
 
+string LogManager::getLogDirectory() noexcept
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string result = ss->getString(Conf::LOG_DIRECTORY);
+	ss->unlockRead();
+	return result;
+}
+
 StepLogger::StepLogger(const string& message, bool skipStart, bool skipStop) : message(message), skipStop(skipStop)
 {
 	startTime = stepTime = GET_TICK();
-	if (!skipStart && BOOLSETTING(LOG_SYSTEM))
+	if (!skipStart && (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM))
 		LogManager::log(LogManager::SYSTEM, "[Start] " + message);
 }
 
 StepLogger::~StepLogger()
 {
-	if (!skipStop && BOOLSETTING(LOG_SYSTEM))
+	if (!skipStop && (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM))
 	{
 		uint64_t now = GET_TICK();
 		LogManager::log(LogManager::SYSTEM,
@@ -333,7 +386,7 @@ StepLogger::~StepLogger()
 void StepLogger::step(const string& what)
 {
 	uint64_t now = GET_TICK();
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM)
 		LogManager::log(LogManager::SYSTEM,
 			message + ' ' + what + " [" + Util::toString(now - stepTime) + " ms]");
 	stepTime = now;

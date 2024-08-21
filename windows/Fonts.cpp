@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "Fonts.h"
 #include "WinUtil.h"
+#include "ConfUI.h"
 #include "../client/StringTokenizer.h"
+#include "../client/SettingsManager.h"
 
 HFONT Fonts::g_font = nullptr;
 int Fonts::g_fontHeight = 0;
@@ -35,9 +37,10 @@ void Fonts::init()
 
 	lf.lfWeight = FW_BOLD;
 	g_boldFont = CreateFontIndirect(&lf);
-	
-	decodeFont(Text::toT(SETTING(TEXT_FONT)), lf);
-	
+
+	auto ss = SettingsManager::instance.getUiSettings();
+	decodeFont(Text::toT(ss->getString(Conf::TEXT_FONT)), lf);
+
 	g_font = ::CreateFontIndirect(&lf);
 	g_fontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_font);
 

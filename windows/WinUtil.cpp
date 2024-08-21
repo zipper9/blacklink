@@ -36,6 +36,8 @@
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/SysVersion.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 #include "Colors.h"
 #include "Fonts.h"
 #include "MagnetDlg.h"
@@ -168,13 +170,14 @@ void WinUtil::init(HWND hWnd)
 	Colors::init();
 	Fonts::init();
 
-	if (BOOLSETTING(REGISTER_URL_HANDLER))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::REGISTER_URL_HANDLER))
 		registerHubUrlHandlers();
-	
-	if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
+
+	if (ss->getBool(Conf::REGISTER_MAGNET_HANDLER))
 		registerMagnetHandler();
 
-	if (BOOLSETTING(REGISTER_DCLST_HANDLER))
+	if (ss->getBool(Conf::REGISTER_DCLST_HANDLER))
 		registerDclstHandler();
 
 	g_hook = SetWindowsHookEx(WH_KEYBOARD, &KeyboardProc, NULL, GetCurrentThreadId());
@@ -466,13 +469,13 @@ static WinUtil::DefinedMagnetAction getMagnetAction(int setting, bool alreadySha
 {
 	switch (setting)
 	{
-		case SettingsManager::MAGNET_ACTION_DOWNLOAD:
+		case Conf::MAGNET_ACTION_DOWNLOAD:
 			return alreadyShared ? WinUtil::MA_ASK : WinUtil::MA_DOWNLOAD;
-		case SettingsManager::MAGNET_ACTION_SEARCH:
+		case Conf::MAGNET_ACTION_SEARCH:
 			return WinUtil::MA_SEARCH;
-		case SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN:
+		case Conf::MAGNET_ACTION_DOWNLOAD_AND_OPEN:
 			return alreadyShared ? WinUtil::MA_ASK : WinUtil::MA_OPEN;
-		case SettingsManager::MAGNET_ACTION_OPEN_EXISTING:
+		case Conf::MAGNET_ACTION_OPEN_EXISTING:
 			return alreadyShared ? WinUtil::MA_OPEN : WinUtil::MA_ASK;
 	}
 	return WinUtil::MA_ASK;
@@ -500,14 +503,18 @@ bool WinUtil::parseMagnetUri(const tstring& text, DefinedMagnetAction action /* 
 			WinUtil::parseDchubUrl(Text::toT(magnet.exactSource));
 
 		const bool isDclst = Util::isDclstFile(fname);
+		const auto* ss = SettingsManager::instance.getUiSettings();
 		if (action == MA_DEFAULT)
 		{
 			if (!localPath.empty())
-				action = BOOLSETTING(SHARED_MAGNET_ASK) ? MA_ASK : getMagnetAction(SETTING(SHARED_MAGNET_ACTION), true);
+				action = ss->getBool(Conf::SHARED_MAGNET_ASK) ?
+					MA_ASK : getMagnetAction(ss->getInt(Conf::SHARED_MAGNET_ACTION), true);
 			else if (!isDclst)
-				action = BOOLSETTING(MAGNET_ASK) ? MA_ASK : getMagnetAction(SETTING(MAGNET_ACTION), false);
+				action = ss->getBool(Conf::MAGNET_ASK) ?
+					MA_ASK : getMagnetAction(ss->getInt(Conf::MAGNET_ACTION), false);
 			else
-				action = BOOLSETTING(DCLST_ASK) ? MA_ASK : getMagnetAction(SETTING(DCLST_ACTION), false);
+				action = ss->getBool(Conf::DCLST_ASK) ?
+					MA_ASK : getMagnetAction(ss->getInt(Conf::DCLST_ACTION), false);
 		}
 		if (action == MA_ASK)
 		{
@@ -544,7 +551,7 @@ bool WinUtil::parseMagnetUri(const tstring& text, DefinedMagnetAction action /* 
 					params.size = magnet.exactLength;
 					params.root = &tth;
 					QueueManager::getInstance()->add(fname, params, HintedUser(), flags, extraFlags, getConnFlag);
-					if (BOOLSETTING(SEARCH_MAGNET_SOURCES))
+					if (ss->getBool(Conf::SEARCH_MAGNET_SOURCES))
 						SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 				}
 				catch (const Exception& e)
@@ -568,12 +575,12 @@ void WinUtil::openFileList(const tstring& filename)
 }
 
 // !SMT!-UI (todo: disable - this routine does not save column visibility)
-void WinUtil::saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting order,
-                              SettingsManager::StrSetting widths, int n,
+void WinUtil::saveHeaderOrder(CListViewCtrl& ctrl, int order, int widths, int n,
                               int* indexes, int* sizes) noexcept
 {
+	auto ss = SettingsManager::instance.getUiSettings();
 	string tmp;
-	
+
 	ctrl.GetColumnOrderArray(n, indexes);
 	int i;
 	for (i = 0; i < n; ++i)
@@ -582,19 +589,19 @@ void WinUtil::saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting o
 		tmp += ',';
 	}
 	tmp.erase(tmp.size() - 1, 1);
-	SettingsManager::set(order, tmp);
+	ss->setString(order, tmp);
 	tmp.clear();
 	const int nHeaderItemsCount = ctrl.GetHeader().GetItemCount();
 	for (i = 0; i < n; ++i)
 	{
 		sizes[i] = ctrl.GetColumnWidth(i);
-		if (i >= nHeaderItemsCount) // Not exist column
+		if (i >= nHeaderItemsCount) // Invalid index
 			sizes[i] = 0;
 		tmp += Util::toString(sizes[i]);
 		tmp += ',';
 	}
 	tmp.erase(tmp.size() - 1, 1);
-	SettingsManager::set(widths, tmp);
+	ss->setString(widths, tmp);
 }
 
 static pair<tstring, bool> formatHubNames(const StringList& hubs)
@@ -693,7 +700,7 @@ void WinUtil::openFolder(const tstring& file)
 
 void WinUtil::openLog(const string& dir, const StringMap& params, const tstring& noLogMessage)
 {
-	const auto file = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(dir, params, true)));
+	const auto file = Text::toT(Util::validateFileName(Util::getConfString(Conf::LOG_DIRECTORY) + Util::formatParams(dir, params, true)));
 	if (File::isExist(file))
 		WinUtil::openFile(file);
 	else
@@ -827,7 +834,7 @@ int WinUtil::fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, 
 			text += _T(')');
 		}
 		bindCombo.AddString(text.c_str());
-		if (options & SettingsManager::BIND_OPTION_USE_DEV)
+		if (options & Conf::BIND_OPTION_USE_DEV)
 		{
 			if (adapters[i].name == selected) selIndex = i;
 		}
@@ -841,7 +848,7 @@ int WinUtil::fillAdapterList(int af, const vector<Util::AdapterInfo>& adapters, 
 	int result = selIndex;
 	if (selIndex == -1)
 	{
-		if (options & SettingsManager::BIND_OPTION_USE_DEV)
+		if (options & Conf::BIND_OPTION_USE_DEV)
 			selIndex = 0;
 		else
 			selIndex = bindCombo.InsertString(-1, Text::toT(selected).c_str());
@@ -884,7 +891,7 @@ void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, 
 		tstring str;
 		if (inFavs)
 		{
-			int defaultCharset = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
+			int defaultCharset = Text::charsetFromString(Util::getConfString(Conf::DEFAULT_CODEPAGE));
 			if (defaultCharset == Text::CHARSET_SYSTEM_DEFAULT) defaultCharset = Text::getDefaultCharset();
 			str = TSTRING_F(ENCODING_DEFAULT, defaultCharset);
 		}
@@ -1180,8 +1187,10 @@ bool WinUtil::setExplorerTheme(HWND hWnd)
 unsigned WinUtil::getListViewExStyle(bool checkboxes)
 {
 	unsigned style = LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP;
-	if (checkboxes) style |= LVS_EX_CHECKBOXES;
-	if (BOOLSETTING(SHOW_GRIDLINES)) style |= LVS_EX_GRIDLINES;
+	if (checkboxes)
+		style |= LVS_EX_CHECKBOXES;
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_GRIDLINES))
+		style |= LVS_EX_GRIDLINES;
 	return style;
 }
 
@@ -1270,4 +1279,10 @@ tstring WinUtil::getFileMaskString(const FileMaskItem* items)
 	}
 	if (result.empty()) result += _T('\0');
 	return result;
+}
+
+bool WinUtil::useMDIMaximized()
+{
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	return ss->getBool(Conf::MDI_MAXIMIZED);
 }

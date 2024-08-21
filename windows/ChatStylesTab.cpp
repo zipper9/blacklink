@@ -4,9 +4,10 @@
 #include "Fonts.h"
 #include "DialogLayout.h"
 #include "LockRedraw.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
 #include "../client/Text.h"
-
-extern SettingsManager *g_settings;
+#include "../client/StrUtil.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -32,8 +33,7 @@ static const DialogLayout::Item layoutItems[] =
 
 void ChatStylesTab::TextStyleSettings::init(
     ChatStylesTab *parent, ResourceManager::Strings name,
-    SettingsManager::IntSetting bgSetting, SettingsManager::IntSetting fgSetting,
-    SettingsManager::IntSetting boldSetting, SettingsManager::IntSetting italicSetting)
+    int bgSetting, int fgSetting, int boldSetting, int italicSetting)
 {
 	memset(this, 0, sizeof(CHARFORMAT2));
 	cbSize = sizeof(CHARFORMAT2);
@@ -48,22 +48,23 @@ void ChatStylesTab::TextStyleSettings::init(
 	this->italicSetting = italicSetting;
 }
 
-void ChatStylesTab::TextStyleSettings::loadSettings()
+void ChatStylesTab::TextStyleSettings::loadSettings(const BaseSettingsImpl* ss)
 {
 	dwEffects = 0;
-	crBackColor = g_settings->get(bgSetting);
-	crTextColor = g_settings->get(fgSetting);
-	if (g_settings->get(boldSetting)) dwEffects |= CFE_BOLD;
-	if (g_settings->get(italicSetting)) dwEffects |= CFE_ITALIC;
+	crBackColor = ss->getInt(bgSetting);
+	crTextColor = ss->getInt(fgSetting);
+	if (ss->getBool(boldSetting)) dwEffects |= CFE_BOLD;
+	if (ss->getBool(italicSetting)) dwEffects |= CFE_ITALIC;
 }
 
 void ChatStylesTab::TextStyleSettings::loadDefaultSettings()
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	dwEffects = 0;
-	crBackColor = g_settings->getDefault(bgSetting);
-	crTextColor = g_settings->getDefault(fgSetting);
-	if (g_settings->getDefault(boldSetting)) dwEffects |= CFE_BOLD;
-	if (g_settings->getDefault(italicSetting)) dwEffects |= CFE_ITALIC;
+	crBackColor = ss->getIntDefault(bgSetting);
+	crTextColor = ss->getIntDefault(fgSetting);
+	if (ss->getIntDefault(boldSetting)) dwEffects |= CFE_BOLD;
+	if (ss->getIntDefault(italicSetting)) dwEffects |= CFE_ITALIC;
 }
 
 void ChatStylesTab::TextStyleSettings::loadSettings(const SettingsStore& ss)
@@ -76,14 +77,12 @@ void ChatStylesTab::TextStyleSettings::loadSettings(const SettingsStore& ss)
 	if (ss.getIntValue(italicSetting, val) && val) dwEffects |= CFE_ITALIC;
 }
 
-void ChatStylesTab::TextStyleSettings::saveSettings() const
+void ChatStylesTab::TextStyleSettings::saveSettings(BaseSettingsImpl* ss) const
 {
-	g_settings->set(bgSetting, (int) crBackColor);
-	g_settings->set(fgSetting, (int) crTextColor);
-	BOOL bold = (dwEffects & CFE_BOLD) == CFE_BOLD;
-	g_settings->set(boldSetting, bold);
-	BOOL italic = (dwEffects & CFE_ITALIC) == CFE_ITALIC;
-	g_settings->set(italicSetting, italic);
+	ss->setInt(bgSetting, (int) crBackColor);
+	ss->setInt(fgSetting, (int) crTextColor);
+	ss->setBool(boldSetting, (dwEffects & CFE_BOLD) == CFE_BOLD);
+	ss->setBool(italicSetting, (dwEffects & CFE_ITALIC) == CFE_ITALIC);
 }
 
 void ChatStylesTab::TextStyleSettings::saveSettings(SettingsStore& ss) const
@@ -143,52 +142,52 @@ ChatStylesTab::ChatStylesTab()
 	bg = 0;
 
 	textStyles[TS_GENERAL].init(this, ResourceManager::GENERAL_TEXT,
-	    SettingsManager::TEXT_GENERAL_BACK_COLOR, SettingsManager::TEXT_GENERAL_FORE_COLOR,
-	    SettingsManager::TEXT_GENERAL_BOLD, SettingsManager::TEXT_GENERAL_ITALIC);
+	    Conf::TEXT_GENERAL_BACK_COLOR, Conf::TEXT_GENERAL_FORE_COLOR,
+	    Conf::TEXT_GENERAL_BOLD, Conf::TEXT_GENERAL_ITALIC);
 
 	textStyles[TS_MYNICK].init(this, ResourceManager::MY_NICK,
-	    SettingsManager::TEXT_MYNICK_BACK_COLOR, SettingsManager::TEXT_MYNICK_FORE_COLOR,
-	    SettingsManager::TEXT_MYNICK_BOLD, SettingsManager::TEXT_MYNICK_ITALIC);
+	    Conf::TEXT_MYNICK_BACK_COLOR, Conf::TEXT_MYNICK_FORE_COLOR,
+	    Conf::TEXT_MYNICK_BOLD, Conf::TEXT_MYNICK_ITALIC);
 
 	textStyles[TS_MYMSG].init(this, ResourceManager::MY_MESSAGE,
-	    SettingsManager::TEXT_MYOWN_BACK_COLOR, SettingsManager::TEXT_MYOWN_FORE_COLOR,
-	    SettingsManager::TEXT_MYOWN_BOLD, SettingsManager::TEXT_MYOWN_ITALIC);
+	    Conf::TEXT_MYOWN_BACK_COLOR, Conf::TEXT_MYOWN_FORE_COLOR,
+	    Conf::TEXT_MYOWN_BOLD, Conf::TEXT_MYOWN_ITALIC);
 
 	textStyles[TS_PRIVATE].init(this, ResourceManager::PRIVATE_MESSAGE,
-	    SettingsManager::TEXT_PRIVATE_BACK_COLOR, SettingsManager::TEXT_PRIVATE_FORE_COLOR,
-	    SettingsManager::TEXT_PRIVATE_BOLD, SettingsManager::TEXT_PRIVATE_ITALIC);
+	    Conf::TEXT_PRIVATE_BACK_COLOR, Conf::TEXT_PRIVATE_FORE_COLOR,
+	    Conf::TEXT_PRIVATE_BOLD, Conf::TEXT_PRIVATE_ITALIC);
 
 	textStyles[TS_SYSTEM].init(this, ResourceManager::SYSTEM_MESSAGE,
-	    SettingsManager::TEXT_SYSTEM_BACK_COLOR, SettingsManager::TEXT_SYSTEM_FORE_COLOR,
-	    SettingsManager::TEXT_SYSTEM_BOLD, SettingsManager::TEXT_SYSTEM_ITALIC);
+	    Conf::TEXT_SYSTEM_BACK_COLOR, Conf::TEXT_SYSTEM_FORE_COLOR,
+	    Conf::TEXT_SYSTEM_BOLD, Conf::TEXT_SYSTEM_ITALIC);
 
 	textStyles[TS_SERVER].init(this, ResourceManager::SERVER_MESSAGE,
-	    SettingsManager::TEXT_SERVER_BACK_COLOR, SettingsManager::TEXT_SERVER_FORE_COLOR,
-	    SettingsManager::TEXT_SERVER_BOLD, SettingsManager::TEXT_SERVER_ITALIC);
+	    Conf::TEXT_SERVER_BACK_COLOR, Conf::TEXT_SERVER_FORE_COLOR,
+	    Conf::TEXT_SERVER_BOLD, Conf::TEXT_SERVER_ITALIC);
 
 	textStyles[TS_TIMESTAMP].init(this, ResourceManager::TIMESTAMP,
-	    SettingsManager::TEXT_TIMESTAMP_BACK_COLOR, SettingsManager::TEXT_TIMESTAMP_FORE_COLOR,
-	    SettingsManager::TEXT_TIMESTAMP_BOLD, SettingsManager::TEXT_TIMESTAMP_ITALIC);
+	    Conf::TEXT_TIMESTAMP_BACK_COLOR, Conf::TEXT_TIMESTAMP_FORE_COLOR,
+	    Conf::TEXT_TIMESTAMP_BOLD, Conf::TEXT_TIMESTAMP_ITALIC);
 
 	textStyles[TS_URL].init(this, ResourceManager::TEXT_STYLE_URL,
-	    SettingsManager::TEXT_URL_BACK_COLOR, SettingsManager::TEXT_URL_FORE_COLOR,
-	    SettingsManager::TEXT_URL_BOLD, SettingsManager::TEXT_URL_ITALIC);
+	    Conf::TEXT_URL_BACK_COLOR, Conf::TEXT_URL_FORE_COLOR,
+	    Conf::TEXT_URL_BOLD, Conf::TEXT_URL_ITALIC);
 
 	textStyles[TS_FAVORITE].init(this, ResourceManager::FAV_USER,
-	    SettingsManager::TEXT_FAV_BACK_COLOR, SettingsManager::TEXT_FAV_FORE_COLOR,
-	    SettingsManager::TEXT_FAV_BOLD, SettingsManager::TEXT_FAV_ITALIC);
+	    Conf::TEXT_FAV_BACK_COLOR, Conf::TEXT_FAV_FORE_COLOR,
+	    Conf::TEXT_FAV_BOLD, Conf::TEXT_FAV_ITALIC);
 
 	textStyles[TS_BANNED].init(this, ResourceManager::FAV_ENEMY_USER,
-	    SettingsManager::TEXT_ENEMY_BACK_COLOR, SettingsManager::TEXT_ENEMY_FORE_COLOR,
-	    SettingsManager::TEXT_ENEMY_BOLD, SettingsManager::TEXT_ENEMY_ITALIC);
+	    Conf::TEXT_ENEMY_BACK_COLOR, Conf::TEXT_ENEMY_FORE_COLOR,
+	    Conf::TEXT_ENEMY_BOLD, Conf::TEXT_ENEMY_ITALIC);
 
 	textStyles[TS_OP].init(this, ResourceManager::OPERATOR,
-	    SettingsManager::TEXT_OP_BACK_COLOR, SettingsManager::TEXT_OP_FORE_COLOR,
-	    SettingsManager::TEXT_OP_BOLD, SettingsManager::TEXT_OP_ITALIC);
+	    Conf::TEXT_OP_BACK_COLOR, Conf::TEXT_OP_FORE_COLOR,
+	    Conf::TEXT_OP_BOLD, Conf::TEXT_OP_ITALIC);
 
 	textStyles[TS_OTHER].init(this, ResourceManager::OTHER_USER,
-	    SettingsManager::TEXT_NORMAL_BACK_COLOR, SettingsManager::TEXT_NORMAL_FORE_COLOR,
-	    SettingsManager::TEXT_NORMAL_BOLD, SettingsManager::TEXT_NORMAL_ITALIC);
+	    Conf::TEXT_NORMAL_BACK_COLOR, Conf::TEXT_NORMAL_FORE_COLOR,
+	    Conf::TEXT_NORMAL_BOLD, Conf::TEXT_NORMAL_ITALIC);
 
 	preview.disableChatCache();
 }
@@ -253,7 +252,8 @@ LRESULT ChatStylesTab::onSetFont(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL&
 
 LRESULT ChatStylesTab::onSetDefaultFont(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
 {
-	Fonts::decodeFont(Text::toT(g_settings->getDefault(SettingsManager::TEXT_FONT)), mainFont);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	Fonts::decodeFont(Text::toT(ss->getStringDefault(Conf::TEXT_FONT)), mainFont);
 	applyFont();
 	updateFont();
 	refreshPreview();
@@ -389,41 +389,41 @@ LRESULT ChatStylesTab::onBoldMsgAuthor(WORD wNotifyCode, WORD wID, HWND hWndCtl,
 {
 	boldMsgAuthor = ctrlBoldMsgAuthors.GetCheck() == BST_CHECKED;
 	refreshPreview();
-	if (callback) callback->settingChanged(SettingsManager::BOLD_MSG_AUTHOR);
+	if (callback) callback->settingChanged(Conf::BOLD_MSG_AUTHOR);
 	return 0;
 }
 
-void ChatStylesTab::loadSettings()
+void ChatStylesTab::loadSettings(const BaseSettingsImpl* ss)
 {
-	currentFont = Text::toT(SETTING(TEXT_FONT));
+	currentFont = Text::toT(ss->getString(Conf::TEXT_FONT));
 	memset(&mainFont, 0, sizeof(mainFont));
 	Fonts::decodeFont(currentFont, mainFont);
 
 	for (int i = 0; i < TS_LAST; i++)
 	{
-		textStyles[i].loadSettings();
+		textStyles[i].loadSettings(ss);
 		_tcscpy(textStyles[i].szFaceName, mainFont.lfFaceName);
 		textStyles[i].bCharSet = mainFont.lfCharSet;
 		textStyles[i].yHeight = mainFont.lfHeight;
 	}
 
-	boldMsgAuthor = g_settings->getBool(SettingsManager::BOLD_MSG_AUTHOR);
+	boldMsgAuthor = ss->getBool(Conf::BOLD_MSG_AUTHOR);
 }
 
-void ChatStylesTab::saveSettings() const
+void ChatStylesTab::saveSettings(BaseSettingsImpl* ss) const
 {
 	for (int i = 0; i < TS_LAST; i++)
-		textStyles[i].saveSettings();
-	g_settings->set(SettingsManager::TEXT_FONT, Text::fromT(Fonts::encodeFont(mainFont)));
-	g_settings->set(SettingsManager::BOLD_MSG_AUTHOR, boldMsgAuthor);
+		textStyles[i].saveSettings(ss);
+	ss->setString(Conf::TEXT_FONT, Text::fromT(Fonts::encodeFont(mainFont)));
+	ss->setBool(Conf::BOLD_MSG_AUTHOR, boldMsgAuthor);
 }
 
 void ChatStylesTab::getValues(SettingsStore& ss) const
 {
 	for (int i = 0; i < TS_LAST; i++)
 		textStyles[i].saveSettings(ss);
-	ss.setStrValue(SettingsManager::TEXT_FONT, Text::fromT(Fonts::encodeFont(mainFont)));
-	ss.setIntValue(SettingsManager::BOLD_MSG_AUTHOR, boldMsgAuthor);
+	ss.setStrValue(Conf::TEXT_FONT, Text::fromT(Fonts::encodeFont(mainFont)));
+	ss.setIntValue(Conf::BOLD_MSG_AUTHOR, boldMsgAuthor);
 }
 
 void ChatStylesTab::setValues(const SettingsStore& ss)
@@ -431,11 +431,11 @@ void ChatStylesTab::setValues(const SettingsStore& ss)
 	for (int i = 0; i < TS_LAST; i++)
 		textStyles[i].loadSettings(ss);
 	string sval;
-	if (ss.getStrValue(SettingsManager::TEXT_FONT, sval))
+	if (ss.getStrValue(Conf::TEXT_FONT, sval))
 		Fonts::decodeFont(Text::toT(sval), mainFont);
-	ss.getBoolValue(SettingsManager::BOLD_MSG_AUTHOR, boldMsgAuthor);
+	ss.getBoolValue(Conf::BOLD_MSG_AUTHOR, boldMsgAuthor);
 	int val;
-	if (ss.getIntValue(SettingsManager::BACKGROUND_COLOR, val)) bg = val;
+	if (ss.getIntValue(Conf::BACKGROUND_COLOR, val)) bg = val;
 }
 
 void ChatStylesTab::updateTheme()
@@ -467,7 +467,7 @@ void ChatStylesTab::applyFont()
 	if (newFont != currentFont)
 	{
 		currentFont = std::move(newFont);
-		if (callback) callback->settingChanged(SettingsManager::TEXT_FONT);
+		if (callback) callback->settingChanged(Conf::TEXT_FONT);
 	}
 	showFont();
 }

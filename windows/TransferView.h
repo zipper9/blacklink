@@ -190,6 +190,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			ADD_TOKEN,
 			REMOVE_TOKEN,
 			UPDATE_TOKEN,
+			POPUP_NOTIF,
 			REPAINT
 		};
 
@@ -301,7 +302,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				}
 				int64_t getPos() const;
 				const tstring getText(uint8_t col) const;
-				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
 				static int compareTargets(const ItemInfo* a, const ItemInfo* b);
 				static int compareUsers(const ItemInfo* a, const ItemInfo* b);
 
@@ -476,6 +478,16 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			}
 		};
 
+		struct PopupTask : public Task
+		{
+			int setting;
+			ResourceManager::Strings title;
+			int flags;
+			string user;
+			string file;
+			tstring miscText;
+		};
+
 		ItemInfo *addToken(const UpdateInfo& ui);
 		ItemInfo* findItemByToken(const string& token, int& index);
 		ItemInfo* findItemByTarget(const tstring& target);
@@ -493,6 +505,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		static const int columnId[];
 
 		ProgressBar progressBar[3]; // download, download segment, upload
+		bool showProgressBars;
+		bool showSpeedIcon;
+		int64_t topUploadSpeed, topDownloadSpeed;
 
 		OMenu segmentedMenu;
 		OMenu copyMenu;
@@ -565,7 +580,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		}
 
 		// SettingsManagerListener
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 
 		void onTransferComplete(const Transfer* t, bool download, const string& filename, bool failed);
 		static void starting(UpdateInfo* ui, const Transfer* t);

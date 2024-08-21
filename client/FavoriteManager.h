@@ -23,6 +23,7 @@
 
 #include "UserCommand.h"
 #include "FavoriteUser.h"
+#include "SettingsManagerListener.h"
 #include "ClientManagerListener.h"
 #include "FavoriteManagerListener.h"
 #include "HubEntry.h"
@@ -36,6 +37,7 @@ class SimpleXML;
 
 class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	public Singleton<FavoriteManager>,
+	private SettingsManagerListener,
 	private ClientManagerListener,
 	private TimerManagerListener
 {
@@ -265,7 +267,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void load();
 		void saveFavorites();
 		void saveRecents();
-		
+
 	private:
 		FavoriteHubEntryList hubs;
 		boost::unordered_map<string, FavoriteHubEntry*> hubsByUrl;
@@ -296,7 +298,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	public:
 		void shutdown();
 
-		void loadRecents(SimpleXML& xml);
+		void loadLegacyRecents(SimpleXML& xml);
+
 		void loadPreviewApps(SimpleXML& xml);
 		void savePreviewApps(SimpleXML& xml) const;
 		void loadSearchUrls(SimpleXML& xml);
@@ -312,7 +315,10 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		const FavoriteHubEntry* getFavoriteHubByUrlL(const string& url) const;
 		FavoriteHubEntry* getFavoriteHubByUrlL(const string& url);
 		static void updateConnectionStatus(FavoriteHubEntry* fhe, ConnectionStatus::Status status, time_t now);
-		
+
+		// SettingsManagerListener
+		void on(Save, SimpleXML&) noexcept override;
+
 		// ClientManagerListener
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
 		void on(UserConnected, const UserPtr& user) noexcept override;

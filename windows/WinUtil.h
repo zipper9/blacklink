@@ -21,34 +21,9 @@
 
 #include "resource.h"
 #include "../client/NetworkUtil.h"
-#include "../client/SettingsManager.h"
 #include "UserInfoSimple.h"
 #include "OMenu.h"
 #include "ImageLists.h"
-
-#define SHOW_POPUP(popup_key, msg, title) \
-do \
-{ \
-	if (POPUP_ENABLED(popup_key)) \
-		MainFrame::ShowBalloonTip(msg, title); \
-} while(0)
-
-#define SHOW_POPUPF(popup_key, msg, title, flags) \
-do \
-{ \
-	if (POPUP_ENABLED(popup_key)) \
-		MainFrame::ShowBalloonTip(msg, title, flags); \
-} while(0)
-
-#define SHOW_POPUP_EXT(popup_key, msg, ext_msg, ext_len, title) \
-do \
-{ \
-	if (POPUP_ENABLED(popup_key)) \
-		MainFrame::ShowBalloonTip(msg + _T(": ") + ext_msg.substr(0, ext_len), title); \
-} while(0)
-
-#define PLAY_SOUND(soundKey) WinUtil::playSound(SOUND_SETTING(soundKey))
-#define PLAY_SOUND_BEEP(soundKey) { if (SOUND_BEEP_BOOLSETTING(soundKey)) WinUtil::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
 
 class FlatTabCtrl;
 class UserCommand;
@@ -151,8 +126,7 @@ namespace WinUtil
 	string getHubDisplayName(const string& hunUrl);
 	int splitTokens(int* result, const string& tokens, int maxItems) noexcept;
 	int splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue = 100) noexcept;
-	void saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting order,
-	                     SettingsManager::StrSetting widths, int n, int* indexes, int* sizes) noexcept; // !SMT!-UI todo: disable - this routine does not save column visibility
+	void saveHeaderOrder(CListViewCtrl& ctrl, int order, int widths, int n, int* indexes, int* sizes) noexcept; // !SMT!-UI todo: disable - this routine does not save column visibility
 
 	inline bool isShift() { return (GetKeyState(VK_SHIFT) & 0x8000) != 0; }
 	inline bool isAlt() { return (GetKeyState(VK_MENU) & 0x8000) != 0; }
@@ -173,6 +147,8 @@ namespace WinUtil
 	{
 		return hiddenCreateEx(*p);
 	}
+
+	bool useMDIMaximized();
 
 	static void translate(HWND page, const TextItem* textItems)
 	{

@@ -3,8 +3,10 @@
 #include "SlotPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "../client/SettingsManager.h"
 #include "../client/IpGrant.h"
 #include "../client/File.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -43,16 +45,16 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SLOTS, SettingsManager::SLOTS, PropPage::T_INT },
-	{ IDC_MIN_UPLOAD_SPEED, SettingsManager::AUTO_SLOT_MIN_UL_SPEED, PropPage::T_INT },
-	{ IDC_EXTRA_SLOTS, SettingsManager::EXTRA_SLOTS, PropPage::T_INT },
-	{ IDC_SMALL_FILE_SIZE, SettingsManager::MINISLOT_SIZE, PropPage::T_INT },
-	{ IDC_EXTRA_SLOTS2, SettingsManager::HUB_SLOTS, PropPage::T_INT },
-	{ IDC_SLOT_DL, SettingsManager::EXTRA_SLOT_TO_DL, PropPage::T_BOOL },
-	{ IDC_AUTO_SLOTS, SettingsManager::AUTO_SLOTS, PropPage::T_INT  },
-	{ IDC_PARTIAL_SLOTS, SettingsManager::EXTRA_PARTIAL_SLOTS, PropPage::T_INT  },
+	{ IDC_SLOTS, Conf::SLOTS, PropPage::T_INT },
+	{ IDC_MIN_UPLOAD_SPEED, Conf::AUTO_SLOT_MIN_UL_SPEED, PropPage::T_INT },
+	{ IDC_EXTRA_SLOTS, Conf::EXTRA_SLOTS, PropPage::T_INT },
+	{ IDC_SMALL_FILE_SIZE, Conf::MINISLOT_SIZE, PropPage::T_INT },
+	{ IDC_EXTRA_SLOTS2, Conf::HUB_SLOTS, PropPage::T_INT },
+	{ IDC_SLOT_DL, Conf::EXTRA_SLOT_TO_DL, PropPage::T_BOOL },
+	{ IDC_AUTO_SLOTS, Conf::AUTO_SLOTS, PropPage::T_INT  },
+	{ IDC_PARTIAL_SLOTS, Conf::EXTRA_PARTIAL_SLOTS, PropPage::T_INT  },
 #ifdef SSA_IPGRANT_FEATURE
-	{ IDC_EXTRA_SLOT_BY_IP, SettingsManager::EXTRA_SLOT_BY_IP, PropPage::T_BOOL },
+	{ IDC_EXTRA_SLOT_BY_IP, Conf::EXTRA_SLOT_BY_IP, PropPage::T_BOOL },
 #endif
 	{ 0, 0, PropPage::T_END }
 };
@@ -93,7 +95,10 @@ LRESULT SlotPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 #ifdef SSA_IPGRANT_FEATURE
 	try
 	{
-		ipGrantEnabled = BOOLSETTING(EXTRA_SLOT_BY_IP);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		ipGrantEnabled = ss->getBool(Conf::EXTRA_SLOT_BY_IP);
+		ss->unlockRead();
 		ipGrantPath = IpGrant::getFileName();
 		ipGrantData = File(ipGrantPath, File::READ, File::OPEN).read();
 		SetDlgItemText(IDC_GRANTIP_INI, Text::toT(ipGrantData).c_str());
@@ -143,7 +148,11 @@ void SlotPage::write()
 		{
 		}
 	}
-	if (BOOLSETTING(EXTRA_SLOT_BY_IP))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool extraSlotByIP = ss->getBool(Conf::EXTRA_SLOT_BY_IP);
+	ss->unlockRead();
+	if (extraSlotByIP)
 	{
 		if (changed || !ipGrantEnabled)
 			ipGrant.load();

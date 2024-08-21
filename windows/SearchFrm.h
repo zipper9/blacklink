@@ -348,7 +348,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				
 				const tstring& getText(uint8_t col) const;
 
-				static int compareItems(const SearchInfo* a, const SearchInfo* b, int col);
+				static int compareItems(const SearchInfo* a, const SearchInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
 
 				int getImageIndex() const;
 				void calcImageIndex();
@@ -374,8 +375,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			HubInfo(const string& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
 				
 			const tstring& getText(int col) const;
-			static int compareItems(const HubInfo* a, const HubInfo* b, int col);
-			static const int getImageIndex() { return 0; }
+			static int compareItems(const HubInfo* a, const HubInfo* b, int col, int flags);
+			static int getCompareFlags() { return 0; }
+			static int getImageIndex() { return 0; }
 			static uint8_t getStateImageIndex() { return 0; }
 			int getType() const;
 			
@@ -449,7 +451,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		CButton ctrlCollapsed;
 		bool expandSR;
-		
+
 		CButton ctrlStoreSettings;
 		bool storeSettings;
 		CButton ctrlUseGroupTreeSettings;
@@ -457,6 +459,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		bool autoSwitchToTTH;
 		bool shouldSort;
+		bool boldSearch;
 		CImageList images;
 		SearchInfoList ctrlResults;
 		CustomDrawHelpers::CustomDrawState customDrawState;
@@ -488,7 +491,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		FastCriticalSection csEverything;
 
 		void clearFound();
-		
+
 		OMenu targetMenu;
 		OMenu targetDirMenu;
 		OMenu priorityMenu;
@@ -590,7 +593,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void on(UserRemoved, const FavoriteUser& user) noexcept override { onUserUpdated(user.user); }
 		void on(UserStatusChanged, const UserPtr& user) noexcept override { onUserUpdated(user); }
 
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 
 		void createMenus();
 		void destroyMenus();
@@ -610,9 +613,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		void addSearchResult(SearchInfo* si);
 		bool isSkipSearchResult(SearchInfo* si);
-		
+
 		LRESULT onItemChangedHub(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-		
+
 		void speak(Speakers s, const Client* c);
 };
 

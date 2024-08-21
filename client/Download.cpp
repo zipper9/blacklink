@@ -28,6 +28,7 @@
 #include "ParamExpander.h"
 #include "FormatUtil.h"
 #include "Random.h"
+#include "ConfCore.h"
 
 #ifdef DEBUG_SHUTDOWN
 std::atomic<int> Download::countCreated(0), Download::countDeleted(0);
@@ -106,17 +107,25 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	cmd.addParam(Util::toString(getStartPos()));
 	cmd.addParam(Util::toString(getSize()));
 
-	if (zlib && BOOLSETTING(COMPRESS_TRANSFERS))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (zlib)
+		zlib = ss->getBool(Conf::COMPRESS_TRANSFERS);
+	bool sendDBParam = ss->getBool(Conf::SEND_DB_PARAM);
+	bool useTTHList = isSet(FLAG_MATCH_QUEUE) ? ss->getBool(Conf::USE_TTH_LIST) : false;
+	ss->unlockRead();
+
+	if (zlib)
 		cmd.addParam("ZL1");
 	if (isSet(FLAG_RECURSIVE_LIST))
 		cmd.addParam("RE1");
-	if (BOOLSETTING(SEND_DB_PARAM))
+	if (sendDBParam)
 	{
 		int64_t bytes = getDownloadedBytes();
 		if (bytes > 0)
 			cmd.addParam(TAG('D', 'B'), Util::toString(bytes));
 	}
-	if (isSet(FLAG_MATCH_QUEUE) && BOOLSETTING(USE_TTH_LIST))
+	if (useTTHList)
 		cmd.addParam("TL1");
 }
 
@@ -175,9 +184,13 @@ string Download::getDownloadTarget() const
 	if (!tempTarget.empty())
 		return tempTarget;
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string tempDirectory = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	ss->unlockRead();
+
 	const TTHValue& tth = qi->getTTH();
 	const string& target = qi->getTarget();
-	const string& tempDirectory = SETTING(TEMP_DOWNLOAD_DIRECTORY);
 	const string targetFileName = Util::getFileName(target);
 	const string tempName = QueueItem::getDCTempName(targetFileName, tempDirectory.empty() ? nullptr : &tth);
 	if (!tempDirectory.empty() && File::getSize(target) == -1)
@@ -205,7 +218,9 @@ string Download::getDownloadTarget() const
 			catch (const Exception&)
 			{
 				LogManager::message(STRING_F(TEMP_DIR_NOT_WRITABLE, tempDirectory));
-				SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, Util::emptyString);
+				ss->lockWrite();
+				ss->setString(Conf::TEMP_DOWNLOAD_DIRECTORY, Util::emptyString);
+				ss->unlockWrite();
 			}
 		}
 	}

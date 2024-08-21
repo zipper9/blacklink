@@ -21,10 +21,12 @@
 #include "SearchFrm.h"
 #include "WinUtil.h"
 #include "Fonts.h"
+#include "../client/SettingsUtil.h"
 #include "../client/Client.h"
 #include "../client/FormatUtil.h"
 #include "../client/LocationUtil.h"
 #include "../client/Tag16.h"
+#include "../client/ConfCore.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int MAX_ITEMS = 500;
@@ -61,9 +63,6 @@ static const ResourceManager::Strings columnNames[] =
 
 SpyFrame::SpyFrame() :
 	timer(m_hWnd), totalCount(0), currentSecIndex(0),
-	ignoreTTH(BOOLSETTING(SPY_FRAME_IGNORE_TTH_SEARCHES)),
-	showNick(BOOLSETTING(SHOW_SEEKERS_IN_SPY_FRAME)),
-	logToFile(BOOLSETTING(LOG_SEEKERS_IN_SPY_FRAME)),
 	ignoreTTHContainer(WC_BUTTON, this, SPYFRAME_IGNORETTH_MESSAGE_MAP),
 	showNickContainer(WC_BUTTON, this, SPYFRAME_SHOW_NICK),
 	logToFileContainer(WC_BUTTON, this, SPYFRAME_LOG_FILE),
@@ -72,11 +71,15 @@ SpyFrame::SpyFrame() :
 	itemId(0)
 {
 	memset(countPerSec, 0, sizeof(countPerSec));
-	colorShared = SETTING(FILE_SHARED_COLOR);
+	const auto ss = SettingsManager::instance.getUiSettings();
+	ignoreTTH = ss->getBool(Conf::SPY_FRAME_IGNORE_TTH_SEARCHES);
+	showNick = ss->getBool(Conf::SHOW_SEEKERS_IN_SPY_FRAME);
+	logToFile = ss->getBool(Conf::LOG_SEEKERS_IN_SPY_FRAME);
+	colorShared = ss->getInt(Conf::FILE_SHARED_COLOR);
 	colorSharedLighter = ColorUtil::lighter(colorShared);
 	colorContrastText = RGB(0,0,0);
 	ClientManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 
 	ctrlSearches.ownsItemData = false;
 	ctrlSearches.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
@@ -107,25 +110,26 @@ LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	ctrlIgnoreTTH.SetFont(Fonts::g_systemFont);
 	ctrlIgnoreTTH.SetCheck(ignoreTTH);
 	ignoreTTHContainer.SubclassWindow(ctrlIgnoreTTH.m_hWnd);
-	
+
 	ctrlShowNick.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(SETTINGS_SHOW_SEEKERS_IN_SPY_FRAME), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 	ctrlShowNick.SetFont(Fonts::g_systemFont);
 	ctrlShowNick.SetCheck(showNick);
 	showNickContainer.SubclassWindow(ctrlShowNick.m_hWnd);
-	
-	logFilePath = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "SpyLog.log"));
+
+	logFilePath = Text::toT(Util::validateFileName(Util::getConfString(Conf::LOG_DIRECTORY) + "SpyLog.log"));
 	const tstring logToFileCaption = TSTRING(SETTINGS_LOG_FILE_IN_SPY_FRAME) + _T(" (") + logFilePath + _T(")");
-	
+
 	ctrlLogToFile.Create(ctrlStatus.m_hWnd, rcDefault, logToFileCaption.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
 	ctrlLogToFile.SetFont(Fonts::g_systemFont);
 	ctrlLogToFile.SetCheck(logToFile);
 	logToFileContainer.SubclassWindow(ctrlLogToFile.m_hWnd);
-	
+
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(SpyFrame::columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(SpyFrame::columnId));
 
-	ctrlSearches.insertColumns(SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, SettingsManager::SPY_FRAME_VISIBLE);
-	ctrlSearches.setSortFromSettings(SETTING(SPY_FRAME_SORT));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	ctrlSearches.insertColumns(Conf::SPY_FRAME_ORDER, Conf::SPY_FRAME_WIDTHS, Conf::SPY_FRAME_VISIBLE);
+	ctrlSearches.setSortFromSettings(ss->getInt(Conf::SPY_FRAME_SORT));
 	ShareManager::getInstance()->setHits(0);
 
 	if (logToFile) openLogFile();
@@ -197,18 +201,19 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	{
 		closed = true;
 		ClientManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		bHandled = TRUE;
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		ctrlSearches.saveHeaderOrder(SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, SettingsManager::SPY_FRAME_VISIBLE);
-		SET_SETTING(SPY_FRAME_SORT, ctrlSearches.getSortForSettings());
-		SET_SETTING(SPY_FRAME_IGNORE_TTH_SEARCHES, ignoreTTH);
-		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, showNick);
-		SET_SETTING(LOG_SEEKERS_IN_SPY_FRAME, logToFile);
+		ctrlSearches.saveHeaderOrder(Conf::SPY_FRAME_ORDER, Conf::SPY_FRAME_WIDTHS, Conf::SPY_FRAME_VISIBLE);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::SPY_FRAME_SORT, ctrlSearches.getSortForSettings());
+		ss->setBool(Conf::SPY_FRAME_IGNORE_TTH_SEARCHES, ignoreTTH);
+		ss->setBool(Conf::SHOW_SEEKERS_IN_SPY_FRAME, showNick);
+		ss->setBool(Conf::LOG_SEEKERS_IN_SPY_FRAME, logToFile);
 		setButtonPressed(IDC_SEARCH_SPY, false);
 		tasks.clear();
 		bHandled = FALSE;
@@ -344,7 +349,7 @@ void SpyFrame::processTasks()
 					ctrlSearches.RedrawWindow();
 				}
 
-				if (BOOLSETTING(BOLD_SEARCH))
+				if (SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_SEARCH))
 					setDirty();
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
 				SHOW_POPUP(POPUP_SEARCH_SPY, currentTime + _T(" : ") + nickList + _T("\r\n") + search, TSTRING(SEARCH_SPY));
@@ -449,7 +454,7 @@ LRESULT SpyFrame::onLogToFile(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	return 0;
 }		
 
-void SpyFrame::on(SettingsManagerListener::Repaint)
+void SpyFrame::on(SettingsManagerListener::ApplySettings)
 {
 	if (ctrlSearches.isRedraw())
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
@@ -612,7 +617,7 @@ tstring SpyFrame::ItemInfo::getText(uint8_t col) const
 	return Util::emptyStringT;
 }
 
-int SpyFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col)
+int SpyFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, int col, int /*flags*/)
 {
 	int result = 0;
 	switch (col)

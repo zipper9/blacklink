@@ -38,6 +38,7 @@
 #include "../client/DownloadManager.h"
 #include "../client/FavoriteManager.h"
 #include "../client/StringTokenizer.h"
+#include "../client/AdcHub.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
@@ -45,6 +46,7 @@
 #include "../client/PortTest.h"
 #include "../client/SysVersion.h"
 #include "../client/dht/DHT.h"
+#include "../client/ConfCore.h"
 
 #define USE_DOWNLOAD_DIR
 
@@ -269,14 +271,15 @@ void SearchFrame::broadcastSearchResult(const SearchResult& sr)
 
 LRESULT SearchFrame::onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::SAVE_SEARCH_SETTINGS))
 	{
-		SET_SETTING(SAVED_SEARCH_TYPE, ctrlFiletype.GetCurSel());
-		SET_SETTING(SAVED_SEARCH_SIZEMODE, ctrlSizeMode.GetCurSel());
-		SET_SETTING(SAVED_SEARCH_MODE, ctrlMode.GetCurSel());
+		ss->setInt(Conf::SAVED_SEARCH_TYPE, ctrlFiletype.GetCurSel());
+		ss->setInt(Conf::SAVED_SEARCH_SIZEMODE, ctrlSizeMode.GetCurSel());
+		ss->setInt(Conf::SAVED_SEARCH_MODE, ctrlMode.GetCurSel());
 		tstring st;
 		WinUtil::getWindowText(ctrlSize, st);
-		SET_SETTING(SAVED_SEARCH_SIZE, Text::fromT(st));
+		ss->setString(Conf::SAVED_SEARCH_SIZE, Text::fromT(st));
 	}
 	onSizeMode();
 	return 0;
@@ -353,27 +356,32 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 #ifdef BL_FEATURE_IP_DATABASE
 	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
-	storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+	auto cs = SettingsManager::instance.getCoreSettings();
+	cs->lockRead();
+	storeIP = cs->getBool(Conf::ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+	cs->unlockRead();
 	ctrlStoreIP.SetCheck(storeIP);
 	ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
 #endif
 
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	boldSearch = SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_SEARCH);
 	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
-	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
+	if (ss->getBool(Conf::SAVE_SEARCH_SETTINGS))
 		ctrlStoreSettings.SetCheck(BST_CHECKED);
 	ctrlStoreSettings.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlStoreSettings.SetWindowText(CTSTRING(SAVE_SEARCH_SETTINGS_TEXT));
 
 	WinUtil::addTool(tooltip, ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
-	if (BOOLSETTING(ONLY_FREE_SLOTS))
+	if (ss->getBool(Conf::ONLY_FREE_SLOTS))
 	{
 		ctrlSlots.SetCheck(BST_CHECKED);
 		onlyFree = true;
 	}
 
 	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_USE_TREE);
-	if (BOOLSETTING(USE_SEARCH_GROUP_TREE_SETTINGS))
+	if (ss->getBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS))
 		ctrlUseGroupTreeSettings.SetCheck(BST_CHECKED);
 	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlUseGroupTreeSettings.SetWindowText(CTSTRING(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
@@ -392,9 +400,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	WinUtil::setExplorerTheme(ctrlSearchFilterTree);
 	ctrlSearchFilterTree.SetImageList(searchTypesImageList, TVSIL_NORMAL);
 
-	useTree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
+	useTree = ss->getBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS);
 
-	const bool useSystemIcons = BOOLSETTING(USE_SYSTEM_ICONS);
+	const bool useSystemIcons = ss->getBool(Conf::USE_SYSTEM_ICONS);
 	ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | WS_TABSTOP,
 	                   WS_EX_CLIENTEDGE, IDC_RESULTS);
@@ -475,12 +483,12 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlFiletype.AddString(CTSTRING(CD_DVD_IMAGES));
 	ctrlFiletype.AddString(CTSTRING(COMICS));
 	ctrlFiletype.AddString(CTSTRING(BOOK));
-	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
+	if (ss->getBool(Conf::SAVE_SEARCH_SETTINGS))
 	{
-		ctrlFiletype.SetCurSel(SETTING(SAVED_SEARCH_TYPE));
-		ctrlSizeMode.SetCurSel(SETTING(SAVED_SEARCH_SIZEMODE));
-		ctrlMode.SetCurSel(SETTING(SAVED_SEARCH_MODE));
-		ctrlSize.SetWindowText(Text::toT(SETTING(SAVED_SEARCH_SIZE)).c_str());
+		ctrlFiletype.SetCurSel(ss->getInt(Conf::SAVED_SEARCH_TYPE));
+		ctrlSizeMode.SetCurSel(ss->getInt(Conf::SAVED_SEARCH_SIZEMODE));
+		ctrlMode.SetCurSel(ss->getInt(Conf::SAVED_SEARCH_MODE));
+		ctrlSize.SetWindowText(Text::toT(ss->getString(Conf::SAVED_SEARCH_SIZE)).c_str());
 	}
 	else
 	{
@@ -491,13 +499,13 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 			ctrlSizeMode.SetCurSel(0);
 		ctrlMode.SetCurSel(1);
 	}
-	
+
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
-	
-	ctrlResults.insertColumns(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
-	ctrlResults.setSortFromSettings(SETTING(SEARCH_FRAME_SORT), COLUMN_HITS, false);
-	
+
+	ctrlResults.insertColumns(Conf::SEARCH_FRAME_ORDER, Conf::SEARCH_FRAME_WIDTHS, Conf::SEARCH_FRAME_VISIBLE);
+	ctrlResults.setSortFromSettings(ss->getInt(Conf::SEARCH_FRAME_SORT), COLUMN_HITS, false);
+
 	setListViewColors(ctrlResults);
 	ctrlResults.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlResults.setColumnOwnerDraw(COLUMN_LOCATION);
@@ -507,7 +515,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	if (hTheme)
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
 	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
-	
+
 	ctrlHubs.insertColumns(Util::emptyString, Util::emptyString, Util::emptyString);
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE);
@@ -569,7 +577,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		setWindowTitle(TSTRING(SEARCH));
 		running = false;
 	}
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	createTimer(1000);
 
 	bHandled = FALSE;
@@ -732,18 +740,15 @@ void SearchFrame::onEnter()
 	WinUtil::getWindowText(ctrlSearch, s);
 	
 	// Add new searches to the last-search dropdown list
-	if (!BOOLSETTING(FORGET_SEARCH_REQUEST))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (!ss->getBool(Conf::FORGET_SEARCH_REQUEST))
 	{
-		lastSearches.addItem(s, SETTING(SEARCH_HISTORY));
+		lastSearches.addItem(s, ss->getInt(Conf::SEARCH_HISTORY));
 		initSearchHistoryBox();
 		lastSearches.save(e_SearchHistory);
 	}
 	MainFrame::getMainFrame()->updateQuickSearches();
-	// Change Default Settings If Changed
-	if (onlyFree != BOOLSETTING(ONLY_FREE_SLOTS))
-	{
-		SET_SETTING(ONLY_FREE_SLOTS, onlyFree);
-	}
+	ss->setBool(Conf::ONLY_FREE_SLOTS, onlyFree);
 
 	bool searchingOnDHT = false;
 	int fileType = ctrlFiletype.GetCurSel();
@@ -821,10 +826,8 @@ void SearchFrame::onEnter()
 	ctrlStatus.SetText(STATUS_COUNT, _T(""));
 	ctrlStatus.SetText(STATUS_DROPPED, _T(""));
 	
-	if (BOOLSETTING(CLEAR_SEARCH))
-	{
+	if (ss->getBool(Conf::CLEAR_SEARCH))
 		ctrlSearch.SetWindowText(_T(""));
-	}
 	
 	droppedResults = 0;
 	resultsCount = 0;
@@ -836,29 +839,26 @@ void SearchFrame::onEnter()
 	ClientManager::cancelSearch(id);
 	searchParam.extList.clear();
 	// Get ADC searchtype extensions if any is selected
-	try
+	if (searchParam.fileType == FILE_TYPE_ANY)
 	{
-		if (searchParam.fileType == FILE_TYPE_ANY)
-		{
-			// Custom searchtype
-			// disabled with current GUI extList = SettingsManager::getInstance()->getExtensions(Text::fromT(fileType->getText()));
-		}
-		else if ((searchParam.fileType > FILE_TYPE_ANY && searchParam.fileType < FILE_TYPE_DIRECTORY) /* TODO - || m_ftype == FILE_TYPE_CD_DVD*/)
-		{
-			// Predefined searchtype
-			searchParam.extList = SettingsManager::getExtensions(string(1, '0' + searchParam.fileType));
-		}
+		// Custom searchtype
+		// disabled with current GUI extList = SettingsManager::getInstance()->getExtensions(Text::fromT(fileType->getText()));
 	}
-	catch (const SearchTypeException&)
+	else if ((searchParam.fileType > FILE_TYPE_ANY && searchParam.fileType < FILE_TYPE_DIRECTORY) /* TODO - || m_ftype == FILE_TYPE_CD_DVD*/)
 	{
-		searchParam.fileType = FILE_TYPE_ANY;
+		// Predefined searchtype
+		searchParam.extList = AdcHub::getSearchExts()[searchParam.fileType - 1];
 	}
 	
 	{
+		auto cs = SettingsManager::instance.getCoreSettings();
+		cs->lockRead();
+		const bool searchPassive = cs->getBool(Conf::SEARCH_PASSIVE);
+		cs->unlockRead();
 		LOCK(csSearch);
 		searchStartTime = GET_TICK();
 		// more 10 seconds for transfering results
-		if (portStatus == PortTest::STATE_FAILURE || BOOLSETTING(SEARCH_PASSIVE))
+		if (searchPassive || portStatus == PortTest::STATE_FAILURE)
 			searchParam.searchMode = SearchParamBase::MODE_PASSIVE;
 		else
 			searchParam.searchMode = SearchParamBase::MODE_DEFAULT;
@@ -921,15 +921,14 @@ LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	storeIP = ctrlStoreIP.GetCheck() == BST_CHECKED;
 #endif
 	storeSettings = ctrlStoreSettings.GetCheck() == BST_CHECKED;
-	SET_SETTING(SAVE_SEARCH_SETTINGS, storeSettings);
+	SettingsManager::instance.getUiSettings()->setBool(Conf::SAVE_SEARCH_SETTINGS, storeSettings);
 	return 0;
 }
-
 
 LRESULT SearchFrame::onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	useTree = ctrlUseGroupTreeSettings.GetCheck() == BST_CHECKED;
-	SET_SETTING(USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
+	SettingsManager::instance.getUiSettings()->setBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
 	UpdateLayout();
 	if (!useTree)
 	{
@@ -1003,7 +1002,7 @@ LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	return 0;
 }
 
-int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo* b, int col)
+int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo* b, int col, int /*flags*/)
 {
 	switch (col)
 	{
@@ -1504,7 +1503,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	if (!closed)
 	{
 		closed = true;
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		ClientManager::getInstance()->removeListener(this);
 		FavoriteManager::getInstance()->removeListener(this);
 		framesLock.lock();
@@ -1513,8 +1512,9 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		ctrlResults.deleteAll();
 		ctrlHubs.deleteAll();
 		clearFound();
-		ctrlResults.saveHeaderOrder(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
-		SET_SETTING(SEARCH_FRAME_SORT, ctrlResults.getSortForSettings());
+		ctrlResults.saveHeaderOrder(Conf::SEARCH_FRAME_ORDER, Conf::SEARCH_FRAME_WIDTHS, Conf::SEARCH_FRAME_VISIBLE);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::SEARCH_FRAME_SORT, ctrlResults.getSortForSettings());
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -1990,13 +1990,9 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			}
 		}
 		if (!filter.empty())
-		{
 			updateSearchList(si);
-		}
-		if (BOOLSETTING(BOLD_SEARCH))
-		{
+		if (boldSearch)
 			setDirty();
-		}
 		shouldSort = true;
 	}
 }
@@ -2382,13 +2378,14 @@ LRESULT SearchFrame::onItemChangedHub(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* b
 LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	bool hasHistory = !lastSearches.empty();
-	if (hasHistory && BOOLSETTING(CONFIRM_CLEAR_SEARCH_HISTORY))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (hasHistory && ss->getBool(Conf::CONFIRM_CLEAR_SEARCH_HISTORY))
 	{
 		UINT check = BST_UNCHECKED;
 		if (MessageBoxWithCheck(m_hWnd, CTSTRING(CONFIRM_CLEAR_SEARCH), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION, check) != IDYES)
 			return 0;
 		if (check == BST_CHECKED)
-			SET_SETTING(CONFIRM_CLEAR_SEARCH_HISTORY, FALSE);
+			ss->setBool(Conf::CONFIRM_CLEAR_SEARCH_HISTORY, false);
 	}
 	tooltip.Activate(FALSE);
 	ctrlSearchBox.ResetContent();
@@ -2603,7 +2600,7 @@ LRESULT SearchFrame::onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 
 LRESULT SearchFrame::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!BOOLSETTING(FILTER_ENTER))
+	if (!SettingsManager::instance.getUiSettings()->getBool(Conf::FILTER_ENTER))
 	{
 		filter = ctrlFilter.getText();
 		Text::makeLower(filter);
@@ -2614,7 +2611,7 @@ LRESULT SearchFrame::onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 LRESULT SearchFrame::onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	if (BOOLSETTING(FILTER_ENTER))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::FILTER_ENTER))
 	{
 		filter = ctrlFilter.getText();
 		Text::makeLower(filter);
@@ -2890,8 +2887,9 @@ void SearchFrame::onUserUpdated(const UserPtr& user) noexcept
 		updateList = true;
 }
 
-void SearchFrame::on(SettingsManagerListener::Repaint)
+void SearchFrame::on(SettingsManagerListener::ApplySettings)
 {
+	boldSearch = SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_SEARCH);
 	SetClassLongPtr(m_hWnd, GCLP_HBRBACKGROUND, (LONG_PTR) Colors::g_tabBackgroundBrush);
 	bool redraw = false;
 	if (colorBackground != Colors::g_tabBackground || colorText != Colors::g_tabText)
@@ -3018,7 +3016,7 @@ const tstring& SearchFrame::HubInfo::getText(int col) const
 	return Util::emptyStringT;
 }
 
-int SearchFrame::HubInfo::compareItems(const HubInfo* a, const HubInfo* b, int col)
+int SearchFrame::HubInfo::compareItems(const HubInfo* a, const HubInfo* b, int col, int /*flags*/)
 {
 	int aType = a->getType();
 	int bType = b->getType();

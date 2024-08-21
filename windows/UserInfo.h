@@ -23,12 +23,20 @@ class UserInfo : public UserInfoBase
 			STATE_IN_PROGRESS,
 			STATE_DONE
 		};
-		
+
+		enum
+		{
+			CI_FLAG_OP_TOP  = 1,
+			CI_FLAG_FAV_TOP = 2
+		};
+
 		explicit UserInfo(const OnlineUserPtr& ou) : ou(ou), flags(ALL_MASK), stateP2PGuard(STATE_INITIAL), stateLocation(STATE_INITIAL)
 		{
 		}
 
-		static int compareItems(const UserInfo* a, const UserInfo* b, int col);
+		static int compareItems(const UserInfo* a, const UserInfo* b, int col, int flags);
+		static int getCompareFlags();
+
 		tstring getText(int col) const;
 		bool isOP() const
 		{

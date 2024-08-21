@@ -263,14 +263,6 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 			DEFAULT_JOURNAL_MODE = JOURNAL_MODE_WAL
 		};
 
-		typedef void (*ErrorCallback)(const string& message,  bool forceExit);
-
-		DatabaseManager() noexcept;
-		~DatabaseManager();
-		void shutdown();
-
-		string getDBInfo();
-		int64_t getDBSize() const { return dbSize; }
 		enum
 		{
 			FLAG_SHARED            = 1,
@@ -278,7 +270,17 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 			FLAG_DOWNLOAD_CANCELED = 4
 		};
 
-		void init(ErrorCallback errorCallback, int journalMode);
+		typedef void (*ErrorCallback)(const string& message,  bool forceExit);
+
+		DatabaseManager() noexcept;
+		~DatabaseManager();
+
+		void shutdown();
+		string getDBInfo();
+		int64_t getDBSize() const { return dbSize; }
+		int getOptions() const { return options.load(); }
+		void init(ErrorCallback errorCallback);
+		void updateSettings(int* journalMode = nullptr) noexcept;
 		DatabaseConnection* getDefaultConnection();
 		DatabaseConnection* getConnection();
 		void putConnection(DatabaseConnection* conn);
@@ -356,6 +358,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		int64_t dbSize;
 		ErrorCallback errorCallback;
 		int journalMode;
+		std::atomic_int options;
 		mutable CriticalSection cs;
 		std::unique_ptr<DatabaseConnection> defConn;
 		std::list<std::unique_ptr<DatabaseConnection>> conn;
@@ -370,6 +373,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		uint64_t timeDownloadMmdb;
 		uint64_t mmdbFileTimestamp; // 0 - file doesn't exist, 1 - not initialized
 		int mmdbStatus;
+		unsigned geoipCheckHours;
 		CriticalSection csDownloadMmdb;
 
 	private:

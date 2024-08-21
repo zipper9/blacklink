@@ -309,35 +309,35 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		unsigned asyncUpdate;
 		unsigned asyncUpdateSaved;
 		bool disableChat;
-		
+
 		void onTimerInternal();
 		void processTasks();
-		
+
 		void onUserParts(const OnlineUserPtr& ou);
-		
+
 		UserInfo* findUserByNick(const tstring& nick) const;
-		
+
 		void addAsFavorite(AutoConnectType autoConnectType = DONT_CHANGE);
 		void removeFavoriteHub();
-		
+
 		void toggleAutoConnect();
 		void appendHubAndUsersItems(OMenu& menu, const bool isChat);
 		void updateStats();
-		
+
 		// FavoriteManagerListener
 		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept override;
 		void on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept override;
 		void on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept override;
 		void resortForFavsFirst(bool justDoIt = false);
-		
+
 		// UserManagerListener
 		void on(UserManagerListener::IgnoreListChanged) noexcept override;
 		void on(UserManagerListener::IgnoreListCleared) noexcept override;
 		void on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept override;
 
 		// SettingsManagerListener
-		void on(SettingsManagerListener::Repaint) override;
-		
+		void on(SettingsManagerListener::ApplySettings) override;
+
 		// ClientListener
 		void on(ClientListener::Connecting, const Client*) noexcept override;
 		void on(ClientListener::Connected, const Client*) noexcept override;
@@ -375,6 +375,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void updateUserJoin(const OnlineUserPtr& ou);
 		void doDisconnected();
 		void doConnected();
+		void doRedirect(const string& redirAddr);
 		void doLoggedIn();
 		void clearTaskAndUserList();
 
@@ -385,10 +386,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc);
 
 		StringMap getFrameLogParams() const;
-		void openFrameLog() const
-		{
-			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
-		}
+		void openFrameLog() const;
 
 	protected:
 		// BaseChatFrame

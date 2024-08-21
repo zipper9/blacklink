@@ -14,11 +14,11 @@ class SettingsManagerListener
 
 		typedef X<0> Load;
 		typedef X<1> Save;
-		typedef X<2> Repaint;
+		typedef X<2> ApplySettings;
 
 		virtual void on(Load, SimpleXML&) { }
 		virtual void on(Save, SimpleXML&) { }
-		virtual void on(Repaint) { }
+		virtual void on(ApplySettings) { }
 };
 
 #endif // SETTINGS_MANAGER_LISTENER_H_

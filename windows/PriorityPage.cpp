@@ -21,6 +21,7 @@
 #include "DialogLayout.h"
 #include "../client/SettingsManager.h"
 #include "../client/QueueItem.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -46,10 +47,10 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_AUTOPRIORITY_USE_PATTERNS, SettingsManager::AUTO_PRIORITY_USE_PATTERNS, PropPage::T_BOOL },
-	{ IDC_AUTOPRIORITY_PATTERNS, SettingsManager::AUTO_PRIORITY_PATTERNS, PropPage::T_STR },
-	{ IDC_AUTOPRIORITY_USE_SIZE, SettingsManager::AUTO_PRIORITY_USE_SIZE, PropPage::T_BOOL },
-	{ IDC_AUTOPRIORITY_SIZE, SettingsManager::AUTO_PRIORITY_SMALL_SIZE, PropPage::T_INT },
+	{ IDC_AUTOPRIORITY_USE_PATTERNS, Conf::AUTO_PRIORITY_USE_PATTERNS, PropPage::T_BOOL },
+	{ IDC_AUTOPRIORITY_PATTERNS, Conf::AUTO_PRIORITY_PATTERNS, PropPage::T_STR },
+	{ IDC_AUTOPRIORITY_USE_SIZE, Conf::AUTO_PRIORITY_USE_SIZE, PropPage::T_BOOL },
+	{ IDC_AUTOPRIORITY_SIZE, Conf::AUTO_PRIORITY_SMALL_SIZE, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -87,17 +88,21 @@ LRESULT PriorityPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		cb2.AddString(text);
 	}
 	
-	int prio = g_settings->get(SettingsManager::AUTO_PRIORITY_PATTERNS_PRIO);
-	clampPrio(prio);
-	cb1.SetCurSel(prio - QueueItem::LOWEST);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int prioPatterns = ss->getInt(Conf::AUTO_PRIORITY_PATTERNS_PRIO);
+	int prioSmallSize = ss->getInt(Conf::AUTO_PRIORITY_SMALL_SIZE_PRIO);
+	ss->unlockRead();
 
-	prio = g_settings->get(SettingsManager::AUTO_PRIORITY_SMALL_SIZE_PRIO);
-	clampPrio(prio);
-	cb2.SetCurSel(prio - QueueItem::LOWEST);
+	clampPrio(prioPatterns);
+	cb1.SetCurSel(prioPatterns - QueueItem::LOWEST);
+
+	clampPrio(prioSmallSize);
+	cb2.SetCurSel(prioSmallSize - QueueItem::LOWEST);
 
 	onChangeUsePatterns();
 	onChangeUseSize();
-	
+
 	return TRUE;
 }
 
@@ -106,10 +111,15 @@ void PriorityPage::write()
 	PropPage::write(*this, items);
 
 	CComboBox cb1(GetDlgItem(IDC_AUTOPRIORITY_PATTERNS_PRIO));
-	g_settings->set(SettingsManager::AUTO_PRIORITY_PATTERNS_PRIO, cb1.GetCurSel() + QueueItem::LOWEST);
-
+	int prioPatterns = cb1.GetCurSel() + QueueItem::LOWEST;
 	CComboBox cb2(GetDlgItem(IDC_AUTOPRIORITY_SIZE_PRIO));
-	g_settings->set(SettingsManager::AUTO_PRIORITY_SMALL_SIZE_PRIO, cb2.GetCurSel() + QueueItem::LOWEST);
+	int prioSmallSize = cb2.GetCurSel() + QueueItem::LOWEST;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(Conf::AUTO_PRIORITY_PATTERNS_PRIO, prioPatterns);
+	ss->setInt(Conf::AUTO_PRIORITY_SMALL_SIZE_PRIO, prioSmallSize);
+	ss->unlockWrite();
 }
 
 void PriorityPage::onChangeUsePatterns()

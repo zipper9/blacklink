@@ -4,13 +4,14 @@
 
 #include "stdafx.h"
 #include "ShareMiscPage.h"
-#include "../client/SettingsManager.h"
-#include "../client/ShareManager.h"
-#include "../client/MediaInfoLib.h"
 #include "LineDlg.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "ImageLists.h"
+#include "../client/SettingsManager.h"
+#include "../client/ShareManager.h"
+#include "../client/MediaInfoLib.h"
+#include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -70,15 +71,15 @@ static const DialogLayout::Item layoutItems3[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SHAREHIDDEN, SettingsManager::SHARE_HIDDEN, PropPage::T_BOOL },
-	{ IDC_SHARESYSTEM, SettingsManager::SHARE_SYSTEM, PropPage::T_BOOL },
-	{ IDC_SHAREVIRTUAL, SettingsManager::SHARE_VIRTUAL, PropPage::T_BOOL },
-	{ IDC_REFRESH_SHARE_ON_STARTUP, SettingsManager::AUTO_REFRESH_ON_STARTUP, PropPage::T_BOOL },
-	{ IDC_AUTO_REFRESH_TIME, SettingsManager::AUTO_REFRESH_TIME, PropPage::T_INT },
-	{ IDC_USE_FAST_HASH, SettingsManager::FAST_HASH, PropPage::T_BOOL },
-	{ IDC_TTH_IN_STREAM, SettingsManager::SAVE_TTH_IN_NTFS_FILESTREAM, PropPage::T_BOOL },
-	{ IDC_MIN_FILE_SIZE, SettingsManager::SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, PropPage::T_INT},
-	{ IDC_MAX_HASH_SPEED, SettingsManager::MAX_HASH_SPEED, PropPage::T_INT },
+	{ IDC_SHAREHIDDEN, Conf::SHARE_HIDDEN, PropPage::T_BOOL },
+	{ IDC_SHARESYSTEM, Conf::SHARE_SYSTEM, PropPage::T_BOOL },
+	{ IDC_SHAREVIRTUAL, Conf::SHARE_VIRTUAL, PropPage::T_BOOL },
+	{ IDC_REFRESH_SHARE_ON_STARTUP, Conf::AUTO_REFRESH_ON_STARTUP, PropPage::T_BOOL },
+	{ IDC_AUTO_REFRESH_TIME, Conf::AUTO_REFRESH_TIME, PropPage::T_INT },
+	{ IDC_USE_FAST_HASH, Conf::FAST_HASH, PropPage::T_BOOL },
+	{ IDC_TTH_IN_STREAM, Conf::SAVE_TTH_IN_NTFS_FILESTREAM, PropPage::T_BOOL },
+	{ IDC_MIN_FILE_SIZE, Conf::SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, PropPage::T_INT},
+	{ IDC_MAX_HASH_SPEED, Conf::MAX_HASH_SPEED, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -468,21 +469,29 @@ LRESULT ShareMediaInfoPage::onEnable(WORD, WORD, HWND, BOOL&)
 
 void ShareMediaInfoPage::readSettings()
 {
-	unsigned options = SETTING(MEDIA_INFO_OPTIONS);
-	ctrlEnable.SetCheck((options & SettingsManager::MEDIA_INFO_OPTION_ENABLE) ? BST_CHECKED : BST_UNCHECKED);
-	ctrlParseAudio.SetCheck((options & SettingsManager::MEDIA_INFO_OPTION_SCAN_AUDIO) ? BST_CHECKED : BST_UNCHECKED);
-	ctrlParseVideo.SetCheck((options & SettingsManager::MEDIA_INFO_OPTION_SCAN_VIDEO) ? BST_CHECKED : BST_UNCHECKED);
-	ctrlForceUpdate.SetCheck(BOOLSETTING(MEDIA_INFO_FORCE_UPDATE) ? BST_CHECKED : BST_UNCHECKED);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned options = ss->getInt(Conf::MEDIA_INFO_OPTIONS);
+	bool forceUpdate = ss->getBool(Conf::MEDIA_INFO_FORCE_UPDATE);
+	ss->unlockRead();
+	ctrlEnable.SetCheck((options & Conf::MEDIA_INFO_OPTION_ENABLE) ? BST_CHECKED : BST_UNCHECKED);
+	ctrlParseAudio.SetCheck((options & Conf::MEDIA_INFO_OPTION_SCAN_AUDIO) ? BST_CHECKED : BST_UNCHECKED);
+	ctrlParseVideo.SetCheck((options & Conf::MEDIA_INFO_OPTION_SCAN_VIDEO) ? BST_CHECKED : BST_UNCHECKED);
+	ctrlForceUpdate.SetCheck(forceUpdate ? BST_CHECKED : BST_UNCHECKED);
 }
 
 void ShareMediaInfoPage::writeSettings()
 {
 	int options = 0;
-	if (ctrlEnable.GetCheck() == BST_CHECKED) options |= SettingsManager::MEDIA_INFO_OPTION_ENABLE;
-	if (ctrlParseAudio.GetCheck() == BST_CHECKED) options |= SettingsManager::MEDIA_INFO_OPTION_SCAN_AUDIO;
-	if (ctrlParseVideo.GetCheck() == BST_CHECKED) options |= SettingsManager::MEDIA_INFO_OPTION_SCAN_VIDEO;
-	SET_SETTING(MEDIA_INFO_OPTIONS, options);
-	SET_SETTING(MEDIA_INFO_FORCE_UPDATE, ctrlForceUpdate.GetCheck() == BST_CHECKED);
+	if (ctrlEnable.GetCheck() == BST_CHECKED) options |= Conf::MEDIA_INFO_OPTION_ENABLE;
+	if (ctrlParseAudio.GetCheck() == BST_CHECKED) options |= Conf::MEDIA_INFO_OPTION_SCAN_AUDIO;
+	if (ctrlParseVideo.GetCheck() == BST_CHECKED) options |= Conf::MEDIA_INFO_OPTION_SCAN_VIDEO;
+	bool forceUpdate = ctrlForceUpdate.GetCheck() == BST_CHECKED;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(Conf::MEDIA_INFO_OPTIONS, options);
+	ss->setBool(Conf::MEDIA_INFO_FORCE_UPDATE, forceUpdate);
+	ss->unlockWrite();
 }
 
 void ShareMediaInfoPage::fixControls()
@@ -532,7 +541,10 @@ void ShareMediaInfoPage::showStatus()
 
 void ShareMediaInfoPage::updateStatus()
 {
-	unsigned options = SETTING(MEDIA_INFO_OPTIONS);
-	if (options & SettingsManager::MEDIA_INFO_OPTION_ENABLE) MediaInfoLib::instance.init();
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned options = ss->getInt(Conf::MEDIA_INFO_OPTIONS);
+	ss->unlockRead();
+	if (options & Conf::MEDIA_INFO_OPTION_ENABLE) MediaInfoLib::instance.init();
 	showStatus();
 }

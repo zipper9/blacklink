@@ -97,6 +97,12 @@ class Socket
 			SECURE_TRANSPORT_DETECT
 		};
 
+		enum
+		{
+			IN_BUFFER  = 1,
+			OUT_BUFFER = 2
+		};
+
 		struct ProxyConfig
 		{
 			string host;
@@ -209,8 +215,7 @@ class Socket
 
 		int getSocketOptInt(int level, int option) const;
 		void setSocketOpt(int level, int option, int value);
-		void setInBufSize();
-		void setOutBufSize();
+		void setBufSize(int what);
 
 		virtual SecureTransport getSecureTransport() const noexcept
 		{

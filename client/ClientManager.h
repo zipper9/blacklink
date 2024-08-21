@@ -43,6 +43,24 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			PM_ERROR
 		};
 
+		enum
+		{
+			CHAT_OPTION_SHOW_IP            = 0x0001,
+			CHAT_OPTION_SHOW_COUNTRY       = 0x0002,
+			CHAT_OPTION_SHOW_ISP           = 0x0004,
+			CHAT_OPTION_SEND_GRANT_MSG     = 0x0008,
+			CHAT_OPTION_SUPPRESS_MAIN_CHAT = 0x0010,
+			CHAT_OPTION_SUPPRESS_PM        = 0x0020,
+			CHAT_OPTION_IGNORE_ME          = 0x0040,
+			CHAT_OPTION_IGNORE_HUB_PMS     = 0x0080,
+			CHAT_OPTION_IGNORE_BOT_PMS     = 0x0100,
+			CHAT_OPTION_PROTECT_PRIVATE    = 0x0200,
+			CHAT_OPTION_LOG_PRIVATE_CHAT   = 0x0400,
+			CHAT_OPTION_LOG_SUPPRESSED     = 0x0800,
+			CHAT_OPTION_LOG_MAIN_CHAT      = 0x1000,
+			CHAT_OPTION_FILTER_KICK        = 0x2000
+		};
+
 		ClientBasePtr getClient(const string& hubURL);
 		void putClient(const ClientBasePtr& cb);
 		static void prepareClose();
@@ -69,12 +87,16 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void cancelSearch(uint64_t owner);
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);
-		
+		static void updateSettings();
+		static string getDefaultNick();
+		static bool isNickEmpty();
+		static int getChatOptions() { return chatOptions; }
+
 		static UserPtr getUser(const string& nick, const string& hubUrl);
 		static UserPtr createUser(const CID& cid, const string& nick, const string& hubUrl);
 		static string findHub(const string& ipPort, int type);
 		static int findHubEncoding(const string& url);
-		
+
 		/**
 		* @param priv discard any user that doesn't match the hint.
 		* @return OnlineUser* found by CID and hint; might be only by CID if priv is false.
@@ -219,7 +241,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void addAsyncOnlineUserUpdated(const OnlineUserPtr& ou);
 		static CID cid;
 		static CID pid;
-		
+
+		static std::atomic_int chatOptions;
+
 		friend class Singleton<ClientManager>;
 		friend class NmdcHub;
 		

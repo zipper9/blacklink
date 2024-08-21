@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "UserTypeColors.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/UserManager.h"
 
@@ -32,28 +33,29 @@ COLORREF UserTypeColors::getColor(unsigned short& flags, const OnlineUserPtr& on
 		}
 	}
 
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (flags & IS_RESERVED_SLOT)
-		return SETTING(RESERVED_SLOT_COLOR);
+		return ss->getInt(Conf::RESERVED_SLOT_COLOR);
 	if (flags & IS_FAVORITE_ON)
-		return (flags & IS_BAN_ON) ? SETTING(FAV_BANNED_COLOR) : SETTING(FAVORITE_COLOR);
+		return ss->getInt((flags & IS_BAN_ON) ? Conf::FAV_BANNED_COLOR : Conf::FAVORITE_COLOR);
 	if (onlineUser->getIdentity().isOp())
-		return SETTING(OP_COLOR);
+		return ss->getInt(Conf::OP_COLOR);
 	if (flags & IS_IGNORED_USER)
-		return SETTING(IGNORED_COLOR);
-	if (BOOLSETTING(SHOW_CHECKED_USERS) && user->getLastCheckTime())
+		return ss->getInt(Conf::IGNORED_COLOR);
+	if (ss->getBool(Conf::SHOW_CHECKED_USERS) && user->getLastCheckTime())
 	{
 		if (userFlags & User::USER_CHECK_FAILED)
-			return SETTING(CHECKED_FAIL_COLOR);
+			return ss->getInt(Conf::CHECKED_FAIL_COLOR);
 		if (!(userFlags & User::USER_CHECK_RUNNING))
-			return SETTING(CHECKED_COLOR);
+			return ss->getInt(Conf::CHECKED_COLOR);
 	}
 	if (statusFlags & Identity::SF_FIREBALL)
-		return SETTING(FIREBALL_COLOR);
+		return ss->getInt(Conf::FIREBALL_COLOR);
 	if (statusFlags & Identity::SF_SERVER)
-		return SETTING(SERVER_COLOR);
+		return ss->getInt(Conf::SERVER_COLOR);
 	if (statusFlags & Identity::SF_PASSIVE)
-		return SETTING(PASSIVE_COLOR);
-	return SETTING(NORMAL_COLOR);
+		return ss->getInt(Conf::PASSIVE_COLOR);
+	return ss->getInt(Conf::NORMAL_COLOR);
 }
 
 COLORREF UserTypeColors::getColor(unsigned short& flags, const UserPtr& user)
@@ -83,11 +85,12 @@ COLORREF UserTypeColors::getColor(unsigned short& flags, const UserPtr& user)
 		}
 	}
 
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (flags & IS_RESERVED_SLOT)
-		return SETTING(RESERVED_SLOT_COLOR);
+		return ss->getInt(Conf::RESERVED_SLOT_COLOR);
 	if (flags & IS_FAVORITE_ON)
-		return (flags & IS_BAN_ON) ? SETTING(FAV_BANNED_COLOR) : SETTING(FAVORITE_COLOR);
+		return ss->getInt((flags & IS_BAN_ON) ? Conf::FAV_BANNED_COLOR : Conf::FAVORITE_COLOR);
 	if (flags & IS_IGNORED_USER)
-		return SETTING(IGNORED_COLOR);
-	return SETTING(NORMAL_COLOR);
+		return ss->getInt(Conf::IGNORED_COLOR);
+	return ss->getInt(Conf::NORMAL_COLOR);
 }

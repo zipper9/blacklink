@@ -21,18 +21,23 @@
 
 #include "IpList.h"
 #include "RWLock.h"
+#include <atomic>
 
 class IpGuard
 {
 	public:
 		IpGuard();
+		bool isEnabled() const noexcept { return enabled; }
 		bool isBlocked(uint32_t addr) const noexcept;
 		void load() noexcept;
 		void clear() noexcept;
+		void updateSettings() noexcept;
 		static std::string getFileName();
 		
 	private:
+		std::atomic_bool enabled;
 		IpList ipList;
+		bool isWhiteList;
 		mutable unique_ptr<RWLock> cs;
 };
 

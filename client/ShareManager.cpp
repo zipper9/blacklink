@@ -37,6 +37,8 @@
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "SettingsManager.h"
+#include "ConfCore.h"
 #include "MediaInfoUtil.h"
 #include "Tag16.h"
 #include "unaligned.h"
@@ -406,8 +408,13 @@ ShareManager::ShareManager() :
 		writeFileAttr(fileAttrPath, fileAttr);
 	}
 
-	autoRefreshTime = SETTING(AUTO_REFRESH_TIME) * 60000;
-	if (BOOLSETTING(AUTO_REFRESH_ON_STARTUP))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	autoRefreshTime = ss->getInt(Conf::AUTO_REFRESH_TIME) * 60000;
+	bool autoRefreshOnStartup = ss->getBool(Conf::AUTO_REFRESH_ON_STARTUP);
+	ss->unlockRead();
+
+	if (autoRefreshOnStartup)
 	{
 		autoRefreshMode = REFRESH_MODE_FULL;
 		tickRefresh = 0;
@@ -419,11 +426,12 @@ ShareManager::ShareManager() :
 
 	HashManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 }
 
 ShareManager::~ShareManager()
 {
+	SettingsManager::instance.removeListener(this);
 	renameXmlFiles();
 	removeOldShareGroupFiles();
 	if (!tempShareDataFile.empty())
@@ -768,26 +776,33 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
 {
 	if (realPath.empty() || virtualName.empty())
 		throw ShareException(STRING(NO_DIRECTORY_SPECIFIED), realPath);
-	
+
 	dcassert(realPath.back() == PATH_SEPARATOR);
-	
+
 	if (!File::isExist(realPath))
 		throw ShareException(STRING(DIRECTORY_NOT_EXIST), realPath);
-	
+
 	string realPathNoSlash = realPath;
 	Util::removePathSeparator(realPathNoSlash);
-	
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool shareHidden = ss->getBool(Conf::SHARE_HIDDEN);
+	bool shareSystem = ss->getBool(Conf::SHARE_SYSTEM);
+	bool shareVirtual = ss->getBool(Conf::SHARE_VIRTUAL);
+	const string tempDownloadDir = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	ss->unlockRead();
+
 	FileFindIter fi(realPathNoSlash);
-	if (!BOOLSETTING(SHARE_HIDDEN) && fi->isHidden())
+	if (!shareHidden && fi->isHidden())
 		throw ShareException(STRING(DIRECTORY_IS_HIDDEN), realPathNoSlash);
 
-	if (!BOOLSETTING(SHARE_SYSTEM) && fi->isSystem())
+	if (!shareSystem && fi->isSystem())
 		throw ShareException(STRING(DIRECTORY_IS_SYSTEM), realPathNoSlash);
 	
-	if (!BOOLSETTING(SHARE_VIRTUAL) && fi->isVirtual())
+	if (!shareVirtual && fi->isVirtual())
 		throw ShareException(STRING(DIRECTORY_IS_VIRTUAL), realPathNoSlash);
 
-	const string tempDownloadDir = SETTING(TEMP_DOWNLOAD_DIRECTORY);
 	if (stricmp(tempDownloadDir, realPath) == 0)
 		throw ShareException(STRING(DONT_SHARE_TEMP_DIRECTORY), realPathNoSlash);
 	
@@ -2060,8 +2075,11 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 	LogManager::message("Generating file list...", false);
 	uint8_t tempBuf[TEMP_BUF_SIZE];
 
-	optionIncludeUploadCount = BOOLSETTING(FILELIST_INCLUDE_UPLOAD_COUNT);
-	optionIncludeTimestamp = BOOLSETTING(FILELIST_INCLUDE_TIMESTAMP);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	optionIncludeUploadCount = ss->getBool(Conf::FILELIST_INCLUDE_UPLOAD_COUNT);
+	optionIncludeTimestamp = ss->getBool(Conf::FILELIST_INCLUDE_TIMESTAMP);
+	ss->unlockRead();
 	
 	const string shareDataFileName = Util::getConfigPath() + fileShareData;
 	string skipBZXmlFile;
@@ -2145,8 +2163,11 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 	if (dir.empty() || dir[0] != '/' || dir.back() != '/')
 		return nullptr;
 
-	optionIncludeUploadCount = BOOLSETTING(FILELIST_INCLUDE_UPLOAD_COUNT);
-	optionIncludeTimestamp = BOOLSETTING(FILELIST_INCLUDE_TIMESTAMP);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	optionIncludeUploadCount = ss->getBool(Conf::FILELIST_INCLUDE_UPLOAD_COUNT);
+	optionIncludeTimestamp = ss->getBool(Conf::FILELIST_INCLUDE_TIMESTAMP);
+	ss->unlockRead();
 
 	int mode = recurse ? MODE_RECURSIVE_PARTIAL_LIST : MODE_PARTIAL_LIST;
 	string xml = SimpleXML::utf8Header;
@@ -2766,6 +2787,12 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 	for (auto i = dir->files.begin(); i != dir->files.end(); ++i)
 		i->second->flags |= BaseDirItem::FLAG_NOT_FOUND;
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string tempDownloadDir = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	const string logDir = ss->getString(Conf::LOG_DIRECTORY);
+	ss->unlockRead();
+
 	string lowerName;
 	for (FileFindIter i(path + '*'); i != FileFindIter::end; ++i)
 	{
@@ -2788,9 +2815,9 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 			if (Util::locatedInSysPath(fullPath))
 				continue;
 				
-			if (stricmp(fullPath, SETTING(TEMP_DOWNLOAD_DIRECTORY)) == 0 ||
+			if (stricmp(fullPath, tempDownloadDir) == 0 ||
 			    stricmp(fullPath, Util::getConfigPath()) == 0 ||
-			    stricmp(fullPath, SETTING(LOG_DIRECTORY)) == 0 ||
+			    stricmp(fullPath, logDir) == 0 ||
 			    isDirectoryExcludedL(fullPath)) continue;
 
 			SharedDir* subdir;
@@ -2932,13 +2959,16 @@ void ShareManager::scanDirs()
 	uint64_t startTick = GET_TICK();
 	LogManager::message(STRING(FILE_LIST_REFRESH_INITIATED));
 
-	optionShareHidden = BOOLSETTING(SHARE_HIDDEN);
-	optionShareSystem = BOOLSETTING(SHARE_SYSTEM);
-	optionShareVirtual = BOOLSETTING(SHARE_VIRTUAL);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	optionShareHidden = ss->getBool(Conf::SHARE_HIDDEN);
+	optionShareSystem = ss->getBool(Conf::SHARE_SYSTEM);
+	optionShareVirtual = ss->getBool(Conf::SHARE_VIRTUAL);
+	optionUseMediaInfo = (ss->getInt(Conf::MEDIA_INFO_OPTIONS) & Conf::MEDIA_INFO_OPTION_ENABLE) != 0;
+	optionForceUpdateMediaInfo = optionUseMediaInfo ? ss->getBool(Conf::MEDIA_INFO_FORCE_UPDATE) : false;
+	ss->setBool(Conf::MEDIA_INFO_FORCE_UPDATE, false);
+	ss->unlockWrite();
 
-	optionUseMediaInfo = (SETTING(MEDIA_INFO_OPTIONS) & SettingsManager::MEDIA_INFO_OPTION_ENABLE) != 0;
-	optionForceUpdateMediaInfo = optionUseMediaInfo ? BOOLSETTING(MEDIA_INFO_FORCE_UPDATE) : false;
-	SET_SETTING(MEDIA_INFO_FORCE_UPDATE, false);
 	mediaInfoFileTypes = MediaInfoUtil::getMediaInfoFileTypes();
 
 	scanProgress[0] = scanProgress[1] = 0;
@@ -3360,8 +3390,12 @@ bool ShareManager::isInSkipList(const string& lowerName) const
 
 void ShareManager::rebuildSkipList()
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string s = ss->getString(Conf::SKIPLIST_SHARE);
+	ss->unlockRead();
 	std::regex re;
-	bool result = Wildcards::regexFromPatternList(re, SETTING(SKIPLIST_SHARE), true);
+	bool result = Wildcards::regexFromPatternList(re, s, true);
 	LOCK(csSkipList);
 	reSkipList = std::move(re);
 	hasSkipList = result;
@@ -3449,9 +3483,12 @@ void ShareManager::on(Second, uint64_t tick) noexcept
 		refreshShare();
 }
 
-void ShareManager::on(Repaint) noexcept
+void ShareManager::on(ApplySettings) noexcept
 {
-	unsigned newAutoRefreshTime = SETTING(AUTO_REFRESH_TIME) * 60000;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned newAutoRefreshTime = ss->getInt(Conf::AUTO_REFRESH_TIME) * 60000;
+	ss->unlockRead();
 	if (newAutoRefreshTime == autoRefreshTime) return;
 	autoRefreshTime = newAutoRefreshTime;
 	if (autoRefreshTime)
@@ -3464,7 +3501,6 @@ void ShareManager::shutdown()
 {
 	HashManager::getInstance()->removeListener(this);
 	TimerManager::getInstance()->removeListener(this);
-	SettingsManager::getInstance()->removeListener(this);
 	if (doingScanDirs)
 	{
 		stopScanning.store(true);
@@ -3628,4 +3664,9 @@ bool ShareManager::writeEmptyFileList(const string& path) noexcept
 		result = false;
 	}
 	return result;
+}
+
+void ShareManager::on(Save, SimpleXML& xml) noexcept
+{
+	saveShareList(xml);
 }

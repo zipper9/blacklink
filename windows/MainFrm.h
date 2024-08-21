@@ -67,7 +67,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			PROCESS_COMMAND_LINE,
 			VIEW_FILE_AND_DELETE,
 			STATUS_MESSAGE,
-			SHOW_POPUP_MESSAGE,
+			SOUND_NOTIF,
 			REMOVE_POPUP,
 			SET_PM_TRAY_ICON,
 			SAVE_RECENTS,
@@ -265,11 +265,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void toggleTransferView(BOOL bVisible);
 		static unsigned int WINAPI stopper(void* p);
 		void UpdateLayout(BOOL resizeBars = TRUE);
-		static void onLimiter(bool currentLimiter = BOOLSETTING(THROTTLE_ENABLE))
-		{
-			Util::setLimiter(!currentLimiter);
-			setLimiterButton(!currentLimiter);
-		}
+
 		void processCommandLine(const ParsedCommandLine& cmd);
 		
 		BOOL PreTranslateMessage(MSG* pMsg);
@@ -326,7 +322,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		LRESULT onOpenLogs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			openDirs(SETTING(LOG_DIRECTORY));
+			openDirs(LogManager::getLogDirectory());
 			return 0;
 		}
 
@@ -423,23 +419,12 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 				instance->ctrlToolbar.CheckButton(IDC_AWAY, check);
 			}
 		}
-		
-		static void setLimiterButton(bool check)
-		{
-			if (instance)
-			{
-				instance->ctrlToolbar.CheckButton(IDC_LIMITER, check);
-				instance->UISetCheck(IDC_TRAY_LIMITER, check);
-			}
-		}
 
 		void setShutdownButton(bool check)
 		{
 			ctrlToolbar.CheckButton(IDC_SHUTDOWN, check);
 			UISetCheck(IDC_SHUTDOWN, check);
 		}
-
-		static void ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags = NIIF_INFO);
 
 		void updateQuickSearches(bool clear = false);
 
@@ -454,13 +439,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 	private:
 		static MainFrame* instance;
-
-		struct Popup
-		{
-			tstring title;
-			tstring message;
-			int icon;
-		};
 
 		struct FileExistsAction
 		{
@@ -496,6 +474,12 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		CImageList settingsImages;
 		HIconWrapper mainIcon;
 		HIconWrapper pmIcon;
+
+		// Settings
+		bool optToggleActiveWindow;
+		bool optAutoAway;
+		bool optMinimizeTray;
+		bool optReducePriority;
 
 		class DirectoryBrowseInfo
 		{
@@ -617,17 +601,20 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		static void checkImageList(CImageList& imageList, int resource, int size);
 		void toggleTopmost();
 		void toggleLockToolbars(BOOL state);
-		void toggleRebarBand(BOOL state, int bandNumber, int commandId, SettingsManager::IntSetting setting);
-		
+		void toggleRebarBand(BOOL state, int bandNumber, int commandId, int setting);
+
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 		LRESULT onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 
 		void autoConnect(const std::vector<FavoriteHubEntry>& hubs);
+		void checkToolbarButtons();
+		void checkLimitsButton();
 		void openDefaultWindows();
 		void initTransfersSplitter();
 		void setAway(bool flag);
-		void setSpeedLimit(bool upload, int minValue, int maxValue);
+		bool setSpeedLimit(bool upload, int minValue, int maxValue);
 		void addStatusMessage(const tstring& msg);
+		void updateSettings();
 
 		void setTrayIcon(int newIcon);
 		void clearPMStatus();

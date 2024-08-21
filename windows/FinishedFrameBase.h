@@ -100,11 +100,14 @@ class FinishedFrameBase
 					dcassert(col >= 0 && col < FinishedItem::COLUMN_LAST);
 					return columns[col];
 				}
-				static int compareItems(const FinishedItemInfo* a, const FinishedItemInfo* b, int col)
+				static int compareItems(const FinishedItemInfo* a, const FinishedItemInfo* b, int col, int /*flags*/)
 				{
 					return FinishedItem::compareItems(a->entry.get(), b->entry.get(), col);
 				}
-				
+				static int getCompareFlags()
+				{
+					return 0;
+				}
 				int getImageIndex() const
 				{
 					return g_fileImage.getIconIndex(entry->getTarget());
@@ -113,8 +116,10 @@ class FinishedFrameBase
 				{
 					return 0;
 				}
+
 			public:
 				FinishedItemPtr entry;
+
 			private:
 				tstring columns[FinishedItem::COLUMN_LAST];
 		};
@@ -150,11 +155,11 @@ class FinishedFrameBase
 		int64_t totalCountLast;
 		
 		const FinishedManager::eType type;
-		SettingsManager::IntSetting boldFinished;
-		SettingsManager::StrSetting columnWidth;
-		SettingsManager::StrSetting columnOrder;
-		SettingsManager::StrSetting columnVisible;
-		SettingsManager::IntSetting columnSort;
+		int boldFinished;
+		int columnWidth;
+		int columnOrder;
+		int columnVisible;
+		int columnSort;
 		
 		HTREEITEM createRootItem(TreeItemType nodeType);
 		void insertData();
@@ -267,7 +272,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			this->SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
 			this->m_nProportionalPos = 2000; //SETTING(FLYSERVER_HUBLIST_SPLIT);
 
-			SettingsManager::getInstance()->addListener(this);
+			SettingsManager::instance.addListener(this);
 			FinishedManager::getInstance()->addListener(this);
 			
 			bHandled = FALSE;
@@ -280,7 +285,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			{
 				this->closed = true;
 				FinishedManager::getInstance()->removeListener(this);
-				SettingsManager::getInstance()->removeListener(this);
+				SettingsManager::instance.removeListener(this);
 				if (loading)
 				{
 					abortFlag.store(true);
@@ -294,9 +299,10 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			else
 			{
 				ctrlList.saveHeaderOrder(columnOrder, columnWidth, columnVisible);
-				SettingsManager::set(columnSort, ctrlList.getSortForSettings());
+				auto ss = SettingsManager::instance.getUiSettings();
+				ss->setInt(columnSort, ctrlList.getSortForSettings());
 				ctrlList.deleteAll();
-				
+
 				bHandled = FALSE;
 				return 0;
 			}
@@ -311,7 +317,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 		{
 			bool updated = FinishedFrameBase::onSpeaker(wParam, lParam);
-			if (updated && SettingsManager::get(boldFinished))
+			if (updated && SettingsManager::instance.getUiSettings()->getBool(boldFinished))
 				this->setDirty();
 			return 0;
 		}
@@ -379,7 +385,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			this->SendMessage(WM_SPEAKER, SPEAK_UPDATE_STATUS, 0);
 		}
 
-		void on(SettingsManagerListener::Repaint) override
+		void on(SettingsManagerListener::ApplySettings) override
 		{
 			if (ctrlList.isRedraw())
 			{

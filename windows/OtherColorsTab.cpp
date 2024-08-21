@@ -4,10 +4,10 @@
 #include "BarShader.h"
 #include "ColorUtil.h"
 #include "Fonts.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/Text.h"
 
-extern SettingsManager *g_settings;
 static OtherColorsTab* instance;
 
 #define CTLID_VALUE_RED   0x2C2
@@ -39,30 +39,30 @@ struct ColorSettings
 
 static ColorSettings colors[] =
 {
-	{ ResourceManager::COLOR_WND,                  SettingsManager::BACKGROUND_COLOR,         0 },
-	{ ResourceManager::COLOR_TEXT,                 SettingsManager::TEXT_COLOR,               0 },
-	{ ResourceManager::COLOR_ERROR,                SettingsManager::ERROR_COLOR,              0 },
+	{ ResourceManager::COLOR_WND,                  Conf::BACKGROUND_COLOR,         0 },
+	{ ResourceManager::COLOR_TEXT,                 Conf::TEXT_COLOR,               0 },
+	{ ResourceManager::COLOR_ERROR,                Conf::ERROR_COLOR,              0 },
 	// Progress bars
-	{ ResourceManager::PROGRESS_BACK,              SettingsManager::PROGRESS_BACK_COLOR,      0 },
-	{ ResourceManager::PROGRESS_SEGMENT,           SettingsManager::PROGRESS_SEGMENT_COLOR,   0 },
-	{ ResourceManager::PROGRESS_DOWNLOADED,        SettingsManager::COLOR_DOWNLOADED,         0 },
-	{ ResourceManager::PROGRESS_RUNNING,           SettingsManager::COLOR_RUNNING,            0 },
-	{ ResourceManager::PROGRESS_RUNNING_COMPLETED, SettingsManager::COLOR_RUNNING_COMPLETED,  0 },
+	{ ResourceManager::PROGRESS_BACK,              Conf::PROGRESS_BACK_COLOR,      0 },
+	{ ResourceManager::PROGRESS_SEGMENT,           Conf::PROGRESS_SEGMENT_COLOR,   0 },
+	{ ResourceManager::PROGRESS_DOWNLOADED,        Conf::COLOR_DOWNLOADED,         0 },
+	{ ResourceManager::PROGRESS_RUNNING,           Conf::COLOR_RUNNING,            0 },
+	{ ResourceManager::PROGRESS_RUNNING_COMPLETED, Conf::COLOR_RUNNING_COMPLETED,  0 },
 	// Tabs
-	{ ResourceManager::TABS_INACTIVE_BACKGROUND_COLOR,       SettingsManager::TABS_INACTIVE_BACKGROUND_COLOR,       0 },
-	{ ResourceManager::TABS_ACTIVE_BACKGROUND_COLOR,         SettingsManager::TABS_ACTIVE_BACKGROUND_COLOR,         0 },
-	{ ResourceManager::TABS_INACTIVE_TEXT_COLOR,             SettingsManager::TABS_INACTIVE_TEXT_COLOR,             0 },
-	{ ResourceManager::TABS_ACTIVE_TEXT_COLOR,               SettingsManager::TABS_ACTIVE_TEXT_COLOR,               0 },
-	{ ResourceManager::TABS_OFFLINE_BACKGROUND_COLOR,        SettingsManager::TABS_OFFLINE_BACKGROUND_COLOR,        0 },
-	{ ResourceManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, SettingsManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, 0 },
-	{ ResourceManager::TABS_UPDATED_BACKGROUND_COLOR,        SettingsManager::TABS_UPDATED_BACKGROUND_COLOR,        0 },
-	{ ResourceManager::TABS_BORDER_COLOR,                    SettingsManager::TABS_BORDER_COLOR,                    0 },
+	{ ResourceManager::TABS_INACTIVE_BACKGROUND_COLOR,       Conf::TABS_INACTIVE_BACKGROUND_COLOR,       0 },
+	{ ResourceManager::TABS_ACTIVE_BACKGROUND_COLOR,         Conf::TABS_ACTIVE_BACKGROUND_COLOR,         0 },
+	{ ResourceManager::TABS_INACTIVE_TEXT_COLOR,             Conf::TABS_INACTIVE_TEXT_COLOR,             0 },
+	{ ResourceManager::TABS_ACTIVE_TEXT_COLOR,               Conf::TABS_ACTIVE_TEXT_COLOR,               0 },
+	{ ResourceManager::TABS_OFFLINE_BACKGROUND_COLOR,        Conf::TABS_OFFLINE_BACKGROUND_COLOR,        0 },
+	{ ResourceManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, Conf::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR, 0 },
+	{ ResourceManager::TABS_UPDATED_BACKGROUND_COLOR,        Conf::TABS_UPDATED_BACKGROUND_COLOR,        0 },
+	{ ResourceManager::TABS_BORDER_COLOR,                    Conf::TABS_BORDER_COLOR,                    0 },
 	// File status
-	{ ResourceManager::COLOR_SHARED,               SettingsManager::FILE_SHARED_COLOR,        0 },
-	{ ResourceManager::COLOR_DOWNLOADED,           SettingsManager::FILE_DOWNLOADED_COLOR,    0 },
-	{ ResourceManager::COLOR_CANCELED,             SettingsManager::FILE_CANCELED_COLOR,      0 },
-	{ ResourceManager::COLOR_FOUND,                SettingsManager::FILE_FOUND_COLOR,         0 },
-	{ ResourceManager::COLOR_QUEUED,               SettingsManager::FILE_QUEUED_COLOR,        0 }
+	{ ResourceManager::COLOR_SHARED,               Conf::FILE_SHARED_COLOR,        0 },
+	{ ResourceManager::COLOR_DOWNLOADED,           Conf::FILE_DOWNLOADED_COLOR,    0 },
+	{ ResourceManager::COLOR_CANCELED,             Conf::FILE_CANCELED_COLOR,      0 },
+	{ ResourceManager::COLOR_FOUND,                Conf::FILE_FOUND_COLOR,         0 },
+	{ ResourceManager::COLOR_QUEUED,               Conf::FILE_QUEUED_COLOR,        0 }
 };
 
 struct MenuOption
@@ -74,42 +74,42 @@ struct MenuOption
 
 static const MenuOption menuOptions[] =
 {
-	{ IDC_USE_CUSTOM_MENU,             SettingsManager::USE_CUSTOM_MENU,    &OtherColorsTab::useCustomMenu },
-	{ IDC_SETTINGS_ODC_MENUBAR_USETWO, SettingsManager::MENUBAR_TWO_COLORS, &OtherColorsTab::menuTwoColors },
-	{ IDC_SETTINGS_ODC_MENUBAR_BUMPED, SettingsManager::MENUBAR_BUMPED,     &OtherColorsTab::menuBumped    }
+	{ IDC_USE_CUSTOM_MENU,             Conf::USE_CUSTOM_MENU,    &OtherColorsTab::useCustomMenu },
+	{ IDC_SETTINGS_ODC_MENUBAR_USETWO, Conf::MENUBAR_TWO_COLORS, &OtherColorsTab::menuTwoColors },
+	{ IDC_SETTINGS_ODC_MENUBAR_BUMPED, Conf::MENUBAR_BUMPED,     &OtherColorsTab::menuBumped    }
 };
 
-void OtherColorsTab::loadSettings()
+void OtherColorsTab::loadSettings(const BaseSettingsImpl* ss)
 {
 	for (int i = 0; i < _countof(colors); i++)
-		colors[i].value = SettingsManager::get((SettingsManager::IntSetting) colors[i].setting);
-	menuLeftColor = g_settings->get(SettingsManager::MENUBAR_LEFT_COLOR);
-	menuRightColor = g_settings->get(SettingsManager::MENUBAR_RIGHT_COLOR);
-	menuTwoColors = g_settings->getBool(SettingsManager::MENUBAR_TWO_COLORS);
-	menuBumped = g_settings->getBool(SettingsManager::MENUBAR_BUMPED);
-	useCustomMenu = g_settings->getBool(SettingsManager::USE_CUSTOM_MENU);
+		colors[i].value = ss->getInt(colors[i].setting);
+	menuLeftColor = ss->getInt(Conf::MENUBAR_LEFT_COLOR);
+	menuRightColor = ss->getInt(Conf::MENUBAR_RIGHT_COLOR);
+	menuTwoColors = ss->getBool(Conf::MENUBAR_TWO_COLORS);
+	menuBumped = ss->getBool(Conf::MENUBAR_BUMPED);
+	useCustomMenu = ss->getBool(Conf::USE_CUSTOM_MENU);
 }
 
-void OtherColorsTab::saveSettings() const
+void OtherColorsTab::saveSettings(BaseSettingsImpl* ss) const
 {
 	for (int i = 0; i < _countof(colors); i++)
-		g_settings->set(SettingsManager::IntSetting(colors[i].setting), (int) colors[i].value);
-	g_settings->set(SettingsManager::MENUBAR_LEFT_COLOR, (int) menuLeftColor);
-	g_settings->set(SettingsManager::MENUBAR_RIGHT_COLOR, (int) menuRightColor);
-	g_settings->set(SettingsManager::MENUBAR_TWO_COLORS, menuTwoColors);
-	g_settings->set(SettingsManager::MENUBAR_BUMPED, menuBumped);
-	g_settings->set(SettingsManager::USE_CUSTOM_MENU, useCustomMenu);
+		ss->setInt(colors[i].setting, (int) colors[i].value);
+	ss->setInt(Conf::MENUBAR_LEFT_COLOR, (int) menuLeftColor);
+	ss->setInt(Conf::MENUBAR_RIGHT_COLOR, (int) menuRightColor);
+	ss->setBool(Conf::MENUBAR_TWO_COLORS, menuTwoColors);
+	ss->setBool(Conf::MENUBAR_BUMPED, menuBumped);
+	ss->setBool(Conf::USE_CUSTOM_MENU, useCustomMenu);
 }
 
 void OtherColorsTab::getValues(SettingsStore& ss) const
 {
 	for (int i = 0; i < _countof(colors); i++)
 		ss.setIntValue(colors[i].setting, colors[i].value);
-	ss.setIntValue(SettingsManager::MENUBAR_LEFT_COLOR, menuLeftColor);
-	ss.setIntValue(SettingsManager::MENUBAR_RIGHT_COLOR, menuRightColor);
-	ss.setIntValue(SettingsManager::MENUBAR_TWO_COLORS, menuTwoColors);
-	ss.setIntValue(SettingsManager::MENUBAR_BUMPED, menuBumped);
-	ss.setIntValue(SettingsManager::USE_CUSTOM_MENU, useCustomMenu);
+	ss.setIntValue(Conf::MENUBAR_LEFT_COLOR, menuLeftColor);
+	ss.setIntValue(Conf::MENUBAR_RIGHT_COLOR, menuRightColor);
+	ss.setIntValue(Conf::MENUBAR_TWO_COLORS, menuTwoColors);
+	ss.setIntValue(Conf::MENUBAR_BUMPED, menuBumped);
+	ss.setIntValue(Conf::USE_CUSTOM_MENU, useCustomMenu);
 }
 
 void OtherColorsTab::setValues(const SettingsStore& ss)
@@ -117,13 +117,13 @@ void OtherColorsTab::setValues(const SettingsStore& ss)
 	int val;
 	for (int i = 0; i < _countof(colors); i++)
 		if (ss.getIntValue(colors[i].setting, val)) colors[i].value = val;
-	if (ss.getIntValue(SettingsManager::MENUBAR_LEFT_COLOR, val))
+	if (ss.getIntValue(Conf::MENUBAR_LEFT_COLOR, val))
 		menuLeftColor = val;
-	if (ss.getIntValue(SettingsManager::MENUBAR_RIGHT_COLOR, val))
+	if (ss.getIntValue(Conf::MENUBAR_RIGHT_COLOR, val))
 		menuRightColor = val;
-	ss.getBoolValue(SettingsManager::MENUBAR_TWO_COLORS, menuTwoColors);
-	ss.getBoolValue(SettingsManager::MENUBAR_BUMPED, menuBumped);
-	ss.getBoolValue(SettingsManager::USE_CUSTOM_MENU, useCustomMenu);
+	ss.getBoolValue(Conf::MENUBAR_TWO_COLORS, menuTwoColors);
+	ss.getBoolValue(Conf::MENUBAR_BUMPED, menuBumped);
+	ss.getBoolValue(Conf::USE_CUSTOM_MENU, useCustomMenu);
 }
 
 void OtherColorsTab::updateTheme()
@@ -203,8 +203,9 @@ void OtherColorsTab::cleanup()
 
 LRESULT OtherColorsTab::onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	const auto ss = SettingsManager::instance.getUiSettings();
 	int index = ctrlTabList.GetCurSel();
-	COLORREF color = SettingsManager::getDefault((SettingsManager::IntSetting) colors[index].setting);
+	COLORREF color = ss->getIntDefault(colors[index].setting);
 	if (colors[index].value != color)
 	{
 		colors[index].value = color;
@@ -240,21 +241,22 @@ LRESULT OtherColorsTab::onChooseColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 LRESULT OtherColorsTab::onMenuDefaults(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	COLORREF color = g_settings->getDefault(SettingsManager::MENUBAR_LEFT_COLOR);
+	const auto ss = SettingsManager::instance.getUiSettings();
+	COLORREF color = ss->getIntDefault(Conf::MENUBAR_LEFT_COLOR);
 	if (color != menuLeftColor)
 	{
 		menuLeftColor = color;
-		if (callback) callback->settingChanged(SettingsManager::MENUBAR_LEFT_COLOR);
+		if (callback) callback->settingChanged(Conf::MENUBAR_LEFT_COLOR);
 	}
-	color = g_settings->getDefault(SettingsManager::MENUBAR_RIGHT_COLOR);
+	color = ss->getIntDefault(Conf::MENUBAR_RIGHT_COLOR);
 	if (color != menuRightColor)
 	{
 		menuRightColor = color;
-		if (callback) callback->settingChanged(SettingsManager::MENUBAR_RIGHT_COLOR);
+		if (callback) callback->settingChanged(Conf::MENUBAR_RIGHT_COLOR);
 	}
 	for (int i = 0; i < _countof(menuOptions); i++)
 	{
-		bool bval = g_settings->getDefault((SettingsManager::IntSetting) menuOptions[i].setting) != 0;
+		bool bval = ss->getIntDefault(menuOptions[i].setting) != 0;
 		if (this->*menuOptions[i].ptr != bval)
 		{
 			this->*menuOptions[i].ptr = bval;
@@ -389,7 +391,7 @@ LRESULT OtherColorsTab::onChooseMenuColor(WORD /*wNotifyCode*/, WORD wID, HWND /
 		{
 			*selColor = d.GetColor();
 			if (callback)
-				callback->settingChanged(wID == IDC_SETTINGS_ODC_MENUBAR_LEFT ? SettingsManager::MENUBAR_LEFT_COLOR : SettingsManager::MENUBAR_RIGHT_COLOR);
+				callback->settingChanged(wID == IDC_SETTINGS_ODC_MENUBAR_LEFT ? Conf::MENUBAR_LEFT_COLOR : Conf::MENUBAR_RIGHT_COLOR);
 		}
 	}
 	else

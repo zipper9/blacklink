@@ -56,6 +56,12 @@ static string getMagnetByPath(const string& file)
 	return Util::emptyString;
 }
 
+static string formatParams(int setting, const StringMap& params)
+{
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	return Util::formatParams(ss->getString(setting), params, false);
+}
+
 // This is GPLed, and copyright (mostly) my anonymous friend
 // - Todd Pederzani
 string Players::getItunesSpam(HWND playerWnd /*= NULL*/)
@@ -215,13 +221,8 @@ string Players::getItunesSpam(HWND playerWnd /*= NULL*/)
 		
 		// If there is something in title, we have at least partly succeeded
 		if (!params["title"].empty())
-		{
-			return Util::formatParams(SETTING(ITUNES_FORMAT), params, false);
-		}
-		else
-		{
-			return "no_media";
-		}
+			return formatParams(Conf::ITUNES_FORMAT, params);
+		return "no_media";
 	}
 	else
 	{
@@ -292,8 +293,9 @@ string Players::getMPCSpam()
 							params["filename"] = Util::getFileName(filename); //otherwise fully qualified
 							params["title"] = params["filename"].substr(0, params["filename"].size() - 4);
 							params["size"] = Util::formatBytes(File::getSize(filename));
-							
-							if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
+
+							const auto* ss = SettingsManager::instance.getUiSettings();
+							if (ss->getBool(Conf::USE_MAGNETS_IN_PLAYERS_SPAM))
 							{
 								string magnet = getMagnetByPath(params["filepath"]);
 								if (magnet.length() > 0)
@@ -376,13 +378,8 @@ string Players::getMPCSpam()
 	}
 	
 	if (success)
-	{
-		return Util::formatParams(SETTING(MPLAYERC_FORMAT), params, false);
-	}
-	else
-	{
-		return Util::emptyString;
-	}
+		return formatParams(Conf::MPLAYERC_FORMAT, params);
+	return Util::emptyString;
 }
 
 // This works for WMP 9+, but it's little slow, but hey we're talking about an MS app here, so what can you expect from the remote support for it...
@@ -499,8 +496,9 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 					::COLE2T MediaURL(bstrMediaURL);
 					params["filepath"] = Text::fromT(MediaURL.m_szBuffer);
 				}
-				
-				if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
+
+				const auto* ss = SettingsManager::instance.getUiSettings();
+				if (ss->getBool(Conf::USE_MAGNETS_IN_PLAYERS_SPAM))
 				{
 					string magnet = getMagnetByPath(params["filepath"]);
 					if (magnet.length() > 0)
@@ -511,7 +509,6 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 #else
 						params["magnet"] = Util::getFileName(params["filepath"]);
 #endif
-						
 				}
 				
 				
@@ -688,18 +685,10 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 		
 		// If there is something in title, we have at least partly succeeded
 		if (!params["title"].empty())
-		{
-			return Util::formatParams(SETTING(WMP_FORMAT), params, false);
-		}
-		else
-		{
-			return "no_media";
-		}
+			return formatParams(Conf::WMP_FORMAT, params);
+		return "no_media";
 	}
-	else
-	{
-		return Util::emptyString;
-	}
+	return Util::emptyString;
 }
 
 string Players::getWinampSpam(HWND playerWnd, int playerType)
@@ -707,6 +696,7 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 	// playerType : 0 - WinAmp, 1 - QCD/QMP
 	if (playerWnd)
 	{
+		const auto* ss = SettingsManager::instance.getUiSettings();
 		StringMap params;
 		int majorVersion, minorVersion;
 		string version;
@@ -779,10 +769,9 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 				ReadProcessMemory(hWinamp, lpFileTitle, realtitle, MAX_PATH, &title_len);
 				
 			CloseHandle(hWinamp);
-			
+
 			params["title"]  = Text::acpToUtf8(realtitle);
-			
-			if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
+			if (ss->getBool(Conf::USE_MAGNETS_IN_PLAYERS_SPAM))
 			{
 				params["filepath"]  = Text::acpToUtf8(name);
 				const string magnet = getMagnetByPath(params["filepath"]);
@@ -853,16 +842,12 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 		    waBitRate = SendMessage(playerWnd, WM_USER, 1, IPC_GETINFO),
 		    waChannels = SendMessage(playerWnd, WM_USER, 2, IPC_GETINFO);
 		//[!] SSA fix for QCD
-		if (playerType == 1 || BOOLSETTING(USE_BITRATE_FIX_FOR_SPAM))
+		if (playerType == 1 || ss->getBool(Conf::USE_BITRATE_FIX_FOR_SPAM))
 		{
 			if (waSampleRate > 100) // if in Herz
-			{
 				waSampleRate = waSampleRate / 1000.0;
-			}
 			if (waBitRate > 10000)  // if in Bits
-			{
 				waBitRate = waBitRate / 1000.0;
-			}
 		}
 		//[!] SSA fix for AIMP
 		params["bitrate"] = Util::toString(waBitRate) + "kbps";
@@ -882,21 +867,10 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 		}
 		params["channels"] = waChannelName;
 		//params["channels"] = (waChannels==2?"stereo":"mono"); // 3+ channels? 0 channels?
-		if (playerType != 1)    //QCD
-		{
-			return Util::formatParams(SETTING(WINAMP_FORMAT), params, false);
-		}
-		else
-		{
-			return Util::formatParams(SETTING(QCDQMP_FORMAT), params, false);
-		}
+		return formatParams(playerType != 1 ? Conf::WINAMP_FORMAT : Conf::QCDQMP_FORMAT, params);
 	}
-	else
-	{
-		return Util::emptyString;
-	}
+	return Util::emptyString;
 }
-
 
 string Players::getJASpam()
 {
@@ -927,10 +901,11 @@ string Players::getJASpam()
 	string inFront = string(numFront, '-'),
 	       inBack = string(numBack, '-');
 	params["bar"] = Text::acpToUtf8('[' + inFront + (jaControl->isJAPlaying() ? '|' : '-') + inBack + ']');
-	
+
 	params["length"] = Text::acpToUtf8(jaControl->getJACurrTimeString(false));
 	params["version"] = Text::acpToUtf8(jaControl->getJAVersion());
-	if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::USE_MAGNETS_IN_PLAYERS_SPAM))
 	{
 		string magnet = getMagnetByPath(params["filepath"]);
 		if (magnet.length() > 0)
@@ -942,5 +917,5 @@ string Players::getJASpam()
 			params["magnet"] = Util::getFileName(params["filepath"]);
 #endif
 	}
-	return Util::formatParams(SETTING(JETAUDIO_FORMAT), params, false);
+	return formatParams(Conf::JETAUDIO_FORMAT, params);
 }

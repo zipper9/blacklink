@@ -22,6 +22,7 @@
 #include "WinUtil.h"
 #include "MainFrm.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
 #include "../client/SimpleStringTokenizer.h"
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -52,10 +53,11 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 
+	const auto ss = SettingsManager::instance.getUiSettings();
 	ctrlIconSize.Attach(GetDlgItem(IDC_ICON_SIZE));
 	ctrlIconSize.AddString(CTSTRING(SETTINGS_TOOLBAR_SMALL));
 	ctrlIconSize.AddString(CTSTRING(SETTINGS_TOOLBAR_LARGE));
-	int iconSize = SETTING(TB_IMAGE_SIZE);
+	int iconSize = ss->getInt(Conf::TB_IMAGE_SIZE);
 	ctrlIconSize.SetCurSel(iconSize == 16 ? 0 : 1);
 
 	auto mainFrame = MainFrame::getMainFrame();
@@ -91,7 +93,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	n = 0;
 	LVFINDINFO lvifi = { 0 };
 	lvifi.flags  = LVFI_PARAM;
-	SimpleStringTokenizer<char> st(SETTING(TOOLBAR), ',');
+	SimpleStringTokenizer<char> st(ss->getString(Conf::TOOLBAR), ',');
 	string token;
 	while (st.getNextToken(token))
 	{
@@ -125,10 +127,11 @@ void ToolbarPage::write()
 		int j = ctrlToolbar.GetItemData(i);
 		toolbar += Util::toString(j);
 	}
-	if (toolbar != g_settings->get(SettingsManager::TOOLBAR) || iconSize != g_settings->get(SettingsManager::TB_IMAGE_SIZE))
+	const auto ss = SettingsManager::instance.getUiSettings();
+	if (toolbar != ss->getString(Conf::TOOLBAR) || iconSize != ss->getInt(Conf::TB_IMAGE_SIZE))
 	{
-		g_settings->set(SettingsManager::TOOLBAR, toolbar);
-		g_settings->set(SettingsManager::TB_IMAGE_SIZE, iconSize);
+		ss->setString(Conf::TOOLBAR, toolbar);
+		ss->setInt(Conf::TB_IMAGE_SIZE, iconSize);
 		dcassert(WinUtil::g_mainWnd);
 		if (WinUtil::g_mainWnd)
 			::SendMessage(WinUtil::g_mainWnd, IDC_REBUILD_TOOLBAR, 0, 0);

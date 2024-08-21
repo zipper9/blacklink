@@ -10,7 +10,7 @@
 #include "ChatCtrl.h"
 #include "SettingsStore.h"
 #include "PropPageCallback.h"
-#include "../client/SettingsManager.h"
+#include "../client/BaseSettingsImpl.h"
 
 class FontStyleDlg : public CDialogImpl<FontStyleDlg>
 {
@@ -67,8 +67,8 @@ class ChatStylesTab : public CDialogImpl<ChatStylesTab>
 			return 0;
 		}
 
-		void loadSettings();
-		void saveSettings() const;
+		void loadSettings(const BaseSettingsImpl* ss);
+		void saveSettings(BaseSettingsImpl* ss) const;
 		void getValues(SettingsStore& ss) const;
 		void setValues(const SettingsStore& ss);
 		void updateTheme();
@@ -82,12 +82,12 @@ class ChatStylesTab : public CDialogImpl<ChatStylesTab>
 				TextStyleSettings() : parent(nullptr) {}
 
 				void init(ChatStylesTab *parent, ResourceManager::Strings name,
-				          SettingsManager::IntSetting bgSetting, SettingsManager::IntSetting fgSetting,
-				          SettingsManager::IntSetting boldSetting, SettingsManager::IntSetting italicSetting);
-				void loadSettings();
+				          int bgSetting, int fgSetting,
+				          int boldSetting, int italicSetting);
+				void loadSettings(const BaseSettingsImpl* ss);
 				void loadSettings(const SettingsStore& ss);
 				void loadDefaultSettings();
-				void saveSettings() const;
+				void saveSettings(BaseSettingsImpl* ss) const;
 				void saveSettings(SettingsStore& ss) const;
 				bool editBackgroundColor();
 				bool editForegroundColor();
@@ -96,10 +96,10 @@ class ChatStylesTab : public CDialogImpl<ChatStylesTab>
 				ResourceManager::Strings name;
 
 				ChatStylesTab* parent;
-				SettingsManager::IntSetting bgSetting;
-				SettingsManager::IntSetting fgSetting;
-				SettingsManager::IntSetting boldSetting;
-				SettingsManager::IntSetting italicSetting;
+				int bgSetting;
+				int fgSetting;
+				int boldSetting;
+				int italicSetting;
 		};
 
 	protected:

@@ -3,6 +3,7 @@
 #include "LineDlg.h"
 #include "WinUtil.h"
 #include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -127,7 +128,10 @@ LRESULT PublicHubsListDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 			if (!tmp.empty()) tmp += ';';
 			tmp += Text::fromT(buf);
 		}
-		SettingsManager::getInstance()->set(SettingsManager::HUBLIST_SERVERS, tmp);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockWrite();
+		ss->setString(Conf::HUBLIST_SERVERS, tmp);
+		ss->unlockWrite();
 	}
 	EndDialog(wID);
 	return 0;

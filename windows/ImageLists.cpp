@@ -85,7 +85,7 @@ int FileImage::getIconIndex(const string& fileName)
 	string x = getVirusIconIndex(fileName, iconIndex);
 	if (iconIndex)
 		return iconIndex;
-	if (BOOLSETTING(USE_SYSTEM_ICONS) && !x.empty())
+	if (useSystemIcons && !x.empty())
 	{
 		ASSERT_MAIN_THREAD();
 		auto j = iconCache.find(x);
@@ -123,6 +123,13 @@ void FileImage::init()
 	ResourceLoader::LoadImageList(IDR_FOLDERS, images, 16, 16);
 	imageCount = DIR_IMAGE_LAST;
 	dcassert(images.GetImageCount() == DIR_IMAGE_LAST);
+	updateSettings();
+}
+
+void FileImage::updateSettings()
+{
+	const auto ss = SettingsManager::instance.getUiSettings();
+	useSystemIcons = ss->getBool(Conf::USE_SYSTEM_ICONS);
 }
 
 void UserStateImage::init()
@@ -137,14 +144,12 @@ void GenderImage::init()
 
 void UserImage::init()
 {
-	if (SETTING(USERLIST_IMAGE).empty())
-	{
+	const auto ss = SettingsManager::instance.getUiSettings();
+	const string& userListImage = ss->getString(Conf::USERLIST_IMAGE);
+	if (userListImage.empty())
 		ResourceLoader::LoadImageList(IDR_USERS, images, 16, 16);
-	}
 	else
-	{
-		ResourceLoader::LoadImageList(Text::toT(SETTING(USERLIST_IMAGE)).c_str(), images, 16, 16);
-	}
+		ResourceLoader::LoadImageList(Text::toT(userListImage).c_str(), images, 16, 16);
 }
 
 void VideoImage::init()

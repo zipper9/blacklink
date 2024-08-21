@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "UCHandler.h"
 #include "WinUtil.h"
+#include "ConfUI.h"
 #include "../client/FavoriteManager.h"
+#include "../client/DatabaseManager.h"
+#include "../client/DatabaseOptions.h"
+#include "../client/SettingsManager.h"
 
 void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 {
@@ -12,7 +16,12 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 	const bool isMultiple = (ctx & UserCommand::CONTEXT_FLAG_MULTIPLE) != 0;
 	ctx &= UserCommand::CONTEXT_MASK;
 
-	const bool useSubMenu = BOOLSETTING(UC_SUBMENU) || isTransfers;
+	bool useSubMenu = isTransfers;
+	if (!useSubMenu)
+	{
+		auto ss = SettingsManager::instance.getUiSettings();
+		useSubMenu = ss->getBool(Conf::UC_SUBMENU);
+	}
 	const int prevCount = menu.GetMenuItemCount();
 	menuPos = prevCount;
 
@@ -26,7 +35,8 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		if (isTransfers)
 		{
 			serviceSubMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION), g_iconBitmaps.getBitmap(IconBitmaps::DISCONNECT, 0));
-			UINT flags = BOOLSETTING(ENABLE_P2P_GUARD) && BOOLSETTING(P2P_GUARD_BLOCK) ? 0 : MF_DISABLED | MF_GRAYED;
+			int options = DatabaseManager::getInstance()->getOptions();
+			UINT flags = (options & DatabaseOptions::P2P_GUARD_BLOCK) ? 0 : MF_DISABLED | MF_GRAYED;
 			serviceSubMenu.AppendMenu(MF_STRING | flags, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP), g_iconBitmaps.getBitmap(IconBitmaps::WALL, 0));
 		}
 		if (!isMe) serviceSubMenu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));

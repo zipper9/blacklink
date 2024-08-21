@@ -8,6 +8,7 @@
 #include "QueueManager.h"
 #include "UserManager.h"
 #include "UploadManager.h"
+#include "SettingsManager.h"
 #include "PathUtil.h"
 #include "HashUtil.h"
 #include "FormatUtil.h"
@@ -18,6 +19,7 @@
 #include "AdcSupports.h"
 #include "Random.h"
 #include "AppPaths.h"
+#include "ConfCore.h"
 #include "dht/DHT.h"
 #include "dht/DHTSearchManager.h"
 #include "dht/IndexManager.h"
@@ -620,7 +622,10 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			int n = Util::toInt(pc.args[1]);
 			if (n > 0)
 			{
-				SET_SETTING(SLOTS, n);
+				auto ss = SettingsManager::instance.getCoreSettings();
+				ss->lockWrite();
+				ss->setInt(Conf::SLOTS, n);
+				ss->unlockWrite();
 				ClientManager::infoUpdated();
 				res.text = STRING(SLOTS_SET);
 				res.what = RESULT_LOCAL_TEXT;
@@ -637,7 +642,10 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			int n = Util::toInt(pc.args[1]);
 			if (n > 0)
 			{
-				SET_SETTING(EXTRA_SLOTS, n);
+				auto ss = SettingsManager::instance.getCoreSettings();
+				ss->lockWrite();
+				ss->setInt(Conf::EXTRA_SLOTS, n);
+				ss->unlockWrite();
 				res.text = STRING(EXTRA_SLOTS_SET);
 				res.what = RESULT_LOCAL_TEXT;
 			}
@@ -653,7 +661,10 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			int n = Util::toInt(pc.args[1]);
 			if (n >= 64)
 			{
-				SET_SETTING(MINISLOT_SIZE, n);
+				auto ss = SettingsManager::instance.getCoreSettings();
+				ss->lockWrite();
+				ss->setInt(Conf::MINISLOT_SIZE, n);
+				ss->unlockWrite();
 				res.text = STRING(SMALL_FILE_SIZE_SET);
 				res.what = RESULT_LOCAL_TEXT;
 			}
@@ -715,7 +726,11 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			params["ratio"] = Util::toString(r);
 			params["up"] = Util::formatBytes(ratio.upload);
 			params["down"] = Util::formatBytes(ratio.download);
-			res.text = Util::formatParams(SETTING(RATIO_MESSAGE), params, false);
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			string message = ss->getString(Conf::RATIO_MESSAGE);
+			ss->unlockRead();
+			res.text = Util::formatParams(message, params, false);
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 		}
@@ -1460,12 +1475,15 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					return true;
 				}
 				HttpClient::Request req;
+				auto ss = SettingsManager::instance.getCoreSettings();
+				ss->lockRead();
+				req.userAgent = ss->getString(Conf::HTTP_USER_AGENT);
+				ss->unlockRead();
 				req.outputPath = Util::getHttpDownloadsPath();
 				File::ensureDirectory(req.outputPath);
 				req.url = pc.args[2];
 				req.maxRedirects = 5;
 				req.frameId = pc.frameId;
-				req.userAgent = SETTING(HTTP_USER_AGENT);
 				uint64_t id = httpClient.addRequest(req);
 				if (id)
 				{

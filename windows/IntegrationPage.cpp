@@ -20,7 +20,9 @@
 #include "IntegrationPage.h"
 #include "WinUtil.h"
 #include "ShellExt.h"
+#include "ConfUI.h"
 #include "../client/AppPaths.h"
+#include "../client/File.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -28,11 +30,11 @@
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
-	{ SettingsManager::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
-	{ SettingsManager::REGISTER_DCLST_HANDLER, ResourceManager::INSTALL_DCLST_HANDLER },
+	{ Conf::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
+	{ Conf::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
+	{ Conf::REGISTER_DCLST_HANDLER, ResourceManager::INSTALL_DCLST_HANDLER },
 #ifdef SSA_SHELL_INTEGRATION
-	{ SettingsManager::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
+	{ Conf::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
 #endif
 	{ 0, ResourceManager::Strings() }
 };

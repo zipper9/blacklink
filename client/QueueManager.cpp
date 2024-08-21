@@ -40,6 +40,7 @@
 #include "ShareManager.h"
 #include "Wildcards.h"
 #include "Random.h"
+#include "ConfCore.h"
 #include "version.h"
 
 #ifdef _WIN32
@@ -79,15 +80,18 @@ uint64_t QueueManager::FileQueue::getGenerationId() const
 	return generationId;
 }
 
-void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags)
+void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoPriority, const string& fileName, int64_t size, QueueItem::MaskType flags) noexcept
 {
 	if (p < QueueItem::DEFAULT || p >= QueueItem::LAST)
 		p = QueueItem::DEFAULT;
 
 	autoPriority = false;
-	if (BOOLSETTING(AUTO_PRIORITY_USE_PATTERNS))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	
+	if (ss->getBool(Conf::AUTO_PRIORITY_USE_PATTERNS))
 	{
-		const string& pattern = SETTING(AUTO_PRIORITY_PATTERNS);
+		const string& pattern = ss->getString(Conf::AUTO_PRIORITY_PATTERNS);
 		if (pattern != autoPriorityPattern)
 		{
 			autoPriorityPattern = pattern;
@@ -101,7 +105,7 @@ void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoP
 	if (p == QueueItem::DEFAULT && !autoPriorityPattern.empty() && std::regex_match(fileName, reAutoPriority))
 	{
 		autoPriority = true;
-		p = (QueueItem::Priority) SETTING(AUTO_PRIORITY_PATTERNS_PRIO);
+		p = (QueueItem::Priority) ss->getInt(Conf::AUTO_PRIORITY_PATTERNS_PRIO);
 		if (p < QueueItem::LOWEST)
 			p = QueueItem::LOWEST;
 		else
@@ -109,12 +113,12 @@ void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoP
 			p = QueueItem::HIGHEST;
 	}
 
-	if (p == QueueItem::DEFAULT && BOOLSETTING(AUTO_PRIORITY_USE_SIZE))
+	if (p == QueueItem::DEFAULT && ss->getBool(Conf::AUTO_PRIORITY_USE_SIZE))
 	{
-		if (size > 0 && size <= SETTING(AUTO_PRIORITY_SMALL_SIZE) << 10)
+		if (size > 0 && size <= ss->getInt(Conf::AUTO_PRIORITY_SMALL_SIZE) << 10)
 		{
 			autoPriority = true;
-			p = (QueueItem::Priority) SETTING(AUTO_PRIORITY_SMALL_SIZE_PRIO);
+			p = (QueueItem::Priority) ss->getInt(Conf::AUTO_PRIORITY_SMALL_SIZE_PRIO);
 			if (p < QueueItem::LOWEST)
 				p = QueueItem::LOWEST;
 			else
@@ -128,6 +132,7 @@ void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoP
 	else
 	if (p == QueueItem::DEFAULT)
 		p = QueueItem::NORMAL;
+	ss->unlockRead();
 }
 
 QueueItemPtr QueueManager::FileQueue::add(QueueManager* qm,
@@ -151,7 +156,7 @@ QueueItemPtr QueueManager::FileQueue::add(QueueManager* qm,
 	if (autoPriority)
 		extraFlags |= QueueItem::XFLAG_AUTO_PRIORITY;
 #ifdef BL_FEATURE_DROP_SLOW_SOURCES
-	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
+	if (DownloadManager::getInstance()->getOptions() & DownloadManager::OPT_AUTO_DISCONNECT)
 		extraFlags |= QueueItem::XFLAG_AUTODROP;
 #endif
 
@@ -291,7 +296,11 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 {
 	QueueItemPtr cand = nullptr;
 
-	size_t limit = SETTING(AUTO_SEARCH_LIMIT);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	size_t limit = ss->getInt(Conf::AUTO_SEARCH_LIMIT);
+	ss->unlockRead();
+
 	for (auto i = start; i != end; ++i)
 	{
 		const QueueItemPtr& q = i->second;
@@ -464,7 +473,10 @@ int QueueManager::UserQueue::getNextL(QueueItemSegment& result, const UserPtr& u
 	int p = QueueItem::LAST - 1;
 	int lastError = QueueItem::ERROR_NO_ITEM;
 
-	size_t fileSlots = SETTING(FILE_SLOTS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	size_t fileSlots = ss->getInt(Conf::FILE_SLOTS);
+	ss->unlockRead();
 	bool hasFreeSlots = fileSlots == 0 || userQueue.getRunningCount() < fileSlots;
 
 	do
@@ -712,7 +724,11 @@ static void getOldFiles(StringList& delList, const string& path, uint64_t curren
 
 void QueueManager::deleteFileLists()
 {
-	unsigned days = SETTING(KEEP_LISTS_DAYS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned days = ss->getInt(Conf::KEEP_LISTS_DAYS);
+	ss->unlockRead();
+
 	StringList delList;
 	const string& path = Util::getListPath();
 	uint64_t currentTime = Util::getFileTime();
@@ -740,6 +756,8 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
 	string searchString;
 	vector<const PartsInfoReqParam*> params;
 	{
@@ -771,37 +789,46 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		}
 	}
 	// TODO: improve auto search
-	if (fileQueue.getSize() > 0 && tick >= nextSearch && BOOLSETTING(AUTO_SEARCH))
+	if (fileQueue.getSize() > 0 && tick >= nextSearch)
 	{
-		// We keep 30 recent searches to avoid duplicate searches
-		while (m_recent.size() >= fileQueue.getSize() || m_recent.size() > 30)
-		{
-			m_recent.pop_front();
-		}
-
-		QueueItemPtr qi;
-		while ((qi = fileQueue.findAutoSearch(m_recent)) == nullptr && !m_recent.empty()) // Местами не переставлять findAutoSearch меняет recent
-		{
-			m_recent.pop_front();
-		}
-		if (qi)
-		{
-			searchString = qi->getTTH().toBase32();
-			m_recent.push_back(qi->getTarget());
-			//dcassert(SETTING(AUTO_SEARCH_TIME) > 1)
-			nextSearch = tick + SETTING(AUTO_SEARCH_TIME) * 60000;
-			if (BOOLSETTING(REPORT_ALTERNATES))
+		ss->lockRead();
+		bool autoSearch = ss->getBool(Conf::AUTO_SEARCH);
+		ss->unlockRead();
+		if (autoSearch)
+		{		
+			// We keep 30 recent searches to avoid duplicate searches
+			while (m_recent.size() >= fileQueue.getSize() || m_recent.size() > 30)
 			{
-				LogManager::message(STRING(ALTERNATES_SEND) + ' ' + Util::getFileName(qi->getTarget())
+				m_recent.pop_front();
+			}
+
+			QueueItemPtr qi;
+			while ((qi = fileQueue.findAutoSearch(m_recent)) == nullptr && !m_recent.empty()) // Местами не переставлять findAutoSearch меняет recent
+			{
+				m_recent.pop_front();
+			}
+			if (qi)
+			{
+				searchString = qi->getTTH().toBase32();
+				m_recent.push_back(qi->getTarget());
+				ss->lockRead();
+				nextSearch = tick + ss->getInt(Conf::AUTO_SEARCH_TIME) * 60000;
+				bool reportAlternates = ss->getBool(Conf::REPORT_ALTERNATES);
+				ss->unlockRead();
+				if (reportAlternates)
+				{
+					LogManager::message(STRING(ALTERNATES_SEND) + ' ' + Util::getFileName(qi->getTarget())
 #ifdef _DEBUG
-				 + " TTH = " + qi->getTTH().toBase32()
+					+ " TTH = " + qi->getTTH().toBase32()
 #endif
-				 );
+					 );
+				}
 			}
 		}
 	}
 
 	// Request parts info from partial file sharing sources
+	int logOptions = LogManager::getLogOptions();
 	for (auto i = params.cbegin(); i != params.cend(); ++i)
 	{
 		const PartsInfoReqParam* param = *i;
@@ -811,7 +838,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		string data = cmd.toString(ClientManager::getMyCID());
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG("[Partial-Search]" + data, DebugTask::CLIENT_OUT, Util::printIpAddress(param->ip) + ':' + Util::toString(param->udpPort));
-		if (BOOLSETTING(LOG_PSR_TRACE))
+		if (logOptions & LogManager::OPT_LOG_PSR)
 		{
 			string msg = param->tth + ": sending periodic PSR #" + Util::toString(param->req) + " to ";
 			msg += Util::printIpAddress(param->ip, true) + ':' + Util::toString(param->udpPort);
@@ -919,6 +946,8 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 	if (!(params.size == -1 && (fileList || testIP)) && (params.size < 0 || params.size > FILE_SIZE_LIMIT))
 		throw QueueException(QueueException::BAD_FILE_SIZE, STRING(INVALID_SIZE));
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+
 	string targetPath;
 	string tempTarget;
 	if (fileList)
@@ -950,7 +979,10 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 	// Check if it's a zero-byte file, if so, create and return...
 	if (params.size == 0)
 	{
-		if (!BOOLSETTING(SKIP_ZERO_BYTE))
+		ss->lockRead();
+		bool skipZeroByte = ss->getBool(Conf::SKIP_ZERO_BYTE);
+		ss->unlockRead();
+		if (!skipZeroByte)
 		{
 			File::ensureDirectory(targetPath);
 			try { File f(targetPath, File::WRITE, File::CREATE); }
@@ -976,31 +1008,38 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 			bool targetExists = File::getAttributes(targetPath, attr);
 			if (targetExists)
 			{
+				ss->lockRead();
+				bool skipExisting = ss->getBool(Conf::SKIP_EXISTING);
+				int targetExistsAction = ss->getInt(Conf::TARGET_EXISTS_ACTION);
+				ss->unlockRead();
 				existingFileSize = attr.getSize();
 				existingFileTime = File::timeStampToUnixTime(attr.getTimeStamp());
-				if (existingFileSize == params.size && BOOLSETTING(SKIP_EXISTING))
+				if (existingFileSize == params.size && skipExisting)
 				{
 					LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, targetPath));
 					return;
 				}
-				switch (SETTING(TARGET_EXISTS_ACTION))
+				switch (targetExistsAction)
 				{
-					case SettingsManager::TE_ACTION_ASK:
+					case Conf::TE_ACTION_ASK:
 						waitForUserInput = true;
 						priority = QueueItem::PAUSED;
 						break;
-					case SettingsManager::TE_ACTION_REPLACE:
+					case Conf::TE_ACTION_REPLACE:
 						File::deleteFile(targetPath); // Delete old file.
 						break;
-					case SettingsManager::TE_ACTION_RENAME:
+					case Conf::TE_ACTION_RENAME:
 						targetPath = Util::getNewFileName(targetPath); // Call Util::getNewFileName instead of using CheckTargetDlg's stored name
 						break;
-					case SettingsManager::TE_ACTION_SKIP:
+					case Conf::TE_ACTION_SKIP:
 						return;
 				}
 			}
 
-			int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
+			ss->lockRead();
+			int copyExistingMaxSize = ss->getInt(Conf::COPY_EXISTING_MAX_SIZE);
+			ss->unlockRead();
+			int64_t maxSizeForCopy = (int64_t) copyExistingMaxSize << 20;
 			if (!waitForUserInput && maxSizeForCopy && params.root &&
 			    ShareManager::getInstance()->getFileInfo(*params.root, sharedFilePath) &&
 			    File::getAttributes(sharedFilePath, attr))
@@ -1083,8 +1122,14 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 		}
 
 		// Perform auto search
-		if (newItem && BOOLSETTING(AUTO_SEARCH) && params.root)
-			SearchManager::getInstance()->searchAuto(params.root->toBase32());
+		if (newItem && params.root)
+		{
+			ss->lockRead();
+			bool autoSearch = ss->getBool(Conf::AUTO_SEARCH);
+			ss->unlockRead();
+			if (autoSearch)
+				SearchManager::getInstance()->searchAuto(params.root->toBase32());
+		}
 	}
 }
 
@@ -1159,15 +1204,15 @@ void QueueManager::processFileExistsQuery(const string& path, int action, const 
 {
 	switch (action)
 	{
-		case SettingsManager::TE_ACTION_REPLACE:
+		case Conf::TE_ACTION_REPLACE:
 			File::deleteFile(path);
 			setPriority(path, priority, false);
 			break;
-		case SettingsManager::TE_ACTION_RENAME:
+		case Conf::TE_ACTION_RENAME:
 			move(path, newPath);
 			setPriority(newPath, priority, false);
 			break;
-		case SettingsManager::TE_ACTION_SKIP:
+		case Conf::TE_ACTION_SKIP:
 			removeTarget(path);
 	}
 }
@@ -1501,11 +1546,14 @@ QueueItemPtr QueueManager::getQueuedItem(const UserPtr& user) noexcept
 
 uint8_t QueueManager::FileQueue::getMaxSegments(uint64_t filesize)
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
 	unsigned value;
-	if (BOOLSETTING(SEGMENTS_MANUAL))
-		value = min(SETTING(NUMBER_OF_SEGMENTS), 200);
+	ss->lockRead();
+	if (ss->getBool(Conf::SEGMENTS_MANUAL))
+		value = min(ss->getInt(Conf::NUMBER_OF_SEGMENTS), 200);
 	else
 		value = static_cast<unsigned>(min<uint64_t>(filesize / (50 * MIN_BLOCK_SIZE) + 2, 200));
+	ss->unlockRead();
 	if (!value) value = 1;
 	return static_cast<uint8_t>(value);
 }
@@ -2079,6 +2127,16 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 
 					if (!isFile || isFinishedFile)
 					{
+						auto ss = SettingsManager::instance.getCoreSettings();
+						ss->lockRead();
+						bool logDownloads = ss->getBool(Conf::LOG_DOWNLOADS);
+						bool logFileListTransfers = ss->getBool(Conf::LOG_FILELIST_TRANSFERS);
+#ifdef _WIN32
+						bool saveTTHToStream = ss->getBool(Conf::SAVE_TTH_IN_NTFS_FILESTREAM);
+						int minSizeToSaveTTH = ss->getInt(Conf::SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM);
+#endif
+						ss->unlockRead();
+
 						const string& path = download->getPath();
 						if (!(q->getFlags() & (QueueItem::FLAG_USER_GET_IP | QueueItem::FLAG_USER_CHECK)))
 						{
@@ -2099,7 +2157,7 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 								moveFile(tempTarget, path, MOVER_LIMIT);
 
 							SharedFileStream::cleanup();
-							if (BOOLSETTING(LOG_DOWNLOADS) && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || isFile))
+							if (logDownloads && (logFileListTransfers || isFile))
 							{
 								StringMap params;
 								download->getParams(params);
@@ -2110,9 +2168,8 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 						if (hashDb && !q->getTTH().isZero() && !(q->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)))
 							hashDb->putFileInfo(q->getTTH().data, DatabaseManager::FLAG_DOWNLOADED, q->getSize(), path.empty() ? nullptr : &path, false);
 #ifdef _WIN32
-						if (isFinishedFile && !SysVersion::isWine() &&
-						    BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) &&
-						    q->getSize() >= (int64_t) SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) << 20)
+						if (isFinishedFile && !SysVersion::isWine() && saveTTHToStream &&
+						    q->getSize() >= (int64_t) minSizeToSaveTTH << 20)
 						{
 							const string directory = Util::getFilePath(path);
 							if (!directory.empty() && ShareManager::getInstance()->isDirectoryShared(directory))
@@ -2342,7 +2399,9 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 
 QueueItem::MaskType QueueManager::getFlagsForFileName(const string& fileName) noexcept
 {
-	const string& pattern = SETTING(WANT_END_FILES);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string& pattern = ss->getString(Conf::WANT_END_FILES);
 	csWantEndFiles.lock();
 	if (pattern != wantEndFilesPattern)
 	{
@@ -2352,6 +2411,7 @@ QueueItem::MaskType QueueManager::getFlagsForFileName(const string& fileName) no
 	}
 	bool result = std::regex_match(fileName, reWantEndFiles);
 	csWantEndFiles.unlock();
+	ss->unlockRead();
 	return result ? QueueItem::FLAG_WANT_END : 0;
 }
 
@@ -2780,6 +2840,12 @@ class QueueLoader : public SimpleXMLReader::CallBack
 	public:
 		QueueLoader() : cur(nullptr), isInDownloads(false)
 		{
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			enableAutoDisconnect = ss->getBool(Conf::ENABLE_AUTO_DISCONNECT);
+			ss->unlockRead();
+#endif
 			qm = QueueManager::getInstance();
 #ifdef USE_QUEUE_RWLOCK
 			QueueItem::g_cs->acquireExclusive();
@@ -2809,6 +2875,9 @@ class QueueLoader : public SimpleXMLReader::CallBack
 		QueueManager* qm;
 		QueueItemPtr cur;
 		bool isInDownloads;
+#ifdef BL_FEATURE_DROP_SLOW_SOURCES
+		bool enableAutoDisconnect;
+#endif
 };
 
 void QueueManager::loadQueue() noexcept
@@ -2897,7 +2966,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (Util::toInt(getAttrib(attribs, sAutoPriority, 6)) == 1)
 				extraFlags |= QueueItem::XFLAG_AUTO_PRIORITY;
 #ifdef BL_FEATURE_DROP_SLOW_SOURCES
-			if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
+			if (enableAutoDisconnect)
 				extraFlags |= QueueItem::XFLAG_AUTODROP;
 #endif
 			auto qi = std::make_shared<QueueItem>(target, size, p, flags, extraFlags, added, TTHValue(tthRoot), maxSegments, tempTarget);
@@ -2985,6 +3054,12 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 		fileQueue.findQueueItems(matches, sr.getTTH());
 		if (!matches.empty())
 		{
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			bool autoSearchDlList = ss->getBool(Conf::AUTO_SEARCH_DL_LIST);
+			int autoSearchMaxSources = ss->getInt(Conf::AUTO_SEARCH_MAX_SOURCES);
+			ss->unlockRead();
+
 			QueueWLock(*QueueItem::g_cs);
 			for (auto i = matches.cbegin(); i != matches.cend(); ++i)
 			{
@@ -2998,7 +3073,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 							break;  // don't add sources to already finished files
 						try
 						{
-							downloadFileList = BOOLSETTING(AUTO_SEARCH_DL_LIST) && !qi->hasOnlineSourcesL(SETTING(AUTO_SEARCH_MAX_SOURCES));
+							downloadFileList = autoSearchDlList && !qi->hasOnlineSourcesL(autoSearchMaxSources);
 							wantConnection = addSourceL(qi, sr.getHintedUser(), 0);
 							added = true;
 						}
@@ -3138,13 +3213,19 @@ bool QueueManager::dropSource(const DownloadPtr& d)
 		overallSpeed = q->getAverageSpeed();
 	}
 
-	if (multipleSegments || !BOOLSETTING(AUTO_DISCONNECT_MULTISOURCE_ONLY))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool autoDiscMultiSourceOnly = ss->getBool(Conf::AUTO_DISCONNECT_MULTISOURCE_ONLY);
+	int autoDiscFileSpeed = ss->getInt(Conf::AUTO_DISCONNECT_FILE_SPEED);
+	int autoDiscRemoveSpeed = ss->getInt(Conf::AUTO_DISCONNECT_REMOVE_SPEED);
+	ss->unlockRead();
+
+	if (multipleSegments || !autoDiscMultiSourceOnly)
 	{
-		uint64_t highSpeed = SETTING(AUTO_DISCONNECT_FILE_SPEED);
-		if (highSpeed == 0 || overallSpeed > highSpeed * 1024)
+		if (autoDiscFileSpeed == 0 || overallSpeed > (uint64_t) autoDiscFileSpeed * 1024)
 		{
 			d->setFlag(Download::FLAG_SLOWUSER);
-			if (d->getRunningAverage() < SETTING(AUTO_DISCONNECT_REMOVE_SPEED) * 1024)
+			if (d->getRunningAverage() < autoDiscRemoveSpeed * 1024)
 				return true;
 			d->disconnect();
 		}
@@ -3184,10 +3265,12 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 		if (qi->isFinished())
 			return false;
 
+		int logOptions = LogManager::getLogOptions();
+
 		// Check min size
 		if (qi->getSize() < QueueItem::PFS_MIN_FILE_SIZE)
 		{
-			if (BOOLSETTING(LOG_PSR_TRACE))
+			if (logOptions & LogManager::OPT_LOG_PSR)
 				LOG(PSR_TRACE, tth.toBase32() + ": file size below minimum (" + Util::toString(qi->getSize()) + ")");
 			return false;
 		}
@@ -3236,7 +3319,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 
 				userQueue.addL(qi, p, user);
 				dcassert(si != qi->getSourcesL().end());
-				if (BOOLSETTING(LOG_PSR_TRACE))
+				if (logOptions & LogManager::OPT_LOG_PSR)
 					logPartialSourceInfo(partialSource, user, tth, "adding partial source", wantConnection);
 			}
 		}
@@ -3249,7 +3332,8 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 				uint16_t oldPort = ps->getUdpPort();
 				uint16_t newPort = partialSource.getUdpPort();
 				if (!newPort) newPort = oldPort;
-				if (BOOLSETTING(LOG_PSR_TRACE) && (!QueueItem::compareParts(ps->getParts(), partialSource.getParts()) || oldPort != newPort))
+				if ((logOptions & LogManager::OPT_LOG_PSR) &&
+					(!QueueItem::compareParts(ps->getParts(), partialSource.getParts()) || oldPort != newPort))
 					logPartialSourceInfo(partialSource, user, tth, "updating partial source", wantConnection);
 				ps->setParts(partialSource.getParts());
 				ps->setUdpPort(newPort);

@@ -22,53 +22,100 @@
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 
-SettingsManager * g_settings;
+struct SettingsState
+{
+	enum
+	{
+		LOCK_NONE,
+		LOCK_READ,
+		LOCK_WRITE
+	};
+
+	Settings* ss;
+	int locked;
+
+	SettingsState() : ss(nullptr), locked(LOCK_NONE) {}
+
+	void release()
+	{
+		if (locked == LOCK_NONE) return;
+		if (locked == LOCK_READ)
+			ss->unlockRead();
+		else
+			ss->unlockWrite();
+		locked = LOCK_NONE;
+	}
+
+	void setRead(Settings* ss)
+	{
+		if (this->ss) return;
+		this->ss = ss;
+		ss->lockRead();
+		locked = LOCK_READ;
+	}
+
+	void setWrite(Settings* ss)
+	{
+		if (this->ss) return;
+		this->ss = ss;
+		ss->lockWrite();
+		locked = LOCK_WRITE;
+	}
+};
+
+static inline bool isUiSetting(int id)
+{
+	return id >= 1024;
+}
 
 void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = 0 */)
 {
 	dcassert(page != NULL);
-	
+
+	SettingsState coreSettings;
+	SettingsState uiSettings;
+	SettingsState* state;
+	tstring s;
+
 	if (items)
 	{
-		const bool useDef = true;
 		for (const Item* i = items; i->type != T_END; i++)
 		{
+			if (isUiSetting(i->setting))
+			{
+				state = &uiSettings;
+				if (!state->ss) state->setRead(SettingsManager::instance.getUiSettings());
+			}
+			else
+			{
+				state = &coreSettings;
+				if (!state->ss) state->setRead(SettingsManager::instance.getCoreSettings());
+			}
+
+			HWND hWnd = GetDlgItem(page, i->itemID);
+			if (!hWnd)
+			{
+				dcassert(0);
+				continue;
+			}
 			switch (i->type)
 			{
 				case T_STR:
-					if (GetDlgItem(page, i->itemID) == NULL)
-					{
-						dcassert(0);
-						break;
-					}
-					::SetDlgItemText(page, i->itemID,
-					                 Text::toT(g_settings->get((SettingsManager::StrSetting) i->setting, useDef)).c_str());
+					Text::toT(state->ss->getString(i->setting), s);
+					SetWindowText(hWnd, s.c_str());
 					break;
 
-				case T_INT:			
-					if (GetDlgItem(page, i->itemID) == NULL)
-					{
-						dcassert(0);
-						break;
-					}
-					::SetDlgItemInt(page, i->itemID,
-					                g_settings->get((SettingsManager::IntSetting) i->setting, useDef), TRUE);
+				case T_INT:
+					s = Util::toStringT(state->ss->getInt(i->setting));
+					SetWindowText(hWnd, s.c_str());
 					break;
 
 				case T_BOOL:
-					if (GetDlgItem(page, i->itemID) == NULL)
-					{
-						dcassert(0);
-						break;
-					}
-					if (SettingsManager::getBool((SettingsManager::IntSetting) i->setting, useDef))
-						::CheckDlgButton(page, i->itemID, BST_CHECKED);
-					else
-						::CheckDlgButton(page, i->itemID, BST_UNCHECKED);
+					SendMessage(hWnd, BM_SETCHECK, state->ss->getBool(i->setting) ? BST_CHECKED : BST_UNCHECKED, 0);
 					break;
 
 				default:
-					dcassert(false);
+					dcassert(0);
 					break;
 			}
 		}
@@ -89,70 +136,88 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 		LVITEM lvi = {0};
 		lvi.mask = LVIF_TEXT;
 		lvi.iSubItem = 0;
-		
+
 		if (ctrl.GetItemCount())
 			ctrl.DeleteAllItems();
 
 		for (int i = 0; listItems[i].setting != 0; i++)
 		{
+			int setting = listItems[i].setting;
+			if (isUiSetting(setting))
+			{
+				state = &uiSettings;
+				if (!state->ss) state->setRead(SettingsManager::instance.getUiSettings());
+			}
+			else
+			{
+				state = &coreSettings;
+				if (!state->ss) state->setRead(SettingsManager::instance.getCoreSettings());
+			}
 			lvi.iItem = i;
 			lvi.pszText = const_cast<TCHAR*>(CTSTRING_I(listItems[i].desc));
 			ctrl.InsertItem(&lvi);
-			ctrl.SetCheckState(i, SettingsManager::getBool((SettingsManager::IntSetting) listItems[i].setting, true));
+			ctrl.SetCheckState(i, state->ss->getBool(setting));
 		}
 		ctrl.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
+
+	coreSettings.release();
+	uiSettings.release();
 }
 
 void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = NULL */)
 {
 	dcassert(page != NULL);
-	
+
 	bool showWarning = false;
-	
+	SettingsState coreSettings;
+	SettingsState uiSettings;
+	SettingsState* state;
+	tstring s;
+
 	if (items)
 	{
 		for (const Item* i = items; i->type != T_END; ++i)
 		{
-			tstring buf;
+			if (isUiSetting(i->setting))
+			{
+				state = &uiSettings;
+				if (!state->ss) state->setWrite(SettingsManager::instance.getUiSettings());
+			}
+			else
+			{
+				state = &coreSettings;
+				if (!state->ss) state->setWrite(SettingsManager::instance.getCoreSettings());
+			}
+
+			HWND hWnd = GetDlgItem(page, i->itemID);
+			if (!hWnd)
+			{
+				dcassert(0);
+				continue;
+			}
 			switch (i->type)
 			{
 				case T_STR:
 				{
-					HWND dlgItem = GetDlgItem(page, i->itemID);
-					if (!dlgItem)
-					{
-						dcassert(0);
-						break;
-					}
-					WinUtil::getWindowText(dlgItem, buf);
-					showWarning |= g_settings->set((SettingsManager::StrSetting) i->setting, Text::fromT(buf));
-					// Crash https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=78416
+					WinUtil::getWindowText(hWnd, s);
+					if (state->ss->setString(i->setting, Text::fromT(s), Settings::SET_FLAG_FIX_VALUE) == Settings::RESULT_UPDATED)
+						showWarning = true;
 					break;
 				}
 
 				case T_INT:
 				{
-					HWND dlgItem = GetDlgItem(page, i->itemID);
-					if (!dlgItem)
-					{
-						dcassert(0);
-						break;
-					}
-					WinUtil::getWindowText(dlgItem, buf);
-					showWarning |= g_settings->set((SettingsManager::IntSetting) i->setting, Util::toInt(buf));
+					WinUtil::getWindowText(hWnd, s);
+					if (state->ss->setInt(i->setting, Util::toInt(s), Settings::SET_FLAG_FIX_VALUE) == Settings::RESULT_UPDATED)
+						showWarning = true;
 					break;
 				}
 
 				case T_BOOL:
 				{
-					if (!GetDlgItem(page, i->itemID))
-					{
-						dcassert(0);
-						break;
-					}
-					bool value = ::IsDlgButtonChecked(page, i->itemID) == BST_CHECKED;
-					showWarning |= g_settings->set((SettingsManager::IntSetting) i->setting, value);
+					bool value = SendMessage(hWnd, BM_GETCHECK, 0, 0) == BST_CHECKED;
+					state->ss->setBool(i->setting, value);
 					break;
 				}
 
@@ -162,13 +227,31 @@ void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* 
 			}
 		}
 	}
-	
+
 	if (listItems)
 	{
 		CListViewCtrl ctrl(list);
 		for (int i = 0; listItems[i].setting != 0; i++)
-			showWarning |= SET_SETTING(IntSetting(listItems[i].setting), ctrl.GetCheckState(i));
+		{
+			int setting = listItems[i].setting;
+			if (isUiSetting(setting))
+			{
+				state = &uiSettings;
+				if (!state->ss) state->setWrite(SettingsManager::instance.getUiSettings());
+			}
+			else
+			{
+				state = &coreSettings;
+				if (!state->ss) state->setWrite(SettingsManager::instance.getCoreSettings());
+			}
+			bool value = ctrl.GetCheckState(i) != FALSE;
+			state->ss->setBool(setting, value);
+		}
 	}
+
+	coreSettings.release();
+	uiSettings.release();
+
 #ifdef _DEBUG
 	if (showWarning)
 		MessageBox(page, _T("Values of the changed settings are automatically adjusted"), CTSTRING(WARNING), MB_OK);

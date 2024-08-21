@@ -6,6 +6,7 @@
 #include "ThemeUtil.h"
 #include "ColorUtil.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
 #include "../client/File.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
@@ -54,17 +55,18 @@ LRESULT StylesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	tcItem.mask = TCIF_TEXT | TCIF_PARAM;
 	tcItem.iImage = -1;
 
-	tabChat.loadSettings();
-	tabUserList.loadSettings();
-	tabProgress.loadSettings();
-	tabOther.loadSettings();
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	tabChat.loadSettings(ss);
+	tabUserList.loadSettings(ss);
+	tabProgress.loadSettings(ss);
+	tabOther.loadSettings(ss);
 
-	COLORREF bg = g_settings->get(SettingsManager::BACKGROUND_COLOR);
+	COLORREF bg = ss->getInt(Conf::BACKGROUND_COLOR);
 	tabChat.setBackgroundColor(bg);
 	tabUserList.setBackgroundColor(bg);
 
-	currentTheme = Text::toT(g_settings->get(SettingsManager::COLOR_THEME));
-	themeModified = g_settings->getBool(SettingsManager::COLOR_THEME_MODIFIED);
+	currentTheme = Text::toT(ss->getString(Conf::COLOR_THEME));
+	themeModified = ss->getBool(Conf::COLOR_THEME_MODIFIED);
 
 	int n = 0;
 	ADD_TAB(tabChat, ChatStylesTab, STYLES_CHAT);
@@ -108,16 +110,14 @@ void StylesPage::changeTab()
 
 void StylesPage::write()
 {
-	tabChat.saveSettings();
-	tabUserList.saveSettings();
-	tabProgress.saveSettings();
-	tabOther.saveSettings();
+	auto ss = SettingsManager::instance.getUiSettings();
+	tabChat.saveSettings(ss);
+	tabUserList.saveSettings(ss);
+	tabProgress.saveSettings(ss);
+	tabOther.saveSettings(ss);
 
-	g_settings->set(SettingsManager::COLOR_THEME, Text::fromT(currentTheme));
-	if (themeModified)
-		g_settings->set(SettingsManager::COLOR_THEME_MODIFIED, true);
-	else
-		g_settings->unset(SettingsManager::COLOR_THEME_MODIFIED);
+	ss->setString(Conf::COLOR_THEME, Text::fromT(currentTheme));
+	ss->setBool(Conf::COLOR_THEME_MODIFIED, themeModified);
 	Colors::init();
 }
 
@@ -328,15 +328,15 @@ void StylesPage::settingChanged(int id)
 
 void StylesPage::intSettingChanged(int id, int value)
 {
-	if (id == SettingsManager::BACKGROUND_COLOR)
+	if (id == Conf::BACKGROUND_COLOR)
 	{
 		tabChat.setBackgroundColor(value, true);
 		tabUserList.setBackgroundColor(value);
 		tabProgress.setBackgroundColor(value);
 	}
-	else if (id == SettingsManager::PROGRESS_BACK_COLOR)
+	else if (id == Conf::PROGRESS_BACK_COLOR)
 		tabProgress.setEmptyBarBackground(value);
-	else if (id == SettingsManager::DOWNLOAD_BAR_COLOR)
+	else if (id == Conf::DOWNLOAD_BAR_COLOR)
 	{
 		// Derive PROGRESS_SEGMENT_COLOR from DOWNLOAD_BAR_COLOR
 		COLORREF clr = HLS_TRANSFORM(value, 0, -35);

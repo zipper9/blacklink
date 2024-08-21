@@ -80,7 +80,9 @@
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/SettingsUtil.h"
 #include "../client/dht/DHT.h"
+#include "../client/ConfCore.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -90,6 +92,7 @@
 #include "BrowseFile.h"
 #include "WinSysHandlers.h"
 #include "StylesPage.h"
+#include "NotifUtil.h"
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 #include "TextFrame.h"
@@ -130,15 +133,17 @@ static const string emptyStringHash("LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ");
 
 static bool hasPasswordTray()
 {
-	if (!SETTING(PROTECT_TRAY)) return false;
-	const string& password = SETTING(PASSWORD);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (!ss->getBool(Conf::PROTECT_TRAY)) return false;
+	const string& password = ss->getString(Conf::PASSWORD);
 	return !password.empty() && password != emptyStringHash;
 }
 
 static bool hasPasswordClose()
 {
-	if (!SETTING(PROTECT_CLOSE)) return false;
-	const string& password = SETTING(PASSWORD);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (!ss->getBool(Conf::PROTECT_CLOSE)) return false;
+	const string& password = ss->getString(Conf::PASSWORD);
 	return !password.empty() && password != emptyStringHash;
 }
 
@@ -186,6 +191,7 @@ MainFrame::MainFrame() :
 #endif
 	g_ipTest.setCommandCallback(this);
 	httpClient.setCommandCallback(this);
+	updateSettings();
 	instance = this;
 }
 
@@ -209,6 +215,15 @@ MainFrame::~MainFrame()
 	UserInfoGuiTraits::uninit();
 	MenuHelper::uninit();
 	WinUtil::uninit();
+}
+
+void MainFrame::updateSettings()
+{
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	optToggleActiveWindow = ss->getBool(Conf::TOGGLE_ACTIVE_WINDOW);
+	optAutoAway = ss->getBool(Conf::AUTO_AWAY);
+	optMinimizeTray = ss->getBool(Conf::MINIMIZE_TRAY);
+	optReducePriority = ss->getBool(Conf::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY);
 }
 
 // Send WM_CLOSE to each MDI child window
@@ -367,9 +382,10 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 {
 	LogManager::message("Main window created (Thread: " + Util::toString(BaseThread::getCurrentThreadId()) + ')', false);
 
-	if (BOOLSETTING(DETECT_PREVIEW_APPS))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::DETECT_PREVIEW_APPS))
 	{
-		SET_SETTING(DETECT_PREVIEW_APPS, FALSE);
+		ss->setBool(Conf::DETECT_PREVIEW_APPS, false);
 		PreviewApplication::List appList;
 		PreviewMenu::detectApps(appList);
 		LogManager::message(Util::toString(appList.size()) + " preview app(s) found");
@@ -386,11 +402,16 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	FavoriteManager::getInstance()->addListener(this);
 	SearchManager::getInstance()->addListener(this);
 
-	if (SETTING(NICK).empty())
-	{
+	if (ClientManager::isNickEmpty())
 		ShowWindow(SW_RESTORE);
-	}
-	if (BOOLSETTING(WEBSERVER))
+
+	auto cs = SettingsManager::instance.getCoreSettings();
+	cs->lockRead();
+	bool enableWebServer = cs->getBool(Conf::ENABLE_WEBSERVER);
+	bool away = cs->getBool(Conf::AWAY);
+	cs->unlockRead();
+
+	if (enableWebServer)
 	{
 		try
 		{
@@ -444,8 +465,8 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	createMainMenu();
 
 	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, settingsImages, 16, 16);
-	
-	int imageSize = SETTING(TB_IMAGE_SIZE);
+
+	int imageSize = ss->getInt(Conf::TB_IMAGE_SIZE);
 	createToolbar(imageSize);
 	createQuickSearchBar();
 	createWinampToolbar(imageSize);
@@ -461,7 +482,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	AddSimpleReBarBandCtrl(ctrlRebar, ctrlWinampToolbar, 0, NULL, TRUE);
 	
 	CreateSimpleStatusBar();
-	
+
 	ToolbarManager::getInstance()->applyTo(m_hWndToolBar, "MainToolBar");
 	
 	ctrlStatus.Attach(m_hWndStatusBar);
@@ -493,8 +514,9 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	ctrlTab.Create(m_hWnd, rcDefault);
 	WinUtil::g_tabCtrl = &ctrlTab;
 	
+	bool showTransferView = ss->getBool(Conf::SHOW_TRANSFERVIEW);
 	transferView.Create(m_hWnd);
-	toggleTransferView(BOOLSETTING(SHOW_TRANSFERVIEW));
+	toggleTransferView(showTransferView);
 
 	initTransfersSplitter();
 
@@ -503,16 +525,17 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	UIAddToolBar(ctrlQuickSearchBar);
 	UISetCheck(ID_VIEW_TOOLBAR, 1);
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
-	UISetCheck(ID_VIEW_TRANSFER_VIEW, BOOLSETTING(SHOW_TRANSFERVIEW));
+	UISetCheck(ID_VIEW_TRANSFER_VIEW, showTransferView);
 	UISetCheck(ID_VIEW_MEDIA_TOOLBAR, 1);
 	UISetCheck(ID_VIEW_QUICK_SEARCH, 1);
 
-	UISetCheck(IDC_TRAY_LIMITER, BOOLSETTING(THROTTLE_ENABLE));
-	UISetCheck(IDC_TOPMOST, BOOLSETTING(TOPMOST));
-	UISetCheck(IDC_LOCK_TOOLBARS, BOOLSETTING(LOCK_TOOLBARS));
+	bool optTopmost = ss->getBool(Conf::TOPMOST);
+	bool optLockToolbars = ss->getBool(Conf::LOCK_TOOLBARS);
+	UISetCheck(IDC_TOPMOST, optTopmost);
+	UISetCheck(IDC_LOCK_TOOLBARS, optLockToolbars);
 
-	if (BOOLSETTING(TOPMOST)) toggleTopmost();
-	if (BOOLSETTING(LOCK_TOOLBARS)) toggleLockToolbars(TRUE);
+	if (optTopmost) toggleTopmost();
+	if (optLockToolbars) toggleLockToolbars(TRUE);
 
 	// register object for message filtering and idle updates
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -531,13 +554,13 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	tbMenu.AppendMenu(MF_STRING, IDC_LOCK_TOOLBARS, CTSTRING(LOCK_TOOLBARS));
 	
 	winampMenu.CreatePopupMenu();
-	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::WinAmp, CTSTRING(MEDIA_MENU_WINAMP));
-	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::WinMediaPlayer, CTSTRING(MEDIA_MENU_WMP));
-	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::iTunes, CTSTRING(MEDIA_MENU_ITUNES));
-	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::WinMediaPlayerClassic, CTSTRING(MEDIA_MENU_WPC));
-	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::JetAudio, CTSTRING(MEDIA_MENU_JA));
+	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::WinAmp, CTSTRING(MEDIA_MENU_WINAMP));
+	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::WinMediaPlayer, CTSTRING(MEDIA_MENU_WMP));
+	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::iTunes, CTSTRING(MEDIA_MENU_ITUNES));
+	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::WinMediaPlayerClassic, CTSTRING(MEDIA_MENU_WPC));
+	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::JetAudio, CTSTRING(MEDIA_MENU_JA));
 	
-	File::ensureDirectory(SETTING(LOG_DIRECTORY));
+	//File::ensureDirectory(SETTING(LOG_DIRECTORY));
 	
 #if 0
 	if (SETTING(PROTECT_START) && SETTING(PASSWORD) != emptyStringHash && !SETTING(PASSWORD).empty())
@@ -561,34 +584,29 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	pmIcon = HIconWrapper(IDR_TRAY_AND_TASKBAR_PM);
 	
 	if (useTrayIcon) setTrayIcon(TRAY_ICON_NORMAL);
-	
-	Util::setAway(BOOLSETTING(AWAY), true);
-	
-	ctrlToolbar.CheckButton(IDC_AWAY, BOOLSETTING(AWAY));
-	ctrlToolbar.CheckButton(IDC_LIMITER, BOOLSETTING(THROTTLE_ENABLE));
-	ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
-	ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
-	ctrlToolbar.CheckButton(ID_VIEW_MEDIA_TOOLBAR, BOOLSETTING(SHOW_PLAYER_CONTROLS));
-	
-	if (SETTING(NICK).empty())
-	{
+
+	Util::setAway(away, true);
+
+	checkToolbarButtons();
+	ctrlToolbar.CheckButton(ID_VIEW_MEDIA_TOOLBAR, visWinampBar);
+
+	if (ClientManager::isNickEmpty())
 		PostMessage(WM_COMMAND, ID_FILE_SETTINGS);
-	}
-	
+
 	jaControl = unique_ptr<JAControl>(new JAControl((HWND)(*this)));
-	
+
 	// We want to pass this one on to the splitter...hope it get's there...
 	bHandled = FALSE;
-	
+
 	transferView.UpdateLayout();
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 	StringList emoticonPacks;
-	const string& emoticonPack = SETTING(EMOTICONS_FILE);
+	const string& emoticonPack = ss->getString(Conf::EMOTICONS_FILE);
 	if (!emoticonPack.empty() && emoticonPack != "Disabled")
 	{
 		emoticonPacks.push_back(emoticonPack);
-		SimpleStringTokenizer<char> st(SETTING(ADDITIONAL_EMOTICONS), ';');
+		SimpleStringTokenizer<char> st(ss->getString(Conf::ADDITIONAL_EMOTICONS), ';');
 		string token;
 		while (st.getNextNonEmptyToken(token))
 			emoticonPacks.push_back(token);
@@ -607,46 +625,65 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	return 0;
 }
 
+void MainFrame::checkToolbarButtons()
+{
+	ctrlToolbar.CheckButton(IDC_AWAY, Util::getAway());
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, ss->getBool(Conf::SOUNDS_DISABLED));
+	ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, ss->getBool(Conf::POPUPS_DISABLED));
+	ctrlToolbar.CheckButton(IDC_SHUTDOWN, isShutDown());
+	checkLimitsButton();
+}
+
+void MainFrame::checkLimitsButton()
+{
+	bool limiterEnabled = ThrottleManager::getInstance()->isEnabled();
+	UISetCheck(IDC_TRAY_LIMITER, limiterEnabled);
+	ctrlToolbar.CheckButton(IDC_LIMITER, limiterEnabled);
+}
+
 void MainFrame::openDefaultWindows()
 {
 	static const struct
 	{
-		SettingsManager::IntSetting setting;
+		int setting;
 		int command;
 		bool value;
 	} openSettings[] =
 	{
-		{ SettingsManager::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,         true  },
-		{ SettingsManager::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,          true  },
-		{ SettingsManager::OPEN_PUBLIC_HUBS,        IDC_PUBLIC_HUBS,       true  },
-		{ SettingsManager::OPEN_QUEUE,              IDC_QUEUE,             true  },
-		{ SettingsManager::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,          true  },
-		{ SettingsManager::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,      true  },
-		{ SettingsManager::OPEN_FINISHED_UPLOADS,   IDC_FINISHED_UL,       true  },
-		{ SettingsManager::OPEN_SEARCH_SPY,         IDC_SEARCH_SPY,        true  },
-		{ SettingsManager::OPEN_NETWORK_STATISTICS, IDC_NET_STATS,         true  },
-		{ SettingsManager::OPEN_NOTEPAD,            IDC_NOTEPAD,           true  },
-		{ SettingsManager::OPEN_ADLSEARCH,          IDC_FILE_ADL_SEARCH,   true  },
+		{ Conf::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,         true  },
+		{ Conf::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,          true  },
+		{ Conf::OPEN_PUBLIC_HUBS,        IDC_PUBLIC_HUBS,       true  },
+		{ Conf::OPEN_QUEUE,              IDC_QUEUE,             true  },
+		{ Conf::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,          true  },
+		{ Conf::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,      true  },
+		{ Conf::OPEN_FINISHED_UPLOADS,   IDC_FINISHED_UL,       true  },
+		{ Conf::OPEN_SEARCH_SPY,         IDC_SEARCH_SPY,        true  },
+		{ Conf::OPEN_NETWORK_STATISTICS, IDC_NET_STATS,         true  },
+		{ Conf::OPEN_NOTEPAD,            IDC_NOTEPAD,           true  },
+		{ Conf::OPEN_ADLSEARCH,          IDC_FILE_ADL_SEARCH,   true  },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-		{ SettingsManager::OPEN_CDMDEBUG,           IDC_CDMDEBUG_WINDOW,   true  },
+		{ Conf::OPEN_CDMDEBUG,           IDC_CDMDEBUG_WINDOW,   true  },
 #endif
-		{ SettingsManager::SHOW_STATUSBAR,          ID_VIEW_STATUS_BAR,    false },
-		{ SettingsManager::SHOW_TOOLBAR,            ID_VIEW_TOOLBAR,       false },
-		{ SettingsManager::SHOW_PLAYER_CONTROLS,    ID_VIEW_MEDIA_TOOLBAR, false },
-		{ SettingsManager::SHOW_QUICK_SEARCH,       ID_VIEW_QUICK_SEARCH,  false }
+		{ Conf::SHOW_STATUSBAR,          ID_VIEW_STATUS_BAR,    false },
+		{ Conf::SHOW_TOOLBAR,            ID_VIEW_TOOLBAR,       false },
+		{ Conf::SHOW_PLAYER_CONTROLS,    ID_VIEW_MEDIA_TOOLBAR, false },
+		{ Conf::SHOW_QUICK_SEARCH,       ID_VIEW_QUICK_SEARCH,  false }
 	};
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	for (int i = 0; i < _countof(openSettings); ++i)
-		if (g_settings->getBool(openSettings[i].setting) == openSettings[i].value)
+		if (ss->getBool(openSettings[i].setting) == openSettings[i].value)
 			PostMessage(WM_COMMAND, openSettings[i].command);
 }
 
 void MainFrame::initTransfersSplitter()
 {
-	int splitSize = SETTING(TRANSFER_FRAME_SPLIT);
+	auto ss = SettingsManager::instance.getUiSettings();
+	int splitSize = ss->getInt(Conf::TRANSFER_FRAME_SPLIT);
 	if (splitSize < 3000 || splitSize > 9400)
 	{
 		splitSize = 9100;
-		SET_SETTING(TRANSFER_FRAME_SPLIT, splitSize);
+		ss->setInt(Conf::TRANSFER_FRAME_SPLIT, splitSize);
 	}
 	SetSplitterPanes(m_hWndMDIClient, transferView.m_hWnd);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
@@ -757,18 +794,19 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesT(ShareManager::getInstance()->getTotalSharedSize()));
 			stats->push_back(TSTRING(H) + hubCounts);
 			stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringT(UploadManager::getFreeSlots()) + _T('/') + Util::toStringT(UploadManager::getSlots())
-			                 + _T(" (") + Util::toStringT(um->getFreeExtraSlots()) + _T('/') + Util::toStringT(SETTING(EXTRA_SLOTS)) + _T(")"));
+			                 + _T(" (") + Util::toStringT(um->getFreeExtraSlots()) + _T('/') + Util::toStringT(Util::getConfInt(Conf::EXTRA_SLOTS)) + _T(")"));
 			stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesT(currentDown));
 			stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesT(currentUp));
-			const bool throttleEnabled = BOOLSETTING(THROTTLE_ENABLE);
 			auto tm = ThrottleManager::getInstance();
+			size_t downLimit = tm->getDownloadLimitInKBytes();
+			size_t upLimit = tm->getUploadLimitInKBytes();
 			stats->push_back(TSTRING(D) + _T(" [") + Util::toStringT(dm->getDownloadCount()) + _T("][")
-			                 + ((!throttleEnabled || tm->getDownloadLimitInKBytes() == 0) ?
-			                    TSTRING(N) : Util::toStringT(tm->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
+			                 + (downLimit == 0 ?
+			                    TSTRING(N) : Util::toStringT(downLimit) + TSTRING(KILO)) + _T("] ")
 			                 + dlstr + _T('/') + TSTRING(S));
 			stats->push_back(TSTRING(U) + _T(" [") + Util::toStringT(um->getUploadCount()) + _T("][")
-			                 + ((!throttleEnabled || tm->getUploadLimitInKBytes() == 0) ?
-			                    TSTRING(N) : Util::toStringT(tm->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
+			                 + (upLimit == 0 ?
+			                    TSTRING(N) : Util::toStringT(upLimit) + TSTRING(KILO)) + _T("] ")
 			                 + ulstr + _T('/') + TSTRING(S));
 			processingStats = true;
 			if (!WinUtil::postSpeakerMsg(m_hWnd, MAIN_STATS, stats))
@@ -788,8 +826,13 @@ void MainFrame::onMinute(uint64_t tick)
 	socketPool.removeExpired(tick);
 	tcpBans.removeExpired(tick);
 	udpBans.removeExpired(tick);
-	if (BOOLSETTING(GEOIP_AUTO_UPDATE))
-		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, SETTING(URL_GEOIP));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool geoIpAutoUpdate = ss->getBool(Conf::GEOIP_AUTO_UPDATE);
+	string geoIpUrl = ss->getString(Conf::URL_GEOIP);
+	ss->unlockRead();
+	if (geoIpAutoUpdate)
+		DatabaseManager::getInstance()->downloadGeoIPDatabase(tick, false, geoIpUrl);
 	ADLSearchManager::getInstance()->saveOnTimer(tick);
 	WebServerManager::getInstance()->removeExpired();
 	CryptoManager::getInstance()->checkExpiredCert();
@@ -844,7 +887,8 @@ void MainFrame::createToolbar(int imageSize)
 		}
 	}
 
-	fillToolbarButtons(ctrlToolbar, SETTING(TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount, checkState);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	fillToolbarButtons(ctrlToolbar, ss->getString(Conf::TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount, checkState);
 	delete[] checkState;
 	ctrlToolbar.AutoSize();
 }
@@ -900,7 +944,8 @@ void MainFrame::createWinampToolbar(int imageSize)
 		}
 	}
 
-	fillToolbarButtons(ctrlWinampToolbar, SETTING(WINAMPTOOLBAR), g_WinampToolbarButtons, g_WinampToolbarButtonsCount, nullptr);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	fillToolbarButtons(ctrlWinampToolbar, ss->getString(Conf::WINAMPTOOLBAR), g_WinampToolbarButtons, g_WinampToolbarButtonsCount, nullptr);
 	ctrlWinampToolbar.AutoSize();
 }
 
@@ -951,7 +996,8 @@ void MainFrame::createQuickSearchBar()
 LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	LockWindowUpdate(TRUE);
-	int imageSize = SETTING(TB_IMAGE_SIZE);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	int imageSize = ss->getInt(Conf::TB_IMAGE_SIZE);
 	bool changeSize = imageSize != toolbarImageSize;
 	if (changeSize)
 	{
@@ -988,10 +1034,10 @@ LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 		AddSimpleReBarBandCtrl(ctrlRebar, ctrlQuickSearchBar, 0, NULL, FALSE, 200, TRUE);
 		AddSimpleReBarBandCtrl(ctrlRebar, ctrlWinampToolbar, 0, NULL, TRUE);
 		toolbarImageSize = imageSize;
-		toggleRebarBand(visToolbar, 1, ID_VIEW_TOOLBAR, SettingsManager::SHOW_TOOLBAR);
-		toggleRebarBand(visWinampBar, 3, ID_VIEW_MEDIA_TOOLBAR, SettingsManager::SHOW_PLAYER_CONTROLS);
-		toggleRebarBand(visQuickSearch, 2, ID_VIEW_QUICK_SEARCH, SettingsManager::SHOW_QUICK_SEARCH);
-		if (BOOLSETTING(LOCK_TOOLBARS)) toggleLockToolbars(TRUE);
+		toggleRebarBand(visToolbar, 1, ID_VIEW_TOOLBAR, Conf::SHOW_TOOLBAR);
+		toggleRebarBand(visWinampBar, 3, ID_VIEW_MEDIA_TOOLBAR, Conf::SHOW_PLAYER_CONTROLS);
+		toggleRebarBand(visQuickSearch, 2, ID_VIEW_QUICK_SEARCH, Conf::SHOW_QUICK_SEARCH);
+		if (ss->getBool(Conf::LOCK_TOOLBARS)) toggleLockToolbars(TRUE);
 		UpdateLayout();
 	}
 	LockWindowUpdate(FALSE);
@@ -1000,7 +1046,8 @@ LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 
 LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (SETTING(MEDIA_PLAYER) == SettingsManager::WinAmp)
+	int mediaPlayer = SettingsManager::instance.getUiSettings()->getInt(Conf::MEDIA_PLAYER);
+	if (mediaPlayer == Conf::WinAmp)
 	{
 		HWND hwndWinamp = FindWindow(_T("Winamp v1.x"), NULL);
 		if (::IsWindow(hwndWinamp))
@@ -1034,7 +1081,7 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			}
 		}
 	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::WinMediaPlayer)
+	else if (mediaPlayer == Conf::WinMediaPlayer)
 	{
 		HWND hwndWMP = FindWindow(_T("WMPlayerApp"), NULL);
 		if (::IsWindow(hwndWMP))
@@ -1066,7 +1113,7 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			}
 		}
 	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::iTunes)
+	else if (mediaPlayer == Conf::iTunes)
 	{
 		// Since i couldn't find out the appropriate window messages, we doing this а la COM
 		HWND hwndiTunes = FindWindow(_T("iTunes"), _T("iTunes"));
@@ -1111,7 +1158,7 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			CoUninitialize();
 		}
 	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::WinMediaPlayerClassic)
+	else if (mediaPlayer == Conf::WinMediaPlayerClassic)
 	{
 		HWND hwndMPC = FindWindow(_T("MediaPlayerClassicW"), NULL);
 		if (::IsWindow(hwndMPC))
@@ -1145,7 +1192,7 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			}
 		}
 	}
-	else if (SETTING(MEDIA_PLAYER) == SettingsManager::JetAudio)
+	else if (mediaPlayer == Conf::JetAudio)
 	{
 		if (jaControl.get() && jaControl.get()->isJARunning())
 		{
@@ -1209,14 +1256,11 @@ LRESULT MainFrame::onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/
 			{
 				bHandled = FALSE;
 			}
-			else
+			else if (uMsg == WM_KEYDOWN)
 			{
-				if (uMsg == WM_KEYDOWN)
-				{
-					tstring s;
-					WinUtil::getWindowText(quickSearchEdit, s);
-					SearchFrame::openWindow(s);
-				}
+				tstring s;
+				WinUtil::getWindowText(quickSearchEdit, s);
+				SearchFrame::openWindow(s);
 			}
 			break;
 		default:
@@ -1307,7 +1351,7 @@ void MainFrame::updateQuickSearches(bool clear /*= false*/)
 		for (const tstring& s : data)
 			quickSearchBox.AddString(s.c_str());
 	}
-	if (BOOLSETTING(CLEAR_SEARCH))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::CLEAR_SEARCH))
 		quickSearchBox.SetWindowText(_T(""));
 }
 
@@ -1329,13 +1373,14 @@ LRESULT MainFrame::onListenerInit(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	autoConnectFlag = false;
 	std::vector<FavoriteHubEntry> hubs;
 	{
-		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);		
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
 		for (const FavoriteHubEntry* entry : lock.getFavoriteHubs())
 			if (entry->getAutoConnect())
 				hubs.push_back(FavoriteHubEntry(*entry));
 	}
 	autoConnect(hubs);
-	if (BOOLSETTING(OPEN_DHT))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::OPEN_DHT))
 		HubFrame::openHubWindow(dht::NetworkName);
 	return 0;
 }
@@ -1458,7 +1503,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				}
 				else
 				{
-					const int timeout = SETTING(SHUTDOWN_TIMEOUT);
+					const auto* ss = SettingsManager::instance.getUiSettings();
+					const int timeout = ss->getInt(Conf::SHUTDOWN_TIMEOUT);
 					const int64_t timeLeft = timeout - (second - shutdownTime);
 					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, (_T(' ') + Util::formatSecondsT(timeLeft, timeLeft < 3600)).c_str(), SBT_POPOUT);
 					if (shutdownTime + timeout <= second)
@@ -1466,7 +1512,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 						// We better not try again. It WON'T work...
 						shutdownEnabled = false;
 
-						int action = SETTING(SHUTDOWN_ACTION);
+						int action = ss->getInt(Conf::SHUTDOWN_ACTION);
 						bool shutdownResult = WinUtil::shutDown(action);
 						if (shutdownResult)
 						{
@@ -1534,18 +1580,9 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	{
 		processCommandLine(cmdLine);
 	}
-	else if (wParam == SHOW_POPUP_MESSAGE)
+	else if (wParam == SOUND_NOTIF)
 	{
-		Popup* msg = reinterpret_cast<Popup*>(lParam);
-		if (!ClientManager::isBeforeShutdown())
-		{
-			dcassert(PopupManager::isValidInstance());
-			if (PopupManager::isValidInstance())
-			{
-				PopupManager::getInstance()->Show(msg->message, msg->title, msg->icon);
-			}
-		}
-		delete msg;
+		NotifUtil::playSound(lParam);
 	}
 	else if (wParam == REMOVE_POPUP)
 	{
@@ -1583,17 +1620,24 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			fileExistsActions.pop_front();
 			csFileExistsActions.unlock();
 
-			int option = SETTING(TARGET_EXISTS_ACTION);
-			if (option == SettingsManager::TE_ACTION_ASK)
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			int option = ss->getInt(Conf::TARGET_EXISTS_ACTION);
+			ss->unlockRead();
+			if (option == Conf::TE_ACTION_ASK)
 			{
 				bool applyForAll;
-				option = SettingsManager::TE_ACTION_REPLACE;
+				option = Conf::TE_ACTION_REPLACE;
 				CheckTargetDlg::showDialog(*this, data.path, data.newSize, data.existingSize, data.existingTime, option, applyForAll);
 				if (applyForAll)
-					SET_SETTING(TARGET_EXISTS_ACTION, option);
+				{
+					ss->lockWrite();
+					ss->setInt(Conf::TARGET_EXISTS_ACTION, option);
+					ss->unlockWrite();
+				}
 			}
 			string newPath;
-			if (option == SettingsManager::TE_ACTION_RENAME)
+			if (option == Conf::TE_ACTION_RENAME)
 				newPath = Util::getNewFileName(data.path);
 			QueueManager::getInstance()->processFileExistsQuery(data.path, option, newPath, data.priority);
 		}
@@ -1633,7 +1677,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 
 void MainFrame::addStatusMessage(const tstring& msg)
 {
-	tstring line = Text::toT(Util::formatDateTime("[" + SETTING(TIME_STAMPS_FORMAT) + "] ", GET_TIME()));
+	string timeStampsFmt = Util::getConfString(Conf::TIME_STAMPS_FORMAT);
+	tstring line = Text::toT(Util::formatDateTime("[" + timeStampsFmt + "] ", GET_TIME()));
 	line += msg;
 	tstring::size_type rpos = line.find(_T('\r'));
 	if (rpos != tstring::npos) line.erase(rpos);
@@ -1767,39 +1812,67 @@ LRESULT MainFrame::onToggleDHT(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	return 0;
 }
 
+struct WebServerSettings
+{
+	bool enabled;
+	string bindAddress;
+	int port;
+
+	void get();
+	bool compare(const WebServerSettings& other) const
+	{
+		return enabled == other.enabled && bindAddress == other.bindAddress && port == other.port;
+	}
+};
+
+void WebServerSettings::get()
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	enabled = ss->getBool(Conf::ENABLE_WEBSERVER);
+	bindAddress = ss->getString(Conf::WEBSERVER_BIND_ADDRESS);
+	port = ss->getInt(Conf::WEBSERVER_PORT);
+	ss->unlockRead();
+}
+
 LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!PropertiesDlg::instance)
 	{
 		PropertiesDlg dlg(m_hWnd, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
-		
+
 		NetworkSettings prevNetworkSettings;
 		prevNetworkSettings.get();
 		NetworkPage::setPrevSettings(&prevNetworkSettings);
 
-		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
-		bool prevRegisterURLHandler = BOOLSETTING(REGISTER_URL_HANDLER);
-		bool prevRegisterMagnetHandler = BOOLSETTING(REGISTER_MAGNET_HANDLER);
-		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);
-		bool prevDHT = BOOLSETTING(USE_DHT);
-		bool prevHubUrlInTitle = BOOLSETTING(HUB_URL_IN_TITLE);
-		bool prevWebServer = BOOLSETTING(WEBSERVER);
-		string prevWebServerBind = SETTING(WEBSERVER_BIND_ADDRESS);
-		int prevWebServerPort = SETTING(WEBSERVER_PORT);
-		string prevDownloadDir = SETTING(TEMP_DOWNLOAD_DIRECTORY);
+		WebServerSettings prevWebServerSettings;
+		auto cs = SettingsManager::instance.getCoreSettings();
+		const auto* ss = SettingsManager::instance.getUiSettings();
+		bool prevSortFavUsersFirst = ss->getBool(Conf::SORT_FAVUSERS_FIRST);
+		bool prevHubUrlInTitle = ss->getBool(Conf::HUB_URL_IN_TITLE);
+		int prevRegHandlerSettings = WinUtil::getRegHandlerSettings();
+		prevWebServerSettings.get();
+		cs->lockRead();
+		bool prevDHT = cs->getBool(Conf::USE_DHT);
+		string prevDownloadDir = cs->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+		cs->unlockRead();
 		COLORREF prevTextColor = Colors::g_textColor;
 		COLORREF prevBgColor = Colors::g_bgColor;
 
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
-			SettingsManager::getInstance()->save();
+			SettingsManager::instance.saveSettings();
 
 			NetworkSettings currentNetworkSettings;
 			currentNetworkSettings.get();
 			if (ConnectionManager::getInstance()->getPort() == 0 || !currentNetworkSettings.compare(prevNetworkSettings))
 				ConnectivityManager::getInstance()->setupConnections();
 
-			bool useDHT = BOOLSETTING(USE_DHT);
+			cs->lockRead();
+			bool useDHT = cs->getBool(Conf::USE_DHT);
+			string downloadDir = cs->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+			cs->unlockRead();
+
 			if (useDHT != prevDHT)
 			{
 				dht::DHT* d = dht::DHT::getInstance();
@@ -1809,54 +1882,35 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 					d->stop();
 			}
 
-			if (BOOLSETTING(WEBSERVER) != prevWebServer || SETTING(WEBSERVER_BIND_ADDRESS) != prevWebServerBind || SETTING(WEBSERVER_PORT) != prevWebServerPort)
+			WebServerSettings webServerSettings;
+			webServerSettings.get();
+			if (!webServerSettings.compare(prevWebServerSettings))
 			{
 				WebServerManager::getInstance()->shutdown();
-				if (BOOLSETTING(WEBSERVER))
+				if (webServerSettings.enabled)
 					WebServerManager::getInstance()->start();
 			}
 
-			if (BOOLSETTING(REGISTER_URL_HANDLER) != prevRegisterURLHandler)
-			{
-				if (BOOLSETTING(REGISTER_URL_HANDLER))
-					WinUtil::registerHubUrlHandlers();
-				else if (WinUtil::hubUrlHandlersRegistered)
-					WinUtil::unregisterHubUrlHandlers();
-			}
+			int regHandlerSettings = WinUtil::getRegHandlerSettings();
+			int regHandlerMask = prevRegHandlerSettings ^ regHandlerSettings;
+			if (regHandlerMask)
+				WinUtil::applyRegHandlerSettings(regHandlerSettings, regHandlerMask);
 
-			if (BOOLSETTING(REGISTER_MAGNET_HANDLER) != prevRegisterMagnetHandler)
-			{
-				if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
-					WinUtil::registerMagnetHandler();
-				else if (WinUtil::magnetHandlerRegistered)
-					WinUtil::unregisterMagnetHandler();
-			}
-
-			if (BOOLSETTING(REGISTER_DCLST_HANDLER) != prevRegisterDCLSTHandler)
-			{
-				if (BOOLSETTING(REGISTER_DCLST_HANDLER))
-					WinUtil::registerDclstHandler();
-				else if (WinUtil::dclstHandlerRegistered)
-					WinUtil::unregisterDclstHandler();
-			}
-
-			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
+			if (ss->getBool(Conf::SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
 				HubFrame::resortUsers();
 
-			if (BOOLSETTING(HUB_URL_IN_TITLE) != prevHubUrlInTitle)
+			if (ss->getBool(Conf::HUB_URL_IN_TITLE) != prevHubUrlInTitle)
 				HubFrame::updateAllTitles();
 
-			if (SETTING(TEMP_DOWNLOAD_DIRECTORY) != prevDownloadDir)
+			if (downloadDir != prevDownloadDir)
 				QueueItem::checkTempDir = true;
 
-			MainFrame::setLimiterButton(BOOLSETTING(THROTTLE_ENABLE));
+			Util::updateCoreSettings();
+			updateSettings();
+			g_fileImage.updateSettings();
+			checkToolbarButtons();
 
-			ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
-			ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
-			ctrlToolbar.CheckButton(IDC_AWAY, Util::getAway());
-			ctrlToolbar.CheckButton(IDC_SHUTDOWN, isShutDown());
-
-			bool needUpdateLayout = ctrlTab.getTabsPosition() != SETTING(TABS_POS);
+			bool needUpdateLayout = ctrlTab.getTabsPosition() != ss->getInt(Conf::TABS_POS);
 			bool needInvalidateTabs = ctrlTab.updateSettings(false);
 
 			if (needUpdateLayout)
@@ -1871,7 +1925,7 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			if (needInvalidateTabs)
 				ctrlTab.Invalidate();
 
-			if (!BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
+			if (!ss->getBool(Conf::SHOW_CURRENT_SPEED_IN_TITLE))
 				SetWindowText(getAppNameVerT().c_str());
 
 			ShareManager::getInstance()->refreshShareIfChanged();
@@ -1974,7 +2028,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 			lastFrame = HubFrame::openHubWindow(cs);
 		}
 	}
-	if (BOOLSETTING(OPEN_RECENT_HUBS))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::OPEN_RECENT_HUBS))
 	{
 		HubFrame::Settings cs;
 		const auto& recents = FavoriteManager::getInstance()->getRecentHubs();
@@ -2047,13 +2101,13 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 		if (!appMinimized)
 		{
 			appMinimized = true;
-			if (BOOLSETTING(MINIMIZE_TRAY) != WinUtil::isShift())
+			if (optMinimizeTray != WinUtil::isShift())
 			{
 				ShowWindow(SW_HIDE);
-				if (BOOLSETTING(REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY))
+				if (optReducePriority)
 					CompatibilityManager::reduceProcessPriority();
 			}
-			if (BOOLSETTING(AUTO_AWAY) && !Util::getAway())
+			if (optAutoAway && !Util::getAway())
 			{
 				autoAway = true;
 				Util::setAway(true);
@@ -2076,16 +2130,6 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 			}
 			autoAway = false;
 		}
-#if 0
-		if (wParam == SIZE_RESTORED)
-		{
-			if (SETTING(MAIN_WINDOW_STATE) == SW_SHOWMAXIMIZED)
-			{
-				//SET_SETTING(MAIN_WINDOW_STATE, SW_SHOWMAXIMIZED);
-				//ShowWindow(SW_SHOWMAXIMIZED);
-			}
-		}
-#endif
 	}
 	bHandled = FALSE;
 	return 0;
@@ -2097,24 +2141,18 @@ void MainFrame::storeWindowsPos()
 	wp.length = sizeof(wp);
 	if (GetWindowPlacement(&wp))
 	{
-		// Состояние окна отдельно от координат! Там мы могли не попадать в условие, при MAXIMIZED
+		auto ss = SettingsManager::instance.getUiSettings();
 		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_SHOWMINIMIZED)
-		{
-			SET_SETTING(MAIN_WINDOW_STATE, (int)wp.showCmd);
-		}
+			ss->setInt(Conf::MAIN_WINDOW_STATE, wp.showCmd);
 		else
-		{
 			dcassert(0);
-		}
-		// Координаты окна
 		CRect rc;
-		// СОХРАНИМ координаты, только если окно в нормальном состоянии!!! Иначе - пусть будут последние
 		if ((wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL) && GetWindowRect(rc))
 		{
-			SET_SETTING(MAIN_WINDOW_POS_X, (int) rc.left);
-			SET_SETTING(MAIN_WINDOW_POS_Y, (int) rc.top);
-			SET_SETTING(MAIN_WINDOW_SIZE_X, rc.Width());
-			SET_SETTING(MAIN_WINDOW_SIZE_Y, rc.Height());
+			ss->setInt(Conf::MAIN_WINDOW_POS_X, rc.left);
+			ss->setInt(Conf::MAIN_WINDOW_POS_Y, rc.top);
+			ss->setInt(Conf::MAIN_WINDOW_SIZE_X, rc.Width());
+			ss->setInt(Conf::MAIN_WINDOW_SIZE_Y, rc.Height());
 		}
 	}
 #ifdef _DEBUG
@@ -2153,7 +2191,8 @@ LRESULT MainFrame::onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 
 LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (BOOLSETTING(MINIMIZE_ON_CLOSE) && !quitFromMenu)
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::MINIMIZE_ON_CLOSE) && !quitFromMenu)
 	{
 		ShowWindow(SW_MINIMIZE);
 	}
@@ -2207,11 +2246,11 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					}
 				}
 			}
-			
-			UINT checkState = BOOLSETTING(CONFIRM_EXIT) ? BST_CHECKED : BST_UNCHECKED;
-			
+
+			UINT checkState = ss->getBool(Conf::CONFIRM_EXIT) ? BST_CHECKED : BST_UNCHECKED;
+
 			if ((endSession ||
-			     SETTING(PROTECT_CLOSE) ||
+			     ss->getBool(Conf::PROTECT_CLOSE) ||
 			     checkState == BST_UNCHECKED ||
 			     (forceNoWarning ||
 			     MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_EXIT), getAppNameVerT().c_str(),
@@ -2219,7 +2258,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			     && !dontQuit)
 			{
 				storeWindowsPos();
-					
+
 				ClientManager::beforeShutdown();
 				LogManager::g_mainWnd = nullptr;
 				closing = true;
@@ -2241,7 +2280,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				useTrayIcon = false;
 				setTrayIcon(TRAY_ICON_NONE);
 				if (m_nProportionalPos > 300)
-					SET_SETTING(TRANSFER_FRAME_SPLIT, m_nProportionalPos);
+					ss->setInt(Conf::TRANSFER_FRAME_SPLIT, m_nProportionalPos);
 				ShowWindow(SW_HIDE);
 				stopperThread = reinterpret_cast<HANDLE>(_beginthreadex(NULL, 0, &stopper, this, 0, nullptr));
 			}
@@ -2249,7 +2288,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			{
 				quitFromMenu = false;
 			}
-			SET_SETTING(CONFIRM_EXIT, checkState != BST_UNCHECKED);
+			ss->setBool(Conf::CONFIRM_EXIT, checkState != BST_UNCHECKED);
 			bHandled = TRUE;
 		}
 		else
@@ -2361,7 +2400,7 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		{
 			switch (ctrlTab.getTabsPosition())
 			{
-				case SettingsManager::TABS_TOP:
+				case Conf::TABS_TOP:
 					rc.bottom = rc.top + ctrlTab.getHeight();
 					rc2.top = rc.bottom;
 					break;
@@ -2391,7 +2430,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		int64_t unused;
 		string path = ShareManager::getInstance()->getBZXmlFile(cid, unused);
 		if (path.empty()) return 0;
-		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), SETTING(NICK));
+		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), ClientManager::getDefaultNick());
 		myUser->setFlag(User::MYSELF);
 		DirectoryListingFrame::openWindow(Text::toT(path),
 			Util::emptyStringT, HintedUser(myUser, Util::emptyString), 0);
@@ -2446,7 +2485,7 @@ bool MainFrame::getPasswordInternal(INT_PTR& result, HWND hwndParent)
 		TigerTree hash(1024);
 		hash.update(tmp.c_str(), tmp.size());
 		hash.finalize();
-		return hash.getRoot().toBase32() == SETTING(PASSWORD);
+		return hash.getRoot().toBase32() == SettingsManager::instance.getUiSettings()->getString(Conf::PASSWORD);
 	}
 	return false;
 }
@@ -2566,20 +2605,6 @@ LRESULT MainFrame::onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& 
 	return 0;
 }
 
-void MainFrame::ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(getMainFrame());
-	if (getMainFrame() && !ClientManager::isBeforeShutdown() && PopupManager::isValidInstance())
-	{
-		Popup* p = new Popup;
-		p->title = title;
-		p->message = message;
-		p->icon = infoFlags;
-		WinUtil::postSpeakerMsg(*getMainFrame(), SHOW_POPUP_MESSAGE, p);
-	}
-}
-
 void MainFrame::toggleLockToolbars(BOOL state)
 {
 	REBARBANDINFO rbi = {};
@@ -2597,19 +2622,20 @@ void MainFrame::toggleLockToolbars(BOOL state)
 	}
 }
 
-void MainFrame::toggleRebarBand(BOOL state, int bandNumber, int commandId, SettingsManager::IntSetting setting)
+void MainFrame::toggleRebarBand(BOOL state, int bandNumber, int commandId, int setting)
 {
 	int bandIndex = ctrlRebar.IdToIndex(ATL_IDW_BAND_FIRST + bandNumber);
 	ctrlRebar.ShowBand(bandIndex, state);
 	UISetCheck(commandId, state);
-	SettingsManager::set(setting, state);
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(setting, state != FALSE);
 	ctrlToolbar.CheckButton(commandId, state);
 }
 
 LRESULT MainFrame::onViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	visToolbar = !visToolbar;
-	toggleRebarBand(visToolbar, 1, ID_VIEW_TOOLBAR, SettingsManager::SHOW_TOOLBAR);
+	toggleRebarBand(visToolbar, 1, ID_VIEW_TOOLBAR, Conf::SHOW_TOOLBAR);
 	UpdateLayout();
 	return 0;
 }
@@ -2617,7 +2643,7 @@ LRESULT MainFrame::onViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 LRESULT MainFrame::onViewWinampBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	visWinampBar = !visWinampBar;
-	toggleRebarBand(visWinampBar, 3, ID_VIEW_MEDIA_TOOLBAR, SettingsManager::SHOW_PLAYER_CONTROLS);
+	toggleRebarBand(visWinampBar, 3, ID_VIEW_MEDIA_TOOLBAR, Conf::SHOW_PLAYER_CONTROLS);
 	UpdateLayout();
 	return 0;
 }
@@ -2625,26 +2651,29 @@ LRESULT MainFrame::onViewWinampBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 LRESULT MainFrame::onViewQuickSearchBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	visQuickSearch = !visQuickSearch;
-	toggleRebarBand(visQuickSearch, 2, ID_VIEW_QUICK_SEARCH, SettingsManager::SHOW_QUICK_SEARCH);
+	toggleRebarBand(visQuickSearch, 2, ID_VIEW_QUICK_SEARCH, Conf::SHOW_QUICK_SEARCH);
 	UpdateLayout();
 	return 0;
 }
 
 LRESULT MainFrame::onViewTopmost(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	UISetCheck(IDC_TOPMOST, !BOOLSETTING(TOPMOST));
-	SET_SETTING(TOPMOST, !BOOLSETTING(TOPMOST));
+	auto ss = SettingsManager::instance.getUiSettings();
+	bool topmost = !ss->getBool(Conf::TOPMOST);
+	UISetCheck(IDC_TOPMOST, topmost);
+	ss->setBool(Conf::TOPMOST, topmost);
 	toggleTopmost();
 	return 0;
 }
 
 LRESULT MainFrame::onViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto ss = SettingsManager::instance.getUiSettings();
 	BOOL bVisible = !::IsWindowVisible(m_hWndStatusBar);
 	::ShowWindow(m_hWndStatusBar, bVisible ? SW_SHOWNOACTIVATE : SW_HIDE);
 	UISetCheck(ID_VIEW_STATUS_BAR, bVisible);
 	UpdateLayout();
-	SET_SETTING(SHOW_STATUSBAR, bVisible);
+	ss->setBool(Conf::SHOW_STATUSBAR, bVisible != FALSE);
 	return 0;
 }
 
@@ -2666,15 +2695,16 @@ void MainFrame::toggleTransferView(BOOL bVisible)
 	}
 	
 	UISetCheck(ID_VIEW_TRANSFER_VIEW, bVisible);
-	UpdateLayout();
 	ctrlToolbar.CheckButton(ID_VIEW_TRANSFER_VIEW, bVisible);
+	UpdateLayout();
 }
 
 LRESULT MainFrame::onViewTransferView(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	const BOOL bVisible = !BOOLSETTING(SHOW_TRANSFERVIEW);
-	SET_SETTING(SHOW_TRANSFERVIEW, bVisible);
-	toggleTransferView(bVisible);
+	auto ss = SettingsManager::instance.getUiSettings();
+	bool visible = !ss->getBool(Conf::SHOW_TRANSFERVIEW);
+	ss->setBool(Conf::SHOW_TRANSFERVIEW, visible);
+	toggleTransferView((BOOL) visible);
 	return 0;
 }
 
@@ -2689,7 +2719,7 @@ LRESULT MainFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 			HubFrame::closeAll(0);
 			break;
 		case IDC_CLOSE_HUBS_BELOW:
-			HubFrame::closeAll(SETTING(USER_THRESHOLD));
+			HubFrame::closeAll(SettingsManager::instance.getUiSettings()->getInt(Conf::USER_THRESHOLD));
 			break;
 		case IDC_CLOSE_HUBS_NO_USR:
 			HubFrame::closeAll(2);
@@ -2718,13 +2748,20 @@ LRESULT MainFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 
 LRESULT MainFrame::onLimiter(WORD, WORD, HWND, BOOL&)
 {
-	onLimiter();
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	bool state = !ss->getBool(Conf::THROTTLE_ENABLE);
+	ss->setBool(Conf::THROTTLE_ENABLE, state);
+	ss->unlockWrite();
+
+	ThrottleManager::getInstance()->updateSettings();
+	checkLimitsButton();
 	return 0;
 }
 
 LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (SETTING(NICK).empty())
+	if (ClientManager::isNickEmpty())
 	{
 		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 		return 0;
@@ -2873,14 +2910,14 @@ void MainFrame::setShutDown(bool flag)
 LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	bool soundDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_SOUNDS) != FALSE;
-	SET_SETTING(SOUNDS_DISABLED, soundDisabled);
+	SettingsManager::instance.getUiSettings()->setBool(Conf::SOUNDS_DISABLED, soundDisabled);
 	return 0;
 }
 
 LRESULT MainFrame::onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	bool popusDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_POPUPS) != FALSE;
-	SET_SETTING(POPUPS_DISABLED, popusDisabled);
+	SettingsManager::instance.getUiSettings()->setBool(Conf::POPUPS_DISABLED, popusDisabled);
 	return 0;
 }
 
@@ -2896,7 +2933,7 @@ LRESULT MainFrame::onSelected(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	{
 		WinUtil::activateMDIChild(hWnd);
 	}
-	else if (BOOLSETTING(TOGGLE_ACTIVE_WINDOW) && !::IsIconic(hWnd))
+	else if (optToggleActiveWindow && !::IsIconic(hWnd))
 	{
 		::SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
 		MDINext(hWnd);
@@ -2918,10 +2955,11 @@ LRESULT MainFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 LRESULT MainFrame::onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	BOOL state = !BOOLSETTING(LOCK_TOOLBARS);
-	UISetCheck(IDC_LOCK_TOOLBARS, state);
-	SET_SETTING(LOCK_TOOLBARS, state);
-	toggleLockToolbars(state);
+	auto ss = SettingsManager::instance.getUiSettings();
+	bool state = !ss->getBool(Conf::LOCK_TOOLBARS);
+	UISetCheck(IDC_LOCK_TOOLBARS, (BOOL) state);
+	ss->setBool(Conf::LOCK_TOOLBARS, state);
+	toggleLockToolbars((BOOL) state);
 	return 0;
 }
 
@@ -2937,25 +2975,23 @@ LRESULT MainFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 	{
 		POINT ptClient = pt;
 		::ScreenToClient(m_hWndStatusBar, &ptClient);
-		
+
 		// AWAY
 		if (ptClient.x >= tabAwayRect.left && ptClient.x <= tabAwayRect.right)
 		{
-			tabAwayMenu.CheckMenuItem(IDC_STATUS_AWAY_ON_OFF, MF_BYCOMMAND | (SETTING(AWAY) ? MF_CHECKED : MF_UNCHECKED));
+			tabAwayMenu.CheckMenuItem(IDC_STATUS_AWAY_ON_OFF, MF_BYCOMMAND | (Util::getAway() ? MF_CHECKED : MF_UNCHECKED));
 			tabAwayMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 		if (ptClient.x >= tabDownSpeedRect.left && ptClient.x <= tabDownSpeedRect.right)
 		{
-			setSpeedLimit(false, 32, 6144);
+			if (setSpeedLimit(false, 32, 6144))
+				checkLimitsButton();
 		}
 		if (ptClient.x >= tabUpSpeedRect.left && ptClient.x <= tabUpSpeedRect.right)
 		{
-			setSpeedLimit(true, 32, 6144);
+			if (setSpeedLimit(true, 32, 6144))
+				checkLimitsButton();
 		}
-		bool newThrottle = SETTING(MAX_UPLOAD_SPEED_LIMIT_NORMAL) != 0 || SETTING(MAX_DOWNLOAD_SPEED_LIMIT_NORMAL) != 0;
-		bool oldThrottle = BOOLSETTING(THROTTLE_ENABLE);
-		if (newThrottle != oldThrottle)
-			onLimiter(!newThrottle);
 		return TRUE;
 	}
 	bHandled = FALSE;
@@ -2972,13 +3008,24 @@ LRESULT MainFrame::onStatusBarClick(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 	return 0;
 }
 
-void MainFrame::setSpeedLimit(bool upload, int minValue, int maxValue)
+bool MainFrame::setSpeedLimit(bool upload, int minValue, int maxValue)
 {
-	auto setting = upload ? SettingsManager::MAX_UPLOAD_SPEED_LIMIT_NORMAL : SettingsManager::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL;
-	int oldValue = SettingsManager::get(setting);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	int setting = upload ? Conf::MAX_UPLOAD_SPEED_LIMIT_NORMAL : Conf::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL;
+	ss->lockRead();
+	int oldValue = ss->getInt(setting);
+	ss->unlockRead();
 	LimitEditDlg dlg(upload, Util::emptyStringT, oldValue, minValue, maxValue);
-	if (dlg.DoModal() == IDOK)
-		SettingsManager::set(setting, dlg.getLimit());
+	if (dlg.DoModal() != IDOK) return false;
+	ss->lockWrite();
+	ss->setInt(setting, dlg.getLimit());
+	if (dlg.getLimit())
+		ss->setBool(Conf::THROTTLE_ENABLE, true);
+	else if (!ss->getInt(Conf::MAX_UPLOAD_SPEED_LIMIT_NORMAL) && !ss->getInt(Conf::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL))
+		ss->setBool(Conf::THROTTLE_ENABLE, false);
+	ss->unlockWrite();
+	ThrottleManager::getInstance()->updateSettings();
+	return true;
 }
 
 LRESULT MainFrame::onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
@@ -3062,9 +3109,9 @@ LRESULT MainFrame::onToolbarDropDown(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*
 		// Map the points
 		toolbar.MapWindowPoints(HWND_DESKTOP, &pt, 1);
 		// Load the menu
-		int iCurrentMediaSelection = SETTING(MEDIA_PLAYER);
-		for (int i = 0; i < SettingsManager::PlayersCount; i++)
-			winampMenu.CheckMenuItem(ID_MEDIA_MENU_WINAMP_START + i, MF_BYCOMMAND | ((iCurrentMediaSelection == i) ? MF_CHECKED : MF_UNCHECKED));
+		int mediaPlayer = SettingsManager::instance.getUiSettings()->getInt(Conf::MEDIA_PLAYER);
+		for (int i = 0; i < Conf::NumPlayers; i++)
+			winampMenu.CheckMenuItem(ID_MEDIA_MENU_WINAMP_START + i, MF_BYCOMMAND | ((mediaPlayer == i) ? MF_CHECKED : MF_UNCHECKED));
 		ctrlCmdBar.TrackPopupMenu(winampMenu, TPM_RIGHTBUTTON | TPM_VERTICAL, pt.x, pt.y);
 	}
 	return 0;
@@ -3073,10 +3120,8 @@ LRESULT MainFrame::onToolbarDropDown(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*
 LRESULT MainFrame::onMediaMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int selectedMenu = wID - ID_MEDIA_MENU_WINAMP_START;
-	if (selectedMenu < SettingsManager::PlayersCount && selectedMenu > -1)
-	{
-		SET_SETTING(MEDIA_PLAYER, selectedMenu);
-	}
+	if (selectedMenu < Conf::NumPlayers && selectedMenu > -1)
+		SettingsManager::instance.getUiSettings()->setInt(Conf::MEDIA_PLAYER, selectedMenu);
 	return 0;
 }
 
@@ -3100,14 +3145,13 @@ void MainFrame::shareFolderFromShell(const tstring& infolder)
 	
 	if (!found)
 	{
-		// [!] SSA Need to add Dialog Question
 		bool shareFolder = true;
-		if (BOOLSETTING(CONFIRM_SHARE_FROM_SHELL))
+		if (SettingsManager::instance.getUiSettings()->getBool(Conf::CONFIRM_SHARE_FROM_SHELL))
 		{
 			tstring question = folder;
 			question += _T("\r\n");
 			question += TSTRING(SECURITY_SHARE_FROM_SHELL_QUESTION);
-			shareFolder = (MessageBox(question.c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES);
+			shareFolder = MessageBox(question.c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES;
 		}
 		if (shareFolder)
 		{
@@ -3179,23 +3223,18 @@ void MainFrame::on(UserManagerListener::OpenHub, const string& url, const UserPt
 
 void MainFrame::on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept
 {
-	if (isFile)
-	{
-		PLAY_SOUND(SOUND_FINISHFILE);
-	}
+	if (isFile) PostMessage(WM_SPEAKER, SOUND_NOTIF, Conf::SOUND_FINISHFILE);
+
 }
 
 void MainFrame::on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept
 {
-	if (isFile)
-	{
-		PLAY_SOUND(SOUND_UPLOADFILE);
-	}
+	if (isFile) PostMessage(WM_SPEAKER, SOUND_NOTIF, Conf::SOUND_UPLOADFILE);
 }
 
 void MainFrame::on(QueueManagerListener::SourceAdded) noexcept
 {
-	PLAY_SOUND(SOUND_SOURCEFILE);
+	PostMessage(WM_SPEAKER, SOUND_NOTIF, Conf::SOUND_SOURCEFILE);
 }
 
 void MainFrame::on(FavoriteManagerListener::SaveRecents) noexcept

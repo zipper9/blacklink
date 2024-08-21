@@ -131,6 +131,8 @@ namespace dht
 		bool pingNode(const CID& cid);
 		void updateLocalIP(const IpAddress& localIP);
 
+		static bool useDHT();
+
 		class LockInstanceNodes
 		{
 			public:

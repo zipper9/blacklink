@@ -20,6 +20,7 @@
 #include "LineDlg.h"
 #include "WinUtil.h"
 #include "UserMessages.h"
+#include "ConfUI.h"
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
 
@@ -134,24 +135,25 @@ LRESULT KickDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
 
-	const size_t count = _countof(recent);
-	for (size_t i = 0; i < count; ++i)
-		recent[i] = Text::toT(SettingsManager::get((SettingsManager::StrSetting) (SettingsManager::KICK_MSG_RECENT_01 + i)));
-	
+	const auto ss = SettingsManager::instance.getUiSettings();
+	const int count = _countof(recent);
+	for (int i = 0; i < count; ++i)
+		recent[i] = Text::toT(ss->getString(Conf::KICK_MSG_RECENT_01 + i));
+
 	ctrlLine.Attach(GetDlgItem(IDC_LINE));
 	ctrlLine.SetFocus();
-	
+
 	line.clear();
-	for (size_t i = 0; i < count; i++)
+	for (int i = 0; i < count; i++)
 		if (!recent[i].empty())
 			ctrlLine.AddString(recent[i].c_str());
 	ctrlLine.SetWindowText(lastMsg.c_str());
-	
+
 	ctrlDescription.Attach(GetDlgItem(IDC_DESCRIPTION));
 	ctrlDescription.SetWindowText(description.c_str());
-	
+
 	SetWindowText(title.c_str());
-	
+
 	CenterWindow(GetParent());
 	return FALSE;
 }
@@ -162,25 +164,26 @@ LRESULT KickDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 	{
 		WinUtil::getWindowText(ctrlLine, line);
 		lastMsg = line;
-		size_t i, j;
-		
-		const size_t count = _countof(recent);
+		int i, j;
+
+		const int count = _countof(recent);
 		for (i = 0; i < count; i++)
 			if (line == recent[i])
 			{
 				i++;
 				break;
 			}
-		
+
 		for (j = i - 1; j > 0; j--)
 			recent[j] = recent[j - 1];
 
 		recent[0] = line;
-		
+
+		auto ss = SettingsManager::instance.getUiSettings();
 		for (i = 0; i < count; ++i)
-			SettingsManager::set((SettingsManager::StrSetting) (SettingsManager::KICK_MSG_RECENT_01 + i), Text::fromT(recent[i]));
+			ss->setString(Conf::KICK_MSG_RECENT_01 + i, Text::fromT(recent[i]));
 	}
-	
+
 	EndDialog(wID);
 	return 0;
 }

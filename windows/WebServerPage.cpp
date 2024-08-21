@@ -1,11 +1,12 @@
 #include "stdafx.h"
 #include "WebServerPage.h"
+#include "WinUtil.h"
+#include "DialogLayout.h"
 #include "../client/SettingsManager.h"
 #include "../client/File.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
-#include "WinUtil.h"
-#include "DialogLayout.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -34,12 +35,12 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_ENABLE_WEBSERVER, SettingsManager::WEBSERVER, PropPage::T_BOOL },
-	{ IDC_PORT, SettingsManager::WEBSERVER_PORT, PropPage::T_INT },
-	{ IDC_NORMAL_USER, SettingsManager::WEBSERVER_USER, PropPage::T_STR },
-	{ IDC_NORMAL_PASSWORD, SettingsManager::WEBSERVER_PASS, PropPage::T_STR },
-	{ IDC_POWER_USER, SettingsManager::WEBSERVER_POWER_USER, PropPage::T_STR },
-	{ IDC_POWER_PASSWORD, SettingsManager::WEBSERVER_POWER_PASS, PropPage::T_STR },
+	{ IDC_ENABLE_WEBSERVER, Conf::ENABLE_WEBSERVER, PropPage::T_BOOL },
+	{ IDC_PORT, Conf::WEBSERVER_PORT, PropPage::T_INT },
+	{ IDC_NORMAL_USER, Conf::WEBSERVER_USER, PropPage::T_STR },
+	{ IDC_NORMAL_PASSWORD, Conf::WEBSERVER_PASS, PropPage::T_STR },
+	{ IDC_POWER_USER, Conf::WEBSERVER_POWER_USER, PropPage::T_STR },
+	{ IDC_POWER_PASSWORD, Conf::WEBSERVER_POWER_PASS, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -86,11 +87,18 @@ LRESULT WebServerPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	}
 
 	PropPage::read(*this, items);
-	toggleControls(BOOLSETTING(WEBSERVER));
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool enableWebServer = ss->getBool(Conf::ENABLE_WEBSERVER);
+	string bindAddress = ss->getString(Conf::WEBSERVER_BIND_ADDRESS);
+	ss->unlockRead();
+
+	toggleControls(enableWebServer);
 	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
 	vector<Util::AdapterInfo> adapters;
 	WinUtil::getAdapterList(AF_INET, adapters, Util::GNA_ALLOW_LOOPBACK);
-	WinUtil::fillAdapterList(AF_INET, adapters, bindCombo, SETTING(WEBSERVER_BIND_ADDRESS), 0);
+	WinUtil::fillAdapterList(AF_INET, adapters, bindCombo, bindAddress, 0);
 	return TRUE;
 }
 
@@ -99,7 +107,12 @@ void WebServerPage::write()
 	if (!hasFiles) return;
 	PropPage::write(*this, items);
 	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
-	g_settings->set(SettingsManager::WEBSERVER_BIND_ADDRESS, WinUtil::getSelectedAdapter(bindCombo));
+	string bindAddress = WinUtil::getSelectedAdapter(bindCombo);
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setString(Conf::WEBSERVER_BIND_ADDRESS, bindAddress);
+	ss->unlockWrite();
 }
 
 void WebServerPage::toggleControls(bool enable)

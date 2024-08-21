@@ -18,6 +18,8 @@
 
 #include "stdinc.h"
 #include "FavoriteManager.h"
+#include "SettingsManager.h"
+#include "SettingsUtil.h"
 #include "AppPaths.h"
 #include "PathUtil.h"
 #include "TimeUtil.h"
@@ -27,6 +29,7 @@
 #include "ConnectionManager.h"
 #include "LogManager.h"
 #include "DatabaseManager.h"
+#include "ConfCore.h"
 #include <boost/algorithm/string.hpp>
 
 static const unsigned SAVE_RECENTS_TIME = 3*60000;
@@ -52,6 +55,7 @@ FavoriteManager::FavoriteManager()
 	csDirs = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 
 	File::ensureDirectory(Util::getHubListsPath());
 }
@@ -60,6 +64,7 @@ FavoriteManager::~FavoriteManager()
 {
 	ClientManager::getInstance()->removeListener(this);
 	TimerManager::getInstance()->removeListener(this);
+	SettingsManager::instance.removeListener(this);
 
 	shutdown();
 
@@ -844,7 +849,7 @@ string FavoriteManager::getDownloadDirectory(const string& ext, const UserPtr& u
 {
 	string dir;
 	if (ext.length() > 1) dir = getFavoriteDir(ext);
-	if (dir.empty()) dir = SETTING(DOWNLOAD_DIRECTORY);
+	if (dir.empty()) dir = Util::getConfString(Conf::DOWNLOAD_DIRECTORY);
 	if (dir.find('%') == string::npos) return dir;
 	return Util::expandDownloadDir(dir, user);
 }
@@ -1234,6 +1239,14 @@ void FavoriteManager::load(SimpleXML& xml)
 			}
 		}
 		xml.resetCurrentChild();
+
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		const string defaultHeaderOrder = ss->getString(Conf::HUB_FRAME_ORDER);
+		const string defaultHeaderWidths = ss->getString(Conf::HUB_FRAME_WIDTHS);
+		const string defaultHeaderVis = ss->getString(Conf::HUB_FRAME_VISIBLE);
+		ss->unlockRead();
+
 		string query;
 		Util::ParsedUrl url;
 		while (xml.findChild("Hub"))
@@ -1304,9 +1317,9 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setShowJoins(xml.getBoolChildAttrib("ShowJoins"));
 			e->setExclChecks(xml.getBoolChildAttrib("ExclChecks"));
 			e->setExclusiveHub(xml.getBoolChildAttrib("ExclusiveHub"));
-			e->setHeaderOrder(xml.getChildAttrib("HeaderOrder", SETTING(HUB_FRAME_ORDER)));
-			e->setHeaderWidths(xml.getChildAttrib("HeaderWidths", SETTING(HUB_FRAME_WIDTHS)));
-			e->setHeaderVisible(xml.getChildAttrib("HeaderVisible", SETTING(HUB_FRAME_VISIBLE)));
+			e->setHeaderOrder(xml.getChildAttrib("HeaderOrder", defaultHeaderOrder));
+			e->setHeaderWidths(xml.getChildAttrib("HeaderWidths", defaultHeaderWidths));
+			e->setHeaderVisible(xml.getChildAttrib("HeaderVisible", defaultHeaderVis));
 			e->setHeaderSort(xml.getIntChildAttrib("HeaderSort", "-1"));
 			e->setHeaderSortAsc(xml.getBoolChildAttrib("HeaderSortAsc"));
 			e->setMode(Util::toInt(xml.getChildAttrib("Mode")));
@@ -1572,7 +1585,7 @@ void FavoriteManager::setUserAttributes(const UserPtr& user, FavoriteUser::Flags
 	favsDirty = true;
 }
 
-void FavoriteManager::loadRecents(SimpleXML& xml)
+void FavoriteManager::loadLegacyRecents(SimpleXML& xml)
 {
 	ASSERT_MAIN_THREAD();
 	xml.resetCurrentChild();
@@ -1864,4 +1877,10 @@ void FavoriteManager::setSearchUrls(const SearchUrl::List& urls)
 {
 	ASSERT_MAIN_THREAD();
 	searchUrls = urls;
+}
+
+void FavoriteManager::on(Save, SimpleXML& xml) noexcept
+{
+	savePreviewApps(xml);
+	saveSearchUrls(xml);
 }

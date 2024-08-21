@@ -20,9 +20,11 @@
 #include "SharePage.h"
 #include "LineDlg.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/ShareManager.h"
+#include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -47,19 +49,20 @@ static const WinUtil::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SKIPLIST_SHARE, SettingsManager::SKIPLIST_SHARE, PropPage::T_STR },
+	{ IDC_SKIPLIST_SHARE, Conf::SKIPLIST_SHARE, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
 LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	WinUtil::translate((HWND)(*this), texts);
-	
+
 	PropPage::read(*this, items);
-	showTree = !BOOLSETTING(USE_OLD_SHARING_UI);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	showTree = !ss->getBool(Conf::USE_OLD_SHARING_UI);
 	CButton ctrlShowTree(GetDlgItem(IDC_SHOW_TREE));
 	ctrlShowTree.SetCheck(showTree ? BST_CHECKED : BST_UNCHECKED);
-	
+
 	listInitialized = false;
 	updateTree = updateList = true;
 	hasExcludeGroup = false;
@@ -77,7 +80,7 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlTotalSize.Attach(GetDlgItem(IDC_SETTINGS_SHARE_SIZE));
 	ctrlTotalFiles.Attach(GetDlgItem(IDC_SETTINGS_SHARE_FILES));
 	toggleView();
-	
+
 	return TRUE;
 }
 
@@ -152,7 +155,9 @@ void SharePage::write()
 {
 	PropPage::write(*this, items);
 	CButton ctrlShowTree(GetDlgItem(IDC_SHOW_TREE));
-	SET_SETTING(USE_OLD_SHARING_UI, ctrlShowTree.GetCheck() == BST_CHECKED ? FALSE : TRUE);
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(Conf::USE_OLD_SHARING_UI,
+		ctrlShowTree.GetCheck() == BST_CHECKED ? false : true);
 }
 
 LRESULT SharePage::onItemChangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)

@@ -5,6 +5,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "Fonts.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/LruCache.h"
@@ -280,7 +281,7 @@ void CustomDrawHelpers::drawLocation(CustomDrawState& state, const NMLVCUSTOMDRA
 	RECT rc = state.rc;
 	POINT p = { rc.left, (rc.top + rc.bottom - iconSize) / 2 };
 	p.x += margin1;
-	if (BOOLSETTING(ENABLE_COUNTRY_FLAG) && ipInfo.countryCode)
+	if (ipInfo.countryCode && SettingsManager::instance.getUiSettings()->getBool(Conf::ENABLE_COUNTRY_FLAG))
 	{
 		g_flagImage.drawCountry(cd->nmcd.hdc, ipInfo.countryCode, p);
 		p.x += flagIconWidth;

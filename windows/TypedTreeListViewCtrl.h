@@ -376,6 +376,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 		{
 			int high = this->GetItemCount();
 			int sortColumn = this->getRealSortColumn();
+			int flags = this->compareFlags;
 			if (sortColumn == -1 || high == 0)
 				return high;
 
@@ -389,7 +390,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			{
 				mid = (low + high) / 2;
 				b = this->getItemData(mid);
-				comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
+				comp = compareItems(a, b, sortColumn, flags);
 
 				if (comp == 0)
 					return mid;
@@ -403,7 +404,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					low = mid + 1;
 			}
 
-			comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
+			comp = compareItems(a, b, sortColumn, flags);
 			if (!this->isAscending() && abs(comp) != 2)
 				comp = -comp;
 			if (comp > 0)
@@ -416,6 +417,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 	protected:
 		void sortItems() override
 		{
+			this->compareFlags = T::getCompareFlags();
 			this->SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
 		}
 
@@ -426,7 +428,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 		static int CALLBACK compareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
 		{
 			thisClass* t = (thisClass*)lParamSort;
-			int result = compareItems((T*)lParam1, (T*)lParam2, t->getRealSortColumn());
+			int result = compareItems((T*)lParam1, (T*)lParam2, t->getRealSortColumn(), t->compareFlags);
 
 			if (result == 2)
 				result = (t->isAscending() ? 1 : -1);
@@ -436,7 +438,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			return (t->isAscending() ? result : -result);
 		}
 
-		static int compareItems(const T* a, const T* b, uint8_t col)
+		static int compareItems(const T* a, const T* b, int col, int flags)
 		{
 			// Copyright (C) Liny, RevConnect
 
@@ -450,7 +452,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 			{
 				// different parent
 				if (aParent != bParent)
-					return compareItems(aParent, bParent, col);
+					return compareItems(aParent, bParent, col, flags);
 			}
 			else
 			{
@@ -461,13 +463,13 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T>
 					return -2; // b should be displayed below a
 
 				if (aParent)
-					return compareItems(aParent, b, col);
+					return compareItems(aParent, b, col, flags);
 
 				if (bParent)
-					return compareItems(a, bParent, col);
+					return compareItems(a, bParent, col, flags);
 			}
 
-			return T::compareItems(a, b, col);
+			return T::compareItems(a, b, col, flags);
 		}
 
 		int insertItemInternal(int pos, T* item, int image)

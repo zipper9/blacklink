@@ -33,6 +33,8 @@
 #include "User.h"
 #include "ShareManager.h"
 #include "ClientManager.h"
+#include "SettingsManager.h"
+#include "ConfCore.h"
 
 static const int PROGRESS_REPORT_TIME = 2000;
 
@@ -191,7 +193,13 @@ class ListLoader : public SimpleXMLReader::CallBack
 			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
 			list->basePath = "/";
 			scanFlags = 0;
-			useUploadCounter = BOOLSETTING(ENABLE_UPLOAD_COUNTER) && BOOLSETTING(FILELIST_SHOW_MY_UPLOADS);
+			/*
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			useUploadCounter = ss->getBool(Conf::ENABLE_UPLOAD_COUNTER) && ss->getBool(Conf::FILELIST_SHOW_MY_UPLOADS);
+			ss->unlockRead();
+			*/
+			useUploadCounter = (scanOptions & DirectoryListing::SCAN_OPTION_SHOW_MY_UPLOADS) != 0;
 			if (scanOptions & DirectoryListing::SCAN_OPTION_SHARED)
 				scanFlags |= DatabaseManager::FLAG_SHARED;
 			if (scanOptions & DirectoryListing::SCAN_OPTION_DOWNLOADED)

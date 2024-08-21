@@ -22,6 +22,7 @@
 #include "LogManager.h"
 #include "ClientManager.h"
 #include "SettingsManager.h"
+#include "ConfCore.h"
 
 #ifdef _WIN32
 static const int64_t MAX_MAPPED_FILE_SIZE = 2ll << 30;
@@ -75,7 +76,11 @@ void SharedFileHandle::init(int64_t fileSize)
 #ifdef _WIN32
 	if ((access == File::READ || access == File::RW) && fileSize && fileSize < MAX_MAPPED_FILE_SIZE)
 	{
-		if (BOOLSETTING(USE_MEMORY_MAPPED_FILES) && !path.empty() && !SharedFileStream::isBadDrive(path))
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		bool useMemoryMapped = ss->getBool(Conf::USE_MEMORY_MAPPED_FILES);
+		ss->unlockRead();
+		if (useMemoryMapped && !path.empty() && !SharedFileStream::isBadDrive(path))
 		{
 			mapping = CreateFileMapping(file.getHandle(), nullptr, access == File::READ ? PAGE_READONLY : PAGE_READWRITE, 0, fileSize, NULL);
 			if (mapping != nullptr)

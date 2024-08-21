@@ -6,6 +6,7 @@
 #include "DialogLayout.h"
 #include "ExMessageBox.h"
 #include "Fonts.h"
+#include "ConfUI.h"
 #include "../client/Util.h"
 #include "../client/SearchManager.h"
 #include "../client/BusyCounter.h"
@@ -137,7 +138,8 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			return 0;
 		}
 
-		lastSearches.addItem(ts, SETTING(SEARCH_HISTORY));
+		const auto* ss = SettingsManager::instance.getUiSettings();
+		lastSearches.addItem(ts, ss->getInt(Conf::SEARCH_HISTORY));
 		lastSearches.save(e_FileListSearchHistory);
 		options.text = std::move(text);
 		options.matchCase = ctrlMatchCase.GetCheck() == BST_CHECKED;
@@ -174,13 +176,14 @@ LRESULT SearchDlg::onClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 LRESULT SearchDlg::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	bool hasHistory = !lastSearches.empty();
-	if (hasHistory && BOOLSETTING(CONFIRM_CLEAR_SEARCH_HISTORY))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (hasHistory && ss->getBool(Conf::CONFIRM_CLEAR_SEARCH_HISTORY))
 	{
 		UINT check = BST_UNCHECKED;
 		if (MessageBoxWithCheck(m_hWnd, CTSTRING(CONFIRM_CLEAR_SEARCH), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION, check) != IDYES)
 			return 0;
 		if (check == BST_CHECKED)
-			SET_SETTING(CONFIRM_CLEAR_SEARCH_HISTORY, FALSE);
+			ss->setBool(Conf::CONFIRM_CLEAR_SEARCH_HISTORY, false);
 	}
 	ctrlText.ResetContent();
 	if (hasHistory)

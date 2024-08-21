@@ -5,8 +5,7 @@
 #include "ImageLists.h"
 #include "DialogLayout.h"
 #include "BrowseFile.h"
-
-extern SettingsManager *g_settings;
+#include "ConfUI.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -25,19 +24,19 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDC_USERLIST,           FLAG_TRANSLATE, AUTO,   UNSPEC             }
 };
 
-static const SettingsManager::IntSetting settings[] =
+static const int settings[] =
 {
-	SettingsManager::NORMAL_COLOR,
-	SettingsManager::FAVORITE_COLOR,
-	SettingsManager::FAV_BANNED_COLOR,
-	SettingsManager::RESERVED_SLOT_COLOR,
-	SettingsManager::IGNORED_COLOR,
-	SettingsManager::FIREBALL_COLOR,
-	SettingsManager::SERVER_COLOR,
-	SettingsManager::OP_COLOR,
-	SettingsManager::PASSIVE_COLOR,
-	SettingsManager::CHECKED_COLOR,
-	SettingsManager::CHECKED_FAIL_COLOR
+	Conf::NORMAL_COLOR,
+	Conf::FAVORITE_COLOR,
+	Conf::FAV_BANNED_COLOR,
+	Conf::RESERVED_SLOT_COLOR,
+	Conf::IGNORED_COLOR,
+	Conf::FIREBALL_COLOR,
+	Conf::SERVER_COLOR,
+	Conf::OP_COLOR,
+	Conf::PASSIVE_COLOR,
+	Conf::CHECKED_COLOR,
+	Conf::CHECKED_FAIL_COLOR
 };
 
 static const ResourceManager::Strings strings[] =
@@ -68,7 +67,8 @@ LRESULT UserListColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 
-	origImagePath = imagePath = Text::toT(g_settings->get(SettingsManager::USERLIST_IMAGE));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	origImagePath = imagePath = Text::toT(ss->getString(Conf::USERLIST_IMAGE));
 
 	ctrlList.Attach(GetDlgItem(IDC_USERLIST_COLORS));
 	ctrlPreview.Attach(GetDlgItem(IDC_PREVIEW));
@@ -80,7 +80,7 @@ LRESULT UserListColorsTab::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	ctrlHubPosition.Attach(GetDlgItem(IDC_HUB_POSITION_COMBO));
 	ctrlHubPosition.AddString(CTSTRING(POSITION_LEFT)); // 0
 	ctrlHubPosition.AddString(CTSTRING(POSITION_RIGHT)); // 1
-	ctrlHubPosition.SetCurSel(SETTING(HUB_POSITION));
+	ctrlHubPosition.SetCurSel(ss->getInt(Conf::HUB_POSITION));
 	
 	ctrlCustomImage.Attach(GetDlgItem(IDC_USERLIST));
 	ctrlImagePath.Attach(GetDlgItem(IDC_USERLIST_IMAGE));
@@ -146,7 +146,8 @@ LRESULT UserListColorsTab::onSetDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 {
 	int index = ctrlList.GetCurSel();
 	if (index == -1) return 0;
-	uint32_t color = static_cast<uint32_t>(g_settings->getDefault(settings[index]));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	uint32_t color = static_cast<uint32_t>(ss->getIntDefault(settings[index]));
 	if (colors[index] != color)
 	{
 		colors[index] = color;
@@ -176,22 +177,22 @@ void UserListColorsTab::refreshPreview()
 	ctrlPreview.InvalidateRect(NULL);
 }
 
-void UserListColorsTab::loadSettings()
+void UserListColorsTab::loadSettings(const BaseSettingsImpl* ss)
 {
 	for (int i = 0; i < numberOfColors; i++)
-		colors[i] = static_cast<uint32_t>(g_settings->get(settings[i]));
-	bg = g_settings->get(SettingsManager::BACKGROUND_COLOR);
+		colors[i] = static_cast<uint32_t>(ss->getInt(settings[i]));
+	bg = ss->getInt(Conf::BACKGROUND_COLOR);
 }
 
-void UserListColorsTab::saveSettings() const
+void UserListColorsTab::saveSettings(BaseSettingsImpl* ss) const
 {
 	const tstring& path = ctrlCustomImage.GetCheck() == BST_CHECKED ? imagePath : Util::emptyStringT;
-	g_settings->set(SettingsManager::USERLIST_IMAGE, Text::fromT(path));
+	ss->setString(Conf::USERLIST_IMAGE, Text::fromT(path));
 	for (int i = 0; i < numberOfColors; i++)
-		g_settings->set(settings[i], static_cast<int>(colors[i]));
-	
+		ss->setInt(settings[i], static_cast<int>(colors[i]));
+
 	if (path != origImagePath) g_userImage.reinit();
-	g_settings->set(SettingsManager::HUB_POSITION, ctrlHubPosition.GetCurSel());
+	ss->setInt(Conf::HUB_POSITION, ctrlHubPosition.GetCurSel());
 }
 
 void UserListColorsTab::getValues(SettingsStore& ss) const
@@ -205,7 +206,7 @@ void UserListColorsTab::setValues(const SettingsStore& ss)
 	int val;
 	for (int i = 0; i < numberOfColors; i++)
 		if (ss.getIntValue(settings[i], val)) colors[i] = val;
-	if (ss.getIntValue(SettingsManager::BACKGROUND_COLOR, val)) bg = val;
+	if (ss.getIntValue(Conf::BACKGROUND_COLOR, val)) bg = val;
 }
 
 void UserListColorsTab::updateTheme()

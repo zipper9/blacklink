@@ -23,6 +23,8 @@
 #include "MainFrm.h"
 #include "PopupManager.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
+#include "../client/ClientManager.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -48,33 +50,33 @@ static const WinUtil::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_POPUP_TIME, SettingsManager::POPUP_TIME, PropPage::T_INT },
-	{ IDC_POPUPFILE, SettingsManager::POPUP_IMAGE_FILE, PropPage::T_STR },
-	{ IDC_MAX_MSG_LENGTH, SettingsManager::POPUP_MAX_LENGTH, PropPage::T_INT },
-	{ IDC_POPUP_W, SettingsManager::POPUP_WIDTH, PropPage::T_INT },
-	{ IDC_POPUP_H, SettingsManager::POPUP_HEIGHT, PropPage::T_INT },
+	{ IDC_POPUP_TIME, Conf::POPUP_TIME, PropPage::T_INT },
+	{ IDC_POPUPFILE, Conf::POPUP_IMAGE_FILE, PropPage::T_STR },
+	{ IDC_MAX_MSG_LENGTH, Conf::POPUP_MAX_LENGTH, PropPage::T_INT },
+	{ IDC_POPUP_W, Conf::POPUP_WIDTH, PropPage::T_INT },
+	{ IDC_POPUP_H, Conf::POPUP_HEIGHT, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::POPUP_ON_HUB_CONNECTED, ResourceManager::POPUP_HUB_CONNECTED },
-	{ SettingsManager::POPUP_ON_HUB_DISCONNECTED, ResourceManager::POPUP_HUB_DISCONNECTED },
-	{ SettingsManager::POPUP_ON_FAVORITE_CONNECTED, ResourceManager::POPUP_FAVORITE_CONNECTED },
-	{ SettingsManager::POPUP_ON_FAVORITE_DISCONNECTED, ResourceManager::POPUP_FAVORITE_DISCONNECTED },
-	{ SettingsManager::POPUP_ON_CHEATING_USER, ResourceManager::POPUP_CHEATING_USER },
-	{ SettingsManager::POPUP_ON_CHAT_LINE, ResourceManager::POPUP_CHAT_LINE },
-	{ SettingsManager::POPUP_ON_DOWNLOAD_STARTED, ResourceManager::POPUP_DOWNLOAD_START },
-	{ SettingsManager::POPUP_ON_DOWNLOAD_FAILED, ResourceManager::POPUP_DOWNLOAD_FAILED },
-	{ SettingsManager::POPUP_ON_DOWNLOAD_FINISHED, ResourceManager::POPUP_DOWNLOAD_FINISHED },
-	{ SettingsManager::POPUP_ON_UPLOAD_FINISHED, ResourceManager::POPUP_UPLOAD_FINISHED },
-	{ SettingsManager::POPUP_ON_PM, ResourceManager::POPUP_PM },
-	{ SettingsManager::POPUP_ON_NEW_PM, ResourceManager::POPUP_NEW_PM },
-	{ SettingsManager::POPUP_PM_PREVIEW, ResourceManager::PM_PREVIEW },
+	{ Conf::POPUP_ON_HUB_CONNECTED, ResourceManager::POPUP_HUB_CONNECTED },
+	{ Conf::POPUP_ON_HUB_DISCONNECTED, ResourceManager::POPUP_HUB_DISCONNECTED },
+	{ Conf::POPUP_ON_FAVORITE_CONNECTED, ResourceManager::POPUP_FAVORITE_CONNECTED },
+	{ Conf::POPUP_ON_FAVORITE_DISCONNECTED, ResourceManager::POPUP_FAVORITE_DISCONNECTED },
+	{ Conf::POPUP_ON_CHEATING_USER, ResourceManager::POPUP_CHEATING_USER },
+	{ Conf::POPUP_ON_CHAT_LINE, ResourceManager::POPUP_CHAT_LINE },
+	{ Conf::POPUP_ON_DOWNLOAD_STARTED, ResourceManager::POPUP_DOWNLOAD_START },
+	{ Conf::POPUP_ON_DOWNLOAD_FAILED, ResourceManager::POPUP_DOWNLOAD_FAILED },
+	{ Conf::POPUP_ON_DOWNLOAD_FINISHED, ResourceManager::POPUP_DOWNLOAD_FINISHED },
+	{ Conf::POPUP_ON_UPLOAD_FINISHED, ResourceManager::POPUP_UPLOAD_FINISHED },
+	{ Conf::POPUP_ON_PM, ResourceManager::POPUP_PM },
+	{ Conf::POPUP_ON_NEW_PM, ResourceManager::POPUP_NEW_PM },
+	{ Conf::POPUP_PM_PREVIEW, ResourceManager::PM_PREVIEW },
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
-	{ SettingsManager::POPUP_ON_SEARCH_SPY, ResourceManager::POPUP_SEARCH_SPY },
+	{ Conf::POPUP_ON_SEARCH_SPY, ResourceManager::POPUP_SEARCH_SPY },
 #endif
-//	{ SettingsManager::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
+//	{ Conf::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -84,14 +86,15 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	WinUtil::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlPopups);
-	
+	const auto* ss = SettingsManager::instance.getUiSettings();
+
 	ctrlPopupType.Attach(GetDlgItem(IDC_POPUP_TYPE));
 	ctrlPopupType.AddString(CTSTRING(POPUP_BALOON));
 	ctrlPopupType.AddString(CTSTRING(POPUP_CUSTOM));
 	ctrlPopupType.AddString(CTSTRING(POPUP_SPLASH));
 	ctrlPopupType.AddString(CTSTRING(POPUP_WINDOW));
-	ctrlPopupType.SetCurSel(SETTING(POPUP_TYPE));
-	
+	ctrlPopupType.SetCurSel(ss->getInt(Conf::POPUP_TYPE));
+
 	CUpDownCtrl spin;
 	spin.Attach(GetDlgItem(IDC_POPUP_TIME_SPIN));
 	spin.SetBuddy(GetDlgItem(IDC_POPUP_TIME));
@@ -116,11 +119,12 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	slider = GetDlgItem(IDC_POPUP_TRANSP_SLIDER);
 	slider.SetRangeMin(50, TRUE);
 	slider.SetRangeMax(255, TRUE);
-	slider.SetPos(SETTING(POPUP_TRANSPARENCY));
-	
-	SetDlgItemText(IDC_POPUPFILE, Text::toT(SETTING(POPUP_IMAGE_FILE)).c_str());
-	
-	if (SETTING(POPUP_TYPE) == BALLOON)
+	slider.SetPos(ss->getInt(Conf::POPUP_TRANSPARENCY));
+
+	SetDlgItemText(IDC_POPUPFILE, Text::toT(ss->getString(Conf::POPUP_IMAGE_FILE)).c_str());
+
+	int popupType = ss->getInt(Conf::POPUP_TYPE);
+	if (popupType == BALLOON)
 	{
 		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
 		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), FALSE);
@@ -133,7 +137,7 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), FALSE);
 		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), FALSE);
 	}
-	else if (SETTING(POPUP_TYPE) == CUSTOM)
+	else if (popupType == CUSTOM)
 	{
 		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
 	}
@@ -143,9 +147,9 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), FALSE);
 	}
 	
-	CheckDlgButton(IDC_POPUP_ENABLE, SETTING(POPUPS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
-	CheckDlgButton(IDC_POPUP_AWAY, SETTING(POPUP_ONLY_WHEN_AWAY) ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(IDC_POPUP_MINIMIZED, SETTING(POPUP_ONLY_WHEN_MINIMIZED) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(IDC_POPUP_ENABLE, ss->getBool(Conf::POPUPS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
+	CheckDlgButton(IDC_POPUP_AWAY, ss->getBool(Conf::POPUP_ONLY_WHEN_AWAY) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(IDC_POPUP_MINIMIZED, ss->getBool(Conf::POPUP_ONLY_WHEN_MINIMIZED) ? BST_CHECKED : BST_UNCHECKED);
 	fixControls();
 	
 	return TRUE;
@@ -153,37 +157,40 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 LRESULT Popups::onBackColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	CColorDialog dlg(SETTING(POPUP_BACKCOLOR), CC_FULLOPEN);
+	auto ss = SettingsManager::instance.getUiSettings();
+	CColorDialog dlg(ss->getInt(Conf::POPUP_BACKCOLOR), CC_FULLOPEN);
 	if (dlg.DoModal() == IDOK)
-		SET_SETTING(POPUP_BACKCOLOR, (int)dlg.GetColor());
+		ss->setInt(Conf::POPUP_BACKCOLOR, (int) dlg.GetColor());
 	return 0;
 }
 
 LRESULT Popups::onFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	LOGFONT font  = {0};
-	Fonts::decodeFont(Text::toT(SETTING(POPUP_FONT)), font);
+	auto ss = SettingsManager::instance.getUiSettings();
+	LOGFONT font = {0};
+	Fonts::decodeFont(Text::toT(ss->getString(Conf::POPUP_FONT)), font);
 	CFontDialog dlg(&font, CF_EFFECTS | CF_SCREENFONTS | CF_FORCEFONTEXIST);
-	dlg.m_cf.rgbColors = SETTING(POPUP_TEXTCOLOR);
+	dlg.m_cf.rgbColors = ss->getInt(Conf::POPUP_TEXTCOLOR);
 	if (dlg.DoModal() == IDOK)
 	{
-		SET_SETTING(POPUP_TEXTCOLOR, (int)dlg.GetColor());
-		SET_SETTING(POPUP_FONT, Text::fromT(Fonts::encodeFont(font)));
+		ss->setInt(Conf::POPUP_TEXTCOLOR, (int) dlg.GetColor());
+		ss->setString(Conf::POPUP_FONT, Text::fromT(Fonts::encodeFont(font)));
 	}
 	return 0;
 }
 
 LRESULT Popups::onTitleFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto ss = SettingsManager::instance.getUiSettings();
 	LOGFONT tmp = myFont;
-	Fonts::decodeFont(Text::toT(SETTING(POPUP_TITLE_FONT)), tmp);
-	CFontDialog dlg(&tmp, CF_EFFECTS | CF_SCREENFONTS | CF_FORCEFONTEXIST); // !SMT!-F
-	dlg.m_cf.rgbColors = SETTING(POPUP_TITLE_TEXTCOLOR);
+	Fonts::decodeFont(Text::toT(ss->getString(Conf::POPUP_TITLE_FONT)), tmp);
+	CFontDialog dlg(&tmp, CF_EFFECTS | CF_SCREENFONTS | CF_FORCEFONTEXIST);
+	dlg.m_cf.rgbColors = ss->getInt(Conf::POPUP_TITLE_TEXTCOLOR);
 	if (dlg.DoModal() == IDOK)
 	{
 		myFont = tmp;
-		SET_SETTING(POPUP_TITLE_TEXTCOLOR, (int)dlg.GetColor());
-		SET_SETTING(POPUP_TITLE_FONT, Text::fromT(Fonts::encodeFont(myFont)));
+		ss->setInt(Conf::POPUP_TITLE_TEXTCOLOR, (int) dlg.GetColor());
+		ss->setString(Conf::POPUP_TITLE_FONT, Text::fromT(Fonts::encodeFont(myFont)));
 	}
 	return 0;
 }
@@ -195,15 +202,18 @@ LRESULT Popups::onPopupBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	if (WinUtil::browseFile(x, m_hWnd, false) == IDOK)
 	{
 		SetDlgItemText(IDC_POPUPFILE, x.c_str());
-		SET_SETTING(POPUP_IMAGE_FILE, Text::fromT(x));
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setString(Conf::POPUP_IMAGE_FILE, Text::fromT(x));
 	}
 	return 0;
 }
 
 LRESULT Popups::onTypeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	SET_SETTING(POPUP_TYPE, ctrlPopupType.GetCurSel());
-	if (ctrlPopupType.GetCurSel() == BALLOON)
+	int popupType = ctrlPopupType.GetCurSel();
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setInt(Conf::POPUP_TYPE, popupType);
+	if (popupType == BALLOON)
 	{
 		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
 		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), FALSE);
@@ -216,7 +226,7 @@ LRESULT Popups::onTypeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), FALSE);
 		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), FALSE);
 	}
-	else if (ctrlPopupType.GetCurSel() == CUSTOM)
+	else if (popupType == CUSTOM)
 	{
 		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
 		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), TRUE);
@@ -232,8 +242,8 @@ LRESULT Popups::onTypeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		::EnableWindow(GetDlgItem(IDC_POPUPFILE), FALSE);
 		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), FALSE);
 	}
-	
-	if (ctrlPopupType.GetCurSel() != BALLOON)
+
+	if (popupType != BALLOON)
 	{
 		::EnableWindow(GetDlgItem(IDC_POPUP_W), TRUE);
 		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), TRUE);
@@ -253,12 +263,13 @@ LRESULT Popups::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 void Popups::write()
 {
 	PropPage::write(*this, items, listItems, ctrlPopups);
-	
-	SET_SETTING(POPUP_TYPE, ctrlPopupType.GetCurSel());
-	SET_SETTING(POPUPS_DISABLED, IsDlgButtonChecked(IDC_POPUP_ENABLE) != BST_CHECKED);
-	SET_SETTING(POPUP_ONLY_WHEN_AWAY, IsDlgButtonChecked(IDC_POPUP_AWAY) == BST_CHECKED);
-	SET_SETTING(POPUP_ONLY_WHEN_MINIMIZED, IsDlgButtonChecked(IDC_POPUP_MINIMIZED) == BST_CHECKED);
-	SET_SETTING(POPUP_TRANSPARENCY, slider.GetPos());
+
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setInt(Conf::POPUP_TYPE, ctrlPopupType.GetCurSel());
+	ss->setBool(Conf::POPUPS_DISABLED, IsDlgButtonChecked(IDC_POPUP_ENABLE) != BST_CHECKED);
+	ss->setBool(Conf::POPUP_ONLY_WHEN_AWAY, IsDlgButtonChecked(IDC_POPUP_AWAY) == BST_CHECKED);
+	ss->setBool(Conf::POPUP_ONLY_WHEN_MINIMIZED, IsDlgButtonChecked(IDC_POPUP_MINIMIZED) == BST_CHECKED);
+	ss->setInt(Conf::POPUP_TRANSPARENCY, slider.GetPos());
 }
 
 void Popups::fixControls()
@@ -271,22 +282,26 @@ void Popups::fixControls()
 
 LRESULT Popups::onPreview(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int popupW = SETTING(POPUP_WIDTH);
-	int popupH = SETTING(POPUP_HEIGHT);
-	int popupTransp = SETTING(POPUP_TRANSPARENCY);
+	auto ss = SettingsManager::instance.getUiSettings();
+	int savedWidth = ss->getInt(Conf::POPUP_WIDTH);
+	int savedHeight = ss->getInt(Conf::POPUP_HEIGHT);
+	int savedTransparency = ss->getInt(Conf::POPUP_TRANSPARENCY);
+	int savedType = ss->getInt(Conf::POPUP_TYPE);
+
 	tstring buf;
 	WinUtil::getWindowText(GetDlgItem(IDC_POPUP_W), buf);
-	SET_SETTING(POPUP_WIDTH, Text::fromT(buf));
+	ss->setInt(Conf::POPUP_WIDTH, Util::toInt(buf));
 	WinUtil::getWindowText(GetDlgItem(IDC_POPUP_H), buf);
-	SET_SETTING(POPUP_HEIGHT, Text::fromT(buf));
-	SET_SETTING(POPUP_TRANSPARENCY, slider.GetPos());      //set from TrackBar position
-	SET_SETTING(POPUP_TYPE, ctrlPopupType.GetCurSel());
-	
+	ss->setInt(Conf::POPUP_HEIGHT, Util::toInt(buf));
+	ss->setInt(Conf::POPUP_TRANSPARENCY, slider.GetPos());
+	ss->setInt(Conf::POPUP_TYPE, ctrlPopupType.GetCurSel());
+
 	PopupManager::getInstance()->Show(TSTRING(FILE) + _T(": FlylinkDC++.7z\n") +
-	                                  TSTRING(USER) + _T(": ") + Text::toT(SETTING(NICK)), TSTRING(DOWNLOAD_FINISHED_IDLE), NIIF_INFO, true);
-	                                  
-	SET_SETTING(POPUP_WIDTH, popupW);
-	SET_SETTING(POPUP_HEIGHT, popupH);
-	SET_SETTING(POPUP_TRANSPARENCY, popupTransp);
+	                                  TSTRING(USER) + _T(": ") + Text::toT(ClientManager::getDefaultNick()), TSTRING(DOWNLOAD_FINISHED_IDLE), NIIF_INFO, true);
+
+	ss->setInt(Conf::POPUP_WIDTH, savedWidth);
+	ss->setInt(Conf::POPUP_HEIGHT, savedHeight);
+	ss->setInt(Conf::POPUP_TRANSPARENCY, savedTransparency);
+	ss->setInt(Conf::POPUP_TYPE, savedType);
 	return 0;
 }

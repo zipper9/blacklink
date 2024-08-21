@@ -21,6 +21,8 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
 #include "../client/File.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
@@ -43,8 +45,8 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_PRIVATE_MESSAGE_BEEP, SettingsManager::PRIVATE_MESSAGE_BEEP, PropPage::T_BOOL },
-	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, SettingsManager::PRIVATE_MESSAGE_BEEP_OPEN, PropPage::T_BOOL },
+	{ IDC_PRIVATE_MESSAGE_BEEP, Conf::PRIVATE_MESSAGE_BEEP, PropPage::T_BOOL },
+	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, Conf::PRIVATE_MESSAGE_BEEP_OPEN, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -55,21 +57,21 @@ struct
 	string value;
 } static currentSounds[] =
 {
-	{ ResourceManager::SOUND_DOWNLOAD_BEGINS,   SettingsManager::SOUND_BEGINFILE       },
-	{ ResourceManager::SOUND_DOWNLOAD_FINISHED, SettingsManager::SOUND_FINISHFILE      },
-	{ ResourceManager::SOUND_SOURCE_ADDED,      SettingsManager::SOUND_SOURCEFILE      },
-	{ ResourceManager::SOUND_UPLOAD_FINISHED,   SettingsManager::SOUND_UPLOADFILE      },
-	{ ResourceManager::SOUND_FAKER_FOUND,       SettingsManager::SOUND_FAKERFILE       },
-	{ ResourceManager::SETCZDC_PRIVATE_SOUND,   SettingsManager::SOUND_BEEPFILE        },
-	{ ResourceManager::MYNICK_IN_CHAT,          SettingsManager::SOUND_CHATNAMEFILE    },
-	{ ResourceManager::SOUND_TTH_INVALID,       SettingsManager::SOUND_TTH             },
-	{ ResourceManager::HUB_CONNECTED,           SettingsManager::SOUND_HUBCON          },
-	{ ResourceManager::HUB_DISCONNECTED,        SettingsManager::SOUND_HUBDISCON       },
-	{ ResourceManager::FAVUSER_ONLINE,          SettingsManager::SOUND_FAVUSER         },
-	{ ResourceManager::FAVUSER_OFFLINE,         SettingsManager::SOUND_FAVUSER_OFFLINE },
-	{ ResourceManager::SOUND_TYPING_NOTIFY,     SettingsManager::SOUND_TYPING_NOTIFY   },
+	{ ResourceManager::SOUND_DOWNLOAD_BEGINS,   Conf::SOUND_BEGINFILE       },
+	{ ResourceManager::SOUND_DOWNLOAD_FINISHED, Conf::SOUND_FINISHFILE      },
+	{ ResourceManager::SOUND_SOURCE_ADDED,      Conf::SOUND_SOURCEFILE      },
+	{ ResourceManager::SOUND_UPLOAD_FINISHED,   Conf::SOUND_UPLOADFILE      },
+	{ ResourceManager::SOUND_FAKER_FOUND,       Conf::SOUND_FAKERFILE       },
+	{ ResourceManager::SETCZDC_PRIVATE_SOUND,   Conf::SOUND_BEEPFILE        },
+	{ ResourceManager::MYNICK_IN_CHAT,          Conf::SOUND_CHATNAMEFILE    },
+	{ ResourceManager::SOUND_TTH_INVALID,       Conf::SOUND_TTH             },
+	{ ResourceManager::HUB_CONNECTED,           Conf::SOUND_HUBCON          },
+	{ ResourceManager::HUB_DISCONNECTED,        Conf::SOUND_HUBDISCON       },
+	{ ResourceManager::FAVUSER_ONLINE,          Conf::SOUND_FAVUSER         },
+	{ ResourceManager::FAVUSER_OFFLINE,         Conf::SOUND_FAVUSER_OFFLINE },
+	{ ResourceManager::SOUND_TYPING_NOTIFY,     Conf::SOUND_TYPING_NOTIFY   },
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
-	{ ResourceManager::SOUND_SEARCHSPY,         SettingsManager::SOUND_SEARCHSPY       }
+	{ ResourceManager::SOUND_SEARCHSPY,         Conf::SOUND_SEARCHSPY       }
 #endif
 };
 
@@ -97,12 +99,13 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items);
-	
+
 	ctrlSoundTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));
-	
+
 	getSoundThemeList();
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	int sel = -1;
-	const string& selTheme = SETTING(THEME_MANAGER_SOUNDS_THEME_NAME);
+	const string& selTheme = ss->getString(Conf::THEME_MANAGER_SOUNDS_THEME_NAME);
 	int index = 0;
 	for (const auto& theme : themes)
 	{
@@ -110,7 +113,7 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		if (theme.path == selTheme) sel = index;
 		index++;
 	}
-		
+
 	if (sel < 0)
 	{
 		ctrlSoundTheme.SetCurSel(0);
@@ -118,9 +121,9 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 	else
 		ctrlSoundTheme.SetCurSel(sel);
-	
-	CheckDlgButton(IDC_SOUND_ENABLE, SETTING(SOUNDS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
-	
+
+	CheckDlgButton(IDC_SOUND_ENABLE, ss->getBool(Conf::SOUNDS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
+
 	ctrlSounds.Attach(GetDlgItem(IDC_SOUNDLIST));
 	CRect rc;
 	ctrlSounds.GetClientRect(rc);
@@ -129,14 +132,14 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	ctrlSounds.InsertColumn(0, CTSTRING(SETTINGS_SOUNDS), LVCFMT_LEFT, (rc.Width() / 3) * 1, 0);
 	ctrlSounds.InsertColumn(1, CTSTRING(FILENAME), LVCFMT_LEFT, (rc.Width() / 3) * 2, 1);
-	
+
 	for (int i = 0; i < _countof(currentSounds); i++)
 	{
 		int j = ctrlSounds.insert(i, Text::toT(ResourceManager::getString(currentSounds[i].name)).c_str());
-		currentSounds[i].value = SettingsManager::get((SettingsManager::StrSetting) currentSounds[i].setting, true);
+		currentSounds[i].value = ss->getString(currentSounds[i].setting);
 		ctrlSounds.SetItemText(j, 1, Text::toT(currentSounds[i].value).c_str());
 	}
-	
+
 	fixControls();
 	return TRUE;
 }
@@ -144,12 +147,13 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 void Sounds::write()
 {
 	PropPage::write(*this, items);
-	
+
+	auto ss = SettingsManager::instance.getUiSettings();
 	for (int i = 0; i < _countof(currentSounds); i++)
-		g_settings->set(SettingsManager::StrSetting(currentSounds[i].setting), ctrlSounds.ExGetItemText(i, 1));
-	
-	SET_SETTING(SOUNDS_DISABLED, IsDlgButtonChecked(IDC_SOUND_ENABLE) == 1 ? false : true);
-	SET_SETTING(THEME_MANAGER_SOUNDS_THEME_NAME, getSelectedTheme());
+		ss->setString(currentSounds[i].setting, ctrlSounds.ExGetItemText(i, 1));
+
+	ss->setBool(Conf::SOUNDS_DISABLED, IsDlgButtonChecked(IDC_SOUND_ENABLE) != BST_CHECKED);
+	ss->setString(Conf::THEME_MANAGER_SOUNDS_THEME_NAME, getSelectedTheme());
 }
 
 LRESULT Sounds::onBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -208,7 +212,7 @@ void Sounds::setAllToDefault()
 {
 	tstring themePath = Text::toT(Util::getSoundsPath() + getSelectedTheme());
 	Util::appendPathSeparator(themePath);
-	
+
 	for (size_t i = 0; i < _countof(defaultSounds); ++i)
 	{
 		const tstring fullPath = themePath + defaultSounds[i];

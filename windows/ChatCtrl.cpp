@@ -18,6 +18,7 @@
 #include "ChatCtrl.h"
 #include "WinUtil.h"
 #include "Colors.h"
+#include "NotifUtil.h"
 #include "../client/OnlineUser.h"
 #include "../client/Client.h"
 #include <boost/algorithm/string.hpp>
@@ -65,7 +66,7 @@ ChatCtrl::~ChatCtrl()
 
 void ChatCtrl::adjustTextSize()
 {
-	int maxLines = SETTING(CHAT_BUFFER_SIZE);
+	int maxLines = SettingsManager::instance.getUiSettings()->getInt(Conf::CHAT_BUFFER_SIZE);
 	if (maxLines <= 0) return;
 	int lineCount = GetLineCount();
 	if (lineCount > maxLines)
@@ -174,13 +175,15 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	{
 		LOCK(csChatCache);
 		if (useChatCacheFlag)
 		{
 			chatCache.push_back(message);
 			chatCacheSize += message.length();
-			if (chatCacheSize + 1000 > (size_t) SETTING(CHAT_BUFFER_SIZE))
+			if (chatCacheSize + 1000 > (size_t) ss->getInt(Conf::CHAT_BUFFER_SIZE))
 			{
 				chatCacheSize -= chatCache.front().length();
 				chatCache.pop_front();
@@ -216,11 +219,12 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 		    message.isFavorite ? (message.isBanned ? Colors::TEXT_STYLE_BANNED_USER : Colors::TEXT_STYLE_FAV_USER) :
 		    message.isOp ? Colors::TEXT_STYLE_OP : Colors::TEXT_STYLE_OTHER_USER];
 		const CHARFORMAT2& cf = Colors::getCharFormat(message.textStyle);
+		const bool boldMsgAuthor = ss->getBool(Conf::BOLD_MSG_AUTHOR);
 		if (message.thirdPerson)
 		{
 			static const tstring strStar = _T("* ");
 			insertAndFormat(strStar, cf, selBegin, selEnd);
-			insertAndFormat(message.nick, currentCF, selBegin, selEnd, BOOLSETTING(BOLD_MSG_AUTHOR) ? CFE_BOLD : 0);
+			insertAndFormat(message.nick, currentCF, selBegin, selEnd, boldMsgAuthor ? CFE_BOLD : 0);
 			insertAndFormat(_T(" "), cf, selBegin, selEnd);
 		}
 		else
@@ -228,7 +232,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 			static const tstring strOpen = _T("<");
 			static const tstring strClose = _T("> ");
 			insertAndFormat(strOpen, cf, selBegin, selEnd);
-			insertAndFormat(message.nick, currentCF, selBegin, selEnd, BOOLSETTING(BOLD_MSG_AUTHOR) ? CFE_BOLD : 0);
+			insertAndFormat(message.nick, currentCF, selBegin, selEnd, boldMsgAuthor ? CFE_BOLD : 0);
 			insertAndFormat(strClose, cf, selBegin, selEnd);
 		}
 	}
@@ -256,9 +260,10 @@ void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsign
 
 void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	const auto& cf = message.myMessage ? Colors::charFormat[Colors::TEXT_STYLE_MY_MESSAGE] : Colors::getCharFormat(message.textStyle);
 #ifdef BL_UI_FEATURE_BB_CODES
-	const bool formatBBCodes = BOOLSETTING(FORMAT_BB_CODES) && (message.isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE));
+	const bool formatBBCodes = ss->getBool(Conf::FORMAT_BB_CODES) && (message.isRealUser || ss->getBool(Conf::FORMAT_BOT_MESSAGE));
 #else
 	const bool formatBBCodes = false;
 #endif
@@ -269,7 +274,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 	insertAndFormat(text, cf, startPos, endPos);
 
 #ifdef BL_UI_FEATURE_BB_CODES
-	bool acceptColors = BOOLSETTING(FORMAT_BB_CODES_COLORS);
+	bool acceptColors = ss->getBool(Conf::FORMAT_BB_CODES_COLORS);
 	for (auto& ti : chatTextParser.getTags())
 	{
 		if (ti.openTagStart == tstring::npos || ti.closeTagEnd == tstring::npos) continue;
@@ -307,7 +312,8 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 
 		if (pRichEditOle && SUCCEEDED(pRichEditOle->GetClientSite(&pOleClientSite)) && pOleClientSite)
 		{
-			IOleObject* pObject = ei.emoticon->getImageObject(BOOLSETTING(CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
+			IOleObject* pObject = ei.emoticon->getImageObject(
+				ss->getBool(Conf::CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
 				pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
 				Colors::charFormat[message.myMessage ? Colors::TEXT_STYLE_MY_MESSAGE : Colors::TEXT_STYLE_NORMAL].crBackColor,
 				ei.emoticon->getText());

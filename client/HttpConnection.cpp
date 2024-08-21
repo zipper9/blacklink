@@ -20,7 +20,7 @@
 #include "HttpConnection.h"
 #include "HttpHeaders.h"
 #include "BufferedSocket.h"
-#include "SettingsManager.h"
+#include "StrUtil.h"
 #include "UriUtil.h"
 #include "FormatUtil.h"
 #include "Text.h"

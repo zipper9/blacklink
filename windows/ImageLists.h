@@ -88,15 +88,17 @@ struct FileImage : public BaseImageList
 			return false;
 		}
 		
-		FileImage()
-#ifdef _DEBUG
-			: imageCount(-1)
-#endif
+		FileImage() : useSystemIcons(false)
 		{
+#ifdef _DEBUG
+			imageCount = -1;
+#endif
 		}
 		void init();
-	
+		void updateSettings();
+
 	private:
+		bool useSystemIcons;
 		int imageCount;
 		boost::unordered_map<string, int> iconCache;
 };

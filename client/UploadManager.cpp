@@ -19,6 +19,7 @@
 #include "stdinc.h"
 
 #include "UploadManager.h"
+#include "SettingsManager.h"
 #include "DownloadManager.h"
 #include "ConnectionManager.h"
 #include "ShareManager.h"
@@ -37,6 +38,7 @@
 #include "IpGrant.h"
 #include "Wildcards.h"
 #include "FilteredFile.h"
+#include "ConfCore.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK     = 3000;
 static const unsigned WAIT_TIME_OTHER_CHUNK    = 8000;
@@ -73,6 +75,7 @@ UploadManager::UploadManager() noexcept :
 	csReservedSlots = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
+	updateSettings();
 }
 
 UploadManager::~UploadManager()
@@ -186,9 +189,16 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	Transfer::Type type = Transfer::TYPE_FILE;
 	TTHValue tth;
 	if (isTTH)
-	{
 		tth = TTHValue(fileName.c_str() + 4);
-	}
+
+	// read settings
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool optExtraSlotToDl = ss->getBool(Conf::EXTRA_SLOT_TO_DL);
+	const int optMinislotSize = ss->getInt(Conf::MINISLOT_SIZE);
+	const int optExtraPartialSlots = ss->getInt(Conf::EXTRA_PARTIAL_SLOTS);
+	ss->unlockRead();
+
 	try
 	{
 		if (isTypeFile)
@@ -279,7 +289,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 						return false;
 					}
 
-					if (fileSize <= (int64_t)(SETTING(MINISLOT_SIZE)) << 10)
+					if (fileSize <= (int64_t) optMinislotSize << 10)
 						isMinislot = true;
 
 					f->setPos(start);
@@ -386,7 +396,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	if (!hasReserved)
 	{
 		if (slotTimeout) source->getUser()->unsetFlag(User::RESERVED_SLOT);
-		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::getInstance()->checkFileDownload(source->getUser());
+		hasReserved = optExtraSlotToDl && DownloadManager::getInstance()->checkFileDownload(source->getUser());
 	}
 	if (slotType == UserConnection::RESSLOT && !hasReserved)
 		slotType = UserConnection::NOSLOT;
@@ -405,7 +415,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 
 #ifdef SSA_IPGRANT_FEATURE
 		bool hasSlotByIP = false;
-		if (BOOLSETTING(EXTRA_SLOT_BY_IP))
+		if (optExtraSlotToDl)
 		{
 			if (!(hasReserved || isFavGrant || isAutoSlot || hasFreeSlot || isLeecher))
 			{
@@ -426,7 +436,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			{
 				slotType = UserConnection::MINISLOT;
 			}
-			else if (isPartial && (slotType == UserConnection::PFS_SLOT || extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)))
+			else if (isPartial && (slotType == UserConnection::PFS_SLOT || extraPartial < optExtraPartialSlots))
 			{
 				slotType = UserConnection::PFS_SLOT;
 			}
@@ -523,17 +533,10 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	return true;
 }
 
-bool UploadManager::isCompressedFile(const string& target)
+bool UploadManager::isCompressedFile(const string& target) noexcept
 {
-	string name = Util::getFileName(target);
-	const string& pattern = SETTING(COMPRESSED_FILES);
+	const string name = Util::getFileName(target);
 	csCompressedFiles.lock();
-	if (pattern != compressedFilesPattern)
-	{
-		compressedFilesPattern = pattern;
-		if (!Wildcards::regexFromPatternList(reCompressedFiles, compressedFilesPattern, true))
-			compressedFilesPattern.clear();
-	}
 	bool result = std::regex_match(name, reCompressedFiles);
 	csCompressedFiles.unlock();
 	return result;
@@ -541,18 +544,22 @@ bool UploadManager::isCompressedFile(const string& target)
 
 bool UploadManager::getAutoSlot(uint64_t tick) const
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int minUploadSpeed = ss->getInt(Conf::AUTO_SLOT_MIN_UL_SPEED);
+	int autoSlots = ss->getInt(Conf::AUTO_SLOTS);
+	ss->unlockRead();
 	/** A 0 in settings means disable */
-	if (SETTING(AUTO_SLOT_MIN_UL_SPEED) == 0)
+	if (minUploadSpeed == 0)
 		return false;
 	/** Max slots */
-	if (getSlots() + SETTING(AUTO_SLOTS) < g_running)
+	if (getSlots() + autoSlots < g_running)
 		return false;
 	/** Only grant one slot per 30 sec */
 	if (tick < getLastGrant() + 30 * 1000)
 		return false;
 	/** Grant if upload speed is less than the threshold speed */
-	return getRunningAverage() < SETTING(AUTO_SLOT_MIN_UL_SPEED) * 1024;
+	return getRunningAverage() < minUploadSpeed * 1024;
 }
 
 void UploadManager::shutdown()
@@ -628,7 +635,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 	}
 
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
-	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
+	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_SEND_GRANT_MSG)
 		ClientManager::privateMessage(hintedUser,
 			STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds),
 			ClientBase::PM_FLAG_AUTOMATIC | ClientBase::PM_FLAG_THIRD_PERSON);
@@ -646,7 +653,7 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	}
 	save();
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
-	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
+	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_SEND_GRANT_MSG)
 		ClientManager::privateMessage(hintedUser,
 			STRING(SLOT_REMOVED_MSG),
 			ClientBase::PM_FLAG_AUTOMATIC | ClientBase::PM_FLAG_THIRD_PERSON);
@@ -789,7 +796,16 @@ void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noex
 	getShareGroup(source, hideShare, shareGroup);
 
 	string errorText;
-	int compressionType = (SETTING(MAX_COMPRESSION) && c.hasFlag(TAG('Z', 'L'), 4)) ? COMPRESSION_CHECK_FILE_TYPE : COMPRESSION_DISABLED;
+	int compressionType = COMPRESSION_DISABLED;
+	if (c.hasFlag(TAG('Z', 'L'), 4))
+	{
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		if (ss->getInt(Conf::MAX_COMPRESSION))
+			compressionType = COMPRESSION_CHECK_FILE_TYPE;
+		ss->unlockRead();
+	}
+
 	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag(TAG('R', 'E'), 4), compressionType, errorText))
 	{
 		auto u = source->getUpload();
@@ -899,16 +915,21 @@ void UploadManager::transmitDone(UserConnection* source) noexcept
 
 void UploadManager::logUpload(const UploadPtr& upload)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (ClientManager::isBeforeShutdown())
+		return;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool logUploads = ss->getBool(Conf::LOG_UPLOADS);
+	const bool logFileLists = ss->getBool(Conf::LOG_FILELIST_TRANSFERS);
+	ss->unlockRead();
+	if (logUploads && upload->getType() != Transfer::TYPE_TREE && (logFileLists || upload->getType() != Transfer::TYPE_FULL_LIST))
 	{
-		if (BOOLSETTING(LOG_UPLOADS) && upload->getType() != Transfer::TYPE_TREE && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || upload->getType() != Transfer::TYPE_FULL_LIST))
-		{
-			StringMap params;
-			upload->getParams(params);
-			LOG(UPLOAD, params);
-		}
-		fire(UploadManagerListener::Complete(), upload);
+		StringMap params;
+		upload->getParams(params);
+		LOG(UPLOAD, params);
 	}
+	fire(UploadManagerListener::Complete(), upload);
 }
 
 size_t UploadManager::addToQueue(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags)
@@ -1115,10 +1136,15 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 			tmpUsers.clear();
 		}
 
-		if (BOOLSETTING(AUTO_KICK))
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		const bool autoKick = ss->getBool(Conf::AUTO_KICK);
+		const bool autoKickNoFavs = ss->getBool(Conf::AUTO_KICK_NO_FAVS);
+		ss->unlockRead();
+
+		if (autoKick)
 		{
 			READ_LOCK(*csFinishedUploads);
-			
 			for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 			{
 				if (auto u = *i)
@@ -1134,7 +1160,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 						disconnects.push_back(u->getUser());
 						continue;
 					}
-					if (BOOLSETTING(AUTO_KICK_NO_FAVS) && (u->getUser()->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE)
+					if (autoKickNoFavs && (u->getUser()->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE)
 					{
 						continue;
 					}
@@ -1371,12 +1397,38 @@ void UploadManager::load()
 	testSlotTimeout();
 }
 
-int UploadManager::getSlots()
+int UploadManager::getSlots() noexcept
 {
-	return std::max(SETTING(SLOTS), std::max(SETTING(HUB_SLOTS), 0) * Client::getTotalCounts());
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const int slots = ss->getInt(Conf::SLOTS);
+	const int hubSlots = ss->getInt(Conf::HUB_SLOTS);
+	ss->unlockRead();
+	return std::max(slots, std::max(hubSlots, 0) * Client::getTotalCounts());
 }
 
 int UploadManager::getFreeExtraSlots() const
 {
-	return std::max(SETTING(EXTRA_SLOTS) - getExtra(), 0);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const int extraSlots = ss->getInt(Conf::EXTRA_SLOTS);
+	ss->unlockRead();
+	return std::max(extraSlots - getExtra(), 0);
+}
+
+void UploadManager::updateSettings() noexcept
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string pattern = ss->getString(Conf::COMPRESSED_FILES);
+	ss->unlockRead();
+
+	csCompressedFiles.lock();
+	if (pattern != compressedFilesPattern)
+	{
+		compressedFilesPattern = std::move(pattern);
+		if (!Wildcards::regexFromPatternList(reCompressedFiles, compressedFilesPattern, true))
+			compressedFilesPattern.clear();
+	}
+	csCompressedFiles.unlock();
 }

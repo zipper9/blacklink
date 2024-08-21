@@ -19,7 +19,8 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 
 			ItemInfo(RecentHubEntry* entry) : entry(entry) {}
 			tstring getText(uint8_t col) const;
-			static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
+			static int compareItems(const ItemInfo* a, const ItemInfo* b, int col, int /*flags*/);
+			static int getCompareFlags() { return 0; }
 			static int getImageIndex() { return 0; }
 			static int getStateImageIndex() { return 0; }
 		};
@@ -131,7 +132,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		void on(RecentRemoved, const RecentHubEntry* entry) noexcept override;
 		void on(RecentUpdated, const RecentHubEntry* entry) noexcept override;
 
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 };
 
 #endif

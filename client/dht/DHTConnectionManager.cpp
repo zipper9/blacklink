@@ -17,7 +17,6 @@
  */
 
 #include "stdinc.h"
-
 #include "Constants.h"
 #include "DHTConnectionManager.h"
 #include "DHT.h"
@@ -25,7 +24,9 @@
 #include "../ClientManager.h"
 #include "../ConnectionManager.h"
 #include "../CryptoManager.h"
+#include "../SettingsManager.h"
 #include "../AdcSupports.h"
+#include "../ConfCore.h"
 
 namespace dht
 {
@@ -37,8 +38,14 @@ namespace dht
 	{
 		bool useTLS = CryptoManager::getInstance()->isInitialized() &&
 			(node->getUser()->getFlags() & User::TLS) != 0;
-		if (useTLS && node->getIdentity().getStringParam("KP").empty() && !BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS))
-			useTLS = false;
+		if (useTLS && node->getIdentity().getStringParam("KP").empty())
+		{
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			if (!ss->getBool(Conf::ALLOW_UNTRUSTED_CLIENTS))
+				useTLS = false;
+			ss->unlockRead();
+		}
 		connect(node, token, useTLS, false);
 	}
 

@@ -20,6 +20,7 @@
 
 #include "MagnetDlg.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/PathUtil.h"
@@ -29,24 +30,25 @@
 
 static void saveAction(int flags, int action)
 {
-	SettingsManager::IntSetting askSetting, setting;
+	int askSetting, setting;
 	if (flags & MagnetDlg::FLAG_ALREADY_SHARED)
 	{
-		askSetting = SettingsManager::SHARED_MAGNET_ASK;
-		setting = SettingsManager::SHARED_MAGNET_ACTION;
+		askSetting = Conf::SHARED_MAGNET_ASK;
+		setting = Conf::SHARED_MAGNET_ACTION;
 	}
 	else if (flags & MagnetDlg::FLAG_DCLST)
 	{
-		askSetting = SettingsManager::DCLST_ASK;
-		setting = SettingsManager::DCLST_ACTION;
+		askSetting = Conf::DCLST_ASK;
+		setting = Conf::DCLST_ACTION;
 	}
 	else
 	{
-		askSetting = SettingsManager::MAGNET_ASK;
-		setting = SettingsManager::MAGNET_ACTION;
+		askSetting = Conf::MAGNET_ASK;
+		setting = Conf::MAGNET_ACTION;
 	}
-	SettingsManager::set(askSetting, FALSE);
-	SettingsManager::set(setting, action);
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(askSetting, false);
+	ss->setInt(setting, action);
 }
 
 #ifdef OSVER_WIN_XP
@@ -136,13 +138,13 @@ LRESULT ClassicMagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		{
 			int action = -1;
 			if (IsDlgButtonChecked(IDC_MAGNET_QUEUE))
-				action = SettingsManager::MAGNET_ACTION_DOWNLOAD;
+				action = Conf::MAGNET_ACTION_DOWNLOAD;
 			else if (IsDlgButtonChecked(IDC_MAGNET_SEARCH))
-				action = SettingsManager::MAGNET_ACTION_SEARCH;
+				action = Conf::MAGNET_ACTION_SEARCH;
 			else if (IsDlgButtonChecked(IDC_MAGNET_OPEN))
 				action = (flags & MagnetDlg::FLAG_ALREADY_SHARED) ?
-					SettingsManager::MAGNET_ACTION_OPEN_EXISTING :
-					SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN;
+					Conf::MAGNET_ACTION_OPEN_EXISTING :
+					Conf::MAGNET_ACTION_DOWNLOAD_AND_OPEN;
 			if (action != -1)
 				saveAction(flags, action);
 		}
@@ -337,16 +339,16 @@ WinUtil::DefinedMagnetAction MagnetDlg::showDialog(HWND hWndParent, int flags, c
 		case IDC_MAGNET_OPEN:
 			result = WinUtil::MA_OPEN;
 			action = (flags & FLAG_ALREADY_SHARED) ?
-				SettingsManager::MAGNET_ACTION_OPEN_EXISTING :
-				SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN;
+				Conf::MAGNET_ACTION_OPEN_EXISTING :
+				Conf::MAGNET_ACTION_DOWNLOAD_AND_OPEN;
 			break;
 		case IDC_MAGNET_QUEUE:
 			result = WinUtil::MA_DOWNLOAD;
-			action = SettingsManager::MAGNET_ACTION_DOWNLOAD;
+			action = Conf::MAGNET_ACTION_DOWNLOAD;
 			break;
 		case IDC_MAGNET_SEARCH:
 			result = WinUtil::MA_SEARCH;
-			action = SettingsManager::MAGNET_ACTION_SEARCH;
+			action = Conf::MAGNET_ACTION_SEARCH;
 	}
 	if (flagChecked && action != -1)
 		saveAction(flags, action);

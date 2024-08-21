@@ -20,7 +20,9 @@
 #include "AdvancedPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -40,23 +42,23 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_EWMAGNET_TEMPL, SettingsManager::WMLINK_TEMPLATE, PropPage::T_STR},
-	{ IDC_RATIOMSG, SettingsManager::RATIO_MESSAGE, PropPage::T_STR},
-	{ IDC_THOLD, SettingsManager::USER_THRESHOLD, PropPage::T_INT },
+	{ IDC_EWMAGNET_TEMPL, Conf::WMLINK_TEMPLATE, PropPage::T_STR},
+	{ IDC_RATIOMSG, Conf::RATIO_MESSAGE, PropPage::T_STR},
+	{ IDC_THOLD, Conf::USER_THRESHOLD, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
-	{ SettingsManager::AUTO_KICK, ResourceManager::SETTINGS_AUTO_KICK },
-	{ SettingsManager::AUTO_KICK_NO_FAVS, ResourceManager::SETTINGS_AUTO_KICK_NO_FAVS },
-	{ SettingsManager::AUTO_CHANGE_NICK, ResourceManager::SETTINGS_AUTO_CHANGE_NICK },
-	{ SettingsManager::USE_MEMORY_MAPPED_FILES, ResourceManager::SETTINGS_USE_MM_FILES },
-	{ SettingsManager::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, ResourceManager::REDUCE_PRIORITY_IF_MINIMIZED },
-	{ SettingsManager::USE_MAGNETS_IN_PLAYERS_SPAM, ResourceManager::USE_MAGNETS_IN_PLAYERS_SPAM },
-	{ SettingsManager::USE_BITRATE_FIX_FOR_SPAM, ResourceManager::USE_BITRATE_FIX_FOR_SPAM },
+	{ Conf::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
+	{ Conf::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
+	{ Conf::AUTO_KICK, ResourceManager::SETTINGS_AUTO_KICK },
+	{ Conf::AUTO_KICK_NO_FAVS, ResourceManager::SETTINGS_AUTO_KICK_NO_FAVS },
+	{ Conf::AUTO_CHANGE_NICK, ResourceManager::SETTINGS_AUTO_CHANGE_NICK },
+	{ Conf::USE_MEMORY_MAPPED_FILES, ResourceManager::SETTINGS_USE_MM_FILES },
+	{ Conf::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, ResourceManager::REDUCE_PRIORITY_IF_MINIMIZED },
+	{ Conf::USE_MAGNETS_IN_PLAYERS_SPAM, ResourceManager::USE_MAGNETS_IN_PLAYERS_SPAM },
+	{ Conf::USE_BITRATE_FIX_FOR_SPAM, ResourceManager::USE_BITRATE_FIX_FOR_SPAM },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -64,14 +66,15 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
-	
-	curSel = SETTING(MEDIA_PLAYER);
-	WMPlayerStr = Text::toT(SETTING(WMP_FORMAT));
-	WinampStr = Text::toT(SETTING(WINAMP_FORMAT));
-	iTunesStr = Text::toT(SETTING(ITUNES_FORMAT));
-	MPCStr = Text::toT(SETTING(MPLAYERC_FORMAT));
-	JAStr = Text::toT(SETTING(JETAUDIO_FORMAT));
-	QCDQMPStr = Text::toT(SETTING(QCDQMP_FORMAT));
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	curSel = ss->getInt(Conf::MEDIA_PLAYER);
+	WMPlayerStr = Text::toT(ss->getString(Conf::WMP_FORMAT));
+	WinampStr = Text::toT(ss->getString(Conf::WINAMP_FORMAT));
+	iTunesStr = Text::toT(ss->getString(Conf::ITUNES_FORMAT));
+	MPCStr = Text::toT(ss->getString(Conf::MPLAYERC_FORMAT));
+	JAStr = Text::toT(ss->getString(Conf::JETAUDIO_FORMAT));
+	QCDQMPStr = Text::toT(ss->getString(Conf::QCDQMP_FORMAT));
 	
 	ctrlList.Attach(GetDlgItem(IDC_ADVANCED_BOOLEANS));
 	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
@@ -87,22 +90,22 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	
 	switch (curSel)
 	{
-		case SettingsManager::WinAmp:
+		case Conf::WinAmp:
 			SetDlgItemText(IDC_WINAMP, WinampStr.c_str());
 			break;
-		case SettingsManager::WinMediaPlayer:
+		case Conf::WinMediaPlayer:
 			SetDlgItemText(IDC_WINAMP, WMPlayerStr.c_str());
 			break;
-		case SettingsManager::iTunes:
+		case Conf::iTunes:
 			iTunesStr = SetDlgItemText(IDC_WINAMP, iTunesStr.c_str());
 			break;
-		case SettingsManager::WinMediaPlayerClassic:
+		case Conf::WinMediaPlayerClassic:
 			SetDlgItemText(IDC_WINAMP, MPCStr.c_str());
 			break;
-		case SettingsManager::JetAudio:
+		case Conf::JetAudio:
 			SetDlgItemText(IDC_WINAMP, JAStr.c_str());
 			break;
-		case SettingsManager::QCDQMP:
+		case Conf::QCDQMP:
 			SetDlgItemText(IDC_WINAMP, QCDQMPStr.c_str());
 			break;
 		default:
@@ -119,61 +122,62 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 void AdvancedPage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
-	
+
 	tstring buf;
 	WinUtil::getWindowText(ctrlFormat, buf);
-	
+
 	switch (curSel)
 	{
-		case SettingsManager::WinAmp:
+		case Conf::WinAmp:
 			WinampStr = buf;
 			break;
-		case SettingsManager::WinMediaPlayer:
+		case Conf::WinMediaPlayer:
 			WMPlayerStr = buf;
 			break;
-		case SettingsManager::iTunes:
+		case Conf::iTunes:
 			iTunesStr = buf;
 			break;
-		case SettingsManager::WinMediaPlayerClassic:
+		case Conf::WinMediaPlayerClassic:
 			MPCStr = buf;
 			break;
-		case SettingsManager::JetAudio:
+		case Conf::JetAudio:
 			JAStr = buf;
 			break;
-		case SettingsManager::QCDQMP:
+		case Conf::QCDQMP:
 			QCDQMPStr = buf;
 			break;
 	}
 	
-	SET_SETTING(MEDIA_PLAYER, ctrlPlayer.GetCurSel());
-	SET_SETTING(WINAMP_FORMAT, Text::fromT(WinampStr).c_str());
-	SET_SETTING(WMP_FORMAT, Text::fromT(WMPlayerStr).c_str());
-	SET_SETTING(ITUNES_FORMAT, Text::fromT(iTunesStr).c_str());
-	SET_SETTING(MPLAYERC_FORMAT, Text::fromT(MPCStr).c_str());
-	SET_SETTING(JETAUDIO_FORMAT, Text::fromT(JAStr).c_str());
-	SET_SETTING(QCDQMP_FORMAT, Text::fromT(QCDQMPStr).c_str());
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setInt(Conf::MEDIA_PLAYER, ctrlPlayer.GetCurSel());
+	ss->setString(Conf::WINAMP_FORMAT, Text::fromT(WinampStr).c_str());
+	ss->setString(Conf::WMP_FORMAT, Text::fromT(WMPlayerStr).c_str());
+	ss->setString(Conf::ITUNES_FORMAT, Text::fromT(iTunesStr).c_str());
+	ss->setString(Conf::MPLAYERC_FORMAT, Text::fromT(MPCStr).c_str());
+	ss->setString(Conf::JETAUDIO_FORMAT, Text::fromT(JAStr).c_str());
+	ss->setString(Conf::QCDQMP_FORMAT, Text::fromT(QCDQMPStr).c_str());
 }
 
 LRESULT AdvancedPage::onClickedWinampHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
 	switch (curSel)
 	{
-		case SettingsManager::WinAmp:
+		case Conf::WinAmp:
 			MessageBox(CTSTRING(WINAMP_HELP), CTSTRING(WINAMP_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 			break;
-		case SettingsManager::WinMediaPlayer:
+		case Conf::WinMediaPlayer:
 			MessageBox(CTSTRING(WMP_HELP_STR), CTSTRING(WMP_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 			break;
-		case SettingsManager::iTunes:
+		case Conf::iTunes:
 			MessageBox(CTSTRING(ITUNES_HELP), CTSTRING(ITUNES_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 			break;
-		case SettingsManager::WinMediaPlayerClassic:
+		case Conf::WinMediaPlayerClassic:
 			MessageBox(CTSTRING(MPC_HELP), CTSTRING(MPC_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 			break;
-		case SettingsManager::JetAudio:
+		case Conf::JetAudio:
 			MessageBox(CTSTRING(JA_HELP), CTSTRING(JA_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 			break;
-		case SettingsManager::QCDQMP:
+		case Conf::QCDQMP:
 			MessageBox(CTSTRING(QCDQMP_HELP), CTSTRING(QCDQMP_HELP_DESC), MB_OK | MB_ICONINFORMATION);
 			break;
 	}
@@ -194,56 +198,54 @@ LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* 
 	
 	switch (curSel)
 	{
-		case SettingsManager::WinAmp:
+		case Conf::WinAmp:
 			WinampStr = buf;
 			break;
-		case SettingsManager::WinMediaPlayer:
+		case Conf::WinMediaPlayer:
 			WMPlayerStr = buf;
 			break;
-		case SettingsManager::iTunes:
+		case Conf::iTunes:
 			iTunesStr = buf;
 			break;
-		case SettingsManager::WinMediaPlayerClassic:
+		case Conf::WinMediaPlayerClassic:
 			MPCStr = buf;
 			break;
-		case SettingsManager::JetAudio:
+		case Conf::JetAudio:
 			JAStr = buf;
 			break;
-		case SettingsManager::QCDQMP:
+		case Conf::QCDQMP:
 			QCDQMPStr = buf;
 			break;
 	}
-	
+
 	curSel = ctrlPlayer.GetCurSel();
 	switch (curSel)
 	{
-		case SettingsManager::WinAmp:
+		case Conf::WinAmp:
 			SetDlgItemText(IDC_WINAMP, WinampStr.c_str());
 			break;
-		case SettingsManager::WinMediaPlayer:
+		case Conf::WinMediaPlayer:
 			SetDlgItemText(IDC_WINAMP, WMPlayerStr.c_str());
 			break;
-		case SettingsManager::iTunes:
+		case Conf::iTunes:
 			SetDlgItemText(IDC_WINAMP, iTunesStr.c_str());
 			break;
-		case SettingsManager::WinMediaPlayerClassic:
+		case Conf::WinMediaPlayerClassic:
 			SetDlgItemText(IDC_WINAMP, MPCStr.c_str());
 			break;
-		case SettingsManager::JetAudio:
+		case Conf::JetAudio:
 			SetDlgItemText(IDC_WINAMP, JAStr.c_str());
 			break;
-		case SettingsManager::QCDQMP:
+		case Conf::QCDQMP:
 			SetDlgItemText(IDC_WINAMP, QCDQMPStr.c_str());
 			break;
 		default:
-		{
 			SetDlgItemText(IDC_WINAMP, CTSTRING(NO_MEDIA_SPAM));
-		}
-		break;
+			break;
 	}
-	
-	BOOL isPlayerSelected = (curSel >= SettingsManager::WinAmp && curSel < SettingsManager::PlayersCount) ? TRUE : FALSE;
-	
+
+	BOOL isPlayerSelected = (curSel >= Conf::WinAmp && curSel < Conf::NumPlayers) ? TRUE : FALSE;
+
 	::EnableWindow(GetDlgItem(IDC_WINAMP), isPlayerSelected);
 	::EnableWindow(GetDlgItem(IDC_WINAMP_HELP), isPlayerSelected);
 	

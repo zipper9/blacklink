@@ -20,8 +20,10 @@
 #include "SDCPage.h"
 #include "DialogLayout.h"
 #include "KnownClients.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/Text.h"
+#include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -72,16 +74,16 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_BUFFERSIZE, SettingsManager::BUFFER_SIZE_FOR_DOWNLOADS, PropPage::T_INT },
-	{ IDC_SOCKET_IN_BUFFER, SettingsManager::SOCKET_IN_BUFFER, PropPage::T_INT },
-	{ IDC_SOCKET_OUT_BUFFER, SettingsManager::SOCKET_OUT_BUFFER, PropPage::T_INT },
-	{ IDC_SHUTDOWN_TIMEOUT, SettingsManager::SHUTDOWN_TIMEOUT, PropPage::T_INT },
-	{ IDC_ENABLE_ZLIB_COMP, SettingsManager::COMPRESS_TRANSFERS, PropPage::T_BOOL },
-	{ IDC_MAX_COMPRESSION, SettingsManager::MAX_COMPRESSION, PropPage::T_INT },
-	{ IDC_COMPRESSED_PATTERN, SettingsManager::COMPRESSED_FILES, PropPage::T_STR },
-	{ IDC_DOWNCONN, SettingsManager::DOWNCONN_PER_SEC, PropPage::T_INT },
-	{ IDC_MIN_MULTI_CHUNK_SIZE, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT },
-	{ IDC_HTTP_USER_AGENT, SettingsManager::HTTP_USER_AGENT, PropPage::T_STR },
+	{ IDC_BUFFERSIZE, Conf::BUFFER_SIZE_FOR_DOWNLOADS, PropPage::T_INT },
+	{ IDC_SOCKET_IN_BUFFER, Conf::SOCKET_IN_BUFFER, PropPage::T_INT },
+	{ IDC_SOCKET_OUT_BUFFER, Conf::SOCKET_OUT_BUFFER, PropPage::T_INT },
+	{ IDC_SHUTDOWN_TIMEOUT, Conf::SHUTDOWN_TIMEOUT, PropPage::T_INT },
+	{ IDC_ENABLE_ZLIB_COMP, Conf::COMPRESS_TRANSFERS, PropPage::T_BOOL },
+	{ IDC_MAX_COMPRESSION, Conf::MAX_COMPRESSION, PropPage::T_INT },
+	{ IDC_COMPRESSED_PATTERN, Conf::COMPRESSED_FILES, PropPage::T_STR },
+	{ IDC_DOWNCONN, Conf::DOWNCONN_PER_SEC, PropPage::T_INT },
+	{ IDC_MIN_MULTI_CHUNK_SIZE, Conf::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT },
+	{ IDC_HTTP_USER_AGENT, Conf::HTTP_USER_AGENT, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -117,7 +119,8 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlShutdownAction.AddString(CTSTRING(LOCK_COMPUTER));
 
 	PropPage::read(*this, items);
-	ctrlShutdownAction.SetCurSel(SETTING(SHUTDOWN_ACTION));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	ctrlShutdownAction.SetCurSel(ss->getInt(Conf::SHUTDOWN_ACTION));
 
 #ifdef OSVER_WIN_XP
 	BOOL enable = !SysVersion::isOsVistaPlus();
@@ -148,5 +151,6 @@ void SDCPage::fixControls()
 void SDCPage::write()
 {
 	PropPage::write(*this, items);
-	SET_SETTING(SHUTDOWN_ACTION, ctrlShutdownAction.GetCurSel());
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setInt(Conf::SHUTDOWN_ACTION, ctrlShutdownAction.GetCurSel());
 }

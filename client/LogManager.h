@@ -59,15 +59,26 @@ class LogManager
 			FLAG_IN  = 1,
 			FLAG_UDP = 2
 		};
-		             
+
+		enum
+		{
+			OPT_LOG_SYSTEM       = 0x001,
+			OPT_LOG_STATUS       = 0x002,
+			OPT_LOG_SOCKET_INFO  = 0x004,
+			OPT_LOG_TCP_MESSAGES = 0x008, // BOOLSETTING(LOG_TCP_MESSAGES)
+			OPT_LOG_UDP_PACKETS  = 0x010,
+			OPT_LOG_CERTIFICATES = 0x020,
+			OPT_LOG_PSR          = 0x040,
+			OPT_LOG_DHT          = 0x080, // BOOLSETTING(LOG_DHT_TRACE)
+			OPT_LOG_SEARCH       = 0x100,
+			OPT_LOG_SQLITE       = 0x200,
+			OPT_LOG_WEB_SERVER   = 0x400  // BOOLSETTING(LOG_WEBSERVER)
+		};
+
 		static void init();
 		static void log(int area, const string& msg) noexcept;
 		static void log(int area, const StringMap& params) noexcept;
 		static void log(int area, Util::ParamExpander* ex) noexcept;
-		static void flood_message(const string& message) noexcept;
-#ifdef FLYLINKDC_USE_TORRENT
-		static void torrent_message(const string& message, bool addToSystem = true) noexcept;
-#endif
 		static void message(const string& msg, bool useStatus = true) noexcept;
 		static void commandTrace(const string& msg, int flags, const string& ip, int port) noexcept;
 		static void speakStatusMessage(const string& message) noexcept;
@@ -75,6 +86,9 @@ class LogManager
 		static void setOptions(int area, const TStringPair& p) noexcept;
 		static void closeOldFiles(int64_t now) noexcept;
 		static string getLogFileName(int area, const StringMap& params) noexcept;
+		static int getLogOptions() noexcept { return options.load(); }
+		static void updateSettings() noexcept;
+		static string getLogDirectory() noexcept;
 
 #ifdef _WIN32
 		static HWND g_mainWnd;
@@ -85,7 +99,8 @@ class LogManager
 	private:
 		static bool g_isInit;
 		static int64_t nextCloseTime;
-		
+		static std::atomic_int options;
+
 		LogManager();
 		~LogManager()
 		{
@@ -105,6 +120,8 @@ class LogManager
 		{
 			CriticalSection cs;
 			boost::unordered_map<string, LogFile> files;
+			string logDirectory;
+			string filenameTemplate;
 			int fileOption;
 			int formatOption;
 		};

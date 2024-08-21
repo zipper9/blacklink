@@ -22,6 +22,7 @@
 #include "ShareManager.h"
 #include "SearchResult.h"
 #include "QueueManager.h"
+#include "SettingsManager.h"
 #include "SimpleStringTokenizer.h"
 #include "FinishedManager.h"
 #include "DebugManager.h"
@@ -30,6 +31,8 @@
 #include "LogManager.h"
 #include "NetworkUtil.h"
 #include "NetworkDevices.h"
+#include "SettingsUtil.h"
+#include "ConfCore.h"
 #include "dht/DHT.h"
 
 uint16_t SearchManager::udpPort = 0;
@@ -61,21 +64,29 @@ ResourceManager::Strings SearchManager::getTypeStr(int type)
 	return types[type];
 }
 
-SearchManager::SearchManager(): stopFlag(false), failed{false, false}
+SearchManager::SearchManager(): stopFlag(false), failed{false, false}, options(0)
 {
 #ifdef _WIN32
 	events[EVENT_COMMAND].create();
 #else
 	threadId = 0;
 #endif
+	updateSettings();
 }
 
 void SearchManager::listenUDP(int af)
 {
 	int index = af == AF_INET6 ? 1 : 0;
-	SettingsManager::IPSettings ips;
-	SettingsManager::getIPSettings(ips, af == AF_INET6);
-	bool autoDetectFlag = SettingsManager::getBool(ips.autoDetect);
+	Conf::IPSettings ips;
+	Conf::getIPSettings(ips, af == AF_INET6);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool autoDetectFlag = ss->getBool(ips.autoDetect);
+	const int portSetting = ss->getInt(Conf::UDP_PORT);
+	const int bindOptions = ss->getInt(ips.bindOptions);
+	const string bindDev = ss->getString(ips.bindDevice);
+	const string bindAddr = ss->getString(ips.bindAddress);
+	ss->unlockRead();
 #ifdef _WIN32
 	events[index].create();
 #endif
@@ -83,29 +94,25 @@ void SearchManager::listenUDP(int af)
 	{
 		sockets[index].reset(new Socket);
 		sockets[index]->create(af, Socket::TYPE_UDP);
-		sockets[index]->setInBufSize();
+		sockets[index]->setBufSize(Socket::IN_BUFFER);
 
 		IpAddressEx bindIp;
 		memset(&bindIp, 0, sizeof(bindIp));
 		if (autoDetectFlag)
 		{
 			bindIp.type = af;
-			int port = SETTING(UDP_PORT);
-			udpPort = sockets[index]->bind(static_cast<uint16_t>(port), bindIp);
+			udpPort = sockets[index]->bind(static_cast<uint16_t>(portSetting), bindIp);
 		}
 		else
 		{
-			int options = SettingsManager::get(ips.bindOptions);
-			if (options & SettingsManager::BIND_OPTION_USE_DEV)
+			if (bindOptions & Conf::BIND_OPTION_USE_DEV)
 			{
-				string bindDev = SettingsManager::get(ips.bindDevice);
-				if (!bindDev.empty() && !networkDevices.getDeviceAddress(af, bindDev, bindIp) && (options & SettingsManager::BIND_OPTION_NO_FALLBACK))
+				if (!bindDev.empty() && !networkDevices.getDeviceAddress(af, bindDev, bindIp) && (bindOptions & Conf::BIND_OPTION_NO_FALLBACK))
 					throw SocketException(STRING_F(NETWORK_DEVICE_NOT_FOUND, bindDev));
 			}
 			if (!bindIp.type)
-				BufferedSocket::getBindAddress(bindIp, af, SettingsManager::get(ips.bindAddress));
-			int port = SETTING(UDP_PORT);
-			udpPort = sockets[index]->bind(static_cast<uint16_t>(port), bindIp);
+				BufferedSocket::getBindAddress(bindIp, af, bindAddr);
+			udpPort = sockets[index]->bind(static_cast<uint16_t>(portSetting), bindIp);
 		}
 
 		if (af == AF_INET)
@@ -125,7 +132,9 @@ void SearchManager::listenUDP(int af)
 #else
 		sockets[index]->setBlocking(false);
 #endif
-		SET_SETTING(UDP_PORT, udpPort);
+		ss->lockWrite();
+		ss->setInt(Conf::UDP_PORT, udpPort);
+		ss->unlockWrite();
 		if (failed[index])
 		{
 			LogManager::message(STRING(SEARCH_ENABLED));
@@ -268,7 +277,7 @@ static inline bool isText(const char* buf, int len)
 
 void SearchManager::onData(const char* buf, int len, const IpAddress& remoteIp, uint16_t remotePort)
 {
-	if (BOOLSETTING(LOG_UDP_PACKETS) && isText(buf, len))
+	if ((LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS) && isText(buf, len))
 		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
 			Util::printIpAddress(remoteIp, true), remotePort);
 
@@ -358,7 +367,7 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		if (!url.empty())
 			user = ClientManager::findUser(nick, url);
 		else
-		if (BOOLSETTING(LOG_SYSTEM))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM)
 			LogManager::message("Unknown Hub IP: " + hubIpPort, false);
 		if (!user)
 		{
@@ -590,7 +599,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 		if (!url.empty())
 			from = ClientManager::findUser(nick, url);
 		else
-		if (BOOLSETTING(LOG_SYSTEM))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM)
 			LogManager::message("Unknown Hub IP: " + hubIpPort, false);
 		if (!from)
 		{
@@ -599,14 +608,14 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 			if (!from)
 			{
 				dcdebug("Search result from unknown user");
-				if (BOOLSETTING(LOG_PSR_TRACE))
+				if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 					LOG(PSR_TRACE, "Unknown user " + (nick.empty() ? "<empty>" : nick) + " (" + url + ')');
 				return;
 			}
 			else
 			{
 				dcdebug("Search result from valid user");
-				if (BOOLSETTING(LOG_PSR_TRACE))
+				if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 					LOG(PSR_TRACE, "Found user " + (nick.empty() ? "<empty>" : nick) + " (" + url + ')');
 			}
 		}
@@ -626,7 +635,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 			AdcCommand reply(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			toPSR(reply, false, ps.getMyNick(), remoteIp.type, hubIpPort, tth, outParts);
 			bool result = ClientManager::sendAdcCommand(reply, from->getCID(), remoteIp, udpPort);
-			if (BOOLSETTING(LOG_PSR_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 			{
 				string msg = tth + ": sending PSR response to ";
 				msg += from->getCID().toBase32();
@@ -641,7 +650,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 		}
 		catch (const Exception& e)
 		{
-			if (BOOLSETTING(LOG_PSR_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 				LOG(PSR_TRACE, "Error sending response packet - " + e.getError());
 		}
 	}
@@ -679,7 +688,7 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 			string hubIpPort = Util::printIpAddress(hubIp, true) + ":" + Util::toString(hubPort);
 			toPSR(cmd, true, Util::emptyString, hubIp.type, hubIpPort, tth, outParts);
 			bool result = ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0);
-			if (BOOLSETTING(LOG_PSR_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 			{
 				string msg = tth + ": sending PSR search result to ";
 				msg += from.toBase32();
@@ -696,7 +705,7 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 	}
 	else
 	{
-		if (BOOLSETTING(LOG_SEARCH_TRACE))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SEARCH)
 		{
 			string description = param.getDescription();
 			string nick = ou->getIdentity().getNick();
@@ -774,7 +783,7 @@ void SearchManager::processSendQueue() noexcept
 		{
 			const string& data = i->data;
 			sockets[index]->sendPacket(data.data(), data.length(), i->address, i->port);
-			if (BOOLSETTING(LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
+			if ((LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
 				LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address, true), i->port);
 		}
 	}
@@ -789,4 +798,19 @@ void SearchManager::sendNotif()
 #else
 	if (threadId) pthread_kill(threadId, SIGUSR1);
 #endif
+}
+
+void SearchManager::updateSettings() noexcept
+{
+	int newOptions = 0;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::INCOMING_SEARCH_TTH_ONLY))
+		newOptions |= OPT_INCOMING_SEARCH_TTH_ONLY;
+	if (ss->getBool(Conf::INCOMING_SEARCH_IGNORE_PASSIVE))
+		newOptions |= OPT_INCOMING_SEARCH_IGNORE_PASSIVE;
+	if (ss->getBool(Conf::INCOMING_SEARCH_IGNORE_BOTS))
+		newOptions |= OPT_INCOMING_SEARCH_IGNORE_BOTS;
+	ss->unlockRead();
+	options = newOptions;
 }

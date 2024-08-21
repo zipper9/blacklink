@@ -73,7 +73,7 @@ class TextFrame : public MDITabChildWindowImpl<TextFrame>, private SettingsManag
 	private:
 		tstring file;
 		CRichEditCtrl ctrlPad;
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 
 		static DWORD CALLBACK editStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb);
 };

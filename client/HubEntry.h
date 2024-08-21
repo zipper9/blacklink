@@ -16,28 +16,20 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef DCPLUSPLUS_DCPP_HUBENTRY_H_
-#define DCPLUSPLUS_DCPP_HUBENTRY_H_
+#ifndef HUB_ENTRY_H_
+#define HUB_ENTRY_H_
 
-#include "StrUtil.h"
-#include "Util.h"
-#include "SettingsManager.h"
+#include "BaseUtil.h"
 #include "CID.h"
 #include "ConnectionStatus.h"
+#include "Text.h"
 
 class HubEntry
 {
 	public:
 		typedef vector<HubEntry> List;
 
-		static bool checkKeyPrintFormat(const string& kp)
-		{
-			if (!(kp.length() == 52 + 7 && kp.compare(0, 7, "SHA256/", 7) == 0)) return false;
-			uint8_t dst[32];
-			bool error;
-			Util::fromBase32(kp.c_str() + 7, dst, sizeof(dst), &error);
-			return !error;
-		}
+		static bool checkKeyPrintFormat(const string& kp);
 
 		HubEntry() : reliability(0), shared(0), minShare(0), users(0), minSlots(0), maxHubs(0), maxUsers(0)
 		{
@@ -46,38 +38,8 @@ class HubEntry
 		HubEntry(const string& name, const string& server, const string& description, const string& users, const string& country,
 		         const string& shared, const string& minShare, const string& minSlots, const string& maxHubs, const string& maxUsers,
 		         const string& reliability, const string& rating, const string& encoding,
-				 const string& secureUrl, const string& website, const string& email,
-				 const string& software, const string& network) :
-			name(name),
-			description(description), country(country),
-			rating(rating), reliability((float) Util::toDouble(reliability) / 100.0f),
-			shared(Util::toInt64(shared)), minShare(Util::toInt64(minShare)),
-			users(Util::toInt(users)), maxUsers(Util::toInt(maxUsers)),
-			minSlots(Util::toInt(minSlots)), maxHubs(Util::toInt(maxHubs)),
-			encoding(encoding), website(website), email(email),
-			software(software), network(network)
-		{
-			Util::ParsedUrl p;
-			if (!server.empty())
-			{
-				Util::decodeUrl(server, p);
-				string kp = Util::getQueryParam(p.query, "kp");
-				if (!kp.empty() && checkKeyPrintFormat(kp))
-					keyPrint = std::move(kp);
-				this->server = Util::formatDchubUrl(p);
-			}
-			if (!secureUrl.empty())
-			{
-				Util::decodeUrl(secureUrl, p);
-				if (keyPrint.empty())
-				{
-					string kp = Util::getQueryParam(p.query, "kp");
-					if (!kp.empty() && checkKeyPrintFormat(kp))
-						keyPrint = std::move(kp);
-				}
-				this->secureUrl = Util::formatDchubUrl(p);
-			}
-		}
+		         const string& secureUrl, const string& website, const string& email,
+		         const string& software, const string& network);
 
 		GETSET(string, name, Name);
 		GETSET(string, server, Server);
@@ -126,15 +88,8 @@ class FavoriteHubEntry
 		{
 		}
 
-		const string& getNick(bool useDefault = true) const
-		{
-			return (!nick.empty() || !useDefault) ? nick : SETTING(NICK);
-		}
-
-		void setNick(const string& newNick)
-		{
-			nick = newNick;
-		}
+		string getNick(bool useDefault = true) const;
+		void setNick(const string& newNick) { nick = newNick; }
 
 		GETSET(string, userDescription, UserDescription);
 		GETSET(string, awayMsg, AwayMsg);
@@ -185,26 +140,7 @@ class FavoriteHubEntry
 		const ConnectionStatus& getConnectionStatus() const { return connectionStatus; }
 		ConnectionStatus& getConnectionStatus() { return connectionStatus; }
 
-		static double parseSizeString(const string& s, double* origSize = nullptr, int* unit = nullptr)
-		{
-			int u = 0;
-			double result = Util::toDouble(s);
-			if (origSize) *origSize = result;
-			auto pos = s.find_first_of("KMGTkmgt");
-			if (pos != string::npos)
-			{
-				switch (s[pos])
-				{
-					case 'K': case 'k': u = 1; break;
-					case 'M': case 'm': u = 2; break;
-					case 'G': case 'g': u = 3; break;
-					case 'T': case 't': u = 4;
-				}
-				result *= 1ull<<(10*u);
-			}
-			if (unit) *unit = u;
-			return result;
-		}
+		static double parseSizeString(const string& s, double* origSize = nullptr, int* unit = nullptr);
 
 	private:
 		int id;
@@ -240,4 +176,4 @@ class RecentHubEntry
 		GETSET(bool, redirect, Redirect);
 };
 
-#endif /*HUBENTRY_H_*/
+#endif // HUB_ENTRY_H_

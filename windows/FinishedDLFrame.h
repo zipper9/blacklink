@@ -20,17 +20,18 @@
 #define FINISHED_DL_FRAME_H
 
 #include "FinishedFrameBase.h"
+#include "ConfUI.h"
 
 class FinishedDLFrame : public FinishedFrame<FinishedDLFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IconBitmaps::FINISHED_DOWNLOADS>
 {
 	public:
 		FinishedDLFrame(): FinishedFrame(e_TransferDownload)
 		{
-			boldFinished = SettingsManager::BOLD_FINISHED_DOWNLOADS;
-			columnOrder = SettingsManager::FINISHED_DL_FRAME_ORDER;
-			columnWidth = SettingsManager::FINISHED_DL_FRAME_WIDTHS;
-			columnVisible = SettingsManager::FINISHED_DL_FRAME_VISIBLE;
-			columnSort = SettingsManager::FINISHED_DL_FRAME_SORT;
+			boldFinished = Conf::BOLD_FINISHED_DOWNLOADS;
+			columnOrder = Conf::FINISHED_DL_FRAME_ORDER;
+			columnWidth = Conf::FINISHED_DL_FRAME_WIDTHS;
+			columnVisible = Conf::FINISHED_DL_FRAME_VISIBLE;
+			columnSort = Conf::FINISHED_DL_FRAME_SORT;
 		}
 
 		static CFrameWndClassInfo& GetWndClassInfo()

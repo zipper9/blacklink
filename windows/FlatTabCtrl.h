@@ -20,7 +20,6 @@
 #define FLAT_TAB_CTRL_H
 
 #include "../client/ResourceManager.h"
-#include "../client/SettingsManager.h"
 
 #include "OMenu.h"
 #include "ShellContextMenu.h"
@@ -28,6 +27,7 @@
 #include "WinUtil.h"
 #include "MenuHelper.h"
 #include "UserMessages.h"
+#include "ConfUI.h"
 #include "resource.h"
 
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
@@ -96,7 +96,7 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 	int getTabsPosition() const { return tabsPosition; }
 	int getContextMenuAlign() const
 	{
-		return getTabsPosition() == SettingsManager::TABS_TOP ? TPM_TOPALIGN : TPM_BOTTOMALIGN;
+		return getTabsPosition() == Conf::TABS_TOP ? TPM_TOPALIGN : TPM_BOTTOMALIGN;
 	}
 	int getTabCount() const { return tabs.size(); }
 
@@ -326,7 +326,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		ATL::CWindow wndParent = hWndParent;
 		BOOL bMaximized = FALSE;
 
-		if (this->MDIGetActive(&bMaximized) == NULL) bMaximized = SETTING(MDI_MAXIMIZED);
+		if (this->MDIGetActive(&bMaximized) == NULL) bMaximized = WinUtil::useMDIMaximized();//SETTING(MDI_MAXIMIZED);
 
 		if (bMaximized) wndParent.SetRedraw(FALSE);
 

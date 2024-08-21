@@ -110,8 +110,8 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		
-		static int getSlots();
-		static int getFreeSlots() { return std::max((getSlots() - g_running), 0); }
+		static int getSlots() noexcept;
+		static int getFreeSlots() noexcept { return std::max((getSlots() - g_running), 0); }
 
 		int getFreeExtraSlots() const;
 
@@ -159,9 +159,10 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		GETSET(int, extraPartial, ExtraPartial);
 		GETSET(int, extra, Extra);
 		GETSET(uint64_t, lastGrant, LastGrant);
-		
+
 		void load();
 		void save();
+		void updateSettings() noexcept;
 
 		uint64_t getReservedSlotTick(const UserPtr& user) const;
 
@@ -173,7 +174,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		void getReservedSlots(vector<ReservedSlotInfo>& out) const;
 
 		void shutdown();
-		
+
 	private:
 		enum
 		{
@@ -230,7 +231,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		void on(Minute, uint64_t tick) noexcept override;
 		
 		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive, int& compressionType, string& errorText);
-		bool isCompressedFile(const string& target);
+		bool isCompressedFile(const string& target) noexcept;
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);
 		void fireUserRemoved(const UserPtr& user) noexcept;

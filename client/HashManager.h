@@ -153,7 +153,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				WaitableEvent semaphore;
 				string currentFile;
 				bool skipFile;
-				int maxHashSpeed; // saved value of SETTING(MAX_HASH_SPEED)
+				int maxHashSpeed; // saved value of Conf::MAX_HASH_SPEED
 				int64_t currentFileRemaining;
 				int64_t totalBytesToHash, totalBytesHashed;
 				size_t totalFilesHashed;

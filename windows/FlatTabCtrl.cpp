@@ -7,7 +7,7 @@
 FlatTabCtrl::FlatTabCtrl() :
 	closing(nullptr),
 	active(nullptr), moving(nullptr), inTab(false),
-	tabsPosition(SettingsManager::TABS_TOP), tabChars(16), maxRows(7),
+	tabsPosition(Conf::TABS_TOP), tabChars(16), maxRows(7),
 	showIcons(true), showCloseButton(true), useBoldNotif(false), nonHubsFirst(true),
 	closeButtonPressedTab(nullptr), closeButtonHover(false), hoverTab(nullptr),
 	rows(1), height(0),	xdu(0), ydu(0),
@@ -239,20 +239,21 @@ bool FlatTabCtrl::updateSettings(bool invalidate)
 {
 	static const int colorOptions[] =
 	{
-		{ SettingsManager::TABS_INACTIVE_BACKGROUND_COLOR       },
-		{ SettingsManager::TABS_ACTIVE_BACKGROUND_COLOR         },
-		{ SettingsManager::TABS_INACTIVE_TEXT_COLOR             },
-		{ SettingsManager::TABS_ACTIVE_TEXT_COLOR               },
-		{ SettingsManager::TABS_OFFLINE_BACKGROUND_COLOR        },
-		{ SettingsManager::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR },
-		{ SettingsManager::TABS_UPDATED_BACKGROUND_COLOR        },
-		{ SettingsManager::TABS_BORDER_COLOR                    }
+		{ Conf::TABS_INACTIVE_BACKGROUND_COLOR       },
+		{ Conf::TABS_ACTIVE_BACKGROUND_COLOR         },
+		{ Conf::TABS_INACTIVE_TEXT_COLOR             },
+		{ Conf::TABS_ACTIVE_TEXT_COLOR               },
+		{ Conf::TABS_OFFLINE_BACKGROUND_COLOR        },
+		{ Conf::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR },
+		{ Conf::TABS_UPDATED_BACKGROUND_COLOR        },
+		{ Conf::TABS_BORDER_COLOR                    }
 	};
 
 	bool needInval = false;
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	for (int i = 0; i < MAX_COLORS; i++)
 	{
-		COLORREF color = SettingsManager::get((SettingsManager::IntSetting) colorOptions[i]);
+		COLORREF color = ss->getInt(colorOptions[i]);
 		if (colors[i] != color)
 		{
 			needInval = true;
@@ -260,12 +261,12 @@ bool FlatTabCtrl::updateSettings(bool invalidate)
 		}
 	}
 
-	int tabsPosition = SETTING(TABS_POS);
-	int maxRows = SETTING(MAX_TAB_ROWS);
-	unsigned tabChars = SETTING(TAB_SIZE);
-	bool showCloseButton = BOOLSETTING(TABS_CLOSEBUTTONS);
-	bool useBoldNotif = BOOLSETTING(TABS_BOLD);
-	this->nonHubsFirst = BOOLSETTING(NON_HUBS_FRONT);
+	int tabsPosition = ss->getInt(Conf::TABS_POS);
+	int maxRows = ss->getInt(Conf::MAX_TAB_ROWS);
+	unsigned tabChars = ss->getInt(Conf::TAB_SIZE);
+	bool showCloseButton = ss->getBool(Conf::TABS_CLOSEBUTTONS);
+	bool useBoldNotif = ss->getBool(Conf::TABS_BOLD);
+	this->nonHubsFirst = ss->getBool(Conf::NON_HUBS_FRONT);
 	if (this->tabsPosition != tabsPosition)
 	{
 		this->tabsPosition = tabsPosition;
@@ -440,7 +441,8 @@ LRESULT FlatTabCtrl::onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam
 				tooltipText = tabTooltip;
 				if (!tooltipText.empty())
 				{
-					if (BOOLSETTING(TABS_SHOW_INFOTIPS))
+					const auto* ss = SettingsManager::instance.getUiSettings();
+					if (ss->getBool(Conf::TABS_SHOW_INFOTIPS))
 					{
 						CToolInfo info(TTF_SUBCLASS, m_hWnd, 0, nullptr, const_cast<TCHAR*>(tooltipText.c_str()));
 						tooltip.AddTool(&info);
@@ -610,7 +612,7 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		CRect rcEdge, rcBackground;
 		rcEdge.left = rcBackground.left = 0;
 		rcEdge.right = rcBackground.right = crc.right;
-		if (tabsPosition == SettingsManager::TABS_TOP)
+		if (tabsPosition == Conf::TABS_TOP)
 		{
 			rcEdge.bottom = crc.bottom;
 			rcEdge.top = rcEdge.bottom - edgeHeight;
@@ -658,7 +660,7 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 		HGDIOBJ oldpen = SelectObject(hdc, ::CreatePen(PS_SOLID, 1, colors[BORDER_COLOR]));
 		int ypos = edgeHeight;
-		if (tabsPosition == SettingsManager::TABS_TOP) ypos += getTabHeight()-1;
+		if (tabsPosition == Conf::TABS_TOP) ypos += getTabHeight()-1;
 		for (int r = 0; r < rows; r++)
 		{
 			MoveToEx(hdc, rc.left, ypos, nullptr);
@@ -745,7 +747,7 @@ int FlatTabCtrl::getRowFromPos(int yPos) const
 	if (yPos < edgeHeight || yPos >= getHeight() - edgeHeight) return -1;
 	yPos -= edgeHeight;
 	int row = yPos / getTabHeight();
-	if (tabsPosition != SettingsManager::TABS_TOP) row = getRows() - 1 - row;
+	if (tabsPosition != Conf::TABS_TOP) row = getRows() - 1 - row;
 	return row;
 }
 
@@ -833,7 +835,7 @@ FlatTabCtrl::TabInfo* FlatTabCtrl::getTabInfo(HWND hWnd) const
 
 int FlatTabCtrl::getTopPos(const TabInfo *tab) const
 {
-	if (tabsPosition == SettingsManager::TABS_TOP)
+	if (tabsPosition == Conf::TABS_TOP)
 		return tab->row * getTabHeight() + edgeHeight;
 	return (getRows() - 1 - tab->row) * getTabHeight() + edgeHeight;
 }
@@ -889,7 +891,7 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 	{
 		if ((options & (DRAW_TAB_FIRST_IN_ROW | DRAW_TAB_LAST_ROW)) == (DRAW_TAB_FIRST_IN_ROW | DRAW_TAB_LAST_ROW))
 		{
-			if (tabsPosition == SettingsManager::TABS_TOP)
+			if (tabsPosition == Conf::TABS_TOP)
 			{
 				MoveToEx(hdc, rc.left, rc.top, nullptr);
 				LineTo(hdc, rc.left, getHeight());
@@ -909,7 +911,7 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 		MoveToEx(hdc, rc.right, rc.top, nullptr);
 		LineTo(hdc, rc.right, rc.bottom);
 
-		if (tabsPosition == SettingsManager::TABS_TOP)
+		if (tabsPosition == Conf::TABS_TOP)
 		{
 			MoveToEx(hdc, rc.left, rc.top-1, nullptr);
 			LineTo(hdc, rc.right+1, rc.top-1);

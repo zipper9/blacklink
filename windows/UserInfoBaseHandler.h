@@ -451,7 +451,12 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			if (ENABLE(options, NICK_TO_CHAT))
 				menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
 			if (ENABLE(options, USER_LOG))
-				menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
+			{
+				int flags = MF_STRING;
+				if (!(ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_PRIVATE_CHAT))
+					flags |= MF_DISABLED;
+				menu.AppendMenu(flags, IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
+			}
 			appendSendPMItems(menu, 1);
 			if (DISABLE(options, NO_CONNECT_FAV_HUB))
 				internal_appendConnectToHubItem(menu, traits);

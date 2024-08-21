@@ -22,8 +22,11 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "BrowseFile.h"
+#include "../client/SettingsManager.h"
+#include "../client/SettingsUtil.h"
 #include "../client/File.h"
 #include "../client/PathUtil.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -31,12 +34,12 @@ using DialogLayout::AUTO;
 
 static const PropPage::Item items[] =
 {
-	{ IDC_TEMP_DOWNLOAD_DIRECTORY, SettingsManager::TEMP_DOWNLOAD_DIRECTORY, PropPage::T_STR },
-	{ IDC_DOWNLOAD_DIR, SettingsManager::DOWNLOAD_DIRECTORY, PropPage::T_STR },
-	{ IDC_DOWNLOADS, SettingsManager::DOWNLOAD_SLOTS, PropPage::T_INT },
-	{ IDC_FILES, SettingsManager::FILE_SLOTS, PropPage::T_INT },
-	{ IDC_MAXSPEED, SettingsManager::MAX_DOWNLOAD_SPEED, PropPage::T_INT },
-	{ IDC_EXTRA_DOWN_SLOT, SettingsManager::EXTRA_DOWNLOAD_SLOTS, PropPage::T_INT },
+	{ IDC_TEMP_DOWNLOAD_DIRECTORY, Conf::TEMP_DOWNLOAD_DIRECTORY, PropPage::T_STR },
+	{ IDC_DOWNLOAD_DIR, Conf::DOWNLOAD_DIRECTORY, PropPage::T_STR },
+	{ IDC_DOWNLOADS, Conf::DOWNLOAD_SLOTS, PropPage::T_INT },
+	{ IDC_FILES, Conf::FILE_SLOTS, PropPage::T_INT },
+	{ IDC_MAXSPEED, Conf::MAX_DOWNLOAD_SPEED, PropPage::T_INT },
+	{ IDC_EXTRA_DOWN_SLOT, Conf::EXTRA_DOWNLOAD_SLOTS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -91,14 +94,14 @@ LRESULT DownloadPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 void DownloadPage::write()
 {
 	PropPage::write(*this, items);
-	const tstring dir = Text::toT(SETTING(TEMP_DOWNLOAD_DIRECTORY));
+	string dir = Util::getConfString(Conf::TEMP_DOWNLOAD_DIRECTORY);
 	if (!dir.empty())
 		File::ensureDirectory(dir);
 }
 
 LRESULT DownloadPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring dir = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
+	tstring dir = Text::toT(Util::getConfString(Conf::DOWNLOAD_DIRECTORY));
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
 		Util::appendPathSeparator(dir);
@@ -109,7 +112,7 @@ LRESULT DownloadPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 
 LRESULT DownloadPage::onClickedBrowseTempDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring dir = Text::toT(SETTING(TEMP_DOWNLOAD_DIRECTORY));
+	tstring dir = Text::toT(Util::getConfString(Conf::TEMP_DOWNLOAD_DIRECTORY));
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
 		Util::appendPathSeparator(dir);

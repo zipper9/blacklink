@@ -192,13 +192,13 @@ class FavoriteHubsFrame :
 		void fillList(const TStringList& groups);
 		void openSelected();
 		int findItem(int id) const;
-		
+
 		void on(FavoriteAdded, const FavoriteHubEntry* entry) noexcept override;
 		void on(FavoriteRemoved, const FavoriteHubEntry* entry) noexcept override;
 		void on(FavoriteChanged, const FavoriteHubEntry* entry) noexcept override;
 
-		void on(SettingsManagerListener::Repaint) override;
-		
+		void on(SettingsManagerListener::ApplySettings) override;
+
 		// ClientManagerListener
 		void on(ClientConnected, const Client* c) noexcept override
 		{

@@ -19,11 +19,10 @@
 #ifndef DCPLUSPLUS_DCPP_CRYPTO_MANAGER_H
 #define DCPLUSPLUS_DCPP_CRYPTO_MANAGER_H
 
-#include "SettingsManager.h"
-
 #include "Exception.h"
 #include "Singleton.h"
 #include "Socket.h"
+#include "Locks.h"
 
 #include <openssl/ssl.h>
 
@@ -88,6 +87,7 @@ class CryptoManager : public Singleton<CryptoManager>
 
 		SSL_CTX* getSSLContext(SSLContext wanted) const noexcept;
 
+		void updateSettings();
 		bool isInitialized() const noexcept;
 		bool initializeKeyPair() noexcept;
 		void generateNewKeyPair();
@@ -130,6 +130,7 @@ class CryptoManager : public Singleton<CryptoManager>
 	private:
 		ssl::SSL_CTX context[MAX_CONTEXT];
 		mutable CriticalSection contextLock;
+		bool useTls;
 		bool keyPairInitialized;
 		ByteVector certFingerprint;
 		int64_t endTime;

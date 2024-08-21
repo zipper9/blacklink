@@ -21,6 +21,10 @@
 #include "SettingsManager.h"
 #include "DatabaseManager.h"
 
+#ifdef BL_FEATURE_IP_DATABASE
+#include "DatabaseOptions.h"
+#endif
+
 #ifdef _DEBUG
 std::atomic_int User::g_user_counts(0);
 #endif
@@ -309,14 +313,14 @@ void User::loadIPStatFromDB(const UserPtr& user)
 		user->flags |= IP_STAT_LOADING;
 	}
 
-	if (!BOOLSETTING(ENABLE_RATIO_USER_LIST))
+	auto db = DatabaseManager::getInstance();
+	if (!(db->getOptions() & DatabaseOptions::ENABLE_IP_STAT))
 	{
 		LOCK(user->cs);
 		user->flags = (user->flags & ~IP_STAT_LOADING) | IP_STAT_LOADED;
 		return;
 	}
-
-	DatabaseManager::getInstance()->loadIPStatAsync(user);
+	db->loadIPStatAsync(user);
 }
 
 void User::loadUserStatFromDB(const UserPtr& user)
@@ -327,14 +331,14 @@ void User::loadUserStatFromDB(const UserPtr& user)
 		user->flags |= USER_STAT_LOADING;
 	}
 
-	if (!BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER))
+	auto db = DatabaseManager::getInstance();
+	if (!(db->getOptions() & DatabaseOptions::ENABLE_USER_STAT))
 	{
 		LOCK(user->cs);
 		user->flags = (user->flags & ~USER_STAT_LOADING) | USER_STAT_LOADED;
 		return;
 	}
-
-	DatabaseManager::getInstance()->loadUserStatAsync(user);
+	db->loadUserStatAsync(user);
 }
 
 void User::saveUserStat()
@@ -398,10 +402,12 @@ void User::incMessageCount()
 		flags |= SAVE_USER_STAT;
 }
 
-void User::saveStats(bool ipStat, bool userStat)
+void User::saveStats(int what)
 {
-	if (ipStat) saveIPStat();
-	if (userStat) saveUserStat();
+	if (what & DatabaseOptions::ENABLE_IP_STAT)
+		saveIPStat();
+	if (what & DatabaseOptions::ENABLE_USER_STAT)
+		saveUserStat();
 }
 
 bool User::shouldSaveStats() const

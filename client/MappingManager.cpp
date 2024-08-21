@@ -33,6 +33,7 @@
 #include "SettingsManager.h"
 #include "ResourceManager.h"
 #include "SearchManager.h"
+#include "ConfCore.h"
 #include "version.h"
 
 static inline Mapper::Protocol getProtocol(int port)
@@ -140,7 +141,7 @@ int MappingManager::run()
 			renew(mapper, portTCP, PORT_TCP, STRING(MAPPING_TRANSFER));
 			renew(mapper, portTLS, PORT_TLS, STRING(MAPPING_ENCRYPTED_TRANSFER));
 			renew(mapper, portUDP, PORT_UDP, STRING(MAPPING_SEARCH));
-		
+
 			renewLater(mapper);
 		}
 		mapper.uninit();
@@ -148,10 +149,21 @@ int MappingManager::run()
 		return 0;
 	}
 
-	// move the preferred mapper to front
-	const auto &mapperName = SettingsManager::get(af == AF_INET6 ? SettingsManager::MAPPER6 : SettingsManager::MAPPER);
-	for (auto i = mappers.begin(); i != mappers.end(); ++i)
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const string mapperName = ss->getString(af == AF_INET6 ? Conf::MAPPER6 : Conf::MAPPER);
+	string bindAddr = ss->getString(af == AF_INET6 ? Conf::BIND_ADDRESS6 : Conf::BIND_ADDRESS);
+	ss->unlockRead();
+
+	if (!bindAddr.empty())
 	{
+		IpAddress ip;
+		Util::parseIpAddress(ip, bindAddr);
+		if (Util::isEmpty(ip)) bindAddr.clear();
+	}
+
+	// move the preferred mapper to front
+	for (auto i = mappers.begin(); i != mappers.end(); ++i)
 		if (i->first == mapperName)
 		{
 			if (i != mappers.begin())
@@ -162,14 +174,10 @@ int MappingManager::run()
 			}
 			break;
 		}
-	}
 
 	for (auto &i : mappers)
 	{
-		auto setting = af == AF_INET6 ? SettingsManager::BIND_ADDRESS6 : SettingsManager::BIND_ADDRESS;
-		unique_ptr<Mapper> pMapper(i.second(SettingsManager::getInstance()->isDefault(setting) ?
-		                           Util::emptyString : SettingsManager::getInstance()->get(setting),
-		                           af));
+		unique_ptr<Mapper> pMapper(i.second(bindAddr, af));
 		Mapper &mapper = *pMapper;
 
 		if (!mapper.init())

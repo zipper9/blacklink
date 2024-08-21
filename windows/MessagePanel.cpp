@@ -19,7 +19,9 @@
 #include "stdafx.h"
 #include "MessagePanel.h"
 #include "WinUtil.h"
+#include "ConfUI.h"
 #include "../client/ClientManager.h"
+#include "../client/SettingsManager.h"
 #include "../client/SysVersion.h"
 
 #ifdef BL_UI_FEATURE_EMOTICONS
@@ -75,7 +77,7 @@ void MessagePanel::initPanel(HWND hWnd)
 	createButton(BUTTON_CCPM, IconBitmaps::PADLOCK_OPEN, IDC_CCPM, ResourceManager::CONNECT_CCPM);
 
 	tooltip.SetMaxTipWidth(200);
-	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
 }
 
@@ -119,6 +121,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 	rc.right = rc.left + 2;
 	rc.bottom = rc.top + BUTTON_HEIGHT;
 
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	HDWP dwp = BeginDeferWindowPos(MAX_BUTTONS);
 	if (disableChat)
 	{
@@ -128,19 +131,19 @@ void MessagePanel::updatePanel(const CRect& rect)
 	}
 	else
 	{
-		updateButton(dwp, BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON), BUTTON_SEND, rc);
-		updateButton(dwp, BOOLSETTING(SHOW_MULTI_CHAT_BTN), BUTTON_MULTILINE, rc);
+		updateButton(dwp, ss->getBool(Conf::SHOW_SEND_MESSAGE_BUTTON), BUTTON_SEND, rc);
+		updateButton(dwp, ss->getBool(Conf::SHOW_MULTI_CHAT_BTN), BUTTON_MULTILINE, rc);
 #ifdef BL_UI_FEATURE_EMOTICONS
-		updateButton(dwp, BOOLSETTING(SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
+		updateButton(dwp, ss->getBool(Conf::SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
 #endif
 #ifdef BL_UI_FEATURE_BB_CODES
-		if (BOOLSETTING(SHOW_BBCODE_PANEL))
+		if (ss->getBool(Conf::SHOW_BBCODE_PANEL))
 		{
-			updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
+			updateButton(dwp, ss->getBool(Conf::SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
 			for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_LINK; ++i)
 				updateButton(dwp, true, i, rc);
-			updateButton(dwp, BOOLSETTING(SHOW_LINK_BTN), BUTTON_LINK, rc);
-			updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
+			updateButton(dwp, ss->getBool(Conf::SHOW_LINK_BTN), BUTTON_LINK, rc);
+			updateButton(dwp, ss->getBool(Conf::FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
 		}
 		else
 #endif
@@ -148,12 +151,12 @@ void MessagePanel::updatePanel(const CRect& rect)
 			for (int i = BUTTON_TRANSCODE; i <= BUTTON_COLOR; ++i)
 				updateButton(dwp, false, i, rc);
 		}
-		updateButton(dwp, BOOLSETTING(SHOW_FIND_BTN), BUTTON_FIND, rc);
+		updateButton(dwp, ss->getBool(Conf::SHOW_FIND_BTN), BUTTON_FIND, rc);
 		updateButton(dwp, showSelectHubButton, BUTTON_SELECT_HUB, rc);
 		updateButton(dwp, showCCPMButton, BUTTON_CCPM, rc);
 	}
 	EndDeferWindowPos(dwp);
-	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	if (ss->getBool(Conf::CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
 }
 
@@ -162,21 +165,22 @@ int MessagePanel::getPanelWidth() const
 	int width = 4;
 	if (disableChat) return width;
 	int count = 0;
-	if (BOOLSETTING(SHOW_MULTI_CHAT_BTN)) ++count;
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::SHOW_MULTI_CHAT_BTN)) ++count;
 #ifdef BL_UI_FEATURE_EMOTICONS
-	if (BOOLSETTING(SHOW_EMOTICONS_BTN)) ++count;
+	if (ss->getBool(Conf::SHOW_EMOTICONS_BTN)) ++count;
 #endif
-	if (BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON)) ++count;
+	if (ss->getBool(Conf::SHOW_SEND_MESSAGE_BUTTON)) ++count;
 #ifdef BL_UI_FEATURE_BB_CODES
-	if (BOOLSETTING(SHOW_BBCODE_PANEL))
+	if (ss->getBool(Conf::SHOW_BBCODE_PANEL))
 	{
 		count += 4;
-		if (BOOLSETTING(SHOW_TRANSCODE_BTN)) ++count;
-		if (BOOLSETTING(FORMAT_BB_CODES_COLORS)) ++count;
-		if (BOOLSETTING(SHOW_LINK_BTN)) ++count;
+		if (ss->getBool(Conf::SHOW_TRANSCODE_BTN)) ++count;
+		if (ss->getBool(Conf::FORMAT_BB_CODES_COLORS)) ++count;
+		if (ss->getBool(Conf::SHOW_LINK_BTN)) ++count;
 	}
 #endif
-	if (BOOLSETTING(SHOW_FIND_BTN)) ++count;
+	if (ss->getBool(Conf::SHOW_FIND_BTN)) ++count;
 	if (showSelectHubButton) ++count;
 	if (showCCPMButton) ++count;
 	width += BUTTON_WIDTH * count;
@@ -240,7 +244,8 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 		bHandled = FALSE;
 		return 0;
 	}
-	if (SETTING(EMOTICONS_FILE) == "Disabled")
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getString(Conf::EMOTICONS_FILE) == "Disabled")
 	{
 		MessageBox(m_hWnd, CTSTRING(EMOTICONS_DISABLED), getAppNameVerT().c_str(), MB_ICONINFORMATION | MB_OK);
 		return 0;
@@ -257,7 +262,7 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 	if (!dlg.result.empty())
 		pasteText(dlg.result);
 	ctrlMessage.SetFocus();
-	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	if (ss->getBool(Conf::CHAT_PANEL_SHOW_INFOTIPS))
 	{
 		if (tooltip.IsWindow())
 			tooltip.Activate(TRUE);
@@ -300,13 +305,14 @@ void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
 	}
 
 	StringList names;
-	const string& mainFile = SETTING(EMOTICONS_FILE);
+	auto ss = SettingsManager::instance.getUiSettings();
+	const string& mainFile = ss->getString(Conf::EMOTICONS_FILE);
 	bool enabled = true;
 	if (mainFile == "Disabled")
 		enabled = false;
 	else if (!mainFile.empty())
 		names.push_back(mainFile);
-	SimpleStringTokenizer<char> st(SETTING(ADDITIONAL_EMOTICONS), ';');
+	SimpleStringTokenizer<char> st(ss->getString(Conf::ADDITIONAL_EMOTICONS), ';');
 	string token;
 	while (st.getNextNonEmptyToken(token))
 		names.push_back(token);
@@ -323,15 +329,15 @@ void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
 	if (dlg.enabled && !names.empty())
 	{
 		emoticonPackList.setConfig(names);
-		SET_SETTING(EMOTICONS_FILE, names[0]);
+		ss->setString(Conf::EMOTICONS_FILE, names[0]);
 		string s = formatNameList(names, 1);
 		if (s.empty()) s += ';'; // prevent resetting to default value
-		SET_SETTING(ADDITIONAL_EMOTICONS, s);
+		ss->setString(Conf::ADDITIONAL_EMOTICONS, s);
 	}
 	else
 	{
-		SET_SETTING(EMOTICONS_FILE, "Disabled");
-		SET_SETTING(ADDITIONAL_EMOTICONS, formatNameList(names, 0));
+		ss->setString(Conf::EMOTICONS_FILE, "Disabled");
+		ss->setString(Conf::ADDITIONAL_EMOTICONS, formatNameList(names, 0));
 		names.clear();
 		emoticonPackList.setConfig(names);
 	}

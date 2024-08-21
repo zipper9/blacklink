@@ -9,6 +9,7 @@
 #include "../client/QueueItem.h"
 #include "../client/ShareManager.h"
 #include "../client/SimpleStringTokenizer.h"
+#include "../client/Util.h"
 
 OMenu PreviewMenu::previewMenu;
 int PreviewMenu::previewAppsSize = 0;
@@ -182,7 +183,7 @@ void PreviewMenu::runPreviewCommand(WORD wID, const string& file)
 	PreviewParamsExpander ex(file);
 	string expandedArguments = Util::formatParams(arguments, &ex, false);
 
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM)
 		LogManager::message("Running command: " + application + " " + expandedArguments, false);
 	::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(expandedArguments).c_str(), Text::toT(ex.getDir()).c_str(), SW_SHOWNORMAL);
 }

@@ -194,8 +194,6 @@ namespace Util
 	string getRandomNick(size_t maxLength = 20);
 	string getRandomPassword();
 
-	void setLimiter(bool enable);
-
 	string formatDchubUrl(const string& url);
 	string formatDchubUrl(ParsedUrl& p);
 

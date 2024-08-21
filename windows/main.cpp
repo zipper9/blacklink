@@ -36,9 +36,10 @@
 #include "../client/SysVersion.h"
 #include "../client/ProfileLocker.h"
 #include "../client/PathUtil.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 #include "SplashWindow.h"
 #include "CommandLine.h"
-#include "KnownClients.h"
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 #include "Emoticons.h"
@@ -119,7 +120,7 @@ class SplashThread : public Thread
 	public:
 		SplashThread() { initEvent.create(); }
 		void waitInitialized() { initEvent.wait(); }
-	
+
 	protected:
 		virtual int run()
 		{
@@ -182,30 +183,31 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	static ULONG_PTR g_gdiplusToken = 0;
 	Gdiplus::GdiplusStartup(&g_gdiplusToken, &g_gdiplusStartupInput, NULL);
 #endif // IRAINMAN_INCLUDE_GDI_INIT
-	
+
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
-	
+
 	startup(splashTextCallBack, nullptr, GuiInit, nullptr, dbErrorCallback);
 	ThemeManager::getInstance()->load();
 	static int nRet;
 	{
+		auto ss = SettingsManager::instance.getUiSettings();
 		// !SMT!-fix this will ensure that GUI (wndMain) destroyed before client library shutdown (gui objects may call lib)
 		MainFrame wndMain;
-		
+
 		CRect rc = wndMain.rcDefault;
-		
-		if (SETTING(MAIN_WINDOW_POS_X) != CW_USEDEFAULT &&
-		    SETTING(MAIN_WINDOW_POS_Y) != CW_USEDEFAULT &&
-		    SETTING(MAIN_WINDOW_SIZE_X) != CW_USEDEFAULT &&
-		    SETTING(MAIN_WINDOW_SIZE_Y) != CW_USEDEFAULT)
+		int xpos = ss->getInt(Conf::MAIN_WINDOW_POS_X);
+		int ypos = ss->getInt(Conf::MAIN_WINDOW_POS_Y);
+		int width = ss->getInt(Conf::MAIN_WINDOW_SIZE_X);
+		int height = ss->getInt(Conf::MAIN_WINDOW_SIZE_Y);
+		if (xpos != CW_USEDEFAULT && ypos != CW_USEDEFAULT && width != CW_USEDEFAULT && height != CW_USEDEFAULT)
 		{
-			rc.left = SETTING(MAIN_WINDOW_POS_X);
-			rc.top = SETTING(MAIN_WINDOW_POS_Y);
-			rc.right = rc.left + SETTING(MAIN_WINDOW_SIZE_X);
-			rc.bottom = rc.top + SETTING(MAIN_WINDOW_SIZE_Y);
+			rc.left = xpos;
+			rc.top = ypos;
+			rc.right = rc.left + xpos;
+			rc.bottom = rc.top + ypos;
 		}
-		
+
 		// Now, let's ensure we have sane values here...
 		if (rc.left < -10 || rc.top < -10 || rc.right - rc.left < 800 || rc.bottom - rc.top < 600)
 		{
@@ -221,20 +223,17 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		}
 		else
 		{
-			if (BOOLSETTING(STARTUP_BACKUP))
+			if (ss->getBool(Conf::STARTUP_BACKUP))
 			{
 				splashTextCallBack(nullptr, TSTRING(STARTUP_BACKUP_SETTINGS));
 				Util::backupSettings();
 			}
-			
-			if (/*SETTING(PROTECT_PRIVATE) && */SETTING(PROTECT_PRIVATE_RND))
-				SET_SETTING(PM_PASSWORD, Util::getRandomNick()); // Generate a random PM password
-				
+
 			SetForegroundWindow(wndMain);
 			DestroySplash();
 
-			wndMain.ShowWindow((nCmdShow == SW_SHOWDEFAULT || nCmdShow == SW_SHOWNORMAL) ? SETTING(MAIN_WINDOW_STATE) : nCmdShow);
-			if (BOOLSETTING(MINIMIZE_ON_STARTUP))
+			wndMain.ShowWindow((nCmdShow == SW_SHOWDEFAULT || nCmdShow == SW_SHOWNORMAL) ? ss->getInt(Conf::MAIN_WINDOW_STATE) : nCmdShow);
+			if (ss->getBool(Conf::MINIMIZE_ON_STARTUP))
 				wndMain.ShowWindow(SW_SHOWMINIMIZED);
 
 			nRet = theLoop.Run();
@@ -314,18 +313,26 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	Util::initialize();
 	Util::initFormatParams();
-	ThrottleManager::newInstance();
-	ToolbarManager::newInstance();
-	
-	SettingsManager::newInstance();
-	SettingsManager::setDefault(SettingsManager::HTTP_USER_AGENT, KnownClients::userAgents[0]);
-	SettingsManager::getInstance()->addListener(ToolbarManager::getInstance());
-	SettingsManager::getInstance()->load();
-	LogManager::init();
 
-	SettingsManager::loadLanguage();
-	SettingsManager::getInstance()->setDefaults(); // Allow localized defaults in string settings
-	if (BOOLSETTING(APP_DPI_AWARE)) setProcessDPIAware();
+	Conf::initCoreSettings();
+	Conf::initUiSettings();
+
+	ToolbarManager::newInstance();
+	SettingsManager::instance.addListener(ToolbarManager::getInstance());
+
+	SettingsManager::instance.loadSettings();
+
+	LogManager::init();
+	Util::loadLanguage();
+
+	// Allow localized defaults in string settings
+	Conf::updateCoreSettingsDefaults();
+	Conf::updateUiSettingsDefaults();
+	Conf::processCoreSettings();
+	Conf::processUiSettings();
+
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::APP_DPI_AWARE)) setProcessDPIAware();
 
 	ProfileLocker profileLocker;
 	profileLocker.setPath(Util::getConfigPath());
@@ -339,12 +346,15 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		}
 		else
 			MessageBox(NULL, CTSTRING(ALREADY_RUNNING_LOCKED), getAppNameVerT().c_str(), MB_ICONINFORMATION | MB_OK);
+		SettingsManager::instance.removeListeners();
 		return 1;
 	}
 
+	ThrottleManager::newInstance();
 	TimerManager::newInstance();
 	ClientManager::newInstance();
 	ThrottleManager::getInstance()->startup();
+
 	if (dcapp.IsAnotherInstanceRunning())
 	{
 		// Allow for more than one instance...
@@ -357,21 +367,22 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		}
 		else
 			multiple = true;
-		
+
 		if (cmdLine.delay)
 			Thread::sleep(2500);        // let's put this one out for a break
-		
+
 		if (!multiple || hasAction)
 		{
 			HWND hOther = NULL;
 			EnumWindows(searchOtherInstance, (LPARAM)&hOther);
-			
+
 			if (hOther != NULL)
 			{
 				// pop up
 				::SetForegroundWindow(hOther);
 				sendCmdLine(hOther, lpstrCmdLine);
 			}
+			SettingsManager::instance.removeListeners();
 			return FALSE;
 		}
 	}
@@ -382,7 +393,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	// For SHBrowseForFolder
 	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	ATLASSERT(SUCCEEDED(hRes));
-	
+
 #ifdef USE_CRASH_HANDLER
 	LPTOP_LEVEL_EXCEPTION_FILTER pOldSEHFilter = nullptr;
 	pOldSEHFilter = SetUnhandledExceptionFilter(&DCUnhandledExceptionFilter);
@@ -390,7 +401,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	AtlInitCommonControls(ICC_COOL_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TREEVIEW_CLASSES | ICC_PROGRESS_CLASS | ICC_STANDARD_CLASSES |
 	                      ICC_TAB_CLASSES | ICC_UPDOWN_CLASS | ICC_USEREX_CLASSES);   // add flags to support other controls
-	                      
+
 	hRes = _Module.Init(NULL, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
 
@@ -406,11 +417,11 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		hRichEditOld = ::LoadLibrary(_T("RICHED32.DLL"));
 */
 	const int nRet = Run(lpstrCmdLine, nCmdShow);
-	
+
 	if (hRichEditNew) ::FreeLibrary(hRichEditNew);
 /*
 	if (hRichEditOld) ::FreeLibrary(hRichEditOld);
-*/	
+*/
 	_Module.Term();
 	::CoUninitialize();
 	DestroySplash();

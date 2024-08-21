@@ -34,19 +34,23 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 	public Singleton<DownloadManager>
 {
 	public:
-		/** @internal */
-		void addConnection(UserConnectionPtr& conn);
+		enum
+		{
+			OPT_AUTO_DISCONNECT = 1
+		};
 
-		/** @internal */
+		void addConnection(UserConnectionPtr& conn);
 		void abortDownload(const string& target);
+		void updateSettings() noexcept;
+		int getOptions() const noexcept { return options.load(); }
 
 		/** @return Running average download speed in Bytes/s */
 		static int64_t getRunningAverage() { return g_runningAverage; }
 		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
-		
+
 		size_t getDownloadCount() const noexcept;
 		void clearDownloads() noexcept;
-		
+
 		bool isStartDownload(QueueItem::Priority prio) const noexcept;
 		bool checkFileDownload(const UserPtr& user) const noexcept;
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
@@ -63,6 +67,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 	private:
 		std::unique_ptr<RWLock> csDownloads;
 		std::vector<DownloadPtr> downloads;
+		std::atomic_int options;
 
 		static int64_t g_runningAverage;
 

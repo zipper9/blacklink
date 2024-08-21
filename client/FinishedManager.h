@@ -35,17 +35,18 @@ class FinishedManager : public Singleton<FinishedManager>,
 			e_Download = 0,
 			e_Upload = 1
 		};
+
 		const FinishedItemList& lockList(eType type, uint64_t* genId = nullptr)
 		{
-			cs[type]->acquireShared();
-			if (genId) *genId = generationId[type];
-			return finished[type];
+			finished[type].cs->acquireShared();
+			if (genId) *genId = finished[type].generationId;
+			return finished[type].items;
 		}
 		void unlockList(eType type)
 		{
-			cs[type]->releaseShared();
+			finished[type].cs->releaseShared();
 		}
-		
+
 		bool removeItem(const FinishedItemPtr& item, eType type);
 		void removeAll(eType type);
 		void pushHistoryFinishedItem(const FinishedItemPtr& item, bool isFile, int type);
@@ -53,22 +54,38 @@ class FinishedManager : public Singleton<FinishedManager>,
 		{
 			fire(FinishedManagerListener::UpdateStatus());
 		}
-		
+		void updateSettings();
+
 	private:
 		friend class Singleton<FinishedManager>;
-		
+
 		FinishedManager();
 		~FinishedManager();
-		
+
 		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& d) noexcept override;
 		void on(UploadManagerListener::Complete, const UploadPtr& u) noexcept override;
 
 		void addItem(FinishedItemPtr& item, eType type);
 
-		std::unique_ptr<RWLock> cs[2]; // index = eType
-		FinishedItemList finished[2]; // index = eType
-		uint64_t generationId[2] = { 0, 0 };
+		struct ItemList
+		{
+			std::unique_ptr<RWLock> cs;
+			FinishedItemList items;
+			uint64_t generationId;
+			size_t maxSize;
+		};
+
+		ItemList finished[2];
 		int64_t tempId;
+		std::atomic_int options;
+
+		enum
+		{
+			OPT_LOG_FINISHED_DOWNLOADS = 1,
+			OPT_LOG_FINISHED_UPLOADS   = 2,
+			OPT_LOG_FILELIST_TRANSFERS = 4,
+			OPT_ENABLE_UPLOAD_COUNTER  = 8
+		};
 };
 
 #endif // !defined(FINISHED_MANAGER_H)

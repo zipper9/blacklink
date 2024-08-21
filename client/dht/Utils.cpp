@@ -18,11 +18,11 @@
 
 #include "stdinc.h"
 #include "Utils.h"
-
 #include "Constants.h"
 
 #include "../AdcCommand.h"
 #include "../CID.h"
+#include "../StrUtil.h"
 #include "../MerkleTree.h"
 #include "../TimeUtil.h"
 #include "../SettingsManager.h"
@@ -107,7 +107,7 @@ namespace dht
 					}
 				}
 
-				if (BOOLSETTING(LOG_DHT_TRACE))
+				if (LogManager::getLogOptions() & LogManager::OPT_LOG_DHT)
 					LOG(DHT_TRACE, "Received unwanted response from " + Util::printIpAddress(ip) + ". Packet dropped.");
 				return false;
 			}
@@ -119,9 +119,9 @@ namespace dht
 
 		if (packetsPerIp.count(cmd.getCommand()) > maxAllowedPacketsPerMinute)
 		{
-			if (BOOLSETTING(LOG_DHT_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_DHT)
 				LOG(DHT_TRACE, "Request flood detected (" + Util::toString(packetsPerIp.count(cmd.getCommand())) +
-				") from " + Util::printIpAddress(ip) + ". Packet dropped.");
+					") from " + Util::printIpAddress(ip) + ". Packet dropped.");
 			return false;
 		}
 

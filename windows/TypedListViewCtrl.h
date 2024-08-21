@@ -25,6 +25,7 @@
 #include "ListViewArrows.h"
 #include "Colors.h"
 #include "LockRedraw.h"
+#include "ConfUI.h"
 #include "resource.h"
 
 class ColumnInfo
@@ -61,14 +62,14 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 	public ListViewArrows<TypedListViewCtrl<T> >
 {
 	public:
-		TypedListViewCtrl() : sortColumn(-1), sortAscending(true), leftMargin(0)
+		TypedListViewCtrl() : sortColumn(-1), sortAscending(true), compareFlags(0), leftMargin(0)
 		{
 		}
-		
+
 		typedef TypedListViewCtrl<T> thisClass;
 		typedef CListViewCtrl baseClass;
 		typedef ListViewArrows<thisClass> arrowBase;
-		
+
 		BEGIN_MSG_MAP(thisClass)
 		MESSAGE_HANDLER(WM_MENUCOMMAND, onHeaderMenu)
 		MESSAGE_HANDLER(WM_CHAR, onChar)
@@ -76,7 +77,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		CHAIN_MSG_MAP(arrowBase)
 		END_MSG_MAP();
-		
+
 		bool isRedraw()
 		{
 			dcassert(!destroyingItems);
@@ -379,10 +380,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			{
 				mid = (low + high) / 2;
 				b = getItemData(mid);
-				comp = T::compareItems(a, b, static_cast<uint8_t>(sortColumn));
+				comp = T::compareItems(a, b, sortColumn, compareFlags);
 				if (!sortAscending)
 					comp = -comp;
-					
+
 				if (comp == 0)
 					return mid;
 				if (comp < 0)
@@ -390,13 +391,13 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 				else
 					low = mid + 1;
 			}
-			
-			comp = T::compareItems(a, b, static_cast<uint8_t>(sortColumn));
+
+			comp = T::compareItems(a, b, sortColumn, compareFlags);
 			if (!sortAscending)
 				comp = -comp;
 			if (comp > 0)
 				mid++;
-				
+
 			return mid;
 		}
 		
@@ -485,9 +486,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			columns.insertColumns(*this, order, widths, visible);
 		}
 
-		void insertColumns(SettingsManager::StrSetting order, SettingsManager::StrSetting widths, SettingsManager::StrSetting visible)
+		void insertColumns(int order, int widths, int visible)
 		{
-			insertColumns(SettingsManager::get(order), SettingsManager::get(widths), SettingsManager::get(visible));
+			auto ss = SettingsManager::instance.getUiSettings();
+			insertColumns(ss->getString(order), ss->getString(widths), ss->getString(visible));
 		}
 
 		void insertDummyColumn()
@@ -551,21 +553,22 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			this->UpdateWindow();
 			return 0;
 		}
-		
-		void saveHeaderOrder(SettingsManager::StrSetting order, SettingsManager::StrSetting widths, SettingsManager::StrSetting visible)
+
+		void saveHeaderOrder(int order, int widths, int visible)
 		{
-			string tmp, tmp2, tmp3;
-			columns.saveSettings(*this, tmp, tmp2, tmp3);
-			SettingsManager::set(order, tmp);
-			SettingsManager::set(widths, tmp2);
-			SettingsManager::set(visible, tmp3);
+			string s1, s2, s3;
+			columns.saveSettings(*this, s1, s2, s3);
+			auto ss = SettingsManager::instance.getUiSettings();
+			ss->setString(order, s1);
+			ss->setString(widths, s2);
+			ss->setString(visible, s3);
 		}
-		
+
 		void saveHeaderOrder(string& order, string& widths, string& visible) noexcept
 		{
 			columns.saveSettings(*this, order, widths, visible);
 		}
-		
+
 		int findColumn(int subItem) const
 		{
 			return columns.subItemToColumn[subItem];
@@ -583,9 +586,11 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 	protected:
 		bool destroyingItems = false;
+		int compareFlags;
 
 		virtual void sortItems()
 		{
+			this->compareFlags = T::getCompareFlags();
 			this->SortItems(&compareFunc, reinterpret_cast<LPARAM>(this));
 		}
 
@@ -594,11 +599,11 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		bool sortAscending;
 		int leftMargin;
 		TypedListViewColumns columns;
-		
+
 		static int CALLBACK compareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
 		{
 			thisClass* t = (thisClass*)lParamSort;
-			int result = T::compareItems((T*)lParam1, (T*)lParam2, t->getRealSortColumn());
+			int result = T::compareItems((T*)lParam1, (T*)lParam2, t->getRealSortColumn(), t->compareFlags);
 			return (t->sortAscending ? result : -result);
 		}
 		

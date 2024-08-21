@@ -26,6 +26,7 @@
 #include "TimeUtil.h"
 #include "Util.h"
 #include "Random.h"
+#include "ConfCore.h"
 #include "version.h"
 
 #ifdef USE_QUEUE_RWLOCK
@@ -954,9 +955,12 @@ bool QueueItem::updateBlockSize(uint64_t treeBlockSize)
 
 void QueueItem::GetSegmentParams::readSettings()
 {
-	enableMultiChunk = BOOLSETTING(ENABLE_MULTI_CHUNK);
-	dontBeginSegment = BOOLSETTING(DONT_BEGIN_SEGMENT);
-	overlapChunks = BOOLSETTING(OVERLAP_CHUNKS);
-	dontBeginSegSpeed = SETTING(DONT_BEGIN_SEGMENT_SPEED);
-	maxChunkSize = SETTING(MAX_CHUNK_SIZE);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	enableMultiChunk = ss->getBool(Conf::ENABLE_MULTI_CHUNK);
+	dontBeginSegment = ss->getBool(Conf::DONT_BEGIN_SEGMENT);
+	overlapChunks = ss->getBool(Conf::OVERLAP_CHUNKS);
+	dontBeginSegSpeed = ss->getInt(Conf::DONT_BEGIN_SEGMENT_SPEED);
+	maxChunkSize = ss->getInt(Conf::MAX_CHUNK_SIZE);
+	ss->unlockRead();
 }

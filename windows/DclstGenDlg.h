@@ -79,6 +79,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		bool calculateTTH();
 		void makeMagnet();
 		static void progressFunc(void *ctx, int64_t fileSize);
+		static const string& getDcLstDirectory();
 
 	private:
 		const DirectoryListing::Directory* const dir;

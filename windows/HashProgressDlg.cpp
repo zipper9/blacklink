@@ -6,6 +6,8 @@
 #include "../client/HashManager.h"
 #include "../client/FormatUtil.h"
 #include "../client/TimeUtil.h"
+#include "../client/SettingsManager.h"
+#include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -74,7 +76,10 @@ LRESULT HashProgressDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	if (!exitOnDone)
 		exitOnDoneButton.ShowWindow(SW_HIDE);
 
-	int hashSpeed = SETTING(MAX_HASH_SPEED);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int hashSpeed = ss->getInt(Conf::MAX_HASH_SPEED);
+	ss->unlockRead();
 	slider.Attach(GetDlgItem(IDC_EDIT_MAX_HASH_SPEED_SLIDER));
 	slider.SetRange(0, 100);
 	slider.SetPos(hashSpeed);

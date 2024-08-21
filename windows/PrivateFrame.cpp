@@ -22,12 +22,15 @@
 #include "PrivateFrame.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
+#include "NotifUtil.h"
 #include "../client/UserManager.h"
 #include "../client/ClientManager.h"
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/ConnectionManager.h"
 #include "../client/FavoriteManager.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 #include "../client/dht/DHT.h"
 
 static const size_t MAX_PM_FRAMES = 100;
@@ -61,6 +64,8 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	ctrlStatusCache.resize(STATUS_LAST);
 	ctrlStatusOwnerDraw = 1<<STATUS_LOCATION;
 	ctrlClient.setHubParam(replyTo.hint, myNick);
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	pmPreview = ss->getBool(Conf::POPUP_PM_PREVIEW);
 }
 
 void PrivateFrame::doDestroyFrame()
@@ -102,7 +107,7 @@ LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	created = true;
 	ClientManager::getInstance()->addListener(this);
 	ConnectionManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	UserManager::getInstance()->setPMOpen(replyTo.user, true);
 
 	bHandled = FALSE;
@@ -143,7 +148,7 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 {
 	const auto& id = myMessage ? to : replyTo;
 	const auto& myId = myMessage ? replyTo : to;
-	
+
 	PrivateFrame* p;
 	const auto i = frames.find(id.getUser());
 	if (i == frames.end())
@@ -159,19 +164,19 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		p = new PrivateFrame(HintedUser(id.getUser(), hubHint), myId.getNick());
 		frames.insert(make_pair(id.getUser(), p));
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
-		if (BOOLSETTING(POPUP_PM_PREVIEW))
+		if (p->pmPreview)
 			SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick()), message, 250, TSTRING(PRIVATE_MESSAGE));
 		PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP_OPEN);
 	}
 	else
 	{
+		p = i->second;
 		if (!myMessage)
 		{
-			if (BOOLSETTING(POPUP_PM_PREVIEW))
+			if (p->pmPreview)
 				SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick()), message, 250, TSTRING(PRIVATE_MESSAGE));
 			PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
 		}
-		p = i->second;
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
 	}
 	if (!myMessage && Util::getAway() && !replyTo.isBotOrHub())
@@ -216,7 +221,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 				myNick = i->second->getMyNick();
 		}
 		if (myNick.empty())
-			myNick = SETTING(NICK);
+			myNick = ClientManager::getDefaultNick();
 	}
 
 	PrivateFrame* p = nullptr;
@@ -423,7 +428,7 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		closed = true;
 		ClientManager::getInstance()->removeListener(this);
 		ConnectionManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		UserManager::getInstance()->setPMOpen(replyTo.user, false);
 		PostMessage(WM_CLOSE);
 		return 0;
@@ -438,10 +443,20 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 void PrivateFrame::readFrameLog()
 {
-	const auto linesCount = SETTING(PM_LOG_LINES);
+	string path, fileName;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const int linesCount = ss->getInt(Conf::PM_LOG_LINES);
 	if (linesCount)
 	{
-		const string path = Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), true));
+		path = ss->getString(Conf::LOG_DIRECTORY);
+		fileName = ss->getString(Conf::LOG_FILE_PRIVATE_CHAT);
+	}
+	ss->unlockRead();
+	if (!path.empty() && !fileName.empty())
+	{
+		path += Util::formatParams(fileName, getFrameLogParams(), true);
+		path = Util::validateFileName(path);
 		appendLogToChat(path, linesCount);
 	}
 }
@@ -454,9 +469,10 @@ void PrivateFrame::addStatus(const tstring& line, bool inChat, bool history, int
 
 void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, int textStyle /*= Colors::TEXT_STYLE_NORMAL*/)
 {
+	const auto ss = SettingsManager::instance.getUiSettings();
 	if (!created)
 	{
-		if (BOOLSETTING(POPUNDER_PM))
+		if (ss->getBool(Conf::POPUNDER_PM))
 			WinUtil::hiddenCreateEx(this);
 		else
 			Create(WinUtil::g_mdiClient);
@@ -465,7 +481,7 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, textStyle, extra);
 
-	if (BOOLSETTING(LOG_PRIVATE_CHAT))
+	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_PRIVATE_CHAT)
 	{
 		StringMap params = getFrameLogParams();
 		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
@@ -476,7 +492,7 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 
 	addStatus(myMessage ? TSTRING(MESSAGE_SENT) : TSTRING(MESSAGE_RECEIVED), false, false);
 
-	if (BOOLSETTING(BOLD_PM))
+	if (ss->getBool(Conf::BOLD_PM))
 		setDirty();
 
 	if (!myMessage)
@@ -534,6 +550,11 @@ void PrivateFrame::runUserCommand(UserCommand& uc)
 	StringMap ucParams = ucLineParams;
 	ClientManager::userCommand(replyTo, uc, ucParams, true);
 	// TODO тут ucParams не используется позже
+}
+
+void PrivateFrame::openFrameLog() const
+{
+	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
 }
 
 void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
@@ -950,9 +971,14 @@ LRESULT PrivateFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	switch (wParam)
 	{
 		case PM_CHANNEL_CONNECTED:
-			sendCPMI = BOOLSETTING(USE_CPMI) && wParam;
+		{
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			sendCPMI = ss->getBool(Conf::USE_CPMI);
+			ss->unlockRead();
 			updateCCPM(true);
 			break;
+		}
 		case PM_CHANNEL_DISCONNECTED:
 			sendCPMI = false;
 			updateCCPM(false);
@@ -1152,11 +1178,13 @@ void PrivateFrame::changeTheme()
 		i->second->themeChanged();
 }
 
-void PrivateFrame::on(SettingsManagerListener::Repaint)
+void PrivateFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
+		const auto* ss = SettingsManager::instance.getUiSettings();
+		pmPreview = ss->getBool(Conf::POPUP_PM_PREVIEW);
 		if (ctrlClient.IsWindow())
 		{
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
@@ -1209,6 +1237,11 @@ void PrivateFrame::createMessagePanel()
 		BaseChatFrame::createMessagePanel(showSelectHub, showCCPM);
 		if (showCCPM && replyTo.user)
 		{
+			auto ss = SettingsManager::instance.getCoreSettings();
+			ss->lockRead();
+			const bool optUseCPMI = ss->getBool(Conf::USE_CCPM);
+			const bool optCCPMAutoStart = ss->getBool(Conf::CCPM_AUTO_START);
+			ss->unlockRead();
 			ConnectionManager::PMConnState s;
 			ConnectionManager::getInstance()->getCCPMState(replyTo.user->getCID(), s);
 			ccpmState = s.state;
@@ -1218,7 +1251,7 @@ void PrivateFrame::createMessagePanel()
 				addStatus(TSTRING(CCPM_IN_PROGRESS), false);
 			else if (s.state == ConnectionManager::CCPM_STATE_CONNECTED)
 			{
-				sendCPMI = BOOLSETTING(USE_CPMI) && s.cpmiSupported;
+				sendCPMI = optUseCPMI && s.cpmiSupported;
 				if (s.cpmi.isTyping == 1)
 				{
 					remoteChatClosed = false;
@@ -1227,7 +1260,7 @@ void PrivateFrame::createMessagePanel()
 				else
 					setRemoteChatClosed(s.cpmi.isClosed);
 			}
-			else if (autoStartCCPM && BOOLSETTING(CCPM_AUTO_START))
+			else if (autoStartCCPM && optCCPMAutoStart)
 			{
 				autoStartCCPM = false;
 				connectCCPM();

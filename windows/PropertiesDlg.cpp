@@ -64,7 +64,6 @@ PropertiesDlg* PropertiesDlg::instance = nullptr;
 PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent)
 {
 	this->icon = icon;
-	::g_settings = SettingsManager::getInstance();
 	instance = this;
 	memset(pages, 0, sizeof(pages));
 	size_t n = 0;

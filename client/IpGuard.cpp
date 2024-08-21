@@ -22,11 +22,26 @@
 #include "AppPaths.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
+#include "ConfCore.h"
 
 IpGuard ipGuard;
 
-IpGuard::IpGuard() : cs(RWLock::create())
+IpGuard::IpGuard() : enabled(false), isWhiteList(false), cs(RWLock::create())
 {
+}
+
+void IpGuard::updateSettings() noexcept
+{
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool optEnabled = ss->getBool(Conf::ENABLE_IPGUARD);
+	bool optWhiteList = ss->getBool(Conf::IPGUARD_DEFAULT_DENY);
+	ss->unlockRead();
+
+	enabled = optEnabled;
+
+	WRITE_LOCK(*cs);
+	isWhiteList = optWhiteList;
 }
 
 string IpGuard::getFileName()
@@ -71,7 +86,6 @@ void IpGuard::clear() noexcept
 
 bool IpGuard::isBlocked(uint32_t addr) const noexcept
 {
-	bool isWhiteList = BOOLSETTING(IPGUARD_DEFAULT_DENY);
 	READ_LOCK(*cs);
 	uint64_t payload;
 	if (ipList.find(addr, payload))

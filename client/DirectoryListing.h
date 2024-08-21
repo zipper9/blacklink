@@ -61,9 +61,10 @@ class DirectoryListing
 
 		enum
 		{
-			SCAN_OPTION_SHARED     = 1 << 0,
-			SCAN_OPTION_DOWNLOADED = 1 << 1,
-			SCAN_OPTION_CANCELED   = 1 << 2
+			SCAN_OPTION_SHARED          = 1 << 0,
+			SCAN_OPTION_DOWNLOADED      = 1 << 1,
+			SCAN_OPTION_CANCELED        = 1 << 2,
+			SCAN_OPTION_SHOW_MY_UPLOADS = 1 << 3
 		};
 
 		typedef boost::unordered_map<TTHValue, int64_t> TTHMap;

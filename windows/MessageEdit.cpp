@@ -1,6 +1,7 @@
 #include <stdafx.h>
 #include "MessageEdit.h"
 #include "WinUtil.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 
 LRESULT MessageEdit::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -57,7 +58,8 @@ LRESULT MessageEdit::onKeyDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 
 bool MessageEdit::insertHistoryLine(UINT chr)
 {
-	bool allowToInsertLineHistory = WinUtil::isAlt() || (WinUtil::isCtrl() && BOOLSETTING(USE_CTRL_FOR_LINE_HISTORY));
+	bool allowToInsertLineHistory = WinUtil::isAlt() ||
+		(WinUtil::isCtrl() && SettingsManager::instance.getUiSettings()->getBool(Conf::USE_CTRL_FOR_LINE_HISTORY));
 	if (!allowToInsertLineHistory)
 		return false;
 

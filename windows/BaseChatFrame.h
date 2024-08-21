@@ -27,7 +27,6 @@
 #include "StatusMessageHistory.h"
 #include "../client/ClientManager.h"
 #include "../client/Commands.h"
-#include "../client/SettingsManager.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::Callback
 {
@@ -70,20 +69,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void createChatCtrl();
 		void setChatDisabled(bool disabled);
 
-		BaseChatFrame() :
-			multiChatLines(0),
-			showTimestamps(BOOLSETTING(CHAT_TIME_STAMPS)),
-			msgPanel(nullptr),
-			messagePanelHwnd(nullptr),
-			messagePanelRect{},
-			lastMessageSelPos(0),
-			userMenu(nullptr),
-			disableChat(false),
-			shouldRestoreStatusText(true),
-			ctrlStatusOwnerDraw(0),
-			findDlg(nullptr)
-		{
-		}
+		BaseChatFrame();
 
 		BaseChatFrame(const BaseChatFrame&) = delete;
 		BaseChatFrame& operator= (const BaseChatFrame&) = delete;

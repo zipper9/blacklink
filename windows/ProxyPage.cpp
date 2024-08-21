@@ -22,7 +22,9 @@
 #include "ProxyPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "../client/SettingsManager.h"
 #include "../client/Socket.h"
+#include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -45,23 +47,27 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SOCKS_SERVER,   SettingsManager::SOCKS_SERVER,   PropPage::T_STR  },
-	{ IDC_SOCKS_PORT,     SettingsManager::SOCKS_PORT,     PropPage::T_INT  },
-	{ IDC_SOCKS_USER,     SettingsManager::SOCKS_USER,     PropPage::T_STR  },
-	{ IDC_SOCKS_PASSWORD, SettingsManager::SOCKS_PASSWORD, PropPage::T_STR  },
-	{ IDC_SOCKS_RESOLVE,  SettingsManager::SOCKS_RESOLVE,  PropPage::T_BOOL },
-	{ IDC_USE_HTTP_PROXY, SettingsManager::USE_HTTP_PROXY, PropPage::T_BOOL },
-	{ IDC_HTTP_PROXY_URL, SettingsManager::HTTP_PROXY,     PropPage::T_STR  },
-	{ 0,                  0,                               PropPage::T_END  }
+	{ IDC_SOCKS_SERVER,   Conf::SOCKS_SERVER,   PropPage::T_STR  },
+	{ IDC_SOCKS_PORT,     Conf::SOCKS_PORT,     PropPage::T_INT  },
+	{ IDC_SOCKS_USER,     Conf::SOCKS_USER,     PropPage::T_STR  },
+	{ IDC_SOCKS_PASSWORD, Conf::SOCKS_PASSWORD, PropPage::T_STR  },
+	{ IDC_SOCKS_RESOLVE,  Conf::SOCKS_RESOLVE,  PropPage::T_BOOL },
+	{ IDC_USE_HTTP_PROXY, Conf::USE_HTTP_PROXY, PropPage::T_BOOL },
+	{ IDC_HTTP_PROXY_URL, Conf::HTTP_PROXY,     PropPage::T_STR  },
+	{ 0,                  0,                    PropPage::T_END  }
 };
 
 LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 
-	switch (SETTING(OUTGOING_CONNECTIONS))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int outgoingConnections = ss->getInt(Conf::OUTGOING_CONNECTIONS);
+	ss->unlockRead();
+	switch (outgoingConnections)
 	{
-		case SettingsManager::OUTGOING_SOCKS5:
+		case Conf::OUTGOING_SOCKS5:
 			CheckDlgButton(IDC_SOCKS5, BST_CHECKED);
 			break;
 		default:
@@ -100,13 +106,14 @@ void ProxyPage::write()
 
 	PropPage::write(*this, items);
 
-	int ct = SettingsManager::OUTGOING_DIRECT;
-
+	int ct = Conf::OUTGOING_DIRECT;
 	if (IsDlgButtonChecked(IDC_SOCKS5))
-		ct = SettingsManager::OUTGOING_SOCKS5;
+		ct = Conf::OUTGOING_SOCKS5;
 
-	if (SETTING(OUTGOING_CONNECTIONS) != ct)
-		g_settings->set(SettingsManager::OUTGOING_CONNECTIONS, ct);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setInt(Conf::OUTGOING_CONNECTIONS, ct);
+	ss->unlockWrite();
 }
 
 void ProxyPage::fixControls()

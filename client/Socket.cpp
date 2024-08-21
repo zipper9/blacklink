@@ -18,11 +18,13 @@
 
 #include "stdinc.h"
 #include "Socket.h"
+#include "StrUtil.h"
 #include "Resolver.h"
 #include "IpGuard.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
 #include "SettingsManager.h"
+#include "ConfCore.h"
 
 #ifdef _WIN32
 #include "SysVersion.h"
@@ -135,7 +137,7 @@ void Socket::create(int af, SocketType type)
 
 uint16_t Socket::accept(const Socket& listeningSocket)
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 	string sockName;
 
 	if (sock != INVALID_SOCKET)
@@ -160,15 +162,14 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	{
 		int error = getLastError();
 		if (doLog)
-			LogManager::message(sockName +
-				": Accept error #" + Util::toString(error), false);
+			LogManager::message(sockName + ": Accept error #" + Util::toString(error), false);
 		throw SocketException(error);
 	}
 
 	IpAddress remoteIp;
 	uint16_t port;
 	fromSockAddr(remoteIp, port, sockAddr);
-	if (BOOLSETTING(ENABLE_IPGUARD) && remoteIp.type == AF_INET && ipGuard.isBlocked(remoteIp.data.v4))
+	if (remoteIp.type == AF_INET && ipGuard.isEnabled() && ipGuard.isBlocked(remoteIp.data.v4))
 		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(remoteIp.data.v4)));
 
 #ifdef _WIN32
@@ -197,12 +198,16 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 
 static inline int getBindOptions(int af)
 {
-	return SettingsManager::get(af == AF_INET6 ? SettingsManager::BIND_OPTIONS6 : SettingsManager::BIND_OPTIONS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int options = ss->getInt(af == AF_INET6 ? Conf::BIND_OPTIONS6 : Conf::BIND_OPTIONS);
+	ss->unlockRead();
+	return options;
 }
 
 uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 	string sockName;
 	if (doLog) printSockName(sockName);
 
@@ -221,7 +226,7 @@ uint16_t Socket::bind(uint16_t port, const IpAddressEx& addr)
 	{
 		int error = getLastError();
 		bool anyAddr = isAnyAddr(sockAddr);
-		if (anyAddr || (getBindOptions(addr.type) & SettingsManager::BIND_OPTION_NO_FALLBACK) != 0)
+		if (anyAddr || (getBindOptions(addr.type) & Conf::BIND_OPTION_NO_FALLBACK) != 0)
 		{
 			if (doLog)
 				LogManager::message(sockName +
@@ -261,7 +266,7 @@ void Socket::listen()
 
 void Socket::connect(const string& host, uint16_t port)
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 	IpAddressEx ip;
 	bool isNumeric;
 	if (!Resolver::resolveHost(ip, 0, host, &isNumeric))
@@ -286,7 +291,7 @@ void Socket::connect(const string& host, uint16_t port)
 
 void Socket::connect(const IpAddressEx& ip, uint16_t port, const string& host)
 {
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = (LogManager::getLogOptions() & LogManager::OPT_LOG_SOCKET_INFO) != 0;
 
 	if (sock == INVALID_SOCKET)
 		create(ip.type, TYPE_TCP);
@@ -300,7 +305,7 @@ void Socket::connect(const IpAddressEx& ip, uint16_t port, const string& host)
 			":" + Util::toString(port) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
 	}
 
-	if (BOOLSETTING(ENABLE_IPGUARD) && ip.type == AF_INET && ipGuard.isBlocked(ip.data.v4))
+	if (ip.type == AF_INET && ipGuard.isEnabled() && ipGuard.isBlocked(ip.data.v4))
 	{
 		string error = STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(ip.data.v4));
 		if (!host.empty()) error += " (" + host + ")";
@@ -335,25 +340,19 @@ int Socket::getSocketOptInt(int level, int option) const
 	return val;
 }
 
-void Socket::setInBufSize()
+void Socket::setBufSize(int what)
 {
 #ifdef _WIN32
 	if (!SysVersion::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
 #endif
 	{
-		const int sockInBuf = SETTING(SOCKET_IN_BUFFER);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		const int sockInBuf = (what & IN_BUFFER) ? ss->getInt(Conf::SOCKET_IN_BUFFER) : 0;
+		const int sockOutBuf = (what & OUT_BUFFER) ? ss->getInt(Conf::SOCKET_OUT_BUFFER) : 0;
+		ss->unlockRead();
 		if (sockInBuf > 0)
 			setSocketOpt(SOL_SOCKET, SO_RCVBUF, sockInBuf);
-	}
-}
-
-void Socket::setOutBufSize()
-{
-#ifdef _WIN32
-	if (!SysVersion::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
-#endif
-	{
-		const int sockOutBuf = SETTING(SOCKET_OUT_BUFFER);
 		if (sockOutBuf > 0)
 			setSocketOpt(SOL_SOCKET, SO_SNDBUF, sockOutBuf);
 	}
@@ -724,15 +723,19 @@ void Socket::disconnect() noexcept
 
 bool Socket::getProxyConfig(Socket::ProxyConfig& proxy)
 {
-	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getInt(Conf::OUTGOING_CONNECTIONS) == Conf::OUTGOING_SOCKS5)
 	{
-		proxy.host = SETTING(SOCKS_SERVER);
-		proxy.port = SETTING(SOCKS_PORT);
-		proxy.user = SETTING(SOCKS_USER);
-		proxy.password = SETTING(SOCKS_PASSWORD);
-		proxy.resolveNames = BOOLSETTING(SOCKS_RESOLVE);
+		proxy.host = ss->getString(Conf::SOCKS_SERVER);
+		proxy.port = ss->getInt(Conf::SOCKS_PORT);
+		proxy.user = ss->getInt(Conf::SOCKS_USER);
+		proxy.password = ss->getInt(Conf::SOCKS_PASSWORD);
+		proxy.resolveNames = ss->getBool(Conf::SOCKS_RESOLVE);
+		ss->unlockRead();
 		return true;
 	}
+	ss->unlockRead();
 	proxy.host.clear();
 	proxy.port = 0;
 	proxy.user.clear();

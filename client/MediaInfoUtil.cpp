@@ -5,6 +5,8 @@
 #include "Text.h"
 #include "SettingsManager.h"
 #include "FileTypes.h"
+#include "StrUtil.h"
+#include "ConfCore.h"
 #include <algorithm>
 
 #define MI MediaInfoLib::instance
@@ -337,14 +339,17 @@ bool MediaInfoUtil::parseDuration(const string& s, unsigned& msec)
 
 uint16_t MediaInfoUtil::getMediaInfoFileTypes()
 {
-	unsigned mediaInfoOptions = SETTING(MEDIA_INFO_OPTIONS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	unsigned mediaInfoOptions = ss->getInt(Conf::MEDIA_INFO_OPTIONS);
 	uint16_t mask = 0;
-	if (mediaInfoOptions & SettingsManager::MEDIA_INFO_OPTION_ENABLE)
+	if (mediaInfoOptions & Conf::MEDIA_INFO_OPTION_ENABLE)
 	{
-		if (mediaInfoOptions & SettingsManager::MEDIA_INFO_OPTION_SCAN_AUDIO)
+		if (mediaInfoOptions & Conf::MEDIA_INFO_OPTION_SCAN_AUDIO)
 			mask |= 1<<FILE_TYPE_AUDIO;
-		if (mediaInfoOptions & SettingsManager::MEDIA_INFO_OPTION_SCAN_VIDEO)
+		if (mediaInfoOptions & Conf::MEDIA_INFO_OPTION_SCAN_VIDEO)
 			mask |= 1<<FILE_TYPE_VIDEO;
 	}
+	ss->unlockRead();
 	return mask;
 }

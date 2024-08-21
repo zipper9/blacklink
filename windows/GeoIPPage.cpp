@@ -5,6 +5,7 @@
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
 #include "../client/FormatUtil.h"
+#include "../client/ConfCore.h"
 
 static const int ICON_SIZE = 16;
 
@@ -33,10 +34,10 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_GEOIP_URL, SettingsManager::URL_GEOIP, PropPage::T_STR },
-	{ IDC_GEOIP_AUTO_DOWNLOAD, SettingsManager::GEOIP_AUTO_UPDATE, PropPage::T_BOOL },
-	{ IDC_GEOIP_CHECK, SettingsManager::GEOIP_CHECK_HOURS, PropPage::T_INT },
-	{ IDC_USE_CUSTOM_LOCATIONS, SettingsManager::USE_CUSTOM_LOCATIONS, PropPage::T_BOOL },
+	{ IDC_GEOIP_URL, Conf::URL_GEOIP, PropPage::T_STR },
+	{ IDC_GEOIP_AUTO_DOWNLOAD, Conf::GEOIP_AUTO_UPDATE, PropPage::T_BOOL },
+	{ IDC_GEOIP_CHECK, Conf::GEOIP_CHECK_HOURS, PropPage::T_INT },
+	{ IDC_USE_CUSTOM_LOCATIONS, Conf::USE_CUSTOM_LOCATIONS, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 

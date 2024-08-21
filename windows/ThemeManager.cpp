@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 #include "ThemeManager.h"
+#include "ConfUI.h"
 #include "../client/AppPaths.h"
 #include "../client/Text.h"
 
@@ -47,7 +48,8 @@ void ThemeManager::loadResourceLib()
 	g_debugResourceLibIsLoaded = true;
 	dcassert(!isResourceLibLoaded());
 #endif // _DEBUG
-	const string themeDllName = SETTING(THEME_MANAGER_THEME_DLL_NAME);
+	const auto ss = SettingsManager::instance.getUiSettings();
+	const string& themeDllName = ss->getString(Conf::THEME_MANAGER_THEME_DLL_NAME);
 	if (!themeDllName.empty())
 	{
 		string themeFullPath = Util::getThemesPath() + themeDllName;

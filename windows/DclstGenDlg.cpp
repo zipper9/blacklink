@@ -23,6 +23,8 @@
 #include "ImageLists.h"
 #include "WinUtil.h"
 #include "BrowseFile.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
 #include "../client/BZUtils.h"
 #include "../client/FilteredFile.h"
 #include "../client/HashUtil.h"
@@ -52,6 +54,14 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDCANCEL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
 
+const string& DclstGenDlg::getDcLstDirectory()
+{
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::DCLST_CREATE_IN_SAME_FOLDER))
+		return Util::emptyString;
+	return ss->getString(Conf::DCLST_DIRECTORY);
+}
+
 LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(DCLSTGEN_TITLE));
@@ -74,9 +84,8 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		string fileName = dir->getName();
 		if (fileName.empty() && user)
 			fileName = user->getLastNick();
-		if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
-			listName = SETTING(DCLST_DIRECTORY);
-		else
+		listName = getDcLstDirectory();
+		if (listName.empty())
 			listName = Util::getDownloadDir(UserPtr());
 		listName += Util::validateFileName(fileName);
 		SetDlgItemText(IDC_DCLSTGEN_SHARE, CTSTRING(DCLSTGEN_SHARE));
@@ -86,9 +95,8 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		calculatingSize = true;
 		Util::appendPathSeparator(dirToHash);
 		string fileName = Util::getLastDir(dirToHash);
-		if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
-			listName = SETTING(DCLST_DIRECTORY);
-		else
+		listName = getDcLstDirectory();
+		if (listName.empty())
 			listName = dirToHash;
 		listName += Util::validateFileName(fileName);
 		SetDlgItemText(IDC_DCLSTGEN_SHARE, CTSTRING(DCLSTGEN_OPEN));
@@ -221,7 +229,7 @@ void DclstGenDlg::writeXMLStart()
 	xml = SimpleXML::utf8Header;
 	CID cid = user ? user->getCID() : CID::generate();
 	xml += "<FileListing Version=\"2\" CID=\"" + cid.toBase32() + "\" Generator=\"DC++ " DCVERSIONSTRING "\"";
-	if (BOOLSETTING(DCLST_INCLUDESELF))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::DCLST_INCLUDESELF))
 		xml += " IncludeSelf=\"1\"";
 	xml += ">\r\n";
 }

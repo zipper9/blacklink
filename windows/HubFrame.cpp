@@ -23,11 +23,15 @@
 #include "PrivateFrame.h"
 #include "MainFrm.h"
 #include "Fonts.h"
+#include "NotifUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/QueueManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/UserManager.h"
+#include "../client/ClientManager.h"
+#include "../client/SettingsUtil.h"
 #include "../client/dht/DHT.h"
+#include "../client/ConfCore.h"
 #include "FavHubProperties.h"
 #include "LineDlg.h"
 
@@ -201,7 +205,8 @@ void HubFrame::updateSplitterPosition(int chatUserSplit, bool swapFlag)
 		swapPanels = false;
 	if (m_nProportionalPos == 0)
 	{
-		swapPanels = SETTING(HUB_POSITION) != SettingsManager::POS_RIGHT;
+		const auto* ss = SettingsManager::instance.getUiSettings();
+		swapPanels = ss->getInt(Conf::HUB_POSITION) != Conf::POS_RIGHT;
 		m_nProportionalPos = swapPanels ? 2500 : 7500;
 	}
 	setSplitterPanes();
@@ -251,19 +256,23 @@ void HubFrame::initUI()
 	FavoriteManager::WindowInfo wi;
 	if (!fm->getFavoriteHubWindowInfo(serverUrl, wi))
 	{
-		wi.headerOrder = SETTING(HUB_FRAME_ORDER);
-		wi.headerWidths = SETTING(HUB_FRAME_WIDTHS);
-		wi.headerVisible = SETTING(HUB_FRAME_VISIBLE);
+		auto cs = SettingsManager::instance.getCoreSettings();
+		cs->lockRead();
+		wi.headerOrder = cs->getString(Conf::HUB_FRAME_ORDER);
+		wi.headerWidths = cs->getString(Conf::HUB_FRAME_WIDTHS);
+		wi.headerVisible = cs->getString(Conf::HUB_FRAME_VISIBLE);
+		cs->unlockRead();
 		wi.headerSort = -1;
 		wi.chatUserSplit = -1;
 		wi.swapPanels = false;
 	}
 
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
-	showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
+	showJoins = fhe ? fhe->getShowJoins() : ss->getBool(Conf::SHOW_JOINS);
 	fm->releaseFavoriteHubEntryPtr(fhe);
 
-	showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
+	showFavJoins = ss->getBool(Conf::FAV_SHOW_JOINS);
 
 	ctrlUsers.initialize(wi);
 
@@ -280,7 +289,7 @@ void HubFrame::initUI()
 
 	FavoriteManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	uiInitialized = true;
 }
 
@@ -399,6 +408,11 @@ StringMap HubFrame::getFrameLogParams() const
 	return params;
 }
 
+void HubFrame::openFrameLog() const
+{
+	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
+}
+
 void HubFrame::readFrameLog()
 {
 	ctrlClient.goToEnd(true);
@@ -438,7 +452,7 @@ bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::
 		{
 			res.what = Commands::RESULT_NO_TEXT;
 			string url = Util::formatDchubUrl(pc.args[1]);
-			if (BOOLSETTING(JOIN_OPEN_NEW_WINDOW))
+			if (SettingsManager::instance.getUiSettings()->getBool(Conf::JOIN_OPEN_NEW_WINDOW))
 			{
 				openHubWindow(url);
 			}
@@ -546,7 +560,7 @@ bool HubFrame::processFrameCommand(const Commands::ParsedCommand& pc, Commands::
 			}
 			if (stricmp(pc.args[1].c_str(), "status") == 0)
 			{
-				WinUtil::openLog(SETTING(LOG_FILE_STATUS), getFrameLogParams(), TSTRING(NO_LOG_FOR_STATUS));
+				WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_STATUS), getFrameLogParams(), TSTRING(NO_LOG_FOR_STATUS));
 				return true;
 			}
 			break;
@@ -658,7 +672,7 @@ void HubFrame::createTabMenu()
 			isAutoConnect = fhe->getAutoConnect();
 		}
 		fm->releaseFavoriteHubEntryPtr(fhe);
-		if (BOOLSETTING(LOG_MAIN_CHAT))
+		if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_MAIN_CHAT)
 		{
 			tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 			tabMenu.AppendMenu(MF_SEPARATOR);
@@ -741,7 +755,7 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 void HubFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool history /*= true*/, int textStyle /*= Colors::TEXT_STYLE_SYSTEM_MESSAGE*/)
 {
 	BaseChatFrame::addStatus(line, inChat, history, textStyle);
-	if (BOOLSETTING(LOG_STATUS_MESSAGES))
+	if (LogManager::getLogOptions() & LogManager::OPT_LOG_STATUS)
 	{
 		StringMap params;
 		if (client)
@@ -774,6 +788,25 @@ void HubFrame::doConnected()
 	if (ctrlStatus)
 		UpdateLayout(FALSE);
 	shouldUpdateStats = true;
+}
+
+void HubFrame::doRedirect(const string& redirAddr)
+{
+	bool doubleRedir = false;
+	if (ClientManager::isConnected(redirAddr))
+	{
+		addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, true, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
+		doubleRedir = true;
+	}
+
+	redirect = redirAddr;
+	if (doubleRedir || SettingsManager::instance.getUiSettings()->getBool(Conf::AUTO_FOLLOW))
+		PostMessage(WM_COMMAND, IDC_FOLLOW, 0);
+	else
+	{
+		string msg = STRING_F(PRESS_FOLLOW_FMT, redirAddr);
+		addStatus(Text::toT(msg), true, true, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
+	}
 }
 
 void HubFrame::doLoggedIn()
@@ -963,6 +996,9 @@ void HubFrame::processTasks()
 				case DISCONNECTED:
 					doDisconnected();
 					break;
+				case REDIRECT:
+					doRedirect(static_cast<const StringTask*>(i->second)->str);
+					break;
 				case LOGGED_IN:
 					doLoggedIn();
 					break;
@@ -981,7 +1017,7 @@ void HubFrame::processTasks()
 					//dcassert(ctrlMessage);
 					if (isConnected())
 					{
-						if (!BOOLSETTING(PROMPT_HUB_PASSWORD))
+						if (!SettingsManager::instance.getUiSettings()->getBool(Conf::PROMPT_HUB_PASSWORD))
 						{
 							addPasswordCommand();
 							waitingForPassword = true;
@@ -1023,7 +1059,7 @@ void HubFrame::processTasks()
 				break;
 				case PRIVATE_MESSAGE:
 				{
-					dcassert(!ClientManager::isBeforeShutdown());
+					const auto* ss = SettingsManager::instance.getUiSettings();
 					MessageTask& task = static_cast<MessageTask&>(*i->second);
 					const ChatMessage* pm = task.getMessage();
 					const Identity& from = pm->from->getIdentity();
@@ -1034,9 +1070,9 @@ void HubFrame::processTasks()
 					const auto& id = myPM ? to : replyTo;
 					const bool isOpen = PrivateFrame::isOpen(id.getUser());
 					bool isPrivateFrameOk = false;
-					if ((BOOLSETTING(POPUP_PMS_HUB) && replyTo.isHub() ||
-					     BOOLSETTING(POPUP_PMS_BOT) && replyTo.isBot() ||
-					     BOOLSETTING(POPUP_PMS_OTHER)) || isOpen)
+					if ((replyTo.isHub() && ss->getBool(Conf::POPUP_PMS_HUB) ||
+					     replyTo.isBot() && ss->getBool(Conf::POPUP_PMS_BOT) ||
+					     ss->getBool(Conf::POPUP_PMS_OTHER)) || isOpen)
 					{
 						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, UINT_MAX, client->getHubUrl(), myPM, pm->thirdPerson);
 					}
@@ -1064,7 +1100,7 @@ void HubFrame::processTasks()
 				{
 					const StatusTask& task = static_cast<StatusTask&>(*i->second);
 					BaseChatFrame::addLine(Text::toT(task.str), 0, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
-					if (BOOLSETTING(LOG_MAIN_CHAT))
+					if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_MAIN_CHAT)
 					{
 						StringMap params;
 						params["message"] = task.str;
@@ -1374,10 +1410,14 @@ void HubFrame::storeColumnsInfo()
 	}
 	else
 	{
-		SET_SETTING(HUB_FRAME_ORDER, wi.headerOrder);
-		SET_SETTING(HUB_FRAME_WIDTHS, wi.headerWidths);
-		SET_SETTING(HUB_FRAME_VISIBLE, wi.headerVisible);
-		SET_SETTING(HUB_FRAME_SORT, ctrlUsers.getUserList().getSortForSettings());
+		auto cs = SettingsManager::instance.getCoreSettings();
+		cs->lockWrite();
+		cs->setString(Conf::HUB_FRAME_ORDER, wi.headerOrder);
+		cs->setString(Conf::HUB_FRAME_WIDTHS, wi.headerWidths);
+		cs->setString(Conf::HUB_FRAME_VISIBLE, wi.headerVisible);
+		cs->unlockWrite();
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::HUB_FRAME_SORT, ctrlUsers.getUserList().getSortForSettings());
 	}
 }
 
@@ -1423,7 +1463,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		}
 		if (uiInitialized)
 		{
-			SettingsManager::getInstance()->removeListener(this);
+			SettingsManager::instance.removeListener(this);
 			UserManager::getInstance()->removeListener(this);
 			FavoriteManager::getInstance()->removeListener(this);
 		}
@@ -1502,7 +1542,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 			}
 			else
 			{
-				switch (SETTING(CHAT_DBLCLICK))
+				switch (SettingsManager::instance.getUiSettings()->getInt(Conf::CHAT_DBLCLICK))
 				{
 					case 0:
 					{
@@ -1545,7 +1585,7 @@ void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, c
 	{
 		SHOW_POPUP(POPUP_ON_CHAT_LINE, line, TSTRING(CHAT_MESSAGE));
 	}
-	if (BOOLSETTING(LOG_MAIN_CHAT))
+	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_MAIN_CHAT)
 	{
 		StringMap params;
 		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
@@ -1559,7 +1599,7 @@ void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, c
 		if (baseClient) params["hubURL"] = baseClient->getHubUrl();
 		LOG(CHAT, params);
 	}
-	if (!ClientManager::isStartup() && BOOLSETTING(BOLD_HUB))
+	if (!ClientManager::isStartup() && SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_HUB))
 	{
 		if (!client || client->isUserListLoaded())
 			setDirty();
@@ -1878,14 +1918,15 @@ LRESULT HubFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 LRESULT HubFrame::onReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!client) return 0;
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	auto fm = FavoriteManager::getInstance();
 	const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
 	bool hasFavNick = fhe && !fhe->getNick().empty();
-	showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
+	showJoins = fhe ? fhe->getShowJoins() : ss->getBool(Conf::SHOW_JOINS);
 	fm->releaseFavoriteHubEntryPtr(fhe);
-	showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
+	showFavJoins = ss->getBool(Conf::FAV_SHOW_JOINS);
 
-	if (!hasFavNick && SETTING(NICK).empty())
+	if (!hasFavNick && ClientManager::isNickEmpty())
 	{
 		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);// TODO Добавить адрес хаба в сообщение
 		return 0;
@@ -2105,7 +2146,7 @@ void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& use
 
 void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 {
-	if (justDoIt || BOOLSETTING(SORT_FAVUSERS_FIRST))
+	if (justDoIt || SettingsManager::instance.getUiSettings()->getBool(Conf::SORT_FAVUSERS_FIRST))
 		ctrlUsers.setSortFlag();
 }
 
@@ -2160,7 +2201,9 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 		return;
 	string convertedLine = line;
 	Util::convertToDos(convertedLine);
-	addTask(ADD_STATUS_LINE, new StatusTask(convertedLine, !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_KICK_MSG), false));
+	addTask(ADD_STATUS_LINE, new StatusTask(convertedLine,
+		!(statusFlags & ClientListener::FLAG_KICK_MSG) ||
+		!(ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_FILTER_KICK), false));
 }
 
 void HubFrame::on(ClientListener::SettingsLoaded, const Client*) noexcept
@@ -2193,19 +2236,10 @@ void HubFrame::on(ClientListener::UserListRemoved, const ClientBase*, const Onli
 
 void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 {
-	string redirAddr = Util::formatDchubUrl(line);
-	bool doubleRedir = false;
-	if (ClientManager::isConnected(redirAddr))
-	{
-		addTask(ADD_STATUS_LINE, new StatusTask(STRING(REDIRECT_ALREADY_CONNECTED), true, true));
-		doubleRedir = true;
-	}
-	
-	redirect = redirAddr;
-	if (BOOLSETTING(AUTO_FOLLOW) || doubleRedir)
-		PostMessage(WM_COMMAND, IDC_FOLLOW, 0);
-	else
-		addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(PRESS_FOLLOW_FMT, redirAddr), true, true));
+	dcassert(!isClosedOrShutdown());
+	if (isClosedOrShutdown())
+		return;
+	addTask(REDIRECT, new StringTask(Util::formatDchubUrl(line)));
 }
 
 void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& line) noexcept
@@ -2229,7 +2263,7 @@ void HubFrame::onTimerHubUpdated()
 	{
 		if (isDHT)
 		{
-			ctrlClient.setHubParam(dht::NetworkName, SETTING(NICK));
+			ctrlClient.setHubParam(dht::NetworkName, ClientManager::getDefaultNick());
 			ctrlUsers.setHubHint(dht::NetworkName);
 		}
 		else if (client)
@@ -2264,8 +2298,9 @@ void HubFrame::updateWindowTitle()
 	if (!client) return;
 	string fullHubName = client->getHubName();
 	string tooltip = fullHubName;
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	const string& url = client->getHubUrl();
-	if (BOOLSETTING(HUB_URL_IN_TITLE) && !url.empty() && url != fullHubName)
+	if (ss->getBool(Conf::HUB_URL_IN_TITLE) && !url.empty() && url != fullHubName)
 		fullHubName += " (" + url + ')';
 
 	string description = client->getHubDescription();
@@ -2291,7 +2326,7 @@ void HubFrame::updateWindowTitle()
 	if (fullHubName != prevHubName)
 	{
 		setWindowTitle(Text::toT(fullHubName));
-		if (BOOLSETTING(BOLD_HUB) && !prevHubName.empty())
+		if (ss->getBool(Conf::BOLD_HUB) && !prevHubName.empty())
 			setDirty();
 		prevHubName = std::move(fullHubName);
 	}
@@ -2339,34 +2374,41 @@ void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickE
 		return;
 	StatusTask* status = nullptr;
 	string nick = client->getMyNick();
-	if (BOOLSETTING(AUTO_CHANGE_NICK) && nickError != ClientListener::BadPassword)
+	if (nickError != ClientListener::BadPassword)
 	{
-		auto fm = FavoriteManager::getInstance();
-		auto fhe = fm->getFavoriteHubEntryPtr(client->getHubUrl());
-		bool noPassword = !fhe || fhe->getPassword().empty();
-		fm->releaseFavoriteHubEntryPtr(fhe);
-
-		if (noPassword)
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		bool autoChangeNick = ss->getBool(Conf::AUTO_CHANGE_NICK);
+		ss->unlockRead();
+		if (autoChangeNick)
 		{
-			const string& tempNick = client->getRandomTempNick();
-			if (!tempNick.empty())
+			auto fm = FavoriteManager::getInstance();
+			auto fhe = fm->getFavoriteHubEntryPtr(client->getHubUrl());
+			bool noPassword = !fhe || fhe->getPassword().empty();
+			fm->releaseFavoriteHubEntryPtr(fhe);
+
+			if (noPassword)
 			{
-				nick = tempNick;
-				Client::removeRandomSuffix(nick);
-			}
-			bool suffixAppended;
-			if (client->convertNick(nick, suffixAppended))
-			{
-				string oldNick = client->getMyNick();
-				if (!suffixAppended) Client::appendRandomSuffix(nick);
-				client->setMyNick(nick, true);
-				setHubParam();				
-				client->setAutoReconnect(true);
-				client->setReconnDelay(30);
-				if (nickError == ClientListener::Rejected)
-					status = new StatusTask(STRING_F(NICK_ERROR_REJECTED_AUTO, oldNick % nick), true, false);
-				else
-					status = new StatusTask(STRING_F(NICK_ERROR_TAKEN_AUTO, oldNick % nick), true, false);
+				const string& tempNick = client->getRandomTempNick();
+				if (!tempNick.empty())
+				{
+					nick = tempNick;
+					Client::removeRandomSuffix(nick);
+				}
+				bool suffixAppended;
+				if (client->convertNick(nick, suffixAppended))
+				{
+					string oldNick = client->getMyNick();
+					if (!suffixAppended) Client::appendRandomSuffix(nick);
+					client->setMyNick(nick, true);
+					setHubParam();				
+					client->setAutoReconnect(true);
+					client->setReconnDelay(30);
+					if (nickError == ClientListener::Rejected)
+						status = new StatusTask(STRING_F(NICK_ERROR_REJECTED_AUTO, oldNick % nick), true, false);
+					else
+						status = new StatusTask(STRING_F(NICK_ERROR_TAKEN_AUTO, oldNick % nick), true, false);
+				}
 			}
 		}
 	}
@@ -2476,20 +2518,19 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 		if (count < 50) // Limit maximum number of selected users
 			appendAndActivateUserItems(menu, false);
 	}
-	
+
 	if (isChat)
-	{
 		appendChatCtrlItems(menu, client && client->isOp());
-	}
-	
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (isChat)
 	{
-		int idc = chatActionToId(SETTING(CHAT_DBLCLICK));
+		int idc = chatActionToId(ss->getInt(Conf::CHAT_DBLCLICK));
 		if (idc) menu.SetMenuDefaultItem(idc);
 	}
 	else
 	{
-		int idc = userListActionToId(SETTING(USERLIST_DBLCLICK));
+		int idc = userListActionToId(ss->getInt(Conf::USERLIST_DBLCLICK));
 		if (idc) menu.SetMenuDefaultItem(idc);
 	}
 }
@@ -2533,7 +2574,7 @@ LRESULT HubFrame::onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-void HubFrame::on(SettingsManagerListener::Repaint)
+void HubFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
@@ -2606,11 +2647,11 @@ void HubFrame::openUserLog()
 	}
 
 	StringMap params = getFrameLogParams();
-	
+
 	params["userNI"] = ui->getNick();
 	params["userCID"] = ui->getUser()->getCID().toBase32();
-	
-	WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
+
+	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
 }
 
 void HubFrame::addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc)

@@ -23,6 +23,8 @@
 #include "BarShader.h"
 #include "GdiUtil.h"
 #include "DwmApiLib.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
 #include "../client/SysVersion.h"
 
 #define THEME_NAME L"MENU"
@@ -210,7 +212,7 @@ BOOL OMenu::CreatePopupMenu()
 {
 	if (ownerDrawMode == OD_DEFAULT)
 	{
-		if (BOOLSETTING(USE_CUSTOM_MENU))
+		if (SettingsManager::instance.getUiSettings()->getBool(Conf::USE_CUSTOM_MENU))
 			ownerDrawMode = OD_ALWAYS;
 		else
 			ownerDrawMode = OD_NEVER;
@@ -769,21 +771,25 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 
 				if ((omi->type & MFT_SEPARATOR) && (omi->extType & EXT_TYPE_HEADER))
 				{
+					const auto ss = SettingsManager::instance.getUiSettings();
 					bHandled = TRUE;
 					rc.left += parent->marginHeader.cxLeftWidth;
 					rc.right -= parent->marginHeader.cxRightWidth;
 					rc.top += parent->marginHeader.cyTopHeight;
 					rc.bottom -= parent->marginHeader.cyBottomHeight;
-					if (BOOLSETTING(MENUBAR_TWO_COLORS))
-						OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
+					if (ss->getBool(Conf::MENUBAR_TWO_COLORS))
+						OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.right, rc.bottom,
+							ss->getInt(Conf::MENUBAR_LEFT_COLOR),
+							ss->getInt(Conf::MENUBAR_RIGHT_COLOR),
+							ss->getBool(Conf::MENUBAR_BUMPED));
 					else
 					{
-						COLORREF clrOld = SetBkColor(dis->hDC, SETTING(MENUBAR_LEFT_COLOR));
+						COLORREF clrOld = SetBkColor(dis->hDC, ss->getInt(Conf::MENUBAR_LEFT_COLOR));
 						ExtTextOut(dis->hDC, 0, 0, ETO_OPAQUE, &rc, nullptr, 0, nullptr);
 						SetBkColor(dis->hDC, clrOld);
 					}
 					SetBkMode(dis->hDC, TRANSPARENT);
-					SetTextColor(dis->hDC, ColorUtil::textFromBackground(SETTING(MENUBAR_LEFT_COLOR)));
+					SetTextColor(dis->hDC, ColorUtil::textFromBackground(ss->getInt(Conf::MENUBAR_LEFT_COLOR)));
 					HGDIOBJ prevFont = SelectObject(dis->hDC, parent->fontBold);
 					DrawText(dis->hDC, omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
 					SelectObject(dis->hDC, prevFont);

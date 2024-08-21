@@ -26,11 +26,14 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "ExMessageBox.h"
+#include "ConfUI.h"
 #include "../client/Util.h"
 #include "../client/FormatUtil.h"
 #include "../client/UserManager.h"
 #include "../client/ShareManager.h"
+#include "../client/SettingsUtil.h"
 #include "../client/dht/DHT.h"
+#include "../client/ConfCore.h"
 
 const int UsersFrame::columnId[] =
 {
@@ -69,7 +72,7 @@ static tstring formatLastSeenTime(time_t t)
 static int getDefaultCommand()
 {
 	static const int cmd[] = { IDC_GETLIST, IDC_PRIVATE_MESSAGE, IDC_MATCH_QUEUE, IDC_EDIT, IDC_OPEN_USER_LOG };
-	int action = SETTING(FAVUSERLIST_DBLCLICK);
+	int action = SettingsManager::instance.getUiSettings()->getInt(Conf::FAVUSERLIST_DBLCLICK);
 	if (action < 0 || action > (int) _countof(cmd)) return 0;
 	return cmd[action];
 }
@@ -93,16 +96,17 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlUsers.SetImageList(g_favUserImage.getIconList(), LVSIL_SMALL);
 	setListViewColors(ctrlUsers);
 	WinUtil::setExplorerTheme(ctrlUsers);
-	
+
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 
-	ctrlUsers.insertColumns(SettingsManager::USERS_FRAME_ORDER, SettingsManager::USERS_FRAME_WIDTHS, SettingsManager::USERS_FRAME_VISIBLE);
-	ctrlUsers.setSortFromSettings(SETTING(USERS_FRAME_SORT));
-	
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	ctrlUsers.insertColumns(Conf::USERS_FRAME_ORDER, Conf::USERS_FRAME_WIDTHS, Conf::USERS_FRAME_VISIBLE);
+	ctrlUsers.setSortFromSettings(ss->getInt(Conf::USERS_FRAME_SORT));
+
 	FavoriteManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	
 	CLockRedraw<> lockRedraw(ctrlUsers);
 	{
@@ -116,17 +120,17 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlShowIgnored.Create(m_hWnd, rcDefault, CTSTRING(SHOW_IGNORED_USERS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_AUTOCHECKBOX | BS_VCENTER, 0, IDC_SHOW_IGNORED);
 	ctrlShowIgnored.SetFont(Fonts::g_systemFont);
 
-	m_nProportionalPos = SETTING(USERS_FRAME_SPLIT);
+	m_nProportionalPos = ss->getInt(Conf::USERS_FRAME_SPLIT);
 	SetSplitterPanes(ctrlUsers, ctrlIgnored, false);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 
-	int showIgnored = SETTING(SHOW_IGNORED_USERS);
+	int showIgnored = ss->getInt(Conf::SHOW_IGNORED_USERS);
 	if (showIgnored == -1)
 		showIgnored = ctrlIgnored.getCount() ? 1 : 0;
 	ctrlShowIgnored.SetCheck(showIgnored ? BST_CHECKED : BST_UNCHECKED);
 	if (!showIgnored)
 		SetSinglePaneMode(SPLIT_PANE_LEFT);
-	
+
 	startup = false;
 	bHandled = FALSE;
 	updateLayout();
@@ -248,7 +252,9 @@ void UsersFrame::updateLayout()
 {
 	WINDOWPLACEMENT wp = { sizeof(wp) };
 	GetWindowPlacement(&wp);
-	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
+		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
+		GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!barHeight)
 	{
 		int xdu, ydu;
@@ -279,13 +285,14 @@ LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 {
 	if (ctrlUsers.getSelectedCount())
 	{
-		if (BOOLSETTING(CONFIRM_USER_REMOVAL))
+		auto ss = SettingsManager::instance.getUiSettings();
+		if (ss->getBool(Conf::CONFIRM_USER_REMOVAL))
 		{
 			UINT checkState = BST_UNCHECKED;
 			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2, checkState) != IDYES)
 				return 0;
 			if (checkState == BST_CHECKED)
-				SET_SETTING(CONFIRM_USER_REMOVAL, FALSE);
+				ss->setBool(Conf::CONFIRM_USER_REMOVAL, false);
 		}
 		int i = -1;
 		while ((i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
@@ -475,18 +482,19 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
 		UserManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		setButtonPressed(IDC_FAVUSERS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
 	else
 	{
-		ctrlUsers.saveHeaderOrder(SettingsManager::USERS_FRAME_ORDER, SettingsManager::USERS_FRAME_WIDTHS, SettingsManager::USERS_FRAME_VISIBLE);
-		SET_SETTING(USERS_FRAME_SORT, ctrlUsers.getSortForSettings());
+		auto ss = SettingsManager::instance.getUiSettings();
+		ctrlUsers.saveHeaderOrder(Conf::USERS_FRAME_ORDER, Conf::USERS_FRAME_WIDTHS, Conf::USERS_FRAME_VISIBLE);
+		ss->setInt(Conf::USERS_FRAME_SORT, ctrlUsers.getSortForSettings());
 		ctrlUsers.deleteAll();
-		
-		SET_SETTING(USERS_FRAME_SPLIT, m_nProportionalPos);
+
+		ss->setInt(Conf::USERS_FRAME_SPLIT, m_nProportionalPos);
 		bHandled = FALSE;
 		return 0;
 	}
@@ -525,7 +533,7 @@ void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 		columns[COLUMN_SHARE_GROUP].clear();
 }
 
-int UsersFrame::ItemInfo::compareItems(const UsersFrame::ItemInfo* a, const UsersFrame::ItemInfo* b, int col)
+int UsersFrame::ItemInfo::compareItems(const UsersFrame::ItemInfo* a, const UsersFrame::ItemInfo* b, int col, int /*flags*/)
 {
 	dcassert(col >= 0 && col < COLUMN_LAST);
 	switch (col)
@@ -587,8 +595,8 @@ void UsersFrame::openUserLog()
 		params["userCID"] = user->getCID().toBase32();
 		params["userNI"] = user->getLastNick();
 		params["myCID"] = ClientManager::getMyCID().toBase32();
-		
-		WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
+
+		WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
 	}
 }
 
@@ -616,7 +624,7 @@ void UsersFrame::on(UserStatusChanged, const UserPtr& user) noexcept
 	}
 }
 
-void UsersFrame::on(SettingsManagerListener::Repaint)
+void UsersFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -662,7 +670,8 @@ LRESULT UsersFrame::onToggleIgnored(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl
 {
 	BOOL state = CButton(hWndCtl).GetCheck() == BST_CHECKED;
 	SetSinglePaneMode(state ? SPLIT_PANE_NONE : SPLIT_PANE_LEFT);
-	SET_SETTING(SHOW_IGNORED_USERS, state ? 1 : 0);
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setInt(Conf::SHOW_IGNORED_USERS, state ? 1 : 0);
 	return 0;
 }
 

@@ -19,19 +19,15 @@
 #ifndef POPUPMANAGER_H
 #define POPUPMANAGER_H
 
-#pragma once
-
 #include "../client/Singleton.h"
 #include "../client/TimerManager.h"
 #include "PopupDlg.h"
 #include "WinUtil.h"
 
-#define DOWNLOAD_COMPLETE 6
-
 class PopupManager : public Singleton< PopupManager >, private TimerManagerListener
 {
 	public:
-		PopupManager() : height(90), width(200), offset(0), isActivated(true), id(0), popupType(0), m_hBitmap(0)
+		PopupManager() : height(90), width(200), offset(0), isActivated(true), id(0), m_hBitmap(0)
 		{
 			TimerManager::getInstance()->addListener(this);
 		}
@@ -49,19 +45,19 @@ class PopupManager : public Singleton< PopupManager >, private TimerManagerListe
 		enum { BALLOON, CUSTOM, SPLASH, WINDOW };
 		
 		//call this with a preformatted message
-		void Show(const tstring &aMsg, const tstring &aTitle, int icon, bool preview = false);
+		void Show(const tstring& message, const tstring& title, int icon, bool preview = false);
 		
 		//remove first popup in list and move everyone else
 		void Remove(uint32_t pos = 0);
 		
 		//remove the popups that are scheduled to be removed
 		void AutoRemove();
-		
+
 		void Mute(bool mute)
 		{
 			isActivated = !mute;
 		}
-		
+
 	private:
 		typedef deque< PopupWnd* > PopupList; // [!] IRainman opt: change list to deque.
 		PopupList popups;
@@ -73,8 +69,7 @@ class PopupManager : public Singleton< PopupManager >, private TimerManagerListe
 		//if we have multiple windows displayed,
 		//keep track of where the new one will be displayed
 		int offset;
-		int popupType;
-		
+
 		//id of the popup to keep track of them
 		uint32_t id;
 		
@@ -83,11 +78,10 @@ class PopupManager : public Singleton< PopupManager >, private TimerManagerListe
 		
 		//for custom popups
 		HBITMAP m_hBitmap;
-		string PopupImage;
+		string popupImage;
 		
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
-		
 };
 
 #endif

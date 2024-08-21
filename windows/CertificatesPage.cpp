@@ -17,11 +17,13 @@
  */
 
 #include "stdafx.h"
-#include "../client/SettingsManager.h"
-#include "../client/CryptoManager.h"
 #include "CertificatesPage.h"
 #include "WinUtil.h"
 #include "BrowseFile.h"
+#include "../client/SettingsManager.h"
+#include "../client/SettingsUtil.h"
+#include "../client/CryptoManager.h"
+#include "../client/ConfCore.h"
 
 int g_tlsOption = 0;
 
@@ -37,24 +39,24 @@ static const WinUtil::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_TLS_CERTIFICATE_FILE, SettingsManager::TLS_CERTIFICATE_FILE, PropPage::T_STR },
-	{ IDC_TLS_PRIVATE_KEY_FILE, SettingsManager::TLS_PRIVATE_KEY_FILE, PropPage::T_STR },
-	{ IDC_TLS_TRUSTED_CERTIFICATES_PATH, SettingsManager::TLS_TRUSTED_CERTIFICATES_PATH, PropPage::T_STR },
+	{ IDC_TLS_CERTIFICATE_FILE, Conf::TLS_CERTIFICATE_FILE, PropPage::T_STR },
+	{ IDC_TLS_PRIVATE_KEY_FILE, Conf::TLS_PRIVATE_KEY_FILE, PropPage::T_STR },
+	{ IDC_TLS_TRUSTED_CERTIFICATES_PATH, Conf::TLS_TRUSTED_CERTIFICATES_PATH, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::USE_TLS, ResourceManager::SETTINGS_USE_TLS },
-	{ SettingsManager::ALLOW_UNTRUSTED_HUBS, ResourceManager::SETTINGS_ALLOW_UNTRUSTED_HUBS },
-	{ SettingsManager::ALLOW_UNTRUSTED_CLIENTS, ResourceManager::SETTINGS_ALLOW_UNTRUSTED_CLIENTS },
+	{ Conf::USE_TLS, ResourceManager::SETTINGS_USE_TLS },
+	{ Conf::ALLOW_UNTRUSTED_HUBS, ResourceManager::SETTINGS_ALLOW_UNTRUSTED_HUBS },
+	{ Conf::ALLOW_UNTRUSTED_CLIENTS, ResourceManager::SETTINGS_ALLOW_UNTRUSTED_CLIENTS },
 	{ 0, ResourceManager::Strings() }
 };
 
 #if 0
 static const PropPage::ListItem securityItems[] =
 {
-	{ SettingsManager::CONFIRM_SHARE_FROM_SHELL, ResourceManager::SECURITY_ASK_ON_SHARE_FROM_SHELL },
+	{ Conf::CONFIRM_SHARE_FROM_SHELL, ResourceManager::SECURITY_ASK_ON_SHARE_FROM_SHELL },
 	{ 0, ResourceManager::Strings() }
 };
 #endif
@@ -86,7 +88,7 @@ void CertificatesPage::cancel()
 
 LRESULT CertificatesPage::onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring target = Text::toT(SETTING(TLS_PRIVATE_KEY_FILE));
+	tstring target = Text::toT(Util::getConfString(Conf::TLS_PRIVATE_KEY_FILE));
 	CEdit edt(GetDlgItem(IDC_TLS_PRIVATE_KEY_FILE));
 	
 	if (WinUtil::browseFile(target, m_hWnd, false, target))
@@ -96,7 +98,7 @@ LRESULT CertificatesPage::onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/,
 
 LRESULT CertificatesPage::onBrowseCertificate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring target = Text::toT(SETTING(TLS_CERTIFICATE_FILE));
+	tstring target = Text::toT(Util::getConfString(Conf::TLS_CERTIFICATE_FILE));
 	CEdit edt(GetDlgItem(IDC_TLS_CERTIFICATE_FILE));
 	
 	if (WinUtil::browseFile(target, m_hWnd, false, target))
@@ -106,7 +108,7 @@ LRESULT CertificatesPage::onBrowseCertificate(WORD /*wNotifyCode*/, WORD /*wID*/
 
 LRESULT CertificatesPage::onBrowseTrustedPath(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring target = Text::toT(SETTING(TLS_TRUSTED_CERTIFICATES_PATH));
+	tstring target = Text::toT(Util::getConfString(Conf::TLS_TRUSTED_CERTIFICATES_PATH));
 	CEdit edt(GetDlgItem(IDC_TLS_TRUSTED_CERTIFICATES_PATH));
 	
 	if (WinUtil::browseDirectory(target, m_hWnd))
@@ -130,5 +132,5 @@ LRESULT CertificatesPage::onGenerateCerts(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 
 void CertificatesPage::onHide()
 {
-	g_tlsOption = getBoolSetting(listItems, ctrlList, SettingsManager::USE_TLS) ? 1 : -1;
+	g_tlsOption = getBoolSetting(listItems, ctrlList, Conf::USE_TLS) ? 1 : -1;
 }

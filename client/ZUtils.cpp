@@ -21,6 +21,7 @@
 #include "File.h"
 #include "SettingsManager.h"
 #include "ResourceManager.h"
+#include "ConfCore.h"
 
 #ifdef _WIN32
 #include "Text.h"
@@ -29,7 +30,11 @@
 ZFilter::ZFilter() : totalIn(0), totalOut(0), compressing(true)
 {
 	memset(&zs, 0, sizeof(zs));
-	int result = deflateInit(&zs, SETTING(MAX_COMPRESSION));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	int maxCompression = ss->getInt(Conf::MAX_COMPRESSION);
+	ss->unlockRead();
+	int result = deflateInit(&zs, maxCompression);
 	if (result != Z_OK)
 		throw Exception(STRING(COMPRESSION_ERROR));
 }

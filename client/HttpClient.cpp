@@ -8,6 +8,7 @@
 #include "CID.h"
 #include "SettingsManager.h"
 #include "ResourceManager.h"
+#include "ConfCore.h"
 
 static const unsigned IDLE_CONNECTION_TIMEOUT = 2 * 60000;
 static const unsigned BUSY_CONNECTION_TIMEOUT = 5 * 60000;
@@ -40,11 +41,16 @@ uint64_t HttpClient::addRequest(const HttpClient::Request& req)
 	string server;
 	if (!decodeUrl(req.url, server)) return 0;
 	string httpProxy;
-	if (BOOLSETTING(USE_HTTP_PROXY))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::USE_HTTP_PROXY))
 	{
-		httpProxy = SETTING(HTTP_PROXY);
+		httpProxy = ss->getString(Conf::HTTP_PROXY);
+		ss->unlockRead();
 		if (!httpProxy.empty() && !decodeUrl(httpProxy, server)) httpProxy.clear();
 	}
+	else
+		ss->unlockRead();
 	uint64_t reqId = ++nextReqId;
 
 	RequestStatePtr rs = std::make_shared<RequestState>();

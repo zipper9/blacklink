@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include <boost/algorithm/string/trim.hpp>
 
+#include "SettingsManager.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "LogManager.h"
@@ -34,6 +35,7 @@
 #include "ParamExpander.h"
 #include "Resolver.h"
 #include "Random.h"
+#include "ConfCore.h"
 
 static const unsigned USER_CHECK_INTERVAL = 60000;
 static const unsigned USER_CHECK_VALIDITY = 60 * 60000;
@@ -83,7 +85,10 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 #ifdef _DEBUG
 	++clientCount;
 #endif
-	encoding = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	encoding = Text::charsetFromString(ss->getString(Conf::DEFAULT_CODEPAGE));
+	ss->unlockRead();
 	TimerManager::getInstance()->addListener(this);
 }
 
@@ -143,6 +148,7 @@ void Client::shutdown() noexcept
 
 void Client::reloadSettings(bool updateNick)
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
 	auto fm = FavoriteManager::getInstance();
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	string speedDescription;
@@ -156,11 +162,20 @@ void Client::reloadSettings(bool updateNick)
 		clientVersion = hub->getClientVersion();
 		overrideClientId = !clientName.empty();
 	}
-	if (!overrideClientId && BOOLSETTING(OVERRIDE_CLIENT_ID))
+	
+	ss->lockRead();
+	if (!overrideClientId && ss->getBool(Conf::OVERRIDE_CLIENT_ID))
 	{
-		FavoriteManager::splitClientId(SETTING(CLIENT_ID), clientName, clientVersion);
+		FavoriteManager::splitClientId(ss->getString(Conf::CLIENT_ID), clientName, clientVersion);
 		overrideClientId = !clientName.empty();
 	}
+	const string description = ss->getString(Conf::DESCRIPTION);
+	const string email = ss->getString(Conf::EMAIL);
+	string nick = ss->getString(Conf::NICK);
+	const int minSearchInterval = ss->getInt(Conf::MIN_SEARCH_INTERVAL);
+	const int minSearchIntervalPassive = ss->getInt(Conf::MIN_SEARCH_INTERVAL_PASSIVE);
+	ss->unlockRead();
+
 	setClientId(overrideClientId, clientName, clientVersion);
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	if (!overrideId && BOOLSETTING(ADD_TO_DESCRIPTION))
@@ -175,7 +190,7 @@ void Client::reloadSettings(bool updateNick)
 	{
 		if (updateNick)
 		{
-			string nick = hub->getNick(true);
+			nick = hub->getNick(true);
 			csState.lock();
 			if (!randomTempNick.empty())
 				nick = randomTempNick;
@@ -200,7 +215,7 @@ void Client::reloadSettings(bool updateNick)
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 			    speedDescription +
 #endif
-			    SETTING(DESCRIPTION));
+			    description);
 		}
 		
 		if (!hub->getEmail().empty())
@@ -209,7 +224,7 @@ void Client::reloadSettings(bool updateNick)
 		}
 		else
 		{
-			setCurrentEmail(SETTING(EMAIL));
+			setCurrentEmail(email);
 		}
 
 		if (!hub->getPassword().empty())
@@ -234,14 +249,14 @@ void Client::reloadSettings(bool updateNick)
 		
 		int searchInterval = hub->getSearchInterval();
 		if (searchInterval < 2)
-			searchInterval = SETTING(MIN_SEARCH_INTERVAL);
+			searchInterval = minSearchInterval;
 		else
 			overrideSearchInterval = true;
 		setSearchInterval(searchInterval * 1000);
 
 		searchInterval = hub->getSearchIntervalPassive();
 		if (searchInterval < 2)
-			searchInterval = SETTING(MIN_SEARCH_INTERVAL_PASSIVE);
+			searchInterval = minSearchIntervalPassive;
 		else
 			overrideSearchIntervalPassive = true;
 		setSearchIntervalPassive(searchInterval * 1000);
@@ -276,7 +291,6 @@ void Client::reloadSettings(bool updateNick)
 	{
 		if (updateNick)
 		{
-			string nick = SETTING(NICK);
 			checkNick(nick);
 			csState.lock();
 			myNick = nick;
@@ -287,15 +301,15 @@ void Client::reloadSettings(bool updateNick)
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 		    speedDescription +
 #endif
-		    SETTING(DESCRIPTION));
-		setCurrentEmail(SETTING(EMAIL));
+		    description);
+		setCurrentEmail(email);
 		hideShare = false;
 		shareGroup.init();
 		setFavIp(Util::emptyString);
 		favMode = 0;
 
-		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000);
-		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000);
+		setSearchInterval(minSearchInterval * 1000);
+		setSearchIntervalPassive(minSearchIntervalPassive * 1000);
 		overrideSearchInterval = overrideSearchIntervalPassive = false;
 
 		opChat.clear();
@@ -332,6 +346,11 @@ void Client::connect()
 	resetOp();
 	updateConnectionStatus(ConnectionStatus::CONNECTING);
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool allowUntrusted = ss->getBool(Conf::ALLOW_UNTRUSTED_HUBS);
+	ss->unlockRead();
+
 	bool hasIP6 = ConnectivityManager::getInstance()->hasIP6();
 	csState.lock();
 	try
@@ -343,7 +362,7 @@ void Client::connect()
 		}
 		else
 			clientSock->setIpVersion(AF_INET | Resolver::RESOLVE_TYPE_EXACT);
-		clientSock->connect(address, port, secure, BOOLSETTING(ALLOW_UNTRUSTED_HUBS), true, proto);
+		clientSock->connect(address, port, secure, allowUntrusted, true, proto);
 		clientSock->start();
 		dcdebug("Client::connect() %p\n", this);
 	}
@@ -570,48 +589,55 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 	ip4 = id.getIP4();
 	ip6 = id.getIP6();
 
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const bool wanIpManual4 = ss->getBool(Conf::WAN_IP_MANUAL);
+	string externalIp4 = wanIpManual4 ? ss->getString(Conf::EXTERNAL_IP) : string();
+	const bool noIpOverride4 = ss->getBool(Conf::NO_IP_OVERRIDE);
+
+	const bool wanIpManual6 = ss->getBool(Conf::WAN_IP_MANUAL6);
+	string externalIp6 = wanIpManual6 ? ss->getString(Conf::EXTERNAL_IP6) : string();
+	const bool noIpOverride6 = ss->getBool(Conf::NO_IP_OVERRIDE6);
+	ss->unlockRead();
+
 	if (ip4 == 0)
 	{
-		string externalIP;
-		if (BOOLSETTING(WAN_IP_MANUAL))
+		if (wanIpManual4)
 		{
-			externalIP = SETTING(EXTERNAL_IP);
-			if (!Util::isValidIp4(externalIP)) externalIP.clear();
+			if (!Util::isValidIp4(externalIp4)) externalIp4.clear();
 		}
-		if (externalIP.empty() || !BOOLSETTING(NO_IP_OVERRIDE))
+		if (externalIp4.empty() || !noIpOverride4)
 		{
 			IpAddress ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET);
-			if (!Util::isEmpty(ip)) externalIP = Util::printIpAddress(ip);
+			if (!Util::isEmpty(ip)) externalIp4 = Util::printIpAddress(ip);
 		}
-		if (externalIP.empty())
+		if (externalIp4.empty())
 		{
 			IpAddress ip = ConnectivityManager::getInstance()->getLocalIP(AF_INET);
 			ip4 = ip.data.v4;
 		}
 		else
-			Util::parseIpAddress(ip4, externalIP);
+			Util::parseIpAddress(ip4, externalIp4);
 	}
 
 	if (Util::isEmpty(ip6))
 	{
-		string externalIP;
-		if (BOOLSETTING(WAN_IP_MANUAL6))
+		if (wanIpManual6)
 		{
-			externalIP = SETTING(EXTERNAL_IP6);
-			if (!Util::isValidIp6(externalIP)) externalIP.clear();
+			if (!Util::isValidIp6(externalIp6)) externalIp6.clear();
 		}
-		if (externalIP.empty() || !BOOLSETTING(NO_IP_OVERRIDE6))
+		if (externalIp6.empty() || !noIpOverride6)
 		{
 			IpAddress ip = ConnectivityManager::getInstance()->getReflectedIP(AF_INET6);
-			if (!Util::isEmpty(ip)) externalIP = Util::printIpAddress(ip);
+			if (!Util::isEmpty(ip)) externalIp6 = Util::printIpAddress(ip);
 		}
-		if (externalIP.empty())
+		if (externalIp6.empty())
 		{
 			IpAddress ip = ConnectivityManager::getInstance()->getLocalIP(AF_INET6);
 			ip6 = ip.data.v6;
 		}
 		else
-			Util::parseIpAddress(ip6, externalIP);
+			Util::parseIpAddress(ip6, externalIp6);
 	}
 }
 
@@ -627,7 +653,12 @@ bool Client::checkIpType(int type) const
 
 bool Client::allowNatTraversal()
 {
-	return BOOLSETTING(ALLOW_NAT_TRAVERSAL) && SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_DIRECT;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool enabled = ss->getBool(Conf::ALLOW_NAT_TRAVERSAL);
+	int outgoingMode = ss->getInt(Conf::OUTGOING_CONNECTIONS);
+	ss->unlockRead();
+	return enabled && outgoingMode == Conf::OUTGOING_DIRECT;
 }
 
 unsigned Client::searchInternal(const SearchParam& sp)
@@ -746,19 +777,25 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 			return false;
 		return true;
 	}
+	int chatOptions = ClientManager::getChatOptions();
 	UserManager::PasswordStatus passwordStatus;
 	bool isOpen = UserManager::getInstance()->checkPMOpen(message, passwordStatus);
 	if (passwordStatus == UserManager::CHECKED && response)
-		*response = SETTING(PM_PASSWORD_OK_HINT);
+	{
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		*response = ss->getString(Conf::PM_PASSWORD_OK_HINT);
+		ss->unlockRead();
+	}
 	if (isOpen)
 		return true;
 	if (suppressChatAndPM)
 		return false;
-	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
+	if (message.thirdPerson && (chatOptions & ClientManager::CHAT_OPTION_IGNORE_ME))
 		return false;
 	if (UserManager::getInstance()->isInIgnoreList(message.replyTo->getIdentity().getNick()))
 		return false;
-	if (BOOLSETTING(SUPPRESS_PMS))
+	if (chatOptions & ClientManager::CHAT_OPTION_SUPPRESS_PM)
 	{
 		FavoriteUser::MaskType flags;
 		int uploadLimit;
@@ -768,7 +805,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	}
 	if (message.replyTo->getIdentity().isHub())
 	{
-		if (BOOLSETTING(IGNORE_HUB_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
+		if ((chatOptions & ClientManager::CHAT_OPTION_IGNORE_HUB_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
 			fire(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
@@ -777,7 +814,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	}
 	if (message.replyTo->getIdentity().isBot())
 	{
-		if (BOOLSETTING(IGNORE_BOT_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
+		if ((chatOptions & ClientManager::CHAT_OPTION_IGNORE_BOT_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
 			fire(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
@@ -785,7 +822,8 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
 	}
 	auto pmFlags = FavoriteManager::getInstance()->getFlags(message.replyTo->getUser());
-	if (BOOLSETTING(PROTECT_PRIVATE) && !(pmFlags & (FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE)))
+	if ((chatOptions & ClientManager::CHAT_OPTION_PROTECT_PRIVATE) &&
+	    !(pmFlags & (FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE)))
 	{
 		switch (passwordStatus)
 		{
@@ -793,18 +831,21 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 				return true;
 			case UserManager::FIRST:
 			{
-				const string& password = SETTING(PM_PASSWORD);
+				auto ss = SettingsManager::instance.getCoreSettings();
+				ss->lockRead();
+				const string password = ss->getString(Conf::PM_PASSWORD);
+				const string passwordHint = ss->getString(Conf::PM_PASSWORD_HINT);
+				bool protectPrivateSay = ss->getBool(Conf::PROTECT_PRIVATE_SAY);
+				ss->unlockRead();
 				UserManager::getInstance()->addPMPassword(message.replyTo->getUser(), password);
 				if (response)
 				{
 					StringMap params;
 					params["pm_pass"] = password;
-					*response = Util::formatParams(SETTING(PM_PASSWORD_HINT), params, false);
+					*response = Util::formatParams(passwordHint, params, false);
 				}
-				if (BOOLSETTING(PROTECT_PRIVATE_SAY))
-				{
+				if (protectPrivateSay)
 					fire(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + " " + message.replyTo->getIdentity().getNick());
-				}
 				return false;
 			}
 			default: // WAITING, CHECKED
@@ -827,9 +868,10 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 		return nick.empty() || !UserManager::getInstance()->isInIgnoreList(nick);
 	if (isMe(message.from))
 		return true;
-	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
+	int options = ClientManager::getChatOptions();
+	if (message.thirdPerson && (options & ClientManager::CHAT_OPTION_IGNORE_ME))
 		return false;
-	if (BOOLSETTING(SUPPRESS_MAIN_CHAT) && !isOp())
+	if ((options & ClientManager::CHAT_OPTION_SUPPRESS_MAIN_CHAT) && !isOp())
 		return false;
 	if (UserManager::getInstance()->isInIgnoreList(message.from->getIdentity().getNick()))
 		return false;
@@ -838,7 +880,8 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 
 void Client::logPM(const ChatMessage& message) const
 {
-	if (BOOLSETTING(LOG_PRIVATE_CHAT) && message.from && message.from->getUser())
+	if ((ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_PRIVATE_CHAT) &&
+	    message.from && message.from->getUser())
 	{
 		const Identity& from = message.from->getIdentity();
 		bool myMessage = from.getUser()->isMe();
@@ -860,7 +903,7 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message, string& re
 	else
 	{
 		logPM(*message);
-		if (BOOLSETTING(LOG_IF_SUPPRESS_PMS) && response.empty())
+		if (response.empty() && (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_SUPPRESSED))
 		{
 			string hubName = getHubName();
 			const string& hubUrl = getHubUrl();
@@ -1019,7 +1062,10 @@ void Client::clearUserCommands(int ctx)
 
 void Client::addUserCommand(const UserCommand& uc)
 {
-	size_t maxCommands = SETTING(MAX_HUB_USER_COMMANDS);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	size_t maxCommands = ss->getInt(Conf::MAX_HUB_USER_COMMANDS);
+	ss->unlockRead();
 	WRITE_LOCK(*csUserCommands);
 	if (userCommands.size() < maxCommands)
 		userCommands.push_back(uc);
@@ -1059,13 +1105,17 @@ void Client::updateConnectionStatus(ConnectionStatus::Status status)
 
 void Client::checkUsers(uint64_t tick)
 {
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool performChecks = ss->getBool(getType() == TYPE_NMDC ? Conf::CHECK_USERS_NMDC : Conf::CHECK_USERS_ADC);
+	const unsigned maxUsersToCheck = ss->getInt(Conf::USER_CHECK_BATCH);
+	ss->unlockRead();
+
 	nextUserCheck = tick + USER_CHECK_INTERVAL;
-	bool autoChecks = !exclChecks &&
-		SettingsManager::getBool(getType() == TYPE_NMDC ? SettingsManager::CHECK_USERS_NMDC : SettingsManager::CHECK_USERS_ADC);
+	bool autoChecks = !exclChecks && performChecks;
 	if (!autoChecks && !hasUserCheckList())
 		return;
 
-	unsigned maxUsersToCheck = SETTING(USER_CHECK_BATCH);
 	unsigned numActive = 0;
 	UserList usersToCheck;
 	{

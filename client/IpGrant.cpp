@@ -25,6 +25,7 @@
 #include "AppPaths.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
+#include "ConfCore.h"
 
 IpGrant ipGrant;
 
@@ -39,7 +40,11 @@ string IpGrant::getFileName()
 
 void IpGrant::load() noexcept
 {
-	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	bool enabled = ss->getBool(Conf::EXTRA_SLOT_BY_IP);
+	ss->unlockRead();
+	if (!enabled)
 		return;
 
 	WRITE_LOCK(*cs);

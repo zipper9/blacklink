@@ -33,6 +33,8 @@
 #include "ClientManager.h"
 #include "LogManager.h"
 #include "CompatibilityManager.h"
+#include "SettingsManager.h"
+#include "ConfCore.h"
 #include "version.h"
 
 const time_t Util::startTime = time(nullptr);
@@ -226,20 +228,27 @@ string Util::ellipsizePath(const string& path)
 string Util::getShortTimeString(time_t t)
 {
 	TimeParamExpander ex(t);
-	return formatParams(SETTING(TIME_STAMPS_FORMAT), &ex, false);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string format = ss->getString(Conf::TIME_STAMPS_FORMAT);
+	ss->unlockRead();
+	return formatParams(format, &ex, false);
 }
 
 void Util::setAway(bool isAway, bool notUpdateInfo /*= false*/)
 {
 	away = isAway;
-	
-	SET_SETTING(AWAY, away);
-	
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockWrite();
+	ss->setBool(Conf::AWAY, away);
+	ss->unlockWrite();
+
 	if (away)
 		awayTime = time(nullptr);
 	else
 		awayMsg.clear();
-	
+
 	if (!notUpdateInfo)
 		ClientManager::infoUpdated();
 }
@@ -274,18 +283,25 @@ string Util::getAwayMessage(const string& customMsg, StringMap& params)
 	if (!customMsg.empty())
 		return formatParams(customMsg, params, false, awayTime);
 	
-	SettingsManager::StrSetting message = SettingsManager::DEFAULT_AWAY_MESSAGE;
-	if (BOOLSETTING(ENABLE_SECONDARY_AWAY))
+	int setting = Conf::DEFAULT_AWAY_MESSAGE;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (ss->getBool(Conf::ENABLE_SECONDARY_AWAY))
 	{
-		if (checkHour(getCurrentHour(), SETTING(SECONDARY_AWAY_START), SETTING(SECONDARY_AWAY_END)))
-			message = SettingsManager::SECONDARY_AWAY_MESSAGE;
+		if (checkHour(getCurrentHour(), ss->getInt(Conf::SECONDARY_AWAY_START), ss->getInt(Conf::SECONDARY_AWAY_END)))
+			setting = Conf::SECONDARY_AWAY_MESSAGE;
 	}
-	return formatParams(SettingsManager::get(message), params, false, awayTime);
+	string message = ss->getString(setting);
+	ss->unlockRead();
+	return formatParams(message, params, false, awayTime);
 }
 
 string Util::getDownloadDir(const UserPtr& user)
 {
-	string s = SETTING(DOWNLOAD_DIRECTORY);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string s = ss->getString(Conf::DOWNLOAD_DIRECTORY);
+	ss->unlockRead();
 	if (s.find('%') == string::npos) return s;
 	return expandDownloadDir(s, user);
 }
@@ -551,12 +567,6 @@ int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*
 }
 #endif
 
-void Util::setLimiter(bool enable)
-{
-	SET_SETTING(THROTTLE_ENABLE, enable);
-	ClientManager::infoUpdated();
-}
-
 string Util::formatDchubUrl(const string& url)
 {
 	if (url.empty() || url == "DHT") return url;
@@ -613,7 +623,11 @@ string Util::getWebMagnet(const TTHValue& hash, const string& file, int64_t size
 	params["size"] = formatBytes(size);
 	params["TTH"] = tthStr;
 	params["name"] = file;
-	return formatParams(SETTING(WMLINK_TEMPLATE), params, false);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string format = ss->getString(Conf::WMLINK_TEMPLATE);
+	ss->unlockRead();
+	return formatParams(format, params, false);
 }
 
 StringList Util::splitSettingAndLower(const string& patternList, bool trimSpace)
@@ -627,7 +641,10 @@ StringList Util::splitSettingAndLower(const string& patternList, bool trimSpace)
 
 string Util::getLang()
 {
-	string lang = SETTING(LANGUAGE_FILE);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string lang = ss->getString(Conf::LANGUAGE_FILE);
+	ss->unlockRead();
 	if (lang.length() != 9 || !Text::isAsciiSuffix2(lang, string(".xml")))
 		return string();
 	lang.erase(2);
@@ -636,7 +653,10 @@ string Util::getLang()
 
 string Util::getIETFLang()
 {
-	string lang = SETTING(LANGUAGE_FILE);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string lang = ss->getString(Conf::LANGUAGE_FILE);
+	ss->unlockRead();
 	if (lang.length() != 9 || !Text::isAsciiSuffix2(lang, string(".xml")))
 		return string();
 	lang.erase(5);

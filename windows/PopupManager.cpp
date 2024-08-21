@@ -25,24 +25,25 @@
 
 static const size_t MAX_POPUPS = 10;
 
-void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int icon, bool preview /*= false*/)
+void PopupManager::Show(const tstring& message, const tstring& title, int icon, bool preview /*= false*/)
 {
 	dcassert(!ClientManager::isStartup());
 	dcassert(!ClientManager::isBeforeShutdown());
-	
+
 	if (ClientManager::isBeforeShutdown()) return;
 	if (ClientManager::isStartup()) return;
 	if (!isActivated) return;		
-		
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (!preview)
 	{
-		if (BOOLSETTING(POPUP_ONLY_WHEN_AWAY) && !Util::getAway()) return;
-		if (BOOLSETTING(POPUP_ONLY_WHEN_MINIMIZED) && !MainFrame::isAppMinimized()) return;
+		if (ss->getBool(Conf::POPUP_ONLY_WHEN_AWAY) && !Util::getAway()) return;
+		if (ss->getBool(Conf::POPUP_ONLY_WHEN_MINIMIZED) && !MainFrame::isAppMinimized()) return;
 	}
 
-	tstring msg = aMsg;
-	size_t maxLength = SETTING(POPUP_MAX_LENGTH);
-	if (aMsg.length() > maxLength)
+	tstring msg = message;
+	size_t maxLength = ss->getInt(Conf::POPUP_MAX_LENGTH);
+	if (message.length() > maxLength)
 	{
 		msg.erase(maxLength - 3);
 		msg += _T("...");
@@ -50,38 +51,42 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int icon, bo
 #ifdef _DEBUG
 	msg += Text::toT("\r\npopups.size() = " + Util::toString(popups.size()));
 #endif
-	
-	if (SETTING(POPUP_TYPE) == BALLOON && MainFrame::getMainFrame())
+
+	int popupType = ss->getInt(Conf::POPUP_TYPE);
+	if (popupType == BALLOON && MainFrame::getMainFrame())
 	{
 		NOTIFYICONDATA m_nid = {0};
 		m_nid.cbSize = sizeof(NOTIFYICONDATA);
 		m_nid.hWnd = MainFrame::getMainFrame()->m_hWnd;
 		m_nid.uID = 0;
 		m_nid.uFlags = NIF_INFO;
-		m_nid.uTimeout = (SETTING(POPUP_TIME) * 1000);
+		m_nid.uTimeout = ss->getInt(Conf::POPUP_TIME) * 1000;
 		m_nid.dwInfoFlags = icon;
 		_tcsncpy(m_nid.szInfo, msg.c_str(), 255);
-		_tcsncpy(m_nid.szInfoTitle, aTitle.c_str(), 63);
+		_tcsncpy(m_nid.szInfoTitle, title.c_str(), 63);
 		Shell_NotifyIcon(NIM_MODIFY, &m_nid);
 		return;
 	}
-	
+
 	if (popups.size() > MAX_POPUPS)
 	{
 		//LogManager::message("PopupManager - popups.size() > 10! Ignore");
 		return;
 	}
-	
-	if (SETTING(POPUP_TYPE) == CUSTOM && PopupImage != SETTING(POPUP_IMAGE_FILE))
+
+	if (popupType == CUSTOM)
 	{
-		PopupImage = SETTING(POPUP_IMAGE_FILE);
-		popupType = SETTING(POPUP_TYPE);
-		m_hBitmap = (HBITMAP)::LoadImage(NULL, Text::toT(PopupImage).c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
+		const string& newImage = ss->getString(Conf::POPUP_IMAGE_FILE);
+		if (popupImage != newImage)
+		{
+			popupImage = newImage;
+			m_hBitmap = (HBITMAP)::LoadImage(NULL, Text::toT(popupImage).c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
+		}
 	}
-	
-	height = SETTING(POPUP_HEIGHT);
-	width = SETTING(POPUP_WIDTH);
-	
+
+	height = ss->getInt(Conf::POPUP_HEIGHT);
+	width = ss->getInt(Conf::POPUP_WIDTH);
+
 	CRect rcDesktop;
 	
 	//get desktop rect so we know where to place the popup
@@ -91,9 +96,9 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int icon, bo
 	int screenWidth = rcDesktop.right;
 	
 	//if we have popups all the way up to the top of the screen do not create a new one
-	if ((offset + height) > screenHeight)
+	if (offset + height > screenHeight)
 		return;
-		
+
 	//get the handle of the window that has focus
 	dcassert(WinUtil::g_mainWnd);
 	HWND gotFocus = ::SetFocus(WinUtil::g_mainWnd);
@@ -102,20 +107,20 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int icon, bo
 	CRect rc(screenWidth - width, screenHeight - height - offset, screenWidth, screenHeight - offset);
 	
 	//Create a new popup
-	PopupWnd *p = new PopupWnd(msg, aTitle, rc, id++, m_hBitmap);
+	PopupWnd *p = new PopupWnd(msg, title, rc, id++, m_hBitmap);
 	p->height = height; // save the height, for removal
-	
-	if (SETTING(POPUP_TYPE) != /*CUSTOM*/ BALLOON)
+
+	if (popupType != /*CUSTOM*/ BALLOON)
 	{
 		typedef bool (CALLBACK * LPFUNC)(HWND hwnd, COLORREF crKey, BYTE bAlpha, DWORD dwFlags);
 		LPFUNC _d_SetLayeredWindowAttributes = (LPFUNC)GetProcAddress(LoadLibrary(_T("user32")), "SetLayeredWindowAttributes");
 		if (_d_SetLayeredWindowAttributes)
 		{
 			p->SetWindowLongPtr(GWL_EXSTYLE, p->GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT);
-			_d_SetLayeredWindowAttributes(p->m_hWnd, 0, SETTING(POPUP_TRANSPARENCY), LWA_ALPHA);
+			_d_SetLayeredWindowAttributes(p->m_hWnd, 0, ss->getInt(Conf::POPUP_TRANSPARENCY), LWA_ALPHA);
 		}
 	}
-	
+
 	//move the window to the top of the z-order and display it
 	p->SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 	p->ShowWindow(SW_SHOWNA);
@@ -142,8 +147,9 @@ void PopupManager::on(TimerManagerListener::Second /*type*/, uint64_t tick) noex
 
 void PopupManager::AutoRemove()
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	const uint64_t tick = GET_TICK();
-	const uint64_t popupTime = SETTING(POPUP_TIME) * 1000;
+	const uint64_t popupTime = ss->getInt(Conf::POPUP_TIME) * 1000;
 	//check all popups and see if we need to remove anyone
 	for (auto i = popups.cbegin(); i != popups.cend(); ++i)
 	{

@@ -7,6 +7,7 @@
 #include "Resolver.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
+#include "ConfCore.h"
 
 static const unsigned IP_TEST_TIMEOUT = 10000;
 
@@ -20,15 +21,19 @@ IpTest::IpTest(): hasListener(false), shutDown(false),
 
 bool IpTest::runTest(int type, uint64_t frameId, string* message) noexcept
 {
-	string url = type == REQ_IP4 ? SETTING(URL_GET_IP) : SETTING(URL_GET_IP6);
 	HttpClient::Request cr;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string url = ss->getString(type == REQ_IP4 ? Conf::URL_GET_IP : Conf::URL_GET_IP6);
+	cr.userAgent = ss->getString(Conf::HTTP_USER_AGENT);
+	ss->unlockRead();
+
 	cr.type = Http::METHOD_GET;
 	cr.url = url;
 	cr.ipVersion = (type == REQ_IP4 ? AF_INET : AF_INET6) | Resolver::RESOLVE_TYPE_EXACT;
 	cr.maxRedirects = 0;
 	cr.noCache = true;
 	cr.closeConn = true;
-	cr.userAgent = SETTING(HTTP_USER_AGENT);
 	cr.maxErrorBodySize = cr.maxRespBodySize = 64 * 1024;
 	uint64_t id = httpClient.addRequest(cr);
 	if (!id) return false;

@@ -167,7 +167,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		{
 			public:
 				const tstring& getText(int col) const;
-				static int compareItems(const HubInfo* a, const HubInfo* b, int col);
+				static int compareItems(const HubInfo* a, const HubInfo* b, int col, int flags);
+				static int getCompareFlags() { return 0; }
 				int getImageIndex() const { return favorite ? 0 : -1; }
 				static int getStateImageIndex() { return 0; }
 				void update(const HubEntry& hub);
@@ -247,7 +248,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 
 		static bool isFavorite(const HubInfo* data);
 
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 
 		void on(HublistManagerListener::StateChanged, uint64_t id) noexcept override;
 		void on(HublistManagerListener::Redirected, uint64_t id) noexcept override;

@@ -66,6 +66,7 @@
 
 #ifdef _DEBUG
 #define DEBUG_USER_CONNECTION
+#define DEBUG_SETTINGS
 #define LOCK_DEBUG
 #endif
 

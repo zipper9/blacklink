@@ -288,7 +288,7 @@ class User final
 		unsigned getMessageCount() const;
 		void saveUserStat();
 		void saveIPStat(); // must be called before saveUserStat
-		void saveStats(bool ipStat, bool userStat);
+		void saveStats(int what);
 		bool shouldSaveStats() const;
 		bool getLastNickAndHub(string& nick, string& hub) const;
 		static void loadUserStatFromDB(const UserPtr& user);

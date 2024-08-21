@@ -47,7 +47,8 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	if (!packList.empty() && packList[0])
 	{
 		const EmoticonPack* pack = packList[0];
-		const int useAnimation = BOOLSETTING(SMILE_SELECT_WND_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : Emoticon::FLAG_NO_FALLBACK;
+		const int useAnimation = SettingsManager::instance.getUiSettings()->getBool(Conf::SMILE_SELECT_WND_ANIM_SMILES) ?
+			Emoticon::FLAG_PREFER_GIF : Emoticon::FLAG_NO_FALLBACK;
 		const vector<Emoticon*>& icons = pack->getEmoticons();
 		size_t packSize = icons.size();
 		size_t numberOfIcons = 0;

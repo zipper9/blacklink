@@ -1,5 +1,6 @@
 #include "stdinc.h"
 #include "PortTest.h"
+#include "StrUtil.h"
 #include "TimeUtil.h"
 #include "HttpClient.h"
 #include "JsonFormatter.h"
@@ -8,6 +9,7 @@
 #include "TigerHash.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
+#include "ConfCore.h"
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
@@ -32,8 +34,13 @@ bool PortTest::runTest(int typeMask) noexcept
 	string strCID = CID(tiger.finalize()).toBase32();
 
 	HttpClient::Request req;
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	req.url = ss->getString(Conf::URL_PORT_TEST);
+	bool doLog = ss->getBool(Conf::LOG_SYSTEM);
+	ss->unlockRead();
+
 	req.type = Http::METHOD_POST;
-	req.url = SETTING(URL_PORT_TEST);
 	req.requestBody = createBody(pid.toBase32(), strCID, typeMask);
 	req.maxRedirects = 0;
 	req.noCache = true;
@@ -75,7 +82,7 @@ bool PortTest::runTest(int typeMask) noexcept
 	cs.unlock();
 
 	LogManager::message(STRING_F(PORT_TEST_STARTED, req.url));
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (doLog)
 	{
 		for (int type = 0; type < MAX_PORTS; type++)
 			if (portToTest[type])

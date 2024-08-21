@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "DefaultClickPage.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -88,10 +89,11 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	chatAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
 	chatAction.AddString(CTSTRING(ADD_TO_FAVORITES));
 
-	userListAction.SetCurSel(SETTING(USERLIST_DBLCLICK));
-	transferListAction.SetCurSel(SETTING(TRANSFERLIST_DBLCLICK));
-	chatAction.SetCurSel(SETTING(CHAT_DBLCLICK));
-	favUserListAction.SetCurSel(SETTING(FAVUSERLIST_DBLCLICK));
+	const auto ss = SettingsManager::instance.getUiSettings();
+	userListAction.SetCurSel(ss->getInt(Conf::USERLIST_DBLCLICK));
+	transferListAction.SetCurSel(ss->getInt(Conf::TRANSFERLIST_DBLCLICK));
+	chatAction.SetCurSel(ss->getInt(Conf::CHAT_DBLCLICK));
+	favUserListAction.SetCurSel(ss->getInt(Conf::FAVUSERLIST_DBLCLICK));
 
 	newMagnetAction.AddString(CTSTRING(ASK));
 	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
@@ -102,27 +104,26 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	oldMagnetAction.AddString(CTSTRING(SEARCH_FOR_ALTERNATES));
 	oldMagnetAction.AddString(CTSTRING(OPEN_FILE));
 
-	if (BOOLSETTING(MAGNET_ASK))
+	if (ss->getBool(Conf::MAGNET_ASK))
 	{
 		newMagnetAction.SetCurSel(0);
 	}
 	else
 	{
-		int index = SETTING(MAGNET_ACTION);
-		if (!(index >= SettingsManager::MAGNET_ACTION_SEARCH && index <= SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN))
-			index = SettingsManager::MAGNET_ACTION_SEARCH;
+		int index = ss->getInt(Conf::MAGNET_ACTION);
+		if (!(index >= Conf::MAGNET_ACTION_SEARCH && index <= Conf::MAGNET_ACTION_DOWNLOAD_AND_OPEN))
+			index = Conf::MAGNET_ACTION_SEARCH;
 		newMagnetAction.SetCurSel(index + 1);
 	}
 
-	if (BOOLSETTING(SHARED_MAGNET_ASK))
+	if (ss->getBool(Conf::SHARED_MAGNET_ASK))
 	{
 		oldMagnetAction.SetCurSel(0);
 	}
 	else
 	{
-		int index = SETTING(SHARED_MAGNET_ACTION);
-		index = index == SettingsManager::MAGNET_ACTION_OPEN_EXISTING ? 2 : 1;
-		oldMagnetAction.SetCurSel(index);
+		int index = ss->getInt(Conf::SHARED_MAGNET_ACTION);
+		oldMagnetAction.SetCurSel(index == Conf::MAGNET_ACTION_OPEN_EXISTING ? 2 : 1);
 	}
 
 	return TRUE;
@@ -132,31 +133,32 @@ void DefaultClickPage::write()
 {
 	PropPage::write(*this, nullptr);
 
-	g_settings->set(SettingsManager::USERLIST_DBLCLICK, userListAction.GetCurSel());
-	g_settings->set(SettingsManager::TRANSFERLIST_DBLCLICK, transferListAction.GetCurSel());
-	g_settings->set(SettingsManager::CHAT_DBLCLICK, chatAction.GetCurSel());
-	g_settings->set(SettingsManager::FAVUSERLIST_DBLCLICK, favUserListAction.GetCurSel());
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setInt(Conf::USERLIST_DBLCLICK, userListAction.GetCurSel());
+	ss->setInt(Conf::TRANSFERLIST_DBLCLICK, transferListAction.GetCurSel());
+	ss->setInt(Conf::CHAT_DBLCLICK, chatAction.GetCurSel());
+	ss->setInt(Conf::FAVUSERLIST_DBLCLICK, favUserListAction.GetCurSel());
 
 	int index = newMagnetAction.GetCurSel();
 	if (index == 0)
 	{
-		g_settings->set(SettingsManager::MAGNET_ASK, true);
+		ss->setBool(Conf::MAGNET_ASK, true);
 	}
 	else
 	{
-		g_settings->set(SettingsManager::MAGNET_ASK, false);
-		g_settings->set(SettingsManager::MAGNET_ACTION, index - 1);
+		ss->setBool(Conf::MAGNET_ASK, false);
+		ss->setInt(Conf::MAGNET_ACTION, index - 1);
 	}
 
 	index = oldMagnetAction.GetCurSel();
 	if (index == 0)
 	{
-		g_settings->set(SettingsManager::SHARED_MAGNET_ASK, true);
+		ss->setBool(Conf::SHARED_MAGNET_ASK, true);
 	}
 	else
 	{
-		index = index == 1 ? SettingsManager::MAGNET_ACTION_SEARCH : SettingsManager::MAGNET_ACTION_OPEN_EXISTING;
-		g_settings->set(SettingsManager::SHARED_MAGNET_ASK, false);
-		g_settings->set(SettingsManager::SHARED_MAGNET_ACTION, index);
+		index = index == 1 ? Conf::MAGNET_ACTION_SEARCH : Conf::MAGNET_ACTION_OPEN_EXISTING;
+		ss->setBool(Conf::SHARED_MAGNET_ASK, false);
+		ss->setInt(Conf::SHARED_MAGNET_ACTION, index);
 	}
 }

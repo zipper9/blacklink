@@ -46,6 +46,7 @@
 #include "../User.h"
 #include "../Tag16.h"
 #include "../Random.h"
+#include "../ConfCore.h"
 #include "../version.h"
 
 #include <zlib.h>
@@ -74,21 +75,31 @@ namespace dht
 		IndexManager::deleteInstance();
 	}
 
-	string DHT::getMyNick() const
+	bool DHT::useDHT()
 	{
-		return SETTING(NICK);
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		bool result = ss->getBool(Conf::USE_DHT);
+		ss->unlockRead();
+		return result;
 	}
+
+	string DHT::getMyNick() const { return ClientManager::getDefaultNick(); }
 
 	/*
 	 * Starts DHT.
 	 */
 	void DHT::start()
 	{
-		if (!BOOLSETTING(USE_DHT) || !(state == STATE_IDLE || state == STATE_FAILED))
+		if (!useDHT() || !(state == STATE_IDLE || state == STATE_FAILED))
 			return;
 
 		state = STATE_INITIALIZING;
-		myUdpKey = CID(SETTING(DHT_KEY));
+
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		myUdpKey = CID(ss->getString(Conf::DHT_KEY));
+		ss->unlockRead();
 
 		// start with global firewalled status
 		firewalled = !ClientManager::isActiveMode(AF_INET, 0, true);
@@ -121,7 +132,7 @@ namespace dht
 		if (BootstrapManager::isValidInstance())
 			BootstrapManager::getInstance()->cleanup();
 
-		if (!BOOLSETTING(USE_DHT) || exiting)
+		if (!useDHT() || exiting)
 		{
 			saveData();
 
@@ -242,12 +253,12 @@ namespace dht
 		string command = cmd.toString(ClientManager::getMyCID());
 		if (command.length() > PACKET_BUF_SIZE - 3)
 		{
-			if (BOOLSETTING(LOG_DHT_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_DHT)
 				LOG(DHT_TRACE, "DHT: Outgoing command too large (size=" + Util::toString(command.length()) + ')');
 			return;
 		}
 
-		if (BOOLSETTING(LOG_UDP_PACKETS))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS)
 			LogManager::commandTrace(command, LogManager::FLAG_UDP, Util::printIpAddress(address), port);
 
 		if (CMD_DEBUG_ENABLED())
@@ -380,7 +391,7 @@ namespace dht
 		string s((const char*) srcBuf, size - 1);
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG(s, DebugTask::HUB_IN, remoteIp + ':' + Util::toString(remotePort));
-		if (BOOLSETTING(LOG_UDP_PACKETS))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS)
 			LogManager::commandTrace(s, LogManager::FLAG_UDP | LogManager::FLAG_IN, remoteIp, remotePort);
 		return dispatch(s, address, remotePort, isUdpKeyValid) || isCompressed || isEncrypted;
 	}
@@ -474,10 +485,14 @@ namespace dht
 		// TODO: what info is needed?
 		AdcCommand cmd(AdcCommand::CMD_INF, AdcCommand::TYPE_UDP);
 
-		string clientName;
-		string clientVersion;
-		if (BOOLSETTING(OVERRIDE_CLIENT_ID))
-			FavoriteManager::splitClientId(SETTING(CLIENT_ID), clientName, clientVersion);
+		string clientName, clientVersion;
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		if (ss->getBool(Conf::OVERRIDE_CLIENT_ID))
+			FavoriteManager::splitClientId(ss->getString(Conf::CLIENT_ID), clientName, clientVersion);
+		const string lineSpeed = ss->getString(Conf::UPLOAD_SPEED);
+		const string nick = ss->getString(Conf::NICK);
+		ss->unlockRead();
 		if (clientName.empty())
 		{
 			clientName = APPNAME;
@@ -487,14 +502,18 @@ namespace dht
 		cmd.addParam(TAG('T', 'Y'), Util::toString(type));
 		cmd.addParam(TAG('A', 'P'), clientName);
 		cmd.addParam(TAG('V', 'E'), clientVersion);
-		cmd.addParam(TAG('N', 'I'), SETTING(NICK));
+		cmd.addParam(TAG('N', 'I'), nick);
 		cmd.addParam(TAG('S', 'L'), Util::toString(UploadManager::getSlots()));
 
-		int64_t limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInKBytes() : 0;
-		if (limit > 0)
-			cmd.addParam(TAG('U', 'S'), Util::toString(limit * 1024));
+		size_t limit = ThrottleManager::getInstance()->getUploadLimitInBytes();
+		if (limit)
+			cmd.addParam(TAG('U', 'S'), Util::toString(limit));
 		else
-			cmd.addParam(TAG('U', 'S'), Util::toString((long)(Util::toDouble(SETTING(UPLOAD_SPEED))*1024*1024/8)));
+		{
+			double speedBps = Util::toDouble(lineSpeed) * (1000000 / 8);
+			limit = (size_t) speedBps;
+			cmd.addParam(TAG('U', 'S'), Util::toString(limit));
+		}
 
 		string su;
 		if (CryptoManager::getInstance()->isInitialized())

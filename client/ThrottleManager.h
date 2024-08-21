@@ -32,12 +32,13 @@ class ThrottleManager : public Singleton<ThrottleManager>, private TimerManagerL
 		size_t getUploadLimitInBytes() const { return upLimit; }
 		void setUploadLimit(size_t limitKb) { upLimit = limitKb << 10; }
 
-		void updateLimits() noexcept;
+		void updateSettings() noexcept;
+		bool isEnabled() const { return enabled; }
 
 		void startup() noexcept
 		{
 			TimerManager::getInstance()->addListener(this);
-			updateLimits();
+			updateSettings();
 		}
 
 		int64_t getSocketUploadLimit() noexcept;
@@ -48,6 +49,7 @@ class ThrottleManager : public Singleton<ThrottleManager>, private TimerManagerL
 
 		size_t downLimit;
 		size_t upLimit;
+		bool enabled;
 
 		ThrottleManager();
 		~ThrottleManager();

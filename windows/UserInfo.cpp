@@ -19,34 +19,32 @@
 #include "stdafx.h"
 #include "UserInfo.h"
 #include "resource.h"
-#include "../client/LocationUtil.h"
-#include "../client/FormatUtil.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/FavoriteManager.h"
+#include "../client/LocationUtil.h"
+#include "../client/FormatUtil.h"
+#include "../client/Util.h"
 
-int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
+int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col, int flags)
 {
 	if (a == nullptr || b == nullptr)
 		return 0;
 	if (col == COLUMN_NICK)
 	{
-		const bool a_isOp = a->isOP(),
-		           b_isOp = b->isOP();
-		if (a_isOp && !b_isOp)
-			return -1;
-		if (!a_isOp && b_isOp)
-			return 1;
-		if (BOOLSETTING(SORT_FAVUSERS_FIRST))
+		if (flags & CI_FLAG_OP_TOP)
+		{
+			const bool a_isOp = a->isOP(), b_isOp = b->isOP();
+			if (a_isOp != b_isOp)
+				return a_isOp ? -1 : 1;
+		}
+		if (flags & CI_FLAG_FAV_TOP)
 		{
 			const bool a_isFav = (a->getUser()->getFlags() & User::FAVORITE) != 0;
 			const bool b_isFav = (b->getUser()->getFlags() & User::FAVORITE) != 0;
-			if (a_isFav && !b_isFav)
-				return -1;
-			if (!a_isFav && b_isFav)
-				return 1;
+			if (a_isFav != b_isFav)
+				return a_isFav ? -1 : 1;
 		}
-		// workaround for faster hub loading
-		// lstrcmpiA(a->m_identity.getNick().c_str(), b->m_identity.getNick().c_str());
 	}
 	switch (col)
 	{
@@ -226,6 +224,13 @@ tstring UserInfo::getText(int col) const
 	}
 }
 
+int UserInfo::getCompareFlags()
+{
+	int flags = CI_FLAG_OP_TOP;
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::SORT_FAVUSERS_FIRST))
+		flags |= CI_FLAG_FAV_TOP;
+	return flags;
+}
 
 tstring UserInfo::formatSpeedLimit(const uint32_t limit)
 {

@@ -27,6 +27,8 @@
 #include "../client/FormatUtil.h"
 #include "../client/ShareManager.h"
 #include "../client/SysVersion.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 
 #ifdef _UNICODE
 static const WCHAR PASSWORD_CHAR = L'\x25CF';
@@ -98,15 +100,16 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlHubs.EnableGroupView(TRUE);
 	WinUtil::setExplorerTheme(ctrlHubs);
 	
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	LVGROUPMETRICS metrics = {0};
 	metrics.cbSize = sizeof(metrics);
 	metrics.mask = LVGMF_TEXTCOLOR;
-	metrics.crHeader = SETTING(TEXT_GENERAL_FORE_COLOR);
+	metrics.crHeader = ss->getInt(Conf::TEXT_GENERAL_FORE_COLOR);
 	ctrlHubs.SetGroupMetrics(&metrics);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(FAVORITES_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(FAVORITES_FRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, ss->getString(Conf::FAVORITES_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, ss->getString(Conf::FAVORITES_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -117,7 +120,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	}
 	ctrlHubs.SetColumnOrderArray(COLUMN_LAST, columnIndexes);
 	//ctrlHubs.setVisible(SETTING(FAVORITESFRAME_VISIBLE)); // !SMT!-UI
-	ctrlHubs.setSortFromSettings(SETTING(FAVORITES_FRAME_SORT), ExListViewCtrl::SORT_STRING_NOCASE, COLUMN_LAST);
+	ctrlHubs.setSortFromSettings(ss->getInt(Conf::FAVORITES_FRAME_SORT), ExListViewCtrl::SORT_STRING_NOCASE, COLUMN_LAST);
 	
 	ctrlNew.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	               BS_PUSHBUTTON, 0, IDC_NEWFAV);
@@ -158,7 +161,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ClientManager::getClientStatus(hubConnStatus);
 
 	FavoriteManager::getInstance()->addListener(this);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	ClientManager::getInstance()->addListener(this);
 	
 	createTimer(15000);
@@ -518,14 +521,16 @@ LRESULT FavoriteHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	int count = ctrlHubs.GetSelectedCount();
 	if (count)
 	{
-		if (BOOLSETTING(CONFIRM_HUB_REMOVAL))
+		auto ss = SettingsManager::instance.getUiSettings();
+		if (ss->getBool(Conf::CONFIRM_HUB_REMOVAL))
 		{
 			UINT checkState = BST_UNCHECKED;
 			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 				return 0;
-			if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_HUB_REMOVAL, FALSE);
+			if (checkState == BST_CHECKED)
+				ss->setBool(Conf::CONFIRM_HUB_REMOVAL, false);
 		}
-		
+
 		std::vector<int> hubIds;
 		hubIds.reserve(count);
 		int i = -1;
@@ -574,7 +579,7 @@ LRESULT FavoriteHubsFrame::onNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 
 bool FavoriteHubsFrame::checkNick()
 {
-	if (SETTING(NICK).empty())
+	if (ClientManager::isNickEmpty())
 	{
 		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 		return false;
@@ -764,7 +769,7 @@ LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	{
 		closed = true;
 		ClientManager::getInstance()->removeListener(this);
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		FavoriteManager::getInstance()->removeListener(this);
 		setButtonPressed(IDC_FAVORITES, false);
 		PostMessage(WM_CLOSE);
@@ -772,10 +777,10 @@ LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::FAVORITES_FRAME_ORDER,
-		                         SettingsManager::FAVORITES_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
-		                         
-		SET_SETTING(FAVORITES_FRAME_SORT, ctrlHubs.getSortForSettings());
+		WinUtil::saveHeaderOrder(ctrlHubs, Conf::FAVORITES_FRAME_ORDER,
+		                         Conf::FAVORITES_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::FAVORITES_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
 	}
@@ -791,7 +796,9 @@ void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 
-	int splitBarHeight = wp.showCmd == SW_MAXIMIZE && BOOLSETTING(SHOW_TRANSFERVIEW) ? GetSystemMetrics(SM_CYSIZEFRAME) : 0;
+	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
+		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
+		GetSystemMetrics(SM_CYSIZEFRAME) : 0;
 	if (!xdu)
 	{
 		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
@@ -848,7 +855,7 @@ LRESULT FavoriteHubsFrame::onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 			params["hubURL"] = fhe->getServer();
 			params["myNI"] = fhe->getNick();
 			fm->releaseFavoriteHubEntryPtr(fhe);
-			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), params, TSTRING(NO_LOG_FOR_HUB));
+			WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_MAIN_CHAT), params, TSTRING(NO_LOG_FOR_HUB));
 		}
 	}
 	return 0;
@@ -885,7 +892,7 @@ LRESULT FavoriteHubsFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	return 0;
 }
 
-void FavoriteHubsFrame::on(SettingsManagerListener::Repaint)
+void FavoriteHubsFrame::on(SettingsManagerListener::ApplySettings)
 {
 	if (ctrlHubs.isRedraw())
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);

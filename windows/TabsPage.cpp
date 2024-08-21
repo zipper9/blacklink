@@ -20,6 +20,8 @@
 #include "TabsPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
@@ -41,30 +43,30 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_TAB_WIDTH, SettingsManager::TAB_SIZE, PropPage::T_INT },
-	{ IDC_MAX_TAB_ROWS, SettingsManager::MAX_TAB_ROWS, PropPage::T_INT },
+	{ IDC_TAB_WIDTH, Conf::TAB_SIZE, PropPage::T_INT },
+	{ IDC_MAX_TAB_ROWS, Conf::MAX_TAB_ROWS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem optionItems[] =
 {
-	{ SettingsManager::NON_HUBS_FRONT, ResourceManager::NON_HUBS_FRONT },
-	{ SettingsManager::TABS_CLOSEBUTTONS, ResourceManager::TABS_CLOSEBUTTONS },
-	{ SettingsManager::TABS_BOLD, ResourceManager::TABS_BOLD },
-	{ SettingsManager::TABS_SHOW_INFOTIPS, ResourceManager::SETTINGS_TABS_INFO_TIPS },
-	{ SettingsManager::HUB_URL_IN_TITLE, ResourceManager::TABS_SHOW_HUB_URL },
+	{ Conf::NON_HUBS_FRONT, ResourceManager::NON_HUBS_FRONT },
+	{ Conf::TABS_CLOSEBUTTONS, ResourceManager::TABS_CLOSEBUTTONS },
+	{ Conf::TABS_BOLD, ResourceManager::TABS_BOLD },
+	{ Conf::TABS_SHOW_INFOTIPS, ResourceManager::SETTINGS_TABS_INFO_TIPS },
+	{ Conf::HUB_URL_IN_TITLE, ResourceManager::TABS_SHOW_HUB_URL },
 	{ 0, ResourceManager::Strings() }
 };
 
 static const PropPage::ListItem boldItems[] =
 {
-	{ SettingsManager::BOLD_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
-	{ SettingsManager::BOLD_FINISHED_UPLOADS, ResourceManager::FINISHED_UPLOADS },
-	{ SettingsManager::BOLD_QUEUE, ResourceManager::DOWNLOAD_QUEUE },
-	{ SettingsManager::BOLD_HUB, ResourceManager::HUB },
-	{ SettingsManager::BOLD_PM, ResourceManager::PRIVATE_MESSAGE },
-	{ SettingsManager::BOLD_SEARCH, ResourceManager::SEARCH },
-	{ SettingsManager::BOLD_WAITING_USERS, ResourceManager::WAITING_USERS },
+	{ Conf::BOLD_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
+	{ Conf::BOLD_FINISHED_UPLOADS, ResourceManager::FINISHED_UPLOADS },
+	{ Conf::BOLD_QUEUE, ResourceManager::DOWNLOAD_QUEUE },
+	{ Conf::BOLD_HUB, ResourceManager::HUB },
+	{ Conf::BOLD_PM, ResourceManager::PRIVATE_MESSAGE },
+	{ Conf::BOLD_SEARCH, ResourceManager::SEARCH },
+	{ Conf::BOLD_WAITING_USERS, ResourceManager::WAITING_USERS },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -76,7 +78,7 @@ LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(m_hWnd, items, optionItems, ctrlOption);
 	PropPage::read(m_hWnd, nullptr, boldItems, ctrlBold);
-	
+
 	CUpDownCtrl updownWidth(GetDlgItem(IDC_SPIN_TAB_WIDTH));
 	updownWidth.SetRange32(7, 80);
 	updownWidth.SetBuddy(GetDlgItem(IDC_TAB_WIDTH));
@@ -88,8 +90,9 @@ LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
 	tabsPosition.AddString(CTSTRING(TABS_TOP));
 	tabsPosition.AddString(CTSTRING(TABS_BOTTOM));
-	tabsPosition.SetCurSel(SETTING(TABS_POS));
-	
+	const auto ss = SettingsManager::instance.getUiSettings();
+	tabsPosition.SetCurSel(ss->getInt(Conf::TABS_POS));
+
 	return TRUE;
 }
 
@@ -97,7 +100,8 @@ void TabsPage::write()
 {
 	PropPage::write(m_hWnd, items, optionItems, ctrlOption);
 	PropPage::write(m_hWnd, nullptr, boldItems, ctrlBold);
-	
+
+	auto ss = SettingsManager::instance.getUiSettings();
 	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
-	g_settings->set(SettingsManager::TABS_POS, tabsPosition.GetCurSel());
+	ss->setInt(Conf::TABS_POS, tabsPosition.GetCurSel());
 }

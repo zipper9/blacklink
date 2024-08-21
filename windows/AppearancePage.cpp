@@ -20,10 +20,13 @@
 #include "AppearancePage.h"
 #include "WinUtil.h"
 #include "UserMessages.h"
+#include "ConfUI.h"
 #include "../client/File.h"
 #include "../client/AppPaths.h"
+#include "../client/SettingsManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/BusyCounter.h"
+#include "../client/ConfCore.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -35,39 +38,40 @@ static const WinUtil::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_TIME_STAMPS_FORMAT, SettingsManager::TIME_STAMPS_FORMAT, PropPage::T_STR },
+	{ IDC_TIME_STAMPS_FORMAT, Conf::TIME_STAMPS_FORMAT, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
 static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::MINIMIZE_ON_STARTUP, ResourceManager::SETTINGS_MINIMIZE_ON_STARTUP },
-	{ SettingsManager::MINIMIZE_ON_CLOSE, ResourceManager::MINIMIZE_ON_CLOSE },
-	{ SettingsManager::MINIMIZE_TRAY, ResourceManager::SETTINGS_MINIMIZE_TRAY },
-	{ SettingsManager::SHOW_CURRENT_SPEED_IN_TITLE, ResourceManager::SHOW_CURRENT_SPEED_IN_TITLE },
-	{ SettingsManager::SORT_FAVUSERS_FIRST, ResourceManager::SETTINGS_SORT_FAVUSERS_FIRST },
-	{ SettingsManager::FILTER_ENTER, ResourceManager::SETTINGS_FILTER_ENTER },
-	{ SettingsManager::USE_SYSTEM_ICONS, ResourceManager::SETTINGS_USE_SYSTEM_ICONS },
-	{ SettingsManager::SHOW_SHELL_MENU, ResourceManager::SETTINGS_SHOW_SHELL_MENU },
-	{ SettingsManager::SHOW_INFOTIPS, ResourceManager::SETTINGS_SHOW_INFO_TIPS },
-	{ SettingsManager::SHOW_GRIDLINES, ResourceManager::VIEW_GRIDCONTROLS },
-	{ SettingsManager::FILTER_MESSAGES, ResourceManager::SETTINGS_FILTER_MESSAGES },
-	{ SettingsManager::UC_SUBMENU, ResourceManager::UC_SUBMENU },
-	{ SettingsManager::ENABLE_COUNTRY_FLAG, ResourceManager::ENABLE_COUNTRYFLAG },
-	{ SettingsManager::APP_DPI_AWARE, ResourceManager::SETTINGS_APP_DPI_AWARE },
+	{ Conf::MINIMIZE_ON_STARTUP, ResourceManager::SETTINGS_MINIMIZE_ON_STARTUP },
+	{ Conf::MINIMIZE_ON_CLOSE, ResourceManager::MINIMIZE_ON_CLOSE },
+	{ Conf::MINIMIZE_TRAY, ResourceManager::SETTINGS_MINIMIZE_TRAY },
+	{ Conf::SHOW_CURRENT_SPEED_IN_TITLE, ResourceManager::SHOW_CURRENT_SPEED_IN_TITLE },
+	{ Conf::SORT_FAVUSERS_FIRST, ResourceManager::SETTINGS_SORT_FAVUSERS_FIRST },
+	{ Conf::FILTER_ENTER, ResourceManager::SETTINGS_FILTER_ENTER },
+	{ Conf::USE_SYSTEM_ICONS, ResourceManager::SETTINGS_USE_SYSTEM_ICONS },
+	{ Conf::SHOW_SHELL_MENU, ResourceManager::SETTINGS_SHOW_SHELL_MENU },
+	{ Conf::SHOW_INFOTIPS, ResourceManager::SETTINGS_SHOW_INFO_TIPS },
+	{ Conf::SHOW_GRIDLINES, ResourceManager::VIEW_GRIDCONTROLS },
+	{ Conf::FILTER_MESSAGES, ResourceManager::SETTINGS_FILTER_MESSAGES },
+	{ Conf::UC_SUBMENU, ResourceManager::UC_SUBMENU },
+	{ Conf::ENABLE_COUNTRY_FLAG, ResourceManager::ENABLE_COUNTRYFLAG },
+	{ Conf::APP_DPI_AWARE, ResourceManager::SETTINGS_APP_DPI_AWARE },
 	{ 0, ResourceManager::Strings() }
 };
 
 void AppearancePage::write()
 {
 	PropPage::write(*this, items, listItems, ctrlList);
-	
+
 	string themeFile;
 	int sel = ctrlTheme.GetCurSel();
 	if (sel >= 0 && sel < (int) themes.size()) themeFile = themes[sel].name;
-	if (SETTING(THEME_MANAGER_THEME_DLL_NAME) != themeFile)
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getString(Conf::THEME_MANAGER_THEME_DLL_NAME) != themeFile)
 	{
-		g_settings->set(SettingsManager::THEME_MANAGER_THEME_DLL_NAME, themeFile);
+		ss->setString(Conf::THEME_MANAGER_THEME_DLL_NAME, themeFile);
 		if (themes.size() != 1)
 			MessageBox(CTSTRING(THEME_CHANGE_THEME_INFO), CTSTRING(THEME_CHANGE_THEME), MB_OK | MB_ICONEXCLAMATION);
 	}
@@ -84,7 +88,9 @@ LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 
 	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO));
 	getThemeList();
-	const string& selectedTheme = SETTING(THEME_MANAGER_THEME_DLL_NAME);
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	const string& selectedTheme = ss->getString(Conf::THEME_MANAGER_THEME_DLL_NAME);
 	int index = 0;
 	int sel = -1;
 	for (const auto& ti : themes)
@@ -93,7 +99,7 @@ LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 		if (ti.name == selectedTheme) sel = index;
 		index++;
 	}
-		
+
 	ctrlTheme.SetCurSel(sel);
 	return TRUE;
 }
@@ -109,11 +115,12 @@ LRESULT AppearancePage::onListItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 	const NMLISTVIEW* l = reinterpret_cast<const NMLISTVIEW*>(pnmh);
 	if (!initializing && (l->uChanged & LVIF_STATE))
 	{
+		const auto* ss = SettingsManager::instance.getUiSettings();
 		int setting = 0;
 		if (l->iItem >= 0 && l->iItem < _countof(listItems))
 			setting = listItems[l->iItem].setting;
-		if (setting == SettingsManager::APP_DPI_AWARE &&
-		    (bool) CListViewCtrl(l->hdr.hwndFrom).GetCheckState(l->iItem) != BOOLSETTING(APP_DPI_AWARE))
+		if (setting == Conf::APP_DPI_AWARE &&
+		    (bool) CListViewCtrl(l->hdr.hwndFrom).GetCheckState(l->iItem) != ss->getBool(Conf::APP_DPI_AWARE))
 		{
 			GetParent().SendMessage(WMU_RESTART_REQUIRED);
 		}

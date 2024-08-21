@@ -8,6 +8,7 @@
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
 #include "../client/UserManager.h"
+#include "../client/ConfCore.h"
 
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
@@ -179,7 +180,10 @@ bool UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int& lim, const tstring&
 
 void UserInfoGuiTraits::updateSpeedMenuText(int customSpeed)
 {
-	int normalSpeed = SETTING(PER_USER_UPLOAD_SPEED_LIMIT);
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	const int normalSpeed = ss->getInt(Conf::PER_USER_UPLOAD_SPEED_LIMIT);
+	ss->unlockRead();
 	if (displayedSpeed[0] != normalSpeed)
 	{
 		displayedSpeed[0] = normalSpeed;

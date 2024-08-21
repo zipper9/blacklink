@@ -11,11 +11,13 @@ class IpTrust
 		bool isBlocked(uint32_t addr) const noexcept;
 		void load() noexcept;
 		void clear() noexcept;
+		void updateSettings() noexcept;
 		static std::string getFileName();
 
 	private:
 		IpList ipList;
 		mutable unique_ptr<RWLock> cs;
+		bool enabled;
 		bool hasWhiteList;
 };
 

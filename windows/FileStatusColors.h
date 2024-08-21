@@ -2,6 +2,7 @@
 #define FILE_STATUS_COLORS_H_
 
 #include "../client/SettingsManager.h"
+#include "ConfUI.h"
 #include "ColorUtil.h"
 
 struct FileStatusColors
@@ -21,11 +22,12 @@ struct FileStatusColors
 
 	void get()
 	{
-		bgNormal[SHARED] = SETTING(FILE_SHARED_COLOR);
-		bgNormal[DOWNLOADED] = SETTING(FILE_DOWNLOADED_COLOR);
-		bgNormal[CANCELED] = SETTING(FILE_CANCELED_COLOR);
-		bgNormal[FOUND] = SETTING(FILE_FOUND_COLOR);
-		fgInQueue = SETTING(FILE_QUEUED_COLOR);
+		auto ss = SettingsManager::instance.getUiSettings();
+		bgNormal[SHARED] = ss->getInt(Conf::FILE_SHARED_COLOR);
+		bgNormal[DOWNLOADED] = ss->getInt(Conf::FILE_DOWNLOADED_COLOR);
+		bgNormal[CANCELED] = ss->getInt(Conf::FILE_CANCELED_COLOR);
+		bgNormal[FOUND] = ss->getInt(Conf::FILE_FOUND_COLOR);
+		fgInQueue = ss->getInt(Conf::FILE_QUEUED_COLOR);
 		for (int i = 0; i < MAX_COLORS; ++i)
 			fgNormal[i] = ColorUtil::textFromBackground(bgNormal[i]);
 	}

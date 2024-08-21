@@ -39,6 +39,13 @@ struct AdcSearchParam;
 class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread
 {
 	public:
+		enum
+		{
+			OPT_INCOMING_SEARCH_TTH_ONLY       = 1,
+			OPT_INCOMING_SEARCH_IGNORE_PASSIVE = 2,
+			OPT_INCOMING_SEARCH_IGNORE_BOTS    = 4
+		};
+
 		static ResourceManager::Strings getTypeStr(int type);
 
 		void searchAuto(const string& tth);
@@ -62,6 +69,8 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 
 		static const uint16_t FLAG_NO_TRACE = 1;
 		void addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags = 0) noexcept;
+		int getOptions() const noexcept { return options.load(); }
+		void updateSettings() noexcept;
 
 	private:
 		friend class Singleton<SearchManager>;
@@ -94,6 +103,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		static uint16_t udpPort;
 		std::atomic_bool stopFlag;
 		std::atomic_bool restartFlag;
+		std::atomic_int options;
 		vector<SendQueueItem> sendQueue;
 		CriticalSection csSendQueue;
 

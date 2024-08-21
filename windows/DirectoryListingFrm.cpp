@@ -27,6 +27,7 @@
 #include "Fonts.h"
 #include "BrowseFile.h"
 #include "LineDlg.h"
+#include "ConfUI.h"
 #include "../client/QueueManager.h"
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
@@ -36,6 +37,8 @@
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/SettingsUtil.h"
+#include "../client/ConfCore.h"
 #include <boost/algorithm/string/trim.hpp>
 
 static const size_t MAX_NAVIGATION_HISTORY = 25;
@@ -111,7 +114,8 @@ void DirectoryListingFrame::openWindow(const tstring& file, const tstring& dir, 
 	frame->setSpeed(speed);
 	frame->setDclstFlag(isDcLst);
 	frame->setFileName(Text::fromT(file));
-	if (BOOLSETTING(POPUNDER_FILELIST))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::POPUNDER_FILELIST))
 		hwnd = WinUtil::hiddenCreateEx(frame);
 	else
 		hwnd = frame->Create(WinUtil::g_mdiClient);
@@ -135,7 +139,8 @@ void DirectoryListingFrame::openWindow(const HintedUser& user, const string& txt
 	}
 	frame = new DirectoryListingFrame(user, nullptr, true);
 	frame->setSpeed(speed);
-	if (BOOLSETTING(POPUNDER_FILELIST))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
 		frame->Create(WinUtil::g_mdiClient);
@@ -148,7 +153,8 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, c
 	DirectoryListingFrame* frame = new DirectoryListingFrame(user, dl, false);
 	frame->searchResultsFlag = searchResults;
 	frame->setSpeed(speed);
-	if (BOOLSETTING(POPUNDER_FILELIST))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
 		frame->Create(WinUtil::g_mdiClient);
@@ -194,11 +200,12 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
 	int scanOptions = 0;
-	if (BOOLSETTING(FILELIST_SHOW_SHARED))
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::FILELIST_SHOW_SHARED))
 		scanOptions |= DirectoryListing::SCAN_OPTION_SHARED;
-	if (BOOLSETTING(FILELIST_SHOW_DOWNLOADED))
+	if (ss->getBool(Conf::FILELIST_SHOW_DOWNLOADED))
 		scanOptions |= DirectoryListing::SCAN_OPTION_DOWNLOADED;
-	if (BOOLSETTING(FILELIST_SHOW_CANCELED))
+	if (ss->getBool(Conf::FILELIST_SHOW_CANCELED))
 		scanOptions |= DirectoryListing::SCAN_OPTION_CANCELED;
 	dl->setScanOptions(scanOptions);
 	this->dl.reset(dl);
@@ -364,9 +371,9 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 
-	ctrlList.insertColumns(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
-
-	ctrlList.setSortFromSettings(SETTING(DIRLIST_FRAME_SORT));
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	ctrlList.insertColumns(Conf::DIRLIST_FRAME_ORDER, Conf::DIRLIST_FRAME_WIDTHS, Conf::DIRLIST_FRAME_VISIBLE);
+	ctrlList.setSortFromSettings(ss->getInt(Conf::DIRLIST_FRAME_SORT));
 
 	ctrlTree.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
@@ -376,7 +383,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	SetSplitterPanes(ctrlTree.m_hWnd, nullptr);
-	m_nProportionalPos = SETTING(DIRLIST_FRAME_SPLIT);
+	m_nProportionalPos = ss->getInt(Conf::DIRLIST_FRAME_SPLIT);
 	int icon = dclstFlag ? FileImage::DIR_DCLST : FileImage::DIR_ICON;
 	nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
 	tstring rootText = getRootItemText();
@@ -391,7 +398,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	navWnd.initToolbars(this);
 	disableControls();
 
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	closed = false;
 	bHandled = FALSE;
 
@@ -2249,12 +2256,13 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	if (!closed)
 	{
 		closed = true;
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		activeFrames.erase(m_hWnd);
 		ctrlList.deleteAll();
-		ctrlList.saveHeaderOrder(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
-		SET_SETTING(DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
-		SET_SETTING(DIRLIST_FRAME_SPLIT, m_nProportionalPos);
+		ctrlList.saveHeaderOrder(Conf::DIRLIST_FRAME_ORDER, Conf::DIRLIST_FRAME_WIDTHS, Conf::DIRLIST_FRAME_VISIBLE);
+		auto ss = SettingsManager::instance.getUiSettings();
+		ss->setInt(Conf::DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
+		ss->setInt(Conf::DIRLIST_FRAME_SPLIT, m_nProportionalPos);
 		bHandled = FALSE;
 	}
 	return 0;
@@ -2302,7 +2310,7 @@ LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL
 	return TRUE;
 }
 
-void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
+void DirectoryListingFrame::on(SettingsManagerListener::ApplySettings)
 {
 	FileStatusColorsEx newColors;
 	newColors.get();
@@ -2693,7 +2701,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) :
 		columns[COLUMN_BITRATE] = Util::toStringT(minBitrate);
 }
 
-int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, int col)
+int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, int col, int /*flags*/)
 {
 	dcassert(col >= 0 && col < COLUMN_LAST);
 	if (a->type == DIRECTORY)
@@ -2887,7 +2895,7 @@ OnlineUserPtr DirectoryListingFrame::getSelectedOnlineUser() const
 
 void DirectoryListingFrame::openUserLog()
 {
-	WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
+	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
 }
 
 void DirectoryListingFrame::showFound()
@@ -3328,8 +3336,14 @@ int ThreadedDirectoryListing::run()
 					adls->matchListing(dl, &window->abortFlag);
 					if (window->abortFlag) throw AbortException("ADL search aborted");
 				}
-				if (!dl->isOwnList() && BOOLSETTING(AUTO_MATCH_DOWNLOADED_LISTS))
-					QueueManager::getInstance()->matchListing(*dl);
+				if (!dl->isOwnList())
+				{
+					auto ss = SettingsManager::instance.getCoreSettings();
+					ss->lockRead();
+					bool matchList = ss->getBool(Conf::AUTO_MATCH_DOWNLOADED_LISTS);
+					ss->unlockRead();
+					if (matchList) QueueManager::getInstance()->matchListing(*dl);
+				}
 				if (window->getDclstFlag() && dl->getIncludeSelf())
 					dl->addDclstSelf(filePath, window->abortFlag);
 				window->refreshTree(dl->getRoot(), window->treeRoot, false, Util::toAdcFile(Text::fromT(directory)));

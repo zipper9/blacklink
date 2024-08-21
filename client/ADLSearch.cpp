@@ -31,6 +31,7 @@
 #include "FavoriteManager.h"
 #include "ClientManager.h"
 #include "TimeUtil.h"
+#include "ConfCore.h"
 
 static string getConfigFile()
 {
@@ -424,9 +425,13 @@ void ADLSearchManager::prepare(ADLSearchManager::SearchContext& ctx, DirectoryLi
 	}
 	ctx.dl = dl;
 	ctx.user = user;
-	ctx.breakOnFirst = BOOLSETTING(ADLS_BREAK_ON_FIRST);
 	ctx.sentCommands.clear();
 	ctx.wantFullPath = false;
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	ctx.breakOnFirst = ss->getBool(Conf::ADLS_BREAK_ON_FIRST);
+	ss->unlockRead();
 
 	ctx.destDir.emplace_back(DestDir{ defDestDir, new DirectoryListing::AdlDirectory(Util::emptyString, root, "<<<" + defDestDir + ">>>") });
 

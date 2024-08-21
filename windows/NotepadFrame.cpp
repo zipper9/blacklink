@@ -66,7 +66,7 @@ LRESULT NotepadFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ctrlPad.SetWindowText(Text::toT(tmp).c_str());
 	ctrlPad.EmptyUndoBuffer();
 	ctrlClientContainer.SubclassWindow(ctrlPad.m_hWnd);
-	SettingsManager::getInstance()->addListener(this);
+	SettingsManager::instance.addListener(this);
 	bHandled = FALSE;
 	return 1;
 }
@@ -94,7 +94,7 @@ LRESULT NotepadFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	if (!closed)
 	{
 		closed = true;
-		SettingsManager::getInstance()->removeListener(this);
+		SettingsManager::instance.removeListener(this);
 		if (ctrlPad.GetModify())
 		{
 			tstring tmp;
@@ -160,13 +160,11 @@ LRESULT NotepadFrame::onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 	return 0;
 }
 
-void NotepadFrame::on(SettingsManagerListener::Repaint)
+void NotepadFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
-	{
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-	}
 }
 
 CFrameWndClassInfo& NotepadFrame::GetWndClassInfo()

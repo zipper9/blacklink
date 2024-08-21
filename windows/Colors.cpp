@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Colors.h"
 #include "BarShader.h"
+#include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/Text.h"
 
@@ -46,11 +47,12 @@ static const NamedColor namedColors[] =
 
 void Colors::init()
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
 	isAppThemed = IsAppThemed();
-	g_textColor = SETTING(TEXT_COLOR);
-	g_bgColor = SETTING(BACKGROUND_COLOR);
-	g_tabBackground = SETTING(TABS_ACTIVE_BACKGROUND_COLOR);
-	g_tabText = SETTING(TABS_ACTIVE_TEXT_COLOR);
+	g_textColor = ss->getInt(Conf::TEXT_COLOR);
+	g_bgColor = ss->getInt(Conf::BACKGROUND_COLOR);
+	g_tabBackground = ss->getInt(Conf::TABS_ACTIVE_BACKGROUND_COLOR);
+	g_tabText = ss->getInt(Conf::TABS_ACTIVE_TEXT_COLOR);
 
 	if (g_bgBrush) DeleteObject(g_bgBrush);
 	g_bgBrush = CreateSolidBrush(g_bgColor);
@@ -68,109 +70,109 @@ void Colors::init()
 	cf.crTextColor = g_textColor;
 
 	charFormat[TEXT_STYLE_TIMESTAMP] = cf;
-	charFormat[TEXT_STYLE_TIMESTAMP].crBackColor = SETTING(TEXT_TIMESTAMP_BACK_COLOR);
-	charFormat[TEXT_STYLE_TIMESTAMP].crTextColor = SETTING(TEXT_TIMESTAMP_FORE_COLOR);
-	if (SETTING(TEXT_TIMESTAMP_BOLD))
+	charFormat[TEXT_STYLE_TIMESTAMP].crBackColor = ss->getInt(Conf::TEXT_TIMESTAMP_BACK_COLOR);
+	charFormat[TEXT_STYLE_TIMESTAMP].crTextColor = ss->getInt(Conf::TEXT_TIMESTAMP_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_TIMESTAMP_BOLD))
 		charFormat[TEXT_STYLE_TIMESTAMP].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_TIMESTAMP_ITALIC))
+	if (ss->getBool(Conf::TEXT_TIMESTAMP_ITALIC))
 		charFormat[TEXT_STYLE_TIMESTAMP].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_NORMAL] = cf;
-	charFormat[TEXT_STYLE_NORMAL].crBackColor = SETTING(TEXT_GENERAL_BACK_COLOR);
-	charFormat[TEXT_STYLE_NORMAL].crTextColor = SETTING(TEXT_GENERAL_FORE_COLOR);
-	if (SETTING(TEXT_GENERAL_BOLD))
+	charFormat[TEXT_STYLE_NORMAL].crBackColor = ss->getInt(Conf::TEXT_GENERAL_BACK_COLOR);
+	charFormat[TEXT_STYLE_NORMAL].crTextColor = ss->getInt(Conf::TEXT_GENERAL_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_GENERAL_BOLD))
 		charFormat[TEXT_STYLE_NORMAL].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_GENERAL_ITALIC))
+	if (ss->getBool(Conf::TEXT_GENERAL_ITALIC))
 		charFormat[TEXT_STYLE_NORMAL].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_MY_NICK] = cf;
-	charFormat[TEXT_STYLE_MY_NICK].crBackColor = SETTING(TEXT_MYNICK_BACK_COLOR);
-	charFormat[TEXT_STYLE_MY_NICK].crTextColor = SETTING(TEXT_MYNICK_FORE_COLOR);
-	if (SETTING(TEXT_MYNICK_BOLD))
+	charFormat[TEXT_STYLE_MY_NICK].crBackColor = ss->getInt(Conf::TEXT_MYNICK_BACK_COLOR);
+	charFormat[TEXT_STYLE_MY_NICK].crTextColor = ss->getInt(Conf::TEXT_MYNICK_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_MYNICK_BOLD))
 		charFormat[TEXT_STYLE_MY_NICK].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_MYNICK_ITALIC))
+	if (ss->getBool(Conf::TEXT_MYNICK_ITALIC))
 		charFormat[TEXT_STYLE_MY_NICK].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_MY_MESSAGE] = cf;
-	charFormat[TEXT_STYLE_MY_MESSAGE].crBackColor = SETTING(TEXT_MYOWN_BACK_COLOR);
-	charFormat[TEXT_STYLE_MY_MESSAGE].crTextColor = SETTING(TEXT_MYOWN_FORE_COLOR);
-	if (SETTING(TEXT_MYOWN_BOLD))
+	charFormat[TEXT_STYLE_MY_MESSAGE].crBackColor = ss->getInt(Conf::TEXT_MYOWN_BACK_COLOR);
+	charFormat[TEXT_STYLE_MY_MESSAGE].crTextColor = ss->getInt(Conf::TEXT_MYOWN_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_MYOWN_BOLD))
 		charFormat[TEXT_STYLE_MY_MESSAGE].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_MYOWN_ITALIC))
+	if (ss->getBool(Conf::TEXT_MYOWN_ITALIC))
 		charFormat[TEXT_STYLE_MY_MESSAGE].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_PRIVATE_CHAT] = cf;
-	charFormat[TEXT_STYLE_PRIVATE_CHAT].crBackColor = SETTING(TEXT_PRIVATE_BACK_COLOR);
-	charFormat[TEXT_STYLE_PRIVATE_CHAT].crTextColor = SETTING(TEXT_PRIVATE_FORE_COLOR);
-	if (SETTING(TEXT_PRIVATE_BOLD))
+	charFormat[TEXT_STYLE_PRIVATE_CHAT].crBackColor = ss->getInt(Conf::TEXT_PRIVATE_BACK_COLOR);
+	charFormat[TEXT_STYLE_PRIVATE_CHAT].crTextColor = ss->getInt(Conf::TEXT_PRIVATE_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_PRIVATE_BOLD))
 		charFormat[TEXT_STYLE_PRIVATE_CHAT].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_PRIVATE_ITALIC))
+	if (ss->getBool(Conf::TEXT_PRIVATE_ITALIC))
 		charFormat[TEXT_STYLE_PRIVATE_CHAT].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_SYSTEM_MESSAGE] = cf;
-	charFormat[TEXT_STYLE_SYSTEM_MESSAGE].crBackColor = SETTING(TEXT_SYSTEM_BACK_COLOR);
-	charFormat[TEXT_STYLE_SYSTEM_MESSAGE].crTextColor = SETTING(TEXT_SYSTEM_FORE_COLOR);
-	if (SETTING(TEXT_SYSTEM_BOLD))
+	charFormat[TEXT_STYLE_SYSTEM_MESSAGE].crBackColor = ss->getInt(Conf::TEXT_SYSTEM_BACK_COLOR);
+	charFormat[TEXT_STYLE_SYSTEM_MESSAGE].crTextColor = ss->getInt(Conf::TEXT_SYSTEM_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_SYSTEM_BOLD))
 		charFormat[TEXT_STYLE_SYSTEM_MESSAGE].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_SYSTEM_ITALIC))
+	if (ss->getBool(Conf::TEXT_SYSTEM_ITALIC))
 		charFormat[TEXT_STYLE_SYSTEM_MESSAGE].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_SERVER_MESSAGE] = cf;
-	charFormat[TEXT_STYLE_SERVER_MESSAGE].crBackColor = SETTING(TEXT_SERVER_BACK_COLOR);
-	charFormat[TEXT_STYLE_SERVER_MESSAGE].crTextColor = SETTING(TEXT_SERVER_FORE_COLOR);
-	if (SETTING(TEXT_SERVER_BOLD))
+	charFormat[TEXT_STYLE_SERVER_MESSAGE].crBackColor = ss->getInt(Conf::TEXT_SERVER_BACK_COLOR);
+	charFormat[TEXT_STYLE_SERVER_MESSAGE].crTextColor = ss->getInt(Conf::TEXT_SERVER_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_SERVER_BOLD))
 		charFormat[TEXT_STYLE_SERVER_MESSAGE].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_SERVER_ITALIC))
+	if (ss->getBool(Conf::TEXT_SERVER_ITALIC))
 		charFormat[TEXT_STYLE_SERVER_MESSAGE].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_LOG] = charFormat[TEXT_STYLE_NORMAL];
-	charFormat[TEXT_STYLE_LOG].crTextColor = OperaColors::blendColors(SETTING(TEXT_GENERAL_BACK_COLOR), SETTING(TEXT_GENERAL_FORE_COLOR), 0.4);
+	charFormat[TEXT_STYLE_LOG].crTextColor = OperaColors::blendColors(ss->getInt(Conf::TEXT_GENERAL_BACK_COLOR), ss->getInt(Conf::TEXT_GENERAL_FORE_COLOR), 0.4);
 
 	charFormat[TEXT_STYLE_FAV_USER] = cf;
-	charFormat[TEXT_STYLE_FAV_USER].crBackColor = SETTING(TEXT_FAV_BACK_COLOR);
-	charFormat[TEXT_STYLE_FAV_USER].crTextColor = SETTING(TEXT_FAV_FORE_COLOR);
-	if (SETTING(TEXT_FAV_BOLD))
+	charFormat[TEXT_STYLE_FAV_USER].crBackColor = ss->getInt(Conf::TEXT_FAV_BACK_COLOR);
+	charFormat[TEXT_STYLE_FAV_USER].crTextColor = ss->getInt(Conf::TEXT_FAV_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_FAV_BOLD))
 		charFormat[TEXT_STYLE_FAV_USER].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_FAV_ITALIC))
+	if (ss->getBool(Conf::TEXT_FAV_ITALIC))
 		charFormat[TEXT_STYLE_FAV_USER].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_BANNED_USER] = cf;
-	charFormat[TEXT_STYLE_BANNED_USER].crBackColor = SETTING(TEXT_ENEMY_BACK_COLOR);
-	charFormat[TEXT_STYLE_BANNED_USER].crTextColor = SETTING(TEXT_ENEMY_FORE_COLOR);
-	if (SETTING(TEXT_ENEMY_BOLD))
+	charFormat[TEXT_STYLE_BANNED_USER].crBackColor = ss->getInt(Conf::TEXT_ENEMY_BACK_COLOR);
+	charFormat[TEXT_STYLE_BANNED_USER].crTextColor = ss->getInt(Conf::TEXT_ENEMY_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_ENEMY_BOLD))
 		charFormat[TEXT_STYLE_BANNED_USER].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_ENEMY_ITALIC))
+	if (ss->getBool(Conf::TEXT_ENEMY_ITALIC))
 		charFormat[TEXT_STYLE_BANNED_USER].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_OP] = cf;
-	charFormat[TEXT_STYLE_OP].crBackColor = SETTING(TEXT_OP_BACK_COLOR);
-	charFormat[TEXT_STYLE_OP].crTextColor = SETTING(TEXT_OP_FORE_COLOR);
-	if (SETTING(TEXT_OP_BOLD))
+	charFormat[TEXT_STYLE_OP].crBackColor = ss->getInt(Conf::TEXT_OP_BACK_COLOR);
+	charFormat[TEXT_STYLE_OP].crTextColor = ss->getInt(Conf::TEXT_OP_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_OP_BOLD))
 		charFormat[TEXT_STYLE_OP].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_OP_ITALIC))
+	if (ss->getBool(Conf::TEXT_OP_ITALIC))
 		charFormat[TEXT_STYLE_OP].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_OTHER_USER] = cf;
-	charFormat[TEXT_STYLE_OTHER_USER].crBackColor = SETTING(TEXT_NORMAL_BACK_COLOR);
-	charFormat[TEXT_STYLE_OTHER_USER].crTextColor = SETTING(TEXT_NORMAL_FORE_COLOR);
-	if (SETTING(TEXT_NORMAL_BOLD))
+	charFormat[TEXT_STYLE_OTHER_USER].crBackColor = ss->getInt(Conf::TEXT_NORMAL_BACK_COLOR);
+	charFormat[TEXT_STYLE_OTHER_USER].crTextColor = ss->getInt(Conf::TEXT_NORMAL_FORE_COLOR);
+	if (ss->getBool(Conf::TEXT_NORMAL_BOLD))
 		charFormat[TEXT_STYLE_OTHER_USER].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_NORMAL_ITALIC))
+	if (ss->getBool(Conf::TEXT_NORMAL_ITALIC))
 		charFormat[TEXT_STYLE_OTHER_USER].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_URL] = cf;
 	charFormat[TEXT_STYLE_URL].dwMask = CFM_COLOR | CFM_BOLD | CFM_ITALIC | CFM_BACKCOLOR | CFM_LINK | CFM_UNDERLINE;
-	charFormat[TEXT_STYLE_URL].crBackColor = SETTING(TEXT_URL_BACK_COLOR);
-	charFormat[TEXT_STYLE_URL].crTextColor = SETTING(TEXT_URL_FORE_COLOR);
+	charFormat[TEXT_STYLE_URL].crBackColor = ss->getInt(Conf::TEXT_URL_BACK_COLOR);
+	charFormat[TEXT_STYLE_URL].crTextColor = ss->getInt(Conf::TEXT_URL_FORE_COLOR);
 	charFormat[TEXT_STYLE_URL].dwEffects = CFE_LINK | CFE_UNDERLINE;
-	if (SETTING(TEXT_URL_BOLD))
+	if (ss->getBool(Conf::TEXT_URL_BOLD))
 		charFormat[TEXT_STYLE_URL].dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_URL_ITALIC))
+	if (ss->getBool(Conf::TEXT_URL_ITALIC))
 		charFormat[TEXT_STYLE_URL].dwEffects |= CFE_ITALIC;
 
 	charFormat[TEXT_STYLE_CHEATING_USER] = cf;
-	charFormat[TEXT_STYLE_CHEATING_USER].crBackColor = SETTING(BACKGROUND_COLOR);
-	charFormat[TEXT_STYLE_CHEATING_USER].crTextColor = SETTING(ERROR_COLOR);
+	charFormat[TEXT_STYLE_CHEATING_USER].crBackColor = ss->getInt(Conf::BACKGROUND_COLOR);
+	charFormat[TEXT_STYLE_CHEATING_USER].crTextColor = ss->getInt(Conf::ERROR_COLOR);
 	charFormat[TEXT_STYLE_CHEATING_USER].dwEffects |= CFE_BOLD;
 }
 

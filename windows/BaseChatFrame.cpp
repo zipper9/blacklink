@@ -22,8 +22,12 @@
 #include "Fonts.h"
 #include "MainFrm.h"
 #include "BrowseFile.h"
+#include "NotifUtil.h"
+#include "ConfUI.h"
+#include "../client/SettingsManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/PathUtil.h"
+#include "../client/ConfCore.h"
 #include <tom.h>
 #include <comdef.h>
 
@@ -118,6 +122,22 @@ static UINT_PTR CALLBACK chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPA
 }
 #endif
 
+BaseChatFrame::BaseChatFrame() :
+	multiChatLines(0),
+	msgPanel(nullptr),
+	messagePanelHwnd(nullptr),
+	messagePanelRect{},
+	lastMessageSelPos(0),
+	userMenu(nullptr),
+	disableChat(false),
+	shouldRestoreStatusText(true),
+	ctrlStatusOwnerDraw(0),
+	findDlg(nullptr)
+{
+	auto ss = SettingsManager::instance.getUiSettings();
+	showTimestamps = ss->getBool(Conf::CHAT_TIME_STAMPS);
+}
+
 void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 {
 #ifdef BL_UI_FEATURE_BB_CODES
@@ -143,10 +163,11 @@ void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 			break;
 		case IDC_COLOR:
 		{
+			auto ss = SettingsManager::instance.getUiSettings();
 			CHOOSECOLOR cc = { sizeof(cc) };
 			cc.hwndOwner = ctrlMessage.m_hWnd;
 			cc.Flags = CC_FULLOPEN | CC_RGBINIT | CC_ENABLEHOOK;
-			cc.rgbResult = SETTING(TEXT_GENERAL_FORE_COLOR);
+			cc.rgbResult = ss->getInt(Conf::TEXT_GENERAL_FORE_COLOR);
 			cc.lpCustColors = CColorDialog::GetCustomColors();
 			cc.lpfnHook = chooseColorHook;
 			RECT rc;
@@ -438,7 +459,8 @@ void BaseChatFrame::checkMultiLine()
 
 TCHAR BaseChatFrame::getNickDelimiter()
 {
-	return BOOLSETTING(CHAT_REFFERING_TO_NICK) ? _T(',') : _T(':');
+	auto ss = SettingsManager::instance.getUiSettings();
+	return ss->getBool(Conf::CHAT_REFFERING_TO_NICK) ? _T(',') : _T(':');
 }
 
 void BaseChatFrame::clearInputBox()
@@ -617,7 +639,8 @@ void BaseChatFrame::onEnter()
 			bool result = Commands::parseCommand(Text::fromT(fullMessageText), pc);
 			if (!result)
 			{
-				if (BOOLSETTING(SEND_UNKNOWN_COMMANDS))
+				auto ss = SettingsManager::instance.getUiSettings();
+				if (ss->getBool(Conf::SEND_UNKNOWN_COMMANDS))
 					sendMessage(Text::fromT(fullMessageText));
 				else
 				{
@@ -654,7 +677,13 @@ void BaseChatFrame::onEnter()
 static void appendMyNick(string& text, bool thirdPerson)
 {
 	if (thirdPerson)
-		text.insert(0, ChatMessage::formatNick(SETTING(NICK), true));
+	{
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		string nickText = ChatMessage::formatNick(ss->getString(Conf::NICK), true);
+		ss->unlockRead();
+		text.insert(0, nickText);
+	}
 }
 
 void BaseChatFrame::sendCommandResult(Commands::Result& res)
@@ -680,22 +709,23 @@ void BaseChatFrame::sendCommandResult(Commands::Result& res)
 
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	const char* cmd;
-	switch (SETTING(MEDIA_PLAYER))
+	auto ss = SettingsManager::instance.getUiSettings();
+	const char* cmd;	
+	switch (ss->getInt(Conf::MEDIA_PLAYER))
 	{
-		case SettingsManager::WinAmp:
+		case Conf::WinAmp:
 			cmd = "winamp";
 			break;
-		case SettingsManager::WinMediaPlayer:
+		case Conf::WinMediaPlayer:
 			cmd = "wmp";
 			break;
-		case SettingsManager::iTunes:
+		case Conf::iTunes:
 			cmd = "itunes";
 			break;
-		case SettingsManager::WinMediaPlayerClassic:
+		case Conf::WinMediaPlayerClassic:
 			cmd = "mpc";
 			break;
-		case SettingsManager::JetAudio:
+		case Conf::JetAudio:
 			cmd = "ja";
 			break;
 		default:
@@ -725,7 +755,7 @@ void BaseChatFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool 
 	if (history)
 		statusHistory.addLine(formattedLine);
 
-	if (inChat && BOOLSETTING(STATUS_IN_CHAT))
+	if (inChat && SettingsManager::instance.getUiSettings()->getBool(Conf::STATUS_IN_CHAT))
 		addSystemMessage(line, textStyle);
 }
 
@@ -792,7 +822,8 @@ LRESULT BaseChatFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&)
 
 LRESULT BaseChatFrame::onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	SET_SETTING(MULTILINE_CHAT_INPUT, !BOOLSETTING(MULTILINE_CHAT_INPUT));
+	auto ss = SettingsManager::instance.getUiSettings();
+	ss->setBool(Conf::MULTILINE_CHAT_INPUT, !ss->getBool(Conf::MULTILINE_CHAT_INPUT));
 	UpdateLayout();
 	checkMultiLine();
 	ctrlMessage.SetFocus();
@@ -938,7 +969,7 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 
 int BaseChatFrame::getInputBoxHeight() const
 {
-	const bool useMultiChat = BOOLSETTING(MULTILINE_CHAT_INPUT) || multiChatLines;
+	const bool useMultiChat = SettingsManager::instance.getUiSettings()->getBool(Conf::MULTILINE_CHAT_INPUT) || multiChatLines;
 	int lines = useMultiChat ? std::max(multiChatLines + 1, 3u) : 1;
 	int height = Fonts::g_fontHeightPixl * lines + 12;
 	if (height < MessagePanel::MIN_INPUT_BOX_HEIGHT)
@@ -965,7 +996,8 @@ void BaseChatFrame::destroyUserMenu()
 bool BaseChatFrame::processEnter()
 {
 	bool insertNewLine = WinUtil::isCtrl() || WinUtil::isAlt();
-	if (BOOLSETTING(MULTILINE_CHAT_INPUT) && BOOLSETTING(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::MULTILINE_CHAT_INPUT) && ss->getBool(Conf::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))
 		insertNewLine = !insertNewLine;
 	if (insertNewLine)
 		return false;

@@ -24,6 +24,7 @@
 #ifndef ADL_SEARCH_H
 #define ADL_SEARCH_H
 
+#include "Singleton.h"
 #include "SettingsManager.h"
 #include "StringSearch.h"
 #include "DirectoryListing.h"

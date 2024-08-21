@@ -20,6 +20,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "NmdcHub.h"
+#include "SettingsManager.h"
 #include "ConnectionManager.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
@@ -40,6 +41,7 @@
 #include "Tag16.h"
 #include "SocketPool.h"
 #include "AdcSupports.h"
+#include "ConfCore.h"
 #include "version.h"
 
 #ifdef BL_FEATURE_NMDC_EXT_JSON
@@ -346,7 +348,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 	ShareManager::getInstance()->search(searchResults, searchParam, this);
 	if (!searchResults.empty())
 	{
-		if (BOOLSETTING(LOG_SEARCH_TRACE))
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SEARCH)
 		{
 			string seeker = searchParam.searchMode == SearchParamBase::MODE_PASSIVE ? searchParam.seeker.substr(4) : searchParam.seeker;
 			string message;
@@ -444,7 +446,7 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			SearchManager::toPSR(cmd, true, getMyNick(), addr.type, getIpPort(), tth.toBase32(), outParts);
-			if (BOOLSETTING(LOG_PSR_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 			{
 				string msg = tth.toBase32() + ": sending PSR search result to ";
 				msg += Util::printIpAddress(addr, true) + ':' + Util::toString(port);
@@ -541,8 +543,10 @@ void NmdcHub::searchParse(const string& param, int type)
 		if (state != STATE_NORMAL || hideShare) return;
 		myNick = this->myNick;
 	}
+
 	NmdcSearchParam searchParam;
 	bool isPassive;
+	int searchOptions = SearchManager::getInstance()->getOptions();
 	
 	if (type == ST_SEARCH)
 	{	
@@ -642,7 +646,7 @@ void NmdcHub::searchParse(const string& param, int type)
 		searchParam.fileType = FILE_TYPE_TTH;
 	}
 
-	if (searchParam.fileType != FILE_TYPE_TTH && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
+	if (searchParam.fileType != FILE_TYPE_TTH && (searchOptions & SearchManager::OPT_INCOMING_SEARCH_TTH_ONLY))
 	{
 		ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, ClientManagerListener::SEARCH_MISS);
 		return;
@@ -655,10 +659,10 @@ void NmdcHub::searchParse(const string& param, int type)
 		string host;
 		if (!Util::parseIpPort(searchParam.seeker, host, port) || !port || !Util::parseIpAddress(ip, host))
 			return;
-		if (BOOLSETTING(INCOMING_SEARCH_IGNORE_BOTS) && ip == getIp())
+		if ((searchOptions & SearchManager::OPT_INCOMING_SEARCH_IGNORE_BOTS) && ip == getIp())
 		{
 			ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, ClientManagerListener::SEARCH_MISS);
-			if (BOOLSETTING(LOG_SEARCH_TRACE))
+			if (LogManager::getLogOptions() & LogManager::OPT_LOG_SEARCH)
 			{
 				string message = STRING_F(SEARCH_HIT_IGNORED, searchParam.seeker % getHubUrl() % searchParam.filter);
 				LOG(SEARCH_TRACE, message);
@@ -670,7 +674,7 @@ void NmdcHub::searchParse(const string& param, int type)
 	}
 	else
 	{
-		if (BOOLSETTING(INCOMING_SEARCH_IGNORE_PASSIVE))
+		if (searchOptions & SearchManager::OPT_INCOMING_SEARCH_IGNORE_PASSIVE)
 		{
 			ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, getHubUrl(), searchParam.filter, ClientManagerListener::SEARCH_MISS);
 			return;
@@ -1181,9 +1185,18 @@ void NmdcHub::lockParse(const string& line)
 		const auto lock = j != string::npos ? param.substr(0, j) : param;
 		if (isExtended(lock))
 		{
+			auto ss = SettingsManager::instance.getCoreSettings(); 
+			ss->lockRead();
+			const bool optionUserCommands = ss->getBool(Conf::HUB_USER_COMMANDS) && ss->getInt(Conf::MAX_HUB_USER_COMMANDS) > 0;
+			const bool optionExtJson = ss->getBool(Conf::SEND_EXT_JSON);
+			const bool optionBotList = ss->getBool(Conf::USE_BOT_LIST);
+			const bool optionSaltPass = ss->getBool(Conf::USE_SALT_PASS);
+			const bool optionMcTo = ss->getBool(Conf::USE_MCTO);
+			ss->unlockRead();
+
 			string feat = "$Supports";
 			feat.reserve(128);
-			if (BOOLSETTING(HUB_USER_COMMANDS) && SETTING(MAX_HUB_USER_COMMANDS) > 0)
+			if (optionUserCommands)
 				feat += " UserCommand";
 			feat += " NoGetINFO";
 			feat += " NoHello";
@@ -1191,11 +1204,11 @@ void NmdcHub::lockParse(const string& line)
 			feat += " TTHSearch";
 			feat += " ZPipe0";
 #ifdef BL_FEATURE_NMDC_EXT_JSON
-			if (BOOLSETTING(SEND_EXT_JSON))
+			if (optionExtJson)
 				feat += " ExtJSON2";
 #endif
 			feat += " HubURL";
-			if (BOOLSETTING(USE_BOT_LIST))
+			if (optionBotList)
 				feat += " BotList";
 			feat += " NickRule";
 			feat += " SearchRule";
@@ -1206,9 +1219,9 @@ void NmdcHub::lockParse(const string& line)
 			feat += " TTHS";
 			if (CryptoManager::getInstance()->isInitialized())
 				feat += " TLS";
-			if (BOOLSETTING(USE_SALT_PASS))
+			if (optionSaltPass)
 				feat += " SaltPass";
-			if (BOOLSETTING(USE_MCTO))
+			if (optionMcTo)
 				feat += " MCTo";
 			
 			feat += '|';
@@ -1947,10 +1960,18 @@ bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 {
 	const uint64_t currentTick = GET_TICK();
+
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	string uploadSpeed = ss->getString(Conf::UPLOAD_SPEED);
+	const int gender = ss->getInt(Conf::GENDER);
+	const unsigned myInfoDelay = ss->getInt(Conf::MYINFO_DELAY);
+	const int outgoingConnections = ss->getInt(Conf::OUTGOING_CONNECTIONS);
+	ss->unlockRead();	
+
 	{
-		unsigned updateInterval = SETTING(MYINFO_DELAY) * 1000;
 		LOCK(csState);
-		uint64_t nextUpdate = lastUpdate + updateInterval;
+		uint64_t nextUpdate = lastUpdate + myInfoDelay * 1000;
 		if (!forcePassive && !alwaysSend && nextUpdate > currentTick)
 		{
 			if (!pendingUpdate)
@@ -1975,18 +1996,23 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	}
 	else
 	{
-		if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)
+		if (outgoingConnections == Conf::OUTGOING_SOCKS5)
 			modeChar = '5';
 		else if (isActive())
 			modeChar = 'A';
 		else
 			modeChar = 'P';
 	}
-	const int64_t upLimit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInKBytes() : 0;
-	const string uploadSpeed = upLimit > 0 ? Util::toString(upLimit) + " KiB/s" : SETTING(UPLOAD_SPEED);
-	
+
+	size_t limit = ThrottleManager::getInstance()->getUploadLimitInBytes();
+	if (limit)
+	{
+		uploadSpeed = Util::toString(limit);
+		uploadSpeed += " KiB/s";
+	}
+
 	char status = NmdcSupports::NORMAL;
-	
+
 	if (Util::getAway())
 	{
 		status |= NmdcSupports::AWAY;
@@ -2090,7 +2116,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			json.setDecorate(false);
 			json.open('{');
 			NmdcExtJson::appendInt64Attrib(json, NmdcExtJson::EXT_JSON_FILES, hideShare ? 0 : filesShared);
-			NmdcExtJson::appendIntAttrib(json, NmdcExtJson::EXT_JSON_GENDER, SETTING(GENDER) + 1);
+			NmdcExtJson::appendIntAttrib(json, NmdcExtJson::EXT_JSON_GENDER, gender + 1);
 			json.close('}');
 #if 0
 			if (ShareManager::getLastSharedDate())

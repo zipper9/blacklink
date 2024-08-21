@@ -2,6 +2,7 @@
 #include "TypedListViewCtrl.h"
 #include "LockRedraw.h"
 #include "../client/SimpleStringTokenizer.h"
+#include "../client/StrUtil.h"
 
 static const int defaultWidth = 100;
 
@@ -342,7 +343,9 @@ void TypedListViewColumns::toggleColumn(CListViewCtrl& lv, int index, int& sortC
 
 void TypedListViewColumns::getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTip)
 {
-	if (!BOOLSETTING(SHOW_INFOTIPS)) return;
+	auto ss = SettingsManager::instance.getUiSettings();
+	if (!ss->getBool(Conf::SHOW_INFOTIPS)) return;
+
 	const bool noColumnHeader = (lv.GetWindowLongPtr(GWL_STYLE) & LVS_NOCOLUMNHEADER) != 0;
 	static const size_t BUF_SIZE = 300;
 	TCHAR buf[BUF_SIZE];

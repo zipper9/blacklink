@@ -22,10 +22,11 @@
 #include "DownloadManager.h"
 #include "UploadManager.h"
 #include "Util.h"
+#include "ConfCore.h"
 
 static const int64_t MIN_LIMIT = 1;
 
-ThrottleManager::ThrottleManager() : downLimit(0), upLimit(0)
+ThrottleManager::ThrottleManager() : downLimit(0), upLimit(0), enabled(false)
 {
 }
 
@@ -37,45 +38,51 @@ ThrottleManager::~ThrottleManager()
 // TimerManagerListener
 void ThrottleManager::on(TimerManagerListener::Minute, uint64_t /*tick*/) noexcept
 {
-	if (!BOOLSETTING(THROTTLE_ENABLE))
-		return;
-
-	updateLimits();
+	updateSettings();
 }
 
-static bool isAltLimiterTime() noexcept
+static bool isAltLimiterTime(const BaseSettingsImpl* ss) noexcept
 {
-	if (!SETTING(TIME_DEPENDENT_THROTTLE))
+	if (!ss->getBool(Conf::TIME_DEPENDENT_THROTTLE))
 		return false;
 
 	int currentHour = Util::getCurrentHour();
-	int s = SETTING(BANDWIDTH_LIMIT_START);
-	int e = SETTING(BANDWIDTH_LIMIT_END);
+	int s = ss->getInt(Conf::BANDWIDTH_LIMIT_START);
+	int e = ss->getInt(Conf::BANDWIDTH_LIMIT_END);
 	return ((s < e &&
 	         currentHour >= s && currentHour < e) ||
 	        (s > e &&
 	         (currentHour >= s || currentHour < e)));
 }
 
-void ThrottleManager::updateLimits() noexcept
+void ThrottleManager::updateSettings() noexcept
 {
-	if (!BOOLSETTING(THROTTLE_ENABLE))
+	auto ss = SettingsManager::instance.getCoreSettings();
+	ss->lockRead();
+	if (!ss->getBool(Conf::THROTTLE_ENABLE))
 	{
+		ss->unlockRead();
 		downLimit = 0;
 		upLimit = 0;
+		enabled = false;
 		return;
 	}
 
-	if (isAltLimiterTime())
+	size_t optUpload, optDownload;
+	if (isAltLimiterTime(ss))
 	{
-		setUploadLimit(SETTING(MAX_UPLOAD_SPEED_LIMIT_TIME));
-		setDownloadLimit(SETTING(MAX_DOWNLOAD_SPEED_LIMIT_TIME));
+		optUpload = ss->getInt(Conf::MAX_UPLOAD_SPEED_LIMIT_TIME);
+		optDownload = ss->getInt(Conf::MAX_DOWNLOAD_SPEED_LIMIT_TIME);
 	}
 	else
 	{
-		setUploadLimit(SETTING(MAX_UPLOAD_SPEED_LIMIT_NORMAL));
-		setDownloadLimit(SETTING(MAX_DOWNLOAD_SPEED_LIMIT_NORMAL));
+		optUpload = ss->getInt(Conf::MAX_UPLOAD_SPEED_LIMIT_NORMAL);
+		optDownload = ss->getInt(Conf::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL);
 	}
+	ss->unlockRead();
+	setUploadLimit(optUpload);
+	setDownloadLimit(optDownload);
+	enabled = optUpload != 0 || optDownload != 0;
 }
 
 int64_t ThrottleManager::getSocketUploadLimit() noexcept

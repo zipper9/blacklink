@@ -111,10 +111,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxEmoticons, int textStyle = Colors::TEXT_STYLE_NORMAL);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
-		void openFrameLog() const
-		{
-			WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
-		}
+		void openFrameLog() const;
 
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 
@@ -211,6 +208,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool newMessageReceived;
 		bool remoteChatClosed;
 		bool uiInitialized;
+		bool pmPreview;
 		uint64_t sendTimeTyping;
 		uint64_t typingTimeout[2];
 		uint64_t lastSentTime;
@@ -240,7 +238,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			updateUser(user);
 		}
-		void on(SettingsManagerListener::Repaint) override;
+		void on(SettingsManagerListener::ApplySettings) override;
 		void updateUser(const UserPtr& user)
 		{
 			if (user == replyTo.user)
