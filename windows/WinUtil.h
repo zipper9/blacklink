@@ -160,11 +160,6 @@ namespace WinUtil
 	bool shutDown(int action);
 	void activateMDIChild(HWND hWnd);
 
-	tstring getNicks(const CID& cid, const string& hintUrl);
-	tstring getNicks(const UserPtr& u, const string& hintUrl);
-	tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
-	tstring getNicks(const HintedUser& user);
-
 	bool setExplorerTheme(HWND hWnd);
 	unsigned getListViewExStyle(bool checkboxes);
 	unsigned getTreeViewStyle();

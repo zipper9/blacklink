@@ -775,37 +775,6 @@ void WinUtil::activateMDIChild(HWND hWnd)
 	::RedrawWindow(g_mdiClient, nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
-tstring WinUtil::getNicks(const CID& cid, const string& hintUrl)
-{
-	const auto nicks = ClientManager::getNicks(cid, hintUrl);
-	if (nicks.empty())
-		return Util::emptyStringT;
-	else
-		return Text::toT(Util::toString(nicks));
-}
-
-tstring WinUtil::getNicks(const UserPtr& u, const string& hintUrl)
-{
-	dcassert(u);
-	if (u)
-		return getNicks(u->getCID(), hintUrl);
-	return Util::emptyStringT;
-}
-
-tstring WinUtil::getNicks(const CID& cid, const string& hintUrl, bool priv)
-{
-	const auto nicks = ClientManager::getNicks(cid, hintUrl, priv);
-	if (nicks.empty())
-		return Util::emptyStringT;
-	else
-		return Text::toT(Util::toString(nicks));
-}
-
-tstring WinUtil::getNicks(const HintedUser& user)
-{
-	return getNicks(user.user, user.hint);
-}
-
 void WinUtil::getAdapterList(int af, vector<Util::AdapterInfo>& adapters, int options)
 {
 	adapters.clear();
