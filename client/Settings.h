@@ -17,9 +17,10 @@ public:
 
 	enum
 	{
-		FLAG_BOOL         = 1,
-		FLAG_CONVERT_PATH = 2,
-		FLAG_FIX_VALUE    = 4
+		FLAG_BOOL               = 1,
+		FLAG_CONVERT_PATH       = 2,
+		FLAG_FIX_VALUE          = 4,
+		FLAG_ALLOW_EMPTY_STRING = 8
 	};
 
 	enum

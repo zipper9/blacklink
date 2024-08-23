@@ -207,7 +207,10 @@ Settings::Result BaseSettingsImpl::setString(int id, const string& val, int flag
 	}
 	else
 		data.val = val;
-	data.flags |= FLAG_VALUE_CHANGED;
+	if (!(data.flags & FLAG_ALLOW_EMPTY_STRING) && data.val.empty())
+		data.flags &= ~FLAG_VALUE_CHANGED;
+	else
+		data.flags |= FLAG_VALUE_CHANGED;
 	return result;
 }
 
