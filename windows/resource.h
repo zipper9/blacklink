@@ -248,15 +248,12 @@
 #define IDC_BROWSE                      1119
 #define IDC_COMMANDS                    1120
 #define IDC_DOWNLOADS                   1121
-#define IDC_SLOTSSPIN                   1123
 #define IDC_MAXSPEED                    1125
-#define IDC_SPEEDSPIN                   1126
 #define IDC_FAKE_SHARE_SIZE             1127
 #define IDC_FAKE_SHARE                  1128
 #define IDC_DEFAULT                     1129
 #define IDC_FAVUSERS                    1130
 #define IDC_ADD_TO_FAVORITES            1131
-#define IDC_FILESPIN                    1132
 #define IDC_LOG_DIRECTORY               1133
 #define IDC_BROWSE_LOG                  1134
 #define IDC_QUICK_CONNECT               1135
@@ -498,16 +495,13 @@
 #define IDC_KB                          1392
 #define IDC_SEG_NUMBER                  1393
 #define IDC_CURRENT_FILE                1394
-#define IDC_SEG_NUMBER_SPIN             1395
 #define IDC_INTERVAL_SPIN               1396
 #define IDC_LIST_ADD                    1397
 #define IDC_AUTO_SEARCH_EDIT            1399
 #define IDC_MATCH_SPIN                  1401
-#define IDC_AUTO_SEARCH_SPIN            1402
 #define IDC_LIST_UP                     1403
 #define IDC_BEGIN_EDIT                  1404
 #define IDC_LIST_DOWN                   1405
-#define IDC_BEGIN_SPIN                  1406
 #define IDC_LIST_REMOVE                 1407
 #define IDC_LIST_LIST                   1410
 #define IDC_SOUNDLIST                   1412
@@ -528,7 +522,6 @@
 #define IDC_PURGE                       1442
 #define IDC_KBPS                        1443
 #define IDC_MINUTES                     1444
-#define IDC_SEARCH_HISTORY_SPIN         1445
 #define IDC_CAPTION_TARGET_EXISTS       1445
 #define IDC_KBPS2                       1446
 #define IDC_PLAY                        1447
@@ -576,7 +569,6 @@
 #define IDC_FIREWALL_PASSIVE            1504
 #define IDC_AUTO_SEARCH_LIMIT_SPIN      1505
 #define IDC_DIRECT_OUT                  1507
-#define IDC_SPIN_TAB_WIDTH              1509
 #define IDC_USER                        1510
 #define IDC_SOCKS5                      1511
 #define IDC_WRITE_SPIN                  1513
@@ -672,7 +664,6 @@
 #define IDC_CCPM_AUTO_START             1638
 #define IDC_CAPTION_CCPM_TIMEOUT        1639
 #define IDC_CCPM_TIMEOUT                1640
-#define IDC_CCPM_TIMEOUT_SPIN           1641
 #define IDC_CHANGE                      1642
 #define IDC_PROTECT_PRIVATE_SAY         1643
 #define IDC_POPUP_TITLE_FONT            1644
@@ -953,7 +944,6 @@
 #define IDC_TABCOLOR_LIST               2097
 #define IDC_MESSAGES_CHAT_BOOLEANS      2098
 #define IDC_SETTINGS_SECONDARY_AWAY_MSG 2100
-#define IDC_EXTRASLOTSSPIN              2101
 #define IDC_EXTRA_DOWN_SLOT             2102
 #define IDC_EXTRA_DOWNLOADS_MAX         2103
 #define IDC_CZDC_I_DOWN_SPEED           2107
@@ -1206,7 +1196,6 @@
 #define IDC_CAPTION_SIZE_TYPE           2418
 #define IDC_SETTINGS_TAB_WIDTH          2419
 #define IDC_TAB_WIDTH                   2420
-#define IDC_SPIN_MAX_TAB_ROWS           2421
 #define IDC_AUTOPRIORITY_PATTERNS_PRIO  2422
 #define IDC_AUTOPRIORITY_SIZE_PRIO      2423
 #define IDC_MAPPER                      2424

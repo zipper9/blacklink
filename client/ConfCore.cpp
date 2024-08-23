@@ -36,6 +36,7 @@ static BaseSettingsImpl::MinMaxValidator<int> validateBufSize(64, 8192);
 static BaseSettingsImpl::MinMaxValidator<int> validateIncoming(Conf::INCOMING_DIRECT, Conf::INCOMING_FIREWALL_PASSIVE);
 static BaseSettingsImpl::MinMaxValidator<int> validateGender(0, 4);
 static BaseSettingsImpl::MinMaxValidator<int> validateSlots(0, 500);
+static BaseSettingsImpl::MinMaxValidator<int> validateDownloadSlots(0, 100);
 static BaseSettingsImpl::MinMaxValidator<int> validateMinislotSize(16, INT_MAX);
 static BaseSettingsImpl::MinMaxValidator<int> validateSegments(1, 200);
 static BaseSettingsImpl::MinMaxValidator<int> validateUserCheckBatch(5, 50);
@@ -232,9 +233,9 @@ void Conf::initCoreSettings()
 
 	// Downloads & Queue
 	s->addString(WANT_END_FILES, "WantEndFiles", WANT_END_FILES_DEFAULT, Settings::FLAG_FIX_VALUE, &noSpaceValidator);
-	s->addInt(DOWNLOAD_SLOTS, "DownloadSlots");
-	s->addInt(FILE_SLOTS, "FileSlots");
-	s->addInt(EXTRA_DOWNLOAD_SLOTS, "ExtraDownloadSlots", 3);
+	s->addInt(DOWNLOAD_SLOTS, "DownloadSlots", 0, 0, &validateDownloadSlots);
+	s->addInt(FILE_SLOTS, "FileSlots", 0, 0, &validateDownloadSlots);
+	s->addInt(EXTRA_DOWNLOAD_SLOTS, "ExtraDownloadSlots", 3, 0, &validateDownloadSlots);
 	s->addInt(MAX_DOWNLOAD_SPEED, "MaxDownloadSpeed");
 	s->addInt(BUFFER_SIZE_FOR_DOWNLOADS, "BufferSizeForDownloads", 1024, 0, &validateBufSize);
 	s->addBool(ENABLE_MULTI_CHUNK, "EnableMultiChunk", true);

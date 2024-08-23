@@ -43,8 +43,8 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_TAB_WIDTH, Conf::TAB_SIZE, PropPage::T_INT },
-	{ IDC_MAX_TAB_ROWS, Conf::MAX_TAB_ROWS, PropPage::T_INT },
+	{ IDC_TAB_WIDTH, Conf::TAB_SIZE, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
+	{ IDC_MAX_TAB_ROWS, Conf::MAX_TAB_ROWS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -76,16 +76,9 @@ LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ctrlBold.Attach(GetDlgItem(IDC_BOLD_BOOLEANS));
 
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(m_hWnd, items, optionItems, ctrlOption);
 	PropPage::read(m_hWnd, nullptr, boldItems, ctrlBold);
-
-	CUpDownCtrl updownWidth(GetDlgItem(IDC_SPIN_TAB_WIDTH));
-	updownWidth.SetRange32(7, 80);
-	updownWidth.SetBuddy(GetDlgItem(IDC_TAB_WIDTH));
-
-	CUpDownCtrl updownRows(GetDlgItem(IDC_SPIN_MAX_TAB_ROWS));
-	updownRows.SetRange32(1, 20);
-	updownRows.SetBuddy(GetDlgItem(IDC_MAX_TAB_ROWS));
 
 	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
 	tabsPosition.AddString(CTSTRING(TABS_TOP));

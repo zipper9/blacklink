@@ -59,9 +59,9 @@ static const PropPage::Item items[] =
 	{ IDC_AUTOSEGMENT, Conf::AUTO_SEARCH, PropPage::T_BOOL },
 	{ IDC_DONTBEGIN, Conf::DONT_BEGIN_SEGMENT, PropPage::T_BOOL },
 	{ IDC_BEGIN_EDIT, Conf::DONT_BEGIN_SEGMENT_SPEED, PropPage::T_INT },
-	{ IDC_AUTO_SEARCH_EDIT, Conf::AUTO_SEARCH_TIME, PropPage::T_INT },
+	{ IDC_AUTO_SEARCH_EDIT, Conf::AUTO_SEARCH_TIME, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_CHUNKCOUNT, Conf::SEGMENTS_MANUAL, PropPage::T_BOOL },
-	{ IDC_SEG_NUMBER, Conf::NUMBER_OF_SEGMENTS, PropPage::T_INT },
+	{ IDC_SEG_NUMBER, Conf::NUMBER_OF_SEGMENTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_SKIP_EXISTING, Conf::SKIP_EXISTING, PropPage::T_BOOL },
 	{ IDC_SETTINGS_COPY_FILE, Conf::COPY_EXISTING_MAX_SIZE, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
@@ -86,19 +86,8 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlActionIfExists.Attach(GetDlgItem(IDC_DOWNLOAD_ASK_COMBO));
 
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items, optionItems, ctrlList);
-
-	CUpDownCtrl spin1(GetDlgItem(IDC_SEG_NUMBER_SPIN));
-	spin1.SetRange32(1, 200);
-	spin1.SetBuddy(GetDlgItem(IDC_SEG_NUMBER));
-
-	CUpDownCtrl spin2(GetDlgItem(IDC_AUTO_SEARCH_SPIN));
-	spin2.SetRange32(1, 60);
-	spin2.SetBuddy(GetDlgItem(IDC_AUTO_SEARCH_EDIT));
-
-	CUpDownCtrl spin3(GetDlgItem(IDC_BEGIN_SPIN));
-	spin3.SetRange32(2, 100000);
-	spin3.SetBuddy(GetDlgItem(IDC_BEGIN_EDIT));
 
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_ASK));
 	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_REPLACE));
@@ -142,7 +131,6 @@ void QueuePage::fixControls()
 	::EnableWindow(GetDlgItem(IDC_AUTOSEGMENT), isChecked);
 	::EnableWindow(GetDlgItem(IDC_DONTBEGIN), isChecked);
 	::EnableWindow(GetDlgItem(IDC_CHUNKCOUNT), isChecked);
-	::EnableWindow(GetDlgItem(IDC_AUTO_SEARCH_SPIN), isChecked);
 	::EnableWindow(GetDlgItem(IDC_AUTO_SEARCH_EDIT), isChecked);
 	::EnableWindow(GetDlgItem(IDC_BEGIN_EDIT), isChecked);
 	::EnableWindow(GetDlgItem(IDC_MINUTES), isChecked);

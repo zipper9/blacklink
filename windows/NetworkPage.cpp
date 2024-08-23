@@ -775,11 +775,11 @@ bool NetworkFirewallTab::testWinFirewall()
 
 static const PropPage::Item itemsUrls[] =
 {
-	{ IDC_PORT_TEST_URL,     Conf::URL_PORT_TEST,     PropPage::T_STR },
-	{ IDC_GET_IPV4_URL,      Conf::URL_GET_IP,        PropPage::T_STR },
-	{ IDC_GET_IPV6_URL,      Conf::URL_GET_IP6,       PropPage::T_STR },
-	{ IDC_DHT_BOOTSTRAP_URL, Conf::URL_DHT_BOOTSTRAP, PropPage::T_STR },
-	{ 0,                     0,                                  PropPage::T_END }
+	{ IDC_PORT_TEST_URL,     Conf::URL_PORT_TEST,     PropPage::T_STR, PropPage::FLAG_DEFAULT_AS_HINT },
+	{ IDC_GET_IPV4_URL,      Conf::URL_GET_IP,        PropPage::T_STR, PropPage::FLAG_DEFAULT_AS_HINT },
+	{ IDC_GET_IPV6_URL,      Conf::URL_GET_IP6,       PropPage::T_STR, PropPage::FLAG_DEFAULT_AS_HINT },
+	{ IDC_DHT_BOOTSTRAP_URL, Conf::URL_DHT_BOOTSTRAP, PropPage::T_STR, PropPage::FLAG_DEFAULT_AS_HINT },
+	{ 0,                     0,                       PropPage::T_END                                 }
 };
 
 LRESULT NetworkUrlsTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
@@ -791,6 +791,7 @@ LRESULT NetworkUrlsTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	CEdit(GetDlgItem(IDC_GET_IPV6_URL)).LimitText(280);
 	CEdit(GetDlgItem(IDC_DHT_BOOTSTRAP_URL)).LimitText(280);
 
+	PropPage::initControls(*this, itemsUrls);
 	PropPage::read(*this, itemsUrls);
 	return 0;
 }

@@ -35,7 +35,8 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SEARCH_HISTORY, Conf::SEARCH_HISTORY, PropPage::T_INT },
+	{ IDC_SAVE_SEARCH, Conf::FORGET_SEARCH_REQUEST, PropPage::T_BOOL, PropPage::FLAG_INVERT },
+	{ IDC_SEARCH_HISTORY, Conf::SEARCH_HISTORY, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_INTERVAL, Conf::MIN_SEARCH_INTERVAL, PropPage::T_INT },
 	{ IDC_MATCH, Conf::AUTO_SEARCH_MAX_SOURCES, PropPage::T_INT },
 	{ IDC_AUTO_SEARCH_LIMIT, Conf::AUTO_SEARCH_LIMIT, PropPage::T_INT },
@@ -58,13 +59,8 @@ LRESULT SearchPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlList.Attach(GetDlgItem(IDC_ADVANCED_BOOLEANS));
 
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items, listItems, ctrlList);
-	const auto* ss = SettingsManager::instance.getUiSettings();
-	CButton(GetDlgItem(IDC_SAVE_SEARCH)).SetCheck(ss->getBool(Conf::FORGET_SEARCH_REQUEST) ? BST_UNCHECKED : BST_CHECKED);
-
-	CUpDownCtrl spin1(GetDlgItem(IDC_SEARCH_HISTORY_SPIN));
-	spin1.SetRange32(1, 100);
-	spin1.SetBuddy(GetDlgItem(IDC_SEARCH_HISTORY));
 
 	CUpDownCtrl spin2(GetDlgItem(IDC_INTERVAL_SPIN));
 	spin2.SetRange32(1, 999);
@@ -85,9 +81,6 @@ LRESULT SearchPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 void SearchPage::write()
 {
 	PropPage::write(*this, items, listItems, ctrlList);
-	bool state = IsDlgButtonChecked(IDC_SAVE_SEARCH) == BST_CHECKED;
-	auto ss = SettingsManager::instance.getUiSettings();
-	ss->setBool(Conf::FORGET_SEARCH_REQUEST, !state);
 }
 
 LRESULT SearchPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -101,5 +94,4 @@ void SearchPage::fixControls()
 	BOOL state = IsDlgButtonChecked(IDC_SAVE_SEARCH) == BST_CHECKED;
 	GetDlgItem(IDC_SETTINGS_SEARCH_HISTORY).EnableWindow(state);
 	GetDlgItem(IDC_SEARCH_HISTORY).EnableWindow(state);
-	GetDlgItem(IDC_SEARCH_HISTORY_SPIN).EnableWindow(state);
 }

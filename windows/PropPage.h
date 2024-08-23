@@ -45,12 +45,21 @@ class PropPage
 
 		enum Type { T_STR, T_INT, T_BOOL, T_END };
 		
+		enum
+		{
+			FLAG_INVERT          = 1,
+			FLAG_CREATE_SPIN     = 2,
+			FLAG_DEFAULT_AS_HINT = 4
+		};
+
 		struct Item
 		{
 			WORD itemID;
 			int setting;
 			Type type;
+			int flags;
 		};
+
 		struct ListItem
 		{
 			int setting;
@@ -60,6 +69,7 @@ class PropPage
 		PropPage(const PropPage &) = delete;
 		PropPage& operator= (const PropPage &) = delete;
 
+		static void initControls(HWND page, const Item* items);
 		static void read(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
 		static void write(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
 

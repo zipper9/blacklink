@@ -49,7 +49,7 @@ static const PropPage::Item items[] =
 	{ IDC_ENABLE_CCPM, Conf::USE_CCPM, PropPage::T_BOOL },
 	{ IDC_ENABLE_CPMI, Conf::USE_CPMI, PropPage::T_BOOL },
 	{ IDC_CCPM_AUTO_START, Conf::CCPM_AUTO_START, PropPage::T_BOOL },
-	{ IDC_CCPM_TIMEOUT, Conf::CCPM_IDLE_TIMEOUT, PropPage::T_INT },
+	{ IDC_CCPM_TIMEOUT, Conf::CCPM_IDLE_TIMEOUT, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_MAX_UC, Conf::MAX_HUB_USER_COMMANDS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
@@ -73,10 +73,8 @@ static const PropPage::ListItem listItems[] =
 LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
-	CUpDownCtrl spin(GetDlgItem(IDC_CCPM_TIMEOUT_SPIN));
-	spin.SetRange32(0, 30);
-	spin.SetBuddy(GetDlgItem(IDC_CCPM_TIMEOUT));
 	fixControls();
 	return TRUE;
 }

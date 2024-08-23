@@ -68,6 +68,50 @@ static inline bool isUiSetting(int id)
 	return id >= 1024;
 }
 
+void PropPage::initControls(HWND page, const Item* items)
+{
+	for (const Item* i = items; i->type != T_END; i++)
+	{
+		BaseSettingsImpl* settings;
+		if (isUiSetting(i->setting))
+			settings = SettingsManager::instance.getUiSettings();
+		else
+			settings = SettingsManager::instance.getCoreSettings();
+		if (i->type == T_INT && (i->flags & FLAG_CREATE_SPIN))
+		{
+			int minVal, maxVal;
+			if (!settings->getIntRange(i->setting, minVal, maxVal) || minVal == INT_MIN || maxVal == INT_MAX)
+			{
+				dcassert(0);
+				continue;
+			}
+			HWND hWnd = GetDlgItem(page, i->itemID);
+			if (!hWnd)
+			{
+				dcassert(0);
+				continue;
+			}
+			CUpDownCtrl spin;
+			spin.Create(page, 0, nullptr, WS_CHILD | WS_VISIBLE | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_ARROWKEYS | UDS_NOTHOUSANDS);
+			spin.SetRange32(minVal, maxVal);
+			spin.SetBuddy(hWnd);
+		}
+		else if (i->type == T_STR && (i->flags & FLAG_DEFAULT_AS_HINT))
+		{
+			HWND hWnd = GetDlgItem(page, i->itemID);
+			if (!hWnd)
+			{
+				dcassert(0);
+				continue;
+			}
+			string text = settings->getStringDefault(i->setting);
+			wstring ws;
+			Text::utf8ToWide(text, ws);
+			CEdit(hWnd).SetCueBannerText(ws.c_str());
+		}
+	}
+}
+
 void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = 0 */)
 {
 	dcassert(page != NULL);
@@ -111,8 +155,12 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 					break;
 
 				case T_BOOL:
-					SendMessage(hWnd, BM_SETCHECK, state->ss->getBool(i->setting) ? BST_CHECKED : BST_UNCHECKED, 0);
+				{
+					bool value = state->ss->getBool(i->setting);
+					if (i->flags & FLAG_INVERT) value = !value;
+					SendMessage(hWnd, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 					break;
+				}
 
 				default:
 					dcassert(0);
@@ -217,6 +265,7 @@ void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* 
 				case T_BOOL:
 				{
 					bool value = SendMessage(hWnd, BM_GETCHECK, 0, 0) == BST_CHECKED;
+					if (i->flags & FLAG_INVERT) value = !value;
 					state->ss->setBool(i->setting, value);
 					break;
 				}

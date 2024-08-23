@@ -36,10 +36,10 @@ static const PropPage::Item items[] =
 {
 	{ IDC_TEMP_DOWNLOAD_DIRECTORY, Conf::TEMP_DOWNLOAD_DIRECTORY, PropPage::T_STR },
 	{ IDC_DOWNLOAD_DIR, Conf::DOWNLOAD_DIRECTORY, PropPage::T_STR },
-	{ IDC_DOWNLOADS, Conf::DOWNLOAD_SLOTS, PropPage::T_INT },
-	{ IDC_FILES, Conf::FILE_SLOTS, PropPage::T_INT },
+	{ IDC_DOWNLOADS, Conf::DOWNLOAD_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
+	{ IDC_FILES, Conf::FILE_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_MAXSPEED, Conf::MAX_DOWNLOAD_SPEED, PropPage::T_INT },
-	{ IDC_EXTRA_DOWN_SLOT, Conf::EXTRA_DOWNLOAD_SLOTS, PropPage::T_INT },
+	{ IDC_EXTRA_DOWN_SLOT, Conf::EXTRA_DOWNLOAD_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -70,24 +70,9 @@ static const DialogLayout::Item layoutItems[] =
 LRESULT DownloadPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items);
 	
-	CUpDownCtrl spin1(GetDlgItem(IDC_FILESPIN));
-	spin1.SetRange32(0, 100);
-	spin1.SetBuddy(GetDlgItem(IDC_FILES));
-
-	CUpDownCtrl spin2(GetDlgItem(IDC_SLOTSSPIN));
-	spin2.SetRange32(0, 100);
-	spin2.SetBuddy(GetDlgItem(IDC_DOWNLOADS));
-
-	CUpDownCtrl spin3(GetDlgItem(IDC_SPEEDSPIN));
-	spin3.SetRange32(0, 10000);	
-	spin3.SetBuddy(GetDlgItem(IDC_MAXSPEED));
-
-	CUpDownCtrl spin4(GetDlgItem(IDC_EXTRASLOTSSPIN));
-	spin4.SetRange32(0, 100);
-	spin4.SetBuddy(GetDlgItem(IDC_EXTRA_DOWN_SLOT));
-
 	return TRUE;
 }
 

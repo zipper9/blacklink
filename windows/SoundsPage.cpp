@@ -45,6 +45,7 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
+	{ IDC_SOUND_ENABLE, Conf::SOUNDS_DISABLED, PropPage::T_BOOL, PropPage::FLAG_INVERT },
 	{ IDC_PRIVATE_MESSAGE_BEEP, Conf::PRIVATE_MESSAGE_BEEP, PropPage::T_BOOL },
 	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, Conf::PRIVATE_MESSAGE_BEEP_OPEN, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
@@ -122,8 +123,6 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	else
 		ctrlSoundTheme.SetCurSel(sel);
 
-	CheckDlgButton(IDC_SOUND_ENABLE, ss->getBool(Conf::SOUNDS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
-
 	ctrlSounds.Attach(GetDlgItem(IDC_SOUNDLIST));
 	CRect rc;
 	ctrlSounds.GetClientRect(rc);
@@ -152,7 +151,6 @@ void Sounds::write()
 	for (int i = 0; i < _countof(currentSounds); i++)
 		ss->setString(currentSounds[i].setting, ctrlSounds.ExGetItemText(i, 1));
 
-	ss->setBool(Conf::SOUNDS_DISABLED, IsDlgButtonChecked(IDC_SOUND_ENABLE) != BST_CHECKED);
 	ss->setString(Conf::THEME_MANAGER_SOUNDS_THEME_NAME, getSelectedTheme());
 }
 
@@ -223,7 +221,7 @@ void Sounds::setAllToDefault()
 void Sounds::fixControls()
 {
 	BOOL enabled = IsDlgButtonChecked(IDC_SOUND_ENABLE) == BST_CHECKED;
-	
+
 	::EnableWindow(GetDlgItem(IDC_CZDC_SOUND), enabled);// TODO: make these interface elements gray when disabled
 	::EnableWindow(GetDlgItem(IDC_SOUNDLIST), enabled);
 	::EnableWindow(GetDlgItem(IDC_SOUNDS_COMBO), enabled);
