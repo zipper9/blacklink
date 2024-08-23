@@ -52,6 +52,7 @@ extern TagCollector collAdcFeatures;
 #endif
 
 static const unsigned RETRY_CONNECTION_DELAY = 10;
+static const unsigned RECONNECT_AFTER_ERROR_DELAY = 30;
 static const unsigned CONNECTION_TIMEOUT = 50;
 
 static const unsigned UC_IDLE_TIME = 60;
@@ -749,18 +750,20 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					removed.push_back(cqi);
 					continue;
 				}
-				
-				if (cqi->getErrors() == -1 && cqi->getLastAttempt() != 0)
-				{
-					// protocol error, don't reconnect except after a forced attempt
-					continue;
-				}
 
 				QueueItem::Priority prio = QueueManager::hasDownload(cqi->getUser());
 				if (prio == QueueItem::PAUSED)
 				{
 					removed.push_back(cqi);
 					continue;
+				}
+
+				if (cqi->getErrors() == -1 && cqi->getLastAttempt() != 0)
+				{
+					if (cqi->getLastAttempt() + RECONNECT_AFTER_ERROR_DELAY * 1000 < tick)
+						cqi->setErrors(0);
+					else
+						continue;
 				}
 
 				int errorCount = cqi->getErrors();
