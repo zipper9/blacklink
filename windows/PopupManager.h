@@ -20,68 +20,42 @@
 #define POPUPMANAGER_H
 
 #include "../client/Singleton.h"
-#include "../client/TimerManager.h"
-#include "PopupDlg.h"
+#include "PopupWindow.h"
 #include "WinUtil.h"
 
-class PopupManager : public Singleton< PopupManager >, private TimerManagerListener
+class PopupManager : public Singleton<PopupManager>
 {
 	public:
-		PopupManager() : height(90), width(200), offset(0), isActivated(true), id(0), m_hBitmap(0)
-		{
-			TimerManager::getInstance()->addListener(this);
-		}
-		
+		PopupManager();
+
 		~PopupManager()
 		{
-			dcassert(popups.empty());
-			TimerManager::getInstance()->removeListener(this);
-			if (m_hBitmap)
-			{
-				::DeleteObject(m_hBitmap);
-			}
+			//dcassert(popups.empty());
 		}
-		
-		enum { BALLOON, CUSTOM, SPLASH, WINDOW };
-		
-		//call this with a preformatted message
-		void Show(const tstring& message, const tstring& title, int icon, bool preview = false);
-		
-		//remove first popup in list and move everyone else
-		void Remove(uint32_t pos = 0);
-		
-		//remove the popups that are scheduled to be removed
-		void AutoRemove();
 
-		void Mute(bool mute)
+		enum
 		{
-			isActivated = !mute;
-		}
+			TYPE_SYSTEM,
+			TYPE_CUSTOM
+		};
+
+		void show(const tstring& message, const tstring& title, int icon, bool preview = false);
+		void remove(HWND hWnd);
+		void removeAll();
+		void autoRemove(uint64_t tick);
+		void setEnabled(bool flag) { enabled = flag; }
+		const string& getDefaultTitleFont();
 
 	private:
-		typedef deque< PopupWnd* > PopupList; // [!] IRainman opt: change list to deque.
+		typedef std::list<PopupWindow*> PopupList;
 		PopupList popups;
-		
-		//size of the popup window
-		int height;
-		int width;
-		
-		//if we have multiple windows displayed,
-		//keep track of where the new one will be displayed
+		bool enabled;
+		string titleFont;
+		string textFont;
+		LOGFONT lfTitle;
+		LOGFONT lfText;
 		int offset;
-
-		//id of the popup to keep track of them
-		uint32_t id;
-		
-		//turn on/off popups completely
-		bool isActivated;
-		
-		//for custom popups
-		HBITMAP m_hBitmap;
-		string popupImage;
-		
-		// TimerManagerListener
-		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
+		string defaultTitleFont;
 };
 
 #endif

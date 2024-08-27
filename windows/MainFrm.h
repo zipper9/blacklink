@@ -68,7 +68,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			VIEW_FILE_AND_DELETE,
 			STATUS_MESSAGE,
 			SOUND_NOTIF,
-			REMOVE_POPUP,
 			SET_PM_TRAY_ICON,
 			SAVE_RECENTS,
 			FILE_EXISTS_ACTION,
@@ -104,6 +103,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_COPYDATA, onCopyData)
 		MESSAGE_HANDLER(WMU_WHERE_ARE_YOU, onWhereAreYou)
 		MESSAGE_HANDLER(WMU_DIALOG_CREATED, onLineDlgCreated)
+		MESSAGE_HANDLER(WMU_REMOVE_POPUP, onRemovePopup)
 		MESSAGE_HANDLER(WM_ACTIVATEAPP, onActivateApp)
 		MESSAGE_HANDLER(WM_APPCOMMAND, onAppCommand)
 		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, onRebuildToolbar)
@@ -396,6 +396,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		}
 
 		LRESULT onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+
+		LRESULT onRemovePopup(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		void onMinute(uint64_t tick);

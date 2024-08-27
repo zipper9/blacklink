@@ -15,6 +15,7 @@ static const UINT WMU_DIALOG_CREATED    = WM_USER + 111;
 static const UINT WMU_CHAT_LINK_CLICKED = WM_USER + 112;
 static const UINT WMU_UPDATE_LAYOUT     = WM_USER + 113;
 static const UINT WMU_DIALOG_CLOSED     = WM_USER + 114;
+static const UINT WMU_REMOVE_POPUP      = WM_USER + 115;
 static const UINT WMU_SHOW_QUEUE_ITEM   = WM_USER + 120;
 static const UINT WMU_LISTENER_INIT     = WM_USER + 121;
 

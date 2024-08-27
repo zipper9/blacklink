@@ -16,59 +16,67 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef POPUPS_PAGE_H
-#define POPUPS_PAGE_H
+#ifndef POPUPS_PAGE_H_
+#define POPUPS_PAGE_H_
 
 #include "PropPage.h"
 
-class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
+class PopupsPage : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 {
 	public:
-		explicit Popups() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(POPUPS))
-		{
-			SetTitle(m_title.c_str());
-			m_psp.dwFlags |= PSP_RTLREADING;
-			memset(&myFont, 0, sizeof(myFont));
-		}
-		
-		enum { BALLOON, CUSTOM, SPLASH, WINDOW };
-		
-		BEGIN_MSG_MAP(Sounds)
+		PopupsPage();
+
+		BEGIN_MSG_MAP(PopupsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_PREVIEW, BN_CLICKED, onPreview)
 		COMMAND_ID_HANDLER(IDC_POPUP_FONT, onFont)
 		COMMAND_ID_HANDLER(IDC_POPUP_TITLE_FONT, onTitleFont)
 		COMMAND_ID_HANDLER(IDC_POPUP_BACKCOLOR, onBackColor)
+		COMMAND_ID_HANDLER(IDC_POPUP_BORDER_COLOR, onBorderColor)
 		COMMAND_ID_HANDLER(IDC_POPUP_TYPE, onTypeChanged)
-		COMMAND_HANDLER(IDC_POPUPBROWSE, BN_CLICKED, onPopupBrowse)
 		COMMAND_ID_HANDLER(IDC_POPUP_ENABLE, onFixControls)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onPreview(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onBackColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onBorderColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTitleFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTypeChanged(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT onPopupBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) *this;
-		}
+
+		PROPSHEETPAGE *getPSP() { return (PROPSHEETPAGE *) *this; }
 		int getPageIcon() const { return PROP_PAGE_ICON_POPUPS; }
 		void write();
 
 	private:
 		void fixControls();
-		
-	protected:
+		void updateControls(int popupType);
+		void changeColor(int index);
+		void changeFont(int fontIndex, int colorIndex);
+		void applySettings();
+		void restoreSettings();
+
 		CListViewCtrl ctrlPopups;
 		CComboBox ctrlPopupType;
-		LOGFONT myFont;
-		CTrackBarCtrl slider;
+
+		struct ColorSetting
+		{
+			COLORREF color, oldColor;
+			bool changed;
+			int setting;
+		};
+
+		struct FontSetting
+		{
+			string font, oldFont;
+			bool changed;
+			int setting;
+		};
+
+		ColorSetting colorSettings[4];
+		FontSetting fontSettings[2];
 };
 
-#endif // POPUPS_PAGE_H
+#endif // POPUPS_PAGE_H_

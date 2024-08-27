@@ -490,6 +490,9 @@
     <ClCompile Include="windows\NotifUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\PopupWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -610,9 +613,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\OMenu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\PopupDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\PopupManager.h">
@@ -1114,6 +1114,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\ConfUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\PopupWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

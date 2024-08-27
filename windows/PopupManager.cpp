@@ -18,21 +18,33 @@
 
 #include "stdafx.h"
 
-#include "WinUtil.h"
-#include "BaseChatFrame.h"
 #include "PopupManager.h"
+#include "WinUtil.h"
 #include "MainFrm.h"
+#include "GdiUtil.h"
+#include "Fonts.h"
+#include "../client/TimeUtil.h"
+
+#ifdef OSVER_WIN_XP
+#include "../client/SysVersion.h"
+#endif
 
 static const size_t MAX_POPUPS = 10;
 
-void PopupManager::Show(const tstring& message, const tstring& title, int icon, bool preview /*= false*/)
+PopupManager::PopupManager() : offset(0), enabled(true)
 {
-	dcassert(!ClientManager::isStartup());
-	dcassert(!ClientManager::isBeforeShutdown());
+	memset(&lfTitle, 0, sizeof(lfTitle));
+	memset(&lfText, 0, sizeof(lfText));
+}
 
+void PopupManager::show(const tstring& message, const tstring& title, int icon, bool preview /*= false*/)
+{
 	if (ClientManager::isBeforeShutdown()) return;
 	if (ClientManager::isStartup()) return;
-	if (!isActivated) return;		
+	if (!enabled) return;
+
+	auto mainFrame = MainFrame::getMainFrame();
+	if (!mainFrame) return;
 
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (!preview)
@@ -48,23 +60,25 @@ void PopupManager::Show(const tstring& message, const tstring& title, int icon, 
 		msg.erase(maxLength - 3);
 		msg += _T("...");
 	}
-#ifdef _DEBUG
-	msg += Text::toT("\r\npopups.size() = " + Util::toString(popups.size()));
-#endif
 
+	int removeTime = ss->getInt(Conf::POPUP_TIME);
 	int popupType = ss->getInt(Conf::POPUP_TYPE);
-	if (popupType == BALLOON && MainFrame::getMainFrame())
+	if (popupType == TYPE_SYSTEM)
 	{
-		NOTIFYICONDATA m_nid = {0};
-		m_nid.cbSize = sizeof(NOTIFYICONDATA);
-		m_nid.hWnd = MainFrame::getMainFrame()->m_hWnd;
-		m_nid.uID = 0;
-		m_nid.uFlags = NIF_INFO;
-		m_nid.uTimeout = ss->getInt(Conf::POPUP_TIME) * 1000;
-		m_nid.dwInfoFlags = icon;
-		_tcsncpy(m_nid.szInfo, msg.c_str(), 255);
-		_tcsncpy(m_nid.szInfoTitle, title.c_str(), 63);
-		Shell_NotifyIcon(NIM_MODIFY, &m_nid);
+		NOTIFYICONDATA nid = {};
+		#ifdef OSVER_WIN_XP
+		nid.cbSize = SysVersion::isOsVistaPlus() ? sizeof(NOTIFYICONDATA) : NOTIFYICONDATA_V3_SIZE;
+		#else
+		nid.cbSize = sizeof(NOTIFYICONDATA);
+		#endif
+		nid.hWnd = mainFrame->m_hWnd;
+		nid.uID = 0;
+		nid.uFlags = NIF_INFO;
+		nid.uTimeout = removeTime * 1000;
+		nid.dwInfoFlags = icon;
+		_tcsncpy(nid.szInfo, msg.c_str(), 255);
+		_tcsncpy(nid.szInfoTitle, title.c_str(), 63);
+		Shell_NotifyIcon(NIM_MODIFY, &nid);
 		return;
 	}
 
@@ -74,145 +88,115 @@ void PopupManager::Show(const tstring& message, const tstring& title, int icon, 
 		return;
 	}
 
-	if (popupType == CUSTOM)
+	const string& newTitleFont = ss->getString(Conf::POPUP_TITLE_FONT);
+	if (newTitleFont != titleFont || !lfTitle.lfHeight)
 	{
-		const string& newImage = ss->getString(Conf::POPUP_IMAGE_FILE);
-		if (popupImage != newImage)
-		{
-			popupImage = newImage;
-			m_hBitmap = (HBITMAP)::LoadImage(NULL, Text::toT(popupImage).c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
-		}
+		titleFont = newTitleFont;
+		Fonts::decodeFont(Text::toT(titleFont.empty() ? getDefaultTitleFont() : titleFont), lfTitle);
+	}
+	const string& newTextFont = ss->getString(Conf::POPUP_FONT);
+	if (newTextFont != textFont || !lfText.lfHeight)
+	{
+		textFont = newTextFont;
+		Fonts::decodeFont(Text::toT(textFont), lfText);
 	}
 
-	height = ss->getInt(Conf::POPUP_HEIGHT);
-	width = ss->getInt(Conf::POPUP_WIDTH);
+	int dpi = WinUtil::getDisplayDpi();
+	int width = ss->getInt(Conf::POPUP_WIDTH) * dpi / 96;
+	int height = ss->getInt(Conf::POPUP_HEIGHT) * dpi / 96;
 
-	CRect rcDesktop;
-	
-	//get desktop rect so we know where to place the popup
-	::SystemParametersInfo(SPI_GETWORKAREA, 0, &rcDesktop, 0);
-	
+	RECT rcDesktop;
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &rcDesktop, 0);
 	int screenHeight = rcDesktop.bottom;
 	int screenWidth = rcDesktop.right;
-	
-	//if we have popups all the way up to the top of the screen do not create a new one
+
 	if (offset + height > screenHeight)
 		return;
 
-	//get the handle of the window that has focus
-	dcassert(WinUtil::g_mainWnd);
-	HWND gotFocus = ::SetFocus(WinUtil::g_mainWnd);
-	
-	//compute the window position
-	CRect rc(screenWidth - width, screenHeight - height - offset, screenWidth, screenHeight - offset);
-	
-	//Create a new popup
-	PopupWnd *p = new PopupWnd(msg, title, rc, id++, m_hBitmap);
-	p->height = height; // save the height, for removal
+	RECT rc;
+	rc.right = screenWidth;
+	rc.bottom = screenHeight - offset;
+	rc.left = rc.right - width;
+	rc.top = rc.bottom - height;
 
-	if (popupType != /*CUSTOM*/ BALLOON)
-	{
-		typedef bool (CALLBACK * LPFUNC)(HWND hwnd, COLORREF crKey, BYTE bAlpha, DWORD dwFlags);
-		LPFUNC _d_SetLayeredWindowAttributes = (LPFUNC)GetProcAddress(LoadLibrary(_T("user32")), "SetLayeredWindowAttributes");
-		if (_d_SetLayeredWindowAttributes)
-		{
-			p->SetWindowLongPtr(GWL_EXSTYLE, p->GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT);
-			_d_SetLayeredWindowAttributes(p->m_hWnd, 0, ss->getInt(Conf::POPUP_TRANSPARENCY), LWA_ALPHA);
-		}
-	}
-
-	//move the window to the top of the z-order and display it
-	p->SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-	p->ShowWindow(SW_SHOWNA);
-	
-	//restore focus to window
-	::SetFocus(gotFocus);
-	
-	//increase offset so we know where to place the next popup
-	offset = offset + height;
-	
+	PopupWindow* p = new PopupWindow;
+	p->setText(msg);
+	p->setTitle(title);
+	p->setTitleFont(lfTitle);
+	if (!textFont.empty()) p->setFont(lfText);
+	p->setBackgroundColor(ss->getInt(Conf::POPUP_BACKGROUND_COLOR));
+	p->setTextColor(ss->getInt(Conf::POPUP_TEXT_COLOR));
+	p->setTitleColor(ss->getInt(Conf::POPUP_TITLE_TEXT_COLOR));
+	p->setBorderColor(ss->getInt(Conf::POPUP_BORDER_COLOR));
+	p->setRemoveTime(Util::getTick() + removeTime * 1000);
+	p->setNotifWnd(mainFrame->m_hWnd);
+	p->Create(nullptr, &rc);
 	popups.push_back(p);
+
+	offset += height;
+	p->ShowWindow(SW_SHOWNOACTIVATE);
 }
 
-void PopupManager::on(TimerManagerListener::Second /*type*/, uint64_t tick) noexcept
+void PopupManager::autoRemove(uint64_t tick)
 {
-	dcassert(WinUtil::g_mainWnd);
-	if (ClientManager::isBeforeShutdown())
-		return;
-	if (WinUtil::g_mainWnd)
-	{
-		::PostMessage(WinUtil::g_mainWnd, WM_SPEAKER, MainFrame::REMOVE_POPUP, 0);
-	}
+	for (PopupWindow* wnd : popups)
+		if (wnd->shouldRemove(tick))
+			wnd->hide();
 }
 
-void PopupManager::AutoRemove()
+void PopupManager::remove(HWND hWnd)
 {
-	const auto* ss = SettingsManager::instance.getUiSettings();
-	const uint64_t tick = GET_TICK();
-	const uint64_t popupTime = ss->getInt(Conf::POPUP_TIME) * 1000;
-	//check all popups and see if we need to remove anyone
-	for (auto i = popups.cbegin(); i != popups.cend(); ++i)
+	RECT rcRemoved = {};
+	for (auto i = popups.begin(); i != popups.end(); ++i)
 	{
-		if ((*i)->timeCreated + popupTime < tick)
+		PopupWindow* wnd = *i;
+		if (wnd->m_hWnd == hWnd)
 		{
-			//okay remove the first popup
-			Remove((*i)->id);
-			
-			//if list is empty there is nothing more to do
-			if (popups.empty())
-				return;
-				
-			//start over from the beginning
-			i = popups.cbegin();
+			wnd->GetWindowRect(&rcRemoved);
+			wnd->DestroyWindow();
+			delete wnd;
+			popups.erase(i);
+			break;
 		}
 	}
-}
 
-void PopupManager::Remove(uint32_t pos)
-{
-	//find the correct window
-	auto i = popups.cbegin();
-	
-	for (; i != popups.cend(); ++i)
+	int height = rcRemoved.bottom - rcRemoved.top;
+	if (!height) return;
+
+	RECT rc;
+	for (PopupWindow* wnd : popups)
 	{
-		if ((*i)->id == pos)
-			break;
-	}
-	dcassert(i != popups.cend());
-	if (i == popups.cend())
-		return;
-	//remove the window from the list
-	PopupWnd *p = *i;
-	i = popups.erase(i);
-	
-	dcassert(p);
-	if (p == nullptr)
-	{
-		return;
-	}
-	
-	//close the window and delete it, ensure that correct height is used from here
-	height = p->height;
-	p->SendMessage(WM_CLOSE, 0, 0);
-	delete p;
-	
-	//set offset one window position lower
-	dcassert(offset > 0);
-	offset = offset - height;
-	
-	//nothing to do
-	if (popups.empty())
-		return;
-	if (!ClientManager::isBeforeShutdown())
-	{
-		CRect rc;
-		//move down all windows
-		for (; i != popups.cend(); ++i)
+		wnd->GetWindowRect(&rc);
+		if (rc.top < rcRemoved.top)
 		{
-			(*i)->GetWindowRect(rc);
 			rc.top += height;
 			rc.bottom += height;
-			(*i)->MoveWindow(rc);
+			wnd->SetWindowPos(nullptr, &rc, SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER);
 		}
 	}
+	offset -= height;
+}
+
+void PopupManager::removeAll()
+{
+	for (PopupWindow* wnd : popups)
+	{
+		wnd->DestroyWindow();
+		delete wnd;
+	}
+	popups.clear();
+	offset = 0;
+}
+
+const string& PopupManager::getDefaultTitleFont()
+{
+	if (defaultTitleFont.empty())
+	{
+		LOGFONT font;
+		int dpi = WinUtil::getDisplayDpi();
+		Fonts::decodeFont(Util::emptyStringT, font);
+		font.lfHeight = -14 * dpi / 72;
+		defaultTitleFont = Text::fromT(Fonts::encodeFont(font));
+	}
+	return defaultTitleFont;
 }

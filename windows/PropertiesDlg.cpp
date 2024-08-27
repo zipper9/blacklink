@@ -80,7 +80,7 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new MessagesPage();
 	pages[n++] = new AppearancePage();
 	pages[n++] = new StylesPage();
-	pages[n++] = new Popups();
+	pages[n++] = new PopupsPage();
 	pages[n++] = new Sounds();
 	pages[n++] = new ToolbarPage();
 	pages[n++] = new WindowsPage();

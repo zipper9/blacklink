@@ -781,6 +781,7 @@
     <ClCompile Include="windows\MenuHelper.cpp" />
     <ClCompile Include="windows\NavigationBar.cpp" />
     <ClCompile Include="windows\NotifUtil.cpp" />
+    <ClCompile Include="windows\PopupWindow.cpp" />
     <ClCompile Include="windows\PreviewAppsPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
@@ -985,6 +986,7 @@
     <ClInclude Include="windows\MenuHelper.h" />
     <ClInclude Include="windows\NavigationBar.h" />
     <ClInclude Include="windows\NotifUtil.h" />
+    <ClInclude Include="windows\PopupWindow.h" />
     <ClInclude Include="windows\PreviewAppsPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />
@@ -1066,7 +1068,6 @@
     <ClInclude Include="windows\OMenu.h" />
     <ClInclude Include="windows\OtherColorsTab.h" />
     <ClInclude Include="windows\Players.h" />
-    <ClInclude Include="windows\PopupDlg.h" />
     <ClInclude Include="windows\PopupManager.h" />
     <ClInclude Include="windows\PopupsPage.h" />
     <ClInclude Include="windows\PreviewMenu.h" />

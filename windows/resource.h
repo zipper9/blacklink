@@ -176,7 +176,6 @@
 #define IDC_CLOSE_HUBS_BELOW            1039
 #define IDC_CLOSE_HUBS_NO_USR           1040
 #define IDC_DOWNCONN_SPIN               1041
-#define IDC_MAX_MSG_LENGTH_SPIN         1042
 #define IDC_PUBLIC_HUBS                 1043
 #define IDC_COPY_HUB_IP                 1044
 #define IDC_TRAY_RESTORE_POS            1045
@@ -657,7 +656,6 @@
 #define IDC_CHECK_ITALIC                1631
 #define IDC_CAPTION_MAX_UC              1632
 #define IDC_MAX_UC                      1633
-#define IDC_POPUP_TYPE                  1634
 #define IDC_SHOW_JOINS                  1635
 #define IDC_ENABLE_CCPM                 1636
 #define IDC_ENABLE_CPMI                 1637
@@ -675,8 +673,10 @@
 #define IDC_IGNORE_REMOVE               1650
 #define IDC_IGNORE_CLEAR                1651
 #define IDC_SHOW_IGNORED                1652
-#define IDC_POPUP_FONT                  1653
-#define IDC_DCLSTGEN_SAVEAS             1654
+#define IDC_POPUP_TYPE                  1653
+#define IDC_POPUP_FONT                  1654
+#define IDC_POPUP_BORDER_COLOR          1655
+#define IDC_DCLSTGEN_SAVEAS             1656
 #define IDC_PLAYER_COMBO                1661
 #define IDC_IP_GET_IP                   1664
 #define IDC_IPTRUST_DATA                1665
@@ -701,10 +701,7 @@
 #define IDC_MAX_MSG_LENGTH_STR          1701
 #define IDC_POPUP_COLORS                1702
 #define IDC_POPUP_BACKCOLOR             1703
-#define IDC_POPUPFILE                   1704
-#define IDC_POPUP_IMAGE_GP              1705
 #define IDC_AWAY_START_TIME_SPIN        1706
-#define IDC_POPUPBROWSE                 1707
 #define IDC_AWAY_END_TIME_SPIN          1708
 #define IDC_POPUP_TIME_SPIN             1711
 #define IDC_B2                          1712
@@ -1114,10 +1111,6 @@
 #define IDC_POPUP_H                     2294
 #define IDC_POPUP_W_STR                 2295
 #define IDC_POPUP_H_STR                 2296
-#define IDC_POPUP_W_SPIN                2297
-#define IDC_POPUP_H_SPIN                2298
-#define IDC_POPUP_TRANSP_STR            2299
-#define IDC_POPUP_TRANSP_SLIDER         2300
 #define IDC_SETTINGS_COPY_FILE          2303
 #define IDC_SKIP_EXISTING               2304
 #define IDC_CAPTION_COPY_FILE           2305

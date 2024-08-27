@@ -13,7 +13,7 @@ bool NotifUtil::isPopupEnabled(int setting)
 void NotifUtil::showPopup(int setting, const tstring& msg, const tstring& title, int flags)
 {
 	if (isPopupEnabled(setting))
-		PopupManager::getInstance()->Show(msg, title, flags);
+		PopupManager::getInstance()->show(msg, title, flags);
 }
 
 void NotifUtil::showPopup(int setting, const tstring& msg, const tstring& extMsg, size_t extLen, const tstring& title)
@@ -25,7 +25,7 @@ void NotifUtil::showPopup(int setting, const tstring& msg, const tstring& extMsg
 		text += extMsg;
 	else
 		text += extMsg.substr(0, extLen);
-	PopupManager::getInstance()->Show(text, title, NIIF_INFO);
+	PopupManager::getInstance()->show(text, title, NIIF_INFO);
 }
 
 void NotifUtil::playSound(int setting)

@@ -39,6 +39,7 @@
 #include "HashProgressDlg.h"
 #include "PrivateFrame.h"
 #include "WinUtil.h"
+#include "Fonts.h"
 #include "CDMDebugFrame.h"
 #include "FileHashDlg.h"
 #include "PopupManager.h"
@@ -732,6 +733,8 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 	if (useTrayIcon && hasPM)
 		setTrayIcon(((tick / 1000) & 1) ? TRAY_ICON_NORMAL : TRAY_ICON_PM);
 
+	PopupManager::getInstance()->autoRemove(tick);
+
 	PROCESS_MEMORY_COUNTERS pmc = { 0 };
 	BOOL memoryInfoResult = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 	if (memoryInfoResult)
@@ -1041,6 +1044,12 @@ LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 		UpdateLayout();
 	}
 	LockWindowUpdate(FALSE);
+	return 0;
+}
+
+LRESULT MainFrame::onRemovePopup(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+{
+	PopupManager::getInstance()->remove((HWND) lParam);
 	return 0;
 }
 
@@ -1584,14 +1593,6 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	{
 		NotifUtil::playSound(lParam);
 	}
-	else if (wParam == REMOVE_POPUP)
-	{
-		dcassert(PopupManager::isValidInstance());
-		if (PopupManager::isValidInstance())
-		{
-			PopupManager::getInstance()->AutoRemove();
-		}
-	}
 	else if (wParam == SET_PM_TRAY_ICON)
 	{
 		if (!ClientManager::isBeforeShutdown() && !hasPM && (!WinUtil::g_isAppActive || appMinimized))
@@ -1659,14 +1660,6 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				frame->addSystemMessage(data->text, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 		}
 		delete data;
-	}
-	else if (wParam == WM_CLOSE)
-	{
-		dcassert(PopupManager::isValidInstance());
-		if (PopupManager::isValidInstance())
-		{
-			PopupManager::getInstance()->Remove((int)lParam);
-		}
 	}
 	else
 	{
@@ -2257,6 +2250,10 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			                         CTSTRING(ALWAYS_ASK), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES))
 			     && !dontQuit)
 			{
+				auto pm = PopupManager::getInstance();
+				pm->setEnabled(false);
+				pm->removeAll();
+
 				storeWindowsPos();
 
 				ClientManager::beforeShutdown();

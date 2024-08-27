@@ -4,7 +4,7 @@
 #include "../client/typedefs.h"
 
 #define SHOW_POPUP(setting, msg, title) \
-	NotifUtil::showPopup(Conf::setting, msg, title, 0)
+	NotifUtil::showPopup(Conf::setting, msg, title, NIIF_INFO)
 
 #define SHOW_POPUPF(setting, msg, title, flags) \
 	NotifUtil::showPopup(Conf::setting, msg, title, flags)
