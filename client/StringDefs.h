@@ -792,6 +792,8 @@ enum Strings   // @DontAdd
 	POPUP_TITLE_FONT, // "&Title text"
 	POPUP_TYPE, // "Popup type"
 	POPUP_UPLOAD_FINISHED, // "Show popup on upload finished"
+	DOWNLOAD_FAILED_POPUP, // "Download failed"
+	DOWNLOAD_FINISHED_POPUP, // "Download finished"
 	PORT, // "Port"
 	POSITION, // "Position"
 	POWER_OFF, // "Power off"

@@ -1481,16 +1481,18 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& downlo
 	ui->setStatusString(tmpReason);
 	ui->setSpeed(0);
 
-	PopupTask* popup = new PopupTask;
-	popup->setting = Conf::POPUP_ON_DOWNLOAD_FAILED;
-	popup->title = ResourceManager::DOWNLOAD_FAILED;
-	popup->flags = NIIF_WARNING;
-	popup->user = ClientManager::getNick(ui->hintedUser);
-	popup->file = Util::getFileName(download->getPath());
-	popup->miscText = tmpReason;
-
+	if (download->getPos() != download->getSize())
+	{
+		PopupTask* popup = new PopupTask;
+		popup->setting = Conf::POPUP_ON_DOWNLOAD_FAILED;
+		popup->title = ResourceManager::DOWNLOAD_FAILED_POPUP;
+		popup->flags = NIIF_WARNING;
+		popup->user = ClientManager::getNick(ui->hintedUser);
+		popup->file = Util::getFileName(download->getPath());
+		popup->miscText = tmpReason;
+		addTask(POPUP_NOTIF, popup);
+	}
 	addTask(UPDATE_TOKEN, ui);
-	addTask(POPUP_NOTIF, popup);
 }
 
 static const tstring& getReasonText(int error)
@@ -1831,7 +1833,7 @@ void TransferView::updateDownload(ItemInfo* ii, int index, int updateMask)
 	}
 	else
 	{
-		qi->setTimeFileBegin(0);
+		//qi->setTimeFileBegin(0); // FIXME
 		if (ii->status != ItemInfo::STATUS_WAITING)
 		{
 			qi->updateDownloadedBytesAndSpeed();
@@ -1860,7 +1862,7 @@ void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, co
 
 		PopupTask* popup = new PopupTask;
 		popup->setting = Conf::POPUP_ON_DOWNLOAD_FINISHED;
-		popup->title = ResourceManager::DOWNLOAD_FINISHED_IDLE;
+		popup->title = ResourceManager::DOWNLOAD_FINISHED_POPUP;
 		popup->flags = NIIF_INFO;
 		popup->file = Util::getFileName(qi->getTarget());
 
