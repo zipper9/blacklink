@@ -758,7 +758,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					continue;
 				}
 
-				if (cqi->getErrors() == -1 && cqi->getLastAttempt() != 0)
+				if (cqi->getErrors() == -1 && cqi->getLastAttempt() != 0) // protocol error
 				{
 					if (cqi->getLastAttempt() + RECONNECT_AFTER_ERROR_DELAY * 1000 < tick)
 						cqi->setErrors(0);

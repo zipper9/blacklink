@@ -2033,15 +2033,14 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			status |= NmdcSupports::FIREBALL;
 	}
 	if (allowNatTraversal() && !isActive())
-	{
 		status |= NmdcSupports::NAT0;
-	}
 
 	if (CryptoManager::getInstance()->isInitialized())
-	{
 		status |= NmdcSupports::TLS;
-	}
-	
+
+	if (getClientName().find("AirDC") != string::npos)
+		status |= NmdcSupports::AIRDC;
+
 	unsigned normal, registered, op;
 	if (fakeHubCount)
 	{	

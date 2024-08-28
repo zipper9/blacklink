@@ -60,12 +60,13 @@ class NmdcSupports
 	public:
 		enum Status
 		{
-			NORMAL      = 0x01,
-			AWAY        = 0x02,
-			SERVER      = 0x04,
-			FIREBALL    = 0x08,
-			TLS         = 0x10,
-			NAT0        = 0x20, // non-standard and incompatible with some hubs
+			NORMAL   = 0x01,
+			AWAY     = 0x02,
+			SERVER   = 0x04,
+			FIREBALL = 0x08,
+			TLS      = 0x10,
+			NAT0     = 0x20, // non-standard and incompatible with some hubs
+			AIRDC    = 0x40
 		};
 		static void setStatus(Identity& id, const char statusChar, const char modeChar, const string& connection);
 };
