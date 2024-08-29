@@ -5,11 +5,16 @@
 
 static const WinUtil::TextItem texts[] =
 {
-	{ IDC_CAPTION_MIN_FILE_SIZE, ResourceManager::MIN_FILE_SIZE },
-	{ IDC_CAPTION_SIZE_TYPE,     ResourceManager::SIZE_TYPE     },
-	{ IDOK,                      ResourceManager::OK            },
-	{ IDCANCEL,                  ResourceManager::CANCEL        },
-	{ 0,                         ResourceManager::Strings()     }
+	{ IDC_CAPTION_MIN_FILE_SIZE, R_(MIN_FILE_SIZE) },
+	{ IDC_CAPTION_SIZE_TYPE,     R_(SIZE_TYPE)     },
+	{ IDOK,                      R_(OK)            },
+	{ IDCANCEL,                  R_(CANCEL)        },
+	{ 0,                         R_INVALID         }
+};
+
+static const ResourceManager::Strings sizeUnitStrings[] =
+{
+	R_(B), R_(KB), R_(MB), R_(GB), R_INVALID
 };
 
 LRESULT FindDuplicatesDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -25,10 +30,7 @@ LRESULT FindDuplicatesDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	if (options.sizeMin > 0) ctrlMinSize.SetWindowText(Util::toStringT(options.sizeMin).c_str());
 	
 	ctrlSizeUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
-	ctrlSizeUnit.AddString(CTSTRING(B));
-	ctrlSizeUnit.AddString(CTSTRING(KB));
-	ctrlSizeUnit.AddString(CTSTRING(MB));
-	ctrlSizeUnit.AddString(CTSTRING(GB));
+	WinUtil::fillComboBoxStrings(ctrlSizeUnit, sizeUnitStrings);
 	ctrlSizeUnit.SetCurSel(options.sizeUnit);
 
 	CenterWindow(GetParent());

@@ -26,12 +26,12 @@
 
 static const WinUtil::TextItem texts[] =
 {
-	{ IDC_DCLS_GENERATORBORDER, ResourceManager::DCLS_GENERATORBORDER },
-	{ IDC_DCLS_CREATE_IN_FOLDER, ResourceManager::DCLS_CREATE_IN_FOLDER },
-	{ IDC_DCLS_ANOTHER_FOLDER, ResourceManager::DCLS_ANOTHER_FOLDER },
-	{ IDC_DCLST_CLICK_STATIC, ResourceManager::DCLS_CLICK_ACTION },
-	{ IDC_DCLST_INCLUDESELF, ResourceManager::DCLST_INCLUDESELF },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_DCLS_GENERATORBORDER, R_(DCLS_GENERATORBORDER) },
+	{ IDC_DCLS_CREATE_IN_FOLDER, R_(DCLS_CREATE_IN_FOLDER) },
+	{ IDC_DCLS_ANOTHER_FOLDER, R_(DCLS_ANOTHER_FOLDER) },
+	{ IDC_DCLST_CLICK_STATIC, R_(DCLS_CLICK_ACTION) },
+	{ IDC_DCLST_INCLUDESELF, R_(DCLST_INCLUDESELF) },
+	{ 0, R_INVALID }
 };
 
 static const PropPage::Item items[] =
@@ -39,6 +39,11 @@ static const PropPage::Item items[] =
 	{ IDC_DCLS_FOLDER, Conf::DCLST_DIRECTORY, PropPage::T_STR },
 	{ IDC_DCLST_INCLUDESELF, Conf::DCLST_INCLUDESELF, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
+};
+
+static const ResourceManager::Strings magnetClickStrings[] =
+{
+	R_(ASK), R_(MAGNET_DLG_BRIEF_SEARCH), R_(MAGNET_DLG_BRIEF_DL_DCLST), R_(MAGNET_DLG_BRIEF_SHOW_DCLST), R_INVALID
 };
 
 LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -51,11 +56,8 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		IDC_DCLS_CREATE_IN_FOLDER : IDC_DCLS_ANOTHER_FOLDER, BST_CHECKED);
 
 	magnetClick.Attach(GetDlgItem(IDC_DCLST_CLICK));
-	magnetClick.AddString(CTSTRING(ASK));
-	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
-	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_DL_DCLST));
-	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_SHOW_DCLST));
-	
+	WinUtil::fillComboBoxStrings(magnetClick, magnetClickStrings);
+
 	if (ss->getBool(Conf::DCLST_ASK))
 	{
 		magnetClick.SetCurSel(0);
@@ -65,7 +67,7 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		int action = ss->getInt(Conf::DCLST_ACTION);
 		magnetClick.SetCurSel(action + 1);
 	}
-	
+
 	fixControls();
 	return TRUE;
 }

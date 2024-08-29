@@ -121,7 +121,7 @@ static void filterText(HWND hwnd, const TCHAR* filter)
 	tstring buf;
 	WinUtil::getWindowText(edit, buf);
 	bool changed = false;
-	
+
 	if (!buf.empty())
 	{
 		tstring::size_type i = 0;
@@ -139,7 +139,7 @@ static void filterText(HWND hwnd, const TCHAR* filter)
 		if (start > 0) start--;
 		if (end > 0) end--;
 		edit.SetSel(start, end);
-	}	
+	}
 }
 
 #define ADD_TAB(name, type, text) \
@@ -161,8 +161,8 @@ LRESULT FavHubProperties::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	ADD_TAB(tabIdent, FavoriteHubTabIdent, FAV_HUB_IDENT);
 	ADD_TAB(tabOptions, FavoriteHubTabOptions, FAV_HUB_OPTIONS);
 	ADD_TAB(tabCheats, FavoriteHubTabCheats, FAV_HUB_CHEATS);
-	ADD_TAB(tabAdvanced, FavoriteHubTabAdvanced, FAV_HUB_ADVANCED);	
-	
+	ADD_TAB(tabAdvanced, FavoriteHubTabAdvanced, FAV_HUB_ADVANCED);
+
 	ctrlTabs.SetCurSel(0);
 	changeTab();
 
@@ -191,7 +191,7 @@ void FavHubProperties::changeTab()
 	ctrlTabs.GetClientRect(&rc);
 	ctrlTabs.AdjustRect(FALSE, &rc);
 	ctrlTabs.MapWindowPoints(m_hWnd, &rc);
-	
+
 	switch (pos)
 	{
 		case 0:
@@ -342,7 +342,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			entry->setSearchInterval(0);
 			entry->setSearchIntervalPassive(0);
 		}
-		
+
 		if (tabName.ctrlGroup.GetCurSel() == 0)
 		{
 			entry->setGroup(Util::emptyString);
@@ -352,7 +352,7 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			WinUtil::getWindowText(tabName.ctrlGroup, buf);
 			entry->setGroup(Text::fromT(buf));
 		}
-		
+
 		WinUtil::getWindowText(tabIdent.ctrlClientId, buf);
 		string clientName, clientVersion;
 		FavoriteManager::splitClientId(Text::fromT(buf), clientName, clientVersion);
@@ -426,17 +426,17 @@ LRESULT FavoriteHubTabName::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		{
 			const string& name = i->first;
 			int pos = ctrlGroup.AddString(Text::toT(name).c_str());
-			
+
 			if (name == entry->getGroup())
 				selIndex = pos;
 		}
 	}
 	ctrlGroup.SetCurSel(selIndex);
-	
+
 	ctrlName.SetFocus();
 	ctrlName.SetSel(0, -1);
 	addressChanged = false;
-	
+
 	return FALSE;
 }
 
@@ -540,10 +540,12 @@ LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	else
 		WinUtil::fillCharsetList(ctrlEncoding, entry->getEncoding(), false, true);
 
+	static const ResourceManager::Strings connTypeStrings[] =
+	{
+		R_(DEFAULT), R_(SETTINGS_DIRECT), R_(SETTINGS_FIREWALL_PASSIVE), R_INVALID
+	};
 	ctrlConnType.Attach(GetDlgItem(IDC_CONNECTION_TYPE));
-	ctrlConnType.AddString(CTSTRING(DEFAULT));
-	ctrlConnType.AddString(CTSTRING(SETTINGS_DIRECT));
-	ctrlConnType.AddString(CTSTRING(SETTINGS_FIREWALL_PASSIVE));	
+	WinUtil::fillComboBoxStrings(ctrlConnType, connTypeStrings);
 
 	int selIndex = entry->getMode();
 	if (selIndex != 1 && selIndex != 2) selIndex = 0;
@@ -622,16 +624,11 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlOverrideStatus.Attach(GetDlgItem(IDC_OVERRIDE_STATUS));
 	ctrlFakeStatus.Attach(GetDlgItem(IDC_FAKE_STATUS));
 
-	static const ResourceManager::Strings units[] =
+	static const ResourceManager::Strings sizeUnitStrings[] =
 	{
-		ResourceManager::B,
-		ResourceManager::KB,
-		ResourceManager::MB,
-		ResourceManager::GB,
-		ResourceManager::TB
+		R_(B), R_(KB), R_(MB), R_(GB), R_(TB), R_INVALID
 	};
-	for (int i = 0; i < _countof(units); ++i)
-		ctrlFakeShareUnit.AddString(CTSTRING_I(units[i]));
+	WinUtil::fillComboBoxStrings(ctrlFakeShareUnit, sizeUnitStrings);
 	int fakeShareUnit = 0;
 	const string& fakeShare = entry->getFakeShare();
 	BOOL useFakeShare = FALSE;
@@ -646,14 +643,11 @@ LRESULT FavoriteHubTabCheats::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		}
 	}
 
-	static const ResourceManager::Strings clientStatus[] =
+	static const ResourceManager::Strings clientStatusStrings[] =
 	{
-		ResourceManager::CLIENT_STATUS_NORMAL,
-		ResourceManager::FILESERVER,
-		ResourceManager::FIREBALL
+		R_(CLIENT_STATUS_NORMAL), R_(FILESERVER), R_(FIREBALL), R_INVALID
 	};
-	for (int i = 0; i < _countof(clientStatus); ++i)
-		ctrlFakeStatus.AddString(CTSTRING_I(clientStatus[i]));
+	WinUtil::fillComboBoxStrings(ctrlFakeStatus, clientStatusStrings);
 
 	ctrlFakeShareUnit.SetCurSel(fakeShareUnit);
 	ctrlEnableFakeShare.SetCheck(useFakeShare ? BST_CHECKED : BST_UNCHECKED);

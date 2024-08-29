@@ -454,35 +454,31 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	hubsLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	hubsLabel.SetFont(Fonts::g_systemFont, FALSE);
 	hubsLabel.SetWindowText(CTSTRING(HUBS));
-	
+
 	ctrlSearchBox.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSize.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlMode.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSizeMode.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlFiletype.SetFont(Fonts::g_systemFont, FALSE);
-	
-	ctrlMode.AddString(CTSTRING(ANY));
-	ctrlMode.AddString(CTSTRING(AT_LEAST));
-	ctrlMode.AddString(CTSTRING(AT_MOST));
-	ctrlMode.AddString(CTSTRING(EXACT_SIZE));
-	
-	ctrlSizeMode.AddString(CTSTRING(B));
-	ctrlSizeMode.AddString(CTSTRING(KB));
-	ctrlSizeMode.AddString(CTSTRING(MB));
-	ctrlSizeMode.AddString(CTSTRING(GB));
-	
-	ctrlFiletype.AddString(CTSTRING(ANY));
-	ctrlFiletype.AddString(CTSTRING(AUDIO));
-	ctrlFiletype.AddString(CTSTRING(COMPRESSED));
-	ctrlFiletype.AddString(CTSTRING(DOCUMENT));
-	ctrlFiletype.AddString(CTSTRING(EXECUTABLE));
-	ctrlFiletype.AddString(CTSTRING(PICTURE));
-	ctrlFiletype.AddString(CTSTRING(VIDEO_AND_SUBTITLES));
-	ctrlFiletype.AddString(CTSTRING(DIRECTORY));
-	ctrlFiletype.AddString(CTSTRING(TTH));
-	ctrlFiletype.AddString(CTSTRING(CD_DVD_IMAGES));
-	ctrlFiletype.AddString(CTSTRING(COMICS));
-	ctrlFiletype.AddString(CTSTRING(BOOK));
+
+	static const ResourceManager::Strings modeStrings[] =
+	{
+		R_(ANY), R_(AT_LEAST), R_(AT_MOST), R_(EXACT_SIZE), R_INVALID
+	};
+	WinUtil::fillComboBoxStrings(ctrlMode, modeStrings);
+
+	static const ResourceManager::Strings unitStrings[] =
+	{
+		R_(B), R_(KB), R_(MB), R_(GB), R_INVALID
+	};
+	WinUtil::fillComboBoxStrings(ctrlSizeMode, unitStrings);
+
+	static const ResourceManager::Strings fileTypeStrings[] =
+	{
+		R_(ANY), R_(AUDIO), R_(COMPRESSED), R_(DOCUMENT), R_(EXECUTABLE), R_(PICTURE), R_(VIDEO_AND_SUBTITLES),
+		R_(DIRECTORY), R_(TTH), R_(CD_DVD_IMAGES), R_(COMICS), R_(BOOK), R_INVALID
+	};
+	WinUtil::fillComboBoxStrings(ctrlFiletype, fileTypeStrings);
 	if (ss->getBool(Conf::SAVE_SEARCH_SETTINGS))
 	{
 		ctrlFiletype.SetCurSel(ss->getInt(Conf::SAVED_SEARCH_TYPE));
@@ -549,9 +545,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	showPortStatus();
 
 	UpdateLayout();
-	for (int j = 0; j < _countof(columnNames); j++)
-		ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
 
+	WinUtil::fillComboBoxStrings(ctrlFilterSel, columnNames, _countof(columnNames));
 	ctrlFilterSel.SetCurSel(0);
 	ctrlStatus.SetText(STATUS_PROGRESS, nullptr, SBT_OWNERDRAW);
 	tooltip.SetMaxTipWidth(200);

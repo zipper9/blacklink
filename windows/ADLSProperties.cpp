@@ -87,17 +87,19 @@ LRESULT ADLSProperties::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlMatchCase.Attach(GetDlgItem(IDC_MATCH_CASE));
 	ctrlRegEx.Attach(GetDlgItem(IDC_REGEXP));
 
+	static const ResourceManager::Strings searchTypeStrings[] =
+	{
+		R_(ADLS_FILE_NAME), R_(ADLS_DIRECTORY_NAME), R_(ADLS_FULL_PATH), R_(TTH), R_INVALID
+	};
 	ctrlSearchType.Attach(GetDlgItem(IDC_FILE_TYPE));
-	ctrlSearchType.AddString(CTSTRING(ADLS_FILE_NAME));
-	ctrlSearchType.AddString(CTSTRING(ADLS_DIRECTORY_NAME));
-	ctrlSearchType.AddString(CTSTRING(ADLS_FULL_PATH));
-	ctrlSearchType.AddString(CTSTRING(TTH));
+	WinUtil::fillComboBoxStrings(ctrlSearchType, searchTypeStrings);
 
+	static const ResourceManager::Strings sizeTypeStrings[] =
+	{
+		R_(B), R_(KB), R_(MB), R_(GB), R_INVALID
+	};
 	ctrlSizeType.Attach(GetDlgItem(IDC_SIZE_TYPE));
-	ctrlSizeType.AddString(CTSTRING(B));
-	ctrlSizeType.AddString(CTSTRING(KB));
-	ctrlSizeType.AddString(CTSTRING(MB));
-	ctrlSizeType.AddString(CTSTRING(GB));
+	WinUtil::fillComboBoxStrings(ctrlSizeType, sizeTypeStrings);
 
 	ctrlSearch.SetWindowText(Text::toT(search->searchString).c_str());
 	ctrlDestDir.SetWindowText(Text::toT(search->destDir).c_str());

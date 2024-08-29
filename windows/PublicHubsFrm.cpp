@@ -164,8 +164,7 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlFilterSel.SetFont(Fonts::g_systemFont, FALSE);
 
 	// populate the filter list with the column names
-	for (int j = 0; j < COLUMN_LAST; j++)
-		ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
+	WinUtil::fillComboBoxStrings(ctrlFilterSel, columnNames, COLUMN_LAST);
 
 	ctrlFilterSel.AddString(CTSTRING(ANY));
 	ctrlFilterSel.SetCurSel(COLUMN_LAST);

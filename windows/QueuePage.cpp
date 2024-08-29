@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "QueuePage.h"
 #include "DialogLayout.h"
+#include "WinUtil.h"
 #include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConfCore.h"
@@ -69,15 +70,20 @@ static const PropPage::Item items[] =
 
 static const PropPage::ListItem optionItems[] =
 {
-	{ Conf::AUTO_SEARCH_DL_LIST, ResourceManager::SETTINGS_AUTO_SEARCH_AUTO_MATCH },
-	{ Conf::SKIP_ZERO_BYTE, ResourceManager::SETTINGS_SKIP_ZERO_BYTE },
+	{ Conf::AUTO_SEARCH_DL_LIST, R_(SETTINGS_AUTO_SEARCH_AUTO_MATCH) },
+	{ Conf::SKIP_ZERO_BYTE, R_(SETTINGS_SKIP_ZERO_BYTE) },
 #if 0
-	{ Conf::DONT_DL_ALREADY_SHARED, ResourceManager::SETTINGS_DONT_DL_ALREADY_SHARED },
+	{ Conf::DONT_DL_ALREADY_SHARED, R_(SETTINGS_DONT_DL_ALREADY_SHARED) },
 #endif
-	{ Conf::OVERLAP_CHUNKS, ResourceManager::OVERLAP_CHUNKS },
-	{ Conf::REPORT_ALTERNATES, ResourceManager::REPORT_ALTERNATES },
-	{ Conf::SEARCH_MAGNET_SOURCES, ResourceManager::SETTINGS_SEARCH_MAGNET_SOURCES },
-	{ 0, ResourceManager::Strings() }
+	{ Conf::OVERLAP_CHUNKS, R_(OVERLAP_CHUNKS) },
+	{ Conf::REPORT_ALTERNATES, R_(REPORT_ALTERNATES) },
+	{ Conf::SEARCH_MAGNET_SOURCES, R_(SETTINGS_SEARCH_MAGNET_SOURCES) },
+	{ 0, R_INVALID }
+};
+
+static const ResourceManager::Strings actionIfExistsStrings[] =
+{
+	R_(TE_ACTION_ASK), R_(TE_ACTION_REPLACE), R_(TE_ACTION_RENAME), R_(TE_ACTION_SKIP), R_INVALID
 };
 
 LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -89,10 +95,7 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	PropPage::initControls(*this, items);
 	PropPage::read(*this, items, optionItems, ctrlList);
 
-	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_ASK));
-	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_REPLACE));
-	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_RENAME));
-	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_SKIP));
+	WinUtil::fillComboBoxStrings(ctrlActionIfExists, actionIfExistsStrings);
 	
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();

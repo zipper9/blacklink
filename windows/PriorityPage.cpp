@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "PriorityPage.h"
 #include "DialogLayout.h"
+#include "WinUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/QueueItem.h"
 #include "../client/ConfCore.h"
@@ -56,13 +57,7 @@ static const PropPage::Item items[] =
 
 static const ResourceManager::Strings prioText[] =
 {
-	ResourceManager::LOWEST,
-	ResourceManager::LOWER,
-	ResourceManager::LOW,
-	ResourceManager::NORMAL,
-	ResourceManager::HIGH,
-	ResourceManager::HIGHER,
-	ResourceManager::HIGHEST
+	R_(LOWEST), R_(LOWER), R_(LOW), R_(NORMAL), R_(HIGH), R_(HIGHER), R_(HIGHEST), R_INVALID
 };
 
 static inline void clampPrio(int& prio)
@@ -81,13 +76,9 @@ LRESULT PriorityPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	
 	CComboBox cb1(GetDlgItem(IDC_AUTOPRIORITY_PATTERNS_PRIO));
 	CComboBox cb2(GetDlgItem(IDC_AUTOPRIORITY_SIZE_PRIO));
-	for (int i = 0; i < _countof(prioText); i++)
-	{
-		const TCHAR* text = CTSTRING_I(prioText[i]);
-		cb1.AddString(text);
-		cb2.AddString(text);
-	}
-	
+	WinUtil::fillComboBoxStrings(cb1, prioText);
+	WinUtil::fillComboBoxStrings(cb2, prioText);
+
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
 	int prioPatterns = ss->getInt(Conf::AUTO_PRIORITY_PATTERNS_PRIO);

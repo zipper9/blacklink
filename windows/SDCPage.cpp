@@ -20,6 +20,7 @@
 #include "SDCPage.h"
 #include "DialogLayout.h"
 #include "KnownClients.h"
+#include "WinUtil.h"
 #include "ConfUI.h"
 #include "../client/SettingsManager.h"
 #include "../client/Text.h"
@@ -94,6 +95,11 @@ void SDCPage::setRange(int idcEdit, int idcSpin, int minVal, int maxVal)
 	spin.SetBuddy(GetDlgItem(idcEdit));
 }
 
+static const ResourceManager::Strings shutdownActionStrings[] =
+{
+	R_(POWER_OFF), R_(LOG_OFF), R_(REBOOT), R_(SUSPEND), R_(HIBERNATE), R_(LOCK_COMPUTER), R_INVALID
+};
+
 LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
@@ -111,12 +117,7 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlHttpUserAgent.AddString(Text::toT(KnownClients::userAgents[i]).c_str());
 
 	ctrlShutdownAction.Attach(GetDlgItem(IDC_SHUTDOWN_ACTION));
-	ctrlShutdownAction.AddString(CTSTRING(POWER_OFF));
-	ctrlShutdownAction.AddString(CTSTRING(LOG_OFF));
-	ctrlShutdownAction.AddString(CTSTRING(REBOOT));
-	ctrlShutdownAction.AddString(CTSTRING(SUSPEND));
-	ctrlShutdownAction.AddString(CTSTRING(HIBERNATE));
-	ctrlShutdownAction.AddString(CTSTRING(LOCK_COMPUTER));
+	WinUtil::fillComboBoxStrings(ctrlShutdownAction, shutdownActionStrings);
 
 	PropPage::read(*this, items);
 	const auto ss = SettingsManager::instance.getUiSettings();

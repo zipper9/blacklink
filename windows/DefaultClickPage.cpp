@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "DefaultClickPage.h"
 #include "DialogLayout.h"
+#include "WinUtil.h"
 #include "ConfUI.h"
 #include "../client/SettingsManager.h"
 
@@ -51,43 +52,36 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
 	PropPage::read(*this, nullptr);
 
-	userListAction.Attach(GetDlgItem(IDC_USERLIST_DBLCLICK));
-	transferListAction.Attach(GetDlgItem(IDC_TRANSFERLIST_DBLCLICK));
-	chatAction.Attach(GetDlgItem(IDC_CHAT_DBLCLICK));
-	newMagnetAction.Attach(GetDlgItem(IDC_CLICK_NEWMAGNET));
-	oldMagnetAction.Attach(GetDlgItem(IDC_CLICK_OLDMAGNET));
-
+	static const ResourceManager::Strings favUserListActionStrings[] =
+	{
+		R_(GET_FILE_LIST), R_(SEND_PRIVATE_MESSAGE), R_(MATCH_QUEUE), R_(EDIT_PROPERTIES), R_(OPEN_USER_LOG), R_INVALID
+	};
 	favUserListAction.Attach(GetDlgItem(IDC_FAVUSERLIST_DBLCLICK));
-	favUserListAction.AddString(CTSTRING(GET_FILE_LIST));
-	favUserListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	favUserListAction.AddString(CTSTRING(MATCH_QUEUE));
-	favUserListAction.AddString(CTSTRING(EDIT_PROPERTIES));
-	favUserListAction.AddString(CTSTRING(OPEN_USER_LOG));
+	WinUtil::fillComboBoxStrings(favUserListAction, favUserListActionStrings);
 
-	userListAction.AddString(CTSTRING(GET_FILE_LIST));
-	userListAction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
-	userListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	userListAction.AddString(CTSTRING(MATCH_QUEUE));
-	userListAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
-	userListAction.AddString(CTSTRING(ADD_TO_FAVORITES));
-	userListAction.AddString(CTSTRING(BROWSE_FILE_LIST));
+	static const ResourceManager::Strings userListActionStrings[] =
+	{
+		R_(GET_FILE_LIST), R_(ADD_NICK_TO_CHAT), R_(SEND_PRIVATE_MESSAGE), R_(MATCH_QUEUE),
+		R_(GRANT_EXTRA_SLOT), R_(ADD_TO_FAVORITES), R_(BROWSE_FILE_LIST), R_INVALID
+	};
+	userListAction.Attach(GetDlgItem(IDC_USERLIST_DBLCLICK));
+	WinUtil::fillComboBoxStrings(userListAction, userListActionStrings);
 
-	transferListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	transferListAction.AddString(CTSTRING(GET_FILE_LIST));
-	transferListAction.AddString(CTSTRING(MATCH_QUEUE));
-	transferListAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
-	transferListAction.AddString(CTSTRING(ADD_TO_FAVORITES));
-	transferListAction.AddString(CTSTRING(FORCE_ATTEMPT));
-	transferListAction.AddString(CTSTRING(BROWSE_FILE_LIST));
-	transferListAction.AddString(CTSTRING(OPEN_DOWNLOAD_QUEUE));
+	static const ResourceManager::Strings transferListActionStrings[] =
+	{
+		R_(SEND_PRIVATE_MESSAGE), R_(GET_FILE_LIST), R_(MATCH_QUEUE), R_(GRANT_EXTRA_SLOT),
+		R_(ADD_TO_FAVORITES), R_(FORCE_ATTEMPT), R_(BROWSE_FILE_LIST), R_(OPEN_DOWNLOAD_QUEUE), R_INVALID
+	};
+	transferListAction.Attach(GetDlgItem(IDC_TRANSFERLIST_DBLCLICK));
+	WinUtil::fillComboBoxStrings(transferListAction, transferListActionStrings);
 
-	chatAction.AddString(CTSTRING(SELECT_USER_LIST));
-	chatAction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
-	chatAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	chatAction.AddString(CTSTRING(GET_FILE_LIST));
-	chatAction.AddString(CTSTRING(MATCH_QUEUE));
-	chatAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
-	chatAction.AddString(CTSTRING(ADD_TO_FAVORITES));
+	static const ResourceManager::Strings chatActionStrings[] =
+	{
+		R_(SELECT_USER_LIST), R_(ADD_NICK_TO_CHAT), R_(SEND_PRIVATE_MESSAGE), R_(GET_FILE_LIST),
+		R_(MATCH_QUEUE), R_(GRANT_EXTRA_SLOT), R_(ADD_TO_FAVORITES), R_INVALID
+	};
+	chatAction.Attach(GetDlgItem(IDC_CHAT_DBLCLICK));
+	WinUtil::fillComboBoxStrings(chatAction, chatActionStrings);
 
 	const auto ss = SettingsManager::instance.getUiSettings();
 	userListAction.SetCurSel(ss->getInt(Conf::USERLIST_DBLCLICK));
@@ -95,14 +89,19 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	chatAction.SetCurSel(ss->getInt(Conf::CHAT_DBLCLICK));
 	favUserListAction.SetCurSel(ss->getInt(Conf::FAVUSERLIST_DBLCLICK));
 
-	newMagnetAction.AddString(CTSTRING(ASK));
-	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
-	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_DOWNLOAD));
-	newMagnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_OPEN));
+	static const ResourceManager::Strings newMagnetActionStrings[] =
+	{
+		R_(ASK), R_(MAGNET_DLG_BRIEF_SEARCH), R_(MAGNET_DLG_BRIEF_DOWNLOAD), R_(MAGNET_DLG_BRIEF_OPEN), R_INVALID
+	};
+	newMagnetAction.Attach(GetDlgItem(IDC_CLICK_NEWMAGNET));
+	WinUtil::fillComboBoxStrings(newMagnetAction, newMagnetActionStrings);
 
-	oldMagnetAction.AddString(CTSTRING(ASK));
-	oldMagnetAction.AddString(CTSTRING(SEARCH_FOR_ALTERNATES));
-	oldMagnetAction.AddString(CTSTRING(OPEN_FILE));
+	static const ResourceManager::Strings oldMagnetActionStrings[] =
+	{
+		R_(ASK), R_(SEARCH_FOR_ALTERNATES), R_(OPEN_FILE), R_INVALID
+	};
+	oldMagnetAction.Attach(GetDlgItem(IDC_CLICK_OLDMAGNET));
+	WinUtil::fillComboBoxStrings(oldMagnetAction, oldMagnetActionStrings);
 
 	if (ss->getBool(Conf::MAGNET_ASK))
 	{

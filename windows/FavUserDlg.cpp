@@ -5,15 +5,15 @@
 
 static const WinUtil::TextItem texts[] =
 {
-	{ IDC_CAPTION_DESCRIPTION,  ResourceManager::DESCRIPTION          },
-	{ IDC_AUTO_GRANT,           ResourceManager::FAVUSER_AUTO_GRANT   },
-	{ IDC_CAPTION_UPLOAD_SPEED, ResourceManager::FAVUSER_UPLOAD_SPEED },
-	{ IDC_KBPS,                 ResourceManager::KBPS                 },
-	{ IDC_CAPTION_SHARE_GROUP,  ResourceManager::SHARE_GROUP          },
-	{ IDC_CAPTION_PM_HANDLING,  ResourceManager::PM_HANDLING          },
-	{ IDOK,                     ResourceManager::OK                   },
-	{ IDCANCEL,                 ResourceManager::CANCEL               },
-	{ 0,                        ResourceManager::Strings()            }
+	{ IDC_CAPTION_DESCRIPTION,  R_(DESCRIPTION)          },
+	{ IDC_AUTO_GRANT,           R_(FAVUSER_AUTO_GRANT)   },
+	{ IDC_CAPTION_UPLOAD_SPEED, R_(FAVUSER_UPLOAD_SPEED) },
+	{ IDC_KBPS,                 R_(KBPS)                 },
+	{ IDC_CAPTION_SHARE_GROUP,  R_(SHARE_GROUP)          },
+	{ IDC_CAPTION_PM_HANDLING,  R_(PM_HANDLING)          },
+	{ IDOK,                     R_(OK)                   },
+	{ IDCANCEL,                 R_(CANCEL)               },
+	{ 0,                        R_INVALID                }
 };
 
 LRESULT FavUserDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -23,19 +23,20 @@ LRESULT FavUserDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 
 	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::USER, 0);
 	SetIcon(dialogIcon, FALSE);
-	SetIcon(dialogIcon, TRUE);	
-	
+	SetIcon(dialogIcon, TRUE);
+
 	ctrlDesc.Attach(GetDlgItem(IDC_DESCRIPTION));
 	ctrlDesc.SetWindowText(description.c_str());
 
 	ctrlAutoGrant.Attach(GetDlgItem(IDC_AUTO_GRANT));
 	ctrlAutoGrant.SetCheck((flags & FavoriteUser::FLAG_GRANT_SLOT) ? BST_CHECKED : BST_UNCHECKED);
 
+	static const ResourceManager::Strings uploadStrings[] =
+	{
+		R_(NORMAL), R_(SPEED_SUPER_USER), R_(SPEED_LIMITED), R_(BAN_USER), R_INVALID
+	};
 	ctrlUpload.Attach(GetDlgItem(IDC_UPLOAD_SPEED));
-	ctrlUpload.AddString(CTSTRING(NORMAL));
-	ctrlUpload.AddString(CTSTRING(SPEED_SUPER_USER));
-	ctrlUpload.AddString(CTSTRING(SPEED_LIMITED));
-	ctrlUpload.AddString(CTSTRING(BAN_USER));
+	WinUtil::fillComboBoxStrings(ctrlUpload, uploadStrings);
 	int selIndex;
 	switch (speedLimit)
 	{
@@ -61,10 +62,12 @@ LRESULT FavUserDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	shareGroups.init();
 	shareGroups.fillCombo(ctrlShareGroup, shareGroup, (flags & FavoriteUser::FLAG_HIDE_SHARE) != 0);
 
+	static const ResourceManager::Strings pmHandlingStrings[] =
+	{
+		R_(NORMAL), R_(IGNORE_PRIVATE), R_(FREE_PM_ACCESS), R_INVALID
+	};
 	ctrlPMHandling.Attach(GetDlgItem(IDC_PM_HANDLING));
-	ctrlPMHandling.AddString(CTSTRING(NORMAL));
-	ctrlPMHandling.AddString(CTSTRING(IGNORE_PRIVATE));
-	ctrlPMHandling.AddString(CTSTRING(FREE_PM_ACCESS));
+	WinUtil::fillComboBoxStrings(ctrlPMHandling, pmHandlingStrings);
 	if (flags & FavoriteUser::FLAG_IGNORE_PRIVATE)
 		selIndex = 1;
 	else if (flags & FavoriteUser::FLAG_FREE_PM_ACCESS)

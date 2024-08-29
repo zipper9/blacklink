@@ -50,16 +50,16 @@ static const PropPage::Item items[] =
 
 static const PropPage::ListItem listItems[] =
 {
-	{ Conf::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ Conf::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
-	{ Conf::AUTO_KICK, ResourceManager::SETTINGS_AUTO_KICK },
-	{ Conf::AUTO_KICK_NO_FAVS, ResourceManager::SETTINGS_AUTO_KICK_NO_FAVS },
-	{ Conf::AUTO_CHANGE_NICK, ResourceManager::SETTINGS_AUTO_CHANGE_NICK },
-	{ Conf::USE_MEMORY_MAPPED_FILES, ResourceManager::SETTINGS_USE_MM_FILES },
-	{ Conf::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, ResourceManager::REDUCE_PRIORITY_IF_MINIMIZED },
-	{ Conf::USE_MAGNETS_IN_PLAYERS_SPAM, ResourceManager::USE_MAGNETS_IN_PLAYERS_SPAM },
-	{ Conf::USE_BITRATE_FIX_FOR_SPAM, ResourceManager::USE_BITRATE_FIX_FOR_SPAM },
-	{ 0, ResourceManager::Strings() }
+	{ Conf::AUTO_FOLLOW, R_(SETTINGS_AUTO_FOLLOW) },
+	{ Conf::STARTUP_BACKUP, R_(STARTUP_BACKUP) },
+	{ Conf::AUTO_KICK, R_(SETTINGS_AUTO_KICK) },
+	{ Conf::AUTO_KICK_NO_FAVS, R_(SETTINGS_AUTO_KICK_NO_FAVS) },
+	{ Conf::AUTO_CHANGE_NICK, R_(SETTINGS_AUTO_CHANGE_NICK) },
+	{ Conf::USE_MEMORY_MAPPED_FILES, R_(SETTINGS_USE_MM_FILES) },
+	{ Conf::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, R_(REDUCE_PRIORITY_IF_MINIMIZED) },
+	{ Conf::USE_MAGNETS_IN_PLAYERS_SPAM, R_(USE_MAGNETS_IN_PLAYERS_SPAM) },
+	{ Conf::USE_BITRATE_FIX_FOR_SPAM, R_(USE_BITRATE_FIX_FOR_SPAM) },
+	{ 0, R_INVALID }
 };
 
 LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -75,19 +75,19 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	MPCStr = Text::toT(ss->getString(Conf::MPLAYERC_FORMAT));
 	JAStr = Text::toT(ss->getString(Conf::JETAUDIO_FORMAT));
 	QCDQMPStr = Text::toT(ss->getString(Conf::QCDQMP_FORMAT));
-	
+
 	ctrlList.Attach(GetDlgItem(IDC_ADVANCED_BOOLEANS));
 	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
-	
+
+	static const ResourceManager::Strings playerStrings[] =
+	{
+		R_(MEDIA_MENU_WINAMP), R_(MEDIA_MENU_WMP), R_(MEDIA_MENU_ITUNES), R_(MEDIA_MENU_WPC),
+		R_(MEDIA_MENU_JA), R_(MEDIA_MENU_QCDQMP), R_INVALID
+	};
 	ctrlPlayer.Attach(GetDlgItem(IDC_PLAYER_COMBO));
-	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_WINAMP));//  _T("Winamp (AIMP)"));
-	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_WMP)); //_T("Windows Media Player"));
-	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_ITUNES)); //_T("iTunes"));
-	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_WPC)); //_T("Media Player Classic"));
-	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_JA)); // _T("jetAudio Player"));
-	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_QCDQMP));
+	WinUtil::fillComboBoxStrings(ctrlPlayer, playerStrings);
 	ctrlPlayer.SetCurSel(curSel);
-	
+
 	switch (curSel)
 	{
 		case Conf::WinAmp:

@@ -86,11 +86,12 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlMaxSize.Attach(GetDlgItem(IDC_MAX_FILE_SIZE));
 	if (options.sizeMax >= 0) ctrlMaxSize.SetWindowText(Util::toStringT(options.sizeMax).c_str());
 
+	static const ResourceManager::Strings sizeUnitStrings[] =
+	{
+		R_(B), R_(KB), R_(MB), R_(GB), R_INVALID
+	};
 	ctrlSizeUnit.Attach(GetDlgItem(IDC_SIZE_TYPE));
-	ctrlSizeUnit.AddString(CTSTRING(B));
-	ctrlSizeUnit.AddString(CTSTRING(KB));
-	ctrlSizeUnit.AddString(CTSTRING(MB));
-	ctrlSizeUnit.AddString(CTSTRING(GB));
+	WinUtil::fillComboBoxStrings(ctrlSizeUnit, sizeUnitStrings);
 	ctrlSizeUnit.SetCurSel(options.sizeUnit);
 
 	ctrlSharedDays.Attach(GetDlgItem(IDC_SHARED_DAYS));

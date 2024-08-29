@@ -1143,6 +1143,24 @@ tstring WinUtil::getComboBoxItemText(HWND hwnd, int index)
 	return res;
 }
 
+void WinUtil::fillComboBoxStrings(HWND hwnd, const ResourceManager::Strings* strings)
+{
+	for (int i = 0; strings[i] != R_INVALID; ++i)
+	{
+		const TCHAR* s = CTSTRING_I(strings[i]);
+		SendMessage(hwnd, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(s));
+	}
+}
+
+void WinUtil::fillComboBoxStrings(HWND hwnd, const ResourceManager::Strings* strings, int count)
+{
+	for (int i = 0; i < count; ++i)
+	{
+		const TCHAR* s = CTSTRING_I(strings[i]);
+		SendMessage(hwnd, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(s));
+	}
+}
+
 bool WinUtil::setExplorerTheme(HWND hWnd)
 {
 #ifdef OSVER_WIN_XP

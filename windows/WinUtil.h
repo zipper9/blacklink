@@ -186,6 +186,8 @@ namespace WinUtil
 
 	void getWindowText(HWND hwnd, tstring& text);
 	tstring getComboBoxItemText(HWND hwnd, int index);
+	void fillComboBoxStrings(HWND hwnd, const ResourceManager::Strings* strings);
+	void fillComboBoxStrings(HWND hwnd, const ResourceManager::Strings* strings, int count);
 
 	inline void limitStringLength(tstring& str, size_t maxLen = 40)
 	{
