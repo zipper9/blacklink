@@ -291,7 +291,7 @@ LRESULT PopupsPage::onPreview(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	exampleFileName += ext2[Util::rand(ext2.size())];
 
 	PopupManager::getInstance()->show(TSTRING(FILE) + _T(": ") + Text::toT(exampleFileName) + _T('\n') +
-	                                  TSTRING(USER) + _T(": ") + Text::toT(ClientManager::getDefaultNick()), TSTRING(DOWNLOAD_FINISHED_IDLE), NIIF_INFO, true);
+	                                  TSTRING(USER) + _T(": ") + Text::toT(ClientManager::getDefaultNick()), TSTRING(DOWNLOAD_FINISHED_POPUP), NIIF_INFO, true);
 
 	ss->setInt(Conf::POPUP_WIDTH, savedWidth);
 	ss->setInt(Conf::POPUP_HEIGHT, savedHeight);

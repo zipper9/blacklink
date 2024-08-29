@@ -39,6 +39,7 @@ class PopupWindow : public CWindowImpl<PopupWindow, CWindow, CWinTraits<WS_POPUP
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onLButtonDown)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SHOWWINDOW, onShowWindow);
+		MESSAGE_HANDLER(WM_MOUSEACTIVATE, onMouseActivate);
 		END_MSG_MAP()
 
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled);
@@ -47,6 +48,7 @@ class PopupWindow : public CWindowImpl<PopupWindow, CWindow, CWinTraits<WS_POPUP
 		LRESULT onLButtonDown(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT, WPARAM wParam, LPARAM, BOOL& bHandled);
 		LRESULT onShowWindow(UINT, WPARAM wParam, LPARAM, BOOL&);
+		LRESULT onMouseActivate(UINT, WPARAM wParam, LPARAM, BOOL&) { return MA_NOACTIVATE; }
 
 		void cleanup();
 		void startAnimation(int type);
