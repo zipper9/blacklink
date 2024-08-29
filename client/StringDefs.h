@@ -5,6 +5,7 @@
 
 enum Strings   // @DontAdd
 {
+	_INVALID_ID = -1, // @DontAdd
 	ABORT_EM, // "Abort!"
 	ABOUT, // "About"
 	ABOUT_STATISTICS, // "Statistics"
@@ -1995,5 +1996,5 @@ enum Strings   // @DontAdd
 	CMD_HELP_ME, // "#message\tSpeak in third person"
 	CMD_HELP_LAST_NICK, // "#message\tAppend last inserted nick"
 	CMD_HELP_IP_UPDATE, // "[v4 | v6]\tGet public IP address"
-	LAST // @DontAdd
+	_LAST // @DontAdd
 };

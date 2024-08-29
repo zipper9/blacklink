@@ -24,7 +24,7 @@
 
 #ifdef _UNICODE
 bool ResourceManager::stringsChanged = true;
-wstring ResourceManager::g_wstrings[ResourceManager::LAST];
+wstring ResourceManager::g_wstrings[ResourceManager::_LAST];
 #endif
 
 boost::unordered_map<string, int> ResourceManager::nameToIndex;
@@ -41,7 +41,7 @@ int (*ResourceManager::pluralCatFunc)(int val) = defaultPluralCatFunc;
 bool ResourceManager::loadLanguage(const string& filePath)
 {
 	if (nameToIndex.empty())
-		for (int i = 0; i < LAST; ++i)
+		for (int i = 0; i < _LAST; ++i)
 		{
 			g_names[i].shrink_to_fit();
 			nameToIndex[g_names[i]] = i;
@@ -101,7 +101,7 @@ bool ResourceManager::loadLanguage(const string& filePath)
 #ifdef _UNICODE
 void ResourceManager::createWide()
 {
-	for (size_t i = 0; i < LAST; ++i)
+	for (size_t i = 0; i < _LAST; ++i)
 	{
 		g_wstrings[i].clear();
 		if (!g_strings[i].empty())

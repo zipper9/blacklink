@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
 */
 		ex.addTag("resources");
 		ex.stepIn();
+
 		string name;
 		string def;
 		string xmldef;
@@ -116,10 +117,11 @@ int main(int argc, char* argv[])
 					name += s[k];
 					u = false;
 				} else
-					name+=(char)tolower(s[k]);
+					name += (char) tolower(s[k]);
 			}
 
 			k = s.find("// ");
+			if (k == string::npos) continue;
 			def = s.substr(k + 3);
 			xmldef = def.substr(1, def.size() - 2);
 /*			while( (k = xmldef.find("\\t")) != string::npos) {
@@ -136,6 +138,9 @@ int main(int argc, char* argv[])
 				xmldef.replace(k, 2, "\\");
 			}
 			*/
+
+			if (name.empty() || name[0] == '_') continue;
+
 			ex.addTag("string", xmldef);
 			ex.addChildAttrib("name", name);
 
@@ -143,8 +148,8 @@ int main(int argc, char* argv[])
 			varName += '\"' + name + "\", \n";
 		}
 
-		varStr.erase(varStr.size()-2, 2);
-		varName.erase(varName.size()-2, 2);
+		varStr.erase(varStr.size() - 2);
+		varName.erase(varName.size() - 2);
 
 		varStr += "\n};\n";
 		varName += "\n};\n";

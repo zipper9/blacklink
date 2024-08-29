@@ -23,6 +23,9 @@
 #include "format.h"
 #include <boost/unordered/unordered_map.hpp>
 
+#define R_(id) ResourceManager::id
+#define R_INVALID ResourceManager::_INVALID_ID
+
 #define STRING(x) ResourceManager::getString(ResourceManager::x)
 #define CSTRING(x) ResourceManager::getString(ResourceManager::x).c_str()
 #define WSTRING(x) ResourceManager::getStringW(ResourceManager::x)
@@ -90,12 +93,12 @@ class ResourceManager
 
 	private:
 		static boost::unordered_map<string, int> nameToIndex;
-		static string g_names[LAST];
-		static string g_strings[LAST];
+		static string g_names[_LAST];
+		static string g_strings[_LAST];
 		static int (*pluralCatFunc)(int val);
 
 #ifdef _UNICODE
-		static wstring g_wstrings[LAST];
+		static wstring g_wstrings[_LAST];
 		static bool stringsChanged;
 
 		static void createWide();
