@@ -1515,10 +1515,9 @@ void AdcHub::info(bool/* forceUpdate*/)
 	const bool optionNatTraversal = ss->getBool(Conf::ALLOW_NAT_TRAVERSAL);
 	const bool optionCCPM = ss->getBool(Conf::USE_CCPM);
 	const string lineSpeed = ss->getString(Conf::UPLOAD_SPEED);
-	const string email = ss->getString(Conf::EMAIL);
 	ss->unlockRead();
 
-	addInfoParam(c, TAG('E', 'M'), email); // FIXME
+	addInfoParam(c, TAG('E', 'M'), getCurrentEmail());
 
 	// Exclusive hub mode
 	if (fakeHubCount)
