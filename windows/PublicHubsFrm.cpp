@@ -483,14 +483,6 @@ bool PublicHubsFrame::checkNick()
 	return true;
 }
 
-bool PublicHubsFrame::isFavorite(const HubInfo* data)
-{
-	auto fm = FavoriteManager::getInstance();
-	if (fm->isFavoriteHub(data->getHubUrl())) return true;
-	const string& secureUrl = data->getSecureHubUrl();
-	return !secureUrl.empty() && fm->isFavoriteHub(secureUrl);
-}
-
 void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 {
 	StringSet onlineHubs;
@@ -504,11 +496,12 @@ void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 
 	double size = -1;
 	FilterModes mode = NONE;
-	
+
 	int sel = ctrlFilterSel.GetCurSel();
 	if (sel >= 0 && sel < COLUMN_LAST) sel = columnId[sel];
 	bool doSizeCompare = parseFilter(mode, size);
-	
+	auto fm = FavoriteManager::getInstance();
+
 	for (auto j = hubs.cbegin(); j != hubs.cend(); ++j)
 	{
 		const auto &i = *j;
@@ -516,8 +509,20 @@ void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 		{
 			HubInfo* data = new HubInfo;
 			data->update(i);
-			data->setOnline(onlineHubs.find(data->getHubUrl()) != onlineHubs.end());
-			data->setFavorite(isFavorite(data));
+			int flags = 0;
+			if (onlineHubs.find(data->getHubUrl()) != onlineHubs.end())
+				flags |= HubInfo::FLAG_ONLINE_NORMAL;
+			if (fm->isFavoriteHub(data->getHubUrl()))
+				flags |= HubInfo::FLAG_FAVORITE_NORMAL;
+			const string& secureUrl = data->getSecureHubUrl();
+			if (!secureUrl.empty())
+			{
+				if (onlineHubs.find(secureUrl) != onlineHubs.end())
+					flags |= HubInfo::FLAG_ONLINE_SECURE;
+				if (fm->isFavoriteHub(secureUrl))
+					flags |= HubInfo::FLAG_FAVORITE_SECURE;
+			}
+			data->setFlags(flags);
 			ctrlHubs.insertItem(data, I_IMAGECALLBACK);
 			visibleHubs++;
 			users += i.getUsers();
@@ -586,22 +591,28 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		case WPARAM_HUB_CONNECTED:
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-			HubInfo* data = findHub(*hub, nullptr);
+			bool secureUrl;
+			HubInfo* data = findHub(*hub, secureUrl, nullptr);
 			if (data)
 			{
-				data->setOnline(true);
-				redraw();
+				int oldFlags = data->getFlags();
+				data->setFlag(secureUrl ? HubInfo::FLAG_ONLINE_SECURE : HubInfo::FLAG_ONLINE_NORMAL);
+				if (data->getFlags() != oldFlags)
+					redraw();
 			}
 			break;
 		}
 		case WPARAM_HUB_DISCONNECTED:
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
-			HubInfo* data = findHub(*hub, nullptr);
+			bool secureUrl;
+			HubInfo* data = findHub(*hub, secureUrl, nullptr);
 			if (data)
 			{
-				data->setOnline(false);
-				redraw();
+				int oldFlags = data->getFlags();
+				data->clearFlag(secureUrl ? HubInfo::FLAG_ONLINE_SECURE : HubInfo::FLAG_ONLINE_NORMAL);
+				if (data->getFlags() != oldFlags)
+					redraw();
 			}
 			break;
 		}
@@ -609,12 +620,14 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
 			int pos;
-			HubInfo* data = findHub(*hub, &pos);
+			bool secureUrl;
+			HubInfo* data = findHub(*hub, secureUrl, &pos);
 			if (data)
 			{
-				if (!data->isFavorite())
+				int oldFlags = data->getFlags();
+				data->setFlag(secureUrl ? HubInfo::FLAG_FAVORITE_SECURE : HubInfo::FLAG_FAVORITE_NORMAL);
+				if (data->getFlags() != oldFlags)
 				{
-					data->setFavorite(true);
 					ctrlHubs.updateImage(pos, 0);
 					redraw();
 				}
@@ -625,12 +638,14 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		{
 			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
 			int pos;
-			HubInfo* data = findHub(*hub, &pos);
+			bool secureUrl;
+			HubInfo* data = findHub(*hub, secureUrl, &pos);
 			if (data)
 			{
-				if (data->isFavorite())
+				int oldFlags = data->getFlags();
+				data->clearFlag(secureUrl ? HubInfo::FLAG_FAVORITE_SECURE : HubInfo::FLAG_FAVORITE_NORMAL);
+				if (data->getFlags() != oldFlags)
 				{
-					data->setFavorite(false);
 					ctrlHubs.updateImage(pos, 0);
 					redraw();
 				}
@@ -728,7 +743,7 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 				if (i == -1) return 0;
 				const HubInfo* data = ctrlHubs.getItemData(i);
 				hubsMenu.InsertSeparatorFirst(data->getText(COLUMN_NAME));
-				if (data->isOnline())
+				if (data->getFlags() & HubInfo::FLAGS_ONLINE)
 					hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(OPEN_HUB_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_HUB, 0));
 				else
 					hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
@@ -1069,7 +1084,7 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 			const HubInfo* data = reinterpret_cast<HubInfo*>(cd->nmcd.lItemlParam);
 			cd->clrText = Colors::g_textColor;
 			cd->clrTextBk = Colors::g_bgColor;
-			if (data->isOnline())
+			if (data->getFlags() & HubInfo::FLAGS_ONLINE)
 				cd->clrTextBk = RGB(142,233,164);
 			CustomDrawHelpers::startItemDraw(customDrawState, cd);
 			return CDRF_NOTIFYSUBITEMDRAW;
@@ -1088,7 +1103,8 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 					return CDRF_SKIPDEFAULT;
 				}
 			}
-			CDCHandle(cd->nmcd.hdc).SelectFont(column == 0 && data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
+			CDCHandle(cd->nmcd.hdc).SelectFont((column == 0 &&
+				(data->getFlags() & HubInfo::FLAGS_FAVORITE)) ? Fonts::g_boldFont : Fonts::g_systemFont);
 			return CDRF_NEWFONT;
 		}
 	}
@@ -1161,14 +1177,21 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 	rating = Util::toInt(hub.getRating());
 }
 
-PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url, int* pos) const
+PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url, bool& secureUrl, int* pos) const
 {
+	secureUrl = false;
 	int count = ctrlHubs.GetItemCount();
 	for (int i = 0; i < count; i++)
 	{
 		HubInfo* data = ctrlHubs.getItemData(i);
 		if (data->getHubUrl() == url)
 		{
+			if (pos) *pos = i;
+			return data;
+		}
+		if (!data->getSecureHubUrl().empty() && data->getSecureHubUrl() == url)
+		{
+			secureUrl = true;
 			if (pos) *pos = i;
 			return data;
 		}

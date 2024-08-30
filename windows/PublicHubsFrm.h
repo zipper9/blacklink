@@ -166,19 +166,29 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		class HubInfo
 		{
 			public:
+				enum
+				{
+					FLAG_ONLINE_NORMAL   = 1,
+					FLAG_ONLINE_SECURE   = 2,
+					FLAG_FAVORITE_NORMAL = 4,
+					FLAG_FAVORITE_SECURE = 8,
+					FLAGS_ONLINE = FLAG_ONLINE_NORMAL | FLAG_ONLINE_SECURE,
+					FLAGS_FAVORITE = FLAG_FAVORITE_NORMAL | FLAG_FAVORITE_SECURE
+				};
+
 				const tstring& getText(int col) const;
 				static int compareItems(const HubInfo* a, const HubInfo* b, int col, int flags);
 				static int getCompareFlags() { return 0; }
-				int getImageIndex() const { return favorite ? 0 : -1; }
+				int getImageIndex() const { return (flags & FLAGS_FAVORITE) ? 0 : -1; }
 				static int getStateImageIndex() { return 0; }
 				void update(const HubEntry& hub);
-				void setOnline(bool flag) { online = flag; }
-				bool isOnline() const { return online; }
+				void setFlags(int val) { flags = val; }
+				int getFlags() const { return flags; }
+				void setFlag(int flag) { flags |= flag; }
+				void clearFlag(int flag) { flags &= ~flag; }
 				const string& getHubUrl() const { return hubUrl; }
 				const string& getSecureHubUrl() const { return secureHubUrl; }
 				const string& getKeyPrint() const { return keyPrint; }
-				bool isFavorite() const { return favorite; }
-				void setFavorite(bool flag) { favorite = flag; }
 				int getCountryIndex() const { return countryIndex; }
 
 			private:
@@ -195,8 +205,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 				int64_t shared;
 				int64_t minShare;
 				double reliability;
-				bool online;
-				bool favorite;
+				int flags;
 		};
 		
 		int visibleHubs;
@@ -225,7 +234,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		
 		static const int columnId[];
 
-		HubInfo* findHub(const string& url, int* pos) const;
+		HubInfo* findHub(const string& url, bool& secureUrl, int* pos) const;
 		string getPubServer(int pos) const
 		{
 			return getPubServer(ctrlHubs.getItemData(pos));
@@ -245,8 +254,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 
 		bool parseFilter(FilterModes& mode, double& size);
 		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, const FilterModes& mode, const double& size);
-
-		static bool isFavorite(const HubInfo* data);
 
 		void on(SettingsManagerListener::ApplySettings) override;
 
