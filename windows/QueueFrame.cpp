@@ -204,7 +204,7 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
-	
+
 	ctrlQueue.insertColumns(Conf::QUEUE_FRAME_ORDER, Conf::QUEUE_FRAME_WIDTHS, Conf::QUEUE_FRAME_VISIBLE);
 	ctrlQueue.setSortFromSettings(ss->getInt(Conf::QUEUE_FRAME_SORT));
 
@@ -212,15 +212,15 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	setTreeViewColors(ctrlDirs);
 
 	ctrlShowTree.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_AUTOCHECKBOX);
-	ctrlShowTree.SetCheck(showTree);
+	ctrlShowTree.SetCheck(showTree ? BST_CHECKED : BST_UNCHECKED);
 	ctrlShowTree.SetFont(Fonts::g_systemFont);
 	showTreeContainer.SubclassWindow(ctrlShowTree.m_hWnd);
-	
+
 	addQueueList();
 	QueueManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
 	SettingsManager::instance.addListener(this);
-	
+
 	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(6, statusSizes);
@@ -1131,7 +1131,7 @@ bool QueueFrame::removeItem(const QueueItemPtr& qi)
 		item = item->parent;
 		if (item == currentDir) foundSubdir = prev;
 	}
-	if (dir == currentDir)
+	if (dir == currentDir || !showTree)
 	{
 		int count = ctrlQueue.GetItemCount();
 		for (int i = 0; i < count; ++i)
