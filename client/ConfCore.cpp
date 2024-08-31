@@ -355,6 +355,7 @@ void Conf::initCoreSettings()
 	s->addInt(CCPM_IDLE_TIMEOUT, "CCPMIdleTimeout", 10, 0, &validateCCPMIdleTimeout);
 	s->addBool(USE_TTH_LIST, "UseTL", true);
 	s->addBool(USE_DI_PARAM, "UseDIParam");
+	s->addBool(USE_SUDP, "UseSUDP");
 	s->addInt(MAX_COMMAND_LENGTH, "MaxCommandLength", 16 * 1024 * 1024);
 	s->addBool(HUB_USER_COMMANDS, "HubUserCommands", true);
 	s->addInt(MAX_HUB_USER_COMMANDS, "MaxHubUserCommands", 500, 0, &validateNonNeg);

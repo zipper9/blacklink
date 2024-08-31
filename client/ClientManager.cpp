@@ -877,7 +877,7 @@ void ClientManager::getUserCommandParams(const OnlineUserPtr& ou, const UserComm
 	}
 }
 
-bool ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid, const IpAddress& udpAddr, uint16_t udpPort)
+bool ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid, const IpAddress& udpAddr, uint16_t udpPort, const void* sudpKey)
 {
 	IpAddress ip;
 	uint16_t port = 0;
@@ -932,7 +932,8 @@ bool ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid, const IpAddr
 	if (sendUDP)
 	{
 		string cmdStr = cmd.toString(getMyCID());
-		SearchManager::getInstance()->addToSendQueue(cmdStr, ip, port);
+		uint16_t flags = sudpKey ? SearchManager::FLAG_ENC_KEY : 0;
+		SearchManager::getInstance()->addToSendQueue(cmdStr, ip, port, flags, sudpKey);
 		return true;
 	}
 	return false;

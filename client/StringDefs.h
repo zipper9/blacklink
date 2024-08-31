@@ -1165,6 +1165,7 @@ enum Strings   // @DontAdd
 	SETTINGS_USE_CCPM, // "Enable CCPM extension (client-to-client private messages)"
 	SETTINGS_USE_CPMI, // "Use CPMI extension"
 	SETTINGS_USE_TTH_LIST, // "Use TL (TTH list) extension"
+	SETTINGS_USE_SUDP, // "Use SUDP extension (ADC)"
 	SETTINGS_SEND_DB_PARAM, // "Send DB (downloaded bytes) parameter"
 	SETTINGS_SEND_QP_PARAM, // "Send QP (queue position) parameter"
 	SETTINGS_SEND_UNKNOWN_COMMANDS, // "Send unknown /commands to the hub"

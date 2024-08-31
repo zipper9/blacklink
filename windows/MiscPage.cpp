@@ -60,6 +60,7 @@ static const PropPage::ListItem listItems[] =
 	{ Conf::HUB_USER_COMMANDS, ResourceManager::SETTINGS_HUB_USER_COMMANDS },
 	{ Conf::SEND_UNKNOWN_COMMANDS, ResourceManager::SETTINGS_SEND_UNKNOWN_COMMANDS },
 	{ Conf::SEND_BLOOM, ResourceManager::SETTINGS_SEND_BLOOM },
+	{ Conf::USE_SUDP, ResourceManager::SETTINGS_USE_SUDP },
 	{ Conf::SEND_EXT_JSON, ResourceManager::SETTINGS_SEND_EXT_JSON },
 	{ Conf::USE_SALT_PASS, ResourceManager::SETTINGS_USE_SALTPASS },
 	{ Conf::USE_BOT_LIST, ResourceManager::SETTINGS_USE_BOTLIST },

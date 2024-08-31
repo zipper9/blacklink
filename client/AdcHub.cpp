@@ -1373,10 +1373,9 @@ void AdcHub::searchToken(const SearchParam& sp)
 		}
 		
 		for (auto i = sp.extList.cbegin(), iend = sp.extList.cend(); i != iend; ++i)
-		{
 			cmd.addParam(TAG('E', 'X'), *i);
-		}
 	}
+	SearchManager::getInstance()->addEncryptionKey(cmd);
 	sendSearch(cmd, sp.searchMode);
 }
 
@@ -1514,6 +1513,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	ss->lockRead();
 	const bool optionNatTraversal = ss->getBool(Conf::ALLOW_NAT_TRAVERSAL);
 	const bool optionCCPM = ss->getBool(Conf::USE_CCPM);
+	const bool optionSUDP = ss->getBool(Conf::USE_SUDP);
 	const string lineSpeed = ss->getString(Conf::UPLOAD_SPEED);
 	ss->unlockRead();
 
@@ -1619,6 +1619,8 @@ void AdcHub::info(bool/* forceUpdate*/)
 		su += ',' + AdcSupports::NAT0_FEATURE;
 	if (optionCCPM)
 		su += ',' + AdcSupports::CCPM_FEATURE;
+	if (optionSUDP)
+		su += ',' + AdcSupports::SUD1_FEATURE;
 
 	addInfoParam(c, TAG('S', 'U'), su);
 

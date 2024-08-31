@@ -34,6 +34,12 @@
 #include "SettingsUtil.h"
 #include "ConfCore.h"
 #include "dht/DHT.h"
+#include "unaligned.h"
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+
+static const unsigned SUDP_KEY_EXPIRE_TIME = 15 * 60 * 1000;
+static const unsigned SUDP_KEY_UPDATE_TIME = 10 * 60 * 1000;
 
 uint16_t SearchManager::udpPort = 0;
 
@@ -64,13 +70,15 @@ ResourceManager::Strings SearchManager::getTypeStr(int type)
 	return types[type];
 }
 
-SearchManager::SearchManager(): stopFlag(false), failed{false, false}, options(0)
+SearchManager::SearchManager(): stopFlag(false), failed{false, false}, options(0), decryptKeyLock(RWLock::create())
 {
 #ifdef _WIN32
 	events[EVENT_COMMAND].create();
 #else
 	threadId = 0;
 #endif
+	lastDecryptState = -1;
+	newKeyTime = 0;
 	updateSettings();
 }
 
@@ -281,6 +289,7 @@ void SearchManager::onData(const char* buf, int len, const IpAddress& remoteIp, 
 		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
 			Util::printIpAddress(remoteIp, true), remotePort);
 
+	if ((getOptions() & OPT_ENABLE_SUDP) && processSUDP(buf, len, remoteIp, remotePort)) return;
 	if (processNMDC(buf, len, remoteIp, remotePort)) return;
 	if (remoteIp.type == AF_INET &&
 	    dht::DHT::getInstance()->processIncoming((const uint8_t *) buf, len, remoteIp.data.v4, remotePort)) return;
@@ -301,38 +310,37 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		if ((j = x.find(' ', i)) == string::npos) return false;
 		string nick = x.substr(i, j - i);
 		i = j + 1;
-				
+
 		// A file has 2 0x05, a directory only one
-		const auto fist05 = x.find(0x05, j);
-		dcassert(fist05 != string::npos);
-		if (fist05 == string::npos) return false;
-		const auto second05 = x.find(0x05, fist05 + 1);
+		const auto first05 = x.find(0x05, j);
+		if (first05 == string::npos) return false;
+		const auto second05 = x.find(0x05, first05 + 1);
 		SearchResult::Types type = SearchResult::TYPE_FILE;
 		string file;
 		int64_t size = 0;
-				
-		if (fist05 != string::npos && second05 == string::npos) // cnt == 1
+
+		if (first05 != string::npos && second05 == string::npos) // cnt == 1
 		{
 			// We have a directory...find the first space beyond the first 0x05 from the back
 			// (dirs might contain spaces as well...clever protocol, eh?)
 			type = SearchResult::TYPE_DIRECTORY;
 			// Get past the hubname that might contain spaces
-			j = fist05;
+			j = first05;
 			// Find the end of the directory info
 			if ((j = x.rfind(' ', j - 1)) == string::npos) return false;
 			if (j < i + 1) return false;
 			file = x.substr(i, j - i) + '\\';
 		}
-		else if (fist05 != string::npos && second05 != string::npos) // cnt == 2
+		else if (first05 != string::npos && second05 != string::npos) // cnt == 2
 		{
-			j = fist05;
+			j = first05;
 			file = x.substr(i, j - i);
 			i = j + 1;
 			if ((j = x.find(' ', i)) == string::npos) return false;
 			size = Util::toInt64(x.substr(i, j - i));
 		}
 		i = j + 1;
-				
+
 		if ((j = x.find('/', i)) == string::npos) return false;
 		int freeSlots = Util::toInt(x.substr(i, j - i));
 		i = j + 1;
@@ -346,10 +354,10 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		if ((j = x.rfind(')')) == string::npos) return false;
 
 		if (freeSlots < 0 || slots < 0) return true;
-				
+
 		const string hubIpPort = x.substr(i, j - i);
 		string url = ClientManager::findHub(hubIpPort, ClientBase::TYPE_NMDC); // check all connected hubs
-			
+
 		const bool isTTH = Util::isTTHBase32(hubNameOrTTH);
 		const bool convertNick = !Text::isAscii(nick);
 		const bool convertFile = !Text::isAscii(file);
@@ -390,15 +398,10 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		}
 		string tth;
 		if (isTTH)
-		{
 			tth = hubNameOrTTH.substr(4);
-		}
 		if (tth.empty() && type == SearchResult::TYPE_FILE)
-		{
-			dcassert(tth.empty() && type == SearchResult::TYPE_FILE);
 			return true;
-		}
-				
+
 		SearchResult sr(user, type, slots, freeSlots, size, file, url, remoteIp, TTHValue(tth), 0);
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + Util::printIpAddress(remoteIp) + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, Util::printIpAddress(remoteIp));
@@ -408,9 +411,27 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 	return false;
 }
 
+#if BOOST_ENDIAN_BIG_BYTE
+static const uint32_t MESSAGE_RES = 0x52455320;
+static const uint32_t MESSAGE_PSR = 0x50535220;
+#else
+static const uint32_t MESSAGE_RES = 0x20534552;
+static const uint32_t MESSAGE_PSR = 0x20525350;
+#endif
+
+static inline bool isRES(const char* buf, int len)
+{
+	return len >= 5 && loadUnaligned32(buf + 1) == MESSAGE_RES && buf[len - 1] == 0x0A;
+}
+
+static inline bool isPSR(const char* buf, int len)
+{
+	return len >= 5 && loadUnaligned32(buf + 1) == MESSAGE_PSR && buf[len - 1] == 0x0A;
+}
+
 bool SearchManager::processRES(const char* buf, int len, const IpAddress& remoteIp)
 {
-	if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
+	if (isRES(buf, len))
 	{
 		AdcCommand c(0);
 		int parseResult = c.parse(string(buf, len-1));
@@ -434,7 +455,7 @@ bool SearchManager::processRES(const char* buf, int len, const IpAddress& remote
 
 bool SearchManager::processPSR(const char* buf, int len, const IpAddress& remoteIp)
 {
-	if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
+	if (isPSR(buf, len))
 	{
 		AdcCommand c(0);
 		int parseResult = c.parse(string(buf, len-1));
@@ -456,6 +477,38 @@ bool SearchManager::processPSR(const char* buf, int len, const IpAddress& remote
 		return true;
 	}
 	return false;
+}
+
+bool SearchManager::processSUDP(const char* buf, int len, const IpAddress& remoteIp, uint16_t remotePort)
+{
+	if (len < 32 || (len & 15)) return false;
+	uint64_t tick = Util::getTick();
+	bool result = false;
+	string data;
+	decryptKeyLock->acquireShared();
+	if (lastDecryptState != -1)
+	{
+		int index = lastDecryptState;
+		while (true)
+		{
+			if (decryptState[index].decrypt(data, buf, len, tick) && isRES(data.data(), (int) data.length()))
+			{
+				result = true;
+				break;
+			}
+			index = (index + 1) % MAX_SUDP_KEYS;
+			if (index == lastDecryptState) break;
+		}
+	}
+	decryptKeyLock->releaseShared();
+	if (result)
+	{
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS)
+			LogManager::commandTrace(data, LogManager::FLAG_IN | LogManager::FLAG_UDP,
+				Util::printIpAddress(remoteIp, true), remotePort);
+		processRES(data.data(), (int) data.length(), remoteIp);
+	}
+	return result;
 }
 
 bool SearchManager::processPortTest(const char* buf, int len, const IpAddress& address)
@@ -634,7 +687,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 		{
 			AdcCommand reply(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			toPSR(reply, false, ps.getMyNick(), remoteIp.type, hubIpPort, tth, outParts);
-			bool result = ClientManager::sendAdcCommand(reply, from->getCID(), remoteIp, udpPort);
+			bool result = ClientManager::sendAdcCommand(reply, from->getCID(), remoteIp, udpPort, nullptr);
 			if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 			{
 				string msg = tth + ": sending PSR response to ";
@@ -687,7 +740,7 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 			string tth = param.root.toBase32();
 			string hubIpPort = Util::printIpAddress(hubIp, true) + ":" + Util::toString(hubPort);
 			toPSR(cmd, true, Util::emptyString, hubIp.type, hubIpPort, tth, outParts);
-			bool result = ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0);
+			bool result = ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0, nullptr);
 			if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
 			{
 				string msg = tth + ": sending PSR search result to ";
@@ -719,13 +772,21 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 				message = STRING_F(SEARCH_HIT_INFO, nick % hubUrl % description % searchResults[0].getFile());
 			LOG(SEARCH_TRACE, message);
 		}
+		uint8_t sudpKeyBuf[16];
+		const void* sudpKey = nullptr;
+		if (param.sudpKey.length() == 26)
+		{
+			bool error;
+			Util::fromBase32(param.sudpKey.c_str(), sudpKeyBuf, sizeof(sudpKeyBuf), &error);
+			if (!error) sudpKey = sudpKeyBuf;
+		}
 		for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 		{
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
 			i->toRES(cmd, UploadManager::getFreeSlots());
 			if (!param.token.empty())
 				cmd.addParam(TAG('T', 'O'), param.token);
-			ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0);
+			ClientManager::sendAdcCommand(cmd, from, IpAddress{0}, 0, sudpKey);
 		}
 		sr = ClientManagerListener::SEARCH_HIT;
 	}
@@ -765,26 +826,33 @@ bool SearchManager::isShutdown() const
 	return g_isBeforeShutdown;
 }
 
-void SearchManager::addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags) noexcept
+void SearchManager::addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags, const void* encKey) noexcept
 {
 	csSendQueue.lock();
-	sendQueue.emplace_back(data, address, port, flags);
+	sendQueue.emplace_back(data, address, port, flags, encKey);
 	csSendQueue.unlock();
 	sendNotif();
 }
 
 void SearchManager::processSendQueue() noexcept
 {
+	string tmp;
 	csSendQueue.lock();
-	for (auto i = sendQueue.cbegin(); i != sendQueue.cend(); ++i)
+	for (SendQueueItem& item : sendQueue)
 	{
-		int index = i->address.type == AF_INET6 ? 1 : 0;
+		int index = item.address.type == AF_INET6 ? 1 : 0;
 		if (sockets[index])
 		{
-			const string& data = i->data;
-			sockets[index]->sendPacket(data.data(), data.length(), i->address, i->port);
-			if ((LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
-				LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address, true), i->port);
+			const string& data = item.data;
+			if ((LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS) && !(item.flags & FLAG_NO_TRACE))
+				LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(item.address, true), item.port);
+			if (item.flags & FLAG_ENC_KEY)
+			{
+				encryptState.encrypt(tmp, data, item.encKey);
+				sockets[index]->sendPacket(tmp.data(), tmp.length(), item.address, item.port);
+			}
+			else
+				sockets[index]->sendPacket(data.data(), data.length(), item.address, item.port);
 		}
 	}
 	sendQueue.clear();
@@ -811,6 +879,158 @@ void SearchManager::updateSettings() noexcept
 		newOptions |= OPT_INCOMING_SEARCH_IGNORE_PASSIVE;
 	if (ss->getBool(Conf::INCOMING_SEARCH_IGNORE_BOTS))
 		newOptions |= OPT_INCOMING_SEARCH_IGNORE_BOTS;
+	if (ss->getBool(Conf::USE_SUDP))
+		newOptions |= OPT_ENABLE_SUDP;
 	ss->unlockRead();
+	if (newOptions & OPT_ENABLE_SUDP)
+	{
+		encryptState.create();
+		createNewDecryptKey(Util::getTick());
+	}
 	options = newOptions;
+}
+
+void SearchManager::createNewDecryptKey(uint64_t tick) noexcept
+{
+	WRITE_LOCK(*decryptKeyLock);
+	if (tick >= newKeyTime)
+	{
+		newKeyTime = tick + SUDP_KEY_UPDATE_TIME;
+		lastDecryptState = (lastDecryptState + 1) % MAX_SUDP_KEYS;
+		decryptState[lastDecryptState].create(tick);
+	}
+}
+
+void SearchManager::addEncryptionKey(AdcCommand& cmd) noexcept
+{
+	if (!(getOptions() & OPT_ENABLE_SUDP)) return;
+	uint64_t tick = Util::getTick();
+	string key;
+	{
+		READ_LOCK(*decryptKeyLock);
+		if (lastDecryptState != -1 && tick < decryptState[lastDecryptState].expires)
+			key = decryptState[lastDecryptState].keyBase32;
+	}
+	if (!key.empty())
+		cmd.addParam(TAG('K', 'Y'), key);
+}
+
+SearchManager::SendQueueItem::SendQueueItem(string& data, const IpAddress& address, uint16_t port, uint16_t flags, const void* encKey) :
+	data(std::move(data)), address(address), port(port), flags(flags)
+{
+	if (flags & FLAG_ENC_KEY)
+		memcpy(this->encKey, encKey, 16);
+}
+
+static const unsigned char zeroIV[16] = {};
+
+bool SearchManager::EncryptState::encrypt(string& out, const string& in, const void* key) const noexcept
+{
+	int len = (int) in.length();
+	int pad = 16 - (len & 15);
+	int outLen = len + pad + 16;
+	out.resize(outLen);
+	unsigned char* outBuf = (unsigned char*) &out[0];
+	RAND_bytes(outBuf, 16);
+	memcpy(outBuf + 16, in.data(), len);
+	memset(outBuf + 16 + len, pad, pad);
+
+	bool result = false;
+	if (cipher)
+	{
+		EVP_CIPHER_CTX* ctx = static_cast<EVP_CIPHER_CTX*>(cipher);
+		if (EVP_CipherInit_ex(ctx, nullptr, nullptr, (const unsigned char*) key, zeroIV, 1))
+		{
+			EVP_CIPHER_CTX_set_padding(ctx, 0);
+			int outl;
+			result = EVP_EncryptUpdate(ctx, outBuf, &outl, outBuf, outLen) != 0 && outl == outLen;
+		}
+	}
+	return result;
+}
+
+bool SearchManager::EncryptState::create() noexcept
+{
+	if (cipher) return false;
+	EVP_CIPHER_CTX* newCipher = EVP_CIPHER_CTX_new();
+	if (!newCipher) return false;
+	if (!EVP_CipherInit_ex(newCipher, EVP_aes_128_cbc(), nullptr, nullptr, nullptr, 1))
+	{
+		EVP_CIPHER_CTX_free(newCipher);
+		return false;
+	}
+	cipher = newCipher;
+	return true;
+}
+
+void SearchManager::EncryptState::clearCipher() noexcept
+{
+	if (cipher)
+	{
+		EVP_CIPHER_CTX_free(static_cast<EVP_CIPHER_CTX*>(cipher));
+		cipher = nullptr;
+	}
+}
+
+void SearchManager::DecryptState::clearCipher() noexcept
+{
+	if (cipher)
+	{
+		EVP_CIPHER_CTX_free(static_cast<EVP_CIPHER_CTX*>(cipher));
+		cipher = nullptr;
+	}
+}
+
+bool SearchManager::DecryptState::create(uint64_t tick) noexcept
+{
+	unsigned char key[16];
+	RAND_bytes(key, sizeof(key));
+	EVP_CIPHER_CTX* newCipher = EVP_CIPHER_CTX_new();
+	if (!newCipher) return false;
+	if (!EVP_CipherInit_ex(newCipher, EVP_aes_128_cbc(), nullptr, key, zeroIV, 0))
+	{
+		EVP_CIPHER_CTX_free(newCipher);
+		return false;
+	}
+	clearCipher();
+	cipher = newCipher;
+	keyBase32 = Util::toBase32(key, sizeof(key));
+	expires = tick + SUDP_KEY_EXPIRE_TIME;
+	return true;
+}
+
+bool SearchManager::DecryptState::decrypt(string& out, const char* inBuf, int len, uint64_t tick) const noexcept
+{
+	if (len < 32 || (len & 15)) return false;
+	bool result = false;
+	if (cipher && tick < expires)
+	{
+		out.resize(len);
+		unsigned char* outBuf = (unsigned char *) &out[0];
+		EVP_CIPHER_CTX* ctx = static_cast<EVP_CIPHER_CTX*>(cipher);
+		EVP_CipherInit_ex(ctx, nullptr, nullptr, nullptr, zeroIV, 0);
+		EVP_CIPHER_CTX_set_padding(ctx, 0);
+		int outl;
+		if (EVP_DecryptUpdate(ctx, outBuf, &outl, (const unsigned char *) inBuf, len))
+		{
+			int pad = outBuf[len-1];
+			if (pad > 0 && pad <= 16)
+			{
+				int i = 0;
+				while (i < pad)
+				{
+					if (outBuf[len-1-i] != pad) break;
+					++i;
+				}
+				if (i == pad)
+				{
+					len -= pad + 16;
+					memmove(outBuf, outBuf + 16, len);
+					out.resize(len);
+					result = true;
+				}
+			}
+		}
+	}
+	return result;
 }

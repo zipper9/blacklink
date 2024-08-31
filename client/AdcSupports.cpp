@@ -36,6 +36,7 @@ const string AdcSupports::UDP6_FEATURE("UDP6");
 const string AdcSupports::NAT0_FEATURE("NAT0");
 const string AdcSupports::SEGA_FEATURE("SEGA");
 const string AdcSupports::CCPM_FEATURE("CCPM");
+const string AdcSupports::SUD1_FEATURE("SUD1");
 const string AdcSupports::BASE_SUPPORT("ADBASE");
 const string AdcSupports::BAS0_SUPPORT("ADBAS0");
 const string AdcSupports::TIGR_SUPPORT("ADTIGR");

@@ -757,6 +757,10 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	if (ClientManager::isBeforeShutdown())
 		return;
 
+	auto sm = SearchManager::getInstance();
+	if (sm->getOptions() & SearchManager::OPT_ENABLE_SUDP)
+		sm->createNewDecryptKey(tick);
+
 	auto ss = SettingsManager::instance.getCoreSettings();
 	string searchString;
 	vector<const PartsInfoReqParam*> params;
@@ -846,13 +850,11 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 			msg += ", we have " + Util::toString(QueueItem::countParts(param->parts)) + '*' + Util::toString(param->blockSize);
 			LOG(PSR_TRACE, msg);
 		}
-		SearchManager::getInstance()->addToSendQueue(data, param->ip, param->udpPort);
+		sm->addToSendQueue(data, param->ip, param->udpPort);
 		delete param;
 	}
 	if (!searchString.empty())
-	{
-		SearchManager::getInstance()->searchAuto(searchString);
-	}
+		sm->searchAuto(searchString);
 }
 
 // TODO HintedUser

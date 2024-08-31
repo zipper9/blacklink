@@ -32,6 +32,7 @@
 #include "Wildcards.h"
 #include "StringTokenizer.h"
 #include "DatabaseManager.h"
+#include "SearchManager.h"
 #include "LogManager.h"
 #include "DebugManager.h"
 #include "PathUtil.h"
@@ -2578,6 +2579,11 @@ AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults, co
 		else if (TAG('T', 'O') == cmd)
 		{
 			token = p.substr(2);
+		}
+		else if (TAG('K', 'Y') == cmd)
+		{
+			if (p.length() == 26 + 2 && (SearchManager::getInstance()->getOptions() & SearchManager::OPT_ENABLE_SUDP))
+				sudpKey = p.substr(2);
 		}
 	}
 	

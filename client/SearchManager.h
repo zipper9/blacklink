@@ -43,7 +43,8 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		{
 			OPT_INCOMING_SEARCH_TTH_ONLY       = 1,
 			OPT_INCOMING_SEARCH_IGNORE_PASSIVE = 2,
-			OPT_INCOMING_SEARCH_IGNORE_BOTS    = 4
+			OPT_INCOMING_SEARCH_IGNORE_BOTS    = 4,
+			OPT_ENABLE_SUDP                    = 8
 		};
 
 		static ResourceManager::Strings getTypeStr(int type);
@@ -61,6 +62,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, const IpAddress& remoteIp);
 		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, const IpAddress& remoteIp);
 		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const QueueItem::PartsInfo& partialInfo);
+		void addEncryptionKey(AdcCommand& cmd) noexcept;
 
 		void onSearchResult(const string& line, const IpAddress& ip)
 		{
@@ -68,12 +70,16 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		}
 
 		static const uint16_t FLAG_NO_TRACE = 1;
-		void addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags = 0) noexcept;
+		static const uint16_t FLAG_ENC_KEY  = 2;
+
+		void addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags = 0, const void* encKey = nullptr) noexcept;
 		int getOptions() const noexcept { return options.load(); }
 		void updateSettings() noexcept;
+		void createNewDecryptKey(uint64_t tick) noexcept;
 
 	private:
 		friend class Singleton<SearchManager>;
+		static const int MAX_SUDP_KEYS = 2;
 
 #ifdef _WIN32
 		enum
@@ -93,9 +99,39 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 			IpAddress address;
 			uint16_t port;
 			uint16_t flags;
+			uint8_t encKey[16];
 
-			SendQueueItem(string& data, const IpAddress& address, uint16_t port, uint16_t flags):
-				data(std::move(data)), address(address), port(port), flags(flags) {}
+			SendQueueItem(string& data, const IpAddress& address, uint16_t port, uint16_t flags, const void* encKey);
+		};
+
+		struct EncryptState
+		{
+			void* cipher;
+
+			EncryptState() noexcept : cipher(nullptr) {}
+			~EncryptState() noexcept { clearCipher(); }
+
+			bool create() noexcept;
+			bool encrypt(string& out, const string& in, const void* key) const noexcept;
+
+		private:
+			void clearCipher() noexcept;
+		};
+
+		struct DecryptState
+		{
+			string keyBase32;
+			void* cipher;
+			uint64_t expires;
+
+			DecryptState() noexcept : cipher(nullptr), expires(0) {}
+			~DecryptState() noexcept { clearCipher(); }
+
+			bool create(uint64_t tick) noexcept;
+			bool decrypt(string& out, const char* inBuf, int len, uint64_t tick) const noexcept;
+
+		private:
+			void clearCipher() noexcept;
 		};
 
 		unique_ptr<Socket> sockets[2];
@@ -107,6 +143,13 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		vector<SendQueueItem> sendQueue;
 		CriticalSection csSendQueue;
 
+		// SUDP
+		EncryptState encryptState;
+		DecryptState decryptState[MAX_SUDP_KEYS];
+		int lastDecryptState;
+		uint64_t newKeyTime;
+		std::unique_ptr<RWLock> decryptKeyLock;
+
 		SearchManager();
 
 		virtual int run() override;
@@ -116,6 +159,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		bool processNMDC(const char* buf, int len, const IpAddress& address, uint16_t remotePort);
 		bool processRES(const char* buf, int len, const IpAddress& address);
 		bool processPSR(const char* buf, int len, const IpAddress& address);
+		bool processSUDP(const char* buf, int len, const IpAddress& remoteIp, uint16_t remotePort);
 		bool processPortTest(const char* buf, int len, const IpAddress& address);
 
 		static string getPartsString(const QueueItem::PartsInfo& partsInfo);

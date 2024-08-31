@@ -42,8 +42,8 @@ STANDARD_EXCEPTION_ADD_INFO(ShareException);
 
 struct AdcSearchParam
 {
-	explicit AdcSearchParam(const StringList& params, unsigned maxResults, const CID& shareGroup) noexcept;
-			
+	AdcSearchParam(const StringList& params, unsigned maxResults, const CID& shareGroup) noexcept;
+
 	bool isExcluded(const string& strLower) const noexcept;
 	bool hasExt(const string& name) noexcept;
 	string getDescription() const noexcept;
@@ -52,15 +52,16 @@ struct AdcSearchParam
 	StringSearch::List exclude;
 	StringList exts;
 	StringList noExts;
-			
+
 	int64_t gt;
 	int64_t lt;
-			
+
 	TTHValue root;
 	const CID shareGroup;
 	bool hasRoot;
 	bool isDirectory;
 	string token;
+	string sudpKey;
 	unsigned maxResults;
 
 	string cacheKey;

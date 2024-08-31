@@ -169,7 +169,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static OnlineUserPtr findOnlineUserL(const CID& cid, const string& hintUrl, bool priv);
 
 	public:
-		static bool sendAdcCommand(AdcCommand& c, const CID& to, const IpAddress& udpAddr, uint16_t udpPort);
+		static bool sendAdcCommand(AdcCommand& c, const CID& to, const IpAddress& udpAddr, uint16_t udpPort, const void* sudpKey);
 		static void resendMyInfo();
 		OnlineUserPtr connect(const HintedUser& user, const string& token, bool forcePassive);
 		static int privateMessage(const HintedUser& user, const string& msg, int flags);
