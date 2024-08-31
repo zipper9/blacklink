@@ -1,14 +1,14 @@
-/* $Id: miniupnpcmodule.c,v 1.36 2021/03/02 23:34:33 nanard Exp $*/
+/* $Id: miniupnpcmodule.c,v 1.40 2024/05/09 15:10:29 nanard Exp $*/
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
  * Author : Thomas BERNARD
  * website : https://miniupnp.tuxfamily.org/
- * copyright (c) 2007-2021 Thomas Bernard
+ * copyright (c) 2007-2024 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENCE file. */
 #include <Python.h>
 #define MINIUPNP_STATICLIB
-#include "structmember.h"
+#include <structmember.h>
 #include "miniupnpc.h"
 #include "upnpcommands.h"
 #include "upnperrors.h"
@@ -49,6 +49,7 @@ typedef struct {
 	unsigned int discoverdelay;	/* value passed to upnpDiscover() */
 	unsigned int localport;		/* value passed to upnpDiscover() */
 	char lanaddr[40];	/* our ip address on the LAN */
+	char wanaddr[40];	/* the ExternalIPAddress returned by the IGD */
 	char * multicastif;
 	char * minissdpdsocket;
 } UPnPObject;
@@ -56,6 +57,9 @@ typedef struct {
 static PyMemberDef UPnP_members[] = {
 	{"lanaddr", T_STRING_INPLACE, offsetof(UPnPObject, lanaddr),
 	 READONLY, "ip address on the LAN"
+	},
+	{"wanaddr", T_STRING_INPLACE, offsetof(UPnPObject, wanaddr),
+	 READONLY, "public ip address on the WAN"
 	},
 	{"discoverdelay", T_UINT, offsetof(UPnPObject, discoverdelay),
 	 0/*READWRITE*/, "value in ms used to wait for SSDP responses"
@@ -69,7 +73,7 @@ static PyMemberDef UPnP_members[] = {
 	    "port, any other value will be attempted as the "
 	    "source port"
 	},
-	/* T_STRING is allways readonly :( */
+	/* T_STRING is always readonly :( */
 	{"multicastif", T_STRING, offsetof(UPnPObject, multicastif),
 	 0, "IP of the network interface to be used for multicast operations"
 	},
@@ -155,12 +159,21 @@ UPnP_discover(UPnPObject *self)
 }
 
 static PyObject *
-UPnP_selectigd(UPnPObject *self)
+UPnP_selectigd(UPnPObject *self, PyObject *args)
 {
+	const char * rootDescUrl = NULL;
 	int r;
+	if(!PyArg_ParseTuple(args, "|z", &rootDescUrl))
+		return NULL;
 Py_BEGIN_ALLOW_THREADS
-	r = UPNP_GetValidIGD(self->devlist, &self->urls, &self->data,
-	                     self->lanaddr, sizeof(self->lanaddr));
+	if (rootDescUrl == NULL) {
+		r = UPNP_GetValidIGD(self->devlist, &self->urls, &self->data,
+		                     self->lanaddr, sizeof(self->lanaddr),
+		                     self->wanaddr, sizeof(self->wanaddr));
+	} else {
+		r = UPNP_GetIGDFromUrl(rootDescUrl, &self->urls, &self->data,
+		                       self->lanaddr, sizeof(self->lanaddr));
+	}
 Py_END_ALLOW_THREADS
 	if(r)
 	{
@@ -562,7 +575,7 @@ static PyMethodDef UPnP_methods[] = {
     {"discover", (PyCFunction)UPnP_discover, METH_NOARGS,
      "discover UPnP IGD devices on the network"
     },
-	{"selectigd", (PyCFunction)UPnP_selectigd, METH_NOARGS,
+	{"selectigd", (PyCFunction)UPnP_selectigd, METH_VARARGS,
 	 "select a valid UPnP IGD among discovered devices"
 	},
 	{"totalbytesent", (PyCFunction)UPnP_totalbytesent, METH_NOARGS,

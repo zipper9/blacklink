@@ -58,7 +58,11 @@ bool Mapper_MiniUPnPc::init()
 	UPNPUrls urls;
 	IGDdatas data;
 
+#if MINIUPNPC_API_VERSION >= 18
+	auto ret = UPNP_GetValidIGD(devices, &urls, &data, nullptr, 0, nullptr, 0);
+#else
 	auto ret = UPNP_GetValidIGD(devices, &urls, &data, nullptr, 0);
+#endif
 
 	bool ok = ret == 1;
 	if (ok)
@@ -94,7 +98,9 @@ bool Mapper_MiniUPnPc::init()
 
 		url = urls.controlURL;
 		service = data.first.servicetype;
+#ifdef MINIUPNPC_HAVE_FRIENDLY_NAME
 		device = data.friendlyName;
+#endif
 	}
 
 	if (ret)

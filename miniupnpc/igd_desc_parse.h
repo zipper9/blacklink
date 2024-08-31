@@ -9,6 +9,8 @@
 #ifndef IGD_DESC_PARSE_H_INCLUDED
 #define IGD_DESC_PARSE_H_INCLUDED
 
+#define MINIUPNPC_HAVE_FRIENDLY_NAME
+
 /* Structure to store the result of the parsing of UPnP
  * descriptions of Internet Gateway Devices */
 #define MINIUPNPC_URL_MAXSIZE (128)

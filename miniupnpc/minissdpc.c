@@ -1,9 +1,9 @@
-/* $Id: minissdpc.c,v 1.47 2021/03/02 23:38:30 nanard Exp $ */
+/* $Id: minissdpc.c,v 1.51 2024/05/16 00:12:05 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
  * Web : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * Author : Thomas BERNARD
- * copyright (c) 2005-2021 Thomas Bernard
+ * copyright (c) 2005-2024 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENCE file. */
 #include <stdio.h>
@@ -342,7 +342,7 @@ receiveDevicesFromMiniSSDPD(int s, int * error)
 #ifdef DEBUG
 		printf("   usnsize=%u\n", usnsize);
 #endif /* DEBUG */
-		tmp = (struct UPNPDev *)malloc(sizeof(struct UPNPDev)+urlsize+stsize+usnsize);
+		tmp = (struct UPNPDev *)malloc(sizeof(struct UPNPDev)+urlsize+stsize+usnsize+3);
 		if(tmp == NULL) {
 			if (error)
 				*error = MINISSDPC_MEMORY_ERROR;
@@ -464,7 +464,7 @@ parseMSEARCHReply(const char * reply, int size,
 static int upnp_gettimeofday(struct timeval * tv)
 {
 #if defined(_WIN32)
-#if defined(_WIN32_WINNT_VISTA) && (_WIN32_WINNT >= _WIN32_WINNT_VISTA)
+#if _WIN32_WINNT >= 0x0600 // _WIN32_WINNT_VISTA
 	ULONGLONG ts = GetTickCount64();
 #else
 	DWORD ts = GetTickCount();
@@ -473,14 +473,29 @@ static int upnp_gettimeofday(struct timeval * tv)
 	tv->tv_usec = (ts % 1000) * 1000;
 	return 0; /* success */
 #elif defined(CLOCK_MONOTONIC_FAST) || defined(CLOCK_MONOTONIC)
-	struct timespec ts;
-	int ret_code = clock_gettime(UPNP_CLOCKID, &ts);
-	if (ret_code == 0)
-	{
-		tv->tv_sec = ts.tv_sec;
-		tv->tv_usec = ts.tv_nsec / 1000;
+#if defined(__APPLE__)
+#if defined(__clang__)
+	if (__builtin_available(macOS 10.12, iOS 10.0, tvOS 10.0, watchOS 3.0, *)) {
+#else /* !defined(__clang__) */
+	if (clock_gettime != NULL) {
+#endif /* defined(__clang__) */
+#endif /* defined(__APPLE__) */
+		struct timespec ts;
+		int ret_code = clock_gettime(UPNP_CLOCKID, &ts);
+		if (ret_code == 0)
+		{
+			tv->tv_sec = ts.tv_sec;
+			tv->tv_usec = ts.tv_nsec / 1000;
+		}
+		return ret_code;
+#if defined(__APPLE__)
 	}
-	return ret_code;
+	else
+	{
+		/* fall-back for earlier Apple platforms */
+		return gettimeofday(tv, NULL);
+	}
+#endif /* defined(__APPLE__) */
 #else
 	return gettimeofday(tv, NULL);
 #endif
@@ -537,7 +552,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 #ifdef _WIN32
 	unsigned long _ttl = (unsigned long)ttl;
 #endif
-	int linklocal = 1;
+	int linklocal = 0;	/* try first with site-local multicast */
 	int sentok;
 
 	if(error)
@@ -580,7 +595,17 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
  * in order to give this ip to setsockopt(sudp, IPPROTO_IP, IP_MULTICAST_IF) */
 	if(!ipv6) {
 		DWORD ifbestidx;
+#if _WIN32_WINNT >= 0x0600 // _WIN32_WINNT_VISTA
+		// While we don't need IPv6 support, the IPv4 only funciton is not available in UWP apps.
+		SOCKADDR_IN destAddr;
+		memset(&destAddr, 0, sizeof(destAddr));
+		destAddr.sin_family = AF_INET;
+		destAddr.sin_addr.s_addr = inet_addr("223.255.255.255");
+		destAddr.sin_port = 0;
+		if (GetBestInterfaceEx((struct sockaddr *)&destAddr, &ifbestidx) == NO_ERROR) {
+#else
 		if (GetBestInterface(inet_addr("223.255.255.255"), &ifbestidx) == NO_ERROR) {
+#endif
 			DWORD dwRetVal = NO_ERROR;
 			PIP_ADAPTER_ADDRESSES pAddresses = NULL;
 			ULONG outBufLen = 15360;
@@ -699,7 +724,7 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 		}
 	}
 
-	if(multicastif)
+	if(multicastif && multicastif[0] != '\0')
 	{
 		if(ipv6) {
 #if !defined(_WIN32)
@@ -979,9 +1004,10 @@ ssdpDiscoverDevices(const char * const deviceTypes[],
 			/* switch linklocal flag */
 			if(linklocal) {
 				linklocal = 0;
-				--deviceIndex;
 			} else {
+				/* try again with linklocal multicast */
 				linklocal = 1;
+				--deviceIndex;
 			}
 		}
 	}
