@@ -35,9 +35,12 @@ static BaseSettingsImpl::MinMaxValidator<int> validateNonNeg(0, INT_MAX);
 static BaseSettingsImpl::MinMaxValidator<int> validateBufSize(64, 8192);
 static BaseSettingsImpl::MinMaxValidator<int> validateIncoming(Conf::INCOMING_DIRECT, Conf::INCOMING_FIREWALL_PASSIVE);
 static BaseSettingsImpl::MinMaxValidator<int> validateGender(0, 4);
-static BaseSettingsImpl::MinMaxValidator<int> validateSlots(0, 500);
+static BaseSettingsImpl::MinMaxValidator<int> validateSlots(1, 500);
+static BaseSettingsImpl::MinMaxValidator<int> validatePartialSlots(0, 100);
+static BaseSettingsImpl::MinMaxValidator<int> validateExtraSlots(0, 20);
+static BaseSettingsImpl::MinMaxValidator<int> validateHubSlots(0, 10);
 static BaseSettingsImpl::MinMaxValidator<int> validateDownloadSlots(0, 100);
-static BaseSettingsImpl::MinMaxValidator<int> validateMinislotSize(16, INT_MAX);
+static BaseSettingsImpl::MinMaxValidator<int> validateMinislotSize(16, 32768); // 16Kb - 32Mb
 static BaseSettingsImpl::MinMaxValidator<int> validateSegments(1, 200);
 static BaseSettingsImpl::MinMaxValidator<int> validateUserCheckBatch(5, 50);
 static BaseSettingsImpl::MinMaxValidator<int> validateSqliteJournalMode(0, 3);
@@ -57,6 +60,7 @@ static BaseSettingsImpl::MinMaxValidator<int> validateKeepListDays(0, 9999);
 static BaseSettingsImpl::MinMaxValidator<int> validateLogLines(0, 999);
 static BaseSettingsImpl::MinMaxValidator<int> validateCCPMIdleTimeout(0, 30);
 static BaseSettingsImpl::MinMaxValidatorWithZero<int> validateIpUpdateInterval(30, 86400);
+static BaseSettingsImpl::MinMaxValidator<int> validatePriority(1, 7);
 static BaseSettingsImpl::StringSizeValidator validateNick(49);
 static BaseSettingsImpl::StringSizeValidator validateDescription(100);
 static BaseSettingsImpl::StringSizeValidator validateEmail(64);
@@ -222,12 +226,12 @@ void Conf::initCoreSettings()
 	s->addBool(AUTO_KICK, "AutoKick");
 	s->addBool(AUTO_KICK_NO_FAVS, "AutoKickNoFavs");
 	s->addInt(MINISLOT_SIZE, "MinislotSize", 64, 0, &validateMinislotSize);
-	s->addInt(EXTRA_SLOTS, "ExtraSlots", 5, 0, &validateNonNeg);
-	s->addInt(HUB_SLOTS, "HubSlots", 1, 0, &validateNonNeg);
+	s->addInt(EXTRA_SLOTS, "ExtraSlots", 5, Settings::FLAG_FIX_VALUE, &validateExtraSlots);
+	s->addInt(HUB_SLOTS, "HubSlots", 1, Settings::FLAG_FIX_VALUE, &validateHubSlots);
 	s->addBool(EXTRA_SLOT_BY_IP, "ExtraSlotByIP");
 	s->addBool(EXTRA_SLOT_TO_DL, "ExtraSlotToDl", true);
-	s->addInt(EXTRA_PARTIAL_SLOTS, "ExtraPartialSlots", 1, 0, &validateNonNeg);
-	s->addInt(AUTO_SLOTS, "AutoSlot", 5, 0, &validateNonNeg);
+	s->addInt(EXTRA_PARTIAL_SLOTS, "ExtraPartialSlots", 5, Settings::FLAG_FIX_VALUE, &validatePartialSlots);
+	s->addInt(AUTO_SLOTS, "AutoSlot", 5, Settings::FLAG_FIX_VALUE, &validateExtraSlots);
 	s->addInt(AUTO_SLOT_MIN_UL_SPEED, "AutoSlotMinULSpeed");
 	s->addBool(SEND_SLOTGRANT_MSG, "SendSlotGrantMsg");
 
@@ -310,10 +314,10 @@ void Conf::initCoreSettings()
 	// Auto priority
 	s->addString(AUTO_PRIORITY_PATTERNS, "AutoPriorityPatterns", "*.sfv;*.nfo;*sample*;*cover*;*.pls;*.m3u", Settings::FLAG_FIX_VALUE, &noSpaceValidator);
 	s->addBool(AUTO_PRIORITY_USE_PATTERNS, "AutoPriorityUsePatterns", true);
-	s->addInt(AUTO_PRIORITY_PATTERNS_PRIO, "AutoPriorityPatternsPrio", 6); // Higher
+	s->addInt(AUTO_PRIORITY_PATTERNS_PRIO, "AutoPriorityPatternsPrio", 6, 0, &validatePriority); // Higher
 	s->addBool(AUTO_PRIORITY_USE_SIZE, "AutoPriorityUseSize", true);
 	s->addInt(AUTO_PRIORITY_SMALL_SIZE, "AutoPrioritySmallSize", 64);
-	s->addInt(AUTO_PRIORITY_SMALL_SIZE_PRIO, "AutoPrioritySmallSizePrio", 6); // Higher
+	s->addInt(AUTO_PRIORITY_SMALL_SIZE_PRIO, "AutoPrioritySmallSizePrio", 6, 0, &validatePriority); // Higher
 
 	// Max finished items
 	s->addInt(MAX_FINISHED_DOWNLOADS, "MaxFinishedDownloads", 1000, 0, &validateNonNeg);
