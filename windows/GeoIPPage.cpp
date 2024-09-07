@@ -34,7 +34,7 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_GEOIP_URL, Conf::URL_GEOIP, PropPage::T_STR },
+	{ IDC_GEOIP_URL, Conf::URL_GEOIP, PropPage::T_STR, PropPage::FLAG_DEFAULT_AS_HINT },
 	{ IDC_GEOIP_AUTO_DOWNLOAD, Conf::GEOIP_AUTO_UPDATE, PropPage::T_BOOL },
 	{ IDC_GEOIP_CHECK, Conf::GEOIP_CHECK_HOURS, PropPage::T_INT },
 	{ IDC_USE_CUSTOM_LOCATIONS, Conf::USE_CUSTOM_LOCATIONS, PropPage::T_BOOL },
@@ -44,6 +44,7 @@ static const PropPage::Item items[] =
 LRESULT GeoIPPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items);
 
 	CStatic placeholder(GetDlgItem(IDC_STATUS));

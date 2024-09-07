@@ -45,14 +45,14 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SLOTS, Conf::SLOTS, PropPage::T_INT },
+	{ IDC_SLOTS, Conf::SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_MIN_UPLOAD_SPEED, Conf::AUTO_SLOT_MIN_UL_SPEED, PropPage::T_INT },
-	{ IDC_EXTRA_SLOTS, Conf::EXTRA_SLOTS, PropPage::T_INT },
-	{ IDC_SMALL_FILE_SIZE, Conf::MINISLOT_SIZE, PropPage::T_INT },
-	{ IDC_EXTRA_SLOTS2, Conf::HUB_SLOTS, PropPage::T_INT },
+	{ IDC_EXTRA_SLOTS, Conf::EXTRA_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
+	{ IDC_SMALL_FILE_SIZE, Conf::MINISLOT_SIZE, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
+	{ IDC_EXTRA_SLOTS2, Conf::HUB_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 	{ IDC_SLOT_DL, Conf::EXTRA_SLOT_TO_DL, PropPage::T_BOOL },
-	{ IDC_AUTO_SLOTS, Conf::AUTO_SLOTS, PropPage::T_INT  },
-	{ IDC_PARTIAL_SLOTS, Conf::EXTRA_PARTIAL_SLOTS, PropPage::T_INT  },
+	{ IDC_AUTO_SLOTS, Conf::AUTO_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
+	{ IDC_PARTIAL_SLOTS, Conf::EXTRA_PARTIAL_SLOTS, PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
 #ifdef SSA_IPGRANT_FEATURE
 	{ IDC_EXTRA_SLOT_BY_IP, Conf::EXTRA_SLOT_BY_IP, PropPage::T_BOOL },
 #endif
@@ -62,35 +62,13 @@ static const PropPage::Item items[] =
 LRESULT SlotPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items);
 
-	CUpDownCtrl spin1(GetDlgItem(IDC_SLOTSPIN));
-	spin1.SetRange32(1, 500);
-	spin1.SetBuddy(GetDlgItem(IDC_SLOTS));
-
-	CUpDownCtrl spin2(GetDlgItem(IDC_EXTRASPIN));
-	spin2.SetRange32(0, 10);
-	spin2.SetBuddy(GetDlgItem(IDC_EXTRA_SLOTS2));
-
+	// FIXME
 	CUpDownCtrl spin3(GetDlgItem(IDC_MIN_UPLOAD_SPIN));
 	spin3.SetRange32(0, UD_MAXVAL);
 	spin3.SetBuddy(GetDlgItem(IDC_MIN_UPLOAD_SPEED));
-
-	CUpDownCtrl spin4(GetDlgItem(IDC_AUTO_SLOTS_SPIN));
-	spin4.SetRange32(0, 100);
-	spin4.SetBuddy(GetDlgItem(IDC_AUTO_SLOTS));
-
-	CUpDownCtrl spin5(GetDlgItem(IDC_PARTIAL_SLOTS_SPIN));
-	spin5.SetRange32(0, 10);
-	spin5.SetBuddy(GetDlgItem(IDC_PARTIAL_SLOTS));
-
-	CUpDownCtrl spin6(GetDlgItem(IDC_EXTRA_SLOTS_SPIN));
-	spin6.SetRange32(0, 100);
-	spin6.SetBuddy(GetDlgItem(IDC_EXTRA_SLOTS));
-
-	CUpDownCtrl spin7(GetDlgItem(IDC_SMALL_FILE_SIZE_SPIN));
-	spin7.SetRange32(16, 32768);
-	spin7.SetBuddy(GetDlgItem(IDC_SMALL_FILE_SIZE));
 
 #ifdef SSA_IPGRANT_FEATURE
 	try

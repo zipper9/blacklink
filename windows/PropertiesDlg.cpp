@@ -85,10 +85,10 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new ToolbarPage();
 	pages[n++] = new WindowsPage();
 	pages[n++] = new TabsPage();
+	pages[n++] = new DefaultClickPage();
 	pages[n++] = new AdvancedPage();
 	pages[n++] = new SDCPage();
 	pages[n++] = new GeoIPPage();
-	pages[n++] = new DefaultClickPage();
 	pages[n++] = new LogPage();
 	pages[n++] = new UCPage();
 	pages[n++] = new SearchUrlsPage();

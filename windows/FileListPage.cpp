@@ -28,20 +28,21 @@ static const DialogLayout::Item layoutItems[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SHOW_SHARED,          Conf::FILELIST_SHOW_SHARED,          PropPage::T_BOOL },
-	{ IDC_SHOW_DOWNLOADED,      Conf::FILELIST_SHOW_DOWNLOADED,      PropPage::T_BOOL },
-	{ IDC_SHOW_CANCELED,        Conf::FILELIST_SHOW_CANCELED,        PropPage::T_BOOL },
-	{ IDC_SHOW_MY_UPLOADS,      Conf::FILELIST_SHOW_MY_UPLOADS,      PropPage::T_BOOL },
-	{ IDC_AUTO_MATCH_LISTS,     Conf::AUTO_MATCH_DOWNLOADED_LISTS,   PropPage::T_BOOL },
-	{ IDC_INCLUDE_TIMESTAMP,    Conf::FILELIST_INCLUDE_TIMESTAMP,    PropPage::T_BOOL },
-	{ IDC_INCLUDE_UPLOAD_COUNT, Conf::FILELIST_INCLUDE_UPLOAD_COUNT, PropPage::T_BOOL },
-	{ IDC_SETTINGS_KEEP_LISTS,  Conf::KEEP_LISTS_DAYS,               PropPage::T_INT  },
-	{ 0,                        0,                                   PropPage::T_END  }
+	{ IDC_SHOW_SHARED,          Conf::FILELIST_SHOW_SHARED,          PropPage::T_BOOL                            },
+	{ IDC_SHOW_DOWNLOADED,      Conf::FILELIST_SHOW_DOWNLOADED,      PropPage::T_BOOL                            },
+	{ IDC_SHOW_CANCELED,        Conf::FILELIST_SHOW_CANCELED,        PropPage::T_BOOL                            },
+	{ IDC_SHOW_MY_UPLOADS,      Conf::FILELIST_SHOW_MY_UPLOADS,      PropPage::T_BOOL                            },
+	{ IDC_AUTO_MATCH_LISTS,     Conf::AUTO_MATCH_DOWNLOADED_LISTS,   PropPage::T_BOOL                            },
+	{ IDC_INCLUDE_TIMESTAMP,    Conf::FILELIST_INCLUDE_TIMESTAMP,    PropPage::T_BOOL                            },
+	{ IDC_INCLUDE_UPLOAD_COUNT, Conf::FILELIST_INCLUDE_UPLOAD_COUNT, PropPage::T_BOOL                            },
+	{ IDC_SETTINGS_KEEP_LISTS,  Conf::KEEP_LISTS_DAYS,               PropPage::T_INT, PropPage::FLAG_CREATE_SPIN },
+	{ 0,                        0,                                   PropPage::T_END                             }
 };
 
 LRESULT FileListPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	DialogLayout::layout(m_hWnd, layoutItems, _countof(layoutItems));
+	PropPage::initControls(*this, items);
 	PropPage::read(*this, items);
 	return TRUE;
 }

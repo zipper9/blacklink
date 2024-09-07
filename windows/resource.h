@@ -207,7 +207,6 @@
 #define IDC_ADD                         1074
 #define IDC_REMOVE                      1075
 #define IDC_SLOTS                       1077
-#define IDC_SLOTSPIN                    1078
 #define IDC_TRANSFERS                   1079
 #define IDC_DOWNLOAD_DIR                1080
 #define IDC_CONNECT                     1081
@@ -216,7 +215,6 @@
 #define IDC_LINE                        1084
 #define IDC_EXTRA_SLOTS2                1085
 #define IDC_DOWNLOADDIRTO               1086
-#define IDC_EXTRASPIN                   1087
 #define IDC_PRIVATE_MESSAGE             1088
 #define IDC_INFO_TEXT                   1089
 #define IDC_GETLIST                     1090
@@ -701,9 +699,6 @@
 #define IDC_MAX_MSG_LENGTH_STR          1701
 #define IDC_POPUP_COLORS                1702
 #define IDC_POPUP_BACKCOLOR             1703
-#define IDC_AWAY_START_TIME_SPIN        1706
-#define IDC_AWAY_END_TIME_SPIN          1708
-#define IDC_POPUP_TIME_SPIN             1711
 #define IDC_B2                          1712
 #define IDC_OTHER_QUEUE_OPTIONS         1713
 #define IDC_B1                          1714
@@ -956,9 +951,7 @@
 #define IDC_TEXT_STYLES                 2118
 #define IDC_REMOVE_IF_BELOW             2119
 #define IDC_EXTRA_SLOTS                 2120
-#define IDC_EXTRA_SLOTS_SPIN            2121
 #define IDC_SMALL_FILE_SIZE             2122
-#define IDC_SMALL_FILE_SIZE_SPIN        2123
 #define IDC_DEFAULT_STYLES              2125
 #define IDC_COPY_APPLICATION            2126
 #define IDC_COPY_FILENAME               2127
@@ -1100,10 +1093,8 @@
 #define IDC_USE_TREE                    2283
 #define IDC_PAUSE                       2284
 #define IDC_PARTIAL_SLOTS               2285
-#define IDC_PARTIAL_SLOTS_SPIN          2286
 #define IDC_SETTINGS_PARTIAL_SLOTS      2287
 #define IDC_AUTO_SLOTS                  2288
-#define IDC_AUTO_SLOTS_SPIN             2289
 #define IDC_SETTINGS_AUTO_SLOTS         2290
 #define IDC_RECHECK                     2291
 #define IDC_EDIT_HUB_PROP               2292
