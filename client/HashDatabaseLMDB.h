@@ -46,6 +46,7 @@ class HashDatabaseConnection
 
 	private:
 		bool busy = true;
+		bool error = false;
 		uint64_t removeTime = 0;
 		MDB_txn *txnRead = nullptr;
 		HashDatabaseLMDB *const parent;
@@ -74,6 +75,7 @@ class HashDatabaseLMDB
 		bool open() noexcept;
 		void close() noexcept;
 		bool getDBInfo(size_t &dataItems, uint64_t &dbSize) noexcept;
+		string getConnectionInfo() const noexcept;
 		static string getDBPath() noexcept;
 		HashDatabaseConnection *getDefaultConnection() noexcept;
 		HashDatabaseConnection *getConnection() noexcept;
@@ -101,7 +103,8 @@ class HashDatabaseLMDB
 		WaitableEvent resizeComplete;
 		WaitableEvent mayResize;
 
-		static bool checkError(int error, const char *what) noexcept;
+		static bool checkError(int error, const char *what, HashDatabaseConnection* conn = nullptr) noexcept;
+		static void printWarning(int error, const char *what);
 		bool addTransaction() noexcept;
 		void releaseTransaction(HashDatabaseConnection *conn) noexcept;
 		bool resizeMap() noexcept;

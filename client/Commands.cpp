@@ -1286,6 +1286,13 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 				}
 				if (hashDb) db->putHashDatabaseConnection(hashDb);
 			}
+			else if (pc.args.size() == 2 && pc.args[1] == "lmdb-conn")
+			{
+				const HashDatabaseLMDB& lmdb = DatabaseManager::getInstance()->getHashDatabase();
+				res.text = "LMDB connections\n";
+				string info = lmdb.getConnectionInfo();
+				res.text += info.empty() ? STRING(COMMAND_EMPTY_LIST) : info;
+			}
 			else
 				res.text = DatabaseManager::getInstance()->getDBInfo();
 			return true;

@@ -287,6 +287,7 @@ class DatabaseManager : public Singleton<DatabaseManager>, public HttpClientList
 		void closeIdleConnections(uint64_t tick);
 		bool addTree(HashDatabaseConnection* conn, const TigerTree& tree) noexcept;
 		bool getTree(HashDatabaseConnection* conn, const TTHValue& tth, TigerTree& tree) noexcept;
+		const HashDatabaseLMDB& getHashDatabase() const noexcept { return lmdb; }
 		HashDatabaseConnection* getHashDatabaseConnection() noexcept { return lmdb.getConnection(); }
 		HashDatabaseConnection* getDefaultHashDatabaseConnection() noexcept { return lmdb.getDefaultConnection(); }
 		void putHashDatabaseConnection(HashDatabaseConnection* conn) noexcept { lmdb.putConnection(conn); }

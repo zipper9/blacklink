@@ -83,7 +83,7 @@ void HashDatabaseLMDB::close() noexcept
 	}
 }
 
-bool HashDatabaseLMDB::checkError(int error, const char* what) noexcept
+bool HashDatabaseLMDB::checkError(int error, const char* what, HashDatabaseConnection* conn) noexcept
 {
 	if (!error) return true;
 	string errorText = "LMDB error: " + Util::toString(error);
@@ -96,7 +96,23 @@ bool HashDatabaseLMDB::checkError(int error, const char* what) noexcept
 	errorText += ", thread 0x";
 	errorText += Util::toHexString(BaseThread::getCurrentThreadId());
 	LogManager::message(errorText);
+	if (conn) conn->error = true;
 	return false;
+}
+
+void HashDatabaseLMDB::printWarning(int error, const char *what)
+{
+	dcassert(error);
+	string errorText = "LMDB recoverable error: " + Util::toString(error);
+	if (what)
+	{
+		errorText += " (";
+		errorText += what;
+		errorText += ")";
+	}
+	errorText += ", thread 0x";
+	errorText += Util::toHexString(BaseThread::getCurrentThreadId());
+	LogManager::message(errorText, false);
 }
 
 class ItemParser
@@ -178,13 +194,13 @@ bool HashDatabaseConnection::createReadTxn(MDB_dbi &dbi) noexcept
 		error = mdb_txn_renew(txnRead);
 		what = "mdb_txn_renew";
 	}
-	if (!HashDatabaseLMDB::checkError(error, what))
+	if (!HashDatabaseLMDB::checkError(error, what, this))
 	{
 		parent->releaseTransaction(this);
 		return false;
 	}
 	error = mdb_dbi_open(txnRead, nullptr, 0, &dbi);
-	if (!HashDatabaseLMDB::checkError(error, "mdb_dbi_open"))
+	if (!HashDatabaseLMDB::checkError(error, "mdb_dbi_open", this))
 	{
 		parent->releaseTransaction(this);
 		return false;
@@ -202,13 +218,13 @@ bool HashDatabaseConnection::createWriteTxn(MDB_dbi &dbi, MDB_txn* &txnWrite) no
 {
 	if (!parent->addTransaction()) return false;
 	int error = mdb_txn_begin(parent->env, nullptr, 0, &txnWrite);
-	if (!HashDatabaseLMDB::checkError(error, "mdb_txn_begin"))
+	if (!HashDatabaseLMDB::checkError(error, "mdb_txn_begin", this))
 	{
 		parent->releaseTransaction(this);
 		return false;
 	}
 	error = mdb_dbi_open(txnWrite, nullptr, 0, &dbi);
-	if (!HashDatabaseLMDB::checkError(error, "mdb_dbi_open"))
+	if (!HashDatabaseLMDB::checkError(error, "mdb_dbi_open", this))
 	{
 		parent->releaseTransaction(this);
 		return false;
@@ -229,6 +245,7 @@ bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &
 	while (retryCount < 2)
 	{
 		int error = mdb_put(txnWrite, dbi, &key, &val, 0);
+		if (error) HashDatabaseLMDB::printWarning(error, "mdb_put");
 		if (error == MDB_MAP_FULL)
 		{
 			abortWriteTxn(txnWrite);
@@ -236,12 +253,13 @@ bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &
 			++retryCount;
 			continue;
 		}
-		if (!HashDatabaseLMDB::checkError(error, "mdb_put"))
+		if (!HashDatabaseLMDB::checkError(error, "mdb_put", this))
 		{
 			abortWriteTxn(txnWrite);
 			break;
 		}
 		error = mdb_txn_commit(txnWrite);
+		if (error) HashDatabaseLMDB::printWarning(error, "mdb_txn_commit");
 		txnWrite = nullptr; // Must not call mdb_txn_abort after mdb_txn_commit, even when an error is returned
 		if (error == MDB_MAP_FULL)
 		{
@@ -250,7 +268,7 @@ bool HashDatabaseConnection::writeData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val &
 			++retryCount;
 			continue;
 		}
-		result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit");
+		result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit", this);
 		break;
 	}
 	if (result)
@@ -275,7 +293,7 @@ bool HashDatabaseConnection::deleteData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val 
 			++retryCount;
 			continue;
 		}
-		if (!HashDatabaseLMDB::checkError(error, "mdb_del"))
+		if (!HashDatabaseLMDB::checkError(error, "mdb_del", this))
 		{
 			abortWriteTxn(txnWrite);
 			break;
@@ -289,7 +307,7 @@ bool HashDatabaseConnection::deleteData(MDB_txn *txnWrite, MDB_dbi dbi, MDB_val 
 			++retryCount;
 			continue;
 		}
-		result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit");
+		result = HashDatabaseLMDB::checkError(error, "mdb_txn_commit", this);
 		break;
 	}
 	if (result)
@@ -307,7 +325,7 @@ bool HashDatabaseConnection::resizeMap() noexcept
 
 	MDB_envinfo info;
 	int error = mdb_env_info(parent->env, &info);
-	if (!HashDatabaseLMDB::checkError(error, "mdb_env_info"))
+	if (!HashDatabaseLMDB::checkError(error, "mdb_env_info", this))
 	{
 		parent->completeResize();
 		return false;
@@ -316,7 +334,7 @@ bool HashDatabaseConnection::resizeMap() noexcept
 	size_t newMapSize = info.me_mapsize << 1;
 	LogManager::message("Resizing LMDB map to " + Util::toString(newMapSize), false);
 	error = mdb_env_set_mapsize(parent->env, newMapSize);
-	bool result = HashDatabaseLMDB::checkError(error, "mdb_env_set_mapsize");
+	bool result = HashDatabaseLMDB::checkError(error, "mdb_env_set_mapsize", this);
 	parent->completeResize();
 	return result;
 }
@@ -708,7 +726,7 @@ HashDatabaseConnection *HashDatabaseLMDB::getConnection() noexcept
 	{
 		LOCK(cs);
 		for (auto& c : conn)
-			if (!c->busy)
+			if (!c->busy && !c->error)
 			{
 				c->busy = true;
 				return c.get();
@@ -723,11 +741,12 @@ HashDatabaseConnection *HashDatabaseLMDB::getConnection() noexcept
 
 void HashDatabaseLMDB::putConnection(HashDatabaseConnection *conn) noexcept
 {
-	uint64_t removeTime = GET_TICK() + 120 * 1000;
+	uint64_t removeTime = GET_TICK();
 	LOCK(cs);
 	dcassert(conn->busy || conn == defConn.get());
 	conn->busy = false;
 	conn->removeTime = removeTime;
+	if (!conn->error) conn->removeTime += 120 * 1000;
 }
 
 void HashDatabaseLMDB::closeIdleConnections(uint64_t tick) noexcept
@@ -952,4 +971,31 @@ void HashDatabaseLMDB::shutdown() noexcept
 	csSharedState.unlock();
 	if (!resizeComplete.empty()) resizeComplete.notify();
 	if (!mayResize.empty()) mayResize.notify();
+}
+
+string HashDatabaseLMDB::getConnectionInfo() const noexcept
+{
+	string info;
+	{
+		uint64_t now = GET_TICK();
+		LOCK(cs);
+		for (const auto& item : conn)
+		{
+			HashDatabaseConnection* c = item.get();
+			info += "Connection ";
+			info += Util::toHexString(c);
+			info += ": busy=";
+			info += Util::toString((int) c->busy);
+			info += ", error=";
+			info += Util::toString((int) c->error);
+			if (!c->busy)
+			{
+				uint64_t expires = now < c->removeTime ? (c->removeTime - now) / 1000 : 0;
+				info += ", expires=";
+				info += Util::toString(expires);
+			}
+			info += '\n';
+		}
+	}
+	return info;
 }
