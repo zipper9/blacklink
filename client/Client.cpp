@@ -688,10 +688,11 @@ unsigned Client::searchInternal(const SearchParam& sp)
 	return 0;
 }
 
-void Client::onDataLine(const string& line) noexcept
+void Client::onDataLine(const char* buf, size_t len) noexcept
 {
 	updateActivityL();
-	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(line, DebugTask::HUB_IN, getIpPort());
+	if (CMD_DEBUG_ENABLED())
+		COMMAND_DEBUG(string(buf, len), DebugTask::HUB_IN, getIpPort());
 }
 
 void Client::on(Second, uint64_t tick) noexcept

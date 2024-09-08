@@ -1162,9 +1162,9 @@ void NmdcHub::userCommandParse(const string& param)
 	}
 }
 
-void NmdcHub::lockParse(const string& line)
+void NmdcHub::lockParse(const char* buf, size_t len)
 {
-	if (line.size() < 6)
+	if (len < 6)
 		return;
 
 	{
@@ -1177,8 +1177,8 @@ void NmdcHub::lockParse(const string& line)
 	dcassert(users.empty());
 
 	// Param must not be toUtf8'd...
-	const string param = line.substr(6);
-	
+	const string param(buf + 6, len - 6);
+
 	if (!param.empty())
 	{
 		const auto j = param.find(' ');
@@ -1543,30 +1543,31 @@ void NmdcHub::mcToParse(const string& param)
 		privateMessage(user, response, PM_FLAG_AUTOMATIC | PM_FLAG_THIRD_PERSON);
 }
 
-void NmdcHub::onLine(const string& line)
+void NmdcHub::onLine(const char* buf, size_t len)
 {
-	if (line.empty())
+	if (!len)
 		return;
 		
-	if (line[0] != '$')
+	if (buf[0] != '$')
 	{
+		string line(buf, len);
 		chatMessageParse(line);
 		return;
 	}
-	
+
 	string cmd;
 	string param;
-	string::size_type x = line.find(' ');
+	const char* p = (const char*) memchr(buf, ' ', len);
 	int searchType = ST_NONE;
 	bool isMyInfo = false;
-	if (x == string::npos)
+	if (!p)
 	{
-		cmd = line.substr(1);
+		cmd.assign(buf + 1, len - 1);
 	}
 	else
 	{
-		cmd = line.substr(1, x - 1);
-		param = toUtf8(line.substr(x + 1));
+		cmd.assign(buf + 1, p - buf - 1);
+		param = toUtf8(string(p + 1, len - (p - buf) - 1));
 		if (cmd.length() == 2 && cmd[0] == 'S')
 		{
 			if (cmd[1] == 'A')
@@ -1619,7 +1620,7 @@ void NmdcHub::onLine(const string& line)
 	}
 	else if (cmd == "SR")
 	{
-		SearchManager::getInstance()->onSearchResult(line, getIp());
+		SearchManager::getInstance()->onSearchResult(buf, len, getIp());
 	}
 	else if (cmd == "HubName")
 	{
@@ -1635,7 +1636,7 @@ void NmdcHub::onLine(const string& line)
 	}
 	else if (cmd == "Lock")
 	{
-		lockParse(line);
+		lockParse(buf, len);
 	}
 	else if (cmd == "Hello")
 	{
@@ -1839,7 +1840,7 @@ void NmdcHub::onLine(const string& line)
 		send("$MyHubURL " + getHubUrl() + "|");
 	}
 	else
-		LogManager::message("Unknown command from hub " + getHubUrl() + ": " + line, false);
+		LogManager::message("Unknown command from hub " + getHubUrl() + ": " + string(buf, len), false);
 	updateMyInfoState(isMyInfo);
 }
 
@@ -2588,12 +2589,12 @@ void NmdcHub::myInfoParse(const string& param)
 	fireUserUpdated(ou);
 }
 
-void NmdcHub::onDataLine(const string& line) noexcept
+void NmdcHub::onDataLine(const char* buf, size_t len) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		Client::onDataLine(line); // TODO skip Start
-		onLine(line);
+		Client::onDataLine(buf, len);
+		onLine(buf, len);
 	}
 }
 

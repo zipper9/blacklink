@@ -84,16 +84,16 @@ void HttpServerConnection::parseRequestHeader(const string& line) noexcept
 	}
 }
 
-void HttpServerConnection::onDataLine(const string &line) noexcept
+void HttpServerConnection::onDataLine(const char* buf, size_t len) noexcept
 {
-	if (connState == STATE_DATA_CHUNKED && line.length() > 1)
+	if (connState == STATE_DATA_CHUNKED && len > 1)
 	{
-		string::size_type i;
+		const char* p = (const char*) memchr(buf, ';', len);
 		string chunkSizeStr;
-		if ((i = line.find(';')) == string::npos)
-			chunkSizeStr = line.substr(0, line.length() - 1);
+		if (!p)
+			chunkSizeStr.assign(buf, len - 1);
 		else
-			chunkSizeStr = line.substr(0, i);
+			chunkSizeStr.assign(buf, p - buf);
 
 		unsigned long chunkSize = strtoul(chunkSizeStr.c_str(), nullptr, 16);
 		if (chunkSize == 0)
@@ -106,7 +106,8 @@ void HttpServerConnection::onDataLine(const string &line) noexcept
 	}
 	if (connState == STATE_RECEIVE_REQUEST)
 	{
-		receivedHeadersSize += line.size();
+		string line(buf, len);
+		receivedHeadersSize += line.length();
 		parseRequestHeader(line);
 		if (req.isError())
 		{

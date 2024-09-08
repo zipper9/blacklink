@@ -153,7 +153,7 @@ class NmdcHub : public Client, private Flags
 		std::unique_ptr<NickRule> nickRule;
 
 		void clearUsers();
-		void onLine(const string& line);
+		void onLine(const char* buf, size_t len);
 
 		OnlineUserPtr getUser(const string& nick);
 		OnlineUserPtr findUser(const string& nick) const override;
@@ -190,7 +190,7 @@ class NmdcHub : public Client, private Flags
 		void hubNameParse(const string& param);
 		void supportsParse(const string& param);
 		void userCommandParse(const string& param);
-		void lockParse(const string& line);
+		void lockParse(const char* buf, size_t len);
 		void helloParse(const string& param);
 		void userIPParse(const string& param);
 		void botListParse(const string& param);
@@ -205,7 +205,7 @@ class NmdcHub : public Client, private Flags
 		bool checkSearchFlood(const IpAddress& ip, uint16_t port);
 
 		void onConnected() noexcept override;
-		void onDataLine(const string& l) noexcept override;
+		void onDataLine(const char* buf, size_t len) noexcept override;
 		void onFailed(const string&) noexcept override;
 };
 

@@ -184,52 +184,49 @@ bool UserConnection::checkState(int state, const AdcCommand& command) const noex
 	return false;
 }
 
-void UserConnection::onDataLine(const string& line) noexcept
+void UserConnection::onDataLine(const char* buf, size_t len) noexcept
 {
-	if (line.length() < 2 || ClientManager::isBeforeShutdown())
+	if (len < 2 || ClientManager::isBeforeShutdown())
 		return;
 	if (CMD_DEBUG_ENABLED())
-		COMMAND_DEBUG(line, DebugTask::CLIENT_IN, getRemoteIpPort());
-	
-	if (line[0] == 'C' && !isSet(FLAG_NMDC))
+		COMMAND_DEBUG(string(buf, len), DebugTask::CLIENT_IN, getRemoteIpPort());
+
+	if (buf[0] == 'C' && !isSet(FLAG_NMDC))
 	{
-		if (!Text::validateUtf8(line))
+		if (!Text::validateUtf8(buf, len))
 		{
 			// @todo Report to user?
 			return;
 		}
-		dispatch(line);
+		dispatch(buf, len);
 		return;
 	}
-	else if (line[0] == '$')
+	else if (buf[0] == '$')
 	{
 		setFlag(FLAG_NMDC);
 	}
 	else
 	{
 		// We shouldn't be here?
-		if (getUser() && line.length() < 255)
-		{
-			ClientManager::setUnknownCommand(getUser(), line);
-		}
-		
+		if (getUser() && len < 255)
+			ClientManager::setUnknownCommand(getUser(), string(buf, len));
+
 		ConnectionManager::getInstance()->failed(this, "Invalid data", true);
 		return;
 	}
 	
 	string cmd;
 	string param;
+	const char* p = (const char*) memchr(buf, ' ', len);
 	
-	string::size_type x = line.find(' ');
-	
-	if (x == string::npos)
+	if (!p)
 	{
-		cmd = line.substr(1);
+		cmd.assign(buf + 1, len - 1);
 	}
 	else
 	{
-		cmd = line.substr(1, x - 1);
-		param = line.substr(x + 1);
+		cmd.assign(buf + 1, p - buf - 1);
+		param.assign(p + 1, len - (p - buf) - 1);
 	}
 	if (cmd == "FLY-TEST-PORT")
 	{
@@ -267,7 +264,7 @@ void UserConnection::onDataLine(const string& line) noexcept
 	else if (cmd == "Direction")
 	{
 		if (!checkState(STATE_DIRECTION, cmd)) return;
-		x = param.find(' ');
+		auto x = param.find(' ');
 		if (x != string::npos)
 		{
 			string dirStr = param.substr(0, x);
@@ -341,7 +338,7 @@ void UserConnection::onDataLine(const string& line) noexcept
 	else if (cmd == "Get")
 	{
 		if (!checkState(STATE_GET, cmd)) return;
-		x = param.find('$');
+		auto x = param.find('$');
 		if (x != string::npos)
 		{
 			UploadManager::getInstance()->processGet(this, Text::toUtf8(param.substr(0, x), lastEncoding), Util::toInt64(param.substr(x + 1)) - 1);
@@ -369,7 +366,7 @@ void UserConnection::onDataLine(const string& line) noexcept
 		if (!checkState(STATE_LOCK, cmd)) return;
 		if (!param.empty())
 		{
-			x = param.find(' ');
+			auto x = param.find(' ');
 			string lock = x != string::npos ? param.substr(0, x) : param;
 			if (NmdcHub::isExtended(lock))
 			{
@@ -425,7 +422,7 @@ void UserConnection::onDataLine(const string& line) noexcept
 	}
 	else if (cmd.compare(0, 3, "ADC", 3) == 0)
 	{
-		dispatch(line, true);
+		dispatch(buf, len, true);
 	}
 	else if (cmd == "ListLen")
 	{
@@ -443,24 +440,30 @@ void UserConnection::onDataLine(const string& line) noexcept
 	}
 	else
 	{
-		if (getUser() && line.length() < 255)
-			ClientManager::setUnknownCommand(getUser(), line);
-			
+		if (getUser() && len < 255)
+			ClientManager::setUnknownCommand(getUser(), string(buf, len));
+
+#ifdef _DEBUG
+		string line(buf, len);
 		dcdebug("UserConnection Unknown NMDC command: %.50s\n", line.c_str());
-		string log = "Unknown command from ";
-		if (getHintedUser().user)
-			log += getHintedUser().user->getLastNick();
-		else
-			log += '?';
-		log += '@';
-		log += getHubUrl();
-		log += " (";
-		log += socket->getRemoteIpAsString();
-		log += "): ";
-		log += line;
-		LogManager::message(log, false);
+#endif
+		if (LogManager::getLogOptions() & LogManager::OPT_LOG_SYSTEM)
+		{
+			string log = "Unknown command from ";
+			if (getHintedUser().user)
+				log += getHintedUser().user->getLastNick();
+			else
+				log += '?';
+			log += '@';
+			log += getHubUrl();
+			log += " (";
+			log += socket->getRemoteIpAsString();
+			log += "): ";
+			log.append(buf, len);
+			LogManager::message(log, false);
+		}
 		unsetFlag(FLAG_NMDC);
-		disconnect(true); // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1684
+		disconnect(true);
 	}
 }
 

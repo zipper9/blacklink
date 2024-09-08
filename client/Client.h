@@ -474,7 +474,7 @@ class Client : public ClientBase,
 			fire(ClientListener::Connecting(), this);
 		}
 		virtual void onConnected() noexcept override;
-		virtual void onDataLine(const string&) noexcept override;
+		virtual void onDataLine(const char*, size_t) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
 
 		string getOpChat() const noexcept;

@@ -149,7 +149,12 @@ inline const string& fromT(const tstring& str) noexcept { return str; }
 
 bool isAscii(const string& str) noexcept;
 bool isAscii(const char* str) noexcept;
-bool validateUtf8(const string& str, size_t pos = 0) noexcept;
+bool validateUtf8(const char* data, size_t len, size_t pos = 0) noexcept;
+
+static inline bool validateUtf8(const string& str, size_t pos = 0) noexcept
+{
+	return validateUtf8(str.data(), str.length(), pos);
+}
 
 static inline int asciiToLower(int c)
 {

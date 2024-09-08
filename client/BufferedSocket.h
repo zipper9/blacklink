@@ -198,7 +198,6 @@ class BufferedSocket : private Thread
 		std::unique_ptr<UnZFilter> zfilter;
 		InputStream* outStream;
 		size_t maxLineSize;
-		string lineBuf;
 		int task;
 		int proxyStage;
 		uint8_t proxyAuthMethod;

@@ -64,9 +64,9 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, int af, const string& hubIpPort, const string& tth, const QueueItem::PartsInfo& partialInfo);
 		void addEncryptionKey(AdcCommand& cmd) noexcept;
 
-		void onSearchResult(const string& line, const IpAddress& ip)
+		void onSearchResult(const char* buf, size_t len, const IpAddress& ip)
 		{
-			onData(line.c_str(), static_cast<int>(line.length()), ip, 0);
+			onData(buf, static_cast<int>(len), ip, 0);
 		}
 
 		static const uint16_t FLAG_NO_TRACE = 1;

@@ -152,7 +152,7 @@ namespace dht
 	/*
 	 * Process incoming command
 	 */
-	bool DHT::dispatch(const string& line, Ip4Address address, uint16_t port, bool isUdpKeyValid)
+	bool DHT::dispatch(const char* buf, size_t len, Ip4Address address, uint16_t port, bool isUdpKeyValid)
 	{
 		// check node's IP address
 		if (!Utils::isGoodIPPort(address, port))
@@ -162,9 +162,12 @@ namespace dht
 		}
 
 		AdcCommand cmd(0);
-		if (cmd.parse(line))
+		if (cmd.parse(buf, len))
 		{
+#ifdef _DEBUG
+			string line(buf, len);
 			dcdebug("Invalid ADC command: %s\n", line.c_str());
+#endif
 			return false;
 		}
 
@@ -222,9 +225,14 @@ namespace dht
 			C(GET); // get some data
 			C(SND); // response to GET
 
-		default:
-			dcdebug("Unknown ADC command: %s\n", line.c_str());
-			return false;
+			default:
+			{
+#ifdef _DEBUG
+				string line(buf, len);
+				dcdebug("Unknown ADC command: %s\n", line.c_str());
+#endif
+				return false;
+			}
 #undef C
 		}
 	}
@@ -259,7 +267,7 @@ namespace dht
 		}
 
 		if (LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS)
-			LogManager::commandTrace(command, LogManager::FLAG_UDP, Util::printIpAddress(address), port);
+			LogManager::commandTrace(command.data(), command.length(), LogManager::FLAG_UDP, Util::printIpAddress(address), port);
 
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG(command, DebugTask::HUB_OUT, Util::printIpAddress(address) + ':' + Util::toString(port));
@@ -388,12 +396,11 @@ namespace dht
 		if (!(size > 2 && srcBuf[0] == ADC_PACKET_HEADER && srcBuf[size - 1] == ADC_PACKET_FOOTER))
 			return false;
 
-		string s((const char*) srcBuf, size - 1);
 		if (CMD_DEBUG_ENABLED())
-			COMMAND_DEBUG(s, DebugTask::HUB_IN, remoteIp + ':' + Util::toString(remotePort));
+			COMMAND_DEBUG(string((const char*) srcBuf, size - 1), DebugTask::HUB_IN, remoteIp + ':' + Util::toString(remotePort));
 		if (LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS)
-			LogManager::commandTrace(s, LogManager::FLAG_UDP | LogManager::FLAG_IN, remoteIp, remotePort);
-		return dispatch(s, address, remotePort, isUdpKeyValid) || isCompressed || isEncrypted;
+			LogManager::commandTrace((const char*) srcBuf, size - 1, LogManager::FLAG_UDP | LogManager::FLAG_IN, remoteIp, remotePort);
+		return dispatch((const char*) srcBuf, size - 1, address, remotePort, isUdpKeyValid) || isCompressed || isEncrypted;
 	}
 
 	/*

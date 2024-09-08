@@ -144,7 +144,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void unknownProtocol(uint32_t target, const string& protocol, const string& p_token);
 		
 		void onConnected() noexcept override;
-		void onDataLine(const string& line) noexcept override;
+		void onDataLine(const char* buf, size_t len) noexcept override;
 		void onFailed(const string& line) noexcept override;
 };
 

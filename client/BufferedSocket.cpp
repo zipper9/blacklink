@@ -432,10 +432,9 @@ void BufferedSocket::parseData(Buffer& b)
 			{
 				if (len > maxLineSize)
 					throw SocketException(STRING(COMMAND_TOO_LONG));
-				lineBuf.assign((const char*) buf, len);
 				if (doTrace)
-					LogManager::commandTrace(lineBuf, LogManager::FLAG_IN, getRemoteIpAsString(), getPort());
-				listener->onDataLine(lineBuf);
+					LogManager::commandTrace((const char*) buf, len, LogManager::FLAG_IN, getRemoteIpAsString(), getPort());
+				listener->onDataLine((const char*) buf, len);
 			}
 			b.readPtr += len + 1;
 			if (stopFlag || mode != prevMode) break;
@@ -552,10 +551,10 @@ void BufferedSocket::write(const void* data, size_t size)
 		{
 			string truncatedMsg((const char *) data, 512 - 11);
 			truncatedMsg.append("<TRUNCATED>", 11);
-			LogManager::commandTrace(truncatedMsg, 0, getRemoteIpAsString(), getPort());
+			LogManager::commandTrace(truncatedMsg.data(), truncatedMsg.length(), 0, getRemoteIpAsString(), getPort());
 		}
 		else
-			LogManager::commandTrace(string((const char *) data, size), 0, getRemoteIpAsString(), getPort());
+			LogManager::commandTrace((const char*) data, size, 0, getRemoteIpAsString(), getPort());
 	}
 
 	bool notify = false;

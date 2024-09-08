@@ -28,7 +28,7 @@ class BufferedSocketListener
 		virtual ~BufferedSocketListener() {}
 		virtual void onConnecting() noexcept {}
 		virtual void onConnected() noexcept {}
-		virtual void onDataLine(const string&) noexcept {}
+		virtual void onDataLine(const char*, size_t) noexcept {}
 		virtual void onData(const uint8_t*, size_t) {}
 		virtual void onBytesLoaded(size_t bytes) {}
 		virtual void onBytesSent(size_t bytes) {}

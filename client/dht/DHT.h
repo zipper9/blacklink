@@ -179,7 +179,7 @@ namespace dht
 		template<typename T> bool handle(T, const Node::Ptr&user, AdcCommand&) { return false; }
 
 		/** Process incoming command */
-		bool dispatch(const string& line, Ip4Address address, uint16_t port, bool isUdpKeyValid);
+		bool dispatch(const char* buf, size_t len, Ip4Address address, uint16_t port, bool isUdpKeyValid);
 
 		void handleFwCheckResponse(const AdcCommand& c, Ip4Address fromIP, string& newExternalIP);
 

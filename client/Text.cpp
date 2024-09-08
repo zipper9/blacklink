@@ -437,13 +437,12 @@ int utf8ToWc(const char* s, size_t pos, size_t len, uint32_t& wc) noexcept
 	return -1;
 }
 
-bool validateUtf8(const string& str, size_t pos /* = 0 */) noexcept
+bool validateUtf8(const char* data, size_t len, size_t pos /* = 0 */) noexcept
 {
-	size_t len = str.length();
 	while (pos < len)
 	{
 		uint32_t unused;
-		int b = utf8ToWc(str.data(), pos, len, unused);
+		int b = utf8ToWc(data, pos, len, unused);
 		if (b < 0) return false;
 		pos += b;
 	}

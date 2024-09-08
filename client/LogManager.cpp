@@ -310,7 +310,7 @@ void LogManager::setOptions(int area, const TStringPair& p) noexcept
 	ss->unlockWrite();
 }
 
-void LogManager::commandTrace(const string& msg, int flags, const string& ip, int port) noexcept
+void LogManager::commandTrace(const char* msg, size_t msgLen, int flags, const string& ip, int port) noexcept
 {
 	if (flags & FLAG_UDP)
 	{
@@ -324,7 +324,7 @@ void LogManager::commandTrace(const string& msg, int flags, const string& ip, in
 	string ipPort = ip + ':' + Util::toString(port);
 	msgFull += ipPort;
 	msgFull += ": ";
-	msgFull += msg;
+	msgFull.append(msg, msgLen);
 	TraceMessageExpander ex(msgFull, ipPort, ip, time(nullptr));
 	log((flags & FLAG_UDP) ? UDP_PACKETS : TCP_MESSAGES, &ex);
 }

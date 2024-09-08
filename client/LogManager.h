@@ -80,7 +80,7 @@ class LogManager
 		static void log(int area, const StringMap& params) noexcept;
 		static void log(int area, Util::ParamExpander* ex) noexcept;
 		static void message(const string& msg, bool useStatus = true) noexcept;
-		static void commandTrace(const string& msg, int flags, const string& ip, int port) noexcept;
+		static void commandTrace(const char* msg, size_t msgLen, int flags, const string& ip, int port) noexcept;
 		static void speakStatusMessage(const string& message) noexcept;
 		static void getOptions(int area, TStringPair& p) noexcept;
 		static void setOptions(int area, const TStringPair& p) noexcept;

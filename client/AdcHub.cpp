@@ -1708,18 +1708,17 @@ void AdcHub::onConnected() noexcept
 	send(cmd);
 }
 
-void AdcHub::onDataLine(const string& line) noexcept
+void AdcHub::onDataLine(const char* buf, size_t len) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		Client::onDataLine(line);
-		
-		if (!Text::validateUtf8(line))
+		Client::onDataLine(buf, len);
+		if (!Text::validateUtf8(buf, len))
 		{
 			// @todo report to user?
 			return;
 		}
-		dispatch(line);
+		dispatch(buf, len);
 	}
 }
 

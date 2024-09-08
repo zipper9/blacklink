@@ -156,7 +156,7 @@ class AdcCommand
 			return tmp;
 		}
 
-		int parse(const string& line, bool nmdc = false) noexcept;
+		int parse(const char* buf, size_t len, bool nmdc = false) noexcept;
 
 		const string& getFeatures() const noexcept
 		{
@@ -252,14 +252,17 @@ class CommandHandler
 {
 	public:
 		virtual ~CommandHandler() {}
-		void dispatch(const string& line, bool nmdc = false)
+		void dispatch(const char* buf, size_t len, bool nmdc = false)
 		{
 			AdcCommand cmd(0);
-			int parseResult = cmd.parse(line, nmdc);
+			int parseResult = cmd.parse(buf, len, nmdc);
 
 			if (parseResult != AdcCommand::PARSE_OK)
 			{
+#ifdef _DEBUG
+				string line(buf, len);
 				dcdebug("Invalid ADC command: %.50s\n", line.c_str());
+#endif
 				return;
 			}
 
@@ -290,9 +293,13 @@ class CommandHandler
 					CALL_CMD(ZON);
 					CALL_CMD(ZOF);
 				default:
+				{
+#ifdef _DEBUG
+					string line(buf, len);
 					dcdebug("Unknown ADC command: %.50s\n", line.c_str());
-					dcassert(0);
+#endif
 					break;
+				}
 #undef CALL_CMD
 			}
 		}

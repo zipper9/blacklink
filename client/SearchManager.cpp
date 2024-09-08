@@ -286,7 +286,7 @@ static inline bool isText(const char* buf, int len)
 void SearchManager::onData(const char* buf, int len, const IpAddress& remoteIp, uint16_t remotePort)
 {
 	if ((LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS) && isText(buf, len))
-		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
+		LogManager::commandTrace(buf, len, LogManager::FLAG_IN | LogManager::FLAG_UDP,
 			Util::printIpAddress(remoteIp, true), remotePort);
 
 	if ((getOptions() & OPT_ENABLE_SUDP) && processSUDP(buf, len, remoteIp, remotePort)) return;
@@ -434,7 +434,7 @@ bool SearchManager::processRES(const char* buf, int len, const IpAddress& remote
 	if (isRES(buf, len))
 	{
 		AdcCommand c(0);
-		int parseResult = c.parse(string(buf, len-1));
+		int parseResult = c.parse(buf, len-1);
 		if (parseResult != AdcCommand::PARSE_OK)
 		{
 #ifdef _DEBUG
@@ -458,7 +458,7 @@ bool SearchManager::processPSR(const char* buf, int len, const IpAddress& remote
 	if (isPSR(buf, len))
 	{
 		AdcCommand c(0);
-		int parseResult = c.parse(string(buf, len-1));
+		int parseResult = c.parse(buf, len-1);
 		if (parseResult != AdcCommand::PARSE_OK)
 		{
 #ifdef _DEBUG
@@ -504,7 +504,7 @@ bool SearchManager::processSUDP(const char* buf, int len, const IpAddress& remot
 	if (result)
 	{
 		if (LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS)
-			LogManager::commandTrace(data, LogManager::FLAG_IN | LogManager::FLAG_UDP,
+			LogManager::commandTrace(data.data(), data.length(), LogManager::FLAG_IN | LogManager::FLAG_UDP,
 				Util::printIpAddress(remoteIp, true), remotePort);
 		processRES(data.data(), (int) data.length(), remoteIp);
 	}
@@ -845,7 +845,7 @@ void SearchManager::processSendQueue() noexcept
 		{
 			const string& data = item.data;
 			if ((LogManager::getLogOptions() & LogManager::OPT_LOG_UDP_PACKETS) && !(item.flags & FLAG_NO_TRACE))
-				LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(item.address, true), item.port);
+				LogManager::commandTrace(data.data(), data.length(), LogManager::FLAG_UDP, Util::printIpAddress(item.address, true), item.port);
 			if (item.flags & FLAG_ENC_KEY)
 			{
 				encryptState.encrypt(tmp, data, item.encKey);

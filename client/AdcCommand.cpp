@@ -40,29 +40,29 @@ AdcCommand::AdcCommand(Severity sev, Error err, const string& desc, char type /*
 	cmdChar[3] = 0;
 }
 
-int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
+int AdcCommand::parse(const char* buf, size_t len, bool nmdc /* = false */) noexcept
 {
-	string::size_type i = 5;
+	size_t i = 5;
 	if (nmdc)
 	{
 		// "$ADCxxx ..."
-		if (line.length() < 7)
+		if (len < 7)
 			return PARSE_ERROR_TOO_SHORT;
 		type = TYPE_CLIENT;
-		cmdChar[0] = line[4];
-		cmdChar[1] = line[5];
-		cmdChar[2] = line[6];
+		cmdChar[0] = buf[4];
+		cmdChar[1] = buf[5];
+		cmdChar[2] = buf[6];
 		i += 3;
 	}
 	else
 	{
 		// "yxxx ..."
-		if (line.length() < 4)
+		if (len < 4)
 			return PARSE_ERROR_TOO_SHORT;
-		type = line[0];
-		cmdChar[0] = line[1];
-		cmdChar[1] = line[2];
-		cmdChar[2] = line[3];
+		type = buf[0];
+		cmdChar[0] = buf[1];
+		cmdChar[1] = buf[2];
+		cmdChar[2] = buf[3];
 	}
 
 	if (type != TYPE_BROADCAST && type != TYPE_CLIENT && type != TYPE_DIRECT && type != TYPE_ECHO && type != TYPE_FEATURE && type != TYPE_INFO && type != TYPE_HUB && type != TYPE_UDP)
@@ -71,8 +71,6 @@ int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 	if (type == TYPE_INFO)
 		from = HUB_SID;
 
-	string::size_type len = line.length();
-	const char* buf = line.c_str();
 	string cur;
 	cur.reserve(128);
 

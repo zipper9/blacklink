@@ -346,7 +346,7 @@ class UserConnection :
 
 		// BufferedConnectionListener
 		void onConnected() noexcept override;
-		void onDataLine(const string&) noexcept override;
+		void onDataLine(const char* buf, size_t len) noexcept override;
 		void onModeChange() noexcept override;
 		void onTransmitDone() noexcept override;
 		void onFailed(const string&) noexcept override;

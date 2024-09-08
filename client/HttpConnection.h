@@ -133,7 +133,7 @@ private:
 
 	// BufferedSocketListener
 	void onConnected() noexcept override;
-	void onDataLine(const string&) noexcept override;
+	void onDataLine(const char*, size_t) noexcept override;
 	void onData(const uint8_t*, size_t) noexcept override;
 	void onModeChange() noexcept override;
 	void onFailed(const string&) noexcept override;
