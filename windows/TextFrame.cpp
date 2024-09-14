@@ -27,6 +27,11 @@
 #include "../client/File.h"
 #include "../client/PathUtil.h"
 
+TextFrame::TextFrame(const tstring& fileName) : file(fileName)
+{
+	SettingsManager::instance.addListener(this);
+}
+
 void TextFrame::openWindow(const tstring& fileName)
 {
 	TextFrame* frame = new TextFrame(fileName);
@@ -112,7 +117,7 @@ LRESULT TextFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 LRESULT TextFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	SettingsManager::getInstance()->removeListener(this);
+	SettingsManager::instance.removeListener(this);
 	bHandled = FALSE;
 	return 0;
 }

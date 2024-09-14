@@ -23,8 +23,11 @@
 #include "TimeUtil.h"
 #include "SettingsManager.h"
 #include "ParamExpander.h"
-#include "ResourceManager.h"
 #include "ConfCore.h"
+
+#ifndef NO_RESOURCE_MANAGER
+#include "ResourceManager.h"
+#endif
 
 #ifdef _WIN32
 #include "ClientManager.h"
@@ -207,10 +210,11 @@ void LogManager::log(int area, Util::ParamExpander* ex) noexcept
 	logRaw(area, msg, ex);
 }
 
-class MapAndResourceParamExpanded : public Util::MapParamExpander
+#ifndef NO_RESOURCE_MANAGER
+class MapAndResourceParamExpander : public Util::MapParamExpander
 {
 	public:
-		MapAndResourceParamExpanded(const StringMap& m, time_t t) : MapParamExpander(m, t)
+		MapAndResourceParamExpander(const StringMap& m, time_t t) : MapParamExpander(m, t)
 		{
 		}
 
@@ -227,6 +231,7 @@ class MapAndResourceParamExpanded : public Util::MapParamExpander
 			return MapParamExpander::expandBracket(str, pos, endPos);
 		}
 };
+#endif
 
 class TraceMessageExpander : public Util::TimeParamExpander
 {
@@ -243,6 +248,7 @@ class TraceMessageExpander : public Util::TimeParamExpander
 			if (param == "message") return msg;
 			if (param == "ipPort") return ipPort;
 			if (param == "IP" || param == "ip") return ip;
+#ifndef NO_RESOURCE_MANAGER
 			if (param.length() > 1 && param[0] == '@')
 			{
 				param.erase(0, 1);
@@ -250,13 +256,18 @@ class TraceMessageExpander : public Util::TimeParamExpander
 				if (id != -1)
 					return ResourceManager::getString((ResourceManager::Strings) id);
 			}
+#endif
 			return Util::emptyString;
 		}
 };
 
 void LogManager::log(int area, const StringMap& params) noexcept
 {
-	MapAndResourceParamExpanded ex(params, time(nullptr));
+#ifndef NO_RESOURCE_MANAGER
+	MapAndResourceParamExpander ex(params, time(nullptr));
+#else
+	Util::MapParamExpander ex(params, time(nullptr));
+#endif
 	log(area, &ex);
 }
 

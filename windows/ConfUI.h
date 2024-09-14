@@ -1,7 +1,7 @@
 #ifndef CONF_UI_H_
 #define CONF_UI_H_
 
-#define BL_UI_FEATURE_BB_CODES
+#include "../client/FeatureDef.h"
 
 namespace Conf
 {

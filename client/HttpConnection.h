@@ -46,7 +46,7 @@ public:
 		FLAG_HTTPS      = 4
 	};
 
-	HttpConnection(int id, HttpClientCallback* client): id(id), client(client), receivingData(false) {}
+	HttpConnection(uint64_t id, HttpClientCallback* client): id(id), client(client), receivingData(false) {}
 
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
@@ -90,7 +90,7 @@ private:
 		STATE_FAILED
 	};
 
-	uint64_t id = 0;
+	uint64_t id;
 	HttpClientCallback* const client;
 	string currentUrl;
 	string proxyServer;

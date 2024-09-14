@@ -348,7 +348,7 @@ class ShareManager :
 		struct HashBloomCacheItem
 		{
 			HashBloomCacheKey key;
-			std::unique_ptr<uint8_t> data;
+			std::unique_ptr<uint8_t[]> data;
 			size_t size;
 			HashBloomCacheItem* next;
 		};

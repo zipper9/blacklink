@@ -17,7 +17,7 @@ SocketPool socketPool;
 
 SocketPool::SocketPool()
 {
-	removeTime = GET_TICK() + CHECK_TIME;
+	removeTime = 0;
 }
 
 SocketPool::~SocketPool()

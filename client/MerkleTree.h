@@ -336,19 +336,4 @@ class MerkleTree
 
 typedef MerkleTree<TigerHash> TigerTree;
 
-struct TTFilter
-{
-		TTFilter() : tt(1024 * 1024 * 1024) { }
-		void operator()(const void* data, size_t len)
-		{
-			tt.update(data, len);
-		}
-		TigerTree& getTree()
-		{
-			return tt;
-		}
-	private:
-		TigerTree tt;
-};
-
 #endif // DCPLUSPLUS_DCPP_MERKLE_TREE_H

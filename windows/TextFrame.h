@@ -31,10 +31,7 @@ class TextFrame : public MDITabChildWindowImpl<TextFrame>, private SettingsManag
 
 		static CFrameWndClassInfo& GetWndClassInfo();
 
-		TextFrame(const tstring& fileName) : file(fileName)
-		{
-			SettingsManager::getInstance()->addListener(this);
-		}
+		TextFrame(const tstring& fileName);
 
 		TextFrame(const TextFrame&) = delete;
 		TextFrame& operator= (const TextFrame&) = delete;
