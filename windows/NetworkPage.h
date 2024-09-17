@@ -47,7 +47,7 @@ class NetworkIPTab : public CDialogImpl<NetworkIPTab>
 	public:
 		enum { IDD = IDD_IP_TAB };
 
-		NetworkIPTab(bool v6, NetworkPage* parent) : parent(parent), v6(v6) {}
+		NetworkIPTab(bool v6, NetworkPage* parent) : parent(parent), v6(v6), options(0) {}
 
 		BEGIN_MSG_MAP(NetworkIPTab)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)

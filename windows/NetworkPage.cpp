@@ -173,7 +173,7 @@ LRESULT NetworkIPTab::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
-	int options = ss->getInt(ips.bindOptions);
+	options = ss->getInt(ips.bindOptions);
 	const string selAdapter = ss->getString((options & Conf::BIND_OPTION_USE_DEV) ? ips.bindDevice : ips.bindAddress);
 	const string selMapper = ss->getString(ips.mapper);
 	const string externalIp = ss->getString(ips.externalIp);
