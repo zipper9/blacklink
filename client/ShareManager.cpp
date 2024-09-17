@@ -1141,11 +1141,17 @@ void ShareManager::updateShareGroup(const CID& id, const string& name, const lis
 	ShareGroup& sg = i->second;
 	sg.name = name;
 	sg.shares.clear();
+	sg.totalSize = 0;
+	sg.totalFiles = 0;
 	BaseDirItem item;
 	for (const string& path : shareList)
 	{
 		item.setName(path);
+		auto i = getByRealL(item.getLowerName());
+		if (i == shares.end()) continue;
 		sg.shares.push_back(item);
+		sg.totalSize += i->dir->totalSize;
+		sg.totalFiles += i->totalFiles;
 	}
 	fileListChanged = true;
 }
