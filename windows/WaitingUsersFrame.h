@@ -133,8 +133,8 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 				UploadQueueItem(const HintedUser& hintedUser, const UploadQueueFilePtr& file) :
 					file(file), hintedUser(hintedUser), iconIndex(-1), ip{0} {}
 				void update();
-				const UserPtr& getUser() const { return hintedUser.user; }
-				const string& getHint() const { return hintedUser.hint; }
+				const UserPtr& getUser() const override { return hintedUser.user; }
+				const string& getHubHint() const override { return hintedUser.hint; }
 				const UploadQueueFilePtr& getFile() { return file; }
 				int getImageIndex() const { return iconIndex < 0 ? 0 : iconIndex; }
 				void setImageIndex(int index) { iconIndex = index; }

@@ -222,7 +222,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 
 		LRESULT onReport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			doAction(&UserInfoBase::doReport, selectedHint);
+			doAction(&UserInfoBase::doReport);
 			return 0;
 		}
 
@@ -281,7 +281,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		{
 			if (selectedUser)
 			{
-				(UserInfoSimple(selectedUser, selectedHint).pm)(selectedHint);
+				(UserInfoSimple(selectedUser, selectedHint).pm)();
 			}
 			else
 			{
@@ -292,11 +292,11 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 					const tstring message = UserInfoSimple::getBroadcastPrivateMessage();
 					if (!message.empty())
 						for (const auto& u : selected)
-							UserInfoSimple(u, selectedHint).pmText(selectedHint, message);
+							UserInfoSimple(u, selectedHint).pmText(message);
 				}
 				else if (!selected.empty())
 				{
-					UserInfoSimple(selected[0], selectedHint).pm(selectedHint);
+					UserInfoSimple(selected[0], selectedHint).pm();
 				}
 			}
 			return 0;
@@ -304,7 +304,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		LRESULT onConnectHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			doAction(&UserInfoBase::connect, selectedHint);
+			doAction(&UserInfoBase::connect);
 			return 0;
 		}
 
@@ -313,25 +313,25 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			switch (wID)
 			{
 				case IDC_GRANTSLOT:
-					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 600);
+					doAction(&UserInfoBase::grantSlotPeriod, 600);
 					break;
 				case IDC_GRANTSLOT_HOUR:
-					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 3600);
+					doAction(&UserInfoBase::grantSlotPeriod, 3600);
 					break;
 				case IDC_GRANTSLOT_DAY:
-					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 24 * 3600);
+					doAction(&UserInfoBase::grantSlotPeriod, 24 * 3600);
 					break;
 				case IDC_GRANTSLOT_WEEK:
-					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 7 * 24 * 3600);
+					doAction(&UserInfoBase::grantSlotPeriod, 7 * 24 * 3600);
 					break;
 				case IDC_GRANTSLOT_PERIOD:
 				{
 					const uint64_t slotTime = UserInfoSimple::inputSlotTime();
-					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, slotTime);
+					doAction(&UserInfoBase::grantSlotPeriod, slotTime);
 				}
 				break;
 				case IDC_UNGRANTSLOT:
-					doAction(&UserInfoBase::ungrantSlot, selectedHint);
+					doAction(&UserInfoBase::ungrantSlot);
 					break;
 			}
 			return 0;
@@ -400,7 +400,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			
 			dcdrun(_debugIsClean = true;)
 		}
-		
+
 		void reinitUserMenu(const T2& user, const string& hint)
 		{
 			selectedHint = hint;
@@ -607,7 +607,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		T2 selectedUser;
 		
 	protected:	
-		void doAction(void (UserInfoBase::*func)(const int data), const int data)
+		void doAction(void (UserInfoBase::*func)(int data), int data)
 		{
 			if (selectedUser)
 			{
@@ -622,58 +622,37 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void doAction(void (UserInfoBase::*func)(const string &hubHint, const tstring& data), const string &hubHint, const tstring& data)
+		void doAction(void (UserInfoBase::*func)(const tstring& data), const tstring& data)
 		{
 			if (selectedUser)
 			{
-				(UserInfoSimple(selectedUser, selectedHint).*func)(hubHint, data);
+				(UserInfoSimple(selectedUser, selectedHint).*func)(data);
 			}
 			else
 			{
 				vector<T2> selected;
 				static_cast<T*>(this)->getSelectedUsers(selected);
 				for (auto& u : selected)
-					(UserInfoSimple(u, selectedHint).*func)(hubHint, data);
+					(UserInfoSimple(u, selectedHint).*func)(data);
 			}
 		}
 		
-		void doAction(void (UserInfoBase::*func)(const string &hubHint, const uint64_t data), const string &hubHint, const uint64_t data)
+		void doAction(void (UserInfoBase::*func)(uint64_t data), uint64_t data)
 		{
 			if (selectedUser)
 			{
-				(UserInfoSimple(selectedUser, selectedHint).*func)(hubHint, data);
+				(UserInfoSimple(selectedUser, selectedHint).*func)(data);
 			}
 			else
 			{
 				vector<T2> selected;
 				static_cast<T*>(this)->getSelectedUsers(selected);
 				for (auto& u : selected)
-					(UserInfoSimple(u, selectedHint).*func)(hubHint, data);
+					(UserInfoSimple(u, selectedHint).*func)(data);
 			}
 		}
 		
-		void doAction(void (UserInfoBase::*func)(const string &hubHint), const string &hubHint, bool useOnlyFirstItem = true)
-		{
-			if (selectedUser)
-			{
-				(UserInfoSimple(selectedUser, selectedHint).*func)(hubHint);
-			}
-			else
-			{
-				vector<T2> selected;
-				static_cast<T*>(this)->getSelectedUsers(selected);
-				if (!selected.empty())
-				{
-					if (useOnlyFirstItem)
-						(UserInfoSimple(selected[0], selectedHint).*func)(hubHint);
-					else
-						for (auto& u : selected)
-							(UserInfoSimple(u, selectedHint).*func)(hubHint);
-				}
-			}
-		}
-
-		void doAction(void (UserInfoBase::*func)())
+		void doAction(void (UserInfoBase::*func)(), bool useOnlyFirstItem = true)
 		{
 			if (selectedUser)
 			{
@@ -683,10 +662,17 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			{
 				vector<T2> selected;
 				static_cast<T*>(this)->getSelectedUsers(selected);
-				for (auto& u : selected)
-					(UserInfoSimple(u, selectedHint).*func)();
+				if (!selected.empty())
+				{
+					if (useOnlyFirstItem)
+						(UserInfoSimple(selected[0], selectedHint).*func)();
+					else
+						for (auto& u : selected)
+							(UserInfoSimple(u, selectedHint).*func)();
+				}
 			}
 		}
+
 	private:
 		dcdrun(bool _debugIsClean;)
 };

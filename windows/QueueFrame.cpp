@@ -1973,7 +1973,7 @@ LRESULT QueueFrame::onGetList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			}
 			try
 			{
-				QueueManager::getInstance()->addList(user, 0, QueueItem::XFLAG_CLIENT_VIEW);
+				QueueManager::getInstance()->addList(HintedUser(user, Util::emptyString), 0, QueueItem::XFLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)
 			{

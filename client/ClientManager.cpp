@@ -375,8 +375,11 @@ string ClientManager::getNick(const UserPtr& user, const string& hintUrl)
 	string result;
 	if (!hintUrl.empty())
 	{
-		READ_LOCK(*g_csOnlineUsers);
-		const OnlineUserPtr u = findOnlineUserHintL(user->getCID(), hintUrl);
+		OnlineUserPtr u;
+		{
+			READ_LOCK(*g_csOnlineUsers);
+			u = findOnlineUserHintL(user->getCID(), hintUrl);
+		}
 		if (u)
 			result = u->getIdentity().getNick();
 	}

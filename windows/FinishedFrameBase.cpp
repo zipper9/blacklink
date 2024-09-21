@@ -633,7 +633,7 @@ LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 					params.size = ii->entry->getSize();
 					params.root = &ii->entry->getTTH();
 					params.readdBadSource = false;
-					qm->add(ii->entry->getTarget(), params, user, 0, 0, getConnFlag);
+					qm->add(ii->entry->getTarget(), params, HintedUser(user, Util::emptyString), 0, 0, getConnFlag);
 				}
 				catch (const Exception& e)
 				{

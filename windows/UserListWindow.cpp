@@ -219,13 +219,13 @@ LRESULT UserListWindow::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /
 					break;
 				}
 				case 2:
-					ui->pm(hubHint);
+					ui->pm();
 					break;
 				case 3:
 					ui->matchQueue();
 					break;
 				case 4:
-					ui->grantSlotPeriod(hubHint, 600);
+					ui->grantSlotPeriod(600);
 					break;
 				case 5:
 					ui->addFav();

@@ -286,7 +286,7 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
 		}
 
-		reinitUserMenu(ui->getUser(), ui->getHint());
+		reinitUserMenu(ui->getUser(), ui->getHubHint());
 		appendAndActivateUserItems(contextMenu);
 		int copyIndex = 3;
 		MENUITEMINFO mii = { sizeof(mii) };
@@ -377,7 +377,7 @@ void WaitingUsersFrame::loadAll()
 		const auto& users = lockedInstance->getUploadQueueL();
 		for (const WaitingUser& wu : users)
 		{
-			tstring text = Text::toT(wu.getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(wu.getHintedUser()).first;
+			tstring text = Text::toT(wu.getHintedUser().getNickAndHub());
 			HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT,
 				text.c_str(), 0, 0, 0, 0,
 				reinterpret_cast<LPARAM>(new UserItem(wu.getHintedUser())), treeRoot, TVI_LAST);

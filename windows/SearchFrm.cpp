@@ -730,7 +730,7 @@ void SearchFrame::onEnter()
 	
 	ctrlResults.deleteAll();
 	clearFound();
-	
+
 	tstring s;
 	WinUtil::getWindowText(ctrlSearch, s);
 	
@@ -2403,7 +2403,7 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 		switch (wID)
 		{
 			case IDC_COPY_NICK:
-				sCopy = sr.getUser()->getLastNick();
+				sCopy = sr.getHintedUser().getNick();
 				break;
 			case IDC_COPY_FILENAME:
 				if (sr.getType() == SearchResult::TYPE_FILE)

@@ -21,40 +21,33 @@
 
 #include "User.h"
 
-/** User pointer associated to a hub url */
+// User pointer associated to a hub url
 class HintedUser
 {
 	public:
 		UserPtr user;
 		string hint;
-		HintedUser(): user(nullptr) {}
-		explicit HintedUser(const UserPtr& user, const string& hint) : user(user), hint(hint) { }
-		
+
+		HintedUser() {}
+		HintedUser(const UserPtr& user, const string& hint) : user(user), hint(hint) {}
+
+		operator UserPtr() const { return user; }
+
 		bool operator==(const UserPtr& rhs) const
 		{
 			return user == rhs;
 		}
-		
+
 		bool operator==(const HintedUser& rhs) const
 		{
 			return user == rhs.user;
 			// ignore the hint, we don't want lists with multiple instances of the same user...
 		}
-		
-		bool equals(const HintedUser& rhs) const
-		{
-			return hint == rhs.hint && user == rhs.user;
-		}
-		
-		string toString() const
-		{
-			return "(" + hint + ")" + (user ? user->getLastNick() : std::string());
-		}
-		
-		operator UserPtr() const
-		{
-			return user;
-		}
+
+		bool equals(const HintedUser& rhs) const { return hint == rhs.hint && user == rhs.user; }
+		string toString() const;
+		string getNick() const;
+		string getNickAndHub() const;
 };
 
 #endif // DCPLUSPLUS_DCPP_HINTEDUSER_H_

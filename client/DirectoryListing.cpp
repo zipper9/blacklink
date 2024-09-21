@@ -719,7 +719,7 @@ void DirectoryListing::download(File* file, const string& target, bool view, Que
 		params.size = file->getSize();
 		params.root = &file->getTTH();
 		params.priority = prio;
-		QueueManager::getInstance()->add(target, params, getUser(), flags, extraFlags, getConnFlag);
+		QueueManager::getInstance()->add(target, params, getHintedUser(), flags, extraFlags, getConnFlag);
 		file->setFlag(FLAG_QUEUED);
 		Directory* dir = file->getParent();
 		while (dir->getParent())

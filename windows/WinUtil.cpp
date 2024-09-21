@@ -453,7 +453,7 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 			{
 				try
 				{
-					QueueManager::getInstance()->addList(user, 0, QueueItem::XFLAG_CLIENT_VIEW, file);
+					QueueManager::getInstance()->addList(HintedUser(user, formattedUrl), 0, QueueItem::XFLAG_CLIENT_VIEW, file);
 				}
 				catch (const Exception&)
 				{

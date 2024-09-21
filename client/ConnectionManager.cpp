@@ -481,17 +481,17 @@ void ConnectionManager::startListen(int af, int type)
  * for downloading.
  * @param user The user to connect to.
  */
-void ConnectionManager::getDownloadConnection(const UserPtr& user)
+void ConnectionManager::getDownloadConnection(const HintedUser& hintedUser)
 {
-	dcassert(user);
+	dcassert(hintedUser.user);
 	ConnectionQueueItemPtr cqi;
 	string existingToken;
 	{
 		WRITE_LOCK(*csDownloads);
-		const auto i = find(downloads.begin(), downloads.end(), user);
+		const auto i = find(downloads.begin(), downloads.end(), hintedUser.user);
 		if (i == downloads.end())
 		{
-			auto cqi = std::make_shared<ConnectionQueueItem>(HintedUser(user, Util::emptyString), true,
+			auto cqi = std::make_shared<ConnectionQueueItem>(hintedUser, true,
 				tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
 			downloads.insert(cqi);
 			if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
@@ -510,7 +510,7 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 	}
 	if (cqi)
 	{
-		fire(ConnectionManagerListener::Added(), HintedUser(user, Util::emptyString), true, cqi->getConnectionQueueToken());
+		fire(ConnectionManagerListener::Added(), hintedUser, true, cqi->getConnectionQueueToken());
 		return;
 	}
 }

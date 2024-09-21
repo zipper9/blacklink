@@ -1167,12 +1167,16 @@ void Client::checkUsers(uint64_t tick)
 			}
 		}
 	}
+	if (usersToCheck.empty()) return;
+	HintedUser hintedUser;
+	hintedUser.hint = getHubUrl();
 	auto qm = QueueManager::getInstance();
 	for (UserPtr& user : usersToCheck)
 	{
 		if (numActive >= maxUsersToCheck) break;
 		LogManager::message("User check started: " + user->getLastNick(), false);
-		qm->userCheckStart(user);
+		hintedUser.user = user;
+		qm->userCheckStart(hintedUser);
 		++numActive;
 	}
 }

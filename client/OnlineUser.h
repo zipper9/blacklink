@@ -571,6 +571,12 @@ class OnlineUser :  public UserInfoBase
 		static std::atomic_int onlineUserCount;
 #endif
 		
+		const UserPtr& getUser() const override
+		{
+			return identity.getUser();
+		}
+		const string& getHubHint() const override;
+
 		operator UserPtr&()
 		{
 			return getUser();
@@ -579,11 +585,7 @@ class OnlineUser :  public UserInfoBase
 		{
 			return getUser();
 		}
-		UserPtr& getUser() // TODO
-		{
-			return identity.getUser();
-		}
-		const UserPtr& getUser() const // TODO
+		UserPtr& getUser()
 		{
 			return identity.getUser();
 		}

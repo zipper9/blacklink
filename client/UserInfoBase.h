@@ -19,43 +19,45 @@
 #ifndef USERINFOBASE_H
 #define USERINFOBASE_H
 
-#include "typedefs.h"
-#include "forward.h"
+#include "HintedUser.h"
 
 class UserInfoBase
 {
 	public:
-		UserInfoBase() { }
-		virtual ~UserInfoBase() { }
+		UserInfoBase() {}
+		virtual ~UserInfoBase() {}
 
 		UserInfoBase(const UserInfoBase&) = delete;
 		UserInfoBase& operator= (const UserInfoBase&) = delete;
-		
+
 		void getList();
 		void browseList();
-		
+
 		void getUserResponses();
 		void matchQueue();
 
-		void doReport(const string& hubHint);
+		void doReport();
 
-		void pm(const string& hubHint);
-		void pmText(const string& hubHint, const tstring& message);
+		void pm();
+		void pmText(const tstring& message);
 
-		void grantSlotPeriod(const string& hubHint, const uint64_t period);
-		void ungrantSlot(const string& hubHint);
+		void grantSlotPeriod(uint64_t period);
+		void ungrantSlot();
 		void addFav();
 		void delFav();
-		void setUploadLimit(const int limit);
+		void setUploadLimit(int limit);
 		void setIgnorePM();
 		void setFreePM();
 		void setNormalPM();
 		void ignoreOrUnignoreUserByName();
 		void removeAll();
-		void connect(const string& hubHint);
-		
+		void connect();
+
 		virtual const UserPtr& getUser() const = 0;
+		virtual const string& getHubHint() const = 0;
+
 		bool isMe() const;
+		HintedUser getHintedUser() const { return HintedUser(getUser(), getHubHint()); }
 };
 
 #endif // USERINFOBASE_H

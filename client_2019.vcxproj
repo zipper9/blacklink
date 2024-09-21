@@ -536,6 +536,7 @@
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
     <ClCompile Include="client\HashManager.cpp" />
     <ClCompile Include="client\HashUtil.cpp" />
+    <ClCompile Include="client\HintedUser.cpp" />
     <ClCompile Include="client\HttpClient.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
     <ClCompile Include="client\HttpCookies.cpp" />

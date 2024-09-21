@@ -199,7 +199,7 @@ class ConnectionManager :
 		void adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure);
 		void adcConnect(const OnlineUser& user, int af, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
 
-		void getDownloadConnection(const UserPtr& user);
+		void getDownloadConnection(const HintedUser& hintedUser);
 		void force(const UserPtr& user);
 		void setUploadLimit(const UserPtr& user, int lim);
 

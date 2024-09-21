@@ -91,13 +91,10 @@ class QueueManager : public Singleton<QueueManager>,
 		};
 
 		// Add a file to the queue
-		void add(const string& target, const QueueItemParams& params, const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, bool& getConnFlag);
+		void add(const string& target, const QueueItemParams& params, const HintedUser& hintedUser, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, bool& getConnFlag);
 		// Add a user's filelist to the queue
-		void addList(const UserPtr& user, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, const string& initialDir = Util::emptyString);
-#if 0
-		void addCheckUserIP(const UserPtr& user);
-#endif
-		bool userCheckStart(const UserPtr& user);
+		void addList(const HintedUser& hintedUser, QueueItem::MaskType flags, QueueItem::MaskType extraFlags, const string& initialDir = Util::emptyString);
+		bool userCheckStart(const HintedUser& hintedUser);
 		void userCheckProcessFailure(const UserPtr& user, int numErrors, bool removeQueueItem);
 		bool addDclstFile(const string& path);
 		void processFileExistsQuery(const string& path, int action, const string& newPath, QueueItem::Priority priority);
@@ -213,7 +210,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void readd(const string& target, const UserPtr& user);
 		void readdAll(const QueueItemPtr& q);
 		/** Add a directory to the queue (downloads filelist and matches the directory). */
-		void addDirectory(const string& dir, const UserPtr& user, const string& target, QueueItem::Priority p, int flag) noexcept;
+		void addDirectory(const string& dir, const HintedUser& hintedUser, const string& target, QueueItem::Priority p, int flag) noexcept;
 		int matchListing(DirectoryListing& dl) noexcept;
 		size_t getDirectoryItemCount() const noexcept;
 
@@ -460,7 +457,8 @@ class QueueManager : public Singleton<QueueManager>,
 		void fireStatusUpdated(const QueueItemPtr& qi);
 
 	public:
-		static void getDownloadConnection(const UserPtr& user);
+		static void getDownloadConnection(const HintedUser& hintedUser);
+		static void getDownloadConnections(const UserList& users);
 };
 
 #endif // !defined(QUEUE_MANAGER_H)

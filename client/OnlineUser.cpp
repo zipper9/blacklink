@@ -831,3 +831,8 @@ string Identity::getExtJSONTimesStartCoreText() const
 	}
 	return result;
 }
+
+const string& OnlineUser::getHubHint() const
+{
+	return cb->getHubUrl();
+}

@@ -420,7 +420,7 @@ void ADLSearchManager::prepare(ADLSearchManager::SearchContext& ctx, DirectoryLi
 	UserPtr user = dl->getUser();
 	if (user)
 	{
-		params["userNI"] = params["nick"] = user->getLastNick(); // FIXME
+		params["userNI"] = params["nick"] = dl->getHintedUser().getNick();
 		params["userCID"] = user->getCID().toBase32();
 	}
 	ctx.dl = dl;
@@ -595,7 +595,7 @@ bool ADLSearchManager::SearchContext::matchFile(const DirectoryListing::File* fi
 				QueueManager::QueueItemParams params;
 				params.size = file->getSize();
 				params.root = &file->getTTH();
-				QueueManager::getInstance()->add(file->getName(), params, user, 0, 0, getConnFlag);
+				QueueManager::getInstance()->add(file->getName(), params, dl->getHintedUser(), 0, 0, getConnFlag);
 			}
 			catch (const Exception& e)
 			{

@@ -1556,7 +1556,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 						break;
 					}
 					case 2:
-						if (client && !ui->isMe()) ui->pm(client->getHubUrl());
+						if (client && !ui->isMe()) ui->pm();
 						break;
 					case 3:
 						if (!ui->isMe()) ui->getList();
@@ -1565,7 +1565,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 						if (!ui->isMe()) ui->matchQueue();
 						break;
 					case 5:
-						if (!ui->isMe()) ui->grantSlotPeriod(baseClient->getHubUrl(), 600);
+						if (!ui->isMe()) ui->grantSlotPeriod(600);
 						break;
 					case 6:
 						ui->addFav();

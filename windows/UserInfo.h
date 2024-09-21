@@ -37,6 +37,9 @@ class UserInfo : public UserInfoBase
 		static int compareItems(const UserInfo* a, const UserInfo* b, int col, int flags);
 		static int getCompareFlags();
 
+		const UserPtr& getUser() const override { return ou->getUser(); }
+		const string& getHubHint() const override { return ou->getHubHint(); }
+
 		tstring getText(int col) const;
 		bool isOP() const
 		{
@@ -68,10 +71,6 @@ class UserInfo : public UserInfoBase
 		const OnlineUserPtr& getOnlineUser() const
 		{
 			return ou;
-		}
-		const UserPtr& getUser() const
-		{
-			return ou->getUser();
 		}
 		Identity& getIdentityRW()
 		{

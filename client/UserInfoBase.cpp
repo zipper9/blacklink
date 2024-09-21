@@ -19,7 +19,7 @@ void UserInfoBase::matchQueue()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), 0, QueueItem::XFLAG_MATCH_QUEUE);
+			QueueManager::getInstance()->addList(getHintedUser(), 0, QueueItem::XFLAG_MATCH_QUEUE);
 		}
 		catch (const Exception& e)
 		{
@@ -34,7 +34,7 @@ void UserInfoBase::getUserResponses()
 	{
 		try
 		{
-			QueueManager::getInstance()->userCheckStart(getUser());
+			QueueManager::getInstance()->userCheckStart(getHintedUser());
 		}
 		catch (const Exception& e)
 		{
@@ -43,10 +43,10 @@ void UserInfoBase::getUserResponses()
 	}
 }
 
-void UserInfoBase::doReport(const string& hubHint)
+void UserInfoBase::doReport()
 {
 	if (getUser())
-		ClientManager::dumpUserInfo(HintedUser(getUser(), hubHint));
+		ClientManager::dumpUserInfo(getHintedUser());
 }
 
 void UserInfoBase::getList()
@@ -55,7 +55,7 @@ void UserInfoBase::getList()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), 0, QueueItem::XFLAG_CLIENT_VIEW);
+			QueueManager::getInstance()->addList(getHintedUser(), 0, QueueItem::XFLAG_CLIENT_VIEW);
 		}
 		catch (const Exception& e)
 		{
@@ -70,7 +70,7 @@ void UserInfoBase::browseList()
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(getUser(), QueueItem::FLAG_PARTIAL_LIST, QueueItem::XFLAG_CLIENT_VIEW);
+			QueueManager::getInstance()->addList(getHintedUser(), QueueItem::FLAG_PARTIAL_LIST, QueueItem::XFLAG_CLIENT_VIEW);
 		}
 		catch (const Exception& e)
 		{
@@ -104,7 +104,7 @@ void UserInfoBase::setNormalPM()
 		FavoriteManager::getInstance()->setFlags(getUser(), FavoriteUser::FLAG_NONE, FavoriteUser::PM_FLAGS_MASK);
 }
 
-void UserInfoBase::setUploadLimit(const int limit)
+void UserInfoBase::setUploadLimit(int limit)
 {
 	if (getUser())
 		FavoriteManager::getInstance()->setUploadLimit(getUser(), limit);
@@ -135,7 +135,7 @@ void UserInfoBase::ignoreOrUnignoreUserByName()
 	}
 }
 
-void UserInfoBase::pm(const string& hubHint)
+void UserInfoBase::pm()
 {
 	if (getUser()
 #ifndef _DEBUG
@@ -143,14 +143,14 @@ void UserInfoBase::pm(const string& hubHint)
 #endif
 	)
 	{
-		UserManager::getInstance()->outgoingPrivateMessage(getUser(), hubHint, Util::emptyStringT);
+		UserManager::getInstance()->outgoingPrivateMessage(getUser(), getHubHint(), Util::emptyStringT);
 	}
 }
 
-void UserInfoBase::pmText(const string& hubHint, const tstring& message)
+void UserInfoBase::pmText(const tstring& message)
 {
-	if (!message.empty())
-		UserManager::getInstance()->outgoingPrivateMessage(getUser(), hubHint, message);
+	if (getUser() && !message.empty())
+		UserManager::getInstance()->outgoingPrivateMessage(getUser(), getHubHint(), message);
 }
 
 void UserInfoBase::removeAll()
@@ -159,22 +159,22 @@ void UserInfoBase::removeAll()
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
 }
 
-void UserInfoBase::connect(const string& hubHint)
+void UserInfoBase::connect()
 {
-	if (getUser() && !hubHint.empty())
-		UserManager::getInstance()->openUserUrl(hubHint, getUser());
+	if (getUser() && !getHubHint().empty())
+		UserManager::getInstance()->openUserUrl(getHubHint(), getUser());
 }
 
-void UserInfoBase::grantSlotPeriod(const string& hubHint, const uint64_t period)
+void UserInfoBase::grantSlotPeriod(uint64_t period)
 {
 	if (period && getUser())
-		UploadManager::getInstance()->reserveSlot(HintedUser(getUser(), hubHint), period);
+		UploadManager::getInstance()->reserveSlot(getHintedUser(), period);
 }
 
-void UserInfoBase::ungrantSlot(const string& hubHint)
+void UserInfoBase::ungrantSlot()
 {
 	if (getUser())
-		UploadManager::getInstance()->unreserveSlot(HintedUser(getUser(), hubHint));
+		UploadManager::getInstance()->unreserveSlot(getHintedUser());
 }
 
 bool UserInfoBase::isMe() const

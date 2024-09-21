@@ -35,17 +35,15 @@ class UserInfoSimple: public UserInfoBase
 		{
 			hintedUser.user->setLastNick(user->getIdentity().getNick());
 		}
-		
+
 		static tstring getBroadcastPrivateMessage();
 		static uint64_t inputSlotTime();
 		static tstring getTagIP(const string& tag, Ip4Address ip4, const Ip6Address& ip6);
 		static tstring getTagIP(const ClientManager::UserParams& params);
-		
-		const UserPtr& getUser() const
-		{
-			return hintedUser.user;
-		}
-		
+
+		const UserPtr& getUser() const override { return hintedUser.user; }
+		const string& getHubHint() const override { return hintedUser.hint; }
+
 		const HintedUser hintedUser;
 };
 

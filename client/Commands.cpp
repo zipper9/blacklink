@@ -1212,7 +1212,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 					return true;
 				}
 				auto qm = QueueManager::getInstance();
-				qm->addDirectory(pc.args[index], ou->getUser(), Util::emptyString,
+				qm->addDirectory(pc.args[index], ou->getHintedUser(), Util::emptyString,
 					QueueItem::DEFAULT,
 					action == ACTION_USER_MATCH_QUEUE ? QueueManager::DIR_FLAG_MATCH_QUEUE : QueueManager::DIR_FLAG_DOWNLOAD_DIRECTORY);
 				res.text = "Requesting partial file list";

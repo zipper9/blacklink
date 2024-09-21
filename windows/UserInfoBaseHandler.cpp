@@ -533,9 +533,8 @@ void FavUserTraits::init(const UserInfoSimple& ui)
 			isFreePm = false;
 		}
 		
-		// FIXME: getLastNick is wrong
 		int type;
-		if (UserManager::getInstance()->isInIgnoreList(ui.getUser()->getLastNick(), &type))
+		if (UserManager::getInstance()->isInIgnoreList(ui.getHintedUser().getNick(), &type))
 		{
 			isIgnoredByName = type == UserManager::IGNORE_NICK;
 			isIgnoredByWildcard = !isIgnoredByName;

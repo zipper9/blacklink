@@ -284,12 +284,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				tstring ratioText;
 #endif
 
+				const UserPtr& getUser() const override { return hintedUser.user; }
+				const string& getHubHint() const override { return hintedUser.hint; }
+
 				void update(const UpdateInfo& ui);
 				void updateNicks();
-				const UserPtr& getUser() const
-				{
-					return hintedUser.user;
-				}
 
 				void disconnect();
 				void disconnectAndBlock();

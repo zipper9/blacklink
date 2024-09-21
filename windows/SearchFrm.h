@@ -306,7 +306,10 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 					ipUpdated = false;
 #endif
 				}
+
 				const UserPtr& getUser() const override { return sr.getUser(); }
+				const string& getHubHint() const override { return sr.getHubUrl(); }
+
 				int iconIndex;
 
 				int hits;

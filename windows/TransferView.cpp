@@ -742,7 +742,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 		switch (ss->getInt(Conf::TRANSFERLIST_DBLCLICK))
 		{
 			case 0:
-				if (isUser) i->pm(i->hintedUser.hint);
+				if (isUser) i->pm();
 				break;
 			case 1:
 				if (isUser) i->getList();
@@ -751,7 +751,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 				if (isUser) i->matchQueue();
 				break;
 			case 3:
-				if (isUser) i->grantSlotPeriod(i->hintedUser.hint, 600);
+				if (isUser) i->grantSlotPeriod(600);
 				break;
 			case 4:
 				if (isUser) i->addFav();

@@ -287,7 +287,7 @@ StringMap DirectoryListingFrame::getFrameLogParams() const
 			params["hubURL"] = hintedUser.hint;
 		}
 		params["userCID"] = hintedUser.user->getCID().toBase32();
-		params["userNI"] = hintedUser.user->getLastNick();
+		params["userNI"] = hintedUser.getNick();
 		params["myCID"] = ClientManager::getMyCID().toBase32();
 	}
 	return params;
@@ -1285,7 +1285,7 @@ LRESULT DirectoryListingFrame::onDownloadAny(WORD, WORD, HWND, BOOL&)
 		params.sourcePath = path;
 		auto pos = path.rfind('/');
 		if (pos != string::npos) path.erase(0, pos + 1);
-		QueueManager::getInstance()->add(path, params, dl->getUser(), 0, 0, getConnFlag);
+		QueueManager::getInstance()->add(path, params, dl->getHintedUser(), 0, 0, getConnFlag);
 	}
 	catch (const Exception& e)
 	{
