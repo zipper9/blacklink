@@ -570,52 +570,16 @@ class OnlineUser :  public UserInfoBase
 #ifdef _DEBUG
 		static std::atomic_int onlineUserCount;
 #endif
-		
-		const UserPtr& getUser() const override
-		{
-			return identity.getUser();
-		}
+
+		const UserPtr& getUser() const override { return identity.getUser(); }
 		const string& getHubHint() const override;
 
-		operator UserPtr&()
-		{
-			return getUser();
-		}
-		operator const UserPtr&() const
-		{
-			return getUser();
-		}
-		UserPtr& getUser()
-		{
-			return identity.getUser();
-		}
-		Identity& getIdentity() // TODO
-		{
-			return identity;
-		}
-		const Identity& getIdentity() const // TODO
-		{
-			return identity;
-		}
-		ClientBasePtr& getClientBase()
-		{
-			return cb;
-		}
-		const ClientBasePtr& getClientBase() const
-		{
-			return cb;
-		}
-		
-		bool isHub() const
-		{
-			return identity.isHub();
-		}
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-		bool isHidden() const
-		{
-			return identity.isHidden();
-		}
-#endif
+		UserPtr& getUser() { return identity.getUser(); }
+		Identity& getIdentity() { return identity; }
+		const Identity& getIdentity() const { return identity; }
+		ClientBasePtr& getClientBase() { return cb; }
+		const ClientBasePtr& getClientBase() const { return cb; }
+
 	private:
 		Identity identity;
 		ClientBasePtr cb;

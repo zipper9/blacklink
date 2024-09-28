@@ -32,9 +32,9 @@
 namespace Text
 {
 
-const string g_utf8 = "utf-8";
-static const string g_utf8NoHyp = "utf8";
-uint16_t g_errorChar = 0xFFFD;
+static const string utf8 = "utf-8";
+static const string utf8NoHyp = "utf8";
+static const uint16_t ERROR_CHAR = 0xFFFD;
 
 #ifndef _WIN32
 #if BOOST_ENDIAN_BIG_BYTE
@@ -87,9 +87,9 @@ int charsetFromString(const string& charset)
 {
 	if (charset.empty())
 		return CHARSET_SYSTEM_DEFAULT;
-	if (charset.length() == g_utf8.length() && isAsciiPrefix2(charset, g_utf8))
+	if (charset.length() == utf8.length() && isAsciiPrefix2(charset, utf8))
 		return CHARSET_UTF8;
-	if (charset.length() == g_utf8NoHyp.length() && isAsciiPrefix2(charset, g_utf8NoHyp))
+	if (charset.length() == utf8NoHyp.length() && isAsciiPrefix2(charset, utf8NoHyp))
 		return CHARSET_UTF8;
 	string::size_type pos;
 	if (!checkPrefix(charset, "windows", pos) && !checkPrefix(charset, "cp", pos))
@@ -108,7 +108,7 @@ string charsetToString(int charset)
 	if (charset == CHARSET_SYSTEM_DEFAULT)
 		return string();
 	if (charset == CHARSET_UTF8)
-		return g_utf8;
+		return utf8;
 	return Util::toString(charset);
 }
 
@@ -136,7 +136,7 @@ string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcept
 void getIconvCharset(char out[], int charset)
 {
 	if (charset == CHARSET_UTF8 || charset == CHARSET_SYSTEM_DEFAULT)
-		strcpy(out, g_utf8.c_str());
+		strcpy(out, utf8.c_str());
 	else
 		sprintf(out, "windows-%d", charset);
 }
@@ -277,7 +277,7 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		uint32_t value = str[i];
 		if (value >= 0xD800 && value < 0xDC00)
 		{
-			if (highSurrogate) outSize += wcToUtf8(g_errorChar, ubuf);
+			if (highSurrogate) outSize += wcToUtf8(ERROR_CHAR, ubuf);
 			highSurrogate = value;
 			continue;
 		}
@@ -285,7 +285,7 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		{
 			if (!highSurrogate)
 			{
-				outSize += wcToUtf8(g_errorChar, ubuf);
+				outSize += wcToUtf8(ERROR_CHAR, ubuf);
 				continue;
 			}
 			value = ((value - 0xDC00) | (highSurrogate - 0xD800) << 10) + 0x10000;
@@ -293,12 +293,12 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		}
 		else if (highSurrogate)
 		{
-			outSize += wcToUtf8(g_errorChar, ubuf);
+			outSize += wcToUtf8(ERROR_CHAR, ubuf);
 			highSurrogate = 0;
 		}
 		outSize += wcToUtf8(value, ubuf);
 	}
-	if (highSurrogate) outSize += wcToUtf8(g_errorChar, ubuf);
+	if (highSurrogate) outSize += wcToUtf8(ERROR_CHAR, ubuf);
 
 	if (!outSize)
 	{
@@ -314,7 +314,7 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		uint32_t value = str[i];
 		if (value >= 0xD800 && value < 0xDC00)
 		{
-			if (highSurrogate) out += wcToUtf8(g_errorChar, out);
+			if (highSurrogate) out += wcToUtf8(ERROR_CHAR, out);
 			highSurrogate = value;
 			continue;
 		}
@@ -322,7 +322,7 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		{
 			if (!highSurrogate)
 			{
-				out += wcToUtf8(g_errorChar, out);
+				out += wcToUtf8(ERROR_CHAR, out);
 				continue;
 			}
 			value = ((value - 0xDC00) | (highSurrogate - 0xD800) << 10) + 0x10000;
@@ -330,17 +330,17 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		}
 		else if (highSurrogate)
 		{
-			out += wcToUtf8(g_errorChar, out);
+			out += wcToUtf8(ERROR_CHAR, out);
 			highSurrogate = 0;
 		}
 		out += wcToUtf8(value, out);
 	}
-	if (highSurrogate) wcToUtf8(g_errorChar, out);
+	if (highSurrogate) wcToUtf8(ERROR_CHAR, out);
 #else
 	for (size_t i = 0; i < len; i++)
 	{
 		uint32_t value = str[i];
-		outSize += wcToUtf8(value < 0x110000 ? value : g_errorChar, ubuf);
+		outSize += wcToUtf8(value < 0x110000 ? value : ERROR_CHAR, ubuf);
 	}
 
 	if (!outSize)
@@ -354,7 +354,7 @@ string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 	for (size_t i = 0; i < len; i++)
 	{
 		uint32_t value = str[i];
-		out += wcToUtf8(value < 0x110000 ? value : g_errorChar, out);
+		out += wcToUtf8(value < 0x110000 ? value : ERROR_CHAR, out);
 	}
 #endif
 	return tgt;
@@ -487,7 +487,7 @@ wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 		if (result < 0)
 		{
 			i -= result;
-			*out++ = g_errorChar;
+			*out++ = ERROR_CHAR;
 		}
 		else
 		{
@@ -525,7 +525,7 @@ wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 		if (result < 0)
 		{
 			i -= result;
-			*out++ = (wchar_t) g_errorChar;
+			*out++ = (wchar_t) ERROR_CHAR;
 		}
 		else
 		{

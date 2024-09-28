@@ -320,7 +320,8 @@ bool UserListWindow::updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bo
 {
 	UserInfo* ui = nullptr;
 	bool isNewUser = false;
-	if (!ou->isHidden() && !ou->isHub())
+	const Identity& identity = ou->getIdentity();
+	if (!identity.isHidden() && !identity.isHub())
 	{
 		WRITE_LOCK(*csUserMap);
 		auto item = userMap.insert(make_pair(ou, ui));

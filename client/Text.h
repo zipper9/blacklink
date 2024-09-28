@@ -42,8 +42,6 @@
 namespace Text
 {
 
-extern const string g_utf8;
-
 enum
 {
 	CHARSET_SYSTEM_DEFAULT = 0,

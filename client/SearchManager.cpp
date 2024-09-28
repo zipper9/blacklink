@@ -554,38 +554,36 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 	for (StringList::size_type i = skipCID ? 1 : 0; i < params.size(); ++i)
 	{
 		const string& str = params[i];
-		if (str.compare(0, 2, "FN", 2) == 0)
+		if (str.length() <= 2) continue;
+		switch (AdcCommand::toCode(str.c_str()))
 		{
-			file = Util::toNmdcFile(str.c_str() + 2);
-		}
-		else if (str.compare(0, 2, "SL", 2) == 0)
-		{
-			freeSlots = Util::toInt(str.c_str() + 2);
-		}
-		else if (str.compare(0, 2, "SI", 2) == 0)
-		{
-			size = Util::toInt64(str.c_str() + 2);
-		}
-		else if (str.compare(0, 2, "TR", 2) == 0)
-		{
-			tth = str.substr(2);
-		}
-		else if (str.compare(0, 2, "TO", 2) == 0)
-		{
-			token = Util::toUInt32(str.c_str() + 2);
+			case TAG('F', 'N'):
+				file = Util::toNmdcFile(str.c_str() + 2);
+				break;
+			case TAG('S', 'L'):
+				freeSlots = Util::toInt(str.c_str() + 2);
+				break;
+			case TAG('S', 'I'):
+				size = Util::toInt64(str.c_str() + 2);
+				break;
+			case TAG('T', 'R'):
+				tth = str.substr(2);
+				break;
+			case TAG('T', 'O'):
+				token = Util::toUInt32(str.c_str() + 2);
 		}
 	}
-	
+
 	if (!file.empty() && freeSlots != SearchResult::SLOTS_UNKNOWN && size != -1)
 	{
 		/// @todo get the hub this was sent from, to be passed as a hint? (eg by using the token?)
 		const StringList hubs = ClientManager::getHubs(from->getCID(), Util::emptyString);
-		const string hub = hubs.empty() ? STRING(OFFLINE) : Util::toString(hubs);
-		
+		const string hub = hubs.empty() ? Util::emptyString : hubs[0];
+
 		const SearchResult::Types type = (file[file.length() - 1] == '\\' ? SearchResult::TYPE_DIRECTORY : SearchResult::TYPE_FILE);
 		if (type == SearchResult::TYPE_FILE && tth.empty())
 			return;
-			
+
 		uint16_t slots = SearchResult::SLOTS_UNKNOWN;
 		ClientManager::getSlots(from->getCID(), slots);
 		SearchResult sr(from, type, slots, freeSlots, size, file, hub, remoteIp, TTHValue(tth), token);
@@ -607,36 +605,34 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 	for (StringList::size_type i = skipCID ? 1 : 0; i < params.size(); ++i)
 	{
 		const string& str = params[i];
-		if (str.compare(0, 2, "U4", 2) == 0)
+		if (str.length() <= 2) continue;
+		switch (AdcCommand::toCode(str.c_str()))
 		{
-			udp4Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));
-		}
-		if (str.compare(0, 2, "U6", 2) == 0)
-		{
-			udp6Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));
-		}
-		else if (str.compare(0, 2, "NI", 2) == 0)
-		{
-			nick = str.substr(2);
-		}
-		else if (str.compare(0, 2, "HI", 2) == 0)
-		{
-			hubIpPort = str.substr(2);
-		}
-		else if (str.compare(0, 2, "TR", 2) == 0)
-		{
-			tth = str.substr(2);
-		}
-		else if (str.compare(0, 2, "PC", 2) == 0)
-		{
-			partialCount = Util::toUInt32(str.c_str() + 2) * 2;
-		}
-		else if (str.compare(0, 2, "PI", 2) == 0)
-		{
-			SimpleStringTokenizer<char> st(str, ',', 2);
-			string tok;
-			while (st.getNextNonEmptyToken(tok))
-				partialInfo.push_back((uint16_t) Util::toInt(tok));
+			case TAG('U', '4'):
+				udp4Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));
+				break;
+			case TAG('U', '6'):
+				udp6Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));
+				break;
+			case TAG('N', 'I'):
+				nick = str.substr(2);
+				break;
+			case TAG('H', 'I'):
+				hubIpPort = str.substr(2);
+				break;
+			case TAG('T', 'R'):
+				tth = str.substr(2);
+				break;
+			case TAG('P', 'C'):
+				partialCount = Util::toUInt32(str.c_str() + 2) * 2;
+				break;
+			case TAG('P', 'I'):
+			{
+				SimpleStringTokenizer<char> st(str, ',', 2);
+				string tok;
+				while (st.getNextNonEmptyToken(tok))
+					partialInfo.push_back((uint16_t) Util::toInt(tok));
+			}
 		}
 	}
 
