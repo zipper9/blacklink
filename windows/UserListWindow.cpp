@@ -125,7 +125,6 @@ UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) : hubFrame(hubFrame)
 	xdu = ydu = 0;
 
 	filterSelPos = COLUMN_NICK;
-	csUserMap = std::unique_ptr<RWLock>(RWLock::create());
 
 	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
@@ -293,6 +292,7 @@ bool UserListWindow::insertUser(UserInfo* ui)
 
 void UserListWindow::updateUserList()
 {
+	ASSERT_MAIN_THREAD();
 	CLockRedraw<> lockRedraw(ctrlUsers);
 	ctrlUsers.DeleteAllItems();
 	if (filter.empty())
@@ -306,7 +306,6 @@ void UserListWindow::updateUserList()
 		dcassert(ctrlFilterSel);
 		const int sel = getFilterSelPos();
 		const bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
-		READ_LOCK(*csUserMap);
 		int pos = 0;
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 		{
@@ -321,10 +320,10 @@ void UserListWindow::updateUserList()
 
 bool UserListWindow::updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bool isConnected)
 {
+	ASSERT_MAIN_THREAD();
 	UserInfo* ui = nullptr;
 	bool isNewUser = false;
 	{
-		WRITE_LOCK(*csUserMap);
 		auto item = userMap.insert(make_pair(ou, ui));
 		if (item.second)
 		{
@@ -384,7 +383,7 @@ bool UserListWindow::updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bo
 
 void UserListWindow::removeUser(const OnlineUserPtr& ou)
 {
-	WRITE_LOCK(*csUserMap);
+	ASSERT_MAIN_THREAD();
 	const auto it = userMap.find(ou);
 	if (it != userMap.end())
 	{
@@ -398,7 +397,7 @@ void UserListWindow::removeUser(const OnlineUserPtr& ou)
 
 size_t UserListWindow::insertUsers()
 {
-	READ_LOCK(*csUserMap);
+	ASSERT_MAIN_THREAD();
 	int pos = ctrlUsers.GetItemCount();
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 	{
@@ -426,6 +425,7 @@ void UserListWindow::setShowUsers(bool flag)
 
 void UserListWindow::setShowHidden(bool flag)
 {
+	ASSERT_MAIN_THREAD();
 	if (showHidden == flag) return;
 	showHidden = flag;
 	if (!showUsers || !ctrlUsers) return;
@@ -443,7 +443,6 @@ void UserListWindow::setShowHidden(bool flag)
 			sel = getFilterSelPos();
 			doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
 		}
-		READ_LOCK(*csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 		{
 			const Identity& identity = i->first->getIdentity();
@@ -460,7 +459,6 @@ void UserListWindow::setShowHidden(bool flag)
 	}
 	else
 	{
-		READ_LOCK(*csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 		{
 			const Identity& identity = i->first->getIdentity();
@@ -481,7 +479,7 @@ void UserListWindow::setShowHidden(bool flag)
 
 UserInfo* UserListWindow::findUser(const OnlineUserPtr& user) const
 {
-	READ_LOCK(*csUserMap);
+	ASSERT_MAIN_THREAD();
 	auto i = userMap.find(user);
 	return i == userMap.end() ? nullptr : i->second;
 }
@@ -511,9 +509,9 @@ void UserListWindow::insertDHTUsers()
 
 void UserListWindow::clearUserList()
 {
+	ASSERT_MAIN_THREAD();
 	removeListViewItems();
 	{
-		WRITE_LOCK(*csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 			delete i->second;
 		userMap.clear();
@@ -840,7 +838,7 @@ bool UserListWindow::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, Filt
 
 void UserListWindow::onIgnoreListChanged()
 {
-	WRITE_LOCK(*csUserMap);
+	ASSERT_MAIN_THREAD();
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
@@ -850,7 +848,7 @@ void UserListWindow::onIgnoreListChanged()
 
 void UserListWindow::onIgnoreListCleared()
 {
-	WRITE_LOCK(*csUserMap);
+	ASSERT_MAIN_THREAD();
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
@@ -987,9 +985,9 @@ bool UserListWindow::selectCID(const CID& cid)
 
 void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const
 {
+	ASSERT_MAIN_THREAD();
 	auto fm = FavoriteManager::getInstance();
 	bool hasIP6 = !Util::isEmpty(param.ip6);
-	READ_LOCK(*csUserMap);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		const auto& id = i->second->getIdentity();
@@ -1043,7 +1041,7 @@ void UserListWindow::setHubHint(const string& hint)
 
 bool UserListWindow::loadIPInfo(const OnlineUserPtr& ou)
 {
-	READ_LOCK(*csUserMap);
+	ASSERT_MAIN_THREAD();
 	auto j = userMap.find(ou); // FIXME
 	if (j == userMap.end()) return false;
 	UserInfo* ui = j->second;

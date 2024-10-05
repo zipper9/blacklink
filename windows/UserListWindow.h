@@ -98,7 +98,6 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 			NOT_EQUAL
 		};
 
-		std::unique_ptr<RWLock> csUserMap;
 		UserInfo::OnlineUserMap userMap;
 
 		CtrlUsers ctrlUsers;
