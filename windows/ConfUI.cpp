@@ -288,6 +288,7 @@ void Conf::initUiSettings()
 	s->addBool(SHOW_CHECKED_USERS, "ShowCheckedUsers", true);
 	s->addInt(HUB_POSITION, "HubPosition", POS_RIGHT);
 	s->addBool(SORT_FAVUSERS_FIRST, "SortFavUsersFirst");
+	s->addBool(SHOW_HIDDEN_USERS, "ShowHiddenUsers");
 	s->addBool(FILTER_ENTER, "FilterEnter");
 	s->addBool(JOIN_OPEN_NEW_WINDOW, "OpenNewWindow");
 	s->addInt(USER_THRESHOLD, "HubThreshold", 1000, 0, &validateNonNeg);

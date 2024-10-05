@@ -62,12 +62,6 @@ class UserInfo : public UserInfoBase
 		{
 			return ou->getIdentity().getNick();
 		}
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-		bool isHidden() const
-		{
-			return ou->getIdentity().isHidden();
-		}
-#endif
 		const OnlineUserPtr& getOnlineUser() const
 		{
 			return ou;

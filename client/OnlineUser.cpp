@@ -590,6 +590,7 @@ void Identity::getReport(string& report)
 		appendStringIfSetBool("Operator", (clientType & CT_OP) != 0);
 		appendStringIfSetBool("Superuser", (clientType & CT_SU) != 0);
 		appendStringIfSetBool("Owner", (clientType & CT_OWNER) != 0);
+		appendStringIfSetBool("Hidden", (clientType & CT_HIDDEN) != 0);
 		report += '(' + Util::toString(clientType) + ")\r\n";
 
 		auto statusFlags = getStatus();

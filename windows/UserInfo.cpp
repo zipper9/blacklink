@@ -98,9 +98,6 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col, int fl
 
 tstring UserInfo::getText(int col) const
 {
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-	// dcassert(isHidden() == false);
-#endif
 	switch (col)
 	{
 		case COLUMN_NICK:

@@ -43,7 +43,6 @@
 
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
-#define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 
 #define USE_SPIN_LOCK
 #define USE_APPDATA

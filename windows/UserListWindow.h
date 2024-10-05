@@ -38,6 +38,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		CtrlUsers& getUserList() { return ctrlUsers; }
 		void setHubHint(const string& hint);
 		void setShowUsers(bool flag);
+		void setShowHidden(bool flag);
 		void initialize(const FavoriteManager::WindowInfo& wi);
 		void clearUserList();
 		void insertDHTUsers();
@@ -114,7 +115,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		tstring filterLower;
 
 		bool showUsers;
-		bool shouldUpdateStats;
+		bool showHidden;
 		bool shouldSort;
 		bool isOp;
 
@@ -127,11 +128,12 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		}
 		size_t insertUsers();
 
-		void insertUser(UserInfo* ui);
+		bool insertUser(UserInfo* ui);
 		void insertUserInternal(UserInfo* ui, int pos);
 		void updateUserList();
 		void removeListViewItems();
 		void selectItem(int pos);
+		bool shouldShowUser(const UserInfo* ui) const;
 
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);

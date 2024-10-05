@@ -1191,6 +1191,7 @@ enum Strings   // @DontAdd
 	SETTINGS_SOCKS5_RESOLVE, // "Use SOCKS5 server to resolve host names"
 	SETTINGS_SOCKS5_USERNAME, // "Username"
 	SETTINGS_SORT_FAVUSERS_FIRST, // "Sort favorite users first"
+	SETTINGS_SHOW_HIDDEN_USERS, // "Show hidden users"
 	SETTINGS_SOUNDS, // "Sounds"
 	SETTINGS_SPEEDS_NOT_ACCURATE, // "Note: because of changing download speeds, this is not 100% accurate..."
 	SETTINGS_STATUS_IN_CHAT, // "View status messages in main chat"

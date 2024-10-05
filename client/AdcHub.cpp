@@ -242,9 +242,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	else if (c.getFrom() == AdcCommand::HUB_SID)
 	{
 		ou = getUser(c.getFrom(), CID(), c.getNick());
-#ifdef IRAINMAN_USE_HIDDEN_USERS
 		ou->getIdentity().setHidden();
-#endif
 	}
 	else
 	{

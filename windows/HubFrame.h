@@ -71,6 +71,13 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			void copySettings(const FavoriteHubEntry& entry);
 		};
 
+		enum
+		{
+			UPDATE_FLAG_TITLE        = 1,
+			UPDATE_FLAG_SORT         = 2,
+			UPDATE_FLAG_HIDDEN_USERS = 4
+		};
+
 		static CFrameWndClassInfo& GetWndClassInfo();
 
 		typedef CSplitterImpl<HubFrame> splitBase;
@@ -188,11 +195,10 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static HubFrame* openHubWindow(const Settings& cs, bool* isNew = nullptr);
 		static HubFrame* openHubWindow(const string& server, const string& keyPrint = Util::emptyString);
 		static HubFrame* findHubWindow(const string& server);
-		static void resortUsers();
 		static void closeDisconnected();
 		static void reconnectDisconnected();
 		static void closeAll(size_t threshold = 0);
-		static void updateAllTitles();
+		static void updateFrames(int flags);
 		static void prepareNonMaximized();
 		static void changeTheme();
 
@@ -328,7 +334,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept override;
 		void on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept override;
 		void on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept override;
-		void resortForFavsFirst(bool justDoIt = false);
 
 		// UserManagerListener
 		void on(UserManagerListener::IgnoreListChanged) noexcept override;

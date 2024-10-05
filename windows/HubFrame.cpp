@@ -2036,18 +2036,6 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 	return 0;
 }
 
-void HubFrame::resortUsers()
-{
-	ASSERT_MAIN_THREAD();
-	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
-	{
-		if (!i->second->isClosedOrShutdown())
-		{
-			i->second->resortForFavsFirst(true);
-		}
-	}
-}
-
 void HubFrame::closeDisconnected()
 {
 	ASSERT_MAIN_THREAD();
@@ -2117,11 +2105,23 @@ void HubFrame::changeTheme()
 		i->second->themeChanged();
 }
 
-void HubFrame::updateAllTitles()
+void HubFrame::updateFrames(int flags)
 {
 	ASSERT_MAIN_THREAD();
+	bool showHidden = SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_HIDDEN_USERS);
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
-		i->second->hubUpdateCount++;
+	{
+		HubFrame* frame = i->second;
+		if (flags & UPDATE_FLAG_TITLE)
+			frame->hubUpdateCount++;
+		if (flags & UPDATE_FLAG_HIDDEN_USERS)
+		{
+			frame->ctrlUsers.setShowHidden(showHidden);
+			frame->shouldUpdateStats = true;
+		}
+		if (flags & UPDATE_FLAG_SORT)
+			frame->ctrlUsers.setSortFlag();
+	}
 }
 
 void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept
@@ -2129,7 +2129,8 @@ void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) 
 	if (isClosedOrShutdown())
 		return;
 	++asyncUpdate;
-	resortForFavsFirst();
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::SORT_FAVUSERS_FIRST))
+		ctrlUsers.setSortFlag();
 }
 
 void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept
@@ -2142,12 +2143,6 @@ void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user
 void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept
 {
 	++asyncUpdate;
-}
-
-void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
-{
-	if (justDoIt || SettingsManager::instance.getUiSettings()->getBool(Conf::SORT_FAVUSERS_FIRST))
-		ctrlUsers.setSortFlag();
 }
 
 void HubFrame::on(UserManagerListener::IgnoreListChanged) noexcept

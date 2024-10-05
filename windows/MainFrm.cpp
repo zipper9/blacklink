@@ -1843,6 +1843,7 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		const auto* ss = SettingsManager::instance.getUiSettings();
 		bool prevSortFavUsersFirst = ss->getBool(Conf::SORT_FAVUSERS_FIRST);
 		bool prevHubUrlInTitle = ss->getBool(Conf::HUB_URL_IN_TITLE);
+		bool prevShowHiddenUsers = ss->getBool(Conf::SHOW_HIDDEN_USERS);
 		int prevRegHandlerSettings = WinUtil::getRegHandlerSettings();
 		prevWebServerSettings.get();
 		cs->lockRead();
@@ -1889,11 +1890,15 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			if (regHandlerMask)
 				WinUtil::applyRegHandlerSettings(regHandlerSettings, regHandlerMask);
 
+			int updateHubFlags = 0;
 			if (ss->getBool(Conf::SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
-				HubFrame::resortUsers();
-
+				updateHubFlags |= HubFrame::UPDATE_FLAG_SORT;
+			if (ss->getBool(Conf::SHOW_HIDDEN_USERS) != prevShowHiddenUsers)
+				updateHubFlags |= HubFrame::UPDATE_FLAG_HIDDEN_USERS;
 			if (ss->getBool(Conf::HUB_URL_IN_TITLE) != prevHubUrlInTitle)
-				HubFrame::updateAllTitles();
+				updateHubFlags |= HubFrame::UPDATE_FLAG_TITLE;
+			if (updateHubFlags)
+				HubFrame::updateFrames(updateHubFlags);
 
 			if (downloadDir != prevDownloadDir)
 				QueueItem::checkTempDir = true;

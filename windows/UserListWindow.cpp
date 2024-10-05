@@ -116,8 +116,10 @@ static const ResourceManager::Strings columnNames[] =
 
 UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) : hubFrame(hubFrame)
 {
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	showHidden = ss->getBool(Conf::SHOW_HIDDEN_USERS);
 	showUsers = false; // can't be set to true until ctrlUsers is created
-	shouldUpdateStats = shouldSort = false;
+	shouldSort = false;
 	isOp = false;
 
 	xdu = ydu = 0;
@@ -250,11 +252,18 @@ void UserListWindow::insertUserInternal(UserInfo* ui, int pos)
 	dcassert(result != -1);
 }
 
-void UserListWindow::insertUser(UserInfo* ui)
+bool UserListWindow::shouldShowUser(const UserInfo* ui) const
 {
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-	dcassert(!ui->isHidden());
-#endif
+	if (showHidden) return true;
+	const Identity& identity = ui->getIdentity();
+	return !identity.isHidden() && !identity.isHub();
+}
+
+bool UserListWindow::insertUser(UserInfo* ui)
+{
+	if (!shouldShowUser(ui))
+		return false;
+
 	//single update
 	//avoid refreshing the whole list and just update the current item
 	//instead
@@ -262,26 +271,24 @@ void UserListWindow::insertUser(UserInfo* ui)
 	{
 		dcassert(ctrlUsers.findItem(ui) == -1);
 		insertUserInternal(ui, -1);
+		return true;
 	}
-	else
-	{
-		int64_t size = -1;
-		FilterModes mode = NONE;
-		const int sel = getFilterSelPos();
-		bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
 
-		if (matchFilter(*ui, sel, doSizeCompare, mode, size))
-		{
-			dcassert(ctrlUsers.findItem(ui) == -1);
-			insertUserInternal(ui, -1);
-		}
-		else
-		{
-			//deleteItem checks to see that the item exists in the list
-			//unnecessary to do it twice.
-			ctrlUsers.deleteItem(ui);
-		}
+	int64_t size = -1;
+	FilterModes mode = NONE;
+	const int sel = getFilterSelPos();
+	bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
+
+	if (matchFilter(*ui, sel, doSizeCompare, mode, size))
+	{
+		dcassert(ctrlUsers.findItem(ui) == -1);
+		insertUserInternal(ui, -1);
+		return true;
 	}
+	//deleteItem checks to see that the item exists in the list
+	//unnecessary to do it twice.
+	ctrlUsers.deleteItem(ui);
+	return false;
 }
 
 void UserListWindow::updateUserList()
@@ -304,24 +311,18 @@ void UserListWindow::updateUserList()
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 		{
 			UserInfo* ui = i->second;
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-			dcassert(!ui->isHidden());
-#endif
-			if (matchFilter(*ui, sel, doSizeCompare, mode, size))
+			if (matchFilter(*ui, sel, doSizeCompare, mode, size) && shouldShowUser(ui))
 				insertUserInternal(ui, pos);
 		}
 	}
 	shouldSort = false;
 	ctrlUsers.resort();
-	shouldUpdateStats = true;
 }
 
 bool UserListWindow::updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bool isConnected)
 {
 	UserInfo* ui = nullptr;
 	bool isNewUser = false;
-	const Identity& identity = ou->getIdentity();
-	if (!identity.isHidden() && !identity.isHub())
 	{
 		WRITE_LOCK(*csUserMap);
 		auto item = userMap.insert(make_pair(ou, ui));
@@ -333,31 +334,15 @@ bool UserListWindow::updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bo
 			isNewUser = true;
 		}
 		else
-		{
 			ui = item.first->second;
-		}
 	}
 	if (isNewUser && showUsers && isConnected)
 	{
-		shouldSort = true;
-		insertUser(ui);
+		if (insertUser(ui)) shouldSort = true;
 		return true;
 	}
-	if (ui == nullptr) // Hidden user or hub
+	if (!ui) // User not found
 		return false;
-
-	// User found, update info
-	if (ui->isHidden())
-	{
-		if (showUsers)
-			ctrlUsers.deleteItem(ui);
-		{
-			WRITE_LOCK(*csUserMap);
-			userMap.erase(ou);
-		}
-		delete ui;
-		return true;
-	}
 
 	if (showUsers)
 	{
@@ -418,10 +403,7 @@ size_t UserListWindow::insertUsers()
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 	{
 		UserInfo* ui = i->second;
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-		dcassert(!ui->isHidden());
-#endif
-		insertUserInternal(ui, pos);
+		if (shouldShowUser(ui)) insertUserInternal(ui, pos);
 	}
 	return userMap.size();
 }
@@ -440,6 +422,61 @@ void UserListWindow::setShowUsers(bool flag)
 	}
 	else
 		removeListViewItems();
+}
+
+void UserListWindow::setShowHidden(bool flag)
+{
+	if (showHidden == flag) return;
+	showHidden = flag;
+	if (!showUsers || !ctrlUsers) return;
+	bool update = false;
+	CLockRedraw<> lockRedraw(ctrlUsers);
+	if (showHidden)
+	{
+		int64_t size = -1;
+		FilterModes mode = NONE;
+		int sel = 0;
+		bool doSizeCompare = false;
+		if (!filter.empty())
+		{
+			dcassert(ctrlFilterSel);
+			sel = getFilterSelPos();
+			doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
+		}
+		READ_LOCK(*csUserMap);
+		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
+		{
+			const Identity& identity = i->first->getIdentity();
+			if (identity.isHidden() || identity.isHub())
+			{
+				UserInfo* ui = i->second;
+				if (filter.empty() || matchFilter(*ui, sel, doSizeCompare, mode, size))
+				{
+					insertUserInternal(ui, -1);
+					update = true;
+				}
+			}
+		}
+	}
+	else
+	{
+		READ_LOCK(*csUserMap);
+		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
+		{
+			const Identity& identity = i->first->getIdentity();
+			if (identity.isHidden() || identity.isHub())
+			{
+				UserInfo* ui = i->second;
+				ctrlUsers.deleteItem(ui);
+				update = true;
+			}
+		}
+	}
+	if (update)
+	{
+		shouldSort = false;
+		ctrlUsers.resort();
+	}
 }
 
 UserInfo* UserListWindow::findUser(const OnlineUserPtr& user) const
@@ -506,7 +543,6 @@ void UserListWindow::ensureVisible(const UserInfo* ui)
 	}
 	ctrlUsers.EnsureVisible(pos, FALSE);
 }
-
 
 LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 {

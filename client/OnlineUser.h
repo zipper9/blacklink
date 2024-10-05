@@ -43,9 +43,7 @@ class Identity
 			CT_SU      = 0x08,
 			CT_OWNER   = 0x10,
 			CT_HUB     = 0x20,
-#ifdef IRAINMAN_USE_HIDDEN_USERS
 			CT_HIDDEN  = 0x40
-#endif
 		};
 
 		enum StatusFlag
@@ -266,7 +264,9 @@ class Identity
 		GSUINT(8, ClientType); // "CT"
 		GSUINT(8, KnownSupports); // "SU"
 		GSUINT(8, KnownUcSupports); // "SU"
-		
+		GSUINTBIT(8, NotEmptyString);
+		GSUINT(8, NotEmptyString);
+
 		void setHub() // "CT"
 		{
 			return setClientTypeBit(CT_HUB, true);
@@ -287,7 +287,6 @@ class Identity
 		{
 			return getClientTypeBit(CT_BOT | CT_HUB);
 		}
-		
 		void setOp(bool op) // "CT"
 		{
 			return setClientTypeBit(CT_OP, op);
@@ -296,7 +295,6 @@ class Identity
 		{
 			return getClientTypeBit(CT_OP /*| CT_SU*/ | CT_OWNER);
 		}
-		
 		void setRegistered(bool reg) // "CT"
 		{
 			return setClientTypeBit(CT_REGGED, reg);
@@ -305,7 +303,6 @@ class Identity
 		{
 			return getClientTypeBit(CT_REGGED);
 		}
-#ifdef IRAINMAN_USE_HIDDEN_USERS
 		void setHidden() // "CT"
 		{
 			return setClientTypeBit(CT_HIDDEN, true);
@@ -314,9 +311,6 @@ class Identity
 		{
 			return getClientTypeBit(CT_HIDDEN);
 		}
-#endif
-		GSUINTBIT(8, NotEmptyString);
-		GSUINT(8, NotEmptyString);
 		
 //////////////////// uint16 ///////////////////
 	private:

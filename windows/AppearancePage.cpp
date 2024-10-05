@@ -49,6 +49,7 @@ static const PropPage::ListItem listItems[] =
 	{ Conf::MINIMIZE_TRAY, ResourceManager::SETTINGS_MINIMIZE_TRAY },
 	{ Conf::SHOW_CURRENT_SPEED_IN_TITLE, ResourceManager::SHOW_CURRENT_SPEED_IN_TITLE },
 	{ Conf::SORT_FAVUSERS_FIRST, ResourceManager::SETTINGS_SORT_FAVUSERS_FIRST },
+	{ Conf::SHOW_HIDDEN_USERS, ResourceManager::SETTINGS_SHOW_HIDDEN_USERS },
 	{ Conf::FILTER_ENTER, ResourceManager::SETTINGS_FILTER_ENTER },
 	{ Conf::USE_SYSTEM_ICONS, ResourceManager::SETTINGS_USE_SYSTEM_ICONS },
 	{ Conf::SHOW_SHELL_MENU, ResourceManager::SETTINGS_SHOW_SHELL_MENU },
