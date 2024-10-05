@@ -696,14 +696,3 @@ void HashManager::Hasher::getInfo(HashManager::Info& info) const
 	info.startTick = startTick;
 	info.startTickSavedSize = startTickSavedSize;
 }
-
-HashManager::HashPauser::HashPauser()
-{
-	prevState = HashManager::getInstance()->setMaxHashSpeed(0);
-}
-
-HashManager::HashPauser::~HashPauser()
-{
-	if (prevState)
-		HashManager::getInstance()->setMaxHashSpeed(prevState);
-}

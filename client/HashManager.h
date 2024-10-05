@@ -99,16 +99,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		{
 			return hasher.isHashing();
 		}
-		
-		struct HashPauser
-		{
-				HashPauser();
-				~HashPauser();
-				
-			private:
-				int prevState;
-		};
-		
+
 #ifdef _WIN32
 		static bool doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept;
 		static bool loadTree(const string& filePath, TigerTree& tree, int64_t fileSize = -1) noexcept;
