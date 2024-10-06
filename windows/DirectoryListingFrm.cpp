@@ -199,6 +199,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	updatingLayout(0)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
+
 	int scanOptions = 0;
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (ss->getBool(Conf::FILELIST_SHOW_SHARED))
@@ -207,6 +208,15 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 		scanOptions |= DirectoryListing::SCAN_OPTION_DOWNLOADED;
 	if (ss->getBool(Conf::FILELIST_SHOW_CANCELED))
 		scanOptions |= DirectoryListing::SCAN_OPTION_CANCELED;
+	if (ownList && ss->getBool(Conf::FILELIST_SHOW_MY_UPLOADS))
+	{
+		auto cs = SettingsManager::instance.getCoreSettings();
+		cs->lockRead();
+		if (cs->getBool(Conf::ENABLE_UPLOAD_COUNTER))
+			scanOptions |= DirectoryListing::SCAN_OPTION_SHOW_MY_UPLOADS;
+		cs->unlockRead();
+	}
+
 	dl->setScanOptions(scanOptions);
 	this->dl.reset(dl);
 	dl->setHintedUser(user);
