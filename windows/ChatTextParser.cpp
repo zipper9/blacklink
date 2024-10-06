@@ -200,8 +200,8 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 							{
 								urlProcessed = true;
 								openLink = false;
-								break;
 							}
+							break;
 						}
 						index--;
 					}
