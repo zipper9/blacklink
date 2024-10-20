@@ -18,7 +18,6 @@
 
 #include "stdinc.h"
 #include "SearchResult.h"
-#include "PathUtil.h"
 #include "Client.h"
 #include "LocationUtil.h"
 #include "DatabaseManager.h"
@@ -118,25 +117,25 @@ void SearchResult::checkTTH(HashDatabaseConnection* hashDb)
 	flags |= FLAG_STATUS_KNOWN;
 }
 
-string SearchResult::getFilePath() const
-{
-	if (getType() == TYPE_FILE)
-		return Util::getFilePath(getFile());
-	else
-		return Util::emptyString;
-}
-
 string SearchResult::getFileName() const
 {
-	if (getType() == TYPE_FILE)
-		return Util::getFileName(getFile());
-		
-	if (getFile().size() < 2)
-		return getFile();
-		
-	const string::size_type i = getFile().rfind('\\', getFile().length() - 2);
-	if (i == string::npos)
-		return getFile();
-		
-	return getFile().substr(i + 1);
+	auto p1 = file.rfind('\\');
+	if (p1 == string::npos)
+		return file;
+	if (type == TYPE_FILE || p1 != file.length() - 1)
+		return file.substr(p1 + 1);
+	auto p2 = file.rfind('\\', p1 - 1);
+	if (p2 == string::npos)
+		p2 = 0;
+	else
+		++p2;
+	return file.substr(p2, p1 - p2);
+}
+
+string SearchResult::getFilePath() const
+{
+	if (type != TYPE_FILE)
+		return Util::emptyString;
+	auto p = file.rfind('\\');
+	return p == string::npos ? Util::emptyString : file.substr(0, p);
 }

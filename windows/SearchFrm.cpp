@@ -999,33 +999,58 @@ LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 
 int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo* b, int col, int /*flags*/)
 {
+	int res;
 	switch (col)
 	{
+		case COLUMN_FILENAME:
+			break;
 		case COLUMN_TYPE:
-			if (a->sr.getType() == b->sr.getType())
-				return stricmp(a->getText(COLUMN_TYPE), b->getText(COLUMN_TYPE));
-			else
-				return (a->sr.getType() == SearchResult::TYPE_DIRECTORY) ? -1 : 1;
+			if (a->sr.getType() != b->sr.getType())
+				return a->sr.getType() == SearchResult::TYPE_DIRECTORY ? -1 : 1;
+			res = stricmp(a->getText(COLUMN_TYPE), b->getText(COLUMN_TYPE));
+			if (res)
+				return res;
+			break;
 		case COLUMN_HITS:
-			return compare(a->hits, b->hits);
+			res = compare(a->hits, b->hits);
+			if (res)
+				return res;
+			break;
 		case COLUMN_SLOTS:
-			if (a->sr.freeSlots == b->sr.freeSlots)
-				return compare(a->sr.slots, b->sr.slots);
-			else
-				return compare(a->sr.freeSlots, b->sr.freeSlots);
+			res = compare(a->sr.freeSlots, b->sr.freeSlots);
+			if (res)
+				return res;
+			res = compare(a->sr.slots, b->sr.slots);
+			if (res)
+				return res;
+			break;
 		case COLUMN_SIZE:
 		case COLUMN_EXACT_SIZE:
-			if (a->sr.getType() == b->sr.getType())
-				return compare(a->sr.getSize(), b->sr.getSize());
-			else
-				return (a->sr.getType() == SearchResult::TYPE_DIRECTORY) ? -1 : 1;
+			if (a->sr.getType() != b->sr.getType())
+				return a->sr.getType() == SearchResult::TYPE_DIRECTORY ? -1 : 1;
+			res = compare(a->sr.getSize(), b->sr.getSize());
+			if (res)
+				return res;
+			break;
 		case COLUMN_IP:
-			return compare(a->sr.getIP(), b->sr.getIP());
+			res = compare(a->sr.getIP(), b->sr.getIP());
+			if (res)
+				return res;
+			break;
 		case COLUMN_TTH:
-			return compare(a->getText(COLUMN_TTH), b->getText(COLUMN_TTH));
+			res = compare(a->getText(COLUMN_TTH), b->getText(COLUMN_TTH));
+			if (res)
+				return res;
+			break;
 		default:
-			return Util::defaultSort(a->getText(col), b->getText(col));
+			res = Util::defaultSort(a->getText(col), b->getText(col));
+			if (res)
+				return res;
 	}
+	res = Util::defaultSort(a->getText(COLUMN_FILENAME), b->getText(COLUMN_FILENAME));
+	if (res)
+		return res;
+	return Util::defaultSort(a->getText(COLUMN_NICK), b->getText(COLUMN_NICK));
 }
 
 void SearchFrame::SearchInfo::calcImageIndex()
@@ -1054,15 +1079,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 	switch (col)
 	{
 		case COLUMN_FILENAME:
-			if (sr.getType() == SearchResult::TYPE_FILE)
-			{
-				if (sr.getFile().rfind(_T('\\')) == tstring::npos)
-					columns[COLUMN_FILENAME] = Text::toT(sr.getFile());
-				else
-					columns[COLUMN_FILENAME] = Text::toT(Util::getFileName(sr.getFile()));
-			}
-			else
-				columns[COLUMN_FILENAME] = Text::toT(sr.getFileName());
+			columns[COLUMN_FILENAME] = Text::toT(sr.getFileName());
 			break;
 		case COLUMN_HITS:
 			columns[COLUMN_HITS] = hits < 0 ? Util::emptyStringT : Util::toStringT(hits + 1) + _T(' ') + TSTRING(USERS);
