@@ -493,6 +493,7 @@
     <ClCompile Include="client\ADLSearch.cpp" />
     <ClCompile Include="client\AntiFlood.cpp" />
     <ClCompile Include="client\AppPaths.cpp" />
+    <ClCompile Include="client\AppStats.cpp" />
     <ClCompile Include="client\AutoDetectSocket.cpp" />
     <ClCompile Include="client\Base32.cpp" />
     <ClCompile Include="client\BaseSettingsImpl.cpp" />
@@ -636,6 +637,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="client\StringDefs.cpp" />
+    <ClCompile Include="client\SysInfo.cpp" />
     <ClCompile Include="client\SysVersion.cpp" />
     <ClCompile Include="client\TagCollector.cpp" />
     <ClCompile Include="client\Text.cpp" />
@@ -735,6 +737,7 @@
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AntiFlood.h" />
     <ClInclude Include="client\AppPaths.h" />
+    <ClInclude Include="client\AppStats.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\Base32.h" />
     <ClInclude Include="client\BaseSettingsImpl.h" />
@@ -886,6 +889,7 @@
     <ClInclude Include="client\ResourceManager.h" />
     <ClInclude Include="client\sqlite\sqlite_conf.h" />
     <ClInclude Include="client\StrUtil.h" />
+    <ClInclude Include="client\SysInfo.h" />
     <ClInclude Include="client\SysVersion.h" />
     <ClInclude Include="client\Tag16.h" />
     <ClInclude Include="client\TagCollector.h" />

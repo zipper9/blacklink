@@ -34,6 +34,7 @@
 #include "../client/AppPaths.h"
 #include "../client/FormatUtil.h"
 #include "../client/SysVersion.h"
+#include "../client/AppStats.h"
 #include "../client/ProfileLocker.h"
 #include "../client/PathUtil.h"
 #include "../client/SettingsUtil.h"
@@ -324,6 +325,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	LogManager::init();
 	Util::loadLanguage();
+	LogManager::message(AppStats::getStartupMessage());
 
 	// Allow localized defaults in string settings
 	Conf::updateCoreSettingsDefaults();
@@ -388,7 +390,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	}
 
 	CreateSplash();
-	CompatibilityManager::updatePhysMemoryStats();
 
 	// For SHBrowseForFolder
 	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);

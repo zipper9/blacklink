@@ -1273,3 +1273,34 @@ bool WinUtil::useMDIMaximized()
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	return ss->getBool(Conf::MDI_MAXIMIZED);
 }
+
+int WinUtil::getDllPlatform(const string& fullpath)
+{
+	#pragma pack(1)
+	struct PE_START
+	{
+		uint32_t signature;
+		uint16_t machine;
+	};
+	#pragma pack()
+
+	WORD result = IMAGE_FILE_MACHINE_UNKNOWN;
+	try
+	{
+		File f(fullpath, File::READ, File::OPEN);
+		IMAGE_DOS_HEADER mz;
+		size_t len = sizeof(mz);
+		f.read(&mz, len);
+		if (len == sizeof(mz) && mz.e_magic == IMAGE_DOS_SIGNATURE)
+		{
+			f.setPos(mz.e_lfanew);
+			PE_START pe;
+			len = sizeof(pe);
+			f.read(&pe, len);
+			if (len == sizeof(pe) && pe.signature == IMAGE_NT_SIGNATURE)
+				result = pe.machine;
+		}
+	}
+	catch (Exception&) {}
+	return result;
+}

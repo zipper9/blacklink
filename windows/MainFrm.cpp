@@ -76,8 +76,8 @@
 #include "../client/SocketPool.h"
 #include "../client/AntiFlood.h"
 #include "../client/IpTest.h"
-#include "../client/CompatibilityManager.h"
 #include "../client/SysVersion.h"
+#include "../client/SysInfo.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
@@ -177,6 +177,7 @@ MainFrame::MainFrame() :
 	shutdownStatusDisplayed(false),
 	passwordDlg(nullptr),
 	stopperThread(nullptr),
+	savedPriorityClass(-1),
 	statusHistory(20),
 	toolbarImageSize(0),
 	fileListVersion(0),
@@ -758,12 +759,13 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			{
 				TCHAR buf[128];
 				tstring title = getAppNameVerT();
-				if (memoryInfoResult && CompatibilityManager::updatePhysMemoryStats())
+				MEMORYSTATUSEX ms;
+				if (memoryInfoResult && SysInfo::getMemoryInfo(&ms))
 				{
 					_sntprintf(buf, _countof(buf), _T(" [RAM: %dM / %dM][Free: %dM][GDI: %d]"),
 					           g_RAM_WorkingSetSize,
 					           g_RAM_PeakWorkingSetSize,
-					           int(CompatibilityManager::getFreePhysMemory() >> 20),
+					           int(ms.ullAvailPhys >> 20),
 					           int(g_GDI_count));
 					title += buf;
 				}
@@ -2103,7 +2105,7 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 			{
 				ShowWindow(SW_HIDE);
 				if (optReducePriority)
-					CompatibilityManager::reduceProcessPriority();
+					reduceProcessPriority();
 			}
 			if (optAutoAway && !Util::getAway())
 			{
@@ -2119,7 +2121,7 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 		if (appMinimized)
 		{
 			appMinimized = false;
-			CompatibilityManager::restoreProcessPriority();
+			restoreProcessPriority();
 			clearPMStatus();
 			if (Util::getAway() && autoAway)
 			{
@@ -3206,6 +3208,24 @@ void MainFrame::addWebSearchUrls()
 		data.emplace_back(SearchUrl{defaultSearchUrls[i].url, description, defaultSearchUrls[i].type});
 	}
 	FavoriteManager::getInstance()->setSearchUrls(data);
+}
+
+void MainFrame::reduceProcessPriority()
+{
+	if (savedPriorityClass == -1)
+	{
+		savedPriorityClass = GetPriorityClass(GetCurrentProcess());
+		SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+	}
+}
+
+void MainFrame::restoreProcessPriority()
+{
+	if (savedPriorityClass != -1)
+	{
+		SetPriorityClass(GetCurrentProcess(), savedPriorityClass);
+		savedPriorityClass = -1;
+	}
 }
 
 void MainFrame::on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hint, const tstring& message) noexcept

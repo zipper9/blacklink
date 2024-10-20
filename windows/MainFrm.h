@@ -590,6 +590,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		HWND passwordDlg;
 		tstring lastTTHdir;
 		HANDLE stopperThread;
+		int savedPriorityClass;
 
 		void showWindow()
 		{
@@ -632,6 +633,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		void shareFolderFromShell(const tstring& folder);
 		void addWebSearchUrls();
+
+		void reduceProcessPriority();
+		void restoreProcessPriority();
 
 		void on(WebServerListener::ShutdownPC, int) noexcept override;
 

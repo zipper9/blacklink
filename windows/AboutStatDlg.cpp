@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "AboutStatDlg.h"
 #include "DialogLayout.h"
-#include "../client/CompatibilityManager.h"
+#include "../client/AppStats.h"
 #include "../client/SimpleStringTokenizer.h"
 
 using DialogLayout::FLAG_TRANSLATE;
@@ -24,7 +24,7 @@ LRESULT AboutStatDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 void AboutStatDlg::showText()
 {
 	string formattedText("{\\urtf8\\tx2500\n{\\colortbl \\red0\\green0\\blue0;\\red0\\green128\\blue255;\\red128\\green128\\blue128;}\n");
-	string text = CompatibilityManager::getStats();
+	string text = AppStats::getStats();
 	SimpleStringTokenizer<char> st(text, '\n');
 	string line;
 	while (st.getNextToken(line))

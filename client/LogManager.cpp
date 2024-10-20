@@ -31,7 +31,6 @@
 
 #ifdef _WIN32
 #include "ClientManager.h"
-#include "CompatibilityManager.h"
 #endif
 
 static const int FILE_TIMEOUT     = 240*1000; // 4 min
@@ -87,11 +86,6 @@ void LogManager::init()
 	types[UDP_PACKETS].formatOption     = Conf::LOG_FORMAT_UDP_PACKETS;
 
 	g_isInit = true;
-
-#ifdef _WIN32
-	if (!CompatibilityManager::getStartupInfo().empty())
-		message(CompatibilityManager::getStartupInfo());
-#endif
 }
 
 LogManager::LogManager()

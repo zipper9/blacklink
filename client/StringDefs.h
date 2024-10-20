@@ -201,8 +201,6 @@ enum Strings   // @DontAdd
 	ISP_IN_CHAT, // "Show user's ISP when available"
 	CPU_INFO, // "CPU Information"
 	CURRENT_HASH_SPEED_TEXT, // "Maximum hashing speed"
-	CURRENT_SYSTEM_STATE, // "Current system state"
-	CURRENT_VERSION, // "Current version"
 	CZDC_RATIOMSG, // "Ratio message template"
 	D, // "D:"
 	DATABASE_ERROR_STRING, // "There was an error accessing the database:\n%1%"

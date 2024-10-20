@@ -183,6 +183,7 @@ namespace WinUtil
 	bool isAutoRunShortcutExists();
 	tstring getAutoRunShortcutName();
 	bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
+	int getDllPlatform(const string& fullpath);
 
 	void getWindowText(HWND hwnd, tstring& text);
 	tstring getComboBoxItemText(HWND hwnd, int index);

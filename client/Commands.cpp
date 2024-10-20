@@ -20,6 +20,8 @@
 #include "Random.h"
 #include "AppPaths.h"
 #include "ConfCore.h"
+#include "AppStats.h"
+#include "SysInfo.h"
 #include "dht/DHT.h"
 #include "dht/DHTSearchManager.h"
 #include "dht/IndexManager.h"
@@ -681,37 +683,37 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 			return true;
 #ifdef _WIN32
 		case COMMAND_INFO_UPTIME:
-			res.text = "+me Uptime: " + Util::formatTime(Util::getUpTime()) + ". System uptime: " + Util::formatTime(CompatibilityManager::getSysUptime());
+			res.text = "+me Uptime: " + Util::formatTime(Util::getUpTime()) + ". System uptime: " + Util::formatTime(SysInfo::getSysUptime());
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_SYSTEM:
-			res.text = "+me systeminfo: " + CompatibilityManager::generateFullSystemStatusMessage();
+			res.text = "+me systeminfo: " + AppStats::getFullSystemStatusMessage();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_SPEED:
-			res.text = "My Speed:\n" + CompatibilityManager::getSpeedInfo();
+			res.text = "My Speed:\n" + AppStats::getSpeedInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_CPU:
-			res.text  = "My CPU: " + CompatibilityManager::getCPUInfo();
+			res.text  = "My CPU: " + SysInfo::getCPUInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_DISK_SPACE:
-			res.text ="My Disk Space:\n" + CompatibilityManager::getDiskSpaceInfo();
+			res.text ="My Disk Space:\n" + AppStats::getDiskSpaceInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_STORAGE:
-			res.text = "My Disks:\n" + CompatibilityManager::getDiskInfo();
+			res.text = "My Disks:\n" + AppStats::getDiskInfo();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 
 		case COMMAND_INFO_STATS:
-			res.text = CompatibilityManager::getStats();
+			res.text = AppStats::getStats();
 			res.what = isPublic(pc.args) ? RESULT_TEXT : RESULT_LOCAL_TEXT;
 			return true;
 #endif

@@ -34,36 +34,12 @@ class CompatibilityManager
 		// Call this function as soon as possible (immediately after the start of the program).
 		static void init();
 
-		static string getGlobalMemoryStatusMessage();
-		static string generateFullSystemStatusMessage();
-		static string getStats();
-		static string getNetworkStats();
 		static string getDefaultPath();
-		static string& getStartupInfo()
-		{
-			return g_startupInfo;
-		}
-		static LONG getComCtlVersion()
-		{
-			return g_comCtlVersion;
-		}
-		static DWORDLONG getTotalPhysMemory()
-		{
-			return g_TotalPhysMemory;
-		}
-		static DWORDLONG getFreePhysMemory()
-		{
-			return g_FreePhysMemory;
-		}
-		static bool updatePhysMemoryStats();
+		static LONG getComCtlVersion() { return comCtlVersion; }
 
-		static WORD getDllPlatform(const string& fullpath);
-		static void reduceProcessPriority();
-		static void restoreProcessPriority();
-		
 		static FINDEX_INFO_LEVELS findFileLevel;
 		static DWORD findFileFlags;
-		
+
 #if defined(OSVER_WIN_XP) || defined(OSVER_WIN_VISTA)
 		static DWORD compareFlags;
 #else
@@ -71,26 +47,9 @@ class CompatibilityManager
 #endif
 
 	private:
-		static DWORD g_oldPriorityClass;
-		static string g_incopatibleSoftwareList;
-		static string g_startupInfo;
-
-		static LONG g_comCtlVersion;
-		static DWORDLONG g_TotalPhysMemory;
-		static DWORDLONG g_FreePhysMemory;
-
-		static LONG getComCtlVersionFromOS();
-		static void generateSystemInfoForApp();
-		static bool getGlobalMemoryStatus(MEMORYSTATUSEX* status);
+		static LONG comCtlVersion;
 
 	public:
-		static string getSpeedInfo();
-		static string getDiskSpaceInfo(bool onlyTotal = false);
-		static string getDiskInfo();
-		static TStringList findVolumes();
-		static string getCPUInfo();
-		static uint64_t getTickCount();
-		static uint64_t getSysUptime() { return getTickCount() / 1000; }
 		static bool setThreadName(HANDLE h, const char* name);
 };
 

@@ -24,7 +24,6 @@
 #include "../client/File.h"
 #include "../client/AppPaths.h"
 #include "../client/SettingsManager.h"
-#include "../client/CompatibilityManager.h"
 #include "../client/BusyCounter.h"
 #include "../client/ConfCore.h"
 
@@ -140,7 +139,7 @@ void AppearancePage::getThemeList()
 			string name  = i->getFileName();
 			string fullPath = Util::getThemesPath() + name;
 			if (name.empty() || i->isDirectory() || i->getSize() == 0
-			        || CompatibilityManager::getDllPlatform(fullPath) !=
+			        || WinUtil::getDllPlatform(fullPath) !=
 #if defined(_WIN64)
 			        IMAGE_FILE_MACHINE_AMD64
 #elif defined(_WIN32)

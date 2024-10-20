@@ -448,6 +448,12 @@
     <ClCompile Include="client\HintedUser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\AppStats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\SysInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1099,6 +1105,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\Settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\AppStats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\SysInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
