@@ -41,6 +41,7 @@
 #include "Tag16.h"
 #include "SocketPool.h"
 #include "AdcSupports.h"
+#include "Util.h"
 #include "ConfCore.h"
 #include "version.h"
 

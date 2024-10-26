@@ -8,6 +8,7 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "ImageLists.h"
+#include "../client/Util.h"
 #include "../client/SettingsManager.h"
 #include "../client/ShareManager.h"
 #include "../client/MediaInfoLib.h"

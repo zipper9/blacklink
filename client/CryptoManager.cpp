@@ -24,6 +24,7 @@
 #include "ClientManager.h"
 #include "ResourceManager.h"
 #include "TimeUtil.h"
+#include "Util.h"
 #include "SettingsManager.h"
 #include "ConfCore.h"
 #include "version.h"

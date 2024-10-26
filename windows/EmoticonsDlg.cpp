@@ -5,6 +5,7 @@
 #include "Emoticons.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
+#include "../client/Util.h"
 #include "../GdiOle/GDIImage.h"
 
 #define SUBCLASS_BUTTON

@@ -4,6 +4,7 @@
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/HashUtil.h"
+#include "../client/Util.h"
 #include "../client/File.h"
 #include "DialogLayout.h"
 #include "WinUtil.h"

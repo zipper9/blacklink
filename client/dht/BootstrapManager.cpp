@@ -25,6 +25,7 @@
 #include "../LogManager.h"
 #include "../HttpClient.h"
 #include "../SimpleXML.h"
+#include "../Util.h"
 #include "../ResourceManager.h"
 #include "../SettingsManager.h"
 #include "../ConfCore.h"

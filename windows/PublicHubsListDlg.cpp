@@ -2,6 +2,7 @@
 #include "PublicHubsListDlg.h"
 #include "LineDlg.h"
 #include "WinUtil.h"
+#include "../client/Util.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConfCore.h"
 

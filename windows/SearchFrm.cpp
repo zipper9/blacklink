@@ -42,6 +42,7 @@
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/Util.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
 #include "../client/SysVersion.h"

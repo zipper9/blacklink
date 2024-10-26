@@ -22,6 +22,7 @@
 #include "UserConnection.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "Util.h"
 
 const string Transfer::fileTypeNames[] =
 {

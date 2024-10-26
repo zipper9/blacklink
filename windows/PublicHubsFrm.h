@@ -235,14 +235,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		static const int columnId[];
 
 		HubInfo* findHub(const string& url, bool& secureUrl, int* pos) const;
-		string getPubServer(int pos) const
-		{
-			return getPubServer(ctrlHubs.getItemData(pos));
-		}
-		string getPubServer(const HubInfo* data) const
-		{
-			return data ? Util::formatDchubUrl(Text::fromT(data->getText(COLUMN_SERVER))) : Util::emptyString;
-		}
+		string getPubServer(int pos) const { return getPubServer(ctrlHubs.getItemData(pos)); }
+		string getPubServer(const HubInfo* data) const;
 		void openHub(int ind);
 
 		void updateStatus();

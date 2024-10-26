@@ -29,6 +29,7 @@
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "Util.h"
 #include "ConfCore.h"
 
 // Return values of fastHash and slowHash

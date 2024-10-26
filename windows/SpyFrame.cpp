@@ -25,6 +25,7 @@
 #include "../client/Client.h"
 #include "../client/FormatUtil.h"
 #include "../client/LocationUtil.h"
+#include "../client/Util.h"
 #include "../client/Tag16.h"
 #include "../client/ConfCore.h"
 

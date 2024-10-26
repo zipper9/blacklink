@@ -38,6 +38,7 @@
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/SettingsUtil.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 #include <boost/algorithm/string/trim.hpp>
 

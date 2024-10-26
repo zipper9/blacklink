@@ -21,6 +21,7 @@
 
 #include "resource.h"
 #include "../client/NetworkUtil.h"
+#include "../client/HashValue.h"
 #include "UserInfoSimple.h"
 #include "OMenu.h"
 #include "ImageLists.h"

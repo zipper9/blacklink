@@ -12,6 +12,7 @@ Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@n
 #include "stdafx.h"
 #include "FolderTree.h"
 #include "../client/PathUtil.h"
+#include "../client/Util.h"
 #include "../client/ShareManager.h"
 #include "../client/CompatibilityManager.h"
 #include "LineDlg.h"

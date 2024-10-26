@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "HubEntry.h"
 #include "ClientManager.h"
+#include "Util.h"
 
 bool HubEntry::checkKeyPrintFormat(const string& kp)
 {

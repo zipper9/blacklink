@@ -12,6 +12,7 @@
 #include "PathUtil.h"
 #include "HashUtil.h"
 #include "FormatUtil.h"
+#include "Util.h"
 #include "ParamExpander.h"
 #include "HttpClient.h"
 #include "IpTest.h"

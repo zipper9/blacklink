@@ -7,6 +7,7 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "ConfUI.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;

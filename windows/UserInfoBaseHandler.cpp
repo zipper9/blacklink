@@ -5,6 +5,7 @@
 #include "QueueFrame.h"
 #include "../client/LocationUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/Util.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
 #include "../client/UserManager.h"

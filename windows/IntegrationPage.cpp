@@ -23,6 +23,7 @@
 #include "ConfUI.h"
 #include "../client/AppPaths.h"
 #include "../client/File.h"
+#include "../client/Util.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"

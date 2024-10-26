@@ -6,6 +6,7 @@
 #include "DialogLayout.h"
 #include "BrowseFile.h"
 #include "ConfUI.h"
+#include "../client/Util.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

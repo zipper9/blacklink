@@ -25,6 +25,7 @@
 #include "ConfUI.h"
 #include "../client/FavoriteManager.h"
 #include "../client/SettingsManager.h"
+#include "../client/Util.h"
 
 static const WinUtil::TextItem texts[] =
 {

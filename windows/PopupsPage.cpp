@@ -26,6 +26,7 @@
 #include "../client/SettingsManager.h"
 #include "../client/AdcHub.h"
 #include "../client/Random.h"
+#include "../client/Util.h"
 
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;

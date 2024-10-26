@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "DebugManager.h"
 #include "TimeUtil.h"
+#include "Util.h"
 
 bool DebugManager::g_isCMDDebug = false;
 

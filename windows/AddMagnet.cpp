@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "AddMagnet.h"
 #include "../client/SimpleStringTokenizer.h"
+#include "../client/Util.h"
 #include <boost/algorithm/string/trim.hpp>
 
 static const WinUtil::TextItem texts[] =

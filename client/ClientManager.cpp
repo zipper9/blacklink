@@ -34,6 +34,7 @@
 #include "DatabaseManager.h"
 #include "PortTest.h"
 #include "BusyCounter.h"
+#include "Util.h"
 #include "dht/DHT.h"
 #include "ConfCore.h"
 

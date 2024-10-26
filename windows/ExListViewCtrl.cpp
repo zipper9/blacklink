@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "LockRedraw.h"
+#include "../client/Util.h"
 
 // TODO: make sure that moved items maintain their selection state
 int ExListViewCtrl::moveItem(int oldPos, int newPos)

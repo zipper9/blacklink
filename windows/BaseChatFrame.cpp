@@ -27,6 +27,7 @@
 #include "../client/SettingsManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/PathUtil.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 #include <tom.h>
 #include <comdef.h>

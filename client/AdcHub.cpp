@@ -35,6 +35,7 @@
 #include "DebugManager.h"
 #include "Tag16.h"
 #include "SocketPool.h"
+#include "Util.h"
 #include "ConfCore.h"
 
 #ifdef _DEBUG

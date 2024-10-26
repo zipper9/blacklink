@@ -35,6 +35,7 @@
 #include "MerkleCheckOutputStream.h"
 #include "SearchResult.h"
 #include "PathUtil.h"
+#include "Util.h"
 #include "SharedFileStream.h"
 #include "ADLSearch.h"
 #include "ShareManager.h"

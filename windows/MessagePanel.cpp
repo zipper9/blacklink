@@ -23,6 +23,7 @@
 #include "../client/ClientManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/SysVersion.h"
+#include "../client/Util.h"
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 #include "../client/SimpleStringTokenizer.h"

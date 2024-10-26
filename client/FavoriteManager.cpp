@@ -23,6 +23,7 @@
 #include "AppPaths.h"
 #include "PathUtil.h"
 #include "TimeUtil.h"
+#include "Util.h"
 #include "ClientManager.h"
 #include "StringTokenizer.h"
 #include "SimpleXML.h"

@@ -25,6 +25,7 @@
 #include "../client/SettingsManager.h"
 #include "../client/FavoriteManager.h"
 #include "../client/Random.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 #include <boost/algorithm/string/trim.hpp>
 

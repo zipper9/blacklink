@@ -37,6 +37,7 @@
 #include "../client/AppStats.h"
 #include "../client/ProfileLocker.h"
 #include "../client/PathUtil.h"
+#include "../client/Util.h"
 #include "../client/SettingsUtil.h"
 #include "../client/ConfCore.h"
 #include "SplashWindow.h"

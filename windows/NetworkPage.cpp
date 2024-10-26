@@ -32,6 +32,7 @@
 #include "../client/PortTest.h"
 #include "../client/IpTest.h"
 #include "../client/AppPaths.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 
 #ifdef OSVER_WIN_XP

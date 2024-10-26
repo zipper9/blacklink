@@ -28,6 +28,7 @@
 #include "Socket.h"
 #include "Client.h"
 #include "FormatUtil.h"
+#include "Util.h"
 
 #include <winnt.h>
 #include <shlwapi.h>

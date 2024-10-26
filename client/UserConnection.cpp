@@ -36,6 +36,7 @@
 #include "Random.h"
 #include "SettingsManager.h"
 #include "FavoriteManager.h"
+#include "Util.h"
 #include "ConfCore.h"
 
 #ifdef BL_FEATURE_IPFILTER

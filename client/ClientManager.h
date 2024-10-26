@@ -27,7 +27,7 @@
 #include "Speaker.h"
 #include "Singleton.h"
 #include "ConnectionStatus.h"
-#include "Util.h"
+#include "NoCaseHash.h"
 
 class UserCommand;
 
@@ -215,7 +215,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void updateUser(const OnlineUserPtr& ou);
 
 	private:	
-		typedef std::unordered_map<string, ClientBasePtr, noCaseStringHash, noCaseStringEq> ClientMap;
+		typedef std::unordered_map<string, ClientBasePtr, NoCaseStringHash, NoCaseStringEq> ClientMap;
 		static ClientMap g_clients;
 		static std::unique_ptr<RWLock> g_csClients;
 		

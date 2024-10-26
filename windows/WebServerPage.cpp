@@ -6,6 +6,7 @@
 #include "../client/File.h"
 #include "../client/AppPaths.h"
 #include "../client/PathUtil.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 
 using DialogLayout::FLAG_TRANSLATE;

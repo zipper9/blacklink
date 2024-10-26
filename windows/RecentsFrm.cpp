@@ -4,6 +4,7 @@
 #include "HubFrame.h"
 #include "LineDlg.h"
 #include "../client/FormatUtil.h"
+#include "../client/Util.h"
 
 const int RecentHubsFrame::columnId[] =
 {

@@ -20,6 +20,7 @@
 #include "SearchResult.h"
 #include "Client.h"
 #include "LocationUtil.h"
+#include "Util.h"
 #include "DatabaseManager.h"
 #include "ShareManager.h"
 #include "QueueManager.h"

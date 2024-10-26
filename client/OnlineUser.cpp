@@ -22,6 +22,7 @@
 #include "ClientManager.h"
 #include "FormatUtil.h"
 #include "LocationUtil.h"
+#include "Util.h"
 #include "UserConnection.h"
 #include "ConnectivityManager.h"
 #include "Resolver.h"

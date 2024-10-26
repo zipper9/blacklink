@@ -4,6 +4,7 @@
 #include "WinUtil.h"
 #include "../client/ParamExpander.h"
 #include "../client/FavoriteManager.h"
+#include "../client/UriUtil.h"
 
 void PreviewBaseHandler::appendPreviewItems(OMenu& menu)
 {

@@ -7,6 +7,7 @@
 #include "WinUtil.h"
 #include "../client/UserManager.h"
 #include "../client/Wildcards.h"
+#include "../client/Util.h"
 
 LRESULT IgnoredUsersWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {

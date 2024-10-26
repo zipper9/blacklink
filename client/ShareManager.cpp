@@ -38,6 +38,7 @@
 #include "PathUtil.h"
 #include "TimeUtil.h"
 #include "FormatUtil.h"
+#include "Util.h"
 #include "SettingsManager.h"
 #include "ConfCore.h"
 #include "MediaInfoUtil.h"

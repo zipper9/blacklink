@@ -25,6 +25,7 @@
 #include "ExMessageBox.h"
 #include "Fonts.h"
 #include "../client/FormatUtil.h"
+#include "../client/Util.h"
 #include "../client/ShareManager.h"
 #include "../client/SysVersion.h"
 #include "../client/SettingsUtil.h"
@@ -668,7 +669,8 @@ void FavoriteHubsFrame::handleMove(bool up)
 
 TStringList FavoriteHubsFrame::getSortedGroups() const
 {
-	std::set<tstring, noCaseStringLess> sortedGroups;
+	std::set<tstring, std::function<bool (const tstring& a, const tstring& b)>>
+		sortedGroups([](const auto& a, const auto& b) { return stricmp(a, b) < 0; });
 	{
 		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
 		const FavHubGroups& favHubGroups = lock.getFavHubGroups();

@@ -26,6 +26,7 @@
 #include "CountryList.h"
 #include "../client/FormatUtil.h"
 #include "../client/SettingsUtil.h"
+#include "../client/Util.h"
 #include "../client/ConfCore.h"
 
 const int PublicHubsFrame::columnId[] =
@@ -1175,6 +1176,11 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 	maxUsers = hub.getMaxUsers();
 	reliability = hub.getReliability();
 	rating = Util::toInt(hub.getRating());
+}
+
+string PublicHubsFrame::getPubServer(const HubInfo* data) const
+{
+	return data ? Util::formatDchubUrl(Text::fromT(data->getText(COLUMN_SERVER))) : Util::emptyString;
 }
 
 PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url, bool& secureUrl, int* pos) const

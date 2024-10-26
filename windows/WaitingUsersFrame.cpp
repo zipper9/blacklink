@@ -21,6 +21,7 @@
 #include "../client/QueueManager.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/Util.h"
 #include "WaitingUsersFrame.h"
 #include "MainFrm.h"
 #include "BarShader.h"

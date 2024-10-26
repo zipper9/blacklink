@@ -30,6 +30,7 @@
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/TimeUtil.h"
+#include "../client/Util.h"
 
 #ifdef DEBUG_QUEUE_FRAME
 int QueueFrame::DirItem::itemsCreated;

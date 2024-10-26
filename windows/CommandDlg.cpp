@@ -22,6 +22,7 @@
 #include "../client/UserCommand.h"
 #include "../client/NmdcHub.h"
 #include "../client/AdcCommand.h"
+#include "../client/Util.h"
 #include "CommandDlg.h"
 #include "WinUtil.h"
 

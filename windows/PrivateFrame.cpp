@@ -29,6 +29,7 @@
 #include "../client/ParamExpander.h"
 #include "../client/ConnectionManager.h"
 #include "../client/FavoriteManager.h"
+#include "../client/Util.h"
 #include "../client/SettingsUtil.h"
 #include "../client/ConfCore.h"
 #include "../client/dht/DHT.h"

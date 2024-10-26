@@ -23,7 +23,7 @@
 
 #include "File.h"
 #include "Locks.h"
-#include "Util.h"
+#include "NoCaseHash.h"
 
 struct SharedFileHandle
 {
@@ -51,7 +51,7 @@ struct SharedFileHandle
 class SharedFileStream : public IOStream
 {
 	public:
-		typedef std::unordered_map<std::string, std::shared_ptr<SharedFileHandle>, noCaseStringHash, noCaseStringEq> SharedFileHandleMap;
+		typedef std::unordered_map<std::string, std::shared_ptr<SharedFileHandle>, NoCaseStringHash, NoCaseStringEq> SharedFileHandleMap;
 
 		SharedFileStream(const string& fileName, int access, int mode, int64_t fileSize);
 		~SharedFileStream();

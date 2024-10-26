@@ -35,6 +35,7 @@
 #include "ParamExpander.h"
 #include "Resolver.h"
 #include "Random.h"
+#include "Util.h"
 #include "ConfCore.h"
 
 static const unsigned USER_CHECK_INTERVAL = 60000;

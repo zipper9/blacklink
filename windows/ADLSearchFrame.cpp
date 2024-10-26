@@ -29,6 +29,7 @@
 #include "ExMessageBox.h"
 #include "HelpTextDlg.h"
 #include "ConfUI.h"
+#include "../client/Util.h"
 
 int ADLSearchFrame::columnIndexes[] =
 {

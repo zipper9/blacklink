@@ -25,6 +25,7 @@
 #include "Fonts.h"
 #include "NotifUtil.h"
 #include "../client/FormatUtil.h"
+#include "../client/Util.h"
 #include "../client/QueueManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/UserManager.h"

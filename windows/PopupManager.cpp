@@ -24,6 +24,7 @@
 #include "GdiUtil.h"
 #include "Fonts.h"
 #include "../client/TimeUtil.h"
+#include "../client/Util.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
