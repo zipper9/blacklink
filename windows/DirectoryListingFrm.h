@@ -462,6 +462,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		OMenu targetDirMenu;
 		OMenu priorityMenu;
 		OMenu priorityDirMenu;
+		int activeMenu;
 
 		CContainedWindow treeContainer;
 		CContainedWindow listContainer;

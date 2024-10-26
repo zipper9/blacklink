@@ -105,6 +105,13 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::FILES
 };
 
+enum
+{
+	MENU_NONE,
+	MENU_LIST,
+	MENU_TREE
+};
+
 static SearchOptions searchOptions;
 static FindDuplicatesDlg::Options findDupsOptions;
 
@@ -197,7 +204,8 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	id(WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_DIRECTORY_LISTING)),
 	originalId(0),
 	changingPath(0),
-	updatingLayout(0)
+	updatingLayout(0),
+	activeMenu(MENU_NONE)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
 
@@ -1316,6 +1324,14 @@ LRESULT DirectoryListingFrame::onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, 
 
 LRESULT DirectoryListingFrame::onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	if (activeMenu == MENU_TREE)
+	{
+		const HTREEITEM t = ctrlTree.GetSelectedItem();
+		if (!t) return 0;
+		const DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
+		if (dir) performWebSearch(wID, dir->getName());
+		return 0;
+	}
 	const auto ii = ctrlList.getSelectedItem();
 	if (!ii) return 0;
 	if (ii->type == ItemInfo::FILE)
@@ -1688,6 +1704,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		fileMenu.AppendMenu(MF_POPUP, copyMenu, CTSTRING(COPY), g_iconBitmaps.getBitmap(IconBitmaps::COPY_TO_CLIPBOARD, 0));
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
+		activeMenu = MENU_LIST;
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
 		{
 			if (!hasTTH)
@@ -1846,6 +1863,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			int n = IDC_DOWNLOAD_TARGET_TREE - IDC_DOWNLOAD_TARGET;
 			LastDir::appendItems(targetDirMenu, n);
 
+			appendWebSearchItems(directoryMenu, SearchUrl::KEYWORD, true, ResourceManager::WEB_SEARCH_KEYWORD);
 			if (copyDirMenu)
 			{
 				directoryMenu.AppendMenu(MF_SEPARATOR);
@@ -1855,6 +1873,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		}
 		else
 		{
+			appendWebSearchItems(directoryMenu, SearchUrl::KEYWORD, true, ResourceManager::WEB_SEARCH_KEYWORD);
 			directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
 			if (copyDirMenu)
 			{
@@ -1869,6 +1888,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		if (originalId && findFrameByID(originalId))
 			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_FILELIST, 0));
 
+		activeMenu = MENU_TREE;
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		MenuHelper::unlinkStaticMenus(directoryMenu);
 		return TRUE;
