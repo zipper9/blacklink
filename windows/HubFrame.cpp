@@ -911,12 +911,6 @@ void HubFrame::processTasks()
 		{
 			switch (i->first)
 			{
-				case UPDATE_USER:
-				{
-					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					shouldUpdateStats |= ctrlUsers.updateUser(u.ou, (uint32_t) -1, isDHT || isConnected());
-				}
-				break;
 				case UPDATE_USERS:
 				{
 					const OnlineUsersTask& u = static_cast<OnlineUsersTask&>(*i->second);

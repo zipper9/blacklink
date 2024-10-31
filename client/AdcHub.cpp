@@ -431,12 +431,9 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		if (newUser && id.isOp())
 			fire(ClientListener::HubInfoMessage(), ClientListener::OperatorInfo, this, Util::emptyString);
 	}
-	else if (id.isHub())
-	{
-		fire(ClientListener::HubUpdated(), this);
-	}
 	else
 	{
+		if (id.isHub()) fire(ClientListener::HubUpdated(), this);
 		fireUserUpdated(ou);
 	}
 }
