@@ -1116,7 +1116,7 @@ void QueueManager::add(const string& target, const QueueItemParams& params, cons
 		static const QueueItem::MaskType UPDATE_FLAGS_MASK = QueueItem::XFLAG_CLIENT_VIEW | QueueItem::XFLAG_TEXT_VIEW | QueueItem::XFLAG_DOWNLOAD_CONTENTS;
 		q->changeExtraFlags(flags & UPDATE_FLAGS_MASK, UPDATE_FLAGS_MASK);
 	}
-	if (!(extraFlags & QueueItem::XFLAG_COPYING) && !(hintedUser.user->getFlags() & User::FAKE) && q)
+	if (!(extraFlags & QueueItem::XFLAG_COPYING) && hintedUser.user && !(hintedUser.user->getFlags() & User::FAKE) && q)
 	{
 		QueueWLock(*QueueItem::g_cs);
 		wantConnection = addSourceL(q, hintedUser.user, (QueueItem::MaskType)(params.readdBadSource ? QueueItem::Source::FLAG_MASK : 0));
