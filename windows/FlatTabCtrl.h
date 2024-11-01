@@ -219,7 +219,6 @@ class FlatTabCtrl : public CWindowImpl<FlatTabCtrl, CWindow, CControlWinTraits>
 
 	int rows;
 	int height;
-	int xdu, ydu;
 	int textHeight;
 	int edgeHeight;
 	int horizIconSpace;

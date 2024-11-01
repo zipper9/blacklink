@@ -10,7 +10,7 @@ FlatTabCtrl::FlatTabCtrl() :
 	tabsPosition(Conf::TABS_TOP), tabChars(16), maxRows(7),
 	showIcons(true), showCloseButton(true), useBoldNotif(false), nonHubsFirst(true),
 	closeButtonPressedTab(nullptr), closeButtonHover(false), hoverTab(nullptr),
-	rows(1), height(0),	xdu(0), ydu(0),
+	rows(1), height(0),
 	textHeight(0), edgeHeight(0), horizIconSpace(0), horizPadding(0), chevronWidth(0),
 	backingStore(nullptr)
 {
@@ -543,7 +543,7 @@ void FlatTabCtrl::switchTo(bool next)
 LRESULT FlatTabCtrl::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/)
 {
 	chevron.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_CHEVRON);
-	chevron.SetWindowText(_T("\u00bb"));
+	chevron.SetWindowTextW(L"\u00bb");
 
 	tooltip.Create(m_hWnd, rcDefault, nullptr, TTS_ALWAYSTIP | TTS_NOPREFIX);
 	tooltip.SetMaxTipWidth(600);
@@ -553,18 +553,18 @@ LRESULT FlatTabCtrl::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	CDCHandle dc(::GetDC(m_hWnd));
 	HFONT oldfont = dc.SelectFont(Fonts::g_systemFont);
+	int xdu, ydu;
 	WinUtil::getDialogUnits(dc, xdu, ydu);
-	edgeHeight = WinUtil::dialogUnitsToPixelsY(2, ydu);
-	horizPadding = WinUtil::dialogUnitsToPixelsX(2, xdu);
-	int vertExtraSpace = WinUtil::dialogUnitsToPixelsY(6, ydu);
-	horizIconSpace = WinUtil::dialogUnitsToPixelsX(1, xdu);
+	int dpi = dc.GetDeviceCaps(LOGPIXELSX);
+	edgeHeight = 2 * dpi / 96;
+	horizPadding = 5 * dpi / 96;
+	int vertExtraSpace = 10 * dpi / 96;
+	horizIconSpace = 2 * dpi / 96;
 	chevronWidth = WinUtil::dialogUnitsToPixelsX(8, xdu);
 	textHeight = WinUtil::getTextHeight(dc);
 	height = std::max<int>(textHeight, ICON_SIZE) + vertExtraSpace;
-	height &= ~1;
 	dc.SelectFont(oldfont);
 	::ReleaseDC(m_hWnd, dc);
-
 
 	return 0;
 }
