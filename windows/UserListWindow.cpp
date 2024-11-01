@@ -317,6 +317,7 @@ void UserListWindow::updateUserList()
 	}
 	shouldSort = false;
 	ctrlUsers.resort();
+	hubFrame->updateUserCount();
 }
 
 bool UserListWindow::updateUser(const OnlineUserPtr& ou, uint32_t columnMask, bool isConnected)

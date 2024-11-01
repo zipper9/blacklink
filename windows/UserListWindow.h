@@ -23,6 +23,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 			virtual void setCurrentNick(const tstring& nick) = 0;
 			virtual void appendNickToChat(const tstring& nick) = 0;
 			virtual void addTask(int type, Task* task) = 0;
+			virtual void updateUserCount() = 0;
 		};
 
 		DECLARE_WND_CLASS_EX(_T("UserListWindow"), CS_HREDRAW | CS_VREDRAW, COLOR_3DFACE);

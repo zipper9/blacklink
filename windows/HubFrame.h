@@ -328,7 +328,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 
 		void toggleAutoConnect();
 		void appendHubAndUsersItems(OMenu& menu, const bool isChat);
-		void updateStats();
+		void updateStats(bool updateSize = true);
 
 		// FavoriteManagerListener
 		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept override;
@@ -369,6 +369,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void setCurrentNick(const tstring& nick) override;
 		void appendNickToChat(const tstring& nick) override;
 		void addTask(int type, Task* task) override;
+		void updateUserCount() override;
 
 		struct StatusTask : public Task
 		{

@@ -2777,7 +2777,7 @@ void HubFrame::onTimerInternal()
 	}
 }
 
-void HubFrame::updateStats()
+void HubFrame::updateStats(bool updateSize)
 {
 	if (isDHT || (client && client->isUserListLoaded()))
 	{
@@ -2804,7 +2804,7 @@ void HubFrame::updateStats()
 		users += _T(' ');
 		users += TSTRING(HUB_USERS);
 		setStatusText(STATUS_USERS, users.c_str());
-		if (!isDHT)
+		if (!isDHT && updateSize)
 		{
 			setStatusText(STATUS_SHARED, Util::formatBytesT(bytesShared));
 			setStatusText(STATUS_SIZE_PER_USER, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
@@ -2825,6 +2825,11 @@ void HubFrame::setCurrentNick(const tstring& nick)
 void HubFrame::appendNickToChat(const tstring& nick)
 {
 	BaseChatFrame::appendNickToChat(nick);
+}
+
+void HubFrame::updateUserCount()
+{
+	updateStats(false);
 }
 
 void HubFrame::selectCID(const CID& cid)
