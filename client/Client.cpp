@@ -1084,11 +1084,12 @@ void Client::removeUserCommand(const string& name)
 		}
 }
 
-void Client::getUserCommands(vector<UserCommand>& result) const
+void Client::getUserCommands(vector<UserCommand>& result, int ctx) const
 {
 	READ_LOCK(*csUserCommands);
 	for (const UserCommand& uc : userCommands)
-		result.push_back(uc);
+		if (uc.getCtx() & ctx)
+			result.push_back(uc);
 }
 
 string Client::getOpChat() const noexcept

@@ -421,13 +421,13 @@ string ClientManager::getOnlineHubName(const string& hubUrl)
 	return i->second->getHubName();
 }
 
-bool ClientManager::getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd)
+bool ClientManager::getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd, int ctx)
 {
 	READ_LOCK(*g_csClients);
 	auto i = g_clients.find(hubUrl);
 	if (i == g_clients.end()) return false;
 	const Client* c = static_cast<const Client*>(i->second.get());
-	c->getUserCommands(cmd);
+	c->getUserCommands(cmd, ctx);
 	return true;
 }
 

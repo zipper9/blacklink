@@ -1663,7 +1663,7 @@ void FavoriteManager::getUserCommands(vector<UserCommand>& result, int ctx, cons
 		}
 	}
 	for (const string& hubUrl : hubs)
-		ClientManager::getHubUserCommands(hubUrl, result);
+		ClientManager::getHubUserCommands(hubUrl, result, ctx);
 }
 
 void FavoriteManager::on(UserUpdated, const OnlineUserPtr& user) noexcept

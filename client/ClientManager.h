@@ -79,7 +79,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
 		static string getOnlineHubName(const string& hubUrl);
-		static bool getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd);
+		static bool getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd, int ctx);
 		static bool isConnected(const string& hubUrl);
 		static bool getSlots(const CID& cid, uint16_t& slots);
 		static void search(const SearchParam& sp);

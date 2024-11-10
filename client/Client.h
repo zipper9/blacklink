@@ -389,7 +389,7 @@ class Client : public ClientBase,
 
 		bool getHideShare() const { return hideShare; }
 		const CID& getShareGroup() const { return shareGroup; }
-		void getUserCommands(vector<UserCommand>& result) const;
+		void getUserCommands(vector<UserCommand>& result, int ctx) const;
 		int64_t getBytesShared() const { return bytesShared.load(); }
 
 		std::shared_ptr<Client> getClientPtr()
