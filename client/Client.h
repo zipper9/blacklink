@@ -91,6 +91,12 @@ class Client : public ClientBase,
 			STATE_WAIT_PORT_TEST // Waiting for port test to complete
 		};
 
+		enum
+		{
+			GLIP_FLAG_MANUAL_IPV4 = 1,
+			GLIP_FLAG_MANUAL_IPV6 = 2
+		};
+
 		virtual ~Client();
 
 	public:
@@ -183,7 +189,7 @@ class Client : public ClientBase,
 		{
 			return "[Hub: " + getHubUrl() + ", " + getIpPort() + "]";
 		}
-		void getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const;
+		int getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const;
 		bool checkIpType(int type) const;
 		static bool allowNatTraversal();
 

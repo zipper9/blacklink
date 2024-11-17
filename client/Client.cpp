@@ -564,7 +564,7 @@ void Client::fireUserUpdated(const OnlineUserPtr& user)
 		fire(ClientListener::UserUpdated(), user);
 }
 
-void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
+int Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 {
 	if (!getFavIp().empty())
 	{
@@ -575,13 +575,13 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 			{
 				ip4 = ip.data.v4;
 				memset(&ip6, 0, sizeof(ip6));
-				return;
+				return GLIP_FLAG_MANUAL_IPV4;
 			}
 			if (ip.type == AF_INET6)
 			{
 				ip6 = ip.data.v6;
 				ip4 = 0;
-				return;
+				return GLIP_FLAG_MANUAL_IPV6;
 			}
 		}
 	}
@@ -592,20 +592,21 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
-	const bool wanIpManual4 = ss->getBool(Conf::WAN_IP_MANUAL);
+	bool wanIpManual4 = ss->getBool(Conf::WAN_IP_MANUAL);
 	string externalIp4 = wanIpManual4 ? ss->getString(Conf::EXTERNAL_IP) : string();
 	const bool noIpOverride4 = ss->getBool(Conf::NO_IP_OVERRIDE);
 
-	const bool wanIpManual6 = ss->getBool(Conf::WAN_IP_MANUAL6);
+	bool wanIpManual6 = ss->getBool(Conf::WAN_IP_MANUAL6);
 	string externalIp6 = wanIpManual6 ? ss->getString(Conf::EXTERNAL_IP6) : string();
 	const bool noIpOverride6 = ss->getBool(Conf::NO_IP_OVERRIDE6);
 	ss->unlockRead();
 
 	if (ip4 == 0)
 	{
-		if (wanIpManual4)
+		if (wanIpManual4 && !Util::isValidIp4(externalIp4))
 		{
-			if (!Util::isValidIp4(externalIp4)) externalIp4.clear();
+			externalIp4.clear();
+			wanIpManual4 = false;
 		}
 		if (externalIp4.empty() || !noIpOverride4)
 		{
@@ -623,9 +624,10 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 
 	if (Util::isEmpty(ip6))
 	{
-		if (wanIpManual6)
+		if (wanIpManual6 && !Util::isValidIp6(externalIp6))
 		{
-			if (!Util::isValidIp6(externalIp6)) externalIp6.clear();
+			externalIp6.clear();
+			wanIpManual6 = false;
 		}
 		if (externalIp6.empty() || !noIpOverride6)
 		{
@@ -640,6 +642,7 @@ void Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 		else
 			Util::parseIpAddress(ip6, externalIp6);
 	}
+	return (wanIpManual4 ? GLIP_FLAG_MANUAL_IPV4 : 0) | (wanIpManual6 ? GLIP_FLAG_MANUAL_IPV6 : 0);
 }
 
 bool Client::checkIpType(int type) const

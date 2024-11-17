@@ -1580,11 +1580,12 @@ void AdcHub::info(bool/* forceUpdate*/)
 	bool hasIP = false;
 	Ip4Address ip4;
 	Ip6Address ip6;
-	getLocalIp(ip4, ip6);
+	int flags = getLocalIp(ip4, ip6);
 
 	uint16_t udpPort = SearchManager::getUdpPort();
 	if (ip4)
 	{
+		if (!(flags & GLIP_FLAG_MANUAL_IPV4)) ip4 = 0;
 		hasIP = true;
 		addInfoParam(c, TAG('I', '4'), Util::printIpAddress(ip4));
 		if (active)
@@ -1599,6 +1600,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	}
 	if (!Util::isEmpty(ip6))
 	{
+		if (!(flags & GLIP_FLAG_MANUAL_IPV6)) memset(ip6.data, 0, sizeof(ip6.data));
 		hasIP = true;
 		addInfoParam(c, TAG('I', '6'), Util::printIpAddress(ip6));
 		if (active)
