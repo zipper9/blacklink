@@ -392,7 +392,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			bool flag = !isShutDown();
 			setShutDown(flag);
 			addStatusMessage(flag ? TSTRING(SHUTDOWN_ON) : TSTRING(SHUTDOWN_OFF));
-			return S_OK;
+			return 0;
 		}
 
 		LRESULT onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

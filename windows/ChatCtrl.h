@@ -113,7 +113,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		list<Message> chatCache;
 		size_t chatCacheSize;
 		bool useChatCacheFlag;
-		FastCriticalSection csChatCache;
 
 		bool autoScroll;
 		string hubHint;

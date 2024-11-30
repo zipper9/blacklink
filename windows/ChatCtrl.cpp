@@ -21,6 +21,7 @@
 #include "NotifUtil.h"
 #include "../client/OnlineUser.h"
 #include "../client/Client.h"
+#include "../client/Util.h"
 #include <boost/algorithm/string.hpp>
 #include <tom.h>
 
@@ -121,37 +122,35 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 
 void ChatCtrl::restoreChatCache()
 {
+	ASSERT_MAIN_THREAD();
 	CWaitCursor waitCursor;
+	std::list<Message> tempChatCache;
+	bool flag = false;
 	{
-		std::list<Message> tempChatCache;
-		bool flag = false;
+		std::swap(useChatCacheFlag, flag);
+		tempChatCache.swap(chatCache);
+		chatCacheSize = 0;
+	}
+	int count = tempChatCache.size();
+	tstring oldText;
+	for (auto i = tempChatCache.begin(); i != tempChatCache.end(); ++i)
+	{
+		if (ClientManager::isBeforeShutdown())
+			return;
+		if (count-- > 40) // Disable styles for old messages
 		{
-			LOCK(csChatCache);
-			std::swap(useChatCacheFlag, flag);
-			tempChatCache.swap(chatCache);
-			chatCacheSize = 0;
+			oldText += _T("* ") + i->extra + _T(' ') + i->nick + _T(' ') + i->msg + _T("\r\n");
+			continue;
 		}
-		int count = tempChatCache.size();
-		tstring oldText;
-		for (auto i = tempChatCache.begin(); i != tempChatCache.end(); ++i)
+		if (!oldText.empty())
 		{
-			if (ClientManager::isBeforeShutdown())
-				return;
-			if (count-- > 40) // Disable styles for old messages
-			{
-				oldText += _T("* ") + i->extra + _T(' ') + i->nick + _T(' ') + i->msg + _T("\r\n");
-				continue;
-			}
-			if (!oldText.empty())
-			{
-				LONG selBegin = 0;
-				LONG selEnd = 0;
-				insertAndFormat(oldText, Colors::getCharFormat(i->textStyle), selBegin, selEnd);
-				oldText.clear();
-			}
-			if (flag)
-				appendText(*i, UINT_MAX, false);
+			LONG selBegin = 0;
+			LONG selEnd = 0;
+			insertAndFormat(oldText, Colors::getCharFormat(i->textStyle), selBegin, selEnd);
+			oldText.clear();
 		}
+		if (flag)
+			appendText(*i, UINT_MAX, false);
 	}
 }
 
@@ -176,20 +175,18 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	if (ClientManager::isBeforeShutdown())
 		return;
 
+	ASSERT_MAIN_THREAD();
 	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (useChatCacheFlag)
 	{
-		LOCK(csChatCache);
-		if (useChatCacheFlag)
+		chatCache.push_back(message);
+		chatCacheSize += message.length();
+		if (chatCacheSize + 1000 > (size_t) ss->getInt(Conf::CHAT_BUFFER_SIZE))
 		{
-			chatCache.push_back(message);
-			chatCacheSize += message.length();
-			if (chatCacheSize + 1000 > (size_t) ss->getInt(Conf::CHAT_BUFFER_SIZE))
-			{
-				chatCacheSize -= chatCache.front().length();
-				chatCache.pop_front();
-			}
-			return;
+			chatCacheSize -= chatCache.front().length();
+			chatCache.pop_front();
 		}
+		return;
 	}
 	LONG selBeginSaved = 0, selEndSaved = 0;
 	GetSel(selBeginSaved, selEndSaved);
