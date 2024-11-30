@@ -21,11 +21,14 @@
 #include "BaseUtil.h"
 #include "debug.h"
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #endif
+#include "inet_compat.h"
 
 extern "C"
 {
@@ -54,10 +57,11 @@ bool Mapper_NATPMP::init()
 {
 	if (initnatpmp(&nat, 0, 0) >= 0)
 	{
-		gateway = inet_ntoa(*(struct in_addr *)&nat.gateway);
+		char buf[16] = {};
+		inet_ntop_compat(AF_INET, (struct in_addr *) &nat.gateway, buf, sizeof(buf));
+		gateway = buf;
 		return true;
 	}
-
 	return false;
 }
 
@@ -113,6 +117,7 @@ bool Mapper_NATPMP::addMapping(int port, Protocol protocol, const string &)
 	{
 		natpmpresp_t response;
 		if (read(response) && response.type == respType(protocol) &&
+		    response.pnu.newportmapping.privateport == port &&
 		    response.pnu.newportmapping.mappedpublicport == port)
 		{
 			lifetime = std::min(3600u, response.pnu.newportmapping.lifetime);
@@ -127,8 +132,13 @@ bool Mapper_NATPMP::removeMapping(int port, Protocol protocol)
 	if (sendRequest(static_cast<uint16_t>(port), protocol, 0))
 	{
 		natpmpresp_t response;
-		return read(response) && response.type == respType(protocol) &&
-		       response.pnu.newportmapping.mappedpublicport == port;
+		if (read(response) && response.type == respType(protocol) &&
+		    response.pnu.newportmapping.privateport == port &&
+		    response.pnu.newportmapping.lifetime == 0)
+		{
+			lifetime = 0;
+			return true;
+		}
 	}
 	return false;
 }
@@ -145,7 +155,9 @@ string Mapper_NATPMP::getExternalIP()
 		natpmpresp_t response;
 		if (read(response) && response.type == NATPMP_RESPTYPE_PUBLICADDRESS)
 		{
-			return inet_ntoa(response.pnu.publicaddress.addr);
+			char buf[16] = {};
+			inet_ntop_compat(AF_INET, &response.pnu.publicaddress.addr, buf, sizeof(buf));
+			return buf;
 		}
 	}
 	return Util::emptyString;
