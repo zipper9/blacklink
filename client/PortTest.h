@@ -1,6 +1,7 @@
 #ifndef PORT_TEST_H
 #define PORT_TEST_H
 
+#include "AppPorts.h"
 #include "HttpClientListener.h"
 #include "CID.h"
 #include "Locks.h"
@@ -10,14 +11,6 @@
 class PortTest: private HttpClientListener, private TimerManagerListener
 {
 public:
-	enum
-	{
-		PORT_UDP,
-		PORT_TCP,
-		PORT_TLS,
-		MAX_PORTS
-	};
-	
 	enum
 	{
 		STATE_UNKNOWN,
@@ -49,7 +42,7 @@ private:
 		Port(): value(0), state(STATE_UNKNOWN), timeout(0), reqId(0) {}
 	};
 	
-	Port ports[MAX_PORTS];
+	Port ports[AppPorts::MAX_PORTS];
 	mutable CriticalSection cs;
 	bool hasListener;
 	bool shutDown;

@@ -1146,7 +1146,8 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 	}
 	if (isActive())
 	{
-		uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
+		IpAddress peerAddress = user.getIdentity().getConnectIP();
+		uint16_t port = ConnectionManager::getInstance()->getConnectionPort(peerAddress.type, secure);
 		if (port == 0)
 		{
 			// Oops?
@@ -1582,7 +1583,6 @@ void AdcHub::info(bool/* forceUpdate*/)
 	Ip6Address ip6;
 	int flags = getLocalIp(ip4, ip6);
 
-	uint16_t udpPort = SearchManager::getUdpPort();
 	if (ip4)
 	{
 		if (!(flags & GLIP_FLAG_MANUAL_IPV4)) ip4 = 0;
@@ -1591,6 +1591,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 		if (active)
 		{
 			su += "," + AdcSupports::TCP4_FEATURE;
+			uint16_t udpPort = SearchManager::getSearchPort(AF_INET);
 			if (udpPort)
 			{
 				addInfoParam(c, TAG('U', '4'), Util::toString(udpPort));
@@ -1606,6 +1607,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 		if (active)
 		{
 			su += "," + AdcSupports::TCP6_FEATURE;
+			uint16_t udpPort = SearchManager::getSearchPort(AF_INET6);
 			if (udpPort)
 			{
 				addInfoParam(c, TAG('U', '6'), Util::toString(udpPort));

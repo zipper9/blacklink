@@ -68,7 +68,7 @@ namespace dht
 
 		if (active)
 		{
-			uint16_t port = secure ? ::ConnectionManager::getInstance()->getSecurePort() : ::ConnectionManager::getInstance()->getPort();
+			uint16_t port = ::ConnectionManager::getInstance()->getConnectionPort(AF_INET, secure);
 			cmd.addParam(Util::toString(port));
 			uint64_t expires = revConnect ? GET_TICK() + 60000 : UINT64_MAX;
 			::ConnectionManager::getInstance()->adcExpect(token, node->getUser()->getCID(), NetworkName, expires);

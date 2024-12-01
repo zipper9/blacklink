@@ -36,9 +36,24 @@
 #include "ConfCore.h"
 #include "version.h"
 
+using namespace AppPorts;
+
+struct MapperPortInfo
+{
+	int what;
+	ResourceManager::Strings description;
+};
+
+static const MapperPortInfo portInfo[] =
+{
+	{ PORT_TCP, ResourceManager::MAPPING_TRANSFER           },
+	{ PORT_TLS, ResourceManager::MAPPING_ENCRYPTED_TRANSFER },
+	{ PORT_UDP, ResourceManager::MAPPING_SEARCH             }
+};
+
 static inline Mapper::Protocol getProtocol(int port)
 {
-	if (port == MappingManager::PORT_UDP) return Mapper::PROTOCOL_UDP;
+	if (port == PORT_UDP) return Mapper::PROTOCOL_UDP;
 	return Mapper::PROTOCOL_TCP;
 }
 
@@ -115,13 +130,14 @@ string MappingManager::formatDescription(const string &description, int type, in
 
 int MappingManager::run()
 {
-	int portTCP = ConnectionManager::getInstance()->getPort();
-	int portTLS = ConnectionManager::getInstance()->getSecurePort();
-	int portUDP = SearchManager::getInstance()->getUdpPort();
+	int ports[MAX_PORTS];
+	ports[PORT_TCP] = ConnectionManager::getInstance()->getPort();
+	ports[PORT_TLS] = ConnectionManager::getInstance()->getSecurePort();
+	ports[PORT_UDP] = SearchManager::getInstance()->getLocalPort();
 	cs.lock();
-	if (portTLS && portTLS == portTCP)
+	if (ports[PORT_TLS] && ports[PORT_TLS] == ports[PORT_TCP])
 	{
-		portTLS = 0;
+		ports[PORT_TLS] = 0;
 		sharedTLSPort = true;
 	}
 	else
@@ -138,10 +154,11 @@ int MappingManager::run()
 		}
 		else
 		{
-			renew(mapper, portTCP, PORT_TCP, STRING(MAPPING_TRANSFER));
-			renew(mapper, portTLS, PORT_TLS, STRING(MAPPING_ENCRYPTED_TRANSFER));
-			renew(mapper, portUDP, PORT_UDP, STRING(MAPPING_SEARCH));
-
+			for (int i = 0; i < _countof(portInfo); ++i)
+			{
+				int what = portInfo[i].what;
+				renew(mapper, ports[what], what, STRING_I(portInfo[i].description));
+			}
 			renewLater(mapper);
 		}
 		mapper.uninit();
@@ -187,32 +204,44 @@ int MappingManager::run()
 			continue;
 		}
 
-		if (!(open(mapper, portTCP, PORT_TCP, STRING(MAPPING_TRANSFER)) &&
-		      open(mapper, portTLS, PORT_TLS, STRING(MAPPING_ENCRYPTED_TRANSFER)) &&
-			  open(mapper, portUDP, PORT_UDP, STRING(MAPPING_SEARCH))))
+		bool ok = true;
+		for (int i = 0; i < _countof(portInfo); ++i)
+		{
+			int what = portInfo[i].what;
+			if (!open(mapper, ports[what], what, STRING_I(portInfo[i].description)))
+			{
+				ok = false;
+				break;
+			}
+		}
+		if (!ok)
 		{
 			close(mapper, true);
 			mapper.uninit();
 			continue;
 		}
 
-		log(STRING_F(MAPPER_CREATING_SUCCESS_LONG, portTCP % portTLS % portUDP % deviceString(mapper) % mapper.getName()), SEV_INFO);
+		log(STRING_F(MAPPER_CREATING_SUCCESS_LONG,
+			ports[PORT_TCP] % ports[PORT_TLS] % ports[PORT_UDP] % deviceString(mapper) % mapper.getName()), SEV_INFO);
 
+		auto cm = ConnectivityManager::getInstance();
 		working = move(pMapper);
-		string externalIP = mapper.getExternalIP();
-		if (!externalIP.empty())
+		IpAddress externalIP = mapper.getExternalIP();
+		if (externalIP.type == af)
 		{
-			IpAddress ip;
-			if (Util::parseIpAddress(ip, externalIP))
-				ConnectivityManager::getInstance()->setReflectedIP(ip);
+			cm->setReflectedIP(externalIP);
+			getPublicPorts(ports);
 		}
 		else
 		{
+			memset(ports, 0, sizeof(ports));
 			// no cleanup because the mappings work and hubs will likely provide the correct IP.
 			log(STRING(MAPPER_IP_FAILED), SEV_WARNING);
 		}
 
-		ConnectivityManager::getInstance()->mappingFinished(mapper.getName(), af);
+		for (int i = 0; i < MAX_PORTS; ++i)
+			cm->setReflectedPort(af, i, ports[i]);
+		cm->mappingFinished(mapper.getName(), af);
 
 		renewLater(mapper);
 		break;
@@ -222,7 +251,10 @@ int MappingManager::run()
 	{
 		cs.lock();
 		for (int i = 0; i < MAX_PORTS; i++)
+		{
 			mappings[i].state = STATE_FAILURE;
+			mappings[i].publicPort = 0;
+		}
 		cs.unlock();
 		log(STRING(MAPPER_CREATING_FAILED), SEV_ERROR);
 		ConnectivityManager::getInstance()->mappingFinished(Util::emptyString, af);
@@ -243,6 +275,7 @@ void MappingManager::close(Mapper &mapper, bool quiet) noexcept
 			int port = mappings[i].port;
 			int state = mappings[i].state;
 			mappings[i].state = STATE_UNKNOWN;
+			mappings[i].publicPort = 0;
 			cs.unlock();
 			dcassert(state != STATE_RUNNING);
 			if ((state == STATE_SUCCESS || state == STATE_RENEWAL_FAILURE) && !mapper.removeMapping(port, getProtocol(i)))
@@ -277,7 +310,7 @@ void MappingManager::renewLater(Mapper &mapper)
 	if (seconds)
 	{
 		bool addTimer = !renewal;
-		renewal = GET_TICK() + std::max(seconds, 30) * 1000;
+		renewal = GET_TICK() + std::max(seconds, 15) * 1000;
 		if (addTimer)
 			TimerManager::getInstance()->addListener(this);
 	}
@@ -320,8 +353,18 @@ bool MappingManager::open(Mapper &mapper, int port, int type, const string &desc
 	mappings[type].port = port;
 	cs.unlock();
 	bool result = mapper.addMapping(port, getProtocol(type), formatDescription(description, type, port));
+	int publicPort = mapper.getExternalPort();
 	cs.lock();
-	mappings[type].state = result ? STATE_SUCCESS : STATE_FAILURE;
+	if (result)
+	{
+		mappings[type].state = STATE_SUCCESS;
+		mappings[type].publicPort = publicPort;
+	}
+	else
+	{
+		mappings[type].state = STATE_FAILURE;
+		mappings[type].publicPort = 0;
+	}
 	cs.unlock();
 	if (!result)
 	{
@@ -347,6 +390,14 @@ void MappingManager::renew(Mapper &mapper, int port, int type, const string &des
 	cs.lock();
 	mappings[type].state = result ? STATE_SUCCESS : STATE_RENEWAL_FAILURE;
 	mappings[type].port = port;
+	cs.unlock();
+}
+
+void MappingManager::getPublicPorts(int ports[]) const noexcept
+{
+	cs.lock();
+	for (int i = 0; i < MAX_PORTS; ++i)
+		ports[i] = mappings[i].publicPort;
 	cs.unlock();
 }
 

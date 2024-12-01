@@ -498,14 +498,15 @@ void NmdcHub::getMyUDPAddr(string& ip, uint16_t& port) const
 	Ip4Address ip4;
 	Ip6Address ip6;
 	getLocalIp(ip4, ip6);
-	port = SearchManager::getUdpPort();
 	if (Util::isValidIp4(ip4))
 	{
+		port = SearchManager::getSearchPort(AF_INET);
 		ip = Util::printIpAddress(ip4);
 		return;
 	}
 	if (Util::isValidIp6(ip6))
 	{
+		port = SearchManager::getSearchPort(AF_INET6);
 		ip = Util::printIpAddress(ip6);
 		return;
 	}
@@ -1875,19 +1876,18 @@ void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 		myNick = this->myNick;
 	}
 
-	bool secure = CryptoManager::getInstance()->isInitialized() && (user.getUser()->getFlags() & User::TLS);
-	auto cm = ConnectionManager::getInstance();
-	uint16_t port = secure ? cm->getSecurePort() : cm->getPort();
-	if (port == 0)
-	{
-		LogManager::message(STRING(NOT_LISTENING));
-		dcassert(0);
-		return;
-	}
-
 	IpAddress ip;
 	if (!getMyExternalIP(ip))
 		return;
+
+	bool secure = CryptoManager::getInstance()->isInitialized() && (user.getUser()->getFlags() & User::TLS);
+	auto cm = ConnectionManager::getInstance();
+	uint16_t port = cm->getConnectionPort(ip.type, secure);
+	if (port == 0)
+	{
+		LogManager::message(STRING(NOT_LISTENING));
+		return;
+	}
 
 	dcdebug("NmdcHub::connectToMe %s\n", user.getIdentity().getNick().c_str());
 	const string nick = fromUtf8(user.getIdentity().getNick());

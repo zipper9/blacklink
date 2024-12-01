@@ -42,7 +42,7 @@ const string Mapper_NATPMP::name = "NAT-PMP";
 
 static const int DEFAULT_LIFETIME = 3600;
 
-Mapper_NATPMP::Mapper_NATPMP(const string &localIp, int af) : Mapper(localIp, af), lifetime(0)
+Mapper_NATPMP::Mapper_NATPMP(const string &localIp, int af) : Mapper(localIp, af), lifetime(0), publicPort(0)
 {
 }
 
@@ -118,9 +118,11 @@ bool Mapper_NATPMP::addMapping(int port, Protocol protocol, const string &)
 		natpmpresp_t response;
 		if (read(response) && response.type == respType(protocol) &&
 		    response.pnu.newportmapping.privateport == port &&
-		    response.pnu.newportmapping.mappedpublicport == port)
+		    response.pnu.newportmapping.mappedpublicport &&
+		    response.pnu.newportmapping.lifetime)
 		{
 			lifetime = std::min(3600u, response.pnu.newportmapping.lifetime);
+			publicPort = response.pnu.newportmapping.mappedpublicport;
 			return true;
 		}
 	}
@@ -137,28 +139,29 @@ bool Mapper_NATPMP::removeMapping(int port, Protocol protocol)
 		    response.pnu.newportmapping.lifetime == 0)
 		{
 			lifetime = 0;
+			publicPort = 0;
 			return true;
 		}
 	}
 	return false;
 }
 
-string Mapper_NATPMP::getDeviceName()
+string Mapper_NATPMP::getDeviceName() const
 {
 	return gateway; // in lack of the router's name, give its IP.
 }
 
-string Mapper_NATPMP::getExternalIP()
+IpAddress Mapper_NATPMP::getExternalIP()
 {
+	IpAddress addr{};
 	if (sendpublicaddressrequest(&nat) >= 0)
 	{
 		natpmpresp_t response;
 		if (read(response) && response.type == NATPMP_RESPTYPE_PUBLICADDRESS)
 		{
-			char buf[16] = {};
-			inet_ntop_compat(AF_INET, &response.pnu.publicaddress.addr, buf, sizeof(buf));
-			return buf;
+			addr.data.v4 = ntohl(response.pnu.publicaddress.addr.s_addr);
+			addr.type = AF_INET;
 		}
 	}
-	return Util::emptyString;
+	return addr;
 }

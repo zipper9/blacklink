@@ -245,8 +245,9 @@ void UserConnection::onDataLine(const char* buf, size_t len) noexcept
 			}
 			
 			int unused;
-			if (g_portTest.processInfo(PortTest::PORT_TCP, PortTest::PORT_TLS, ConnectionManager::getInstance()->getPort(), reflectedAddress, param.substr(0, 39)) &&
-			    g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
+			uint16_t localPort = ConnectionManager::getInstance()->getConnectionPort(AF_INET, false);
+			if (g_portTest.processInfo(AppPorts::PORT_TCP, AppPorts::PORT_TLS, localPort, reflectedAddress, param.substr(0, 39)) &&
+			    g_portTest.getState(AppPorts::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
 			{
 				Util::parseIpPort(reflectedAddress, ip, port);
 				IpAddress addr;

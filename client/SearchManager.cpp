@@ -82,6 +82,17 @@ SearchManager::SearchManager(): stopFlag(false), failed{false, false}, options(0
 	updateSettings();
 }
 
+uint16_t SearchManager::getSearchPort(int af)
+{
+	uint16_t port = getLocalPort();
+	if (!port)
+		return 0;
+	int rport = ConnectivityManager::getInstance()->getReflectedPort(af, AppPorts::PORT_UDP);
+	if (rport)
+		port = rport;
+	return port;
+}
+
 void SearchManager::listenUDP(int af)
 {
 	int index = af == AF_INET6 ? 1 : 0;
@@ -249,7 +260,7 @@ int SearchManager::run()
 	}
 
 	terminate:
-	g_portTest.resetState(1<<PortTest::PORT_UDP);
+	g_portTest.resetState(1<<AppPorts::PORT_UDP);
 	return 0;
 }
 
@@ -525,7 +536,7 @@ bool SearchManager::processPortTest(const char* buf, int len, const IpAddress& a
 			if (!(port && Util::isValidIp4(ip)))
 				reflectedAddress.clear();
 		}
-		if (g_portTest.processInfo(PortTest::PORT_UDP, PortTest::PORT_UDP, 0, reflectedAddress, string(buf + 15, 39)))
+		if (g_portTest.processInfo(AppPorts::PORT_UDP, AppPorts::PORT_UDP, 0, reflectedAddress, string(buf + 15, 39)))
 			ConnectivityManager::getInstance()->processPortTestResult();
 		return true;
 	}
@@ -809,7 +820,7 @@ void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNi
 		cmd.addParam(TAG('N', 'I'), myNick);
 
 	cmd.addParam(TAG('H', 'I'), hubIpPort);
-	cmd.addParam(af == AF_INET6 ? TAG('U', '6') : TAG('U', '4'), Util::toString(wantResponse ? getUdpPort() : 0));
+	cmd.addParam(af == AF_INET6 ? TAG('U', '6') : TAG('U', '4'), Util::toString(wantResponse ? getSearchPort(af) : 0));
 	cmd.addParam(TAG('T', 'R'), tth);
 	cmd.addParam(TAG('P', 'C'), Util::toString(partialInfo.size() / 2));
 	cmd.addParam(TAG('P', 'I'), getPartsString(partialInfo));

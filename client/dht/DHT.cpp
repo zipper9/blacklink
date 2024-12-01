@@ -954,7 +954,7 @@ namespace dht
 
 	uint16_t DHT::getPort()
 	{
-		return ::SearchManager::getUdpPort();
+		return ::SearchManager::getSearchPort(AF_INET);
 	}
 
 	void DHT::setRequestFWCheck()

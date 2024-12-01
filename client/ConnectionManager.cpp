@@ -986,9 +986,9 @@ int ConnectionManager::Server::run() noexcept
 	}
 	int mask = 0;
 	if (type == SERVER_TYPE_TCP || type == SERVER_TYPE_AUTO_DETECT)
-		mask |= 1<<PortTest::PORT_TCP;
+		mask |= 1<<AppPorts::PORT_TCP;
 	if (type == SERVER_TYPE_SSL || type == SERVER_TYPE_AUTO_DETECT)
-		mask |= 1<<PortTest::PORT_TLS;
+		mask |= 1<<AppPorts::PORT_TLS;
 	g_portTest.resetState(mask);
 	return 0;
 }
@@ -1021,7 +1021,7 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 		if (type == SERVER_TYPE_SSL && server)
 		{
 			// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
-			if (g_portTest.processInfo(PortTest::PORT_TLS, PortTest::PORT_TLS, server->getServerPort(), Util::emptyString, Util::emptyString, false))
+			if (g_portTest.processInfo(AppPorts::PORT_TLS, AppPorts::PORT_TLS, getConnectionPort(AF_INET, true), Util::emptyString, Util::emptyString, false))
 				ConnectivityManager::getInstance()->processPortTestResult();
 		}
 		return;
@@ -2076,4 +2076,19 @@ StringList ConnectionManager::getAdcFeatures() const
 		features.push_back(UserConnection::FEATURE_ADC_CPMI);
 	ss->unlockRead();
 	return features;
+}
+
+uint16_t ConnectionManager::getConnectionPort(int af, bool secure) const
+{
+	uint16_t port = ports[secure ? 1 : 0];
+	if (port)
+	{
+		int what = secure ? AppPorts::PORT_TLS : AppPorts::PORT_TCP;
+		if (what == AppPorts::PORT_TLS && ports[0] == ports[1])
+			what = AppPorts::PORT_TCP;
+		int rport = ConnectivityManager::getInstance()->getReflectedPort(af, what);
+		if (rport)
+			port = rport;
+	}
+	return port;
 }

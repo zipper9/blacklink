@@ -19,10 +19,8 @@
 #ifndef MAPPER_H
 #define MAPPER_H
 
-#include <string>
+#include "IpAddress.h"
 #include <utility>
-
-using std::string;
 
 /** abstract class to represent an implementation usable by MappingManager. */
 class Mapper
@@ -54,8 +52,9 @@ class Mapper
 		/** interval after which ports should be re-mapped, in seconds. 0 = no renewal. */
 		virtual int renewal() const = 0;
 
-		virtual string getDeviceName() = 0;
-		virtual string getExternalIP() = 0;
+		virtual string getDeviceName() const = 0;
+		virtual IpAddress getExternalIP() = 0;
+		virtual int getExternalPort() const = 0;
 
 		/* by contract, implementations of this class should define a public user-friendly name in:
 		static const string name; */

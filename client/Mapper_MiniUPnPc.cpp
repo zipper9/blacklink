@@ -134,15 +134,16 @@ bool Mapper_MiniUPnPc::removeMapping(int port, Protocol protocol)
 	return UPNP_DeletePortMapping(url.c_str(), service.c_str(), portStr.c_str(), protocols[protocol], nullptr) == UPNPCOMMAND_SUCCESS;
 }
 
-string Mapper_MiniUPnPc::getDeviceName()
+string Mapper_MiniUPnPc::getDeviceName() const
 {
 	return device;
 }
 
-string Mapper_MiniUPnPc::getExternalIP()
+IpAddress Mapper_MiniUPnPc::getExternalIP()
 {
-	char buf[256] = { 0 };
+	char buf[256] = {};	
+	IpAddress addr{};
 	if (UPNP_GetExternalIPAddress(url.c_str(), service.c_str(), buf) == UPNPCOMMAND_SUCCESS)
-		return buf;
-	return Util::emptyString;
+		Util::parseIpAddress(addr, string(buf));
+	return addr;
 }

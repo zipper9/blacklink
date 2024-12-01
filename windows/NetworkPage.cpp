@@ -472,11 +472,11 @@ static int getIconForMappingState(int state)
 
 void NetworkIPTab::updateState()
 {
-	static_assert(PortTest::PORT_UDP == 0 && PortTest::PORT_TCP == 1 && PortTest::PORT_TLS == 2, "PortTest constants mismatch");
+	static_assert(AppPorts::PORT_UDP == 0 && AppPorts::PORT_TCP == 1 && AppPorts::PORT_TLS == 2, "PortTest constants mismatch");
 	int af = v6 ? AF_INET6 : AF_INET;
 	const MappingManager& mapper = ConnectivityManager::getInstance()->getMapper(af);
 	bool running = false;
-	for (int type = 0; type < PortTest::MAX_PORTS; type++)
+	for (int type = 0; type < AppPorts::MAX_PORTS; type++)
 	{
 		const auto& ci = controlInfo[type];
 		int port, portIcon, mappingIcon;
@@ -492,7 +492,7 @@ void NetworkIPTab::updateState()
 			int getIpState = g_ipTest.getState(IpTest::REQ_IP6, nullptr);
 			if (getIpState == IpTest::STATE_RUNNING) running = true;
 		}
-		if (type == PortTest::PORT_TLS && !parent->useTLS)
+		if (type == AppPorts::PORT_TLS && !parent->useTLS)
 		{
 			portIcon = IconDisabled;
 			mappingIcon = IconDisabled;
@@ -538,7 +538,7 @@ void NetworkIPTab::updatePortNumbers()
 	bool updatePrevSettings = false;
 	tstring oldText, newText;
 	auto ss = SettingsManager::instance.getCoreSettings();
-	for (int type = 0; type < PortTest::MAX_PORTS; type++)
+	for (int type = 0; type < AppPorts::MAX_PORTS; type++)
 	{
 		const auto& ci = controlInfo[type];
 		CEdit edit(GetDlgItem(ci.edit));
@@ -574,7 +574,7 @@ void NetworkIPTab::writePortSettings()
 	tstring buf;
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockWrite();
-	for (int i = 0; i < PortTest::MAX_PORTS; ++i)
+	for (int i = 0; i < AppPorts::MAX_PORTS; ++i)
 	{
 		WinUtil::getWindowText(GetDlgItem(portSettings[i].id), buf);
 		ss->setInt(portSettings[i].setting, Util::toInt(buf));
@@ -929,13 +929,17 @@ bool NetworkPage::runPortTest()
 	int portTLS = ss->getInt(Conf::TLS_PORT);
 	ss->unlockRead();
 
-	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
-	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
+	auto cm = ConnectivityManager::getInstance();
+	cm->checkReflectedPort(portTCP, AF_INET, AppPorts::PORT_TCP);
+	cm->checkReflectedPort(portUDP, AF_INET, AppPorts::PORT_UDP);
+	g_portTest.setPort(AppPorts::PORT_TCP, portTCP);
+	g_portTest.setPort(AppPorts::PORT_UDP, portUDP);
+	int mask = 1<<AppPorts::PORT_UDP | 1<<AppPorts::PORT_TCP;
 	if (useTLS)
 	{
-			g_portTest.setPort(PortTest::PORT_TLS, portTLS);
-		mask |= 1<<PortTest::PORT_TLS;
+		cm->checkReflectedPort(portTLS, AF_INET, AppPorts::PORT_TLS);
+		g_portTest.setPort(AppPorts::PORT_TLS, portTLS);
+		mask |= 1<<AppPorts::PORT_TLS;
 	}
 	if (!g_portTest.runTest(mask)) return false;
 	tabIP[0].updateState();

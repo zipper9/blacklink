@@ -53,7 +53,8 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 
 		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const IpAddress& hubIp, uint16_t hubPort);
 
-		static uint16_t getUdpPort() { return udpPort; }
+		static uint16_t getLocalPort() { return udpPort; }
+		static uint16_t getSearchPort(int af);
 
 		void listenUDP(int af);
 		void start();

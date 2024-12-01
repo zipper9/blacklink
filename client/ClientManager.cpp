@@ -1228,18 +1228,16 @@ string ClientManager::findMyNick(const string& hubUrl)
 
 bool ClientManager::isActiveMode(int af, int favHubMode, bool udp)
 {
-	int portTestType, mappingType;
+	int whatPort;
 	if (udp)
 	{
-		if (SearchManager::getUdpPort() == 0) return false;
-		portTestType = PortTest::PORT_UDP;
-		mappingType = MappingManager::PORT_UDP;
+		if (SearchManager::getLocalPort() == 0) return false;
+		whatPort = AppPorts::PORT_UDP;
 	}
 	else
 	{
 		if (ConnectionManager::getInstance()->getPort() == 0) return false;
-		portTestType = PortTest::PORT_TCP;
-		mappingType = MappingManager::PORT_TCP;
+		whatPort = AppPorts::PORT_TCP;
 	}
 	switch (favHubMode)
 	{
@@ -1260,13 +1258,13 @@ bool ClientManager::isActiveMode(int af, int favHubMode, bool udp)
 	if (af == AF_INET)
 	{
 		int unused;
-		portTestState = g_portTest.getState(portTestType, unused, nullptr);
+		portTestState = g_portTest.getState(whatPort, unused, nullptr);
 		if (portTestState == PortTest::STATE_FAILURE)
 			return false;
 	}
 	if (type == Conf::INCOMING_FIREWALL_UPNP &&
 	    portTestState != PortTest::STATE_SUCCESS &&
-		ConnectivityManager::getInstance()->getMapper(af).getState(mappingType) == MappingManager::STATE_FAILURE)
+		ConnectivityManager::getInstance()->getMapper(af).getState(whatPort) == MappingManager::STATE_FAILURE)
 		return false;
 	return type != Conf::INCOMING_FIREWALL_PASSIVE;
 }

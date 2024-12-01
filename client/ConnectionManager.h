@@ -231,6 +231,7 @@ class ConnectionManager :
 
 		uint16_t getPort() const { return ports[0]; }
 		uint16_t getSecurePort() const { return ports[1]; }
+		uint16_t getConnectionPort(int af, bool secure) const;
 
 		string getUserConnectionInfo() const;
 		string getExpectedInfo() const;

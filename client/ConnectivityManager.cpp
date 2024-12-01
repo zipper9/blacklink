@@ -64,6 +64,7 @@ ConnectivityManager::ConnectivityManager() : running(0), setupResult(0), autoDet
 {
 	memset(reflectedIP, 0, sizeof(reflectedIP));
 	memset(localIP, 0, sizeof(localIP));
+	memset(reflectedPort, 0, sizeof(reflectedPort));
 	mappers[0].init(AF_INET);
 	mappers[1].init(AF_INET6);
 	checkIP6();
@@ -132,13 +133,16 @@ unsigned ConnectivityManager::testPorts()
 	{
 		if (force || incomingMode != Conf::INCOMING_FIREWALL_PASSIVE)
 		{
-			g_portTest.setPort(PortTest::PORT_TCP, portTCP);
-			g_portTest.setPort(PortTest::PORT_UDP, portUDP);
-			int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
+			checkReflectedPort(portTCP, AF_INET, AppPorts::PORT_TCP);
+			checkReflectedPort(portUDP, AF_INET, AppPorts::PORT_UDP);
+			checkReflectedPort(portTLS, AF_INET, AppPorts::PORT_TLS);
+			g_portTest.setPort(AppPorts::PORT_TCP, portTCP);
+			g_portTest.setPort(AppPorts::PORT_UDP, portUDP);
+			int mask = 1<<AppPorts::PORT_UDP | 1<<AppPorts::PORT_TCP;
 			if (CryptoManager::getInstance()->isInitialized())
 			{
-				g_portTest.setPort(PortTest::PORT_TLS, portTLS);
-				mask |= 1<<PortTest::PORT_TLS;
+				g_portTest.setPort(AppPorts::PORT_TLS, portTLS);
+				mask |= 1<<AppPorts::PORT_TLS;
 			}
 			if (g_portTest.runTest(mask))
 				testFlags |= RUNNING_TEST_IPV4_PORTS;
@@ -358,7 +362,7 @@ string ConnectivityManager::getInformation() const
 		s += "\t" + STRING_F(CONNECTIVITY_ENCRYPTED_TRANSFER_PORT, port);
 		s += '\n';
 	}
-	port = SearchManager::getUdpPort();
+	port = SearchManager::getLocalPort();
 	s += "\t" + STRING_F(CONNECTIVITY_SEARCH_PORT, port);
 	s += '\n';
 	return s;
@@ -428,8 +432,8 @@ void ConnectivityManager::processPortTestResult() noexcept
 	if (autoDetectFlag)
 	{
 		int unused;
-		if (g_portTest.getState(PortTest::PORT_TCP, unused, nullptr) != PortTest::STATE_SUCCESS ||
-		    g_portTest.getState(PortTest::PORT_UDP, unused, nullptr) != PortTest::STATE_SUCCESS)
+		if (g_portTest.getState(AppPorts::PORT_TCP, unused, nullptr) != PortTest::STATE_SUCCESS ||
+		    g_portTest.getState(AppPorts::PORT_UDP, unused, nullptr) != PortTest::STATE_SUCCESS)
 		{
 			setPassiveMode(AF_INET);
 		}
@@ -623,6 +627,22 @@ IpAddress ConnectivityManager::getReflectedIP(int af) const noexcept
 	return reflectedIP[index];
 }
 
+void ConnectivityManager::setReflectedPort(int af, int what, int port) noexcept
+{
+	int index = getIndex(af);
+	if (index == -1) return;
+	LOCK(cs);
+	reflectedPort[index * AppPorts::MAX_PORTS + what] = port;
+}
+
+int ConnectivityManager::getReflectedPort(int af, int what) const noexcept
+{
+	int index = getIndex(af);
+	if (index == -1) return 0;
+	LOCK(cs);
+	return reflectedPort[index * AppPorts::MAX_PORTS + what];
+}
+
 void ConnectivityManager::setLocalIP(const IpAddress& ip) noexcept
 {
 	int index = getIndex(ip.type);
@@ -637,6 +657,15 @@ IpAddress ConnectivityManager::getLocalIP(int af) const noexcept
 	if (index == -1) return IpAddress{};
 	LOCK(cs);
 	return localIP[index];
+}
+
+void ConnectivityManager::checkReflectedPort(int& port, int af, int what) const noexcept
+{
+	int index = getIndex(af);
+	cs.lock();
+	int rport = reflectedPort[index * AppPorts::MAX_PORTS + what];
+	cs.unlock();
+	if (rport) port = rport;
 }
 
 const MappingManager& ConnectivityManager::getMapper(int af) const

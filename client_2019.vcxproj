@@ -737,6 +737,7 @@
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AntiFlood.h" />
     <ClInclude Include="client\AppPaths.h" />
+    <ClInclude Include="client\AppPorts.h" />
     <ClInclude Include="client\AppStats.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\Base32.h" />

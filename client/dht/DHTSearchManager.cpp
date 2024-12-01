@@ -411,7 +411,7 @@ namespace dht
 
 						// ask for partial file
 						AdcCommand request(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-						request.addParam(TAG('U', '4'), Util::toString(::SearchManager::getInstance()->getUdpPort()));
+						request.addParam(TAG('U', '4'), Util::toString(::SearchManager::getSearchPort(AF_INET)));
 						request.addParam(TAG('T', 'R'), s->term);
 
 						DHT::getInstance()->send(request, address.data.v4, u4, cid, source->getUdpKey());

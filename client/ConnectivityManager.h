@@ -22,6 +22,7 @@
 #include "Singleton.h"
 #include "MappingManager.h"
 #include "IpAddress.h"
+#include "AppPorts.h"
 #include <atomic>
 
 class ConnectivityManager : public Singleton<ConnectivityManager>
@@ -33,9 +34,12 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		void processGetIpResult(int req) noexcept;
 		void setReflectedIP(const IpAddress& ip) noexcept;
 		IpAddress getReflectedIP(int af) const noexcept;
+		void setReflectedPort(int af, int what, int port) noexcept;
+		int getReflectedPort(int af, int what) const noexcept;
 		void setLocalIP(const IpAddress& ip) noexcept;
 		IpAddress getLocalIP(int af) const noexcept;
 		const MappingManager& getMapper(int af) const;
+		void checkReflectedPort(int& port, int af, int what) const noexcept;
 		string getInformation() const;
 		static bool isIP6Supported() { return ipv6Supported; }
 		static void checkIP6();
@@ -61,6 +65,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		unsigned getRunningFlags() const noexcept;
 
 		IpAddress reflectedIP[2];
+		int reflectedPort[2 * AppPorts::MAX_PORTS];
 		IpAddress localIP[2];
 		MappingManager mappers[2];
 		mutable FastCriticalSection cs;

@@ -2981,7 +2981,7 @@ void SearchFrame::showPortStatus()
 	if (g_DisableTestPort) return;
 	string reflectedAddress;
 	int port;
-	int state = g_portTest.getState(PortTest::PORT_UDP, port, &reflectedAddress);
+	int state = g_portTest.getState(AppPorts::PORT_UDP, port, &reflectedAddress);
 	if (state == portStatus && currentReflectedAddress == reflectedAddress) return;
 	tstring newText;
 	int icon;

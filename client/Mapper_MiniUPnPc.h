@@ -38,8 +38,9 @@ class Mapper_MiniUPnPc : public Mapper
 
 		int renewal() const { return 0; }
 
-		string getDeviceName();
-		string getExternalIP();
+		string getDeviceName() const;
+		IpAddress getExternalIP();
+		int getExternalPort() const { return 0; }
 
 		const string& getName() const { return name; }
 

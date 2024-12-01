@@ -38,13 +38,15 @@ class Mapper_NATPMP : public Mapper
 
 		int renewal() const { return lifetime / 2; }
 
-		string getDeviceName();
-		string getExternalIP();
+		string getDeviceName() const;
+		IpAddress getExternalIP();
+		int getExternalPort() const { return publicPort; }
 
 		const string &getName() const { return name; }
 
 		string gateway;
 		int lifetime; // in seconds
+		int publicPort;
 };
 
 #endif

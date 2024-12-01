@@ -11,9 +11,11 @@
 #include "ResourceManager.h"
 #include "ConfCore.h"
 
+using namespace AppPorts;
+
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
-static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
+static const char* protoName[AppPorts::MAX_PORTS] = { "UDP", "TCP", "TLS" };
 static const string userAgent = "FlylinkDC++ r600-x64 build 22434";
 
 PortTest g_portTest;
@@ -25,7 +27,7 @@ PortTest::PortTest(): hasListener(false), shutDown(false),
 
 bool PortTest::runTest(int typeMask) noexcept
 {
-	int portToTest[PortTest::MAX_PORTS];
+	int portToTest[MAX_PORTS];
 
 	CID pid;
 	pid.regenerate();

@@ -27,19 +27,12 @@
 #include "Locks.h"
 #include "TimerManager.h"
 #include "Severity.h"
+#include "AppPorts.h"
 #include <atomic>
 
 class MappingManager : private Thread, private TimerManagerListener
 {
 	public:
-		enum
-		{
-			PORT_UDP,
-			PORT_TCP,
-			PORT_TLS,
-			MAX_PORTS
-		};
-
 		enum
 		{
 			STATE_UNKNOWN,
@@ -73,12 +66,13 @@ class MappingManager : private Thread, private TimerManagerListener
 		struct Mapping
 		{
 			int port = 0;
+			int publicPort = 0;
 			int state = STATE_UNKNOWN;
 		};
 
 		int af;
 		mutable CriticalSection cs;
-		Mapping mappings[MAX_PORTS];
+		Mapping mappings[AppPorts::MAX_PORTS];
 
 		vector<pair<string, std::function<Mapper *(const string &, int)>>> mappers;
 		std::unique_ptr<Mapper> working; // currently working implementation.
@@ -96,6 +90,7 @@ class MappingManager : private Thread, private TimerManagerListener
 		string deviceString(Mapper &mapper) const;
 		void renewLater(Mapper &mapper);
 		static string formatDescription(const string &description, int type, int port);
+		void getPublicPorts(int ports[]) const noexcept;
 		
 		virtual void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 };
