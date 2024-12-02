@@ -58,6 +58,13 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		static const vector<StringList>& getSearchExts() { return searchExts; }
 		static StringList parseSearchExts(int flag);
 
+		int getHbriConnId() const noexcept
+		{
+			LOCK(csState);
+			return hbriConnId;
+		}
+		void notifyHbriStatus(bool ok) noexcept;
+
 	protected:
 		void searchToken(const SearchParam& sp) override;
 		void getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const noexcept override;
@@ -75,7 +82,8 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			FEATURE_FLAG_OLD_PASSWORD        = 1,
 			FEATURE_FLAG_ALLOW_NAT_TRAVERSAL = 2,
 			FEATURE_FLAG_USER_COMMANDS       = 4,
-			FEATURE_FLAG_SEND_BLOOM          = 8
+			FEATURE_FLAG_SEND_BLOOM          = 8,
+			FEATURE_FLAG_HBRI                = 16
 		};
 
 		/** Map session id to OnlineUser */
@@ -87,6 +95,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 
 		unsigned featureFlags;
 		int lastErrorCode;
+		int hbriConnId;
 		SIDMap users;
 		std::unique_ptr<RWLock> csUsers;
 		boost::unordered_map<uint16_t, string> lastInfoMap;
@@ -101,6 +110,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 
 		string salt;
 		uint32_t sid;
+		uint64_t lastHbriCheck;
 
 		boost::unordered_set<uint32_t> forbiddenCommands;
 
@@ -136,6 +146,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void handle(AdcCommand::PSR, const AdcCommand& c) noexcept;
 		void handle(AdcCommand::ZON, const AdcCommand& c) noexcept;
 		void handle(AdcCommand::ZOF, const AdcCommand& c) noexcept;
+		void handle(AdcCommand::TCP, const AdcCommand& c) noexcept;
 		
 		template<typename T> void handle(T, const AdcCommand&) { }
 		

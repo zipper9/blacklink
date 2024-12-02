@@ -42,6 +42,7 @@ class AdcSupports
 		static const string UCM0_SUPPORT;
 		static const string BLO0_SUPPORT;
 		static const string ZLIF_SUPPORT;
+		static const string HBRI_SUPPORT;
 
 		enum KnownSupports
 		{

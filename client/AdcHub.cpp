@@ -60,7 +60,7 @@ ClientBasePtr AdcHub::create(const string& hubURL, const string& address, uint16
 
 AdcHub::AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure) :
 	Client(hubURL, address, port, '\n', secure, Socket::PROTO_ADC),
-	featureFlags(0), lastErrorCode(0), sid(0),
+	featureFlags(0), lastErrorCode(0), sid(0), hbriConnId(0), lastHbriCheck(0),
 	csUsers(std::unique_ptr<RWLock>(RWLock::create()))
 {
 }
@@ -742,7 +742,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 		connectUser(*ou, token, secure, true);
 		return;
 	}
-	
+
 	if (!isFeatureSupported(FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !(ou->getUser()->getFlags() & User::NAT0))
 		return;
 
@@ -1106,6 +1106,39 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 
 	dcdebug("triggering connecting attempt in RNT: remote port = %s, local port = %d\n", port.c_str(), localPort);
 	ConnectionManager::getInstance()->adcConnect(*ou, localType, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
+}
+
+void AdcHub::handle(AdcCommand::TCP, const AdcCommand& c) noexcept
+{
+	if (!isFeatureSupported(FEATURE_FLAG_HBRI))
+		return;
+
+	int otherType = getIp().type == AF_INET ? AF_INET6 : AF_INET;
+	char ipVer = otherType == AF_INET6 ? '6' : '4';
+
+	string token, ipStr, portStr;
+	if (!c.getParam(TAG('T', 'O'), 0, token) || !c.getParam(TAG('I', ipVer), 0, ipStr) || !c.getParam(TAG('P', ipVer), 0, portStr))
+	{
+		send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_PROTOCOL_GENERIC, "Missing parameters"));
+		return;
+	}
+	int port = Util::toInt(portStr);
+	IpAddress addr;
+	Util::parseIpAddress(addr, ipStr);
+	if (addr.type != otherType || !(port > 0 && port <= 0xFFFF))
+	{
+		send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_PROTOCOL_GENERIC, "Invalid parameters"));
+		return;
+	}
+
+	uint64_t tick = GET_TICK();
+	if (lastHbriCheck && lastHbriCheck + 5 * 60000 > tick)
+		return;
+	lastHbriCheck = tick;
+	int connId = ConnectionManager::getInstance()->adcConnectHbri(addr, port, token, isSecure());
+	csState.lock();
+	hbriConnId = connId;
+	csState.unlock();
 }
 
 void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)
@@ -1682,18 +1715,24 @@ void AdcHub::onConnected() noexcept
 	ss->unlockRead();
 
 	userListLoaded = true;
+	unsigned connFlags = ConnectivityManager::getInstance()->getConnectivity();
+
 	{
 		LOCK(csState);
 		if (state != STATE_PROTOCOL)
 			return;
 		lastInfoMap.clear();
-		featureFlags &= ~(FEATURE_FLAG_USER_COMMANDS | FEATURE_FLAG_SEND_BLOOM);
+		hbriConnId = 0;
+		featureFlags &= ~(FEATURE_FLAG_USER_COMMANDS | FEATURE_FLAG_SEND_BLOOM | FEATURE_FLAG_HBRI);
 		if (optionUserCommands)
 			featureFlags |= FEATURE_FLAG_USER_COMMANDS;
 		if (optionSendBloom)
 			featureFlags |= FEATURE_FLAG_SEND_BLOOM;
+		if (connFlags == ConnectivityManager::STATUS_DUAL_STACK)
+			featureFlags |= FEATURE_FLAG_HBRI;
 	}
 	sid = 0;
+	lastHbriCheck = 0;
 	forbiddenCommands.clear();
 	
 	AdcCommand cmd(AdcCommand::CMD_SUP, AdcCommand::TYPE_HUB);
@@ -1704,6 +1743,8 @@ void AdcHub::onConnected() noexcept
 	if (optionSendBloom)
 		cmd.addParam(AdcSupports::BLO0_SUPPORT);
 	cmd.addParam(AdcSupports::ZLIF_SUPPORT);
+	if (connFlags == ConnectivityManager::STATUS_DUAL_STACK)
+		cmd.addParam(AdcSupports::HBRI_SUPPORT);
 
 	send(cmd);
 }
@@ -1741,4 +1782,13 @@ void AdcHub::getUsersToCheck(UserList& res, int64_t tick, int timeDiff) const no
 		if (lastCheckTime && lastCheckTime + timeDiff > tick) continue;
 		res.push_back(user);
 	}
+}
+
+void AdcHub::notifyHbriStatus(bool ok) noexcept
+{
+	csState.lock();
+	hbriConnId = 0;
+	csState.unlock();
+	if (ok)
+		fire(ClientListener::HubInfoMessage(), ClientListener::HBRIValidated, this, Util::emptyString);
 }

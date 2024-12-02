@@ -43,6 +43,7 @@ const string AdcSupports::TIGR_SUPPORT("ADTIGR");
 const string AdcSupports::UCM0_SUPPORT("ADUCM0");
 const string AdcSupports::BLO0_SUPPORT("ADBLO0");
 const string AdcSupports::ZLIF_SUPPORT("ADZLIF");
+const string AdcSupports::HBRI_SUPPORT("ADHBRI");
 
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 TagCollector collAdcFeatures;

@@ -28,6 +28,13 @@
 class ConnectivityManager : public Singleton<ConnectivityManager>
 {
 	public:
+		enum
+		{
+			STATUS_IPV4 = 1,
+			STATUS_IPV6 = 2,
+			STATUS_DUAL_STACK = STATUS_IPV4 | STATUS_IPV6
+		};
+
 		void setupConnections(bool forcePortTest = false);
 		bool isSetupInProgress() const noexcept { return getRunningFlags() != 0; }
 		void processPortTestResult() noexcept;
@@ -41,6 +48,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		const MappingManager& getMapper(int af) const;
 		void checkReflectedPort(int& port, int af, int what) const noexcept;
 		string getInformation() const;
+		unsigned getConnectivity() const;
 		static bool isIP6Supported() { return ipv6Supported; }
 		static void checkIP6();
 		static bool hasIP6() { return ipv6Enabled; }

@@ -198,6 +198,7 @@ class ConnectionManager :
 		void nmdcConnect(const IpAddress& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure);
 		void adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure);
 		void adcConnect(const OnlineUser& user, int af, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
+		int adcConnectHbri(const IpAddress& addr, uint16_t port, const string& token, bool secure);
 
 		void getDownloadConnection(const HintedUser& hintedUser);
 		void force(const UserPtr& user);
@@ -336,7 +337,7 @@ class ConnectionManager :
 		~ConnectionManager();
 
 		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi);
-		UserConnectionPtr getConnection(bool nmdc, bool secure) noexcept;
+		UserConnectionPtr getConnection(int flags) noexcept;
 		UserConnectionPtr findConnection(const string& token) const noexcept;
 		void deleteConnection(UserConnectionPtr& conn);
 		void connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci);

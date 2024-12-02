@@ -32,6 +32,7 @@
 #include "LocationUtil.h"
 #include "PortTest.h"
 #include "NmdcHub.h"
+#include "AdcHub.h"
 #include "AntiFlood.h"
 #include "Random.h"
 #include "SettingsManager.h"
@@ -192,7 +193,7 @@ void UserConnection::onDataLine(const char* buf, size_t len) noexcept
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG(string(buf, len), DebugTask::CLIENT_IN, getRemoteIpPort());
 
-	if (buf[0] == 'C' && !isSet(FLAG_NMDC))
+	if (!isSet(FLAG_NMDC) && buf[0] == (isSet(FLAG_HBRI) ? 'I' : 'C'))
 	{
 		if (!Text::validateUtf8(buf, len))
 		{
@@ -500,14 +501,33 @@ void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t por
 
 void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)
 {
+	int status = -1;
 	if (c.getParameters().size() >= 2)
 	{
 		const string& code = c.getParam(0);
-		if (!code.empty() && code[0] - '0' == AdcCommand::SEV_FATAL)
+		if (!code.empty())
 		{
-			protocolError(c.getParam(1));
-			return;
+			status = code[0] - '0';
+			if (status == AdcCommand::SEV_FATAL)
+			{
+				if (isSet(FLAG_HBRI))
+					disconnect();
+				else
+					protocolError(c.getParam(1));
+				return;
+			}
 		}
+	}
+	if (isSet(FLAG_HBRI))
+	{
+		if (status == 0)
+		{
+			ClientBasePtr client = ClientManager::findClientForHbriConn(id);
+			if (client)
+				static_cast<AdcHub*>(client.get())->notifyHbriStatus(true);
+		}
+		disconnect();
+		return;
 	}
 	if (isSet(FLAG_ASSOCIATED | FLAG_DOWNLOAD))
 		DownloadManager::getInstance()->processSTA(this, c);
@@ -663,6 +683,12 @@ void UserConnection::onConnected() noexcept
 	}
 #endif
 	dcassert(getState() == STATE_CONNECT);
+	if (isSet(UserConnection::FLAG_HBRI))
+	{
+		sendHTCP();
+		setState(UserConnection::STATE_HBRI_HANDSHAKE);
+		return;
+	}
 	if (isSet(UserConnection::FLAG_NMDC))
 	{
 		myNick(getUserConnectionToken());
@@ -720,6 +746,20 @@ void UserConnection::onFailed(const string& line) noexcept
 	if (state == STATE_UNUSED) return;
 	state = STATE_UNCONNECTED;
 	failed(line);
+}
+
+void UserConnection::sendHTCP()
+{
+	AdcCommand cmd(AdcCommand::CMD_TCP, AdcCommand::TYPE_HUB);
+	int af = socket->getIp().type;
+	char ipVer = af == AF_INET6 ? '6' : '4';
+	int port = ConnectionManager::getInstance()->getConnectionPort(af, false);
+	IpAddress emptyAddr{};
+	emptyAddr.type = af;
+	cmd.addParam(TAG('I', ipVer), Util::printIpAddress(emptyAddr));
+	cmd.addParam(TAG('U', ipVer), Util::toString(port));
+	cmd.addParam(TAG('T', 'O'), getUserConnectionToken());
+	send(cmd);
 }
 
 // # ms we should aim for per segment

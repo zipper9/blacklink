@@ -2443,6 +2443,10 @@ void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode co
 		case ClientListener::HubTopic:
 			addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true, false));
 			break;
+
+		case ClientListener::HBRIValidated:
+			addTask(ADD_STATUS_LINE, new StatusTask(STRING(HBRI_VALIDATED), true, false));
+			break;
 	}
 }
 

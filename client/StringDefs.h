@@ -1854,6 +1854,7 @@ enum Strings   // @DontAdd
 	MAGNET_NEW_FILE, // "New file"
 	MAGNET_OLD_FILE, // "Already shared file"
 	PROFILE_LOCKED, // "The profile %1% is in use by another instance of BlackLink. Please choose a different profile."
+	HBRI_VALIDATED, // "HBRI extension enabled"
 	COMMAND_ARG_REQUIRED, // "This command requires an argument"
 	COMMAND_N_ARGS_REQUIRED, // "This command requires %1% arguments"
 	COMMAND_N_ARGS_EXTRA, // "This command does not accept more than %1% arguments"

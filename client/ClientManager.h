@@ -96,6 +96,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static UserPtr createUser(const CID& cid, const string& nick, const string& hubUrl);
 		static string findHub(const string& ipPort, int type);
 		static int findHubEncoding(const string& url);
+		static ClientBasePtr findClientForHbriConn(int id);
 
 		/**
 		* @param priv discard any user that doesn't match the hint.

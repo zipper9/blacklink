@@ -550,7 +550,7 @@ ConnectionQueueItemPtr ConnectionManager::getUploadCQI(const string& token) cons
 	return i == uploads.end() ? nullptr : *i;
 }
 
-UserConnectionPtr ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
+UserConnectionPtr ConnectionManager::getConnection(int flags) noexcept
 {
 	dcassert(!shuttingDown);
 	UserConnectionPtr uc = std::make_shared<UserConnection>();
@@ -558,10 +558,7 @@ UserConnectionPtr ConnectionManager::getConnection(bool nmdc, bool secure) noexc
 		WRITE_LOCK(*csConnections);
 		userConnections.insert(make_pair(uc.get(), uc));
 	}
-	if (nmdc)
-		uc->setFlag(UserConnection::FLAG_NMDC);
-	if (secure)
-		uc->setFlag(UserConnection::FLAG_SECURE);
+	uc->setFlag(flags);
 	return uc;
 }
 
@@ -1026,7 +1023,8 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 		}
 		return;
 	}
-	UserConnection* uc = getConnection(false, type == SERVER_TYPE_SSL).get();
+	UserConnectionPtr ucPtr = getConnection(type == SERVER_TYPE_SSL ? UserConnection::FLAG_SECURE : 0);
+	UserConnection* uc = ucPtr.get();
 	uc->setFlag(UserConnection::FLAG_INCOMING);
 	uc->setState(UserConnection::STATE_SUPNICK);
 	uc->updateLastActivity();
@@ -1058,7 +1056,7 @@ void ConnectionManager::nmdcConnect(const IpAddress& address, uint16_t port, uin
 	if (shuttingDown)
 		return;
 
-	UserConnectionPtr ucPtr = getConnection(true, secure);
+	UserConnectionPtr ucPtr = getConnection((secure ? UserConnection::FLAG_SECURE : 0) | UserConnection::FLAG_NMDC);
 	UserConnection* uc = ucPtr.get();
 	uc->setUserConnectionToken(myNick);
 	uc->setHubUrl(hubUrl);
@@ -1107,7 +1105,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, int af, uint16_t port
 		if (!ip.type) return;
 	}
 
-	UserConnectionPtr ucPtr = getConnection(false, secure);
+	UserConnectionPtr ucPtr = getConnection(secure ? UserConnection::FLAG_SECURE : 0);
 	UserConnection* uc = ucPtr.get();
 	uc->setUserConnectionToken(token);
 	uc->setEncoding(Text::CHARSET_UTF8);
@@ -1127,6 +1125,28 @@ void ConnectionManager::adcConnect(const OnlineUser& user, int af, uint16_t port
 	{
 		deleteConnection(ucPtr);
 	}
+}
+
+int ConnectionManager::adcConnectHbri(const IpAddress& addr, uint16_t port, const string& token, bool secure)
+{
+	if (shuttingDown)
+		return 0;
+
+	UserConnectionPtr ucPtr = getConnection((secure ? UserConnection::FLAG_SECURE : 0) | UserConnection::FLAG_HBRI);
+	UserConnection* uc = ucPtr.get();
+	uc->setUserConnectionToken(token);
+	uc->setEncoding(Text::CHARSET_UTF8);
+	uc->setState(UserConnection::STATE_CONNECT);
+	try
+	{
+		uc->connect(addr, port, 0, BufferedSocket::NAT_NONE);
+	}
+	catch (const Exception&)
+	{
+		deleteConnection(ucPtr);
+		return 0;
+	}
+	return uc->getId();
 }
 
 void ConnectionManager::stopServer(int af) noexcept

@@ -49,7 +49,8 @@ class ClientListener
 		enum HubInfoCode
 		{
 			HubTopic,
-			OperatorInfo
+			OperatorInfo,
+			HBRIValidated
 		};
 
 		enum StatusFlags

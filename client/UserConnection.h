@@ -74,7 +74,8 @@ class UserConnection :
 			FLAG_INCOMING       = FLAG_INTERNAL_FIRST << 4,
 			FLAG_ASSOCIATED     = FLAG_INTERNAL_FIRST << 5,
 			FLAG_SECURE         = FLAG_INTERNAL_FIRST << 6,
-			FLAG_CCPM           = FLAG_INTERNAL_FIRST << 7
+			FLAG_CCPM           = FLAG_INTERNAL_FIRST << 7,
+			FLAG_HBRI           = FLAG_INTERNAL_FIRST << 8
 		};
 
 		enum States
@@ -83,8 +84,11 @@ class UserConnection :
 			STATE_UNCONNECTED,
 			STATE_CONNECT,
 
+			// HBRI
+			STATE_HBRI_HANDSHAKE,
+
 			// Handshake
-			STATE_SUPNICK,      // ADC: SUP, Nmdc: $Nick
+			STATE_SUPNICK,      // ADC: SUP, NMDC: $Nick
 			STATE_INF,
 			STATE_LOCK,
 			STATE_DIRECTION,
@@ -308,13 +312,14 @@ class UserConnection :
 		int64_t getLastUploadSpeed() const { return lastUploadSpeed; }
 		void setLastDownloadSpeed(int64_t speed) { lastDownloadSpeed = speed; }
 		int64_t getLastDownloadSpeed() const { return lastDownloadSpeed; }
+		int getId() const { return id; }
 		string getDescription() const;
 #ifdef BL_FEATURE_COLLECT_UNKNOWN_FEATURES
 		string& getUnknownFeatures() { return unknownFeatures; }
 #endif
 
 	private:
-		int id;
+		const int id;
 		const int16_t number;
 		int64_t chunkSize;
 		BufferedSocket* socket;
@@ -335,6 +340,7 @@ class UserConnection :
 		bool checkState(int state, const AdcCommand& command) const noexcept;
 		void failed(const string& line) noexcept;
 		void protocolError(const string& error) noexcept;
+		void sendHTCP();
 
 		void sup(const StringList& features);
 		void supports(const StringList& feat);

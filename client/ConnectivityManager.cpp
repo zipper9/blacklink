@@ -46,12 +46,6 @@ enum
 	RUNNING_OTHER           = 32
 };
 
-enum
-{
-	STATUS_IPV4 = 1,
-	STATUS_IPV6 = 2
-};
-
 class ListenerException : public Exception
 {
 	public:
@@ -296,6 +290,14 @@ static string getModeString(int mode, int af)
 	int v = af == AF_INET6 ? 6 : 4;
 	string modeString = STRING_I(str);
 	return STRING_F(CONNECTIVITY_MODE, v % modeString);
+}
+
+unsigned ConnectivityManager::getConnectivity() const
+{
+	cs.lock();
+	unsigned result = setupResult;
+	cs.unlock();
+	return result;
 }
 
 string ConnectivityManager::getInformation() const
