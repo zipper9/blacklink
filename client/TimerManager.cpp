@@ -38,6 +38,7 @@ TimerManager::~TimerManager()
 
 void TimerManager::shutdown()
 {
+	removeListeners();
 	stopEvent.notify();
 	join();
 }

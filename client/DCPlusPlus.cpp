@@ -140,10 +140,10 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 
 void preparingCoreToShutdown()
 {
-	static bool g_is_first = false;
-	if (!g_is_first)
+	static std::atomic_bool runOnce(false);
+	bool flag = runOnce.exchange(true);
+	if (!flag)
 	{
-		g_is_first = true;
 		StepLogger sl("[Core shutdown]", false);
 		dht::DHT::getInstance()->stop();
 		ClientManager::shutdown();
@@ -156,7 +156,7 @@ void preparingCoreToShutdown()
 #ifdef DEBUG_SHUTDOWN
 		sl.step("HashManager");
 #endif
-		TimerManager::getInstance()->shutdown();
+		TimerManager::getInstance()->setTicksDisabled(true);
 		UploadManager::getInstance()->shutdown();
 #ifdef DEBUG_SHUTDOWN
 		sl.step("UploadManager");
@@ -237,6 +237,8 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 
 	DatabaseManager::getInstance()->shutdown();
 	DatabaseManager::deleteInstance();
+
+	TimerManager::getInstance()->shutdown();
 	TimerManager::deleteInstance();
 
 	SettingsManager::instance.removeListeners();
