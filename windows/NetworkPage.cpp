@@ -355,6 +355,7 @@ void NetworkIPTab::fixControls()
 	const BOOL nat = enabled && IsDlgButtonChecked(IDC_FIREWALL_NAT) == BST_CHECKED;
 	const BOOL passive = enabled && IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;
 	const BOOL manualIP = enabled && IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
+	const BOOL portEnabled = enabled && !parent->applyingSettings;
 
 	GetDlgItem(IDC_DIRECT).EnableWindow(enabled && !autoDetect);
 	GetDlgItem(IDC_FIREWALL_UPNP).EnableWindow(enabled && !autoDetect);
@@ -365,11 +366,6 @@ void NetworkIPTab::fixControls()
 	GetDlgItem(IDC_SETTINGS_IP).EnableWindow(enabled && !autoDetect);
 
 	GetDlgItem(IDC_NO_IP_OVERRIDE).EnableWindow(manualIP);
-#if 0
-	const BOOL portEnabled = enabled && !autoDetect;
-#else
-	const BOOL portEnabled = enabled && !parent->applyingSettings;
-#endif
 	GetDlgItem(IDC_PORT_TCP).EnableWindow(portEnabled);
 	GetDlgItem(IDC_PORT_UDP).EnableWindow(portEnabled);
 	GetDlgItem(IDC_PORT_TLS).EnableWindow(portEnabled && useTLS);
@@ -521,8 +517,12 @@ void NetworkIPTab::updateState()
 	}
 	else
 	{
+		const BOOL enabled = IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED;
 		ctrl.SetWindowText(v6 ? CTSTRING(GET_IP) : CTSTRING(TEST_PORTS_AND_GET_IP));
 		ctrl.EnableWindow(IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED);
+		GetDlgItem(IDC_PORT_TCP).EnableWindow(enabled);
+		GetDlgItem(IDC_PORT_UDP).EnableWindow(enabled);
+		GetDlgItem(IDC_PORT_TLS).EnableWindow(enabled && parent->useTLS);
 	}
 
 	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
