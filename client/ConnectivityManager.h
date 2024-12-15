@@ -70,6 +70,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		unsigned testPorts();
 		bool setup(int af);
 		void disconnect();
+		void clearReflectedPorts(int af) noexcept;
 		unsigned getRunningFlags() const noexcept;
 
 		IpAddress reflectedIP[2];

@@ -217,7 +217,7 @@ bool ConnectivityManager::setup(int af)
 	int index = af == AF_INET6 ? 1 : 0;
 	Conf::IPSettings ips;
 	Conf::getIPSettings(ips, af == AF_INET6);
-	
+
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
 	const bool autoDetectFlag = ss->getBool(ips.autoDetect);
@@ -240,6 +240,8 @@ bool ConnectivityManager::setup(int af)
 		ss->lockRead();
 		int incomingMode = ss->getInt(ips.incomingConnections);
 		ss->unlockRead();
+		if (incomingMode != Conf::INCOMING_FIREWALL_UPNP)
+			clearReflectedPorts(af);
 		if (incomingMode == Conf::INCOMING_FIREWALL_UPNP && mappers[index].open())
 		{
 			cs.lock();
@@ -643,6 +645,16 @@ int ConnectivityManager::getReflectedPort(int af, int what) const noexcept
 	if (index == -1) return 0;
 	LOCK(cs);
 	return reflectedPort[index * AppPorts::MAX_PORTS + what];
+}
+
+void ConnectivityManager::clearReflectedPorts(int af) noexcept
+{
+	int index = getIndex(af);
+	if (index == -1) return;
+	index *= AppPorts::MAX_PORTS;
+	LOCK(cs);
+	for (int i = 0; i < AppPorts::MAX_PORTS; i++)
+		reflectedPort[index + i] = 0;
 }
 
 void ConnectivityManager::setLocalIP(const IpAddress& ip) noexcept
