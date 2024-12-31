@@ -28,6 +28,15 @@ namespace ColorUtil
 		return y > 0.5 * 255 ? RGB(0, 0, 0) : RGB(255, 255, 255);
 	}
 
+	inline bool isDark(COLORREF color) noexcept
+	{
+		unsigned r = GetRValue(color);
+		unsigned g = GetGValue(color);
+		unsigned b = GetBValue(color);
+		double y = 0.299 * r + 0.587 * g + 0.114 * b;
+		return y < 0.4 * 255;
+	}
+
 	inline COLORREF lighter(COLORREF color) noexcept
 	{
 		return HLS_TRANSFORM(color, 35, -20);

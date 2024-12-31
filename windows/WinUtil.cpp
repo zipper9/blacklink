@@ -1172,6 +1172,27 @@ bool WinUtil::setExplorerTheme(HWND hWnd)
 	return true;
 }
 
+static bool hasTreeViewDarkMode(HWND hWnd)
+{
+	static int treeViewDarkModeFlag = -1;
+	if (treeViewDarkModeFlag != -1) return treeViewDarkModeFlag != 0;
+	ThemeWrapper theme;
+	bool result = theme.openTheme(hWnd, L"DarkMode_Explorer::TreeView");
+	treeViewDarkModeFlag = result ? 1 : 0;
+	return result;
+}
+
+bool WinUtil::setTreeViewTheme(HWND hWnd, bool darkMode)
+{
+#ifdef OSVER_WIN_XP
+	if (!SysVersion::isOsVistaPlus()) return false;
+#endif
+	if (!IsAppThemed()) return false;
+	if (darkMode && !hasTreeViewDarkMode(hWnd)) darkMode = false;
+	SetWindowTheme(hWnd, darkMode ? L"DarkMode_Explorer" : L"Explorer", nullptr);
+	return true;
+}
+
 unsigned WinUtil::getListViewExStyle(bool checkboxes)
 {
 	unsigned style = LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP;

@@ -372,7 +372,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	ctrlStatus.SetFont(Fonts::g_systemFont);
 
 	ctrlTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
-	WinUtil::setExplorerTheme(ctrlTree);
+	WinUtil::setTreeViewTheme(ctrlTree, Colors::isDarkTheme);
 	treeContainer.SubclassWindow(ctrlTree);
 
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_FILES);
@@ -2349,6 +2349,7 @@ void DirectoryListingFrame::on(SettingsManagerListener::ApplySettings)
 	{
 		colors = newColors;
 		setTreeViewColors(ctrlTree);
+		WinUtil::setTreeViewTheme(ctrlTree, Colors::isDarkTheme);
 		redraw();
 	}
 }

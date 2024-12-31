@@ -162,6 +162,7 @@ namespace WinUtil
 	void activateMDIChild(HWND hWnd);
 
 	bool setExplorerTheme(HWND hWnd);
+	bool setTreeViewTheme(HWND hWnd, bool darkMode);
 	unsigned getListViewExStyle(bool checkboxes);
 	unsigned getTreeViewStyle();
 	void getAdapterList(int af, vector<Util::AdapterInfo>& adapters, int options = 0);

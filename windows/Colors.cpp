@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Colors.h"
+#include "ColorUtil.h"
 #include "BarShader.h"
 #include "ConfUI.h"
 #include "../client/SettingsManager.h"
@@ -14,6 +15,7 @@ COLORREF Colors::g_tabBackground = 0;
 COLORREF Colors::g_tabText = 0;
 
 bool Colors::isAppThemed = false;
+bool Colors::isDarkTheme = false;
 
 CHARFORMAT2 Colors::charFormat[Colors::MAX_TEXT_STYLES];
 
@@ -174,6 +176,8 @@ void Colors::init()
 	charFormat[TEXT_STYLE_CHEATING_USER].crBackColor = ss->getInt(Conf::BACKGROUND_COLOR);
 	charFormat[TEXT_STYLE_CHEATING_USER].crTextColor = ss->getInt(Conf::ERROR_COLOR);
 	charFormat[TEXT_STYLE_CHEATING_USER].dwEffects |= CFE_BOLD;
+
+	isDarkTheme = ColorUtil::isDark(g_bgColor);
 }
 
 const CHARFORMAT2& Colors::getCharFormat(int textStyle)
