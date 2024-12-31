@@ -100,8 +100,8 @@ bool SimpleXMLReader::error(const char* e)
 
 const string& SimpleXMLReader::CallBack::getAttrib(StringPairList& attribs, const string& name, size_t hint)
 {
-	hint = min(hint, attribs.size());
-	
+	hint = std::min(hint, attribs.size());
+
 	auto compare = [&](const auto& p) { return p.first == name; };
 	auto i = find_if(attribs.begin() + hint, attribs.end(), compare);
 	if (i == attribs.end())
@@ -122,7 +122,7 @@ bool SimpleXMLReader::literal(const char* lit, size_t len, bool withSpace, Parse
 			return false;
 		}
 	}
-	
+
 	if (n == len)
 	{
 		if (withSpace)
@@ -140,7 +140,7 @@ bool SimpleXMLReader::literal(const char* lit, size_t len, bool withSpace, Parse
 		advancePos(n);
 		state = newState;
 	}
-	
+
 	return true;
 }
 
@@ -150,7 +150,7 @@ bool SimpleXMLReader::element()
 	{
 		return true;
 	}
-	
+
 	int c = charAt(1);
 	if (charAt(0) == '<' && isNameStartChar(c))
 	{
@@ -158,16 +158,16 @@ bool SimpleXMLReader::element()
 		{
 			error("Max nesting exceeded");
 		}
-		
+
 		state = STATE_ELEMENT_NAME;
 		elements.push_back(Util::emptyString);
 		append(elements.back(), MAX_NAME_SIZE, c);
-		
+
 		advancePos(2);
-		
+
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -177,11 +177,11 @@ bool SimpleXMLReader::elementName()
 	for (size_t iend = bufSize(); i < iend; ++i)
 	{
 		int c = charAt(i);
-		
+
 		if (isSpace(c))
 		{
 			append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-			
+
 			state = STATE_ELEMENT_ATTR;
 			advancePos(i + 1);
 			return true;
@@ -189,7 +189,7 @@ bool SimpleXMLReader::elementName()
 		else if (c == '/')
 		{
 			append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-			
+
 			state = STATE_ELEMENT_END_SIMPLE;
 			advancePos(i + 1);
 			return true;
@@ -197,10 +197,10 @@ bool SimpleXMLReader::elementName()
 		else if (c == '>')
 		{
 			append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-			
+
 			cb->startTag(elements.back(), attribs, false);
 			attribs.clear();
-			
+
 			state = STATE_CONTENT;
 			advancePos(i + 1);
 			return true;
@@ -210,10 +210,10 @@ bool SimpleXMLReader::elementName()
 			return false;
 		}
 	}
-	
+
 	append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 	advancePos(i);
-	
+
 	return true;
 }
 
@@ -223,19 +223,19 @@ bool SimpleXMLReader::elementAttr()
 	{
 		return true;
 	}
-	
+
 	int c = charAt(0);
 	if (isNameStartChar(c))
 	{
 		attribs.push_back(StringPair()); // Hot point - 10%
 		append(attribs.back().first, MAX_NAME_SIZE, c); // MAX_NAME_SIZE - 260
-		
+
 		state = STATE_ELEMENT_ATTR_NAME;
 		advancePos(1);
-		
+
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -245,11 +245,11 @@ bool SimpleXMLReader::elementAttrName()
 	for (size_t iend = bufSize(); i < iend; ++i)
 	{
 		const int c = charAt(i);
-		
+
 		if (isSpace(c))
 		{
 			append(attribs.back().first, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-			
+
 			state = STATE_ELEMENT_ATTR_EQ;
 			advancePos(i + 1);
 			return true;
@@ -257,7 +257,7 @@ bool SimpleXMLReader::elementAttrName()
 		else if (c == '=')
 		{
 			append(attribs.back().first, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-			
+
 			state = STATE_ELEMENT_ATTR_VALUE;
 			advancePos(i + 1);
 			return true;
@@ -267,7 +267,7 @@ bool SimpleXMLReader::elementAttrName()
 			return false;
 		}
 	}
-	
+
 	append(attribs.back().first, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 	advancePos(i);
 	return true;
@@ -279,14 +279,14 @@ bool SimpleXMLReader::elementAttrValue()
 	for (size_t iend = bufSize(); i < iend; ++i)
 	{
 		const int c = charAt(i);
-		
+
 		if ((state == STATE_ELEMENT_ATTR_VALUE_APOS && c == '\'') || (state == STATE_ELEMENT_ATTR_VALUE_QUOT && c == '"'))
 		{
 			append(attribs.back().second, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-			
+
 			if (charset != Text::CHARSET_UTF8)
 				attribs.back().second = Text::toUtf8(attribs.back().second, charset);
-			
+
 			state = STATE_ELEMENT_ATTR;
 			advancePos(i + 1);
 			return true;
@@ -298,10 +298,10 @@ bool SimpleXMLReader::elementAttrValue()
 			return entref(attribs.back().second);
 		}
 	}
-	
+
 	append(attribs.back().second, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 	advancePos(i);
-	
+
 	return true;
 }
 
@@ -311,18 +311,18 @@ bool SimpleXMLReader::elementEndSimple()
 	{
 		return true;
 	}
-	
+
 	if (charAt(0) == '>')
 	{
 		cb->startTag(elements.back(), attribs, true);
 		elements.pop_back();
 		attribs.clear();
-		
+
 		state = STATE_CONTENT;
 		advancePos(1);
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -332,17 +332,17 @@ bool SimpleXMLReader::elementEndComplex()
 	{
 		return true;
 	}
-	
+
 	if (charAt(0) == '>')
 	{
 		cb->startTag(elements.back(), attribs, false);
 		attribs.clear();
-		
+
 		state = STATE_CONTENT;
 		advancePos(1);
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -352,14 +352,14 @@ bool SimpleXMLReader::character(int character, ParseState newState)
 	{
 		return true;
 	}
-	
+
 	if (charAt(0) == character)
 	{
 		advancePos(1);
 		state = newState;
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -369,9 +369,9 @@ bool SimpleXMLReader::declVersionNum()
 	{
 		return true;
 	}
-	
+
 	const int sep = charAt(0);
-	
+
 	if ((sep == '"' || sep == '\'') && charAt(1) == '1' && charAt(2) == '.')
 	{
 		// At least one more number
@@ -379,7 +379,7 @@ bool SimpleXMLReader::declVersionNum()
 		{
 			return false;
 		}
-		
+
 		// Now an unknown number of [0-9]
 		for (string::size_type n = 4, nend = bufSize(); n < nend; ++n)
 		{
@@ -390,16 +390,16 @@ bool SimpleXMLReader::declVersionNum()
 				advancePos(n + 1);
 				return true;
 			}
-			
+
 			if (!inRange(c, 0, 9))
 			{
 				return false;
 			}
 		}
-		
+
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -408,7 +408,7 @@ bool SimpleXMLReader::declEncodingValue()
 	while (bufSize() > 0)
 	{
 		int c = charAt(0);
-		
+
 		if ((state == STATE_DECL_ENCODING_NAME_APOS && c == '\'') || (state == STATE_DECL_ENCODING_NAME_QUOT && c == '"'))
 		{
 			encoding = Text::toLower(encoding);
@@ -430,7 +430,7 @@ bool SimpleXMLReader::declEncodingValue()
 			advancePos(1);
 		}
 	}
-	
+
 	return true;
 }
 
@@ -439,7 +439,7 @@ bool SimpleXMLReader::comment()
 	while (bufSize() > 0)
 	{
 		int c = charAt(0);
-		
+
 		// TODO We shouldn't allow ---> to end a comment
 		if (c == '-')
 		{
@@ -454,10 +454,10 @@ bool SimpleXMLReader::comment()
 				return true;
 			}
 		}
-		
+
 		advancePos(1);
 	}
-	
+
 	return true;
 }
 
@@ -466,7 +466,7 @@ bool SimpleXMLReader::cdata()
 	while (bufSize() > 0)
 	{
 		int c = charAt(0);
-		
+
 		// TODO We shouldn't allow ---> to end a comment
 		if (c == ']')
 		{
@@ -481,7 +481,7 @@ bool SimpleXMLReader::cdata()
 				return true;
 			}
 		}
-		
+
 		advancePos(1);
 	}
 	return true;
@@ -493,7 +493,7 @@ bool SimpleXMLReader::entref(string& d)
 	{
 		error("Buffer overflow");
 	}
-	
+
 	if (bufSize() > 6)
 	{
 		if (charAt(1) == 'l' && charAt(2) == 't' && charAt(3) == ';')
@@ -525,7 +525,7 @@ bool SimpleXMLReader::entref(string& d)
 			d.append(1, '\'');
 			advancePos(6);
 			return true;
-			
+
 			// Ignore &#00000 decimal and &#x0000 hex values to avoid error, they wouldn't be parsed anyway
 		}
 		else if (charAt(1) == '#' && isdigit(charAt(2)) && charAt(3) == ';')
@@ -552,7 +552,7 @@ bool SimpleXMLReader::entref(string& d)
 		{
 			advancePos(8);
 			return true;
-			
+
 		}
 		else if (charAt(1) == '#' && (charAt(2) == 'x' ||  charAt(2) == 'X') && isxdigit(charAt(3)) && charAt(4) == ';')
 		{
@@ -579,7 +579,7 @@ bool SimpleXMLReader::entref(string& d)
 	{
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -589,7 +589,7 @@ bool SimpleXMLReader::content()
 	{
 		return true;
 	}
-	
+
 	int c = charAt(0);
 	if (c == '<')
 	{
@@ -599,16 +599,16 @@ bool SimpleXMLReader::content()
 		}
 		return false;
 	}
-	
+
 	if (c == '&')
 	{
 		return entref(value);
 	}
-	
+
 	append(value, MAX_VALUE_SIZE, c);
-	
+
 	advancePos(1);
-	
+
 	return true;
 }
 
@@ -618,20 +618,20 @@ bool SimpleXMLReader::elementEnd()
 	{
 		return false;
 	}
-	
+
 	const string& top = elements.back();
 	if (!needChars(top.size()))
 	{
 		return true;
 	}
-	
+
 	if (top.compare(0, top.size(), &buf[bufPos], top.size()) == 0)
 	{
 		state = STATE_ELEMENT_END_END;
 		advancePos(top.size());
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -641,7 +641,7 @@ bool SimpleXMLReader::elementEndEnd()
 	{
 		return true;
 	}
-	
+
 	if (charAt(0) == '>')
 	{
 		if (charset != Text::CHARSET_UTF8)
@@ -649,12 +649,12 @@ bool SimpleXMLReader::elementEndEnd()
 		cb->endTag(elements.back(), value);
 		value.clear();
 		elements.pop_back();
-		
+
 		state = STATE_CONTENT;
 		advancePos(1);
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -675,7 +675,7 @@ bool SimpleXMLReader::skipSpace(bool store)
 		advancePos();
 		skipped = true;
 	}
-	
+
 	return skipped;
 }
 
@@ -690,13 +690,13 @@ void SimpleXMLReader::parse(InputStream& stream, size_t maxSize)
 	{
 		size_t old = buf.size();
 		buf.resize(BUF_SIZE);
-		
+
 		size_t n = buf.size() - old;
 		size_t len = stream.read(&buf[old], n);
-		
+
 		if (maxSize > 0 && (bytesRead + len) > maxSize)
 			error("Greater than maximum allowed size");
-			
+
 		if (len == 0)
 		{
 			if (elements.empty())
@@ -730,7 +730,7 @@ bool SimpleXMLReader::process()
 {
 	ParseState oldState = state;
 	string::size_type oldPos = bufPos;
-	
+
 	while (true)
 	{
 		switch (state)
@@ -857,7 +857,7 @@ bool SimpleXMLReader::process()
 				error("Unexpected state");
 				break;
 		}
-		
+
 		if (oldState == state && oldPos == bufPos)
 		{
 			// Need more data...
@@ -868,17 +868,17 @@ bool SimpleXMLReader::process()
 			}
 			return true;
 		}
-		
+
 		if (state == STATE_CONTENT && state != oldState)
 		{
 			// might contain whitespace from previous unfruitful contents (that turned out to be elements / comments)
 			value.clear();
 		}
-		
+
 		oldState = state;
 		oldPos = bufPos;
 	}
-	
+
 	// should never happen
 	return false;
 }

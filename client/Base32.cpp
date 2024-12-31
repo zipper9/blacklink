@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include "Base32.h"
 #include "debug.h"
+#include <string.h>
 
 static const int8_t base32Table[] =
 {
@@ -122,4 +123,9 @@ void Util::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorPtr)
 			dst[offset] |= tmp << (8 - index);
 		}
 	}
+}
+
+const char* Util::getBase32Chars()
+{
+	return base32Alphabet;
 }

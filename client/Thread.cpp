@@ -24,7 +24,11 @@
 #include <process.h>
 #include "CompatibilityManager.h"
 #else
+#include <limits.h>
 #include <errno.h>
+#ifndef PTHREAD_STACK_MIN
+#define PTHREAD_STACK_MIN 65536
+#endif
 #endif
 
 #ifdef USE_WIN_THREAD_NAME

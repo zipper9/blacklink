@@ -8,6 +8,7 @@
 #else
 #include <pthread.h>
 #include <unistd.h>
+#include <stdint.h>
 #define INVALID_THREAD_HANDLE 0
 #endif
 

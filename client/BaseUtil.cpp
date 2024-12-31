@@ -2,6 +2,7 @@
 #include "BaseUtil.h"
 #include "StrUtil.h"
 #include "Text.h"
+#include <string.h>
 
 const string Util::emptyString;
 const wstring Util::emptyStringW;

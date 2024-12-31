@@ -31,6 +31,28 @@ uint32_t Util::rand()
 	return randState.getValue();
 }
 
+#ifdef HAVE_OPENSSL
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ >= 405
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__clang__)
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#endif
+
+void Util::randBytes(void* buf, size_t size, bool secure)
+{
+#ifdef HAVE_OPENSSL
+	if (secure)
+	{
+		RAND_pseudo_bytes((unsigned char*) buf, size);
+		return;
+	}
+#endif
+	LOCK(csRandState);
+	for (size_t i = 0; i < size; ++i)
+		((uint8_t *) buf)[i] = (uint8_t) randState.getValue();
+}
+
 void Util::MT19937::randomize()
 {
 #ifdef HAVE_OPENSSL

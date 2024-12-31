@@ -3,6 +3,9 @@
 
 #include <locale.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string>
+#include <type_traits>
 
 #ifdef _UNICODE
 #define toStringT toStringW
@@ -14,6 +17,9 @@
 
 namespace Util
 {
+	using std::string;
+	using std::wstring;
+
 	inline bool isWhiteSpace(int c)
 	{
 		return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
@@ -69,8 +75,8 @@ namespace Util
 #pragma warning(pop)
 #endif
 
-	inline int toInt(const string& s)  { return stringToInt<int, char>(s.c_str()); }		
-	inline int toInt(const char* s)    { return stringToInt<int, char>(s); }		
+	inline int toInt(const string& s)  { return stringToInt<int, char>(s.c_str()); }
+	inline int toInt(const char* s)    { return stringToInt<int, char>(s); }
 	inline int toInt(const wstring& s) { return stringToInt<int, wchar_t>(s.c_str()); }
 	inline int toInt(const wchar_t* s) { return stringToInt<int, wchar_t>(s); }
 
@@ -135,7 +141,7 @@ namespace Util
 		if (negative) s[--i] = '-';
 		return std::basic_string<char_type>(s + i, BUF_SIZE - i);
 	}
-		
+
 	template<typename int_type, typename char_type>
 	inline std::basic_string<char_type> uintToHexString(int_type v)
 	{
@@ -144,7 +150,7 @@ namespace Util
 		char_type s[BUF_SIZE];
 		size_t i = BUF_SIZE;
 		while (v)
-		{				
+		{
 			unsigned dig = (unsigned) (v & 0xF);
 			s[--i] = (char_type) "0123456789ABCDEF"[dig];
 			v >>= 4;
@@ -173,26 +179,28 @@ namespace Util
 
 	inline string toString(double val)
 	{
-		char buf[512];
-		snprintf(buf, sizeof(buf), "%0.2f", val);
+		static const int BUF_SIZE = 512;
+		char buf[BUF_SIZE];
+		snprintf(buf, BUF_SIZE, "%0.2f", val);
 		return buf;
 	}
 
 	inline wstring toStringW(double val)
 	{
-		wchar_t buf[512];
+		static const int BUF_SIZE = 512;
+		wchar_t buf[BUF_SIZE];
 #if defined(_MSC_VER) && _MSC_VER < 1900
-		_snwprintf(buf, _countof(buf), L"%0.2f", val);
-		buf[_countof(buf)-1] = 0;
+		_snwprintf(buf, BUF_SIZE, L"%0.2f", val);
+		buf[BUF_SIZE-1] = 0;
 #else
-		swprintf(buf, _countof(buf), L"%0.2f", val);
+		swprintf(buf, BUF_SIZE, L"%0.2f", val);
 #endif
 		return buf;
 	}
-		
+
 	inline string  toHexString(unsigned long val)  { return uintToHexString<unsigned long, char>(val); }
 	inline wstring toHexStringW(unsigned long val) { return uintToHexString<unsigned long, wchar_t>(val); }
-	
+
 	inline string  toHexString(const void* val)  { return uintToHexString<size_t, char>(reinterpret_cast<size_t>(val)); }
 	inline wstring toHexStringW(const void* val) { return uintToHexString<size_t, wchar_t>(reinterpret_cast<size_t>(val)); }
 }

@@ -18,10 +18,7 @@
 
 #include "stdinc.h"
 #include "Exception.h"
-
-#if defined _WIN32 && defined _MSC_VER
-void DumpDebugMessage(const TCHAR *filename, const char *msg, size_t msgSize, bool appendNL);
-#endif
+#include "debug.h"
 
 Exception::Exception(const string& errorText) : error(errorText)
 {

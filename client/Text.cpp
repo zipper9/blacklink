@@ -21,6 +21,7 @@
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "debug.h"
+#include <string.h>
 
 #ifndef _WIN32
 #include <errno.h>

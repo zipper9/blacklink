@@ -18,6 +18,9 @@
 
 #include "stdinc.h"
 #include "CompatibilityManager.h"
+
+#ifdef _WIN32
+
 #include "SysVersion.h"
 #include "Text.h"
 #include <shlwapi.h>
@@ -116,3 +119,5 @@ bool CompatibilityManager::setThreadName(HANDLE h, const char* name)
 	wstring wsName = Text::utf8ToWide(name);
 	return SUCCEEDED(pSetThreadDescription(h, wsName.c_str()));
 }
+
+#endif

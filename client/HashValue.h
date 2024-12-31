@@ -22,13 +22,14 @@
 #include "TigerHash.h"
 #include "Base32.h"
 #include "BaseUtil.h"
+#include <boost/functional/hash.hpp>
 
 template<class Hasher>
 struct HashValue
 {
 	static const size_t BITS = Hasher::BITS;
 	static const size_t BYTES = Hasher::BYTES;
-	
+
 	HashValue()
 	{
 		memset(&data, 0, sizeof(data));
@@ -78,7 +79,7 @@ struct HashValue
 			if (data[i]) return false;
 		return true;
 	}
-	
+
 	uint8_t data[BYTES];
 };
 
@@ -97,6 +98,7 @@ struct hash<HashValue<T>>
 	}
 };
 }
+
 namespace std
 {
 template<typename T>

@@ -2,12 +2,14 @@
 #define RANDOM_H_
 
 #include <stdint.h>
+#include <stddef.h>
 #include "debug.h"
 
 namespace Util
 {
 	void initRand();
 	uint32_t rand();
+	void randBytes(void* buf, size_t size, bool secure);
 
 	inline uint32_t rand(uint32_t high)
 	{

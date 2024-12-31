@@ -22,6 +22,8 @@
 
 #include "BaseStreams.h"
 #include <algorithm>
+#include <string.h>
+#include <stdint.h>
 
 #ifndef NO_RESOURCE_MANAGER
 #include "ResourceManager.h"
@@ -39,12 +41,12 @@ class MemoryInputStream : public InputStream
 			dcassert(src.size());
 			memcpy(buf, src.data(), src.size());
 		}
-		
+
 		~MemoryInputStream()
 		{
 			delete[] buf;
 		}
-		
+
 		size_t read(void* tgt, size_t& len) override
 		{
 			len = std::min(len, bufSize - pos);
@@ -52,9 +54,9 @@ class MemoryInputStream : public InputStream
 			pos += len;
 			return len;
 		}
-		
+
 		size_t getSize() const { return bufSize; }
-		
+
 	private:
 		size_t pos;
 		size_t const bufSize;
@@ -73,7 +75,7 @@ class BufferedInputStream : public InputStream
 			if (managed) delete s;
 			delete[] buf;
 		}
-		
+
 		size_t read(void* out, size_t& len) override
 		{
 			size_t sizeInBuf = size - pos;
@@ -128,7 +130,7 @@ class LimitedInputStream : public InputStream
 		{
 			if (managed) delete s;
 		}
-		
+
 		size_t read(void* buf, size_t& len) override
 		{
 			dcassert(maxBytes >= 0);
@@ -139,12 +141,12 @@ class LimitedInputStream : public InputStream
 			maxBytes -= x;
 			return x;
 		}
-		
+
 		void closeStream() override
 		{
 			s->closeStream();
 		}
-		
+
 	private:
 		InputStream* const s;
 		int64_t maxBytes;
@@ -161,7 +163,7 @@ class LimitedOutputStream : public OutputStream
 		{
 			delete s;
 		}
-		
+
 		size_t write(const void* buf, size_t len) override
 		{
 			//dcassert(len > 0);
@@ -176,17 +178,17 @@ class LimitedOutputStream : public OutputStream
 			maxBytes -= len;
 			return s->write(buf, len);
 		}
-		
+
 		size_t flushBuffers(bool force) override
 		{
 			return s->flushBuffers(force);
 		}
-		
+
 		bool eof() const override
 		{
 			return maxBytes == 0;
 		}
-		
+
 	private:
 		OutputStream* const s;
 		uint64_t maxBytes;
@@ -197,7 +199,7 @@ class BufferedOutputStream : public OutputStream
 {
 	public:
 		using OutputStream::write;
-		
+
 		explicit BufferedOutputStream(OutputStream* stream, size_t bufSize) : s(stream),
 			pos(0), bufSize(bufSize), buf(bufSize ? new uint8_t[bufSize] : nullptr)
 		{
@@ -217,7 +219,7 @@ class BufferedOutputStream : public OutputStream
 			if (managed) delete s;
 			delete[] buf;
 		}
-		
+
 		size_t flushBuffers(bool force) override
 		{
 			if (pos > 0)
@@ -228,7 +230,7 @@ class BufferedOutputStream : public OutputStream
 			s->flushBuffers(force);
 			return 0;
 		}
-		
+
 		size_t write(const void* wbuf, size_t len) override
 		{
 			const uint8_t* b = static_cast<const uint8_t*>(wbuf);
@@ -266,7 +268,7 @@ class StringOutputStream : public OutputStream
 	public:
 		explicit StringOutputStream(string& out) : str(out) { }
 		using OutputStream::write;
-		
+
 		size_t flushBuffers(bool force) override
 		{
 			return 0;

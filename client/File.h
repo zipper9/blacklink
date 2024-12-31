@@ -172,6 +172,15 @@ class File : public IOStream
 #endif
 		}
 
+#ifdef _WIN32
+		static bool isAbsolute(const wstring& path) noexcept
+		{
+			if (!path.empty() && (path[0] == L'\\' || path[0] == L'/')) return true;
+			if (path.length() > 2 && path[1] == L':' && (path[2] == L'\\' || path[2] == L'/')) return true;
+			return false;
+		}
+#endif
+
 		static uint64_t timeStampToUnixTime(uint64_t ts);
 
 		virtual ~File() noexcept
@@ -241,7 +250,7 @@ class FileFindIter
 
 			struct dirent* ent;
 		};
-		
+
 		DirData& operator*() { return data; }
 		const DirData& operator*() const { return data; }
 		DirData* operator->() { return &data; }

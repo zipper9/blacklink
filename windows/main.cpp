@@ -339,6 +339,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	ProfileLocker profileLocker;
 	profileLocker.setPath(Util::getConfigPath());
+	profileLocker.setLockFileName("lock.pid");
 	if (!profileLocker.lock())
 	{
 		if (Util::isLocalMode())

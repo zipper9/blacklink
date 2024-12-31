@@ -34,6 +34,7 @@
 #define DCPLUSPLUS_DCPP_TIGER_HASH_H
 
 #include "compiler.h"
+#include "typedefs.h"
 
 class TigerHash
 {

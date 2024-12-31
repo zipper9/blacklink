@@ -10,7 +10,11 @@
 #include <unistd.h>
 #endif
 
-static const string LOCK_FILE = "lock.pid";
+void ProfileLocker::setLockFileName(const string& name) noexcept
+{
+	dcassert(lockFileName.empty());
+	lockFileName = name;
+}
 
 bool ProfileLocker::setPath(const string& path) noexcept
 {
@@ -44,7 +48,9 @@ void ProfileLocker::unlock() noexcept
 
 bool ProfileLocker::createLockFile() noexcept
 {
-	string lockFile = profilePath + LOCK_FILE;
+	if (lockFileName.empty()) return false;
+	string lockFile = profilePath + lockFileName;
+	dcassert(File::isAbsolute(lockFile));
 	char buf[64];
 #ifdef _WIN32
 	wstring wsLockFile = File::formatPath(Text::utf8ToWide(lockFile));
@@ -65,16 +71,19 @@ bool ProfileLocker::createLockFile() noexcept
 			return false;
 		}
 	}
-	int len = sprintf(buf, "%u", (unsigned) getpid());
-	len = write(file, buf, len);
-	if (len >= 0) ftruncate(file, len);
+	if (!updateLater)
+	{
+		int len = sprintf(buf, "%u", (unsigned) getpid());
+		len = write(file, buf, len);
+		if (len >= 0) ftruncate(file, len);
+	}
 #endif
 	return true;
 }
 
 void ProfileLocker::removeLockFile() noexcept
 {
-	string lockFile = profilePath + LOCK_FILE;
+	string lockFile = profilePath + lockFileName;
 #ifdef _WIN32
 	wstring wsLockFile = File::formatPath(Text::utf8ToWide(lockFile));
 	DeleteFileW(wsLockFile.c_str());
@@ -82,3 +91,19 @@ void ProfileLocker::removeLockFile() noexcept
 	unlink(lockFile.c_str());
 #endif
 }
+
+#ifndef _WIN32
+bool ProfileLocker::updatePidFile() noexcept
+{
+	char buf[64];
+	if (file < 0 || lseek(file, 0, SEEK_SET) != 0) return false;
+	int len = sprintf(buf, "%u", (unsigned) getpid());
+	len = write(file, buf, len);
+	if (len > 0)
+	{
+		ftruncate(file, len);
+		return true;
+	}
+	return false;
+}
+#endif

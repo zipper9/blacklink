@@ -32,6 +32,7 @@
 #include "stdinc.h"
 #include "TigerHash.h"
 #include "debug.h"
+#include <string.h>
 #include <boost/predef/other/endian.h>
 
 #if BOOST_ENDIAN_BIG_BYTE

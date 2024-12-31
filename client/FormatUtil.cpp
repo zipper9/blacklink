@@ -20,24 +20,64 @@
 #include "FormatUtil.h"
 #include "BaseUtil.h"
 #include "StrUtil.h"
-#include "TimeUtil.h"
 #include "Text.h"
 #include "ParamExpander.h"
-#include "ResourceManager.h"
 
 #ifdef _WIN32
 static NUMBERFMT nf;
 #define swprintf _snwprintf
 #endif
 
+#ifndef NO_RESOURCE_MANAGER
+#include "ResourceManager.h"
+#else
+enum
+{
+	B,
+	KB,
+	MB,
+	GB,
+	TB,
+	PB,
+	EB,
+	DATETIME_WEEK,
+	DATETIME_WEEKS,
+	DATETIME_DAY,
+	DATETIME_DAYS,
+	DATETIME_HOUR,
+	DATETIME_HOURS,
+	DATETIME_MINUTE,
+	DATETIME_MINUTES,
+	DATETIME_SECONDS,
+	NUM_STRINGS
+};
+
+static const char* strings[NUM_STRINGS] =
+{
+	"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB",
+	"week", "weeks", "day", "day.", "hour", "hr.",
+	"minute", "min.", "sec."
+};
+
+static const char* CSTRING(int id)
+{
+	return id >= 0 && id < NUM_STRINGS ? strings[id] : nullptr;
+}
+
+static string STRING(int id)
+{
+	return string(CSTRING(id));
+}
+#endif
+
 void Util::initFormatParams()
 {
 #ifdef _WIN32
 	static TCHAR sep[2] = _T(",");
-	static wchar_t dummy[16] = { 0 };
+	static TCHAR dummy[16] = { 0 };
 	nf.lpDecimalSep = sep;
 	GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SGROUPING, dummy, 16);
-	nf.Grouping = _wtoi(dummy);
+	nf.Grouping = _tstoi(dummy);
 	GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, dummy, 16);
 	nf.lpThousandSep = dummy;
 #endif
@@ -113,7 +153,7 @@ string Util::formatDateTime(time_t t, bool useGMT) noexcept
 string Util::formatCurrentDate() noexcept
 {
 	static const string defaultDateFormat("%Y-%m-%d");
-	return formatDateTime(defaultDateFormat, GET_TIME());
+	return formatDateTime(defaultDateFormat, time(nullptr));
 }
 
 #ifdef _UNICODE
@@ -171,7 +211,7 @@ string Util::formatBytes(double bytes)
 
 string Util::formatExactSize(int64_t bytes)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && defined(_UNICODE) && !defined(NO_RESOURCE_MANAGER)
 	return Text::wideToUtf8(formatExactSizeW(bytes));
 #else
 	char buf[64];
@@ -180,7 +220,7 @@ string Util::formatExactSize(int64_t bytes)
 #endif
 }
 
-#ifdef _UNICODE
+#if defined(_UNICODE) && !defined(NO_RESOURCE_MANAGER)
 template<typename size_type>
 inline wstring formatBytesWTemplate(size_type bytes)
 {

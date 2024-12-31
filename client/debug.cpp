@@ -2,6 +2,7 @@
 #include "debug.h"
 
 #ifdef _WIN32
+#include "w.h"
 void DumpDebugMessage(const TCHAR *filename, const char *msg, size_t msgSize, bool appendNL)
 {
 	TCHAR path[MAX_PATH + 64];

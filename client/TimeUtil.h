@@ -10,11 +10,11 @@ namespace Util
 	uint64_t getTick() noexcept;
 	uint64_t getFileTime() noexcept;
 #ifdef _WIN32
-	inline uint64_t getHighResFrequency() noexcept;
+	uint64_t getHighResFrequency() noexcept;
 #else
 	inline constexpr uint64_t getHighResFrequency() noexcept { return 1000000000; }
 #endif
-	inline uint64_t getHighResTimestamp() noexcept;
+	uint64_t getHighResTimestamp() noexcept;
 	int64_t gmtToUnixTime(const tm* t) noexcept;
 
 #ifdef _WIN32

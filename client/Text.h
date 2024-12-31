@@ -22,7 +22,9 @@
 #include "tstring.h"
 #include <stdint.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include "w.h"
+#else
 #include <wctype.h>
 #endif
 

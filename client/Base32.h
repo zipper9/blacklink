@@ -52,6 +52,8 @@ namespace Util
 				return false;
 		return true;
 	}
+
+	const char* getBase32Chars();
 }
 
 #endif // BASE32_H_

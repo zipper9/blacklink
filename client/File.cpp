@@ -22,13 +22,15 @@
 #include "BaseUtil.h"
 #include "Path.h"
 #include "Text.h"
+#include <memory>
+#include <string.h>
 
 #ifndef _CONSOLE
-#include "LogManager.h"
 #include "CompatibilityManager.h"
 #endif
 
 #ifndef _WIN32
+#include <unistd.h>
 #include <fnmatch.h>
 #include <sys/statvfs.h>
 #ifdef _DARWIN_C_SOURCE
@@ -269,15 +271,7 @@ size_t File::flushBuffers(bool unused)
 
 bool File::deleteFile(const wstring& fileName) noexcept
 {
-	bool result = ::DeleteFileW(formatPath(fileName).c_str()) != FALSE;
-#if !defined(_CONSOLE) && defined(_DEBUG)
-	if (!result)
-	{
-		string error = "Error deleting file " + Text::wideToUtf8(fileName) + ": " + Util::toString(GetLastError());
-		LogManager::message(error);
-	}
-#endif
-	return result;
+	return ::DeleteFileW(formatPath(fileName).c_str()) != FALSE;
 }
 
 bool File::deleteFile(const string& fileName) noexcept
@@ -442,7 +436,7 @@ uint64_t File::calcFilesSize(const string& path, const string& pattern)
 StringList File::findFiles(const string& path, const string& pattern, bool appendPath /*= true */)
 {
 	StringList ret;
-	
+
 	WIN32_FIND_DATAW data;
 	HANDLE hFind = FindFirstFileExW(formatPath(Text::utf8ToWide(path + pattern)).c_str(),
 	                                CompatibilityManager::findFileLevel,

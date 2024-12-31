@@ -2,7 +2,9 @@
 #include "TimeUtil.h"
 #include "debug.h"
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include "w.h"
+#else
 #include <sys/time.h>
 #endif
 
