@@ -325,7 +325,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 		ATL::CWindow wndParent = hWndParent;
 		BOOL bMaximized = FALSE;
 
-		if (this->MDIGetActive(&bMaximized) == NULL) bMaximized = WinUtil::useMDIMaximized();//SETTING(MDI_MAXIMIZED);
+		if (this->MDIGetActive(&bMaximized) == NULL) bMaximized = WinUtil::useMDIMaximized();
 
 		if (bMaximized) wndParent.SetRedraw(FALSE);
 

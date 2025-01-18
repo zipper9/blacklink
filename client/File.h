@@ -248,7 +248,9 @@ class FileFindIter
 			bool isTemporary() const;
 			bool isVirtual() const;
 
+#ifndef _WIN32
 			struct dirent* ent;
+#endif
 		};
 
 		DirData& operator*() { return data; }

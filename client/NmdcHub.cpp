@@ -90,7 +90,7 @@ NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, boo
 	lastUpdate(0),
 	lastNatUserExpires(0),
 	myInfoState(WAITING_FOR_MYINFO),
-	csUsers(std::unique_ptr<RWLock>(RWLock::create()))
+	csUsers(RWLock::create())
 {
 }
 

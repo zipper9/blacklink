@@ -206,7 +206,7 @@ LRESULT PublicHubsFrame::onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOO
 {
 	HWND hWnd = (HWND)lParam;
 	HDC hDC = (HDC)wParam;
-	if (uMsg == WM_CTLCOLORLISTBOX || hWnd == ctrlPubLists.m_hWnd || hWnd == ctrlFilter.m_hWnd || hWnd == ctrlFilterSel.m_hWnd)
+	if (uMsg == WM_CTLCOLORLISTBOX || hWnd == ctrlPubLists.m_hWnd || hWnd == ctrlFilterSel.m_hWnd)
 	{
 		return Colors::setColor(hDC);
 	}

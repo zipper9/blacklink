@@ -73,7 +73,7 @@ void IntegrationPage::write()
 }
 
 #ifdef SSA_SHELL_INTEGRATION
-LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
+LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	bool oldState = shellIntEnabled;
 	bool result = WinUtil::registerShellExt(shellIntEnabled);
@@ -98,7 +98,7 @@ LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, H
 }
 #endif // SSA_SHELL_INTEGRATION
 
-LRESULT IntegrationPage::onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
+LRESULT IntegrationPage::onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	bool oldState = autostartEnabled;
 	bool result =  WinUtil::autoRunShortcut(!autostartEnabled);

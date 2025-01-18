@@ -24,7 +24,9 @@
 #include "WinUtil.h"
 #include "CompiledDateTime.h"
 
-#if _MSC_VER >= 1921
+#if _MSC_VER >= 1930
+#define MSC_RELEASE 2022
+#elif _MSC_VER >= 1920
 #define MSC_RELEASE 2019
 #elif _MSC_VER >= 1910
 #define MSC_RELEASE 2017
@@ -37,7 +39,7 @@
 #elif _MSC_VER >= 1600
 #define MSC_RELEASE 2010
 #else
-#define MSC_RELEASE 1970
+#define MSC_RELEASE 2008
 #endif
 
 class AboutDlg : public CDialogImpl<AboutDlg>
