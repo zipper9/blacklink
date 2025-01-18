@@ -398,7 +398,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
 	setTreeViewColors(ctrlSearchFilterTree);
-	WinUtil::setExplorerTheme(ctrlSearchFilterTree);
+	WinUtil::setTreeViewTheme(ctrlSearchFilterTree, Colors::isDarkTheme);
 	ctrlSearchFilterTree.SetImageList(searchTypesImageList, TVSIL_NORMAL);
 
 	useTree = ss->getBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS);

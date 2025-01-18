@@ -118,7 +118,7 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 
 	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(),
 	                  WS_EX_CLIENTEDGE, IDC_USERS);
-	WinUtil::setExplorerTheme(ctrlQueued);
+	WinUtil::setTreeViewTheme(ctrlQueued, Colors::isDarkTheme);
 
 	ctrlQueued.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);

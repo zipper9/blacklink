@@ -111,7 +111,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 
 	ctrlTree.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
 	setTreeViewColors(ctrlTree);
-	WinUtil::setExplorerTheme(ctrlTree);
+	WinUtil::setTreeViewTheme(ctrlTree, Colors::isDarkTheme);
 
 	g_TransferTreeImage.init();
 	ctrlTree.SetImageList(g_TransferTreeImage.getIconList(), TVSIL_NORMAL);
