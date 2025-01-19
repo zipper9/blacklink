@@ -137,7 +137,7 @@ namespace WinUtil
 	{
 		const HWND active = (HWND)::SendMessage(g_mdiClient, WM_MDIGETACTIVE, 0, 0);
 		LockWindowUpdate(g_mdiClient);
-		HWND ret = p.CreateEx(g_mdiClient);
+		HWND ret = p.Create(g_mdiClient);
 		if (active && ::IsWindow(active))
 			::SendMessage(g_mdiClient, WM_MDIACTIVATE, (WPARAM)active, 0);
 		LockWindowUpdate(NULL);
