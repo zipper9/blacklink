@@ -17,7 +17,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define PACKAGE_VERSION "1.9.1"
+#define PACKAGE_VERSION "1.12.2"
 
 #ifdef _WIN32
 #ifndef UNICODE
@@ -746,12 +746,14 @@ static int populate_languages_metadata(MMDB_s *mmdb,
     mmdb->metadata.languages.count = 0;
     mmdb->metadata.languages.names = calloc(array_size, sizeof(char *));
     if (NULL == mmdb->metadata.languages.names) {
+        MMDB_free_entry_data_list(first_member);
         return MMDB_OUT_OF_MEMORY_ERROR;
     }
 
     for (uint32_t i = 0; i < array_size; i++) {
         member = member->next;
         if (MMDB_DATA_TYPE_UTF8_STRING != member->entry_data.type) {
+            MMDB_free_entry_data_list(first_member);
             return MMDB_INVALID_METADATA_ERROR;
         }
 
@@ -759,6 +761,7 @@ static int populate_languages_metadata(MMDB_s *mmdb,
             member->entry_data.utf8_string, member->entry_data.data_size);
 
         if (NULL == mmdb->metadata.languages.names[i]) {
+            MMDB_free_entry_data_list(first_member);
             return MMDB_OUT_OF_MEMORY_ERROR;
         }
         // We assign this as we go so that if we fail a calloc and need to
@@ -949,7 +952,7 @@ static int find_address_in_search_tree(const MMDB_s *const mmdb,
         return MMDB_UNKNOWN_DATABASE_FORMAT_ERROR;
     }
 
-    uint32_t value = 0;
+    uint64_t value = 0;
     uint16_t current_bit = 0;
     if (mmdb->metadata.ip_version == 6 && address_family == AF_INET) {
         value = mmdb->ipv4_start_node.node_value;
@@ -963,6 +966,7 @@ static int find_address_in_search_tree(const MMDB_s *const mmdb,
         uint8_t bit =
             1U & (address[current_bit >> 3] >> (7 - (current_bit % 8)));
 
+        // Note that value*record_info.record_length can be larger than 2**32
         record_pointer = &search_tree[value * record_info.record_length];
         if (record_pointer + record_info.record_length > mmdb->data_section) {
             return MMDB_CORRUPT_SEARCH_TREE_ERROR;
@@ -1634,6 +1638,8 @@ int MMDB_get_metadata_as_entry_data_list(
 
 int MMDB_get_entry_data_list(MMDB_entry_s *start,
                              MMDB_entry_data_list_s **const entry_data_list) {
+    *entry_data_list = NULL;
+
     MMDB_data_pool_s *const pool = data_pool_new(MMDB_POOL_INIT_SIZE);
     if (!pool) {
         return MMDB_OUT_OF_MEMORY_ERROR;
@@ -1647,6 +1653,10 @@ int MMDB_get_entry_data_list(MMDB_entry_s *start,
 
     int const status =
         get_entry_data_list(start->mmdb, start->offset, list, pool, 0);
+    if (MMDB_SUCCESS != status) {
+        data_pool_destroy(pool);
+        return status;
+    }
 
     *entry_data_list = data_pool_to_list(pool);
     if (!*entry_data_list) {
