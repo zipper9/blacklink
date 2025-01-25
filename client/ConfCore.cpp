@@ -449,8 +449,8 @@ void Conf::initCoreSettings()
 	s->addString(LOG_FILE_TCP_MESSAGES, "LogFileCMDDebugTrace", "Trace" PATH_SEPARATOR_STR "%[ip]" PATH_SEPARATOR_STR "%[ipPort].log");
 	s->addString(LOG_FILE_UDP_PACKETS, "LogFileUDPDebugTrace", "Trace" PATH_SEPARATOR_STR "UDP-Packets.log");
 	s->addString(LOG_FILE_TLS_CERT, "LogFileTLSCert", "Trace" PATH_SEPARATOR_STR "%[ip]" PATH_SEPARATOR_STR "%[kp].cer", 0, &validateLogFileTlsCert);
-	s->addString(LOG_FORMAT_DOWNLOAD, "LogFormatPostDownload", "%Y-%m-%d %H:%M:%S: %[target] %[@DownloadedFrom] %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
-	s->addString(LOG_FORMAT_UPLOAD, "LogFormatPostUpload", "%Y-%m-%d %H:%M:%S %[source] %[@UploadedTo] %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
+	s->addString(LOG_FORMAT_DOWNLOAD, "LogFormatPostDownload", "%Y-%m-%d %H:%M:%S: %[target] %[@DownloadedFrom] %[userNI] - %[hubURL] (%[userIP]), %[fileSI] (%[fileTR])");
+	s->addString(LOG_FORMAT_UPLOAD, "LogFormatPostUpload", "%Y-%m-%d %H:%M:%S %[source] %[@UploadedTo] %[userNI] - %[hubURL] (%[userIP]), %[fileSI] (%[fileTR])");
 	s->addString(LOG_FORMAT_MAIN_CHAT, "LogFormatMainChat", chatLogFormat);
 	s->addString(LOG_FORMAT_PRIVATE_CHAT, "LogFormatPrivateChat", chatLogFormat);
 	s->addString(LOG_FORMAT_STATUS, "LogFormatStatus", simpleLogFormat);

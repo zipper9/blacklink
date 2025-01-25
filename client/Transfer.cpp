@@ -67,10 +67,10 @@ void Transfer::getParams(StringMap& params) const
 		switch (ip.type)
 		{
 			case AF_INET:
-				params["userI4"] = Util::printIpAddress(ip.data.v4);
+				params["userIP"] = params["userI4"] = Util::printIpAddress(ip.data.v4);
 				break;
 			case AF_INET6:
-				params["userI6"] = Util::printIpAddress(ip.data.v6);
+				params["userIP"] = params["userI6"] = Util::printIpAddress(ip.data.v6);
 				break;
 		}
 		
