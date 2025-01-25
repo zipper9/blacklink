@@ -120,6 +120,7 @@ int DirectoryListingNavWnd::updateNavBarHeight()
 
 void DirectoryListingNavWnd::updateNavBar(const DirectoryListing::Directory* dir, const string& path, const DirectoryListingFrame* frame)
 {
+	const auto* root = frame->getDirectoryListing()->getRoot();
 	navBar.setEditMode(false);
 	int icon = IconBitmaps::FOLDER;
 	if (!dir->getParent())
@@ -127,7 +128,7 @@ void DirectoryListingNavWnd::updateNavBar(const DirectoryListing::Directory* dir
 	navBar.removeAllItems();
 	navBar.setIcon(g_iconBitmaps.getBitmap(icon, 0));
 	navBar.addArrowItem(PATH_ITEM_ROOT);
-	navBar.addTextItem(Text::toT(frame->getNick()), PATH_ITEM_ROOT, !dir->directories.empty());
+	navBar.addTextItem(Text::toT(frame->getNick()), PATH_ITEM_ROOT, !root->directories.empty());
 	string::size_type pos = 0;
 	bool hasArrow = true;
 	while (pos < path.length())

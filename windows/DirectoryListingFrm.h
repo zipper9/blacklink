@@ -265,6 +265,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void setSpeed(int64_t speed) { this->speed = speed; }
 		tstring getRootItemText() const;
 		const string& getNick() const { return nick; }
+		const DirectoryListing* getDirectoryListing() const { return dl.get(); }
 
 		HTREEITEM findItem(HTREEITEM ht, const tstring& name);
 		void selectItem(const tstring& name);
