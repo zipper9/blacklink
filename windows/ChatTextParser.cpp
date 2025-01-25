@@ -35,6 +35,7 @@ static const tstring linkPrefixes[] =
 
 static const int LINK_TYPE_MAGNET = 0;
 static const int LINK_TYPE_HTTP   = 6;
+static const int LINK_TYPE_HTTPS  = 7;
 static const int LINK_TYPE_WWW    = _countof(linkPrefixes)-1;
 
 #ifdef BL_UI_FEATURE_BB_CODES
@@ -100,6 +101,13 @@ static tstring getMagnetDescription(const MagnetLink& magnet)
 		result += _T(')');
 	}
 	return result;
+}
+
+static void unquoteLink(tstring& ts)
+{
+	if (ts.find(_T('%')) == tstring::npos) return;
+	string s = Util::decodeUri(Text::fromT(ts));
+	if (Text::validateUtf8(s)) ts = Text::toT(s);
 }
 
 void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool formatBBCodes, unsigned maxEmoticons)
@@ -215,7 +223,11 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 						li.type = getLinkType(url);
 						if (li.type == -1 || li.type == LINK_TYPE_WWW)
 						{
-							if (description.empty()) description = url;
+							if (description.empty())
+							{
+								description = url;
+								unquoteLink(description);
+							}
 							li.type = LINK_TYPE_HTTP;
 							url.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
 						}
@@ -225,7 +237,12 @@ void ChatTextParser::parseText(const tstring& text, const CHARFORMAT2& cf, bool 
 							if (magnet.parse(Text::fromT(url)))
 								description = getMagnetDescription(magnet);
 						}
-						if (description.empty()) description = url;
+						if (description.empty())
+						{
+							description = url;
+							if (li.type == LINK_TYPE_HTTP || li.type == LINK_TYPE_HTTPS)
+								unquoteLink(description);
+						}
 						li.updatedText = std::move(description);
 						li.updatedText += HIDDEN_TEXT_SEP;
 						li.updatedText += url;
@@ -479,11 +496,13 @@ void ChatTextParser::processLink(const tstring& text, ChatTextParser::LinkItem& 
 		li.updatedText += HIDDEN_TEXT_SEP;
 		li.hiddenTextLen = link.length() + 2;
 	}
-	else if (li.type == LINK_TYPE_WWW)
+	else if (li.type == LINK_TYPE_WWW || li.type == LINK_TYPE_HTTP || li.type == LINK_TYPE_HTTPS)
 	{
 		tstring link = text.substr(li.start, li.end - li.start);
 		li.updatedText = link;
-		link.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
+		unquoteLink(li.updatedText);
+		if (li.type == LINK_TYPE_WWW)
+			link.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
 		li.updatedText += HIDDEN_TEXT_SEP;
 		li.updatedText += link;
 		li.updatedText += HIDDEN_TEXT_SEP;
