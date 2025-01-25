@@ -2398,7 +2398,8 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			if (error)
 			{
 				mode = error->mode;
-				MessageBox(error->text.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+				if (!error->text.empty())
+					MessageBox(error->text.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
 			}
 			if (mode == ThreadedDirectoryListing::MODE_LOAD_FILE)
 				PostMessage(WM_CLOSE, 0, 0);
@@ -3422,7 +3423,9 @@ int ThreadedDirectoryListing::run()
 	}
 	catch (const AbortException&)
 	{
-		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED);
+		auto error = new DirectoryListingFrame::ErrorInfo;
+		error->mode = mode;
+		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED, reinterpret_cast<LPARAM>(error));
 	}
 	catch (const Exception& e)
 	{
