@@ -236,7 +236,7 @@ CMS_ContentInfo *CMS_EncryptedData_encrypt_ex(BIO *in, const EVP_CIPHER *cipher,
     if (cms == NULL)
         return NULL;
     if (!CMS_EncryptedData_set1_key(cms, cipher, key, keylen))
-        return NULL;
+        goto err;
 
     if (!(flags & CMS_DETACHED))
         CMS_set_detached(cms, 0);
@@ -245,6 +245,7 @@ CMS_ContentInfo *CMS_EncryptedData_encrypt_ex(BIO *in, const EVP_CIPHER *cipher,
         || CMS_final(cms, in, NULL, flags))
         return cms;
 
+ err:
     CMS_ContentInfo_free(cms);
     return NULL;
 }
@@ -558,7 +559,7 @@ CMS_ContentInfo *CMS_sign_receipt(CMS_SignerInfo *si,
 {
     CMS_SignerInfo *rct_si;
     CMS_ContentInfo *cms = NULL;
-    ASN1_OCTET_STRING **pos, *os;
+    ASN1_OCTET_STRING **pos, *os = NULL;
     BIO *rct_cont = NULL;
     int r = 0;
     const CMS_CTX *ctx = si->cms_ctx;
@@ -620,6 +621,7 @@ CMS_ContentInfo *CMS_sign_receipt(CMS_SignerInfo *si,
     if (r)
         return cms;
     CMS_ContentInfo_free(cms);
+    ASN1_OCTET_STRING_free(os);
     return NULL;
 
 }

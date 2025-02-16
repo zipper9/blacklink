@@ -487,13 +487,17 @@ static int parse_http_line1(char *line, int *found_keep_alive)
 
 static int check_set_resp_len(OSSL_HTTP_REQ_CTX *rctx, size_t len)
 {
-    if (rctx->max_resp_len != 0 && len > rctx->max_resp_len)
+    if (rctx->max_resp_len != 0 && len > rctx->max_resp_len) {
         ERR_raise_data(ERR_LIB_HTTP, HTTP_R_MAX_RESP_LEN_EXCEEDED,
                        "length=%zu, max=%zu", len, rctx->max_resp_len);
-    if (rctx->resp_len != 0 && rctx->resp_len != len)
+        return 0;
+    }
+    if (rctx->resp_len != 0 && rctx->resp_len != len) {
         ERR_raise_data(ERR_LIB_HTTP, HTTP_R_INCONSISTENT_CONTENT_LENGTH,
                        "ASN.1 length=%zu, Content-Length=%zu",
                        len, rctx->resp_len);
+        return 0;
+    }
     rctx->resp_len = len;
     return 1;
 }
@@ -847,6 +851,20 @@ int OSSL_HTTP_REQ_CTX_nbio_d2i(OSSL_HTTP_REQ_CTX *rctx,
 
 #ifndef OPENSSL_NO_SOCK
 
+static const char *explict_or_default_port(const char *hostserv, const char *port, int use_ssl)
+{
+    if (port == NULL) {
+        char *service = NULL;
+
+        if (!BIO_parse_hostserv(hostserv, NULL, &service, BIO_PARSE_PRIO_HOST))
+            return NULL;
+        if (service == NULL) /* implicit port */
+            port = use_ssl ? OSSL_HTTPS_PORT : OSSL_HTTP_PORT;
+        OPENSSL_free(service);
+    } /* otherwise take the explicitly given port */
+    return port;
+}
+
 /* set up a new connection BIO, to HTTP server or to HTTP(S) proxy if given */
 static BIO *http_new_bio(const char *server /* optionally includes ":port" */,
                          const char *server_port /* explicit server port */,
@@ -866,8 +884,7 @@ static BIO *http_new_bio(const char *server /* optionally includes ":port" */,
         port = proxy_port;
     }
 
-    if (port == NULL && strchr(host, ':') == NULL)
-        port = use_ssl ? OSSL_HTTPS_PORT : OSSL_HTTP_PORT;
+    port = explict_or_default_port(host, port, use_ssl);
 
     cbio = BIO_new_connect(host /* optionally includes ":port" */);
     if (cbio == NULL)
@@ -954,8 +971,6 @@ OSSL_HTTP_REQ_CTX *OSSL_HTTP_open(const char *server, const char *port,
         }
         if (port != NULL && *port == '\0')
             port = NULL;
-        if (port == NULL && strchr(server, ':') == NULL)
-            port = use_ssl ? OSSL_HTTPS_PORT : OSSL_HTTP_PORT;
         proxy = OSSL_HTTP_adapt_proxy(proxy, no_proxy, server, use_ssl);
         if (proxy != NULL
             && !OSSL_HTTP_parse_url(proxy, NULL /* use_ssl */, NULL /* user */,

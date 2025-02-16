@@ -369,12 +369,20 @@ static int aes_ocb_set_ctx_params(void *vctx, const OSSL_PARAM params[])
         }
         if (p->data == NULL) {
             /* Tag len must be 0 to 16 */
-            if (p->data_size > OCB_MAX_TAG_LEN)
+            if (p->data_size > OCB_MAX_TAG_LEN) {
+                ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_TAG_LENGTH);
                 return 0;
+            }
             ctx->taglen = p->data_size;
         } else {
-            if (p->data_size != ctx->taglen || ctx->base.enc)
+            if (ctx->base.enc) {
+                ERR_raise(ERR_LIB_PROV, ERR_R_PASSED_INVALID_ARGUMENT);
                 return 0;
+            }
+            if (p->data_size != ctx->taglen) {
+                ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_TAG_LENGTH);
+                return 0;
+            }
             memcpy(ctx->tag, p->data, p->data_size);
         }
      }
@@ -387,7 +395,10 @@ static int aes_ocb_set_ctx_params(void *vctx, const OSSL_PARAM params[])
         /* IV len must be 1 to 15 */
         if (sz < OCB_MIN_IV_LEN || sz > OCB_MAX_IV_LEN)
             return 0;
-        ctx->base.ivlen = sz;
+        if (ctx->base.ivlen != sz) {
+            ctx->base.ivlen = sz;
+            ctx->iv_state = IV_STATE_UNINITIALISED;
+        }
     }
     p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
     if (p != NULL) {

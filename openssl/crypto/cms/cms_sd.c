@@ -354,11 +354,16 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
 
     if (md == NULL) {
         int def_nid;
-        if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0)
+
+        if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0) {
+            ERR_raise_data(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST,
+                           "pkey nid=%d", EVP_PKEY_get_id(pk));
             goto err;
+        }
         md = EVP_get_digestbynid(def_nid);
         if (md == NULL) {
-            ERR_raise(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST);
+            ERR_raise_data(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST,
+                           "default md nid=%d", def_nid);
             goto err;
         }
     }
@@ -398,8 +403,11 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
         }
     }
 
-    if (!(flags & CMS_KEY_PARAM) && !cms_sd_asn1_ctrl(si, 0))
+    if (!(flags & CMS_KEY_PARAM) && !cms_sd_asn1_ctrl(si, 0)) {
+        ERR_raise_data(ERR_LIB_CMS, CMS_R_UNSUPPORTED_SIGNATURE_ALGORITHM,
+                       "pkey nid=%d", EVP_PKEY_get_id(pk));
         goto err;
+    }
     if (!(flags & CMS_NOATTR)) {
         /*
          * Initialize signed attributes structure so other attributes
@@ -474,7 +482,11 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
                                          ossl_cms_ctx_get0_libctx(ctx),
                                          ossl_cms_ctx_get0_propq(ctx),
                                          pk, NULL) <= 0) {
+            si->pctx = NULL;
             goto err;
+        }
+        else {
+            EVP_MD_CTX_set_flags(si->mctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX);
         }
     }
 
@@ -717,6 +729,7 @@ static int cms_SignerInfo_content_sign(CMS_ContentInfo *cms,
         unsigned int mdlen;
 
         pctx = si->pctx;
+        si->pctx = NULL;
         if (!EVP_DigestFinal_ex(mctx, md, &mdlen))
             goto err;
         siglen = EVP_PKEY_get_size(si->pkey);
@@ -805,6 +818,7 @@ int CMS_SignerInfo_sign(CMS_SignerInfo *si)
                                   ossl_cms_ctx_get0_propq(ctx), si->pkey,
                                   NULL) <= 0)
             goto err;
+        EVP_MD_CTX_set_flags(mctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX);
         si->pctx = pctx;
     }
 
@@ -876,9 +890,16 @@ int CMS_SignerInfo_verify(CMS_SignerInfo *si)
         goto err;
     }
     mctx = si->mctx;
+    if (si->pctx != NULL) {
+        EVP_PKEY_CTX_free(si->pctx);
+        si->pctx = NULL;
+    }
     if (EVP_DigestVerifyInit_ex(mctx, &si->pctx, EVP_MD_get0_name(md), libctx,
-                                propq, si->pkey, NULL) <= 0)
+                                propq, si->pkey, NULL) <= 0) {
+        si->pctx = NULL;
         goto err;
+    }
+    EVP_MD_CTX_set_flags(mctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX);
 
     if (!cms_sd_asn1_ctrl(si, 1))
         goto err;
@@ -995,8 +1016,11 @@ int CMS_SignerInfo_verify_content(CMS_SignerInfo *si, BIO *chain)
         if (EVP_PKEY_CTX_set_signature_md(pkctx, md) <= 0)
             goto err;
         si->pctx = pkctx;
-        if (!cms_sd_asn1_ctrl(si, 1))
+        if (!cms_sd_asn1_ctrl(si, 1)) {
+            si->pctx = NULL;
             goto err;
+        }
+        si->pctx = NULL;
         r = EVP_PKEY_verify(pkctx, si->signature->data,
                             si->signature->length, mval, mlen);
         if (r <= 0) {
@@ -1029,31 +1053,32 @@ int CMS_add_smimecap(CMS_SignerInfo *si, STACK_OF(X509_ALGOR) *algs)
 int CMS_add_simple_smimecap(STACK_OF(X509_ALGOR) **algs,
                             int algnid, int keysize)
 {
-    X509_ALGOR *alg;
+    X509_ALGOR *alg = NULL;
     ASN1_INTEGER *key = NULL;
 
     if (keysize > 0) {
         key = ASN1_INTEGER_new();
-        if (key == NULL || !ASN1_INTEGER_set(key, keysize)) {
-            ASN1_INTEGER_free(key);
-            return 0;
-        }
+        if (key == NULL || !ASN1_INTEGER_set(key, keysize))
+            goto err;
     }
     alg = X509_ALGOR_new();
-    if (alg == NULL) {
-        ASN1_INTEGER_free(key);
-        return 0;
-    }
+    if (alg == NULL)
+        goto err;
 
-    X509_ALGOR_set0(alg, OBJ_nid2obj(algnid),
-                    key ? V_ASN1_INTEGER : V_ASN1_UNDEF, key);
+    if (!X509_ALGOR_set0(alg, OBJ_nid2obj(algnid),
+                         key ? V_ASN1_INTEGER : V_ASN1_UNDEF, key))
+        goto err;
+    key = NULL;
     if (*algs == NULL)
         *algs = sk_X509_ALGOR_new_null();
-    if (*algs == NULL || !sk_X509_ALGOR_push(*algs, alg)) {
-        X509_ALGOR_free(alg);
-        return 0;
-    }
+    if (*algs == NULL || !sk_X509_ALGOR_push(*algs, alg))
+        goto err;
     return 1;
+
+ err:
+    ASN1_INTEGER_free(key);
+    X509_ALGOR_free(alg);
+    return 0;
 }
 
 /* Check to see if a cipher exists and if so add S/MIME capabilities */
