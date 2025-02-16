@@ -63,6 +63,13 @@ const string& DclstGenDlg::getDcLstDirectory()
 	return ss->getString(Conf::DCLST_DIRECTORY);
 }
 
+static string validateFileName(const string& name)
+{
+	if (name.length() == 3 && name[1] == ':' && name[2] == '\\')
+		return name.substr(0, 1);
+	return Util::validateFileName(name);
+}
+
 LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(DCLSTGEN_TITLE));
@@ -73,11 +80,11 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
-	
+
 	GetDlgItem(IDC_DCLSTGEN_SAVEAS).EnableWindow(FALSE);
 	GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(FALSE);
 	GetDlgItem(IDC_DCLSTGEN_COPYMAGNET).EnableWindow(FALSE);
-	
+
 	CProgressBarCtrl(GetDlgItem(IDC_DCLSTGEN_PROGRESS)).SetRange32(0, 100);
 
 	if (dir)
@@ -88,7 +95,7 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		listName = getDcLstDirectory();
 		if (listName.empty())
 			listName = Util::getDownloadDir(UserPtr());
-		listName += Util::validateFileName(fileName);
+		listName += validateFileName(fileName);
 		SetDlgItemText(IDC_DCLSTGEN_SHARE, CTSTRING(DCLSTGEN_SHARE));
 	}
 	else
@@ -99,7 +106,7 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		listName = getDcLstDirectory();
 		if (listName.empty())
 			listName = dirToHash;
-		listName += Util::validateFileName(fileName);
+		listName += validateFileName(fileName);
 		SetDlgItemText(IDC_DCLSTGEN_SHARE, CTSTRING(DCLSTGEN_OPEN));
 	}
 	listName += ".dcls";
@@ -109,13 +116,15 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	SetDlgItemText(IDC_DCLSTGEN_NAME, Text::toT(listName).c_str());
 	updateDialogItems();
 
+	includeSelf = SettingsManager::instance.getUiSettings()->getBool(Conf::DCLST_INCLUDESELF);
+
 	createTimer(500);
 	start(0, "DclstGenDlg");
 	return 0;
 }
 
 LRESULT DclstGenDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{	
+{
 	abortFlag.store(true);
 	join();
 	destroyTimer();
@@ -213,7 +222,7 @@ int DclstGenDlg::run()
 	if (dir)
 		writeFolder(dir);
 	else
-		hashFolder(dirToHash, Util::getLastDir(dirToHash));
+		hashFolder(dirToHash, validateFileName(Util::getLastDir(dirToHash)));
 
 	if (abortFlag.load())
 		return 0;
@@ -230,7 +239,7 @@ void DclstGenDlg::writeXMLStart()
 	xml = SimpleXML::utf8Header;
 	CID cid = user ? user->getCID() : CID::generate();
 	xml += "<FileListing Version=\"2\" CID=\"" + cid.toBase32() + "\" Generator=\"DC++ " DCVERSIONSTRING "\"";
-	if (SettingsManager::instance.getUiSettings()->getBool(Conf::DCLST_INCLUDESELF))
+	if (includeSelf)
 		xml += " IncludeSelf=\"1\"";
 	xml += ">\r\n";
 }
@@ -250,14 +259,14 @@ void DclstGenDlg::writeFolder(const DirectoryListing::Directory* dir)
 
 	string dirName = dir->getName();
 	xml += "<Directory Name=\"" + SimpleXML::escape(dirName, true) + "\">\r\n";
-	
+
 	for (auto i = dir->directories.cbegin(); i != dir->directories.cend(); ++i)
 	{
 		dcassert(*i);
 		writeFolder(*i);
 		if (abortFlag.load()) return;
 	}
-	
+
 	for (auto i = dir->files.cbegin(); i != dir->files.cend(); ++i)
 	{
 		const DirectoryListing::File* f = *i;
@@ -265,7 +274,7 @@ void DclstGenDlg::writeFolder(const DirectoryListing::Directory* dir)
 		if (!f->isAnySet(DirectoryListing::FLAG_DCLST_SELF)) writeFile(f);
 		if (abortFlag.load()) return;
 	}
-	
+
 	xml += "</Directory>\r\n";
 }
 
@@ -320,7 +329,7 @@ void DclstGenDlg::hashFolder(const string& path, const string& dirName)
 	string tmp;
 	xml += "<Directory Name=\"" + SimpleXML::escape(dirName, tmp, true) + "\">\r\n";
 	string filePath = path;
-	filePath += '*';	
+	filePath += '*';
 	for (FileFindIter i(filePath); i != FileFindIter::end; ++i)
 	{
 		if (abortFlag) break;

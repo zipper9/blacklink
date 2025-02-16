@@ -31,11 +31,12 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 {
 	public:
 		enum { IDD = IDD_DCLS_GENERATOR };
-		
+
 		DclstGenDlg(const DirectoryListing::Directory* dir, const UserPtr& user) :
 			TimerHelper(m_hWnd),
 			dir(dir), user(user), filesProcessed(0), foldersProcessed(0),
-			sizeProcessed(0), sizeTotal(0), abortFlag(false), calculatingSize(false)
+			sizeProcessed(0), sizeTotal(0), abortFlag(false), calculatingSize(false),
+			includeSelf(false)
 		{
 		}
 
@@ -43,7 +44,8 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 			TimerHelper(m_hWnd),
 			dirToHash(path),
 			dir(nullptr), user(nullptr), filesProcessed(0), foldersProcessed(0),
-			sizeProcessed(0), sizeTotal(0), abortFlag(false)
+			sizeProcessed(0), sizeTotal(0), abortFlag(false),
+			includeSelf(false)
 		{
 		}
 
@@ -56,7 +58,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_FINISHED, onFinished)
 		END_MSG_MAP();
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -91,6 +93,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 		int64_t sizeProcessed;
 		int64_t sizeTotal;
 		bool calculatingSize;
+		bool includeSelf;
 		string xml;
 		string listName;
 		string magnet;
