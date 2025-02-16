@@ -16,7 +16,7 @@ Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@n
 #include <atldlgs.h>
 #include <shlobj.h>
 #include <lm.h>
-#include "../client/typedefs.h"
+#include "../client/DynamicLibrary.h"
 
 //Class which gets stored int the item data on the tree control
 
@@ -35,13 +35,10 @@ class FolderTreeItemInfo
 			m_sRelativePath(sRelativePath)
 		{
 		}
-		
-		FolderTreeItemInfo(const FolderTreeItemInfo& ItemInfo);
-		~FolderTreeItemInfo()
-		{
-			dcassert(m_pNetResource == nullptr);
-		}
-		
+
+		FolderTreeItemInfo(const FolderTreeItemInfo& src);
+		~FolderTreeItemInfo();
+
 		tstring         m_sFQPath;          //Fully qualified path for this item
 		tstring         m_sRelativePath;    //The relative bit of the path
 		NETRESOURCE*    m_pNetResource;     //Used if this item is under Network Neighborhood
@@ -75,15 +72,15 @@ class ShareEnumerator
 	public:
 		ShareEnumerator();
 		~ShareEnumerator();
-		
+
 		void Refresh(); //Updates the internal enumeration list
 		bool IsShared(const tstring& sPath) const;
-		
+
 	protected:
 		typedef NET_API_STATUS(WINAPI NT_NETSHAREENUM)(LPWSTR, DWORD, LPBYTE*, DWORD, LPDWORD, LPDWORD, LPDWORD);
 		typedef NET_API_STATUS(WINAPI NT_NETAPIBUFFERFREE)(LPVOID);
 
-		HMODULE                  m_hNetApi;         //Handle to the net api dll
+		DynamicLibrary lib;
 		NT_NETSHAREENUM*         m_pNTShareEnum;    //NT function pointer for NetShareEnum
 		NT_NETAPIBUFFERFREE*     m_pNTBufferFree;   //NT function pointer for NetAPIBufferFree
 		SHARE_INFO_502*          m_pNTShareInfo;    //NT share info
@@ -172,7 +169,7 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		bool IsMediaValid(const tstring& sDrive);
 		bool EnumNetwork(HTREEITEM hParent);
 		int DeleteChildren(HTREEITEM hItem, bool bUpdateChildIndicator);
-		BOOL GetSerialNumber(const tstring& sDrive, DWORD& dwSerialNumber);
+		static bool GetSerialNumber(const tstring& sDrive, DWORD& dwSerialNumber);
 		void SetHasSharedChildren(HTREEITEM hItem, bool bHasSharedChildren);
 		void SetHasSharedChildren(HTREEITEM hItem);
 		bool GetHasSharedChildren(HTREEITEM hItem);

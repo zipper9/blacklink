@@ -36,29 +36,40 @@ static bool validatePath(const tstring& path)
 	return false;
 }
 
-FolderTreeItemInfo::FolderTreeItemInfo(const FolderTreeItemInfo& ItemInfo)
+FolderTreeItemInfo::FolderTreeItemInfo(const FolderTreeItemInfo& src)
 {
-	m_sFQPath       = ItemInfo.m_sFQPath;
-	m_sRelativePath = ItemInfo.m_sRelativePath;
-	m_bNetworkNode  = ItemInfo.m_bNetworkNode;
-	m_pNetResource = new NETRESOURCE;
-	if (ItemInfo.m_pNetResource)
+	m_sFQPath       = src.m_sFQPath;
+	m_sRelativePath = src.m_sRelativePath;
+	m_bNetworkNode  = src.m_bNetworkNode;
+	if (src.m_pNetResource)
 	{
-		//Copy the direct member variables of NETRESOURCE
-		CopyMemory(m_pNetResource, ItemInfo.m_pNetResource, sizeof(NETRESOURCE));
+		m_pNetResource = new NETRESOURCE;
+		memcpy(m_pNetResource, src.m_pNetResource, sizeof(NETRESOURCE));
 		
 		//Duplicate the strings which are stored in NETRESOURCE as pointers
-		if (ItemInfo.m_pNetResource->lpLocalName)
-			m_pNetResource->lpLocalName = _tcsdup(ItemInfo.m_pNetResource->lpLocalName);
-		if (ItemInfo.m_pNetResource->lpRemoteName)
-			m_pNetResource->lpRemoteName = _tcsdup(ItemInfo.m_pNetResource->lpRemoteName);
-		if (ItemInfo.m_pNetResource->lpComment)
-			m_pNetResource->lpComment = _tcsdup(ItemInfo.m_pNetResource->lpComment);
-		if (ItemInfo.m_pNetResource->lpProvider)
-			m_pNetResource->lpProvider = _tcsdup(ItemInfo.m_pNetResource->lpProvider);
+		if (src.m_pNetResource->lpLocalName)
+			m_pNetResource->lpLocalName = _tcsdup(src.m_pNetResource->lpLocalName);
+		if (src.m_pNetResource->lpRemoteName)
+			m_pNetResource->lpRemoteName = _tcsdup(src.m_pNetResource->lpRemoteName);
+		if (src.m_pNetResource->lpComment)
+			m_pNetResource->lpComment = _tcsdup(src.m_pNetResource->lpComment);
+		if (src.m_pNetResource->lpProvider)
+			m_pNetResource->lpProvider = _tcsdup(src.m_pNetResource->lpProvider);
 	}
 	else
-		memset(m_pNetResource, 0, sizeof(NETRESOURCE));
+		m_pNetResource = nullptr;
+}
+
+FolderTreeItemInfo::~FolderTreeItemInfo()
+{
+	if (m_pNetResource)
+	{
+		free(m_pNetResource->lpLocalName);
+		free(m_pNetResource->lpRemoteName);
+		free(m_pNetResource->lpComment);
+		free(m_pNetResource->lpProvider);
+		delete m_pNetResource;
+	}
 }
 
 SystemImageList::SystemImageList()
@@ -104,14 +115,12 @@ ShareEnumerator::ShareEnumerator()
 	m_pNTBufferFree = nullptr;
 	m_pNTShareInfo = nullptr;
 	m_dwShares = 0;
-	
-	//Load up the NETAPI dll
-	m_hNetApi = LoadLibrary(_T("NETAPI32.dll"));
-	if (m_hNetApi)
+
+	if (lib.open(_T("NETAPI32.dll")))
 	{
 		//Get the required function pointers
-		m_pNTShareEnum = (NT_NETSHAREENUM*) GetProcAddress(m_hNetApi, "NetShareEnum");
-		m_pNTBufferFree = (NT_NETAPIBUFFERFREE*) GetProcAddress(m_hNetApi, "NetApiBufferFree");
+		m_pNTShareEnum = (NT_NETSHAREENUM*) lib.resolve("NetShareEnum");
+		m_pNTBufferFree = (NT_NETAPIBUFFERFREE*) lib.resolve("NetApiBufferFree");
 	}
 
 	//Update the array of shares we know about
@@ -122,13 +131,6 @@ ShareEnumerator::~ShareEnumerator()
 {
 	if (m_pNTShareInfo)
 		m_pNTBufferFree(m_pNTShareInfo);
-
-	//Free the dll now that we are finished with it
-	if (m_hNetApi)
-	{
-		FreeLibrary(m_hNetApi);
-		m_hNetApi = NULL;
-	}
 }
 
 void ShareEnumerator::Refresh()
@@ -682,20 +684,23 @@ bool FolderTree::IsDrive(const tstring &sPath)
 
 tstring FolderTree::GetDriveLabel(const tstring &drive)
 {
-	USES_CONVERSION;
-	//Let's start with the drive letter
-	tstring sLabel = drive;
+#ifdef _UNICODE
+	const wstring& path = drive;
+#else
+	wstring path;
+	Text::utf8ToWide(drive, path);
+#endif
+	tstring result;
 	//Try to find the item directory using ParseDisplayName
 	LPITEMIDLIST pidl = nullptr;
-	if (SUCCEEDED(m_pShellFolder->ParseDisplayName(NULL, NULL, T2W(const_cast<TCHAR*>(drive.c_str())), NULL, &pidl, NULL)))
+	if (m_pShellFolder && SUCCEEDED(m_pShellFolder->ParseDisplayName(nullptr, nullptr, const_cast<wchar_t*>(path.c_str()), nullptr, &pidl, nullptr)))
 	{
 		SHFILEINFO sfi = {0};
 		if (SHGetFileInfo((LPCTSTR) pidl, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
-			sLabel = sfi.szDisplayName;
+			result = sfi.szDisplayName;
 		CoTaskMemFree(pidl);
 	}
-	
-	return sLabel;
+	return result.empty() ? drive : result;
 }
 
 bool FolderTree::HasGotSubEntries(const tstring &directory)
@@ -975,58 +980,55 @@ bool FolderTree::IsMediaValid(const tstring &sDrive)
 bool FolderTree::IsFolder(const tstring &sPath)
 {
 	DWORD dwAttributes = GetFileAttributes(sPath.c_str());
-	return ((dwAttributes != INVALID_FILE_ATTRIBUTES) && (dwAttributes & FILE_ATTRIBUTE_DIRECTORY));
+	return dwAttributes != INVALID_FILE_ATTRIBUTES && (dwAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
 bool FolderTree::EnumNetwork(HTREEITEM hParent)
 {
 	//What will be the return value from this function
 	bool bGotChildren = false;
-	
+
 	//Check if the item already has a network resource and use it.
 	FolderTreeItemInfo* pItem = (FolderTreeItemInfo*) GetItemData(hParent);
-	
+
 	NETRESOURCE* pNetResource = pItem->m_pNetResource;
-	
+
 	//Setup for the network enumeration
 	HANDLE hEnum;
 	DWORD dwResult = WNetOpenEnum(pNetResource ? RESOURCE_GLOBALNET : RESOURCE_CONTEXT, m_dwNetworkItemTypes,
 	                              0, pNetResource ? pNetResource : NULL, &hEnum);
-	                              
+
 	//Was the read sucessful
 	if (dwResult != NO_ERROR)
 	{
 		//TRACE(_T("Cannot enumerate network drives, Error:%d\n"), dwResult);
-		return FALSE;
+		return false;
 	}
-	
+
 	//Do the network enumeration
 	DWORD cbBuffer = 16384;
-	
-	bool bNeedMoreMemory = true;
+
 	bool bSuccess = false;
-	LPNETRESOURCE lpnrDrv = NULL;
+	LPNETRESOURCE lpnrDrv = nullptr;
 	DWORD cEntries = 0;
-	while (bNeedMoreMemory && !bSuccess)
+	while (true)
 	{
-		//Allocate the memory and enumerate
-		lpnrDrv = (LPNETRESOURCE) new BYTE[cbBuffer]; //-V121
+		lpnrDrv = (LPNETRESOURCE) operator new(cbBuffer);
 		cEntries = 0xFFFFFFFF;
 		dwResult = WNetEnumResource(hEnum, &cEntries, lpnrDrv, &cbBuffer);
-		
+
 		if (dwResult == ERROR_MORE_DATA)
 		{
-			//Free up the heap memory we have used
-			delete [] lpnrDrv;
-			
+			operator delete(lpnrDrv);
 			cbBuffer *= 2;
 		}
-		else if (dwResult == NO_ERROR)
-			bSuccess = true;
 		else
-			bNeedMoreMemory = false;
+		{
+			if (dwResult == NO_ERROR) bSuccess = true;
+			break;
+		}
 	}
-	
+
 	//Enumeration successful?
 	if (bSuccess)
 	{
@@ -1048,25 +1050,24 @@ bool FolderTree::EnumNetwork(HTREEITEM hParent)
 			//Setup the item data for the new item
 			FolderTreeItemInfo* pItem = new FolderTreeItemInfo;
 			pItem->m_pNetResource = new NETRESOURCE;
-			memset(pItem->m_pNetResource, 0, sizeof(NETRESOURCE));
-			*pItem->m_pNetResource = lpnrDrv[i];
-			
+			memcpy(pItem->m_pNetResource, &lpnrDrv[i], sizeof(NETRESOURCE));
+
 			if (lpnrDrv[i].lpLocalName)
 				pItem->m_pNetResource->lpLocalName = _tcsdup(lpnrDrv[i].lpLocalName);
 			if (lpnrDrv[i].lpRemoteName)
 				pItem->m_pNetResource->lpRemoteName = _tcsdup(lpnrDrv[i].lpRemoteName);
 			if (lpnrDrv[i].lpComment)
-				pItem->m_pNetResource->lpComment  = _tcsdup(lpnrDrv[i].lpComment);
+				pItem->m_pNetResource->lpComment = _tcsdup(lpnrDrv[i].lpComment);
 			if (lpnrDrv[i].lpProvider)
 				pItem->m_pNetResource->lpProvider = _tcsdup(lpnrDrv[i].lpProvider);
 			if (lpnrDrv[i].lpRemoteName)
 				pItem->m_sFQPath = lpnrDrv[i].lpRemoteName;
 			else
 				pItem->m_sFQPath = sNameRemote;
-				
+
 			pItem->m_sRelativePath = sNameRemote;
 			pItem->m_bNetworkNode = true;
-			
+
 			//Display a share and the appropiate icon
 			if (lpnrDrv[i].dwDisplayType == RESOURCEDISPLAYTYPE_SHARE)
 			{
@@ -1104,15 +1105,17 @@ bool FolderTree::EnumNetwork(HTREEITEM hParent)
 			bGotChildren = true;
 		}
 	}
-	/*  else
-	        TRACE(_T("Cannot complete network drive enumeration, Error:%d\n"), dwResult);
+	/*
+	else
+		TRACE(_T("Cannot complete network drive enumeration, Error:%d\n"), dwResult);
 	*/
+
 	//Clean up the enumeration handle
 	WNetCloseEnum(hEnum);
-	
+
 	//Free up the heap memory we have used
-	delete [] lpnrDrv;
-	
+	operator delete(lpnrDrv);
+
 	//Return whether or not we added any items
 	return bGotChildren;
 }
@@ -1141,9 +1144,9 @@ int FolderTree::DeleteChildren(HTREEITEM hItem, bool bUpdateChildIndicator)
 	return nCount;
 }
 
-BOOL FolderTree::GetSerialNumber(const tstring &sDrive, DWORD &dwSerialNumber)
+bool FolderTree::GetSerialNumber(const tstring &sDrive, DWORD &dwSerialNumber)
 {
-	return GetVolumeInformation(sDrive.c_str(), NULL, 0, &dwSerialNumber, NULL, NULL, NULL, 0);
+	return (bool) GetVolumeInformation(sDrive.c_str(), NULL, 0, &dwSerialNumber, NULL, NULL, NULL, 0);
 }
 
 LRESULT FolderTree::OnSelChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL &bHandled)
@@ -1233,14 +1236,6 @@ LRESULT FolderTree::OnDeleteItem(int /*idCtrl*/, LPNMHDR pnmh, BOOL &bHandled)
 	if (pNMTreeView->itemOld.hItem != TVI_ROOT)
 	{
 		FolderTreeItemInfo* pItem = (FolderTreeItemInfo*) pNMTreeView->itemOld.lParam;
-		if (pItem->m_pNetResource)
-		{
-			free(pItem->m_pNetResource->lpLocalName);
-			free(pItem->m_pNetResource->lpRemoteName);
-			free(pItem->m_pNetResource->lpComment);
-			free(pItem->m_pNetResource->lpProvider);
-			delete pItem->m_pNetResource;
-		}
 		delete pItem;
 	}
 	bHandled = FALSE; //Allow the message to be reflected again
@@ -1259,8 +1254,6 @@ LRESULT FolderTree::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				return OnChecked(htItem, bHandled);
 			else
 				return OnUnChecked(htItem, bHandled);
-				
-			break;
 	}
 	return 0;
 }

@@ -17,6 +17,7 @@ class DynamicLibrary
 		DynamicLibrary& operator= (const DynamicLibrary &) = delete;
 
 		bool open(const tstring& path) noexcept;
+		bool open(const tchar_t* path) noexcept;
 		void close() noexcept;
 		void* resolve(const char* name) noexcept;
 		bool isOpen() const { return lib != nullptr; }

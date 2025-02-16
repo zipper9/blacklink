@@ -19,6 +19,23 @@ bool DynamicLibrary::open(const tstring& path) noexcept
 	return lib != nullptr;
 }
 
+bool DynamicLibrary::open(const tchar_t* path) noexcept
+{
+	if (lib) return true;
+#ifdef _WIN32
+	lib = LoadLibrary(path);
+#else
+#ifdef _UNICODE
+	string s;
+	Text::wideToUtf8(path, wcslen(path), s);
+	lib = dlopen(s.c_str(), RTLD_NOW);
+#else
+	lib = dlopen(path, RTLD_NOW);
+#endif
+#endif
+	return lib != nullptr;
+}
+
 void DynamicLibrary::close() noexcept
 {
 	if (lib)
