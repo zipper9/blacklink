@@ -2824,9 +2824,13 @@ void QueueFrame::onTimerInternal()
 			if (ii->getQueueItem()->isRunning())
 			{
 				u = true;
-				ii->flags |= QueueItemInfo::FLAG_RUNNING;
 				ii->getQueueItem()->updateDownloadedBytesAndSpeed();
 				ctrlQueue.updateItem(i, COLUMN_DOWNLOADED);
+				if (!(ii->flags & QueueItemInfo::FLAG_RUNNING))
+				{
+					ii->flags |= QueueItemInfo::FLAG_RUNNING;
+					ctrlQueue.updateItem(i, COLUMN_STATUS);
+				}
 			}
 			else if (ii->flags & QueueItemInfo::FLAG_RUNNING)
 			{
