@@ -44,17 +44,6 @@ void ToolbarManager::on(SettingsManagerListener::Load, SimpleXML& xml)
 		}
 		xml.stepOut();
 	}
-	else
-	{
-		// Default toolbar layout - for MainFrame rebar
-		ToolbarEntry* t = new ToolbarEntry();
-		t->setName("MainToolBar");
-		t->setID("60160,60162,60161,60163");
-		t->setCX("1147,213,1142,255");
-		t->setBreakLine("1,0,1,1");
-		t->setBandCount(4);
-		addToolBarEntry(t);
-	}
 }
 
 void ToolbarManager::on(SettingsManagerListener::Save, SimpleXML& xml)
@@ -69,7 +58,7 @@ void ToolbarManager::on(SettingsManagerListener::Save, SimpleXML& xml)
 		xml.addChildAttrib("CX", (*i)->getCX());
 		xml.addChildAttrib("BreakLine", (*i)->getBreakLine());
 		xml.addChildAttrib("BandCount", (*i)->getBandCount());
-	}	
+	}
 	xml.stepOut();
 }
 
@@ -80,25 +69,26 @@ void ToolbarManager::getFrom(HWND rebarWnd, const string& name)
 	if (rebar.IsWindow())
 	{
 		removeToolbarEntry(getToolbarEntry(name));
-		
+
 		ToolbarEntry* t = new ToolbarEntry();
-		string id, cx, bl, dl;
+		string id, cx, bl;
 		t->setName(name);
 		t->setBandCount(rebar.GetBandCount());
-		
-		for (int i = 0; i < t->getBandCount(); i++)
+
+		int count = t->getBandCount();
+		for (int i = 0; i < count; i++)
 		{
-			dl = i > 0 ? "," : "";
+			const string& dl = i > 0 ? "," : "";
 			REBARBANDINFO rbi = {};
 			rbi.cbSize = COMPAT_REBARBANDINFO_SIZE;
 			rbi.fMask = RBBIM_ID | RBBIM_SIZE | RBBIM_STYLE;
 			rebar.GetBandInfo(i, &rbi);
 			id += dl + Util::toString(rbi.wID);
 			cx += dl + Util::toString(rbi.cx);
-			bl += dl + (((rbi.fStyle & RBBS_BREAK) != 0) ? "1" : "0");
+			bl += dl + ((rbi.fStyle & RBBS_BREAK) ? "1" : "0");
 
 		}
-		
+
 		t->setID(id);
 		t->setCX(cx);
 		t->setBreakLine(bl);
@@ -121,21 +111,26 @@ void ToolbarManager::applyTo(HWND rebarWnd, const string& name) const
 			const StringList& cxList = cx.getTokens();
 			const StringTokenizer<string> bl(t->getBreakLine(), ',');
 			const StringList& blList = bl.getTokens();
-			
-			for (int i = 0; i < t->getBandCount(); i++)
+
+			size_t listSize = std::min(idList.size(), cxList.size());
+			int count = (int) std::min<size_t>(t->getBandCount(), listSize);
+			for (int i = 0; i < count; i++)
 			{
-				rebar.MoveBand(rebar.IdToIndex(Util::toInt(idList[i])), i);
+				int index = rebar.IdToIndex(Util::toInt(idList[i]));
+				if (index < 0) continue;
+				rebar.MoveBand(index, i);
+
 				REBARBANDINFO rbi = {};
 				rbi.cbSize = COMPAT_REBARBANDINFO_SIZE;
 				rbi.fMask = RBBIM_ID | RBBIM_SIZE | RBBIM_STYLE;
 				rebar.GetBandInfo(i, &rbi);
 
 				rbi.cx = Util::toInt(cxList[i]);
-				if (Util::toInt(blList[i]) > 0)
+				int breakLine = i < (int) blList.size() ? Util::toInt(blList[i]) : 0;
+				if (breakLine > 0)
 					rbi.fStyle |= RBBS_BREAK;
 				else
-					rbi.fStyle &= (~RBBS_BREAK);
-
+					rbi.fStyle &= ~RBBS_BREAK;
 				rebar.SetBandInfo(i, &rbi);
 			}
 		}
@@ -157,6 +152,6 @@ void ToolbarManager::removeToolbarEntry(const ToolbarEntry* entry)
 const ToolbarEntry* ToolbarManager::getToolbarEntry(const string& name) const
 {
 	for (const ToolbarEntry* t : toolbarEntries)
-		if (stricmp(t->getName(), name) == 0) return t;
+		if (Text::asciiEqual(t->getName(), name)) return t;
 	return nullptr;
 }

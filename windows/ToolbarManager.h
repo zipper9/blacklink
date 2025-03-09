@@ -19,11 +19,8 @@
 class ToolbarEntry
 {
 	public:
-		typedef ToolbarEntry* Ptr;
-		typedef vector<Ptr> List;
-		
 		ToolbarEntry() { bandcount = 0; }
-		
+
 		GETSET(string, name, Name);
 		GETSET(string, id, ID);
 		GETSET(string, cx, CX);
@@ -50,9 +47,9 @@ class ToolbarManager : public Singleton<ToolbarManager>, public SettingsManagerL
 		{
 			toolbarEntries.push_back(entry);
 		}
-		
+
 		// Store Toolbar infos here
-		ToolbarEntry::List toolbarEntries;
+		std::vector<ToolbarEntry*> toolbarEntries;
 
 		virtual void on(Load, SimpleXML&) override;
 		virtual void on(Save, SimpleXML&) override;
