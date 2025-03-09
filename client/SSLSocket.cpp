@@ -94,7 +94,7 @@ bool SSLSocket::waitConnected(unsigned millis)
 			checkSSL(-1);
 
 		if (!verifyData)
-			SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
+			SSL_set_verify(ssl, SSL_VERIFY_NONE, nullptr);
 		else
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
 
@@ -181,7 +181,7 @@ bool SSLSocket::waitAccepted(unsigned millis)
 			checkSSL(-1);
 
 		if (!verifyData)
-			SSL_set_verify(ssl, SSL_VERIFY_NONE, NULL);
+			SSL_set_verify(ssl, SSL_VERIFY_NONE, nullptr);
 		else
 			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, verifyData.get());
 
@@ -288,39 +288,44 @@ int SSLSocket::checkSSL(int ret)
 				throw SocketException(STRING(CONNECTION_CLOSED));
 			case SSL_ERROR_SYSCALL:
 			{
-				auto sys_err = ERR_get_error();
-				if (sys_err == 0)
+				auto sysErr = ERR_get_error();
+				if (sysErr == 0)
 				{
 					if (ret == 0)
 					{
-						dcdebug("TLS error: call ret = %d, SSL_get_error = %d, ERR_get_error = %lu\n", ret, err, sys_err);
+						dcdebug("TLS error: call ret = %d, SSL_get_error = %d, ERR_get_error = %lu\n", ret, err, sysErr);
 						throw SSLSocketException(STRING(CONNECTION_CLOSED));
 					}
-					sys_err = getLastError();
+					sysErr = getLastError();
 				}
-				throw SSLSocketException(sys_err);
+				throw SSLSocketException(sysErr);
 			}
 			default:
 			{
+				auto sysErr = ERR_get_error();
+#ifdef SSL_R_UNEXPECTED_EOF_WHILE_READING
+				int errLib = ERR_GET_LIB(sysErr);
+				int errReason = ERR_GET_REASON(sysErr);
+				// This happens when server resets the connection.
+				if (errLib == ERR_LIB_SSL && errReason == SSL_R_UNEXPECTED_EOF_WHILE_READING)
+					throw SocketException(STRING(CONNECTION_CLOSED));
+#endif
+				string details;
 				//display the cert errors as first choice, if the error is not the certs display the error from the ssl.
-				auto sys_err = ERR_get_error();
-				string _error;
-				int v_err = SSL_get_verify_result(ssl);
-				if (v_err == X509_V_ERR_APPLICATION_VERIFICATION)
-				{
-					_error = "Keyprint mismatch";
-				}
-				else if (v_err != X509_V_OK)
-				{
-					_error = X509_verify_cert_error_string(v_err);
-				}
+				int verifyResult = SSL_get_verify_result(ssl);
+				if (verifyResult == X509_V_ERR_APPLICATION_VERIFICATION)
+					details = "Keyprint mismatch";
+				else if (verifyResult != X509_V_OK)
+					details = X509_verify_cert_error_string(verifyResult);
 				else
-				{
-					_error = ERR_error_string(sys_err, NULL);
-				}
+					details = ERR_error_string(sysErr, nullptr);
 				ssl.reset();
-				//dcdebug("TLS error: call ret = %d, SSL_get_error = %d, ERR_get_error = " U64_FMT ",ERROR string: %s \n", ret, err, sys_err, ERR_error_string(sys_err, NULL));
-				throw SSLSocketException(STRING(TLS_ERROR) + (_error.empty() ? "" : + ": " + _error));
+				//dcdebug("TLS error: call ret = %d, SSL_get_error = %d, ERR_get_error = " U64_FMT ",ERROR string: %s \n", ret, err, sysErr, ERR_error_string(sysErr, nullptr));
+				if (details.empty())
+					details = STRING(TLS_ERROR);
+				else
+					details.insert(0, STRING(TLS_ERROR) + ": ");
+				throw SSLSocketException(details);
 			}
 		}
 	}
