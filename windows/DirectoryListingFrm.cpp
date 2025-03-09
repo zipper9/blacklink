@@ -3470,7 +3470,8 @@ void ThreadedDirectoryListing::notify(int progress)
 
 BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)
 {
-	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
+	if (WinUtil::g_tabCtrl->isActive(m_hWnd) && TranslateAccelerator(m_hWnd, m_hAccel, pMsg))
+		return TRUE;
 	MainFrame* mainFrame = MainFrame::getMainFrame();
 	return TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg);
 }
