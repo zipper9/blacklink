@@ -196,6 +196,11 @@ bool HashDatabaseConnection::createReadTxn(MDB_dbi &dbi) noexcept
 	}
 	if (!HashDatabaseLMDB::checkError(error, what, this))
 	{
+		if (txnRead)
+		{
+			mdb_txn_abort(txnRead);
+			txnRead = nullptr;
+		}
 		parent->releaseTransaction(this);
 		return false;
 	}
