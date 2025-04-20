@@ -113,6 +113,26 @@ static const char badChars[] =
 };
 #endif
 
+bool Util::isValidFileName(const string& s, bool allowPath)
+{
+	if (s.empty()) return false;
+	if (s.find_first_of(badChars) != string::npos) return false;
+	if (!allowPath && s.find(PATH_SEPARATOR) != string::npos) return false;
+#ifdef _WIN32
+	string::size_type i = 0;
+	while ((i = s.find(':', i)) != string::npos)
+	{
+		if (allowPath && i == 1)
+		{
+			i++;
+			continue;
+		}
+		return false;
+	}
+#endif
+	return true;
+}
+
 /**
  * Replaces all strange characters in a file with '_'
  * @todo Check for invalid names such as nul and aux...

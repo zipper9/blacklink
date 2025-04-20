@@ -1590,8 +1590,17 @@ void QueueFrame::renameSelected()
 	dlg.title = TSTRING(RENAME);
 	dlg.description = TSTRING(FILENAME);
 	dlg.line = filename;
-	if (dlg.DoModal(m_hWnd) == IDOK)
-		QueueManager::getInstance()->move(qi->getTarget(), Text::fromT(target.substr(0, target.length() - filename.length()) + dlg.line));
+	dlg.allowEmpty = false;
+	if (dlg.DoModal(m_hWnd) != IDOK) return;
+
+	string newFilename = Text::fromT(dlg.line);
+	if (!Util::isValidFileName(newFilename, false))
+	{
+		MessageBox(CTSTRING(INVALID_FILENAME), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
+		return;
+	}
+	string path = Text::fromT(target.substr(0, target.length() - filename.length()));
+	QueueManager::getInstance()->move(qi->getTarget(), path + newFilename);
 }
 
 void QueueFrame::renameSelectedDir()

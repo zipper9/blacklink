@@ -105,6 +105,7 @@ namespace Util
 
 	int getHubProtocol(const string& scheme); // 'scheme' must be in lowercase
 
+	bool isValidFileName(const string& s, bool allowPath);
 	string validateFileName(string file, bool badCharsOnly = false);
 	string ellipsizePath(const string& path);
 

@@ -504,6 +504,7 @@ enum Strings   // @DontAdd
 	INVALID_TARGET_FILE, // "Invalid target file (missing directory, check default download directory setting)"
 	INVALID_TIME_FORMAT, // "Invalid time format"
 	INVALID_TREE, // "Full tree does not match TTH root"
+	INVALID_FILENAME, // "Invalid file name"
 	IP_WITH_COLON, // "IP:"
 	IPGUARD, // "IPGuard"
 	IPGUARD_MODE, // "IPGuard mode"
