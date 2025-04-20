@@ -167,7 +167,7 @@ tstring UserInfo::getText(int col) const
 		{
 			const auto slots = getIdentity().getSlots();
 			if (slots)
-				return Util::toStringW(slots);
+				return Util::toStringT(slots);
 			return Util::emptyStringT;
 		}
 		case COLUMN_CID:

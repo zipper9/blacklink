@@ -37,6 +37,8 @@ static const string utf8 = "utf-8";
 static const string utf8NoHyp = "utf8";
 static const uint16_t ERROR_CHAR = 0xFFFD;
 
+static_assert(sizeof(wchar_t) == SIZEOF_WCHAR, "Invalid value of SIZEOF_WCHAR macro");
+
 #ifndef _WIN32
 #if BOOST_ENDIAN_BIG_BYTE
 #define WCHAR_BYTE_ORDER "BE"

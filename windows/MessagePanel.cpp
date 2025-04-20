@@ -54,7 +54,6 @@ void MessagePanel::destroyPanel()
 
 void MessagePanel::initPanel(HWND hWnd)
 {
-	initialized = true;
 	m_hWnd = hWnd;
 	RECT rcDefault = {};
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
@@ -80,6 +79,7 @@ void MessagePanel::initPanel(HWND hWnd)
 	tooltip.SetMaxTipWidth(200);
 	if (SettingsManager::instance.getUiSettings()->getBool(Conf::CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
+	initialized = true;
 }
 
 void MessagePanel::createButton(int index, int image, int idc, ResourceManager::Strings caption)
@@ -112,6 +112,7 @@ void MessagePanel::updateButton(HDWP dwp, bool show, int index, CRect& rc)
 
 void MessagePanel::updatePanel(const CRect& rect)
 {
+	dcassert(initialized);
 	dcassert(!ClientManager::isBeforeShutdown());
 	tooltip.Activate(FALSE);
 	if (m_hWnd == NULL)
