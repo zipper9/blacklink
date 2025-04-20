@@ -87,8 +87,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			FINISHED,
 			ABORTED,
 			SPLICE_TREE,
-			ADL_SEARCH,
-			PROGRESS = 0x1000
+			ADL_SEARCH
 		};
 
 		enum
@@ -521,6 +520,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		const bool browsing;
 		const bool ownList;
 
+		FastCriticalSection csProgress;
+		int progressValue;
+		size_t progressFiles, progressDirs;
+
 		static const int columnId[];
 
 		typedef std::map<HWND, DirectoryListingFrame*> FrameMap;
@@ -557,8 +560,8 @@ class ThreadedDirectoryListing : public Thread, private DirectoryListing::Progre
 		int mode;
 
 	private:
-		virtual int run() override;
-		virtual void notify(int progress) override;
+		int run() override;
+		void notify(int progress, size_t files, size_t dirs) override;
 };
 
 #endif // !defined(DIRECTORY_LISTING_FRM_H)

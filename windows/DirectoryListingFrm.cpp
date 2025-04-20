@@ -205,7 +205,8 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	originalId(0),
 	changingPath(0),
 	updatingLayout(0),
-	activeMenu(MENU_NONE)
+	activeMenu(MENU_NONE),
+	progressValue(0), progressFiles(0), progressDirs(0)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
 
@@ -416,6 +417,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 
 	navWnd.initToolbars(this);
 	disableControls();
+	createTimer(1000);
 
 	SettingsManager::instance.addListener(this);
 	closed = false;
@@ -521,7 +523,6 @@ void DirectoryListingFrame::startLoading()
 	disableControls();
 	loadStartTime = GET_TICK();
 	loading = true;
-	destroyTimer();
 }
 
 void DirectoryListingFrame::disableControls()
@@ -536,7 +537,6 @@ void DirectoryListingFrame::enableControls()
 	ctrlTree.EnableWindow(TRUE);
 	ctrlList.EnableWindow(TRUE);
 	navWnd.EnableWindow(TRUE);
-	createTimer(1000);
 }
 
 void DirectoryListingFrame::updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem)
@@ -2445,17 +2445,6 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		case ADL_SEARCH:
 			ctrlStatus.SetText(0, CTSTRING(PERFORMING_ADL_SEARCH));
 			break;
-		default:
-			if (wParam & PROGRESS)
-			{
-				tstring str = TSTRING(LOADING_FILE_LIST_PROGRESS);
-				str += Util::toStringT(wParam & ~PROGRESS);
-				str += _T('%');
-				ctrlStatus.SetText(0, str.c_str());
-				break;
-			}
-			dcassert(0);
-			break;
 	}
 	return 0;
 }
@@ -3181,6 +3170,17 @@ LRESULT DirectoryListingFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 		bHandled = FALSE;
 		return 0;
 	}
+	if (loading)
+	{
+		csProgress.lock();
+		int value = progressValue;
+		size_t files = progressFiles;
+		size_t dirs = progressDirs;
+		csProgress.unlock();
+
+		tstring str = TSTRING_F(LOADING_FILE_LIST_FMT, value % files % dirs);
+		ctrlStatus.SetText(0, str.c_str());
+	}
 	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown())
 	{
 		if (listItemChanged)
@@ -3463,9 +3463,13 @@ void DirectoryListingFrame::onTab()
 	::SetFocus(hWnd[index]);
 }
 
-void ThreadedDirectoryListing::notify(int progress)
+void ThreadedDirectoryListing::notify(int progress, size_t files, size_t dirs)
 {
-	window->PostMessage(WM_SPEAKER, DirectoryListingFrame::PROGRESS | progress);
+	window->csProgress.lock();
+	window->progressValue = progress;
+	window->progressFiles = files;
+	window->progressDirs = dirs;
+	window->csProgress.unlock();
 }
 
 BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)

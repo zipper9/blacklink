@@ -189,7 +189,8 @@ class ListLoader : public SimpleXMLReader::CallBack
 		ListLoader(DirectoryListing* list, InputStream &is, DirectoryListing::Directory* root,
 		           const UserPtr& user, bool ownList, int scanOptions)
 			: list(list), current(root), inListing(false), ownList(ownList),
-			  emptyFileNameCounter(0), progressNotif(nullptr), stream(is), filesProcessed(0)
+			  emptyFileNameCounter(0), progressNotif(nullptr), stream(is),
+			  totalFileCount(0), totalDirCount(0)
 		{
 			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
 			list->basePath = "/";
@@ -220,11 +221,8 @@ class ListLoader : public SimpleXMLReader::CallBack
 
 		void fileProcessed()
 		{
-			if (++filesProcessed == 200)
-			{
-				filesProcessed = 0;
-				notifyProgress();
-			}
+			totalFileCount++;
+			notifyProgress();
 		}
 		
 	private:
@@ -241,7 +239,8 @@ class ListLoader : public SimpleXMLReader::CallBack
 		uint64_t nextProgressReport;
 		DirectoryListing::ProgressNotif *progressNotif;
 		InputStream& stream;
-		int filesProcessed;
+		size_t totalFileCount;
+		size_t totalDirCount;
 
 		void notifyProgress();
 };
@@ -493,6 +492,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 		}
 		else if (name == tagDirectory)
 		{
+			totalDirCount++;
 			if (!list->tthSet)
 			{
 				const string &fileName = getAttrib(attribs, attrName, 0);
@@ -645,7 +645,7 @@ void ListLoader::notifyProgress()
 				progress = 100;
 			else
 				progress = static_cast<int>(pos*100/size);
-			progressNotif->notify(progress);
+			progressNotif->notify(progress, totalFileCount, totalDirCount);
 			nextProgressReport = tick + PROGRESS_REPORT_TIME;
 		}
 	}

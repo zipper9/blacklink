@@ -34,7 +34,7 @@ class DirectoryListing
 		class ProgressNotif
 		{
 			public:
-				virtual void notify(int progress) {};
+				virtual void notify(int progress, size_t files, size_t dirs) {};
 		};
 
 		class Directory;
