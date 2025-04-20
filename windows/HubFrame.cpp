@@ -363,8 +363,7 @@ HubFrame* HubFrame::openHubWindow(const Settings& cs, bool* isNew)
 		frm = i->second;
 		if (::IsIconic(frm->m_hWnd))
 			::ShowWindow(frm->m_hWnd, SW_RESTORE);
-		if (frm->m_hWndMDIClient)
-			frm->MDIActivate(frm->m_hWnd);
+		WinUtil::activateMDIChild(frm->m_hWnd);
 		if (isNew) *isNew = false;
 	}
 	return frm;

@@ -248,8 +248,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 			p->selectHub(replyTo.hint);
 		if (::IsIconic(p->m_hWnd))
 			::ShowWindow(p->m_hWnd, SW_RESTORE);
-			
-		p->MDIActivate(p->m_hWnd);
+		WinUtil::activateMDIChild(p->m_hWnd);
 	}
 	if (!msg.empty())
 		p->sendMessage(msg);
