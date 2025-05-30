@@ -1,8 +1,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29102.190
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "blacklink", "blacklink_2019.vcxproj", "{E82610AA-B6FD-4813-B5B9-E717CBD0F23B}"
+# Visual Studio Version 17
+VisualStudioVersion = 17
+MinimumVisualStudioVersion = 17
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "blacklink", "blacklink.vcxproj", "{E82610AA-B6FD-4813-B5B9-E717CBD0F23B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{51015502-C27C-43CF-9FA4-12AB9DB5D36E} = {51015502-C27C-43CF-9FA4-12AB9DB5D36E}
 		{D1095E8A-63A5-4592-AE93-2D638F20F66A} = {D1095E8A-63A5-4592-AE93-2D638F20F66A}
@@ -10,25 +10,25 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "blacklink", "blacklink_2019
 		{B9F644C2-F9DE-4648-B613-43755D81EA3B} = {B9F644C2-F9DE-4648-B613-43755D81EA3B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "bzip2_2019.vcxproj", "{8B162F1B-5D6C-41C1-8A80-858B379DE07D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "bzip2.vcxproj", "{8B162F1B-5D6C-41C1-8A80-858B379DE07D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "client_2019.vcxproj", "{F8D0E5FE-BABD-4FC8-B3FE-B48978D23FEB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "client.vcxproj", "{F8D0E5FE-BABD-4FC8-B3FE-B48978D23FEB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{AEF82786-9DA2-4CDF-8602-02643CAFC727} = {AEF82786-9DA2-4CDF-8602-02643CAFC727}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "zlib_2019.vcxproj", "{DFBBE42A-45F4-4188-89C2-17F5DFE50673}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "zlib.vcxproj", "{DFBBE42A-45F4-4188-89C2-17F5DFE50673}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GdiOle", "GdiOle\GdiOle_2019.vcxproj", "{22C938C3-474A-4BF5-9B28-482683F98EA1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GdiOle", "GdiOle\GdiOle.vcxproj", "{22C938C3-474A-4BF5-9B28-482683F98EA1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boost", "boost-regex_2019.vcxproj", "{D1095E8A-63A5-4592-AE93-2D638F20F66A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boost", "boost-regex.vcxproj", "{D1095E8A-63A5-4592-AE93-2D638F20F66A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openssl", "openssl\openssl_2019.vcxproj", "{B9F644C2-F9DE-4648-B613-43755D81EA3B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openssl", "openssl\openssl.vcxproj", "{B9F644C2-F9DE-4648-B613-43755D81EA3B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{AAE85BDC-B7BD-4000-A59D-E4A6C327AFA3} = {AAE85BDC-B7BD-4000-A59D-E4A6C327AFA3}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "lua\lua_2019.vcxproj", "{8CAB66DE-3F50-4135-9BED-395C253EA7DC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "lua\lua.vcxproj", "{8CAB66DE-3F50-4135-9BED-395C253EA7DC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "miniupnpc", "miniupnpc\miniupnpc.vcxproj", "{51015502-C27C-43CF-9FA4-12AB9DB5D36E}"
 EndProject

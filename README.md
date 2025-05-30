@@ -19,5 +19,5 @@ https://p.yusukekamiyamane.com
 
 ## How to build
 
-BlackLink can be built on Windows with Visual Studio 2019, either full or Community Edition. Use the provided solution, blacklink_2019.sln.
+BlackLink can be built on Windows with Visual Studio 2022, either full or Community Edition. Use the provided solution, blacklink.sln.
 Set the platform to _x64_ and configuration to _Release_.

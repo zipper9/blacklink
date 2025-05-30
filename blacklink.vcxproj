@@ -49,7 +49,7 @@
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -57,19 +57,19 @@
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -77,7 +77,7 @@
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
@@ -86,20 +86,20 @@
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -226,7 +226,9 @@
       <PreprocessorDefinitions>_DEBUG;HAVE_NATUPNP_H;_UNICODE;UNICODE;BOOST_USE_WINDOWS_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet></EnableEnhancedInstructionSet>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -282,6 +284,8 @@
       <PreprocessorDefinitions>_DEBUG;HAVE_NATUPNP_H;_UNICODE;UNICODE;BOOST_USE_WINDOWS_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -341,6 +345,8 @@
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -397,6 +403,8 @@
       <PreprocessorDefinitions>_DEBUG;HAVE_NATUPNP_H;_UNICODE;UNICODE;BOOST_USE_WINDOWS_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -430,7 +438,7 @@
       <TypeLibraryName>$(SolutionDir)compiled\$(ProjectName).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -450,14 +458,16 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <AssemblerOutput>
       </AssemblerOutput>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>NDEBUG;HAVE_NATUPNP_H;_UNICODE;UNICODE;BOOST_USE_WINDOWS_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet></EnableEnhancedInstructionSet>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -504,7 +514,7 @@
       <TypeLibraryName>$(SolutionDir)compiled\$(ProjectName).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -524,13 +534,15 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <AssemblerOutput>
       </AssemblerOutput>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>NDEBUG;HAVE_NATUPNP_H;_UNICODE;UNICODE;BOOST_USE_WINDOWS_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -577,7 +589,7 @@
       <TypeLibraryName>$(SolutionDir)compiled\$(ProjectName).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -598,9 +610,8 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <AssemblerOutput>
       </AssemblerOutput>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <CallingConvention>Cdecl</CallingConvention>
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -608,6 +619,9 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <BrowseInformation />
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -656,7 +670,7 @@
       <TypeLibraryName>$(SolutionDir)compiled\$(ProjectName).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -677,7 +691,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <AssemblerOutput>
       </AssemblerOutput>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <CompileAs>Default</CompileAs>
@@ -686,6 +700,8 @@
       <PreprocessorDefinitions>NDEBUG;HAVE_NATUPNP_H;_UNICODE;UNICODE;BOOST_USE_WINDOWS_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -1233,19 +1249,19 @@
     </CustomBuildStep>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="boost-regex_2019.vcxproj">
+    <ProjectReference Include="boost-regex.vcxproj">
       <Project>{d1095e8a-63a5-4592-ae93-2d638f20f66a}</Project>
     </ProjectReference>
-    <ProjectReference Include="bzip2_2019.vcxproj">
+    <ProjectReference Include="bzip2.vcxproj">
       <Project>{8b162f1b-5d6c-41c1-8a80-858b379de07d}</Project>
     </ProjectReference>
-    <ProjectReference Include="client_2019.vcxproj">
+    <ProjectReference Include="client.vcxproj">
       <Project>{f8d0e5fe-babd-4fc8-b3fe-b48978d23feb}</Project>
     </ProjectReference>
-    <ProjectReference Include="GdiOle\GdiOle_2019.vcxproj">
+    <ProjectReference Include="GdiOle\GdiOle.vcxproj">
       <Project>{22c938c3-474a-4bf5-9b28-482683f98ea1}</Project>
     </ProjectReference>
-    <ProjectReference Include="lua\lua_2019.vcxproj">
+    <ProjectReference Include="lua\lua.vcxproj">
       <Project>{8cab66de-3f50-4135-9bed-395c253ea7dc}</Project>
     </ProjectReference>
     <ProjectReference Include="miniupnpc\miniupnpc.vcxproj">
@@ -1254,7 +1270,7 @@
     <ProjectReference Include="natpmp\natpmp.vcxproj">
       <Project>{6bd1d0b7-ec0c-4473-533b-5ec961138415}</Project>
     </ProjectReference>
-    <ProjectReference Include="zlib_2019.vcxproj">
+    <ProjectReference Include="zlib.vcxproj">
       <Project>{dfbbe42a-45f4-4188-89c2-17f5dfe50673}</Project>
     </ProjectReference>
   </ItemGroup>

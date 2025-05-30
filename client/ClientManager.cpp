@@ -144,7 +144,7 @@ void ClientManager::shutdown()
 	flushRatio();
 #endif
 	::g_isShutdown = true;
-	::g_isBeforeShutdown = true; // Äëÿ íàäåæíîñòè
+	::g_isBeforeShutdown = true; // Ð”Ð»Ñ Ð½Ð°Ð´ÐµÐ¶Ð½Ð¾ÑÑ‚Ð¸
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 	{
 		WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
@@ -253,7 +253,7 @@ void ClientManager::putClient(const ClientBasePtr& cb)
 		WRITE_LOCK(*g_csClients);
 		g_clients.erase(client->getHubUrl());
 	}
-	if (!isBeforeShutdown()) // Ïðè çàêðûòèè íå øëåì óâåäîìëåíèå (íà íåãî ïîäïèñàí òîëüêî ôðåéì ïîèñêà)
+	if (!isBeforeShutdown()) // ÐŸÑ€Ð¸ Ð·Ð°ÐºÑ€Ñ‹Ñ‚Ð¸Ð¸ Ð½Ðµ ÑˆÐ»ÐµÐ¼ ÑƒÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ðµ (Ð½Ð° Ð½ÐµÐ³Ð¾ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐ°Ð½ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ñ„Ñ€ÐµÐ¹Ð¼ Ð¿Ð¾Ð¸ÑÐºÐ°)
 	{
 		fire(ClientManagerListener::ClientDisconnected(), client);
 	}
@@ -749,7 +749,7 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noe
 		OnlineIter::difference_type diff = 0;
 		{
 			WRITE_LOCK(*g_csOnlineUsers);
-			auto op = g_onlineUsers.equal_range(ou->getUser()->getCID()); // Èùåòñÿ ïî îäíîì - íàó÷èòüñÿ óáèâàòü ñðàçó ìàññèâ.
+			auto op = g_onlineUsers.equal_range(ou->getUser()->getCID()); // Ð˜Ñ‰ÐµÑ‚ÑÑ Ð¿Ð¾ Ð¾Ð´Ð½Ð¾Ð¼ - Ð½Ð°ÑƒÑ‡Ð¸Ñ‚ÑŒÑÑ ÑƒÐ±Ð¸Ð²Ð°Ñ‚ÑŒ ÑÑ€Ð°Ð·Ñƒ Ð¼Ð°ÑÑÐ¸Ð².
 			// [-] dcassert(op.first != op.second); [!] L: this is normal and means that the user is offline.
 			for (auto i = op.first; i != op.second; ++i)
 			{
@@ -1208,7 +1208,7 @@ void ClientManager::usersCleanup()
 	auto i = g_users.begin();
 	while (i != g_users.end())
 	{
-		if (i->second.unique())
+		if (!i->second.use_count())
 			g_users.erase(i++);
 		else
 			++i;
@@ -1315,7 +1315,7 @@ void ClientManager::on(UserListUpdated, const ClientBase* client, const OnlineUs
 {
 	for (auto i = l.cbegin(); i != l.cend(); ++i)
 	{
-		updateNick(*i); // TODO ïðîâåðèòü ÷òî ìåíÿåòñÿ èìåííî íèê - èíà÷å íå çâàòü. èëè ðàçáèòü UsersUpdated íà UsersUpdated + UsersUpdatedNick
+		updateNick(*i); // TODO Ð¿Ñ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ Ñ‡Ñ‚Ð¾ Ð¼ÐµÐ½ÑÐµÑ‚ÑÑ Ð¸Ð¼ÐµÐ½Ð½Ð¾ Ð½Ð¸Ðº - Ð¸Ð½Ð°Ñ‡Ðµ Ð½Ðµ Ð·Ð²Ð°Ñ‚ÑŒ. Ð¸Ð»Ð¸ Ñ€Ð°Ð·Ð±Ð¸Ñ‚ÑŒ UsersUpdated Ð½Ð° UsersUpdated + UsersUpdatedNick
 #ifdef _DEBUG
 		//      LogManager::message("ClientManager::on(UsersUpdated nick = " + (*i)->getUser()->getLastNick());
 #endif
