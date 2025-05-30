@@ -729,8 +729,8 @@ bool Socket::getProxyConfig(Socket::ProxyConfig& proxy)
 	{
 		proxy.host = ss->getString(Conf::SOCKS_SERVER);
 		proxy.port = ss->getInt(Conf::SOCKS_PORT);
-		proxy.user = ss->getInt(Conf::SOCKS_USER);
-		proxy.password = ss->getInt(Conf::SOCKS_PASSWORD);
+		proxy.user = ss->getString(Conf::SOCKS_USER);
+		proxy.password = ss->getString(Conf::SOCKS_PASSWORD);
 		proxy.resolveNames = ss->getBool(Conf::SOCKS_RESOLVE);
 		ss->unlockRead();
 		return true;
