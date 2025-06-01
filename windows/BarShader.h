@@ -10,7 +10,6 @@ class CBarShader
 {
 	public:
 		CBarShader(uint32_t height, uint32_t width, COLORREF color = 0, uint64_t fileSize = 1);
-		~CBarShader(void);
 		
 		//set the width of the bar
 		void SetWidth(uint32_t width);

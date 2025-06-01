@@ -648,10 +648,8 @@ void DirectoryListingFrame::updateStatus()
 void DirectoryListingFrame::initStatus()
 {
 	const DirectoryListing::Directory *root = dl->getRoot();
-	size_t files = root->getTotalFileCount();
-	string size = Util::formatBytes(root->getTotalSize());
 
-	tstring tmp = TSTRING(TOTAL_FILES) + Util::toStringT(files);
+	tstring tmp = TSTRING(TOTAL_FILES) + Util::toStringT(root->getTotalFileCount());
 	statusSizes[STATUS_TOTAL_FILES] = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 	ctrlStatus.SetText(STATUS_TOTAL_FILES, tmp.c_str());
 
@@ -1787,9 +1785,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 					copyMenu.AppendMenu(MF_STRING, IDC_COPY_URL, CTSTRING(FOLDER_URL));
 					contextMenuHubUrl.push_back(hubUrl);
 				}
-			}
-			if (isDirectory)
 				copyMenu.EnableMenuItem(IDC_COPY_TTH, MF_BYCOMMAND | MFS_DISABLED);
+			}
 			copyMenu.EnableMenuItem(IDC_COPY_LINK, MF_BYCOMMAND | MFS_DISABLED);
 			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, MF_BYCOMMAND | MFS_DISABLED);
 
@@ -3357,7 +3354,6 @@ int ThreadedDirectoryListing::run()
 			{
 				dcassert(!filePath.empty());
 				DirectoryListing* dl = window->dl.get();
-				const string filename = Util::getFileName(filePath);
 				const UserPtr& user = dl->getUser();
 				window->updateWindowTitle();
 				dl->loadFile(filePath, this, user->isMe());

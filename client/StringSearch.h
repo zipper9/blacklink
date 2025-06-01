@@ -68,6 +68,7 @@ class StringSearch
 
 		StringSearch& operator=(const StringSearch& rhs) noexcept
 		{
+			if (this == &rhs) return *this;
 			::operator delete(delta1);
 			if (rhs.delta1)
 			{
@@ -85,6 +86,7 @@ class StringSearch
 
 		StringSearch& operator=(StringSearch&& rhs) noexcept
 		{
+			if (this == &rhs) return *this;
 			::operator delete(delta1);
 			delta1 = rhs.delta1;
 			pattern = std::move(rhs.pattern);

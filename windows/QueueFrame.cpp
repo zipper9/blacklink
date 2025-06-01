@@ -410,7 +410,7 @@ int QueueFrame::QueueItemInfo::compareItems(const QueueItemInfo* a, const QueueI
 	}
 }
 
-const tstring QueueFrame::QueueItemInfo::getText(int col) const
+tstring QueueFrame::QueueItemInfo::getText(int col) const
 {
 	switch (col)
 	{

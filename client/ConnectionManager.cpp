@@ -491,7 +491,7 @@ void ConnectionManager::getDownloadConnection(const HintedUser& hintedUser)
 		const auto i = find(downloads.begin(), downloads.end(), hintedUser.user);
 		if (i == downloads.end())
 		{
-			auto cqi = std::make_shared<ConnectionQueueItem>(hintedUser, true,
+			cqi = std::make_shared<ConnectionQueueItem>(hintedUser, true,
 				tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
 			downloads.insert(cqi);
 			if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
@@ -509,10 +509,7 @@ void ConnectionManager::getDownloadConnection(const HintedUser& hintedUser)
 		}
 	}
 	if (cqi)
-	{
 		fire(ConnectionManagerListener::Added(), hintedUser, true, cqi->getConnectionQueueToken());
-		return;
-	}
 }
 
 void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)

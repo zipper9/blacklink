@@ -48,8 +48,8 @@ LRESULT PublicHubsListDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 LRESULT PublicHubsListDlg::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
 {
 	LineDlg dlg;
-	dlg.title = CTSTRING(HUB_LIST);
-	dlg.description = CTSTRING(HUB_LIST_ADD);
+	dlg.title = TSTRING(HUB_LIST);
+	dlg.description = TSTRING(HUB_LIST_ADD);
 	dlg.icon = IconBitmaps::INTERNET_HUBS;
 	dlg.allowEmpty = false;
 	if (dlg.DoModal(m_hWnd) == IDOK)
@@ -94,8 +94,8 @@ LRESULT PublicHubsListDlg::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		LineDlg dlg;
-		dlg.title = CTSTRING(HUB_LIST);
-		dlg.description = CTSTRING(HUB_LIST_EDIT);
+		dlg.title = TSTRING(HUB_LIST);
+		dlg.description = TSTRING(HUB_LIST_EDIT);
 		ctrlList.GetItemText(i, 0, buf, 256);
 		dlg.line = buf;
 		dlg.icon = IconBitmaps::INTERNET_HUBS;

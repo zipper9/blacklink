@@ -1630,7 +1630,6 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 
 LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	CRect rc;
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	isTabMenuShown = false;
 	if (!ctrlUsers.m_hWnd)
@@ -2633,11 +2632,8 @@ void HubFrame::addNickToChat()
 void HubFrame::openUserLog()
 {
 	UserInfo* ui = nullptr;
-	if (getSelectedUser())
-	{
-		ui = ctrlUsers.findUser(getSelectedUser());
-		if (!ui) return;
-	}
+	if (getSelectedUser()) ui = ctrlUsers.findUser(getSelectedUser());
+	if (!ui) return;
 
 	StringMap params = getFrameLogParams();
 
@@ -2806,7 +2802,7 @@ void HubFrame::updateStats(bool updateSize)
 		}
 		users += _T(' ');
 		users += TSTRING(HUB_USERS);
-		setStatusText(STATUS_USERS, users.c_str());
+		setStatusText(STATUS_USERS, users);
 		if (!isDHT && updateSize)
 		{
 			setStatusText(STATUS_SHARED, Util::formatBytesT(bytesShared));

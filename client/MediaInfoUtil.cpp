@@ -91,7 +91,7 @@ string Parser::getAudioStreamInfo(size_t index)
 		uint32_t number = Util::toUInt32(val);
 		if (number)
 		{
-			if (!result.empty()) result += ", ";
+			result += ", ";
 			if (getParameter(handle, MediaInfoLib::Stream_Audio, index, MC("ChannelPositions")).find("LFE") != string::npos)
 			{
 				result += Util::toString(number - 1);
@@ -107,13 +107,13 @@ string Parser::getAudioStreamInfo(size_t index)
 	val = getParameter(handle, MediaInfoLib::Stream_Audio, index, MC("BitRate/String"));
 	if (!val.empty())
 	{
-		if (!result.empty()) result += ", ";
+		result += ", ";
 		result += val;
 	}
 	val = getParameter(handle, MediaInfoLib::Stream_Audio, index, MC("Language/String1"));
 	if (!val.empty())
 	{
-		if (!result.empty()) result += ", ";
+		result += ", ";
 		result += val;
 	}
 	return result;
@@ -126,13 +126,13 @@ string Parser::getVideoStreamInfo(size_t index)
 	string val = getParameter(handle, MediaInfoLib::Stream_Video, index, MC("BitRate/String"));
 	if (!val.empty())
 	{
-		if (!result.empty()) result += ", ";
+		result += ", ";
 		result += val;
 	}
 	val = getParameter(handle, MediaInfoLib::Stream_Video, index, MC("FrameRate/String"));
 	if (!val.empty())
 	{
-		if (!result.empty()) result += ", ";
+		result += ", ";
 		result += val;
 	}
 	return result;

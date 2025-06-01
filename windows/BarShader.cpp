@@ -23,10 +23,6 @@ CBarShader::CBarShader(uint32_t dwHeight, uint32_t dwWidth, COLORREF crColor /*=
 	SetFileSize(qwFileSize);
 }
 
-CBarShader::~CBarShader(void)
-{
-}
-
 void CBarShader::BuildModifiers()
 {
 	static const double dDepths[5] = { 5.5, 4.0, 3.0, 2.50, 2.25 };     //aqua bar - smoother gradient jumps...

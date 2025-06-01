@@ -454,7 +454,7 @@ string Identity::formatIpString(const IpAddress& ip)
 		else if (!hostname.empty())
 			desc = std::move(hostname);
 		else if (!location.empty())
-			desc = std::move(location);
+			desc = location;
 		if (desc.empty()) return Util::printIpAddress(ip);
 		return Util::printIpAddress(ip) + " (" + desc + ')';
 	}

@@ -672,6 +672,7 @@ void FavoriteManager::updateConnectionStatus(FavoriteHubEntry* fhe, ConnectionSt
 			break;
 		case ConnectionStatus::SUCCESS:
 			cs.lastSuccess = now;
+			// fallthrough
 		case ConnectionStatus::FAILURE:
 			cs.status = status;
 	}

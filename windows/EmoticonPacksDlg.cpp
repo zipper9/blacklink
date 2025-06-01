@@ -97,7 +97,7 @@ LRESULT EmoticonPacksDlg::onListItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& 
 	{
 		int index = l->iItem;
 		if (index >= 0 && (unsigned) index < items.size())
-			items[index].enabled = ctrlList.GetCheckState(index) == BST_CHECKED;
+			items[index].enabled = ctrlList.GetCheckState(index) != FALSE;
 	}
 	updateButtons(TRUE);
 	return 0;

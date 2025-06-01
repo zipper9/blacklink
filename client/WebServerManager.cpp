@@ -1361,7 +1361,7 @@ void WebServerManager::ClientContext::printWaitingUsers(string& os, size_t from,
 	WebServerUtil::printItemCount(os, waitingUsers.size(), ResourceManager::NO_WAITING_USERS, ResourceManager::PLURAL_USERS);
 	if (!count) return;
 	os += "<table id='waiting' class='t'>\n";
-	string nick, tmp, timeStr, ipStr;
+	string nick, timeStr, ipStr;
 	const WebServerUtil::TableInfo& ti = tableInfo[PAGE_WAITING_USERS];
 	WebServerUtil::printTableHeader(os, ti, waitingUsersSort);
 	string actions[2];

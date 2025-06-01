@@ -2989,17 +2989,17 @@ void SearchFrame::showPortStatus()
 	{
 		case PortTest::STATE_RUNNING:
 			icon = IconBitmaps::WARNING;
-			newText = CTSTRING(UDP_PORT_TEST_WAIT);
+			newText = TSTRING(UDP_PORT_TEST_WAIT);
 			break;
 
 		case PortTest::STATE_FAILURE:
 			icon = IconBitmaps::STATUS_FAILURE;
-			newText = CTSTRING(UDP_PORT_TEST_FAILED);
+			newText = TSTRING(UDP_PORT_TEST_FAILED);
 			break;
 
 		case PortTest::STATE_SUCCESS:
 			icon = IconBitmaps::STATUS_SUCCESS;
-			newText = CTSTRING(UDP_PORT_TEST_OK);
+			newText = TSTRING(UDP_PORT_TEST_OK);
 			if (!reflectedAddress.empty())
 			{
 				newText += _T(" (");

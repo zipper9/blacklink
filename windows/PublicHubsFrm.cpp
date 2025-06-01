@@ -468,7 +468,7 @@ void PublicHubsFrame::openHub(int ind)
 	FavoriteManager::getInstance()->addRecent(r);
 	string encoding = Text::fromT(data->getText(COLUMN_ENCODING));
 	HubFrame::Settings cs;
-	cs.server = server;
+	cs.server = std::move(server);
 	cs.keyPrint = data->getKeyPrint();
 	cs.encoding = Text::charsetFromString(encoding);
 	HubFrame::openHubWindow(cs);
@@ -912,7 +912,7 @@ bool PublicHubsFrame::parseFilter(FilterModes &mode, double &size)
 	return true;
 }
 
-bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCompare, const FilterModes &mode, const double &size)
+bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCompare, FilterModes mode, double size)
 {
 	if (filter.empty()) return true;
 

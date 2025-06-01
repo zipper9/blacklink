@@ -413,7 +413,7 @@ void BufferedSocket::writeData()
 			sb.clear();
 		}
 	} while (stream);
-	if (listener && !stream && transmitDone)
+	if (listener && transmitDone)
 		listener->onTransmitDone();
 }
 
@@ -616,7 +616,6 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 			LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Error - Socket already assigned", false);
 		throw SocketException("Socket already assigned");
 	}
-	dcassert(!sock.get());
 	sock = move(s);
 #ifdef _WIN32
 	if (sock.get() && isRunning())

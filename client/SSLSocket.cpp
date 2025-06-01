@@ -391,7 +391,7 @@ bool SSLSocket::verifyKeyprint(const string& expKP, bool allowUntrusted) noexcep
 	if (!ssl)
 		return true;
 		
-	if (expKP.empty() || expKP.find("/") == string::npos)
+	if (expKP.empty() || expKP.find('/') == string::npos)
 		return allowUntrusted;
 		
 	verifyData.reset(new CryptoManager::SSLVerifyData(allowUntrusted, expKP));

@@ -468,7 +468,7 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 				{
 					::COLE2T WMPVer(bstrWMPVer);
 					params["fullversion"] = Text::fromT(WMPVer.m_szBuffer);
-					params["version"] = params["fullversion"].substr(0, params["fullversion"].find("."));
+					params["version"] = params["fullversion"].substr(0, params["fullversion"].find('.'));
 				}
 				
 				// Pre-formatted status message from Windows Media Player

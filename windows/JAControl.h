@@ -32,7 +32,6 @@ class JAControl
 {
 	public:
 		explicit JAControl(HWND window);
-		~JAControl() { }
 		
 	public:
 		// JAUpdateAllInfo

@@ -61,6 +61,7 @@ uint16_t SocketPool::addSocket(const string& userKey, int af, bool serverRole, b
 	}
 	catch (Exception&)
 	{
+		delete sock;
 		return 0;
 	}
 

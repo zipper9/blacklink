@@ -73,7 +73,7 @@ static int getDefaultCommand()
 {
 	static const int cmd[] = { IDC_GETLIST, IDC_PRIVATE_MESSAGE, IDC_MATCH_QUEUE, IDC_EDIT, IDC_OPEN_USER_LOG };
 	int action = SettingsManager::instance.getUiSettings()->getInt(Conf::FAVUSERLIST_DBLCLICK);
-	if (action < 0 || action > (int) _countof(cmd)) return 0;
+	if (action < 0 || action >= (int) _countof(cmd)) return 0;
 	return cmd[action];
 }
 

@@ -317,7 +317,7 @@ class Client : public ClientBase,
 			return getHubOnlineUser()->getIdentity();
 		}
 		
-		const string getCurrentDescription() const
+		string getCurrentDescription() const
 		{
 			return getMyIdentity().getDescription();
 		}

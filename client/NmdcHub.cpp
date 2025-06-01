@@ -2470,10 +2470,10 @@ bool NmdcHub::extJSONParse(const string& param)
 		return false;
 
 	const string text = unescape(param.substr(nick.size() + 1));
-	OnlineUserPtr ou = getUser(nick);
 	NmdcExtJson::Data data;
 	if (data.parse(text))
 	{
+		OnlineUserPtr ou = getUser(nick);
 		ou->getIdentity().setExtJSON();
 		ou->getIdentity().setStringParam("F4", data.attr[NmdcExtJson::EXT_JSON_GENDER]);
 		ou->getIdentity().setExtJSONSupportInfo(data.attr[NmdcExtJson::EXT_JSON_SUPPORT]);

@@ -155,7 +155,6 @@ int JsonParser::process(const char* data, size_t size) noexcept
 						expect = EXPECT_KEY_NAME;
 					else
 						E(ERR_UNEXPECTED_CHARACTER);
-					state = STATE_WHITESPACE;
 					stateFlags = STATE_FLAG_COMMA;
 					pos++;
 					break;
@@ -164,7 +163,6 @@ int JsonParser::process(const char* data, size_t size) noexcept
 				{
 					if (expect != EXPECT_COLON) E(ERR_UNEXPECTED_CHARACTER);
 					expect = EXPECT_KEY_VALUE;
-					state = STATE_WHITESPACE;
 					pos++;
 					break;
 				}

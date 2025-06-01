@@ -280,7 +280,7 @@ void TreePropertySheet::showStatusText()
 {
 	if (ctrlStatus.IsWindowVisible()) return;
 	ctrlStatus.setImage(IconBitmaps::INFORMATION, 0);
-	ctrlStatus.setText(CTSTRING(SETTINGS_RESTART_REQUIRED));
+	ctrlStatus.setText(TSTRING(SETTINGS_RESTART_REQUIRED));
 	HDC hdc = ctrlStatus.GetDC();
 	SIZE size = ctrlStatus.getIdealSize(hdc);
 	ctrlStatus.ReleaseDC(hdc);

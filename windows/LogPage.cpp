@@ -115,7 +115,7 @@ void LogPage::setEnabled()
 	int sel = logOptions.GetSelectedIndex();
 	if (sel >= 0 && sel < LogManager::LAST)
 	{
-		BOOL checkState = logOptions.GetCheckState(sel) == BST_CHECKED;
+		BOOL checkState = logOptions.GetCheckState(sel) != FALSE;
 		logFile.EnableWindow(checkState);
 		logFormat.EnableWindow(checkState);
 		logFile.SetWindowText(options[sel].first.c_str());
@@ -124,7 +124,7 @@ void LogPage::setEnabled()
 	}
 	else if (sel == LOG_CERT_INDEX)
 	{
-		BOOL checkState = logOptions.GetCheckState(sel) == BST_CHECKED;
+		BOOL checkState = logOptions.GetCheckState(sel) != FALSE;
 		logFile.EnableWindow(checkState);
 		logFormat.EnableWindow(FALSE);
 		logFile.SetWindowText(options[sel].first.c_str());

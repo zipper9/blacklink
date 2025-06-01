@@ -247,7 +247,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		void redraw();
 
 		bool parseFilter(FilterModes& mode, double& size);
-		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, const FilterModes& mode, const double& size);
+		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, FilterModes mode, double size);
 
 		void on(SettingsManagerListener::ApplySettings) override;
 

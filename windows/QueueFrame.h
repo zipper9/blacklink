@@ -309,7 +309,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 #endif
 				}
 
-				const tstring getText(int col) const;
+				tstring getText(int col) const;
 				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col, int flags);
 				static int getCompareFlags() { return 0; }
 

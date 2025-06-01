@@ -132,11 +132,6 @@ void HttpServerConnection::onDataLine(const char* buf, size_t len) noexcept
 			}
 			else if (bodySize == 0)
 				setIdleState();
-			else if (bodySize == BODY_SIZE_UNKNOWN)
-			{
-				socket->setDataMode(-1);
-				connState = STATE_DATA;
-			}
 			else if (bodySize == BODY_SIZE_CHUNKED)
 				connState = STATE_DATA_CHUNKED;
 			else

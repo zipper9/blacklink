@@ -285,7 +285,7 @@ void Http::Request::clear() noexcept
 	complete = false;
 	uri.clear();
 	method.clear();
-	method = -1;
+	methodId = -1;
 }
 
 bool Http::Request::parseLine(const string& s) noexcept

@@ -88,9 +88,9 @@ static void checkBuggyLibrary(PCSTR library)
 	for (int i = 0; i < LIBCOUNT; i++)
 	{
 		string lib = Text::fromT(crashLibs[i][0]);
-		tstring app = crashLibs[i][1];
 		if (stricmp(library, lib) == 0)
 		{
+			tstring app = crashLibs[i][1];
 			const tstring& crashMessage = TSTRING(LIB_CRASH);
 			size_t bufSize = crashMessage.length() + app.length() + 16;
 			

@@ -587,7 +587,6 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 
 			if (colIndex == COLUMN_STATUS)
 			{
-				CRect rc3;
 				tstring status = ii->getText(COLUMN_STATUS);
 				CustomDrawHelpers::startSubItemDraw(customDrawState, cd);
 				if (ii->status == ItemInfo::STATUS_RUNNING)
@@ -1490,7 +1489,7 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& downlo
 		popup->flags = NIIF_WARNING;
 		popup->user = ClientManager::getNick(ui->hintedUser);
 		popup->file = Util::getFileName(download->getPath());
-		popup->miscText = tmpReason;
+		popup->miscText = std::move(tmpReason);
 		addTask(POPUP_NOTIF, popup);
 	}
 	addTask(UPDATE_TOKEN, ui);

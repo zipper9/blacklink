@@ -208,7 +208,7 @@ class Identity
 	}
 
 #define GSUINTBITS(bits)\
-	const uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr index) const\
+	uint##bits##_t get_uint##bits(eTypeUint##bits##Attr index) const\
 	{\
 		return values.info_uint##bits[index];\
 	}\
@@ -216,7 +216,7 @@ class Identity
 	{\
 		return values.info_uint##bits[index];\
 	}\
-	void set_uint##bits(eTypeUint##bits##Attr index, const uint##bits##_t& value)\
+	void set_uint##bits(eTypeUint##bits##Attr index, uint##bits##_t value)\
 	{\
 		values.info_uint##bits[index] = value;\
 	}
@@ -230,7 +230,7 @@ class Identity
 	void set##x(int##bits##_t val) { set_int##bits(e_##x, val); }
 
 #define GSINTBITS(bits)\
-	const int##bits##_t& get_int##bits(eTypeInt##bits##Attr index) const\
+	int##bits##_t get_int##bits(eTypeInt##bits##Attr index) const\
 	{\
 		return values.info_int##bits[index];\
 	}\
@@ -238,7 +238,7 @@ class Identity
 	{\
 		return values.info_int##bits[index];\
 	}\
-	void set_int##bits(eTypeInt##bits##Attr index, const int##bits##_t& value)\
+	void set_int##bits(eTypeInt##bits##Attr index, int##bits##_t value)\
 	{\
 		values.info_int##bits[index] = value;\
 	}

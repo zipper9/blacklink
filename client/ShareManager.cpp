@@ -2090,7 +2090,6 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 	ss->unlockRead();
 	
 	const string shareDataFileName = Util::getConfigPath() + fileShareData;
-	string skipBZXmlFile;
 	try
 	{
 		// Write Share.dat
@@ -2858,7 +2857,6 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 		else
 		{
 			// Not a directory, assume it's a file...make sure we're not sharing the settings file...
-			string ext = Util::getFileExtWithoutDot(lowerName);
 			const string fullPath = path + fileName;
 			int64_t size = i->getSize();
 			if (isInSkipList(lowerName))
@@ -2930,9 +2928,9 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 			SharedFilePtr& file = i->second;
 			if (file->flags & BaseDirItem::FLAG_NOT_FOUND)
 			{
-				string fullPath = path + file->getName();
 				deltaSize -= file->getSize();
 #ifdef DEBUG_SHARE_MANAGER
+				string fullPath = path + file->getName();
 				LogManager::message("File removed: " + fullPath, false);
 #endif
 				i = dir->files.erase(i);
@@ -2948,9 +2946,9 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 			SharedDir* d = i->second;
 			if (d->flags & BaseDirItem::FLAG_NOT_FOUND)
 			{
-				string fullPath = path + d->getName();
 				deltaSize -= d->totalSize;
 #ifdef DEBUG_SHARE_MANAGER
+				string fullPath = path + d->getName();
 				LogManager::message("Directory removed: " + fullPath, false);
 #endif
 				SharedDir::deleteTree(d);

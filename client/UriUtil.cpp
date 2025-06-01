@@ -270,7 +270,7 @@ void Util::decodeUrl(const string& url, ParsedUrl& res, const string& defProto)
 		int error;
 		string converted;
 		if (IDNA_convert_to_ACE(wstr, converted, error))
-			res.host = converted;
+			res.host = std::move(converted);
 	}
 }
 

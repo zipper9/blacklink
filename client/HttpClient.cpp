@@ -101,7 +101,7 @@ HttpConnection* HttpClient::findConnectionL(uint64_t now, RequestStatePtr& rs, c
 		c = new HttpConnection(connId, this);
 		ConnectionData cd;
 		cd.state = state;
-		cd.server = std::move(server);
+		cd.server = server;
 		cd.requestId = reqId;
 		cd.closeConn = closeConn;
 		cd.conn = c;

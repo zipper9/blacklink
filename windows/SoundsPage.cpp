@@ -134,7 +134,7 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	for (int i = 0; i < _countof(currentSounds); i++)
 	{
-		int j = ctrlSounds.insert(i, Text::toT(ResourceManager::getString(currentSounds[i].name)).c_str());
+		int j = ctrlSounds.insert(i, Text::toT(ResourceManager::getString(currentSounds[i].name)));
 		currentSounds[i].value = ss->getString(currentSounds[i].setting);
 		ctrlSounds.SetItemText(j, 1, Text::toT(currentSounds[i].value).c_str());
 	}

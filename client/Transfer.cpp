@@ -35,7 +35,7 @@ const string Transfer::fileNameFilesBzXml = "files.xml.bz2";
 Transfer::Transfer(const UserConnectionPtr& conn, const string& path, const TTHValue& tth) :
 	type(TYPE_FILE),
 	path(path), tth(tth), actual(0), pos(0), userConnection(conn), hintedUser(conn->getHintedUser()), startPos(0),
-	isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
+	runningAverage(0), isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
 	startTime(0), lastTick(GET_TICK()),
 	ip(conn->getRemoteIp()),
 	fileSize(-1)

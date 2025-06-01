@@ -163,7 +163,6 @@ class RecentHubEntry
 			opentab("-"),
 			autoopen(false),
 			redirect(false) {}
-		~RecentHubEntry() { }
 
 		GETSET(string, name, Name);
 		GETSET(string, server, Server);

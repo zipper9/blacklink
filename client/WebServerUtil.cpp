@@ -342,7 +342,6 @@ string WebServerUtil::getStringByName(const string& data) noexcept
 void WebServerUtil::expandCssVariables(string& data, const StringMap& vars) noexcept
 {
 	string::size_type i = 0;
-	string value;
 	while (i < data.length())
 	{
 		string::size_type j = data.find('$', i);
@@ -380,7 +379,6 @@ void WebServerUtil::loadCssVariables(const string& data, StringMap& vars) noexce
 	const char* s = data.c_str();
 	string::size_type len = data.length();
 	string::size_type i = 0;
-	string value;
 	while (i < len)
 	{
 		string::size_type j = data.find('$', i);

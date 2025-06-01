@@ -302,7 +302,7 @@ LRESULT NetworkIPTab::onOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl
 	RECT rc;
 	CWindow(hWndCtl).GetWindowRect(&rc);
 	int result = menu.TrackPopupMenu(TPM_NONOTIFY | TPM_RETURNCMD, rc.left, rc.bottom, m_hWnd);
-	if (result == Conf::BIND_OPTION_NO_FALLBACK || Conf::BIND_OPTION_USE_DEV)
+	if (result == Conf::BIND_OPTION_NO_FALLBACK || result == Conf::BIND_OPTION_USE_DEV)
 		options ^= result;
 	return 0;
 }
@@ -351,9 +351,6 @@ void NetworkIPTab::fixControls()
 	const bool useTLS = parent->useTLS;
 	const BOOL enabled = IsDlgButtonChecked(IDC_ENABLE) == BST_CHECKED;
 	const BOOL autoDetect = enabled && IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
-	const BOOL upnp = enabled && IsDlgButtonChecked(IDC_FIREWALL_UPNP) == BST_CHECKED;
-	const BOOL nat = enabled && IsDlgButtonChecked(IDC_FIREWALL_NAT) == BST_CHECKED;
-	const BOOL passive = enabled && IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;
 	const BOOL manualIP = enabled && IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
 	const BOOL portEnabled = enabled && !parent->applyingSettings;
 

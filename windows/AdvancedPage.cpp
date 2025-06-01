@@ -150,12 +150,12 @@ void AdvancedPage::write()
 	
 	auto ss = SettingsManager::instance.getUiSettings();
 	ss->setInt(Conf::MEDIA_PLAYER, ctrlPlayer.GetCurSel());
-	ss->setString(Conf::WINAMP_FORMAT, Text::fromT(WinampStr).c_str());
-	ss->setString(Conf::WMP_FORMAT, Text::fromT(WMPlayerStr).c_str());
-	ss->setString(Conf::ITUNES_FORMAT, Text::fromT(iTunesStr).c_str());
-	ss->setString(Conf::MPLAYERC_FORMAT, Text::fromT(MPCStr).c_str());
-	ss->setString(Conf::JETAUDIO_FORMAT, Text::fromT(JAStr).c_str());
-	ss->setString(Conf::QCDQMP_FORMAT, Text::fromT(QCDQMPStr).c_str());
+	ss->setString(Conf::WINAMP_FORMAT, Text::fromT(WinampStr));
+	ss->setString(Conf::WMP_FORMAT, Text::fromT(WMPlayerStr));
+	ss->setString(Conf::ITUNES_FORMAT, Text::fromT(iTunesStr));
+	ss->setString(Conf::MPLAYERC_FORMAT, Text::fromT(MPCStr));
+	ss->setString(Conf::JETAUDIO_FORMAT, Text::fromT(JAStr));
+	ss->setString(Conf::QCDQMP_FORMAT, Text::fromT(QCDQMPStr));
 }
 
 LRESULT AdvancedPage::onClickedWinampHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)

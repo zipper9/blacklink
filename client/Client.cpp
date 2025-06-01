@@ -919,8 +919,8 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message, string& re
 				hubName += ')';
 			}
 			string nick = message->replyTo->getIdentity().getNick();
-			LogManager::message(CSTRING_F(PM_IGNORED, nick % hubName));
-			fire(ClientListener::StatusMessage(), this, CSTRING_F(PM_IGNORED2, nick));
+			LogManager::message(STRING_F(PM_IGNORED, nick % hubName));
+			fire(ClientListener::StatusMessage(), this, STRING_F(PM_IGNORED2, nick));
 		}
 	}
 }

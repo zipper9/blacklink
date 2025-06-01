@@ -330,7 +330,7 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		string file;
 		int64_t size = 0;
 
-		if (first05 != string::npos && second05 == string::npos) // cnt == 1
+		if (second05 == string::npos) // cnt == 1
 		{
 			// We have a directory...find the first space beyond the first 0x05 from the back
 			// (dirs might contain spaces as well...clever protocol, eh?)
@@ -342,7 +342,7 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 			if (j < i + 1) return false;
 			file = x.substr(i, j - i) + '\\';
 		}
-		else if (first05 != string::npos && second05 != string::npos) // cnt == 2
+		else // cnt == 2
 		{
 			j = first05;
 			file = x.substr(i, j - i);
@@ -364,7 +364,7 @@ bool SearchManager::processNMDC(const char* buf, int len, const IpAddress& remot
 		i = j + 2;
 		if ((j = x.rfind(')')) == string::npos) return false;
 
-		if (freeSlots < 0 || slots < 0) return true;
+		if (freeSlots < 0) return true;
 
 		const string hubIpPort = x.substr(i, j - i);
 		string url = ClientManager::findHub(hubIpPort, ClientBase::TYPE_NMDC); // check all connected hubs
@@ -669,14 +669,14 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 			{
 				dcdebug("Search result from unknown user");
 				if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
-					LOG(PSR_TRACE, "Unknown user " + (nick.empty() ? "<empty>" : nick) + " (" + url + ')');
+					LOG(PSR_TRACE, "Unknown user " + nick + " (" + url + ')');
 				return;
 			}
 			else
 			{
 				dcdebug("Search result from valid user");
 				if (LogManager::getLogOptions() & LogManager::OPT_LOG_PSR)
-					LOG(PSR_TRACE, "Found user " + (nick.empty() ? "<empty>" : nick) + " (" + url + ')');
+					LOG(PSR_TRACE, "Found user " + nick + " (" + url + ')');
 			}
 		}
 	}

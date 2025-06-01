@@ -102,7 +102,8 @@ int Resolver::resolveHost(Ip4Address* v4, Ip6AddressEx* v6, int af, const string
 		if (v6)
 		{
 			const sockaddr_in6* sa = (const sockaddr_in6*) v6Result;
-			memcpy(v6, &sa->sin6_addr, sizeof(*v6));
+			memcpy(v6, &sa->sin6_addr, 16);
+			v6->scopeId = sa->sin6_scope_id;
 		}
 	}
 	freeaddrinfo(result);

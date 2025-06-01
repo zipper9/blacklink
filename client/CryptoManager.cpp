@@ -198,7 +198,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 			CID certCID(tmp);
 			if (tmp.length() == 39 && !certCID.isZero())
 				tmp = Util::toString(ClientManager::getNicks(certCID, Util::emptyString, false));
-			line += (!line.empty() ? ", " : "") + tmp;
+			line += tmp;
 		}
 
 		tmp = getNameEntryByNID(subject, NID_organizationName);
@@ -729,7 +729,7 @@ void CryptoManager::generateNewKeyPair()
 	LOCK(contextLock);
 	for (int i = 0; i < 2; i++)
 		context[i] = std::move(newContext[i]);
-	certFingerprint = digest;
+	certFingerprint = std::move(digest);
 	this->endTime = endTime;
 	keyPairInitialized = true;
 }
@@ -771,7 +771,7 @@ bool CryptoManager::initializeKeyPair() noexcept
 	LOCK(contextLock);
 	for (int i = 0; i < 2; i++)
 		context[i] = std::move(newContext[i]);
-	certFingerprint = digest;
+	certFingerprint = std::move(digest);
 	this->endTime = endTime;
 	keyPairInitialized = true;
 	return true;

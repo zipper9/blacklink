@@ -14,6 +14,7 @@ void CImageEx::Destroy() noexcept
 
 CImageEx& CImageEx::operator= (CImageEx&& src)
 {
+	if (this == &src) return *this;
 	CImage::Destroy();
 	Attach(src.Detach());
 	if (buffer)

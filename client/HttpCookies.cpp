@@ -62,7 +62,7 @@ void Http::ServerCookies::parseLine(const string& s) noexcept
 			{
 				boost::algorithm::trim(value);
 				auto& item = data[name];
-				item.value = value;
+				item.value = std::move(value);
 				item.expires = 0;
 				item.flags = 0;
 			}

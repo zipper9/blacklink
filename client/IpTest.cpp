@@ -170,7 +170,7 @@ void IpTest::on(Completed, uint64_t id, const Http::Response& resp, const Result
 				}
 				if (result)
 				{
-					req[type].reflectedAddress = s;
+					req[type].reflectedAddress = std::move(s);
 					req[type].state = STATE_SUCCESS;
 				}
 			}

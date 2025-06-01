@@ -312,7 +312,7 @@ void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& res
 	}
 	else
 	{
-		setStatusText(STATUS_TEXT, CTSTRING(USER_WENT_OFFLINE));
+		setStatusText(STATUS_TEXT, TSTRING(USER_WENT_OFFLINE));
 		resetInputMessageText = false;
 	}
 }
@@ -711,7 +711,7 @@ void PrivateFrame::updateHubList()
 			if (client->getHubUrl() == replyTo.hint)
 			{
 				replyToRealName = Text::toT(ou->getIdentity().getNick());
-				lastHubName = hubName;
+				lastHubName = std::move(hubName);
 				found = true;
 			}
 		}
@@ -748,7 +748,7 @@ void PrivateFrame::updateHubList()
 		fullUserName += _T(" - ");
 		tstring hubName = lastHubName.empty() ? Text::toT(replyTo.hint) : lastHubName;
 		if (hubName.empty())
-			hubName = CTSTRING(OFFLINE);
+			hubName = TSTRING(OFFLINE);
 		fullUserName += hubName;
 		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + fullUserName + _T("]"));
 	}
