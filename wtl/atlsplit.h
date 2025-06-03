@@ -524,11 +524,6 @@ public:
 		}
 	}
 
-	void UpdatePane(int nPane, const RECT& rcPane)
-	{
-		static_cast<T*>(this)->InvalidateRect(&rcPane);
-	}
-
 // Message map and handlers
 	BEGIN_MSG_MAP(CSplitterImpl)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
@@ -841,7 +836,7 @@ public:
 					if(m_hWndPane[nPane] != NULL)
 						::SetWindowPos(m_hWndPane[nPane], NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
 					else
-						pT->UpdatePane(nPane, rect);
+						pT->InvalidateRect(&rect);
 				}
 			}
 		}
@@ -852,7 +847,7 @@ public:
 				if(m_hWndPane[m_nSinglePane] != NULL)
 					::SetWindowPos(m_hWndPane[m_nSinglePane], NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
 				else
-					pT->UpdatePane(m_nSinglePane, rect);
+					pT->InvalidateRect(&rect);
 			}
 		}
 	}

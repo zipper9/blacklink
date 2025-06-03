@@ -493,6 +493,9 @@
     <ClCompile Include="windows\PopupWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\SplitWnd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -1117,6 +1120,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\PopupWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\SplitWnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -29,6 +29,7 @@
 #include "UserInfoBaseHandler.h"
 #include "FileStatusColors.h"
 #include "DirectoryListingNavWnd.h"
+#include "SplitWnd.h"
 
 #include "../client/StringSearch.h"
 #include "../client/ADLSearch.h"
@@ -41,13 +42,14 @@ class ThreadedDirectoryListing;
 static const int DL_FRAME_TRAITS = UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_FILE_LIST;
 
 class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame>,
-	public CSplitterImpl<DirectoryListingFrame>,
+	public SplitWndImpl<DirectoryListingFrame>,
 	public UserInfoBaseHandler<DirectoryListingFrame, DL_FRAME_TRAITS>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
 	public InternetSearchBaseHandler,
 	private TimerHelper,
 	public CMessageFilter,
-	public NavigationBar::Callback
+	protected NavigationBar::Callback,
+	protected SplitWndBase::Callback
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
 		static const int MAX_FAV_DIRS = 100;
@@ -188,7 +190,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uibBase)
 		CHAIN_MSG_MAP(baseClass)
-		CHAIN_MSG_MAP(CSplitterImpl<DirectoryListingFrame>)
+		CHAIN_MSG_MAP(SplitWndImpl<DirectoryListingFrame>)
 		ALT_MSG_MAP(CONTROL_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_XBUTTONUP, onXButtonUp)
 		END_MSG_MAP()
@@ -238,9 +240,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onGoToOriginal(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-
-		void DrawSplitterPane(CDCHandle dc, int nPane);
-		void UpdatePane(int nPane, const RECT& rcPane);
 
 		void downloadSelected(const tstring& target, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
 		void downloadSelected(bool view = false, QueueItem::Priority prio = QueueItem::DEFAULT)
@@ -349,6 +348,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void getHistoryItems(vector<HistoryItem>& res) const override;
 		tstring getHistoryItem(int index) const override;
 		HBITMAP getChevronMenuImage(int index, uintptr_t itemData) override;
+
+		void setPaneRect(int pane, const RECT& rc) override;
+		void splitterMoved(int splitter) override {}
 
 	private:
 		struct ErrorInfo

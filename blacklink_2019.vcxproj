@@ -916,6 +916,7 @@
     <ClCompile Include="windows\SlotPage.cpp" />
     <ClCompile Include="windows\SoundsPage.cpp" />
     <ClCompile Include="windows\SplashWindow.cpp" />
+    <ClCompile Include="windows\SplitWnd.cpp" />
     <ClCompile Include="windows\SpyFrame.cpp" />
     <ClCompile Include="windows\StatsFrame.cpp" />
     <ClCompile Include="windows\StatusLabelCtrl.cpp" />
@@ -1089,6 +1090,7 @@
     <ClInclude Include="windows\ShellContextMenu.h" />
     <ClInclude Include="windows\SoundsPage.h" />
     <ClInclude Include="windows\SplashWindow.h" />
+    <ClInclude Include="windows\SplitWnd.h" />
     <ClInclude Include="windows\StaticFrame.h" />
     <ClInclude Include="windows\StatusLabelCtrl.h" />
     <ClInclude Include="windows\StatusMessageHistory.h" />

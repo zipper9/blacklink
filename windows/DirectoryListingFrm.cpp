@@ -40,6 +40,7 @@
 #include "../client/SettingsUtil.h"
 #include "../client/Util.h"
 #include "../client/ConfCore.h"
+#include "../client/SysVersion.h"
 #include <boost/algorithm/string/trim.hpp>
 
 static const size_t MAX_NAVIGATION_HISTORY = 25;
@@ -401,9 +402,12 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	navWnd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, WS_EX_COMPOSITED);
 	navWnd.navBar.setCallback(this);
 
-	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
-	SetSplitterPanes(ctrlTree.m_hWnd, nullptr);
-	m_nProportionalPos = ss->getInt(Conf::DIRLIST_FRAME_SPLIT);
+	addSplitter(-1, FLAG_HORIZONTAL | FLAG_PROPORTIONAL | FLAG_INTERACTIVE, ss->getInt(Conf::DIRLIST_FRAME_SPLIT));
+	if (Colors::isAppThemed && SysVersion::isOsVistaPlus())
+		setSplitterColor(0, COLOR_TYPE_SYSCOLOR, COLOR_WINDOW);
+	setPaneWnd(0, ctrlTree.m_hWnd);
+	setCallback(this);
+
 	int icon = dclstFlag ? FileImage::DIR_DCLST : FileImage::DIR_ICON;
 	nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
 	tstring rootText = getRootItemText();
@@ -2040,6 +2044,14 @@ LRESULT DirectoryListingFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 	return 0;
 }
 
+static inline void getMargins(MARGINS& m, const RECT& rcOld, const RECT& rcNew)
+{
+	m.cxLeftWidth = rcNew.left - rcOld.left;
+	m.cxRightWidth = rcOld.right - rcNew.right;
+	m.cyTopHeight = rcNew.top - rcOld.top;
+	m.cyBottomHeight = rcOld.bottom - rcNew.bottom;
+}
+
 void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown() || updatingLayout)
@@ -2048,6 +2060,7 @@ void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	updatingLayout++;
 	RECT rect;
 	GetClientRect(&rect);
+	RECT prevRect = rect;
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 
@@ -2065,7 +2078,10 @@ void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		ctrlStatus.SetParts(STATUS_LAST, w);
 	}
 
-	SetSplitterRect(&rect);
+	MARGINS margins;
+	getMargins(margins, prevRect, rect);
+	setMargins(margins);
+	updateLayout();
 	updatingLayout--;
 }
 
@@ -2290,7 +2306,7 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 		ctrlList.saveHeaderOrder(Conf::DIRLIST_FRAME_ORDER, Conf::DIRLIST_FRAME_WIDTHS, Conf::DIRLIST_FRAME_VISIBLE);
 		auto ss = SettingsManager::instance.getUiSettings();
 		ss->setInt(Conf::DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
-		ss->setInt(Conf::DIRLIST_FRAME_SPLIT, m_nProportionalPos);
+		ss->setInt(Conf::DIRLIST_FRAME_SPLIT, getSplitterPos(0, true));
 		bHandled = FALSE;
 	}
 	return 0;
@@ -3188,13 +3204,9 @@ LRESULT DirectoryListingFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 	return 0;
 }
 
-void DirectoryListingFrame::DrawSplitterPane(CDCHandle dc, int nPane)
+void DirectoryListingFrame::setPaneRect(int pane, const RECT& rcPane)
 {
-}
-
-void DirectoryListingFrame::UpdatePane(int nPane, const RECT& rcPane)
-{
-	if (nPane != 1) return;
+	if (pane != 1) return;
 	int navBarHeight = navWnd.updateNavBarHeight();
 
 	RECT rc;
