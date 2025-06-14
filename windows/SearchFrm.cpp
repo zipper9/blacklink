@@ -1823,22 +1823,6 @@ LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 	return 0;
 }
 
-bool SearchFrame::itemMatchesSelType(const SearchInfo* si) const
-{
-	if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
-		return true;
-	bool result = false;
-	if (si->sr.getType() == SearchResult::TYPE_FILE)
-	{
-		const auto fileExt = Text::toLower(Util::getFileExtWithoutDot(si->sr.getFileName()));
-		auto it = groupedResults.find(treeItemCurrent);
-		if (it == groupedResults.cend()) return false;
-		const auto& data = it->second;
-		return data.ext == fileExt;
-	}
-	return result;
-}
-
 HTREEITEM SearchFrame::getInsertAfter(int type) const
 {
 	for (--type; type >= 0; --type)
@@ -1923,6 +1907,8 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 	if (running)
 	{
 		resultsCount++;
+		HTREEITEM htFileExt = nullptr;
+		HTREEITEM htFileType = nullptr;
 		if (!treeItemRoot)
 		{
 			treeItemRoot = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
@@ -1958,15 +1944,13 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 					treeExpanded = true;
 				}
 			}
-			string fileExt;
 			if (fileType != FILE_TYPE_DIRECTORY)
 			{
-				HTREEITEM fileExtNode;
 				string fileExt = Text::toLower(Util::getFileExtWithoutDot(file));
 				const auto extItem = extToTreeItem.find(fileExt);
 				if (extItem == extToTreeItem.end())
 				{
-					fileExtNode = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+					htFileExt = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
 						fileExt.empty() ? CTSTRING(SEARCH_NO_EXTENSION) : Text::toT(fileExt).c_str(),
 						0, // nImage
 						0, // nSelectedImage
@@ -1975,30 +1959,28 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 						0, // lParam
 						typeNode, // aParent,
 						TVI_SORT);
-					extToTreeItem.insert(make_pair(fileExt, fileExtNode));
+					extToTreeItem.insert(make_pair(fileExt, htFileExt));
 				}
 				else
-				{
-					fileExtNode = extItem->second;
-				}
-				auto& res1 = groupedResults[fileExtNode];
+					htFileExt = extItem->second;
+				auto& res1 = groupedResults[htFileExt];
 				res1.data.push_back(si);
-				res1.ext = fileExt;
+				#if 0
+				res1.ext = std::move(fileExt);
+				#endif
 			}
-			auto& res2 = groupedResults[typeNode];
+			htFileType = typeNode;
+			auto& res2 = groupedResults[htFileType];
 			res2.data.push_back(si);
-			res2.ext = std::move(fileExt);
 		}
 		{
 			CLockRedraw<> lockRedraw(ctrlResults);
-			if (!si->getText(COLUMN_TTH).empty())
+			if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr ||
+			    treeItemCurrent == htFileExt || treeItemCurrent == htFileType)
 			{
-				if (itemMatchesSelType(si))
+				if (!si->getText(COLUMN_TTH).empty())
 					ctrlResults.insertGroupedItem(si, expandSR, true);
-			}
-			else
-			{
-				if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
+				else
 					ctrlResults.insertItem(si, I_IMAGECALLBACK);
 			}
 		}

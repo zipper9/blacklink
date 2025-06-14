@@ -479,14 +479,15 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		struct ExtGroup
 		{
+			#if 0
 			string ext;
+			#endif
 			vector<SearchInfo*> data;
 		};
-		
+
 		std::unordered_map<HTREEITEM, ExtGroup> groupedResults;
 		HTREEITEM typeNodes[NUMBER_OF_TYPE_NODES];
 		bool treeExpanded;
-		bool itemMatchesSelType(const SearchInfo* si) const;
 		HTREEITEM getInsertAfter(int type) const;
 
 		std::unordered_set<SearchInfo*> everything;
