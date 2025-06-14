@@ -1445,7 +1445,7 @@ bool DirectoryListing::SearchContext::next()
 					fileIndex = newFileIndex;
 					file = newDir->files[newFileIndex];
 					dir = newDir;
-					dirIndex = newIndex;
+					dirIndex = std::move(newIndex);
 					return true;
 				}
 				newFileIndex++;
@@ -1465,7 +1465,7 @@ bool DirectoryListing::SearchContext::next()
 				file = nullptr;
 				dir = dirEntry;
 				newIndex.back() = newDirIndex;
-				dirIndex = newIndex;
+				dirIndex = std::move(newIndex);
 				return true;
 			}
 			if (dirEntry->isSet(FLAG_HAS_FOUND))
@@ -1519,7 +1519,7 @@ bool DirectoryListing::SearchContext::prev()
 					fileIndex = newFileIndex;
 					file = newDir->files[newFileIndex];
 					dir = newDir;
-					dirIndex = newIndex;
+					dirIndex = std::move(newIndex);
 					return true;
 				}
 				newFileIndex--;
@@ -1530,12 +1530,11 @@ bool DirectoryListing::SearchContext::prev()
 				fileIndex = 0;
 				file = nullptr;
 				dir = newDir;
-				dirIndex = newIndex;
+				dirIndex = std::move(newIndex);
 				return true;
 			}
 			newDir = newDir->getParent();
 			if (!newDir) return false;
-			searchFiles = false;
 			newIndex.back()--;
 			newFileIndex = 0;
 		}
@@ -1559,7 +1558,7 @@ bool DirectoryListing::SearchContext::prev()
 				file = nullptr;
 				dir = dirEntry;
 				newIndex.back() = newDirIndex;
-				dirIndex = newIndex;
+				dirIndex = std::move(newIndex);
 				return true;
 			}
 			newDirIndex--;

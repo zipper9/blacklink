@@ -3109,7 +3109,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	redraw();
 	showFound();
 
-	const size_t* count = search->getCount();
+	const size_t* count = search[SEARCH_CURRENT].getCount();
 	tstring statusText;
 	if (count[0] && count[1])
 	{

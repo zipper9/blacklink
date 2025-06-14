@@ -249,7 +249,7 @@ void TypedListViewColumns::saveSettings(const CListViewCtrl& lv, string& order, 
 	}
 }
 
-void TypedListViewColumns::showMenu(const POINT& pt, HWND hWnd)
+void TypedListViewColumns::showMenu(POINT pt, HWND hWnd)
 {
 	headerMenu.DestroyMenu();
 	headerMenu.CreatePopupMenu();

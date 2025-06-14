@@ -804,7 +804,7 @@ static const PropPage::Item items[] =
 	{ IDC_AUTO_TEST_PORTS, Conf::AUTO_TEST_PORTS,     PropPage::T_BOOL },
 	{ IDC_NATT,            Conf::ALLOW_NAT_TRAVERSAL, PropPage::T_BOOL },
 	{ IDC_USE_DHT,         Conf::USE_DHT,             PropPage::T_BOOL },
-	{ 0,                   0,                                    PropPage::T_END  }
+	{ 0,                   0,                         PropPage::T_END  }
 };
 
 #define ADD_TAB(name, type, text) \

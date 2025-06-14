@@ -328,7 +328,7 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		LineDlg virt;
 		virt.title = TSTRING(VIRTUAL_NAME);
 		virt.description = TSTRING(VIRTUAL_NAME_LONG);
-		virt.line = vName;
+		virt.line = std::move(vName);
 		virt.allowEmpty = false;
 		virt.icon = IconBitmaps::FINISHED_UPLOADS;
 		if (virt.DoModal(m_hWnd) == IDOK)

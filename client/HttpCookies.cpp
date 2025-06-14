@@ -56,10 +56,10 @@ void Http::ServerCookies::parseLine(const string& s) noexcept
 		if (delim != string::npos && delim < end)
 		{
 			string name = s.substr(start, delim - start);
-			string value = s.substr(delim + 1, end - (delim + 1));
 			boost::algorithm::trim(name);
 			if (!name.empty())
 			{
+				string value = s.substr(delim + 1, end - (delim + 1));
 				boost::algorithm::trim(value);
 				auto& item = data[name];
 				item.value = std::move(value);

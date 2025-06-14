@@ -214,8 +214,8 @@ class FlagImage
 		FlagImage() : memDC(NULL) {}
 		~FlagImage();
 		void init();
-		bool drawCountry(HDC dc, uint16_t countryCode, const POINT& pt);
-		bool drawLocation(HDC dc, int locationImage, const POINT& pt);
+		bool drawCountry(HDC dc, uint16_t countryCode, POINT pt);
+		bool drawLocation(HDC dc, int locationImage, POINT pt);
 
 	private:
 		boost::unordered_map<uint32_t, HBITMAP> bitmaps;

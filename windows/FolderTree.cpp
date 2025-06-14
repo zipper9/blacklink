@@ -1065,7 +1065,7 @@ bool FolderTree::EnumNetwork(HTREEITEM hParent)
 			else
 				pItem->m_sFQPath = sNameRemote;
 
-			pItem->m_sRelativePath = sNameRemote;
+			pItem->m_sRelativePath = std::move(sNameRemote);
 			pItem->m_bNetworkNode = true;
 
 			//Display a share and the appropiate icon

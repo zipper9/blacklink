@@ -52,7 +52,7 @@ class TypedListViewColumns
 		void insertColumns(CListViewCtrl& lv, const string& order, const string& widths, const string& visible);
 		void insertDummyColumn(CListViewCtrl& lv);
 		void saveSettings(const CListViewCtrl& lv, string& order, string& widths, string& visible) const;
-		void showMenu(const POINT& pt, HWND hWnd);
+		void showMenu(POINT pt, HWND hWnd);
 		void toggleColumn(CListViewCtrl& lv, int index, int& sortColumn, bool& doResort);
 		static void getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTip);
 };
@@ -497,7 +497,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			columns.insertDummyColumn(*this);
 		}
 
-		void showMenu(const POINT &pt)
+		void showMenu(POINT pt)
 		{
 			columns.showMenu(pt, this->m_hWnd);
 		}

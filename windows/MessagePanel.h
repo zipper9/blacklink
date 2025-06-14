@@ -86,7 +86,7 @@ class MessagePanel
 		void pasteText(const tstring& text);
 #endif
 		CButton& getButton(int index) { return ctrlButtons[index]; }
-		BOOL onContextMenu(POINT& pt, WPARAM& wParam);
+		BOOL onContextMenu(POINT pt, WPARAM& wParam);
 
 		bool initialized;
 		bool showSelectHubButton;
@@ -107,7 +107,7 @@ class MessagePanel
 		int ccpmState;
 
 #ifdef BL_UI_FEATURE_EMOTICONS
-		static void showEmoticonsConfig(const POINT& pt, HWND hWnd);
+		static void showEmoticonsConfig(POINT pt, HWND hWnd);
 		LRESULT onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 #endif
 		void createButton(int index, int image, int idc, ResourceManager::Strings caption);

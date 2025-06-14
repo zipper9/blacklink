@@ -97,7 +97,7 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			SetDlgItemText(IDC_WINAMP, WMPlayerStr.c_str());
 			break;
 		case Conf::iTunes:
-			iTunesStr = SetDlgItemText(IDC_WINAMP, iTunesStr.c_str());
+			SetDlgItemText(IDC_WINAMP, iTunesStr.c_str());
 			break;
 		case Conf::WinMediaPlayerClassic:
 			SetDlgItemText(IDC_WINAMP, MPCStr.c_str());
@@ -111,8 +111,8 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		default:
 		{
 			SetDlgItemText(IDC_WINAMP, CTSTRING(NO_MEDIA_SPAM));
-			::EnableWindow(GetDlgItem(IDC_WINAMP), false);
-			::EnableWindow(GetDlgItem(IDC_WINAMP_HELP), false);
+			::EnableWindow(GetDlgItem(IDC_WINAMP), FALSE);
+			::EnableWindow(GetDlgItem(IDC_WINAMP_HELP), FALSE);
 		}
 		break;
 	}
@@ -122,32 +122,8 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 void AdvancedPage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
+	updateFormatString();
 
-	tstring buf;
-	WinUtil::getWindowText(ctrlFormat, buf);
-
-	switch (curSel)
-	{
-		case Conf::WinAmp:
-			WinampStr = buf;
-			break;
-		case Conf::WinMediaPlayer:
-			WMPlayerStr = buf;
-			break;
-		case Conf::iTunes:
-			iTunesStr = buf;
-			break;
-		case Conf::WinMediaPlayerClassic:
-			MPCStr = buf;
-			break;
-		case Conf::JetAudio:
-			JAStr = buf;
-			break;
-		case Conf::QCDQMP:
-			QCDQMPStr = buf;
-			break;
-	}
-	
 	auto ss = SettingsManager::instance.getUiSettings();
 	ss->setInt(Conf::MEDIA_PLAYER, ctrlPlayer.GetCurSel());
 	ss->setString(Conf::WINAMP_FORMAT, Text::fromT(WinampStr));
@@ -193,31 +169,7 @@ LRESULT AdvancedPage::onClickedRatioMsgHelp(WORD /* wNotifyCode */, WORD /*wID*/
 
 LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	tstring buf;
-	WinUtil::getWindowText(ctrlFormat, buf);
-	
-	switch (curSel)
-	{
-		case Conf::WinAmp:
-			WinampStr = buf;
-			break;
-		case Conf::WinMediaPlayer:
-			WMPlayerStr = buf;
-			break;
-		case Conf::iTunes:
-			iTunesStr = buf;
-			break;
-		case Conf::WinMediaPlayerClassic:
-			MPCStr = buf;
-			break;
-		case Conf::JetAudio:
-			JAStr = buf;
-			break;
-		case Conf::QCDQMP:
-			QCDQMPStr = buf;
-			break;
-	}
-
+	updateFormatString();
 	curSel = ctrlPlayer.GetCurSel();
 	switch (curSel)
 	{
@@ -250,4 +202,32 @@ LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* 
 	::EnableWindow(GetDlgItem(IDC_WINAMP_HELP), isPlayerSelected);
 	
 	return 0;
+}
+
+void AdvancedPage::updateFormatString()
+{
+	tstring buf;
+	WinUtil::getWindowText(ctrlFormat, buf);
+
+	switch (curSel)
+	{
+		case Conf::WinAmp:
+			WinampStr = buf;
+			break;
+		case Conf::WinMediaPlayer:
+			WMPlayerStr = buf;
+			break;
+		case Conf::iTunes:
+			iTunesStr = buf;
+			break;
+		case Conf::WinMediaPlayerClassic:
+			MPCStr = buf;
+			break;
+		case Conf::JetAudio:
+			JAStr = buf;
+			break;
+		case Conf::QCDQMP:
+			QCDQMPStr = buf;
+			break;
+	}
 }

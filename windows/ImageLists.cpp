@@ -198,7 +198,7 @@ void FlagImage::init()
 	customLocationsPath = Text::toT(s);
 }
 
-bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, const POINT& pt)
+bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, POINT pt)
 {
 	if (flagsPath.empty()) return false;
 	HBITMAP bmp = nullptr;
@@ -228,7 +228,7 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, const POINT& pt)
 	return true;
 }
 
-bool FlagImage::drawLocation(HDC dc, int locationImage, const POINT& pt)
+bool FlagImage::drawLocation(HDC dc, int locationImage, POINT pt)
 {
 	if (customLocationsPath.empty()) return false;
 	uint32_t index = (uint32_t) locationImage << 16;

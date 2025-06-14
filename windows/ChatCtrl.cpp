@@ -352,7 +352,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 	chatTextParser.clear();
 }
 
-bool ChatCtrl::hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos)
+bool ChatCtrl::hitNick(POINT p, tstring& nick, int& startPos, int& endPos)
 {
 	static const int MAX_NICK_LEN = 64;
 	if (hubHint.empty()) return false;
@@ -384,7 +384,7 @@ bool ChatCtrl::hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos
 	return true;
 }
 
-bool ChatCtrl::hitIP(const POINT& p, tstring& result, int& startPos, int& endPos)
+bool ChatCtrl::hitIP(POINT p, tstring& result, int& startPos, int& endPos)
 {
 	// TODO: add IPv6 support.
 	const int charPos = CharFromPos(p);
@@ -596,24 +596,21 @@ tstring ChatCtrl::getUrl(const ENLINK* el, bool keepSelected)
 LRESULT ChatCtrl::onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	ENLINK* pEL = (ENLINK*)pnmh;
-	if (pEL->msg == WM_LBUTTONUP || pEL->msg == WM_RBUTTONUP)
+	if (pEL->msg == WM_LBUTTONUP)
 	{
-		if (pEL->msg == WM_LBUTTONUP)
+		if (!(pEL->chrg.cpMin == ignoreLinkStart && pEL->chrg.cpMax == ignoreLinkEnd))
 		{
-			if (!(pEL->chrg.cpMin == ignoreLinkStart && pEL->chrg.cpMax == ignoreLinkEnd))
-			{
-				g_sSelectedURL = getUrl(pEL, false);
-				dcassert(!g_sSelectedURL.empty());
-				GetParent().PostMessage(WMU_CHAT_LINK_CLICKED, 0, 0);
-			}
-			ignoreLinkStart = ignoreLinkEnd = 0;
+			g_sSelectedURL = getUrl(pEL, false);
+			dcassert(!g_sSelectedURL.empty());
+			GetParent().PostMessage(WMU_CHAT_LINK_CLICKED, 0, 0);
 		}
-		else if (pEL->msg == WM_RBUTTONUP)
-		{
-			g_sSelectedURL = getUrl(pEL, true);
-			InvalidateRect(NULL);
-			ignoreLinkStart = ignoreLinkEnd = 0;
-		}
+		ignoreLinkStart = ignoreLinkEnd = 0;
+	}
+	else if (pEL->msg == WM_RBUTTONUP)
+	{
+		g_sSelectedURL = getUrl(pEL, true);
+		InvalidateRect(NULL);
+		ignoreLinkStart = ignoreLinkEnd = 0;
 	}
 	else if (pEL->msg == WM_MOUSEMOVE)
 	{

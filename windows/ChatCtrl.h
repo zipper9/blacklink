@@ -103,8 +103,8 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		static const tstring nickBoundaryChars;
 
 	protected:
-		bool hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos);
-		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);
+		bool hitNick(POINT p, tstring& nick, int& startPos, int& endPos);
+		bool hitIP(POINT p, tstring& result, int& startPos, int& endPos);
 		bool hitText(tstring& text, int selBegin, int selEnd) const;
 		long findAndSelect(DWORD flags, FINDTEXTEX& ft);
 

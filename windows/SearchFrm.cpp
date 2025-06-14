@@ -1221,7 +1221,7 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 							getConnFlag = true;
 							params.size = j->sr.getSize();
 							params.root = &j->sr.getTTH();
-							QueueManager::getInstance()->add(target, params, j->sr.getHintedUser(), mask, true, getConnFlag);
+							QueueManager::getInstance()->add(target, params, j->sr.getHintedUser(), mask, 0, getConnFlag);
 							j->sr.flags |= SearchResult::FLAG_QUEUED;
 							sf->updateList = true;
 						}

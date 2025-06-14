@@ -273,7 +273,7 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 }
 #endif // BL_UI_FEATURE_EMOTICONS
 
-BOOL MessagePanel::onContextMenu(POINT& pt, WPARAM& wParam)
+BOOL MessagePanel::onContextMenu(POINT pt, WPARAM& wParam)
 {
 #ifdef BL_UI_FEATURE_EMOTICONS
 	if (reinterpret_cast<HWND>(wParam) == ctrlButtons[BUTTON_EMOTICONS])
@@ -297,7 +297,7 @@ static string formatNameList(const StringList& sl, size_t first)
 	return s;
 }
 
-void MessagePanel::showEmoticonsConfig(const POINT& pt, HWND hWnd)
+void MessagePanel::showEmoticonsConfig(POINT pt, HWND hWnd)
 {
 	EmoticonPacksDlg dlg;
 	if (!dlg.loadAvailablePacks())

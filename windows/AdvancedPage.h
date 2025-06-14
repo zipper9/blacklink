@@ -25,7 +25,6 @@
 class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 {
 	public:
-	
 		explicit AdvancedPage() : PropPage(TSTRING(SETTINGS_ADVANCED)), curSel(0)
 		{
 			SetTitle(m_title.c_str());
@@ -43,7 +42,6 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		LRESULT onClickedWinampHelp(WORD /* wNotifyCode */, WORD wID, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onClickedRatioMsgHelp(WORD /* wNotifyCode */, WORD wID, HWND /* hWndCtl */, BOOL& /* bHandled */);//[+] WhiteD. Custom ratio message
 		LRESULT onSelChange(WORD /* wNotifyCode */, WORD wID, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		//LRESULT onListItemChanged(int wParam, LPNMHDR lParam, BOOL& /* bHandled */);    // [+] brain-ripper
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -64,8 +62,10 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		tstring JAStr;
 		tstring QCDQMPStr;
 		int curSel;
-		
+
 		CListViewCtrl ctrlList;
+
+		void updateFormatString();
 };
 
 #endif // !defined(ADVANCED_PAGE_H)
