@@ -31,6 +31,7 @@
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
 #include "UCHandler.h"
+#include "SplitWnd.h"
 
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...
 #define FILTER_MESSAGE_MAP 11
@@ -40,7 +41,7 @@ static const int HUB_FRAME_TRAITS = UserInfoGuiTraits::NO_CONNECT_FAV_HUB | User
 
 class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	private ClientListener,
-	public CSplitterImpl<HubFrame>,
+	public SplitWndImpl<HubFrame>,
 	public CMessageFilter,
 	public UCHandler<HubFrame>,
 	public UserInfoBaseHandler<HubFrame, HUB_FRAME_TRAITS, OnlineUserPtr>,
@@ -80,7 +81,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 
 		static CFrameWndClassInfo& GetWndClassInfo();
 
-		typedef CSplitterImpl<HubFrame> splitBase;
+		typedef SplitWndImpl<HubFrame> splitBase;
 		typedef MDITabChildWindowImpl<HubFrame> baseClass;
 		typedef UCHandler<HubFrame> ucBase;
 		typedef UserInfoBaseHandler<HubFrame, HUB_FRAME_TRAITS, OnlineUserPtr> uibBase;
@@ -425,6 +426,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		tstring getHubTitle() const;
 
 		void updateSplitterPosition(int chatUserSplit, bool swapPanels);
+		void updateSplitterLayout(const RECT& rect, const RECT& prevRect);
 		void initUI();
 		void storeColumnsInfo();
 

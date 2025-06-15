@@ -88,7 +88,7 @@ HubFrame::HubFrame(const Settings& cs) :
 	showUsersStore = !cs.hideUserList;
 	showUsers = false;
 	serverUrl = cs.server;
-	m_nProportionalPos = cs.chatUserSplit;
+	addSplitter(-1, FLAG_HORIZONTAL | FLAG_PROPORTIONAL | FLAG_INTERACTIVE, cs.chatUserSplit);
 
 	if (serverUrl == dht::NetworkName)
 	{
@@ -196,22 +196,22 @@ LRESULT HubFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 void HubFrame::updateSplitterPosition(int chatUserSplit, bool swapFlag)
 {
-	m_nProportionalPos = 0;
+	int propPos = 0;
 	if (chatUserSplit != -1)
 	{
 		swapPanels = swapFlag;
-		m_nProportionalPos = chatUserSplit;
+		propPos = chatUserSplit;
 	}
 	else
 		swapPanels = false;
-	if (m_nProportionalPos == 0)
+	if (propPos == 0)
 	{
 		const auto* ss = SettingsManager::instance.getUiSettings();
 		swapPanels = ss->getInt(Conf::HUB_POSITION) != Conf::POS_RIGHT;
-		m_nProportionalPos = swapPanels ? 2500 : 7500;
+		propPos = swapPanels ? 2500 : 7500;
 	}
+	setSplitterPos(0, propPos, true);
 	setSplitterPanes();
-	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 }
 
 void HubFrame::initUI()
@@ -1146,6 +1146,14 @@ void HubFrame::onUserParts(const OnlineUserPtr& ou)
 	}
 }
 
+static inline void getMargins(MARGINS& m, const RECT& rcOld, const RECT& rcNew)
+{
+	m.cxLeftWidth = rcNew.left - rcOld.left;
+	m.cxRightWidth = rcOld.right - rcNew.right;
+	m.cyTopHeight = rcNew.top - rcOld.top;
+	m.cyBottomHeight = rcOld.bottom - rcNew.bottom;
+}
+
 void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
@@ -1156,6 +1164,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		tooltip.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
+	RECT prevRect = rect;
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 	if (ctrlStatus)
@@ -1223,9 +1232,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 
 		CRect rc = rect;
 		rc.bottom -= panelHeight;
-
-		setSplitterPanes();
-		SetSplitterRect(rc);
+		updateSplitterLayout(rc, prevRect);
 
 		if (msgPanel->initialized)
 		{
@@ -1251,13 +1258,18 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			tooltip.Activate(TRUE);
 	}
 	else
-	{
-		setSplitterPanes();
-		SetSplitterRect(&rect);
-	}
+		updateSplitterLayout(rect, prevRect);
 	if (showUsers && ctrlUsers)
 		ctrlUsers.updateLayout();
 	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+}
+
+void HubFrame::updateSplitterLayout(const RECT& rect, const RECT& prevRect)
+{
+	MARGINS margins;
+	getMargins(margins, prevRect, rect);
+	setMargins(margins);
+	setSplitterPanes();
 }
 
 void HubFrame::setSplitterPanes()
@@ -1268,17 +1280,23 @@ void HubFrame::setSplitterPanes()
 	if (ctrlUsers && ctrlClient)
 	{
 		if (swapPanels && !disableChat)
-			SetSplitterPanes(ctrlUsers.m_hWnd, ctrlClient.m_hWnd, false);
+		{
+			setPaneWnd(0, ctrlUsers.m_hWnd);
+			setPaneWnd(1, ctrlClient.m_hWnd);
+		}
 		else
-			SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false);
+		{
+			setPaneWnd(0, ctrlClient.m_hWnd);
+			setPaneWnd(1, ctrlUsers.m_hWnd);
+		}
 	}
-	int newMode = SPLIT_PANE_NONE;
+	int newMode = -1;
 	if (disableChat)
-		newMode = SPLIT_PANE_RIGHT;
+		newMode = 1;
 	else if (!showUsers)
-		newMode = swapPanels ? SPLIT_PANE_RIGHT : SPLIT_PANE_LEFT;
-	if (GetSinglePaneMode() != newMode)
-		SetSinglePaneMode(newMode);
+		newMode = swapPanels ? 1 : 0;
+	setSinglePaneMode(newMode);
+	splitBase::updateLayout();
 }
 
 void HubFrame::updateDisabledChatSettings()
@@ -1395,7 +1413,7 @@ void HubFrame::storeColumnsInfo()
 			wi.windowType = wp.showCmd;
 		else
 			wi.windowType = SW_SHOWMAXIMIZED;
-		wi.chatUserSplit = m_nProportionalPos;
+		wi.chatUserSplit = getSplitterPos(0, true);;
 		wi.swapPanels = swapPanels;
 		wi.hideUserList = !showUsersStore;
 		wi.headerSort = ctrlUsers.getUserList().getSortColumn();
@@ -1968,7 +1986,8 @@ LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 void HubFrame::switchPanels()
 {
 	swapPanels = !swapPanels;
-	m_nProportionalPos = 10000 - m_nProportionalPos;
+	int pos = 10000 - getSplitterPos(0, true);
+	setSplitterPos(0, pos, true);
 	UpdateLayout();
 }
 
