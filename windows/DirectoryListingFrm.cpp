@@ -407,6 +407,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		setSplitterColor(0, COLOR_TYPE_SYSCOLOR, COLOR_WINDOW);
 	setPaneWnd(0, ctrlTree.m_hWnd);
 	setCallback(this);
+	setOptions(0);
 
 	int icon = dclstFlag ? FileImage::DIR_DCLST : FileImage::DIR_ICON;
 	nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);

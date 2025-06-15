@@ -35,10 +35,12 @@ class SplitWndBase
 		void setMargins(const MARGINS& margins);
 		void setCallback(Callback* p) { callback = p; }
 		void setFullDragMode(int mode);
-		void setSinglePaneMode(int pane) { singlePane = pane; }
+		void setSinglePaneMode(int pane);
 		int getSplitterPos(int index, bool proportional) const;
 		int getSinglePaneMode() const { return singlePane; }
 		void updateClientRect(HWND hWnd);
+		int getOptions() const { return options; }
+		void setOptions(int opt) { options = opt; }
 
 		enum
 		{
@@ -63,6 +65,11 @@ class SplitWndBase
 			FULL_DRAG_DISABLED
 		};
 
+		enum
+		{
+			OPT_PAINT_MARGINS = 1
+		};
+
 	protected:
 		void getPaneRect(int pane, RECT& rc) const;
 		void updateLayout();
@@ -78,7 +85,8 @@ class SplitWndBase
 		enum
 		{
 			FLAG_WIDTH_CHANGED  = 1,
-			FLAG_HEIGHT_CHANGED = 2
+			FLAG_HEIGHT_CHANGED = 2,
+			FLAG_WND_HIDDEN     = 4
 		};
 
 		enum
@@ -119,6 +127,7 @@ class SplitWndBase
 		int fullDragMode;
 		int ghostBarPos;
 		int singlePane;
+		int options;
 
 		void drawFrame(HDC hdc) const;
 		void drawGhostBar(HWND hWnd);

@@ -37,6 +37,7 @@ SplitWndBase::SplitWndBase()
 	fullDragMode = FULL_DRAG_DEFAULT;
 	ghostBarPos = INT_MIN;
 	singlePane = -1;
+	options = OPT_PAINT_MARGINS;
 }
 
 SplitWndBase::~SplitWndBase()
@@ -106,7 +107,48 @@ void SplitWndBase::addSplitter(int pane, uint16_t flags, int position, int thick
 void SplitWndBase::setPaneWnd(int pane, HWND hWnd)
 {
 	int index = pane >> 1, which = pane & 1;
-	sp[index].panes[which].hWnd = hWnd;
+	PaneInfo& pi = sp[index].panes[which];
+	if (pi.hWnd != hWnd)
+	{
+		pi.hWnd = hWnd;
+		clearRect(pi.rc);
+		if (pi.flags & FLAG_WND_HIDDEN)
+		{
+			if (hWnd)
+				ShowWindow(hWnd, SW_HIDE);
+			else
+				pi.flags ^= FLAG_WND_HIDDEN;
+		}
+	}
+}
+
+void SplitWndBase::setSinglePaneMode(int pane)
+{
+	if (pane < -1) pane = -1;
+	if (pane == singlePane) return;
+	for (int i = 0; i < (int) sp.size(); ++i)
+		for (int j = 0; j < 2; ++j)
+		{
+			PaneInfo& pi = sp[i].panes[j];
+			if (!pi.hWnd) continue;
+			if ((i << 1) + j == pane || pane == -1)
+			{
+				if (pi.flags & FLAG_WND_HIDDEN)
+				{
+					ShowWindow(pi.hWnd, SW_SHOWNA);
+					pi.flags ^= FLAG_WND_HIDDEN;
+				}
+			}
+			else
+			{
+				if (!(pi.flags & FLAG_WND_HIDDEN))
+				{
+					ShowWindow(pi.hWnd, SW_HIDE);
+					pi.flags |= FLAG_WND_HIDDEN;
+				}
+			}
+		}
+	singlePane = pane;
 }
 
 void SplitWndBase::setSplitterColor(int index, int colorType, COLORREF color)
@@ -446,6 +488,7 @@ void SplitWndBase::drawGhostBar(HWND hWnd)
 
 void SplitWndBase::draw(HDC hdc)
 {
+	if (options & OPT_PAINT_MARGINS) drawFrame(hdc);
 	RECT rc;
 	for (int i = 0; i < (int) sp.size(); ++i)
 		if (sp[i].colorType != COLOR_TYPE_TRANSPARENT && sp[i].thickness > 0)
