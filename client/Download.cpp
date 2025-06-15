@@ -202,7 +202,9 @@ string Download::getDownloadTarget() const
 		else
 			sm["targetdrive"] = Util::getLocalPath().substr(0, 3);
 #endif
-		tempTarget = Util::formatParams(tempDirectory, sm, false) + tempName;
+		tempTarget = Util::formatParams(tempDirectory, sm, false);
+		Util::appendPathSeparator(tempTarget);
+		tempTarget += tempName;
 		if (QueueItem::checkTempDir && !tempTarget.empty())
 		{
 			QueueItem::checkTempDir = false;

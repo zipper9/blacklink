@@ -792,8 +792,9 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
 	bool shareHidden = ss->getBool(Conf::SHARE_HIDDEN);
 	bool shareSystem = ss->getBool(Conf::SHARE_SYSTEM);
 	bool shareVirtual = ss->getBool(Conf::SHARE_VIRTUAL);
-	const string tempDownloadDir = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	string tempDownloadDir = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
 	ss->unlockRead();
+	Util::appendPathSeparator(tempDownloadDir);
 
 	FileFindIter fi(realPathNoSlash);
 	if (!shareHidden && fi->isHidden())
@@ -2801,9 +2802,11 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
-	const string tempDownloadDir = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
-	const string logDir = ss->getString(Conf::LOG_DIRECTORY);
+	string tempDownloadDir = ss->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	string logDir = ss->getString(Conf::LOG_DIRECTORY);
 	ss->unlockRead();
+	Util::appendPathSeparator(tempDownloadDir);
+	Util::appendPathSeparator(logDir);
 
 	string lowerName;
 	for (FileFindIter i(path + '*'); i != FileFindIter::end; ++i)
