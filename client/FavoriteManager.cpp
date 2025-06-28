@@ -1310,7 +1310,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setWindowSizeX(clampValue(xml.getIntChildAttrib("WindowSizeX"), 50, 1600, valueOutOfBounds));
 			e->setWindowSizeY(clampValue(xml.getIntChildAttrib("WindowSizeY"), 50, 1600, valueOutOfBounds));
 			if (!valueOutOfBounds)
-				e->setWindowType(xml.getIntChildAttrib("WindowType", "3")); // SW_MAXIMIZE if missing
+				e->setWindowType(xml.getIntChildAttrib("WindowType", 3)); // SW_MAXIMIZE if missing
 			else
 				e->setWindowType(3); // SW_MAXIMIZE
 			e->setChatUserSplit(xml.getIntChildAttrib("ChatUserSplitSize"));
@@ -1322,7 +1322,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setHeaderOrder(xml.getChildAttrib("HeaderOrder", defaultHeaderOrder));
 			e->setHeaderWidths(xml.getChildAttrib("HeaderWidths", defaultHeaderWidths));
 			e->setHeaderVisible(xml.getChildAttrib("HeaderVisible", defaultHeaderVis));
-			e->setHeaderSort(xml.getIntChildAttrib("HeaderSort", "-1"));
+			e->setHeaderSort(xml.getIntChildAttrib("HeaderSort", -1));
 			e->setHeaderSortAsc(xml.getBoolChildAttrib("HeaderSortAsc"));
 			e->setMode(Util::toInt(xml.getChildAttrib("Mode")));
 			e->setIP(boost::algorithm::trim_copy(xml.getChildAttrib("IP")));
@@ -1339,7 +1339,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			e->setOverrideId(isOverrideId);
 			e->setFakeShare(xml.getChildAttrib("FakeShare"));
 			e->setFakeFileCount(xml.getInt64ChildAttrib("FakeFiles"));
-			e->setFakeSlots(xml.getIntChildAttrib("FakeSlots", "-1"));
+			e->setFakeSlots(xml.getIntChildAttrib("FakeSlots", -1));
 			e->setFakeClientStatus(xml.getIntChildAttrib("FakeClientStatus"));
 
 			e->setGroup(group);

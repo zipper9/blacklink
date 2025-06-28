@@ -96,10 +96,11 @@ class SimpleXML
 			return (*currentChild)->getAttrib(name, defValue);
 		}
 
-		int getIntChildAttrib(const string& name,  const string& defValue) const
+		int getIntChildAttrib(const string& name, int defValue) const
 		{
 			checkChildSelected();
-			return Util::toInt(getChildAttrib(name, defValue));
+			const string& value = getChildAttrib(name);
+			return value.empty() ? defValue : Util::toInt(value);
 		}
 
 		int getIntChildAttrib(const string& name) const
@@ -108,10 +109,11 @@ class SimpleXML
 			return Util::toInt(getChildAttrib(name));
 		}
 
-		int64_t getInt64ChildAttrib(const string& name, const string& defValue) const
+		int64_t getInt64ChildAttrib(const string& name, int64_t defValue) const
 		{
 			checkChildSelected();
-			return Util::toInt64(getChildAttrib(name, defValue));
+			const string& value = getChildAttrib(name);
+			return value.empty() ? defValue : Util::toInt64(value);
 		}
 
 		int64_t getInt64ChildAttrib(const string& name) const
