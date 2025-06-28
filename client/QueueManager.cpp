@@ -1390,7 +1390,7 @@ int QueueManager::matchListing(DirectoryListing& dl) noexcept
 				}
 			}
 		}
-		if (sourceAdded)
+		if (sourceAdded && dl.getUser()->isOnline())
 			getDownloadConnection(HintedUser(dl.getUser(), Util::emptyString));
 	}
 	return matches;
@@ -2454,10 +2454,16 @@ void QueueManager::removeItem(const QueueItemPtr& qi, bool removeFromUserQueue)
 	{
 		batchRemove.push_back(qi);
 		csBatch.unlock();
+#ifdef DEBUG_QUEUE_FRAME
+		LogManager::message("QueueManager: batch remove " + qi->getTTH().toBase32(), false);
+#endif
 	}
 	else
 	{
 		csBatch.unlock();
+#ifdef DEBUG_QUEUE_FRAME
+		LogManager::message("QueueManager: removeItem " + qi->getTTH().toBase32(), false);
+#endif
 		fire(QueueManagerListener::Removed(), qi);
 	}
 }
