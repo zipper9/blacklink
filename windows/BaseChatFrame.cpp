@@ -767,6 +767,8 @@ void BaseChatFrame::addSystemMessage(const tstring& line, int textStyle)
 
 void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, int textStyle)
 {
+	if (disableChat)
+		return;
 #ifdef _DEBUG
 	if (line.find(_T("&#124")) != tstring::npos)
 	{
@@ -787,10 +789,10 @@ void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, int textSty
 
 void BaseChatFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle, string& extra)
 {
+	if (disableChat)
+		return;
 	if (ctrlClient.IsWindow())
-	{
 		ctrlClient.adjustTextSize();
-	}
 	string additionalInfo;
 	if (showTimestamps) additionalInfo = Util::getShortTimeString();
 	extra = ChatMessage::getExtra(from);
