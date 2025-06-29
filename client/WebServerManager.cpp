@@ -1911,7 +1911,7 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 			error = true;
 		}
 		else
-			message = STRING(WEBSERVER_MAGNET_ALREADY_IN_QUEUE);
+			message = STRING(ALREADY_QUEUED);
 	}
 	catch (Exception& e)
 	{
@@ -2081,7 +2081,7 @@ void WebServerManager::addMagnet(HandlerResult& res, const RequestInfo& state) n
 				if (QueueManager::fileQueue.isQueued(tth))
 				{
 					result = true;
-					messageText = STRING(WEBSERVER_MAGNET_ALREADY_IN_QUEUE);
+					messageText = STRING(ALREADY_QUEUED);
 				} else
 				{
 					const bool isDclst = Util::isDclstFile(fname);

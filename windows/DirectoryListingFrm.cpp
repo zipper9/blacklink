@@ -979,6 +979,11 @@ void DirectoryListingFrame::performDefaultAction(int index)
 		}
 		else
 		{
+			if (QueueManager::fileQueue.isQueued(ii->file->getTTH()))
+			{
+				ctrlStatus.SetText(STATUS_TEXT, CTSTRING(ALREADY_QUEUED));
+				return;
+			}
 			DirectoryListing::Directory* parent = nullptr;
 			try
 			{
