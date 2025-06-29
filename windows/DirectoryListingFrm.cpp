@@ -2050,14 +2050,6 @@ LRESULT DirectoryListingFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 	return 0;
 }
 
-static inline void getMargins(MARGINS& m, const RECT& rcOld, const RECT& rcNew)
-{
-	m.cxLeftWidth = rcNew.left - rcOld.left;
-	m.cxRightWidth = rcOld.right - rcNew.right;
-	m.cyTopHeight = rcNew.top - rcOld.top;
-	m.cyBottomHeight = rcOld.bottom - rcNew.bottom;
-}
-
 void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown() || updatingLayout)
@@ -2085,7 +2077,7 @@ void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	}
 
 	MARGINS margins;
-	getMargins(margins, prevRect, rect);
+	WinUtil::getMargins(margins, prevRect, rect);
 	setMargins(margins);
 	updateLayout();
 	updatingLayout--;

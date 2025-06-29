@@ -1146,14 +1146,6 @@ void HubFrame::onUserParts(const OnlineUserPtr& ou)
 	}
 }
 
-static inline void getMargins(MARGINS& m, const RECT& rcOld, const RECT& rcNew)
-{
-	m.cxLeftWidth = rcNew.left - rcOld.left;
-	m.cxRightWidth = rcOld.right - rcNew.right;
-	m.cyTopHeight = rcNew.top - rcOld.top;
-	m.cyBottomHeight = rcOld.bottom - rcNew.bottom;
-}
-
 void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
@@ -1267,7 +1259,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 void HubFrame::updateSplitterLayout(const RECT& rect, const RECT& prevRect)
 {
 	MARGINS margins;
-	getMargins(margins, prevRect, rect);
+	WinUtil::getMargins(margins, prevRect, rect);
 	setMargins(margins);
 	setSplitterPanes();
 }

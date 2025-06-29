@@ -26,6 +26,7 @@
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
+#include "SplitWnd.h"
 #include "../client/UserInfoBase.h"
 #include "../client/UploadManager.h"
 #include "../client/TaskQueue.h"
@@ -33,7 +34,7 @@
 class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 	public StaticFrame<WaitingUsersFrame, ResourceManager::WAITING_USERS, IDC_UPLOAD_QUEUE>,
 	private UploadManagerListener,
-	public CSplitterImpl<WaitingUsersFrame>,
+	public SplitWndImpl<WaitingUsersFrame>,
 	public UserInfoBaseHandler<WaitingUsersFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener
 {
@@ -44,7 +45,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 
 	public:
 		static CFrameWndClassInfo& GetWndClassInfo();
-		
+
 		WaitingUsersFrame();
 		~WaitingUsersFrame();
 
@@ -56,10 +57,9 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			ADD_FILE,
 			REMOVE_USER
 		};
-		
+
 		typedef MDITabChildWindowImpl<WaitingUsersFrame> baseClass;
-		typedef CSplitterImpl<WaitingUsersFrame> splitBase;
-		
+
 		BEGIN_MSG_MAP(WaitingUsersFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
@@ -78,12 +78,12 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		NOTIFY_HANDLER(IDC_USERS, TVN_SELCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_USERS, TVN_DELETEITEM, onTreeItemDeleted)
 		NOTIFY_HANDLER(IDC_USERS, TVN_KEYDOWN, onKeyDownDirs)
-		
+
 		CHAIN_COMMANDS(uiBase)
-		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(baseClass)
+		CHAIN_MSG_MAP(SplitWndImpl<WaitingUsersFrame>)
 		END_MSG_MAP()
-		
+
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);

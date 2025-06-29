@@ -74,14 +74,15 @@ namespace WinUtil
 	bool getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy);
 	bool getDialogUnits(HDC hdc, int& cx, int& cy);
 
-	inline int dialogUnitsToPixelsX(int x, int xdu)
-	{
-		return (x * xdu + 2) / 4;
-	}
+	inline int dialogUnitsToPixelsX(int x, int xdu) { return (x * xdu + 2) / 4; }
+	inline int dialogUnitsToPixelsY(int y, int ydu)	{ return (y * ydu + 4) / 8; }
 
-	inline int dialogUnitsToPixelsY(int y, int ydu)
+	inline void getMargins(MARGINS& m, const RECT& rcOld, const RECT& rcNew)
 	{
-		return (y * ydu + 4) / 8;
+		m.cxLeftWidth = rcNew.left - rcOld.left;
+		m.cxRightWidth = rcOld.right - rcNew.right;
+		m.cyTopHeight = rcNew.top - rcOld.top;
+		m.cyBottomHeight = rcOld.bottom - rcNew.bottom;
 	}
 
 	void showInputError(HWND hwndCtl, const tstring& text);

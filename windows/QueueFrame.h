@@ -27,6 +27,7 @@
 #include "../client/DownloadManagerListener.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
+#include "SplitWnd.h"
 
 #define SHOWTREE_MESSAGE_MAP 12
 
@@ -34,22 +35,21 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	public StaticFrame<QueueFrame, ResourceManager::DOWNLOAD_QUEUE, IDC_QUEUE>,
 	private QueueManagerListener,
 	private DownloadManagerListener,
-	public CSplitterImpl<QueueFrame>,
+	public SplitWndImpl<QueueFrame>,
 	public PreviewBaseHandler,
 	private SettingsManagerListener
 {
 	public:
 		static CFrameWndClassInfo& GetWndClassInfo();
-		
+
 		QueueFrame();
 		~QueueFrame();
 
 		QueueFrame(const QueueFrame&) = delete;
 		QueueFrame& operator= (const QueueFrame&) = delete;
-		
+
 		typedef MDITabChildWindowImpl<QueueFrame> baseClass;
-		typedef CSplitterImpl<QueueFrame> splitBase;
-		
+
 		BEGIN_MSG_MAP(QueueFrame)
 		NOTIFY_HANDLER(IDC_QUEUE, LVN_GETDISPINFO, ctrlQueue.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_QUEUE, LVN_COLUMNCLICK, ctrlQueue.onColumnClick)
@@ -90,13 +90,13 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		COMMAND_RANGE_HANDLER(IDC_READD, IDC_READD + 1 + (int) readdList.size() - 1, onReadd)
 		COMMAND_ID_HANDLER(IDC_AUTOPRIORITY, onAutoPriority)
 		NOTIFY_HANDLER(IDC_QUEUE, NM_CUSTOMDRAW, onCustomDraw)
-		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(baseClass)
+		CHAIN_MSG_MAP(SplitWndImpl<QueueFrame>)
 		CHAIN_COMMANDS(PreviewBaseHandler)
 		ALT_MSG_MAP(SHOWTREE_MESSAGE_MAP)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowTree)
 		END_MSG_MAP()
-		
+
 		LRESULT onPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSegments(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

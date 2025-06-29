@@ -31,6 +31,7 @@
 #include "../client/FormatUtil.h"
 #include "../client/TimeUtil.h"
 #include "../client/Util.h"
+#include "../client/SysVersion.h"
 
 #ifdef DEBUG_QUEUE_FRAME
 int QueueFrame::DirItem::itemsCreated;
@@ -201,8 +202,11 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlDirs.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlQueue.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 
-	m_nProportionalPos = ss->getInt(Conf::QUEUE_FRAME_SPLIT);
-	SetSplitterPanes(ctrlDirs.m_hWnd, ctrlQueue.m_hWnd);
+	addSplitter(-1, FLAG_HORIZONTAL | FLAG_PROPORTIONAL | FLAG_INTERACTIVE, ss->getInt(Conf::QUEUE_FRAME_SPLIT));
+	if (Colors::isAppThemed && SysVersion::isOsVistaPlus())
+		setSplitterColor(0, COLOR_TYPE_SYSCOLOR, COLOR_WINDOW);
+	setPaneWnd(0, ctrlDirs.m_hWnd);
+	setPaneWnd(1, ctrlQueue.m_hWnd);
 
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
@@ -226,7 +230,8 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(6, statusSizes);
-	updateStatus = true;
+	updateQueueStatus();
+
 	timer.createTimer(TIMER_VAL);
 	bHandled = FALSE;
 	return 1;
@@ -2320,58 +2325,60 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
+
+	RECT rect;
+	GetClientRect(&rect);
+	RECT prevRect = rect;
+	// position bars and offset their dimensions
+	UpdateBarsPosition(rect, bResizeBars);
+
+	if (ctrlStatus.IsWindow())
 	{
-		RECT rect;
-		GetClientRect(&rect);
-		// position bars and offset their dimensions
-		UpdateBarsPosition(rect, bResizeBars);
-		
-		if (ctrlStatus.IsWindow())
-		{
-			CRect sr;
-			int w[6];
-			ctrlStatus.GetClientRect(sr);
-			w[5] = sr.right - 16;
+		CRect sr;
+		int w[6];
+		ctrlStatus.GetClientRect(sr);
+		w[5] = sr.right - 16;
 #define setw(x) w[x] = max(w[x+1] - statusSizes[x], 0)
-			setw(4);
-			setw(3);
-			setw(2);
-			setw(1);
-			
-			w[0] = 36;
-			
-			ctrlStatus.SetParts(6, w);
-			
-			ctrlStatus.GetRect(0, sr);
-			if (ctrlShowTree.IsWindow())
-				ctrlShowTree.MoveWindow(sr);
-		}
-		
-		if (showTree)
-		{
-			if (GetSinglePaneMode() != SPLIT_PANE_NONE)
-			{
-				if (!treeInserted) insertTrees();
-				SetSinglePaneMode(SPLIT_PANE_NONE);
-				updateQueue(true);
-			}
-		}
-		else
-		{
-			if (GetSinglePaneMode() != SPLIT_PANE_RIGHT)
-			{
-				clearingTree++;
-				ctrlDirs.DeleteAllItems();
-				clearingTree--;
-				treeInserted = false;
-				SetSinglePaneMode(SPLIT_PANE_RIGHT);
-				updateQueue(true);
-			}
-		}
-		
-		CRect rc = rect;
-		SetSplitterRect(rc);
+		setw(4);
+		setw(3);
+		setw(2);
+		setw(1);
+
+		w[0] = 36;
+
+		ctrlStatus.SetParts(6, w);
+	
+		ctrlStatus.GetRect(0, sr);
+		if (ctrlShowTree.IsWindow())
+			ctrlShowTree.MoveWindow(sr);
 	}
+
+	if (showTree)
+	{
+		if (getSinglePaneMode() != -1)
+		{
+			if (!treeInserted) insertTrees();
+			setSinglePaneMode(-1);
+			updateQueue(true);
+		}
+	}
+	else
+	{
+		if (getSinglePaneMode() != 1)
+		{
+			clearingTree++;
+			ctrlDirs.DeleteAllItems();
+			clearingTree--;
+			treeInserted = false;
+			setSinglePaneMode(1);
+			updateQueue(true);
+		}
+	}
+
+	MARGINS margins;
+	WinUtil::getMargins(margins, prevRect, rect);
+	setMargins(margins);
+	updateLayout();
 }
 
 LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -2401,7 +2408,7 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 		ctrlQueue.saveHeaderOrder(Conf::QUEUE_FRAME_ORDER, Conf::QUEUE_FRAME_WIDTHS, Conf::QUEUE_FRAME_VISIBLE);
 		ss->setInt(Conf::QUEUE_FRAME_SORT, ctrlQueue.getSortForSettings());
-		ss->setInt(Conf::QUEUE_FRAME_SPLIT, m_nProportionalPos);
+		ss->setInt(Conf::QUEUE_FRAME_SPLIT, getSplitterPos(0, true));
 		tasks.clear();
 		bHandled = FALSE;
 		return 0;

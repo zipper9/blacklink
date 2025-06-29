@@ -17,17 +17,18 @@
  */
 
 #include "stdafx.h"
-#include "../client/ClientManager.h"
-#include "../client/QueueManager.h"
-#include "../client/PathUtil.h"
-#include "../client/FormatUtil.h"
-#include "../client/Util.h"
 #include "WaitingUsersFrame.h"
 #include "MainFrm.h"
 #include "BarShader.h"
 #include "ImageLists.h"
 #include "Colors.h"
 #include "ConfUI.h"
+#include "../client/ClientManager.h"
+#include "../client/QueueManager.h"
+#include "../client/PathUtil.h"
+#include "../client/FormatUtil.h"
+#include "../client/Util.h"
+#include "../client/SysVersion.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
@@ -124,8 +125,11 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 
 	const auto* ss = SettingsManager::instance.getUiSettings();
-	m_nProportionalPos = ss->getInt(Conf::UPLOAD_QUEUE_FRAME_SPLIT);
-	SetSplitterPanes(ctrlQueued.m_hWnd, ctrlList.m_hWnd);
+	addSplitter(-1, FLAG_HORIZONTAL | FLAG_PROPORTIONAL | FLAG_INTERACTIVE, ss->getInt(Conf::UPLOAD_QUEUE_FRAME_SPLIT));
+	if (Colors::isAppThemed && SysVersion::isOsVistaPlus())
+		setSplitterColor(0, COLOR_TYPE_SYSCOLOR, COLOR_WINDOW);
+	setPaneWnd(0, ctrlQueued.m_hWnd);
+	setPaneWnd(1, ctrlList.m_hWnd);
 
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
@@ -137,15 +141,17 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	setListViewColors(ctrlList);
 	setTreeViewColors(ctrlQueued);
 
+	loadAll();
+
 	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(4, statusSizes);
+	updateStatus();
 	UpdateLayout();
 
 	UploadManager::getInstance()->addListener(this);
 	SettingsManager::instance.addListener(this);
 
-	loadAll();
 	timer.createTimer(TIMER_VAL);
 	bHandled = FALSE;
 	return TRUE;
@@ -186,7 +192,7 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 
 		auto ss = SettingsManager::instance.getUiSettings();
 		ss->setInt(Conf::UPLOAD_QUEUE_FRAME_SORT, ctrlList.getSortForSettings());
-		ss->setInt(Conf::UPLOAD_QUEUE_FRAME_SPLIT, m_nProportionalPos);
+		ss->setInt(Conf::UPLOAD_QUEUE_FRAME_SPLIT, getSplitterPos(0, true));
 
 		tasks.clear();
 		bHandled = FALSE;
@@ -198,11 +204,13 @@ void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
+
 	RECT rect;
 	GetClientRect(&rect);
+	RECT prevRect = rect;
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
-	
+
 	if (ctrlStatus.IsWindow())
 	{
 		CRect sr;
@@ -214,11 +222,14 @@ void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		setw(1);
 #undef setw
 		w[0] = 36;
-		
+
 		ctrlStatus.SetParts(4, w);
 	}
-	CRect rc = rect;
-	SetSplitterRect(rc);
+
+	MARGINS margins;
+	WinUtil::getMargins(margins, prevRect, rect);
+	setMargins(margins);
+	updateLayout();
 }
 
 LRESULT WaitingUsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -365,7 +376,7 @@ void WaitingUsersFrame::loadAll()
 {
 	CLockRedraw<> lockRedraw(ctrlList);
 	CLockRedraw<true> lockRedrawQueued(ctrlQueued);
-	
+
 	userList.clear();
 	ctrlList.deleteAllNoLock();
 
