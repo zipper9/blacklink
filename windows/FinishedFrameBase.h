@@ -262,10 +262,11 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		{
 			this->CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			ctrlStatus.Attach(this->m_hWndStatusBar);
+			ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
 
 			FinishedFrameBase::onCreate(this->m_hWnd, id);
 			treeContainer.SubclassWindow(ctrlTree);
-			
+
 			UpdateLayout();
 
 			this->SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
@@ -274,7 +275,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 			SettingsManager::instance.addListener(this);
 			FinishedManager::getInstance()->addListener(this);
-			
+
 			bHandled = FALSE;
 			return TRUE;
 		}

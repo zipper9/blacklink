@@ -18,11 +18,12 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	                  WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY, WS_EX_CLIENTEDGE);
 	ctrlCMDPad.LimitText(0);
 	ctrlCMDPad.SetFont(Fonts::g_font);
-	
+
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
+	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
 	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
-	
+
 	ctrlClear.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_CLEAR);
 	ctrlClear.SetWindowText(CTSTRING(CDM_CLEAR));
 	ctrlClear.SetFont(Fonts::g_systemFont);
