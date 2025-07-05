@@ -468,7 +468,9 @@ void Conf::initUiSettings()
 	s->addInt(USERS_FRAME_SORT, "UsersFrameSort");
 	s->addInt(USERS_FRAME_SPLIT, "UsersFrameSplit", 8000);
 	s->addInt(FINISHED_DL_FRAME_SORT, "FinishedDLFrameSort");
+	s->addInt(FINISHED_DL_FRAME_SPLIT, "FinishedDLFrameSplit", 2000);
 	s->addInt(FINISHED_UL_FRAME_SORT, "FinishedULFrameSort");
+	s->addInt(FINISHED_UL_FRAME_SPLIT, "FinishedULFrameSplit", 2000);
 	s->addInt(UPLOAD_QUEUE_FRAME_SORT, "UploadQueueFrameSort");
 	s->addInt(UPLOAD_QUEUE_FRAME_SPLIT, "UploadQueueFrameSplit", 2500, 0, &validateSplitter);
 	s->addInt(RECENTS_FRAME_SORT, "RecentFrameSort");

@@ -32,6 +32,7 @@ class FinishedDLFrame : public FinishedFrame<FinishedDLFrame, ResourceManager::F
 			columnWidth = Conf::FINISHED_DL_FRAME_WIDTHS;
 			columnVisible = Conf::FINISHED_DL_FRAME_VISIBLE;
 			columnSort = Conf::FINISHED_DL_FRAME_SORT;
+			splitterPos = Conf::FINISHED_DL_FRAME_SPLIT;
 		}
 
 		static CFrameWndClassInfo& GetWndClassInfo()

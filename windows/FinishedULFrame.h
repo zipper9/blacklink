@@ -32,6 +32,7 @@ class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::F
 			columnWidth = Conf::FINISHED_UL_FRAME_WIDTHS;
 			columnVisible = Conf::FINISHED_UL_FRAME_VISIBLE;
 			columnSort = Conf::FINISHED_UL_FRAME_SORT;
+			splitterPos = Conf::FINISHED_UL_FRAME_SPLIT;
 		}
 
 		static CFrameWndClassInfo& GetWndClassInfo()

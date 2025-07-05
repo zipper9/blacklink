@@ -24,9 +24,11 @@
 #include "TypedListViewCtrl.h"
 #include "WinUtil.h"
 #include "ImageLists.h"
+#include "SplitWnd.h"
 #include "../client/FinishedManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
+#include "../client/SysVersion.h"
 
 #define FINISHED_TREE_MESSAGE_MAP 11
 #define FINISHED_LIST_MESSAGE_MAP 12
@@ -153,14 +155,15 @@ class FinishedFrameBase
 		int64_t totalSpeed;
 		int64_t totalCount;
 		int64_t totalCountLast;
-		
+
 		const FinishedManager::eType type;
 		int boldFinished;
 		int columnWidth;
 		int columnOrder;
 		int columnVisible;
 		int columnSort;
-		
+		int splitterPos;
+
 		HTREEITEM createRootItem(TreeItemType nodeType);
 		void insertData();
 		void addStatusLine(const tstring& line);
@@ -195,7 +198,7 @@ class FinishedFrameBase
 template<class T, int title, int id, int icon>
 class FinishedFrame : public MDITabChildWindowImpl<T>,
 	public StaticFrame<T, title, id>,
-	public CSplitterImpl<FinishedFrame<T, title, id, icon>>,
+	public SplitWndImpl<FinishedFrame<T, title, id, icon>>,
 	public FinishedFrameBase,
 	protected FinishedManagerListener,
 	private SettingsManagerListener
@@ -247,7 +250,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		NOTIFY_HANDLER(IDC_TRANSFER_TREE, TVN_SELCHANGED, onSelChangedTree)
 		NOTIFY_HANDLER(IDC_TRANSFER_TREE, TVN_DELETEITEM, onTreeItemDeleted)
 		CHAIN_MSG_MAP(baseClass)
-		CHAIN_MSG_MAP(CSplitterImpl<FinishedFrame>)
+		CHAIN_MSG_MAP(SplitWndImpl<FinishedFrame>)
 		ALT_MSG_MAP(FINISHED_TREE_MESSAGE_MAP)
 		ALT_MSG_MAP(FINISHED_LIST_MESSAGE_MAP)
 		
@@ -267,15 +270,17 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			FinishedFrameBase::onCreate(this->m_hWnd, id);
 			treeContainer.SubclassWindow(ctrlTree);
 
-			UpdateLayout();
-
-			this->SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
-			this->SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
-			this->m_nProportionalPos = 2000; //SETTING(FLYSERVER_HUBLIST_SPLIT);
+			auto ss = SettingsManager::instance.getUiSettings();
+			this->addSplitter(-1, SplitWndBase::FLAG_HORIZONTAL | SplitWndBase::FLAG_PROPORTIONAL | SplitWndBase::FLAG_INTERACTIVE, ss->getInt(splitterPos));
+			if (Colors::isAppThemed && SysVersion::isOsVistaPlus())
+				this->setSplitterColor(0, SplitWndBase::COLOR_TYPE_SYSCOLOR, COLOR_WINDOW);
+			this->setPaneWnd(0, ctrlTree.m_hWnd);
+			this->setPaneWnd(1, ctrlList.m_hWnd);
 
 			SettingsManager::instance.addListener(this);
 			FinishedManager::getInstance()->addListener(this);
 
+			UpdateLayout();
 			bHandled = FALSE;
 			return TRUE;
 		}
@@ -302,6 +307,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				ctrlList.saveHeaderOrder(columnOrder, columnWidth, columnVisible);
 				auto ss = SettingsManager::instance.getUiSettings();
 				ss->setInt(columnSort, ctrlList.getSortForSettings());
+				ss->setInt(splitterPos, this->getSplitterPos(0, true));
 				ctrlList.deleteAll();
 
 				bHandled = FALSE;
@@ -355,12 +361,12 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				this->PostMessage(WM_COMMAND, IDC_REMOVE);
 			return 0;
 		}
-		
+
 		void UpdateLayout(BOOL bResizeBars = TRUE)
 		{
 			RECT rect;
 			this->GetClientRect(&rect);
-			
+			RECT prevRect = rect;
 			// position bars and offset their dimensions
 			this->UpdateBarsPosition(rect, bResizeBars);
 
@@ -377,9 +383,12 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				ctrlStatus.SetParts(5, w);
 			}
 
-			this->SetSplitterRect(&rect);
+			MARGINS margins;
+			WinUtil::getMargins(margins, prevRect, rect);
+			this->setMargins(margins);
+			this->updateLayout();
 		}
-		
+
 	protected:
 		void on(UpdateStatus) noexcept override
 		{
