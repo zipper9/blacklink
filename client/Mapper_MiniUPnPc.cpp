@@ -57,6 +57,7 @@ bool Mapper_MiniUPnPc::init()
 
 	UPNPUrls urls;
 	IGDdatas data;
+	memset(&urls, 0, sizeof(urls));
 
 #if MINIUPNPC_API_VERSION >= 18
 	auto ret = UPNP_GetValidIGD(devices, &urls, &data, nullptr, 0, nullptr, 0);
@@ -103,12 +104,8 @@ bool Mapper_MiniUPnPc::init()
 #endif
 	}
 
-	if (ret)
-	{
-		FreeUPNPUrls(&urls);
-		freeUPNPDevlist(devices);
-	}
-
+	FreeUPNPUrls(&urls);
+	freeUPNPDevlist(devices);
 	return ok;
 }
 
