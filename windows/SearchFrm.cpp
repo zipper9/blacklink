@@ -169,6 +169,22 @@ static const ResourceManager::Strings hubsColumnNames[] =
 	ResourceManager::TIME_TO_WAIT
 };
 
+enum
+{
+	CTRL_INDEX_ONLY_FREE_SLOTS,
+	CTRL_INDEX_EXPAND_RESULTS,
+#ifdef BL_FEATURE_IP_DATABASE
+	CTRL_INDEX_STORE_SEARCH_IP,
+#endif
+	CTRL_INDEX_SAVE_SETTINGS,
+	CTRL_INDEX_USE_GROUP_TREE,
+	CTRL_INDEX_LABEL_SEARCH,
+	CTRL_INDEX_LABEL_SIZE,
+	CTRL_INDEX_LABEL_FILE_TYPE,
+	CTRL_INDEX_LABEL_SEARCH_OPTIONS,
+	CTRL_INDEX_LABEL_HUBS
+};
+
 SearchFrame::SearchFrame() :
 	id(WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_SEARCH)),
 	TimerHelper(m_hWnd),
@@ -342,50 +358,42 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	ctrlSizeMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZEMODE);
-	
+
 	ctrlFiletype.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_HASSTRINGS | CBS_OWNERDRAWFIXED | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILETYPES);
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, searchTypesImageList, 16, 16);
 
-	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_FREESLOTS);
-	ctrlSlots.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlSlots.SetWindowText(CTSTRING(ONLY_FREE_SLOTS));
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_FREESLOTS, R_(ONLY_FREE_SLOTS));
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(EXPANDED_RESULTS));
+#ifdef BL_FEATURE_IP_DATABASE
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(STORE_SEARCH_IP));
+#endif
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(SAVE_SEARCH_SETTINGS_TEXT));
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_USE_TREE, R_(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
+	controls.add(WinUtil::CTRL_TEXT, -1, R_(SEARCH_FOR));
+	controls.add(WinUtil::CTRL_TEXT, -1, R_(SIZE));
+	controls.add(WinUtil::CTRL_TEXT, -1, R_(FILE_TYPE));
+	controls.add(WinUtil::CTRL_TEXT, -1, R_(SEARCH_OPTIONS));
+	controls.add(WinUtil::CTRL_TEXT, -1, R_(HUBS));
 
-	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
-	ctrlCollapsed.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlCollapsed.SetWindowText(CTSTRING(EXPANDED_RESULTS));
+	controls.create(m_hWnd);
 
 #ifdef BL_FEATURE_IP_DATABASE
-	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
 	auto cs = SettingsManager::instance.getCoreSettings();
 	cs->lockRead();
 	storeIP = cs->getBool(Conf::ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 	cs->unlockRead();
-	ctrlStoreIP.SetCheck(storeIP);
-	ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
+	controls.setCheck(CTRL_INDEX_STORE_SEARCH_IP, storeIP);
 #endif
 
 	const auto* ss = SettingsManager::instance.getUiSettings();
-	boldSearch = SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_SEARCH);
-	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_OPTION_CHECKBOX);
-	if (ss->getBool(Conf::SAVE_SEARCH_SETTINGS))
-		ctrlStoreSettings.SetCheck(BST_CHECKED);
-	ctrlStoreSettings.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlStoreSettings.SetWindowText(CTSTRING(SAVE_SEARCH_SETTINGS_TEXT));
+	boldSearch = ss->getBool(Conf::BOLD_SEARCH);
+	controls.setCheck(CTRL_INDEX_SAVE_SETTINGS, ss->getBool(Conf::SAVE_SEARCH_SETTINGS));
+	onlyFree = ss->getBool(Conf::ONLY_FREE_SLOTS);
+	controls.setCheck(CTRL_INDEX_ONLY_FREE_SLOTS, onlyFree);
+	controls.setCheck(CTRL_INDEX_USE_GROUP_TREE, ss->getBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS));
 
-	WinUtil::addTool(tooltip, ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
-	if (ss->getBool(Conf::ONLY_FREE_SLOTS))
-	{
-		ctrlSlots.SetCheck(BST_CHECKED);
-		onlyFree = true;
-	}
-
-	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | BS_AUTOCHECKBOX, NULL, IDC_USE_TREE);
-	if (ss->getBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS))
-		ctrlUseGroupTreeSettings.SetCheck(BST_CHECKED);
-	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlUseGroupTreeSettings.SetWindowText(CTSTRING(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
+	WinUtil::addTool(tooltip, controls.getData()[CTRL_INDEX_SAVE_SETTINGS].hWnd, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
 
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_HUB);
@@ -435,26 +443,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlShowOptions.SetFont(Fonts::g_systemFont);
 	showOptionsContainer.SubclassWindow(ctrlShowOptions.m_hWnd);
 	WinUtil::addTool(tooltip, ctrlShowOptions, ResourceManager::SEARCH_SHOWHIDEPANEL);
-
-	searchLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	searchLabel.SetFont(Fonts::g_systemFont, FALSE);
-	searchLabel.SetWindowText(CTSTRING(SEARCH_FOR));
-
-	sizeLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	sizeLabel.SetFont(Fonts::g_systemFont, FALSE);
-	sizeLabel.SetWindowText(CTSTRING(SIZE));
-
-	typeLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	typeLabel.SetFont(Fonts::g_systemFont, FALSE);
-	typeLabel.SetWindowText(CTSTRING(FILE_TYPE));
-
-	optionLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	optionLabel.SetFont(Fonts::g_systemFont, FALSE);
-	optionLabel.SetWindowText(CTSTRING(SEARCH_OPTIONS));
-
-	hubsLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	hubsLabel.SetFont(Fonts::g_systemFont, FALSE);
-	hubsLabel.SetWindowText(CTSTRING(HUBS));
 
 	ctrlSearchBox.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSize.SetFont(Fonts::g_systemFont, FALSE);
@@ -518,27 +506,28 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE);
 	WinUtil::setExplorerTheme(ctrlHubs);
 
+	const auto& data = controls.getData();
 	for (int i = 0; i < _countof(layoutItems); ++i)
 		layout[i] = layoutItems[i];
-	layout[0].id = (UINT_PTR) searchLabel.m_hWnd;
+	layout[0].id = (UINT_PTR) data[CTRL_INDEX_LABEL_SEARCH].hWnd;
 	layout[1].id = (UINT_PTR) ctrlPurge.m_hWnd;
 	layout[2].id = (UINT_PTR) ctrlDoSearch.m_hWnd;
 	layout[3].id = (UINT_PTR) ctrlSearchBox.m_hWnd;
-	layout[4].id = (UINT_PTR) sizeLabel.m_hWnd;
+	layout[4].id = (UINT_PTR) data[CTRL_INDEX_LABEL_SIZE].hWnd;
 	layout[5].id = (UINT_PTR) ctrlSizeMode.m_hWnd;
 	layout[6].id = (UINT_PTR) ctrlSize.m_hWnd;
 	layout[7].id = (UINT_PTR) ctrlMode.m_hWnd;
-	layout[8].id = (UINT_PTR) typeLabel.m_hWnd;
+	layout[8].id = (UINT_PTR) data[CTRL_INDEX_LABEL_FILE_TYPE].hWnd;
 	layout[9].id = (UINT_PTR) ctrlFiletype.m_hWnd;
-	layout[10].id = (UINT_PTR) optionLabel.m_hWnd;
-	layout[11].id = (UINT_PTR) ctrlSlots.m_hWnd;
-	layout[12].id = (UINT_PTR) ctrlCollapsed.m_hWnd;
+	layout[10].id = (UINT_PTR) data[CTRL_INDEX_LABEL_SEARCH_OPTIONS].hWnd;
+	layout[11].id = (UINT_PTR) data[CTRL_INDEX_ONLY_FREE_SLOTS].hWnd;
+	layout[12].id = (UINT_PTR) data[CTRL_INDEX_EXPAND_RESULTS].hWnd;
 #ifdef BL_FEATURE_IP_DATABASE
-	layout[13].id = (UINT_PTR) ctrlStoreIP.m_hWnd;
+	layout[13].id = (UINT_PTR) data[CTRL_INDEX_STORE_SEARCH_IP].hWnd;
 #endif
-	layout[14].id = (UINT_PTR) ctrlStoreSettings.m_hWnd;
-	layout[15].id = (UINT_PTR) ctrlUseGroupTreeSettings.m_hWnd;
-	layout[16].id = (UINT_PTR) hubsLabel.m_hWnd;
+	layout[14].id = (UINT_PTR) data[CTRL_INDEX_SAVE_SETTINGS].hWnd;
+	layout[15].id = (UINT_PTR) data[CTRL_INDEX_USE_GROUP_TREE].hWnd;
+	layout[16].id = (UINT_PTR) data[CTRL_INDEX_LABEL_HUBS].hWnd;
 	layout[17].id = (UINT_PTR) ctrlHubs.m_hWnd;
 
 	ctrlPortStatus.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0);
@@ -910,20 +899,26 @@ void SearchFrame::addSearchResult(const SearchResult& sr)
 	}
 }
 
+LRESULT SearchFrame::onFreeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	onlyFree = controls.isChecked(CTRL_INDEX_ONLY_FREE_SLOTS);
+	return 0;
+}
+
 LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	expandSR = ctrlCollapsed.GetCheck() == BST_CHECKED;
+	expandSR = controls.isChecked(CTRL_INDEX_EXPAND_RESULTS);
 #ifdef BL_FEATURE_IP_DATABASE
-	storeIP = ctrlStoreIP.GetCheck() == BST_CHECKED;
+	storeIP = controls.isChecked(CTRL_INDEX_STORE_SEARCH_IP);
 #endif
-	storeSettings = ctrlStoreSettings.GetCheck() == BST_CHECKED;
+	storeSettings = controls.isChecked(CTRL_INDEX_SAVE_SETTINGS);
 	SettingsManager::instance.getUiSettings()->setBool(Conf::SAVE_SEARCH_SETTINGS, storeSettings);
 	return 0;
 }
 
 LRESULT SearchFrame::onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	useTree = ctrlUseGroupTreeSettings.GetCheck() == BST_CHECKED;
+	useTree = controls.isChecked(CTRL_INDEX_USE_GROUP_TREE);
 	SettingsManager::instance.getUiSettings()->setBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
 	UpdateLayout();
 	if (!useTree)
@@ -1630,22 +1625,11 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		ctrlSizeMode.ShowWindow(SW_HIDE);
 		ctrlFiletype.ShowWindow(SW_HIDE);
 
-		ctrlCollapsed.ShowWindow(SW_HIDE);
-		ctrlSlots.ShowWindow(SW_HIDE);
-#ifdef BL_FEATURE_IP_DATABASE
-		ctrlStoreIP.ShowWindow(SW_HIDE);
-#endif
-		ctrlStoreSettings.ShowWindow(SW_HIDE);
-		ctrlUseGroupTreeSettings.ShowWindow(SW_HIDE);
+		controls.show(SW_HIDE);
 		ctrlSearchFilterTree.ShowWindow(SW_HIDE);
 
 		ctrlHubs.ShowWindow(SW_HIDE);
 		ctrlDoSearch.ShowWindow(SW_HIDE);
-		typeLabel.ShowWindow(SW_HIDE);
-		hubsLabel.ShowWindow(SW_HIDE);
-		sizeLabel.ShowWindow(SW_HIDE);
-		searchLabel.ShowWindow(SW_HIDE);
-		optionLabel.ShowWindow(SW_HIDE);
 	}
 
 	CRect rc;
@@ -1734,28 +1718,34 @@ LRESULT SearchFrame::onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 		bHandled = FALSE;
 		return 0;
 	}
-	const HWND hWnd = (HWND)lParam;
-	if (uMsg == WM_CTLCOLOREDIT && !(hWnd == ctrlSearch.m_hWnd || hWnd == ctrlSize.m_hWnd))
+	const HWND hWnd = (HWND) lParam;
+	const HDC hDC = (HDC) wParam;
+	if (uMsg == WM_CTLCOLOREDIT)
 	{
+		if (hWnd == ctrlSearch.m_hWnd || hWnd == ctrlSize.m_hWnd)
+			return Colors::setColor(hDC);
 		bHandled = FALSE;
 		return 0;
 	}
-	const HDC hDC = (HDC)wParam;
-	if (hWnd == searchLabel.m_hWnd || hWnd == sizeLabel.m_hWnd || hWnd == optionLabel.m_hWnd || hWnd == typeLabel.m_hWnd
-	        || hWnd == hubsLabel.m_hWnd || hWnd == ctrlSlots.m_hWnd ||
-#ifdef BL_FEATURE_IP_DATABASE
-	        hWnd == ctrlStoreIP.m_hWnd ||
-#endif
-	        hWnd == ctrlStoreSettings.m_hWnd ||
-	        hWnd == ctrlUseGroupTreeSettings.m_hWnd ||
-	        hWnd == ctrlCollapsed.m_hWnd ||
-			hWnd == ctrlPortStatus.m_hWnd)
+	if (uMsg == WM_CTLCOLORSTATIC)
 	{
-		SetTextColor(hDC, colorText);
-		SetBkColor(hDC, colorBackground);
-		return reinterpret_cast<LRESULT>(Colors::g_tabBackgroundBrush);
+		if (hWnd == ctrlSize.m_hWnd) // disabled edits send WM_CTLCOLORSTATIC
+			return Colors::setColor(hDC);
+		int controlIndex = controls.find(hWnd);
+		int controlType = controlIndex < 0 ? -1 : controls.getData()[controlIndex].type;
+		if (hWnd == ctrlPortStatus.m_hWnd || (controlType == WinUtil::CTRL_TEXT || controlType == WinUtil::CTRL_CHECKBOX))
+		{
+			SetTextColor(hDC, colorText);
+			SetBkColor(hDC, colorBackground);
+			return reinterpret_cast<LRESULT>(Colors::g_tabBackgroundBrush);
+		}
 	}
-	return Colors::setColor(hDC);
+	if (uMsg == WM_CTLCOLORLISTBOX)
+	{
+		return Colors::setColor(hDC);
+	}
+	bHandled = FALSE;
+	return 0;
 }
 
 BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
@@ -2485,7 +2475,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 		case CDDS_PREPAINT:
 			CustomDrawHelpers::startDraw(customDrawState, cd);
 			return CDRF_NOTIFYITEMDRAW;
-	
+
 		case CDDS_ITEMPREPAINT:
 		{
 			cd->clrText = Colors::g_textColor;

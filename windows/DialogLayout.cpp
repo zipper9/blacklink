@@ -1,22 +1,10 @@
 #include "stdafx.h"
 #include "DialogLayout.h"
+#include "ControlTypes.h"
 #include "WinUtil.h"
 #include <algorithm>
 
 using namespace DialogLayout;
-
-enum
-{
-	CTRL_UNKNOWN,
-	CTRL_TEXT,
-	CTRL_IMAGE,
-	CTRL_BUTTON,
-	CTRL_CHECKBOX,
-	CTRL_RADIO,
-	CTRL_EDIT,
-	CTRL_COMBOBOX,
-	CTRL_GROUPBOX
-};
 
 enum
 {
@@ -144,9 +132,9 @@ public:
 static int getControlType(HWND hwnd, int& drawFlags)
 {
 	TCHAR name[64];
-	if (!GetClassName(hwnd, name, _countof(name))) return CTRL_UNKNOWN;
+	if (!GetClassName(hwnd, name, _countof(name))) return WinUtil::CTRL_UNKNOWN;
 	int style = GetWindowLong(hwnd, GWL_STYLE);
-	int type = CTRL_UNKNOWN;
+	int type = WinUtil::CTRL_UNKNOWN;
 	drawFlags = DT_SINGLELINE;
 	if (!_tcsicmp(name, _T("static")))
 	{
@@ -157,14 +145,14 @@ static int getControlType(HWND hwnd, int& drawFlags)
 			case SS_RIGHT:
 			case SS_SIMPLE:
 			case SS_LEFTNOWORDWRAP:
-				type = CTRL_TEXT;
+				type = WinUtil::CTRL_TEXT;
 				break;
 			case SS_ICON:
 			case SS_BITMAP:
-				type = CTRL_IMAGE;
+				type = WinUtil::CTRL_IMAGE;
 				break;
 			default:
-				return CTRL_UNKNOWN;
+				return WinUtil::CTRL_UNKNOWN;
 		}
 		if (style & SS_NOPREFIX) drawFlags |= DT_NOPREFIX;
 	}
@@ -176,28 +164,28 @@ static int getControlType(HWND hwnd, int& drawFlags)
 			case BS_AUTOCHECKBOX:
 			case BS_3STATE:
 			case BS_AUTO3STATE:
-				type = (style & BS_PUSHLIKE) ? CTRL_BUTTON : CTRL_CHECKBOX;
+				type = (style & BS_PUSHLIKE) ? WinUtil::CTRL_BUTTON : WinUtil::CTRL_CHECKBOX;
 				break;
 			case BS_RADIOBUTTON:
 			case BS_AUTORADIOBUTTON:
-				type = (style & BS_PUSHLIKE) ? CTRL_BUTTON : CTRL_RADIO;
+				type = (style & BS_PUSHLIKE) ? WinUtil::CTRL_BUTTON : WinUtil::CTRL_RADIO;
 				break;
 			case BS_GROUPBOX:
-				type = CTRL_GROUPBOX;
+				type = WinUtil::CTRL_GROUPBOX;
 				break;
 			default:
-				type = CTRL_BUTTON;
+				type = WinUtil::CTRL_BUTTON;
 		}
 		if (style & BS_MULTILINE) drawFlags &= ~DT_SINGLELINE;
 	}
 	else if (!_tcsicmp(name, _T("combobox")))
 	{
 		if (style & CBS_DROPDOWN)
-			type = CTRL_COMBOBOX;
+			type = WinUtil::CTRL_COMBOBOX;
 	}
 	else if (!_tcsicmp(name, _T("edit")))
 	{
-		type = CTRL_EDIT;
+		type = WinUtil::CTRL_EDIT;
 	}
 	return type;
 }
@@ -326,7 +314,7 @@ void DialogLayout::layout(HWND hWnd, const Item* items, int count, const Options
 		}
 		cur.flags = 0;
 		cur.type = getControlType(cur.hwnd, cur.drawFlags);
-		if (cur.type == CTRL_COMBOBOX) di.getOrigRect(cur);
+		if (cur.type == WinUtil::CTRL_COMBOBOX) di.getOrigRect(cur);
 		if (items[i].width >= 0)
 		{
 			cur.width = di.getXSize(items[i].width);
@@ -426,7 +414,7 @@ void DialogLayout::layout(HWND hWnd, const Item* items, int count, const Options
 		    cur.rc.top == cur.rcOrig.top && cur.rc.bottom == cur.rcOrig.bottom) continue;
 		DeferWindowPos(dwp, cur.hwnd, nullptr, cur.rc.left, cur.rc.top,
 			cur.rc.right - cur.rc.left,
-			cur.type == CTRL_COMBOBOX ? cur.rcOrig.bottom - cur.rcOrig.top : cur.rc.bottom - cur.rc.top,
+			cur.type == WinUtil::CTRL_COMBOBOX ? cur.rcOrig.bottom - cur.rcOrig.top : cur.rc.bottom - cur.rc.top,
 			flags);
 	}
 	EndDeferWindowPos(dwp);
@@ -458,7 +446,7 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 	size.cx = size.cy = 0;
 	switch (type)
 	{
-		case CTRL_TEXT:
+		case WinUtil::CTRL_TEXT:
 		{
 			HDC dc = GetDC(hwnd);
 			if (!dc) return false;
@@ -466,10 +454,10 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 			ReleaseDC(hwnd, dc);
 			break;
 		}
-		case CTRL_IMAGE:
+		case WinUtil::CTRL_IMAGE:
 			size.cx = size.cy = 16;
 			break;
-		case CTRL_BUTTON:
+		case WinUtil::CTRL_BUTTON:
 		{
 			HDC dc = GetDC(hwnd);
 			if (!dc) return false;
@@ -481,8 +469,8 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 				size.cy += getYSizeDU(6);
 			break;
 		}
-		case CTRL_CHECKBOX:
-		case CTRL_RADIO:
+		case WinUtil::CTRL_CHECKBOX:
+		case WinUtil::CTRL_RADIO:
 		{
 			HDC dc = GetDC(hwnd);
 			if (!dc) return false;
@@ -509,12 +497,12 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 				}
 			}
 			ReleaseDC(hwnd, dc);
-			size.cx += (type == CTRL_RADIO ? radioSize.cx : checkBoxSize.cx) + checkBoxGap;
+			size.cx += (type == WinUtil::CTRL_RADIO ? radioSize.cx : checkBoxSize.cx) + checkBoxGap;
 			size.cy = std::max(size.cy, checkBoxSize.cy);
 			if (!hasTheme) size.cx += 2;
 			break;
 		}
-		case CTRL_COMBOBOX:
+		case WinUtil::CTRL_COMBOBOX:
 		{
 			if (comboBoxHeight < 0)
 			{
@@ -533,7 +521,7 @@ bool DialogInfo::getSizeFromContent(HWND hwnd, int type, int drawFlags, SIZE& si
 			size.cy = comboBoxHeight;
 			break;
 		}
-		case CTRL_EDIT:
+		case WinUtil::CTRL_EDIT:
 			size.cx = getXSizeDU(40);
 			size.cy = getYSizeDU(14);
 			break;

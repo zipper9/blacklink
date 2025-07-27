@@ -30,6 +30,7 @@
 #include "DialogLayout.h"
 #include "StatusLabelCtrl.h"
 #include "SearchBoxCtrl.h"
+#include "ControlList.h"
 
 #include "../client/ClientManagerListener.h"
 #include "../client/FavoriteManagerListener.h"
@@ -195,22 +196,17 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			removeSelected();
 			return 0;
 		}
-		
-		LRESULT onFreeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			onlyFree = ctrlSlots.GetCheck() == BST_CHECKED;
-			return 0;
-		}
-		
+
+		LRESULT onFreeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
 		LRESULT onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			onEnter();
 			return 0;
 		}
-		
+
 		LRESULT onGetDefID(UINT, WPARAM, LPARAM, BOOL&)
 		{
 			return MAKELONG(IDC_SEARCH, DC_HASDEFID);
@@ -414,12 +410,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		int64_t initialSize;
 		SizeModes initialMode;
 		int initialType;
-		
+
 		CStatusBarCtrl ctrlStatus;
 		CEdit ctrlSearch;
 		CComboBox ctrlSearchBox;
 		void initSearchHistoryBox();
-		
+
 		DialogLayout::Item layout[18];
 		CEdit ctrlSize;
 		CComboBox ctrlMode;
@@ -434,31 +430,24 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		ImageButton ctrlDoSearchSubclass;
 #endif
 
+		WinUtil::ControlList controls;
 		CToolTipCtrl tooltip;
 
-#ifdef BL_FEATURE_IP_DATABASE
-		CButton ctrlStoreIP;
-		bool storeIP;
-#endif
 		CContainedWindow showOptionsContainer;
 		tstring filter;
 
 		COLORREF colorBackground;
 		COLORREF colorText;
-		CStatic searchLabel, sizeLabel, optionLabel, typeLabel, hubsLabel;
-		CButton ctrlSlots;
+#ifdef BL_FEATURE_IP_DATABASE
+		bool storeIP;
+#endif
 		bool onlyFree;
+		bool expandSR;
+		bool storeSettings;
+		bool useTree;
 
 		CButton ctrlShowOptions;
 		bool showOptions;
-
-		CButton ctrlCollapsed;
-		bool expandSR;
-
-		CButton ctrlStoreSettings;
-		bool storeSettings;
-		CButton ctrlUseGroupTreeSettings;
-		bool useTree;
 
 		bool autoSwitchToTTH;
 		bool shouldSort;
@@ -531,11 +520,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		StatusLabelCtrl ctrlPortStatus;
 		int portStatus;
 		string currentReflectedAddress;
-		
+
 		size_t droppedResults;
-		
+
 		StringMap ucLineParams;
-		
+
 		static const int columnId[];
 
 		typedef std::map<uint64_t, SearchFrame*> FrameMap;

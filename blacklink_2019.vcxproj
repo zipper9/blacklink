@@ -773,6 +773,7 @@
     <ClCompile Include="windows\AutoImageList.cpp" />
     <ClCompile Include="windows\BackingStore.cpp" />
     <ClCompile Include="windows\ConfUI.cpp" />
+    <ClCompile Include="windows\ControlList.cpp" />
     <ClCompile Include="windows\DirectoryListingNavWnd.cpp" />
     <ClCompile Include="windows\DwmApiLib.cpp" />
     <ClCompile Include="windows\EmoticonPacksDlg.cpp" />
@@ -978,6 +979,7 @@
     <ClInclude Include="windows\AutoImageList.h" />
     <ClInclude Include="windows\BackingStore.h" />
     <ClInclude Include="windows\ConfUI.h" />
+    <ClInclude Include="windows\ControlList.h" />
     <ClInclude Include="windows\DirectoryListingNavWnd.h" />
     <ClInclude Include="windows\DwmApiLib.h" />
     <ClInclude Include="windows\EmoticonPacksDlg.h" />

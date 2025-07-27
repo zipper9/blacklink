@@ -1,0 +1,20 @@
+#ifndef CONTROL_TYPES_H_
+#define CONTROL_TYPES_H_
+
+namespace WinUtil
+{
+	enum ControlType
+	{
+		CTRL_UNKNOWN,
+		CTRL_TEXT,
+		CTRL_IMAGE,
+		CTRL_BUTTON,
+		CTRL_CHECKBOX,
+		CTRL_RADIO,
+		CTRL_EDIT,
+		CTRL_COMBOBOX,
+		CTRL_GROUPBOX
+	};
+}
+
+#endif // CONTROL_TYPES_H_
