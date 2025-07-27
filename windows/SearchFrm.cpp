@@ -363,13 +363,13 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_HASSTRINGS | CBS_OWNERDRAWFIXED | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILETYPES);
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, searchTypesImageList, 16, 16);
 
-	controls.add(WinUtil::CTRL_CHECKBOX, IDC_FREESLOTS, R_(ONLY_FREE_SLOTS));
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(ONLY_FREE_SLOTS));
 	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(EXPANDED_RESULTS));
 #ifdef BL_FEATURE_IP_DATABASE
 	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(STORE_SEARCH_IP));
 #endif
 	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(SAVE_SEARCH_SETTINGS_TEXT));
-	controls.add(WinUtil::CTRL_CHECKBOX, IDC_USE_TREE, R_(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
+	controls.add(WinUtil::CTRL_CHECKBOX, IDC_OPTION_CHECKBOX, R_(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
 	controls.add(WinUtil::CTRL_TEXT, -1, R_(SEARCH_FOR));
 	controls.add(WinUtil::CTRL_TEXT, -1, R_(SIZE));
 	controls.add(WinUtil::CTRL_TEXT, -1, R_(FILE_TYPE));
@@ -500,6 +500,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	if (hTheme)
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
 	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
+
+	initCheckBoxCustomDraw();
 
 	ctrlHubs.insertColumns(Util::emptyString, Util::emptyString, Util::emptyString);
 	setListViewColors(ctrlHubs);
@@ -899,49 +901,29 @@ void SearchFrame::addSearchResult(const SearchResult& sr)
 	}
 }
 
-LRESULT SearchFrame::onFreeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	onlyFree = controls.isChecked(CTRL_INDEX_ONLY_FREE_SLOTS);
-	return 0;
-}
-
-LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	expandSR = controls.isChecked(CTRL_INDEX_EXPAND_RESULTS);
+	switch (controls.find(hWndCtl))
+	{
+		case CTRL_INDEX_ONLY_FREE_SLOTS:
+			onlyFree = controls.isChecked(CTRL_INDEX_ONLY_FREE_SLOTS);
+			break;
+		case CTRL_INDEX_EXPAND_RESULTS:
+			expandSR = controls.isChecked(CTRL_INDEX_EXPAND_RESULTS);
+			break;
 #ifdef BL_FEATURE_IP_DATABASE
-	storeIP = controls.isChecked(CTRL_INDEX_STORE_SEARCH_IP);
+		case CTRL_INDEX_STORE_SEARCH_IP:
+			storeIP = controls.isChecked(CTRL_INDEX_STORE_SEARCH_IP);
+			break;
 #endif
-	storeSettings = controls.isChecked(CTRL_INDEX_SAVE_SETTINGS);
-	SettingsManager::instance.getUiSettings()->setBool(Conf::SAVE_SEARCH_SETTINGS, storeSettings);
-	return 0;
-}
-
-LRESULT SearchFrame::onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	useTree = controls.isChecked(CTRL_INDEX_USE_GROUP_TREE);
-	SettingsManager::instance.getUiSettings()->setBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
-	UpdateLayout();
-	if (!useTree)
-	{
-		if (treeItemRoot)
-		{
-			treeItemOld = treeItemCurrent;
-			ctrlSearchFilterTree.SelectItem(treeItemRoot);
-		}
-	}
-	else
-	{
-		if (treeItemOld)
-		{
-			if (ctrlSearchFilterTree.SelectItem(treeItemOld))
-			{
-				treeItemCurrent = treeItemOld;
-			}
-			else
-			{
-				dcassert(0);
-			}
-		}
+		case CTRL_INDEX_SAVE_SETTINGS:
+			storeSettings = controls.isChecked(CTRL_INDEX_SAVE_SETTINGS);
+			SettingsManager::instance.getUiSettings()->setBool(Conf::SAVE_SEARCH_SETTINGS, storeSettings);
+			break;
+		case CTRL_INDEX_USE_GROUP_TREE:
+			useTree = controls.isChecked(CTRL_INDEX_USE_GROUP_TREE);
+			SettingsManager::instance.getUiSettings()->setBool(Conf::USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
+			toggleTree();
 	}
 	return 0;
 }
@@ -1666,6 +1648,29 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	tooltip.Activate(TRUE);
 }
 
+void SearchFrame::toggleTree()
+{
+	UpdateLayout();
+	if (!useTree)
+	{
+		if (treeItemRoot)
+		{
+			treeItemOld = treeItemCurrent;
+			ctrlSearchFilterTree.SelectItem(treeItemRoot);
+		}
+	}
+	else
+	{
+		if (treeItemOld)
+		{
+			if (ctrlSearchFilterTree.SelectItem(treeItemOld))
+				treeItemCurrent = treeItemOld;
+			else
+				dcassert(0);
+		}
+	}
+}
+
 void SearchFrame::runUserCommand(UserCommand & uc)
 {
 	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
@@ -1745,6 +1750,16 @@ LRESULT SearchFrame::onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 	}
 	bHandled = FALSE;
 	return 0;
+}
+
+LRESULT SearchFrame::onCheckBoxCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
+{
+	NMCUSTOMDRAW* cd = reinterpret_cast<NMCUSTOMDRAW*>(pnmh);
+	if (cd->dwDrawStage == CDDS_PREPAINT)
+		return CustomDrawHelpers::drawCheckBox(cd, customDrawCheckBox) ?
+			CDRF_SKIPDEFAULT : CDRF_DODEFAULT;
+
+	return CDRF_DODEFAULT;
 }
 
 BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
@@ -2466,6 +2481,12 @@ void SearchFrame::getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const
 		fg = colors.fgInQueue;
 }
 
+void SearchFrame::initCheckBoxCustomDraw()
+{
+	customDrawCheckBox.enableCustomDraw = (colorText & 0xFFFFFF) != 0;
+	customDrawCheckBox.textColor = colorText;
+}
+
 LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
@@ -2880,6 +2901,7 @@ void SearchFrame::on(SettingsManagerListener::ApplySettings)
 	{
 		colorBackground = Colors::g_tabBackground;
 		colorText = Colors::g_tabText;
+		initCheckBoxCustomDraw();
 		redraw = true;
 	}
 

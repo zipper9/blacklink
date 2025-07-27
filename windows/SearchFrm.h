@@ -77,6 +77,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_HUB, LVN_ITEMCHANGED, onItemChangedHub)
 		NOTIFY_HANDLER(IDC_RESULTS, NM_CUSTOMDRAW, onCustomDraw)
+		NOTIFY_HANDLER(IDC_OPTION_CHECKBOX, NM_CUSTOMDRAW, onCheckBoxCustomDraw)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
@@ -103,9 +104,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_COPY_FILENAME, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_PATH, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_SIZE, onCopy)
-		COMMAND_ID_HANDLER(IDC_FREESLOTS, onFreeSlots)
 		COMMAND_ID_HANDLER(IDC_OPTION_CHECKBOX, onChangeOption)
-		COMMAND_ID_HANDLER(IDC_USE_TREE, onToggleTree)
 		COMMAND_ID_HANDLER(IDC_GETLIST, onGetList)
 		COMMAND_ID_HANDLER(IDC_BROWSELIST, onBrowseList)
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchByTTH)
@@ -157,6 +156,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCtlColor(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCheckBoxCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onDoubleClickResults(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -197,9 +197,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			return 0;
 		}
 
-		LRESULT onFreeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/);
 
 		LRESULT onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -455,9 +453,10 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CImageList images;
 		SearchInfoList ctrlResults;
 		CustomDrawHelpers::CustomDrawState customDrawState;
+		CustomDrawHelpers::CustomDrawCheckBoxState customDrawCheckBox;
 		HTHEME hTheme;
 		TypedListViewCtrl<HubInfo> ctrlHubs;
-		
+
 		CTreeViewCtrl ctrlSearchFilterTree;
 		HTREEITEM treeItemRoot;
 		HTREEITEM treeItemCurrent;
@@ -555,7 +554,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		class HashDatabaseConnection* hashDb;
 
 		void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg) const;
+		void initCheckBoxCustomDraw();
 		void showPortStatus();
+		void toggleTree();
 
 		void onEnter();
 		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title);

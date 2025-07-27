@@ -469,3 +469,58 @@ void CustomDrawHelpers::drawComboBox(HWND hWnd, const DRAWITEMSTRUCT* dis, HIMAG
 		}
 	}
 }
+
+CustomDrawHelpers::CustomDrawCheckBoxState::CustomDrawCheckBoxState()
+{
+	enableCustomDraw = initialized = false;
+	checkBoxSize.cx = checkBoxSize.cy = 0;
+	checkBoxGap = 0;
+	textColor = 0;
+}
+
+void CustomDrawHelpers::CustomDrawCheckBoxState::init(HWND hWnd, HDC dc)
+{
+	HTHEME hTheme = OpenThemeData(hWnd, VSCLASS_BUTTON);
+	if (!hTheme || FAILED(GetThemePartSize(hTheme, dc, BP_CHECKBOX, CBS_UNCHECKEDNORMAL, nullptr, TS_TRUE, &checkBoxSize)))
+		checkBoxSize.cx = checkBoxSize.cy = GetDeviceCaps(dc, LOGPIXELSX) / 8 + 1;
+	if (hTheme) CloseThemeData(hTheme);
+	SIZE szZero;
+	HFONT hFont = (HFONT) SendMessage(hWnd, WM_GETFONT, 0, 0);
+	HGDIOBJ prevFont = SelectObject(dc, hFont);
+	TCHAR c = _T('0');
+	GetTextExtentPoint32(dc, &c, 1, &szZero);
+	SelectObject(dc, prevFont);
+	checkBoxGap = szZero.cx / 2;
+	if (!hTheme) checkBoxGap += 2;
+	initialized = true;
+}
+
+bool CustomDrawHelpers::drawCheckBox(const NMCUSTOMDRAW* cd, CustomDrawHelpers::CustomDrawCheckBoxState& state)
+{
+	if (!state.enableCustomDraw) return false;
+	HWND hWnd = cd->hdr.hwndFrom;
+	if (!state.initialized) state.init(hWnd, cd->hdc);
+
+	RECT rc = cd->rc;
+	rc.left += state.checkBoxSize.cx + state.checkBoxGap;
+	tstring text;
+	WinUtil::getWindowText(cd->hdr.hwndFrom, text);
+
+	int oldMode = GetBkMode(cd->hdc);
+	COLORREF oldColor = GetTextColor(cd->hdc);
+	SetBkMode(cd->hdc, TRANSPARENT);
+	SetTextColor(cd->hdc, state.textColor);
+	DrawText(cd->hdc, text.c_str(), (int) text.length(), &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+	SetBkMode(cd->hdc, oldMode);
+	SetTextColor(cd->hdc, oldColor);
+
+	if (GetFocus() == hWnd && !(SendMessage(hWnd, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS))
+	{
+		static const int offset = 1;
+		DrawText(cd->hdc, text.c_str(), (int) text.length(), &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_CALCRECT);
+		rc.left -= offset;
+		rc.right += offset;
+		DrawFocusRect(cd->hdc, &rc);
+	}
+	return true;
+}

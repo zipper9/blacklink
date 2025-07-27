@@ -287,7 +287,6 @@
 #define IDC_SOCKS_PORT                  1167
 #define IDC_SOCKS_USER                  1168
 #define IDC_SOCKS_PASSWORD              1169
-#define IDC_FREESLOTS                   1170
 #define IDC_COPY_NICK                   1171
 #define IDC_ADVANCED_BOOLEANS           1172
 #define IDC_ADD_MENU                    1173
@@ -1090,7 +1089,6 @@
 #define IDC_TRANSCODE                   2280
 #define IDC_SELECT_HUB                  2281
 #define IDC_OPTION_CHECKBOX             2282
-#define IDC_USE_TREE                    2283
 #define IDC_PAUSE                       2284
 #define IDC_PARTIAL_SLOTS               2285
 #define IDC_SETTINGS_PARTIAL_SLOTS      2287

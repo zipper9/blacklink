@@ -40,6 +40,18 @@ namespace CustomDrawHelpers
 		CustomDrawState();
 	};
 
+	struct CustomDrawCheckBoxState
+	{
+		bool enableCustomDraw;
+		bool initialized;
+		COLORREF textColor;
+		SIZE checkBoxSize;
+		int checkBoxGap;
+
+		CustomDrawCheckBoxState();
+		void init(HWND hWnd, HDC dc);
+	};
+
 	void startDraw(CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 	void startItemDraw(CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 	void drawFocusRect(CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
@@ -48,8 +60,8 @@ namespace CustomDrawHelpers
 	void endSubItemDraw(CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 	void setColor(CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 	void fillBackground(const CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
-	void drawFirstSubItem(CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const tstring& text);
-	UINT getTextFlags(const CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
+	void drawFirstSubItem(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const tstring& text);
+	UINT getTextFlags(const CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 
 	void drawLocation(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const IPInfo& ipInfo);
 	void drawCountry(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, uint16_t code, const tstring& text);
@@ -61,6 +73,8 @@ namespace CustomDrawHelpers
 
 	void measureComboBox(MEASUREITEMSTRUCT* mis, HFONT hFont);
 	void drawComboBox(HWND hWnd, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList);
+
+	bool drawCheckBox(const NMCUSTOMDRAW* cd, CustomDrawCheckBoxState& state);
 }
 
 #endif /* CUSTOM_DRAW_HELPERS_H */
