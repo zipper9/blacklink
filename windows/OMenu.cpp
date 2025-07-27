@@ -1213,7 +1213,11 @@ HBITMAP OMenuItem::getGrayBitmap(HDC hdc) const
 	bmi.bmiHeader.biClrImportant = 0;
 
 	BYTE* bits = new BYTE[size];
-	if (!GetDIBits(hdc, bitmap, 0, height, bits, &bmi, DIB_RGB_COLORS)) return bitmap;
+	if (!GetDIBits(hdc, bitmap, 0, height, bits, &bmi, DIB_RGB_COLORS))
+	{
+		delete[] bits;
+		return bitmap;
+	}
 	BYTE* p = bits;
 	for (int y = 0; y < height; y++)
 		for(int x = 0; x < width; x++)

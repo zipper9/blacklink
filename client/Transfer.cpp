@@ -79,7 +79,7 @@ void Transfer::getParams(StringMap& params) const
 		{
 			hubNames.push_back(STRING(OFFLINE));
 		}
-		params["hub"] = Util::toString(hubNames);
+		params["hub"] = params["hubNI"] = Util::toString(hubNames);
 		
 		StringList hubs = ClientManager::getHubs(user->getCID(), hint);
 		if (hubs.empty())

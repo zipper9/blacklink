@@ -1670,10 +1670,9 @@ void SearchFrame::runUserCommand(UserCommand & uc)
 {
 	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
 		return;
-		
+
 	StringMap ucParams = ucLineParams;
-	
-	std::set<CID> users;
+	boost::unordered_set<CID> users;
 	
 	int sel = -1;
 	while ((sel = ctrlResults.GetNextItem(sel, LVNI_SELECTED)) != -1)

@@ -462,7 +462,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		HTREEITEM treeItemRoot;
 		HTREEITEM treeItemCurrent;
 		HTREEITEM treeItemOld;
-		std::unordered_map<string, HTREEITEM> extToTreeItem;
+		boost::unordered_map<string, HTREEITEM> extToTreeItem;
 
 		static const int NUMBER_OF_TYPE_NODES = NUMBER_OF_FILE_TYPES;
 
@@ -474,13 +474,13 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			vector<SearchInfo*> data;
 		};
 
-		std::unordered_map<HTREEITEM, ExtGroup> groupedResults;
+		boost::unordered_map<HTREEITEM, ExtGroup> groupedResults;
 		HTREEITEM typeNodes[NUMBER_OF_TYPE_NODES];
 		bool treeExpanded;
 		HTREEITEM getInsertAfter(int type) const;
 
-		std::unordered_set<SearchInfo*> everything;
-		std::unordered_set<UserPtr> allUsers;
+		boost::unordered_set<SearchInfo*> everything;
+		boost::unordered_set<UserPtr> allUsers;
 		FastCriticalSection csEverything;
 
 		void clearFound();
