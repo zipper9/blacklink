@@ -55,8 +55,8 @@ struct
 	{ PRODUCT_WEB_SERVER,                   "Web Server Edition"                          },
 	{ PRODUCT_IOTUAP,                       "IoT Core"                                    },
 	{ PRODUCT_EDUCATION,                    "Education"                                   },
-	{ PRODUCT_ENTERPRISE_S,                 "Enterprise 2015 LTSB"                        },
-	{ PRODUCT_ENTERPRISE_S_N,               "Enterprise 2015 LTSB N"                      },
+	{ PRODUCT_ENTERPRISE_S,                 "Enterprise LTSC"                             },
+	{ PRODUCT_ENTERPRISE_S_N,               "Enterprise LTSC N"                           },
 	{ PRODUCT_CORE,                         "Home"                                        },
 	{ PRODUCT_CORE_SINGLELANGUAGE,          "Home Single Language"                        },
 	{ PRODUCT_UNLICENSED,                   "Unlicensed"                                  }
@@ -141,10 +141,62 @@ string SysVersion::getFormattedOsVerNum()
 #endif
 }
 
+#ifdef _WIN32
+struct BuildName
+{
+	int build;
+	const char* name;
+};
+
+static const BuildName winDesktopBuilds[] =
+{
+	{ 26100, "11 ver. 24H2" },
+	{ 22631, "11 ver. 23H2" },
+	{ 22621, "11 ver. 22H2" },
+	{ 22000, "11 ver. 21H2" },
+	{ 19045, "10 ver. 22H2" },
+	{ 19044, "10 ver. 21H2" },
+	{ 19043, "10 ver. 21H1" },
+	{ 19042, "10 ver. 20H2" },
+	{ 19041, "10 ver. 2004" },
+	{ 18363, "10 ver. 1909" },
+	{ 18362, "10 ver. 1903" },
+	{ 17763, "10 ver. 1809" },
+	{ 17134, "10 ver. 1803" },
+	{ 16299, "10 ver. 1709" },
+	{ 15063, "10 ver. 1703" },
+	{ 14393, "10 ver. 1607" },
+	{ 10586, "10 ver. 1511" },
+	{ 10240, "10"           }
+};
+
+static const BuildName winServerBuilds[] =
+{
+	{ 26100, "Server 2025"      },
+	{ 25398, "Server ver. 23H2" },
+	{ 20348, "Server 2022"      },
+	{ 19042, "Server ver. 20H2" },
+	{ 19041, "Server ver. 2004" },
+	{ 18363, "Server ver. 1909" },
+	{ 18362, "Server ver. 1903" },
+	{ 17763, "Server 2019"      },
+	{ 17134, "Server ver. 1803" },
+	{ 16299, "Server ver. 1709" },
+	{ 14393, "Server 2016"      }
+};
+
+static const char* getBuildName(int buildNum, const BuildName* builds, int count)
+{
+	for (int i = 0; i < count; i++)
+		if (buildNum >= builds[i].build) return builds[i].name;
+	return nullptr;
+}
+#endif
+
 string SysVersion::getFormattedOsName()
 {
 #ifdef _WIN32
-	string text = "Microsoft Windows ";
+	string text = "Windows ";
 
 	// Test for the specific product.
 	// https://msdn.microsoft.com/ru-ru/library/windows/desktop/ms724833(v=vs.85).aspx
@@ -156,12 +208,11 @@ string SysVersion::getFormattedOsName()
 		{
 			if (minor == 0)
 			{
-				if (osvi.dwBuildNumber >= 22000)
-					text += osvi.wProductType == VER_NT_WORKSTATION ? "11" : "Server 2022";
-				else
-					text += osvi.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016";
+				const char* buildName = osvi.wProductType ==  VER_NT_WORKSTATION ?
+					getBuildName(osvi.dwBuildNumber, winDesktopBuilds, _countof(winDesktopBuilds)) :
+					getBuildName(osvi.dwBuildNumber, winServerBuilds, _countof(winServerBuilds));
+				text += buildName ? buildName : "10?";
 			}
-			// check type for Win10: Desktop, Mobile, etc...
 		}
 		if (major == 6)
 		{
