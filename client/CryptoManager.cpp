@@ -156,6 +156,7 @@ ssl::SSL_CTX CryptoManager::createContext(bool isServer) noexcept
 		unsigned long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;
 		if (isServer) options |= SSL_OP_SINGLE_DH_USE;
 		SSL_CTX_set_options(ctx, options);
+		SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 		SSL_CTX_set_cipher_list(ctx, cipherSuites);
 #if 0 // Don't set curves list, just use the defaults
 		SSL_CTX_set1_curves_list(ctx, "P-256");

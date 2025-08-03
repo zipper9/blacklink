@@ -306,6 +306,7 @@ int SSLSocket::checkSSL(int ret)
 #ifdef SSL_R_UNEXPECTED_EOF_WHILE_READING
 				int errLib = ERR_GET_LIB(sysErr);
 				int errReason = ERR_GET_REASON(sysErr);
+				dcdebug("ERR_get_error: errLib=%d, errReason=%d\n", errLib, errReason);
 				// This happens when server resets the connection.
 				if (errLib == ERR_LIB_SSL && errReason == SSL_R_UNEXPECTED_EOF_WHILE_READING)
 					throw SocketException(STRING(CONNECTION_CLOSED));
