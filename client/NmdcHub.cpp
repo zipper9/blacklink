@@ -143,6 +143,7 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 
 OnlineUserPtr NmdcHub::getUser(const string& nick)
 {
+	bool addMyUser = false;
 	OnlineUserPtr ou;
 	{
 		csState.lock();
@@ -169,6 +170,7 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 				ou = res.first->second;
 				ou->getUser()->addNick(nick, getHubUrl());
 				dcassert(ou->getIdentity().getNick() == nick);
+				addMyUser = true;
 			}
 			else
 			{
@@ -198,6 +200,14 @@ OnlineUserPtr NmdcHub::getUser(const string& nick)
 		}
 	}
 	csUsers->releaseExclusive();
+	if (addMyUser)
+	{
+		Ip4Address ip4;
+		Ip6Address ip6;
+		getLocalIpHelper(ip4, ip6, GLIP_WHAT_IPV4 | GLIP_WHAT_IPV6);
+		if (ip4) getMyIdentity().setIP4(ip4);
+		if (!Util::isEmpty(ip6)) getMyIdentity().setIP6(ip6);
+	}
 	if (!ou->getUser()->getCID().isZero())
 		ClientManager::getInstance()->putOnline(ou, true);
 	return ou;

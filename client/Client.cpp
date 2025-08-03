@@ -589,7 +589,14 @@ int Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 	const Identity& id = getMyIdentity();
 	ip4 = id.getIP4();
 	ip6 = id.getIP6();
+	int what = 0;
+	if (ip4 == 0) what |= GLIP_WHAT_IPV4;
+	if (Util::isEmpty(ip6)) what |= GLIP_WHAT_IPV6;
+	return what ? getLocalIpHelper(ip4, ip6, what) : 0;
+}
 
+int Client::getLocalIpHelper(Ip4Address& ip4, Ip6Address& ip6, int what) const
+{
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
 	bool wanIpManual4 = ss->getBool(Conf::WAN_IP_MANUAL);
@@ -601,7 +608,7 @@ int Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 	const bool noIpOverride6 = ss->getBool(Conf::NO_IP_OVERRIDE6);
 	ss->unlockRead();
 
-	if (ip4 == 0)
+	if (what & GLIP_WHAT_IPV4)
 	{
 		if (wanIpManual4 && !Util::isValidIp4(externalIp4))
 		{
@@ -622,7 +629,7 @@ int Client::getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const
 			Util::parseIpAddress(ip4, externalIp4);
 	}
 
-	if (Util::isEmpty(ip6))
+	if (what & GLIP_WHAT_IPV6)
 	{
 		if (wanIpManual6 && !Util::isValidIp6(externalIp6))
 		{

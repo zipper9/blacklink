@@ -97,6 +97,12 @@ class Client : public ClientBase,
 			GLIP_FLAG_MANUAL_IPV6 = 2
 		};
 
+		enum
+		{
+			GLIP_WHAT_IPV4 = 1,
+			GLIP_WHAT_IPV6 = 2
+		};
+
 		virtual ~Client();
 
 	public:
@@ -190,6 +196,7 @@ class Client : public ClientBase,
 			return "[Hub: " + getHubUrl() + ", " + getIpPort() + "]";
 		}
 		int getLocalIp(Ip4Address& ip4, Ip6Address& ip6) const;
+		int getLocalIpHelper(Ip4Address& ip4, Ip6Address& ip6, int what) const;
 		bool checkIpType(int type) const;
 		static bool allowNatTraversal();
 
