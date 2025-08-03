@@ -99,6 +99,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		SIDMap users;
 		std::unique_ptr<RWLock> csUsers;
 		boost::unordered_map<uint16_t, string> lastInfoMap;
+		size_t sharedTTHCount;
 
 		void addInfoParam(AdcCommand& c, uint16_t param, const string& value);
 

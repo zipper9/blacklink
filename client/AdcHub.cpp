@@ -60,7 +60,7 @@ ClientBasePtr AdcHub::create(const string& hubURL, const string& address, uint16
 
 AdcHub::AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure) :
 	Client(hubURL, address, port, '\n', secure, Socket::PROTO_ADC),
-	featureFlags(0), lastErrorCode(0), sid(0), hbriConnId(0), lastHbriCheck(0),
+	featureFlags(0), lastErrorCode(0), sid(0), hbriConnId(0), lastHbriCheck(0), sharedTTHCount(0),
 	csUsers(RWLock::create())
 {
 }
@@ -976,9 +976,9 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_TRANSFER_GENERIC, "Unsupported h", AdcCommand::TYPE_HUB));
 		return;
 	}
-		
+
 	ShareManager* sm = ShareManager::getInstance();
-	const size_t n = sm->getSharedTTHCount();
+	const size_t n = sharedTTHCount;
 	// When h >= 32, m can't go above 2^h anyway since it's stored in a size_t.
 	if (!m || m > 5 * Util::roundUp((size_t)(n * k / log(2.)), (size_t) 64) ||
 	    (h < 32 && m > ((size_t) 1 << h)))
@@ -1500,15 +1500,15 @@ void AdcHub::info(bool/* forceUpdate*/)
 
 	if (state != STATE_IDENTIFY && state != STATE_NORMAL)
 		return;
-		
+
 	reloadSettings(false);
-	
+
 	AdcCommand c(AdcCommand::CMD_INF, AdcCommand::TYPE_BROADCAST);
 	c.getParameters().reserve(20);
-	
+
 	if (state == STATE_NORMAL)
 		updateCounts(false);
-	
+
 	addInfoParam(c, TAG('I', 'D'), ClientManager::getMyCID().toBase32());
 	addInfoParam(c, TAG('P', 'D'), ClientManager::getMyPID().toBase32());
 	addInfoParam(c, TAG('N', 'I'), nick);
@@ -1530,6 +1530,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 			if (fileCount <= 0) fileCount = (fakeShareSize + averageFakeFileSize - 1)/averageFakeFileSize;
 		}
 		addInfoParam(c, TAG('S', 'F'), Util::toString(fileCount));
+		sharedTTHCount = (size_t) fileCount;
 	}
 	else
 	{
@@ -1537,8 +1538,9 @@ void AdcHub::info(bool/* forceUpdate*/)
 		ShareManager::getInstance()->getShareGroupInfo(shareGroup, size, files);
 		addInfoParam(c, TAG('S', 'S'), Util::toString(size));
 		addInfoParam(c, TAG('S', 'F'), Util::toString(files));
+		sharedTTHCount = (size_t) files;
 	}
-	
+
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
 	const bool optionNatTraversal = ss->getBool(Conf::ALLOW_NAT_TRAVERSAL);
@@ -1576,7 +1578,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 	size_t limit = tm->getDownloadLimitInBytes();
 	if (limit)
 		addInfoParam(c, TAG('D', 'S'), Util::toString(limit));
-	
+
 	limit = tm->getUploadLimitInBytes();
 	if (limit)
 	{
@@ -1588,11 +1590,11 @@ void AdcHub::info(bool/* forceUpdate*/)
 		limit = (size_t) speedBps;
 		addInfoParam(c, TAG('U', 'S'), Util::toString(limit));
 	}
-	
+
 	addInfoParam(c, TAG('L', 'C'), Util::getIETFLang()); // http://adc.sourceforge.net/ADC-EXT.html#_lc_locale_specification
-	
+
 	string su(AdcSupports::SEGA_FEATURE);
-	
+
 	auto cryptoManager = CryptoManager::getInstance();
 	if (cryptoManager->isInitialized())
 	{
