@@ -195,7 +195,6 @@ class File : public IOStream
 			write(str.c_str(), str.length());
 		}
 		static StringList findFiles(const string& path, const string& pattern, bool appendPath = true);
-		static uint64_t calcFilesSize(const string& path, const string& pattern);
 
 	protected:
 		Handle h;

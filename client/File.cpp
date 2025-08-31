@@ -211,27 +211,24 @@ int64_t File::getSize() const noexcept
 
 int64_t File::getPos() const noexcept
 {
-	LARGE_INTEGER x = {0};
-	BOOL bRet = ::SetFilePointerEx(h, x, &x, FILE_CURRENT);
-
-	if (bRet == FALSE)
-		return -1;
-	return x.QuadPart;
+	LARGE_INTEGER x;
+	x.QuadPart = 0;
+	return SetFilePointerEx(h, x, &x, FILE_CURRENT) ? x.QuadPart : -1;
 }
 
 void File::setPos(int64_t pos)
 {
 	LARGE_INTEGER x;
 	x.QuadPart = pos;
-	if (!::SetFilePointerEx(h, x, &x, FILE_BEGIN))
+	if (!SetFilePointerEx(h, x, &x, FILE_BEGIN))
 		throw FileException(Util::translateError());
 }
 
 int64_t File::setEndPos(int64_t pos)
 {
-	LARGE_INTEGER x = {0};
+	LARGE_INTEGER x;
 	x.QuadPart = pos;
-	if (!::SetFilePointerEx(h, x, &x, FILE_END))
+	if (!SetFilePointerEx(h, x, &x, FILE_END))
 		throw FileException(Util::translateError());
 	return x.QuadPart;
 }
@@ -240,7 +237,7 @@ void File::movePos(int64_t pos)
 {
 	LARGE_INTEGER x;
 	x.QuadPart = pos;
-	if (!::SetFilePointerEx(h, x, &x, FILE_CURRENT))
+	if (!SetFilePointerEx(h, x, &x, FILE_CURRENT))
 		throw FileException(Util::translateError());
 }
 
@@ -408,29 +405,6 @@ bool File::getVolumeInfo(const wstring& path, VolumeInfo &vi) noexcept
 	vi.totalBytes = space[0].QuadPart;
 	vi.freeBytes = space[1].QuadPart;
 	return true;
-}
-
-uint64_t File::calcFilesSize(const string& path, const string& pattern)
-{
-	uint64_t size = 0;
-	WIN32_FIND_DATAW data;
-	HANDLE hFind = FindFirstFileExW(formatPath(Text::utf8ToWide(path + pattern)).c_str(),
-	                                CompatibilityManager::findFileLevel,
-	                                &data,
-	                                FindExSearchNameMatch,
-	                                nullptr,
-	                                0);
-	if (hFind != INVALID_HANDLE_VALUE)
-	{
-		do
-		{
-			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-				size += (int64_t) data.nFileSizeLow | ((int64_t) data.nFileSizeHigh) << 32;
-		}
-		while (FindNextFileW(hFind, &data));
-		FindClose(hFind);
-	}
-	return size;
 }
 
 StringList File::findFiles(const string& path, const string& pattern, bool appendPath /*= true */)
