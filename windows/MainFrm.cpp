@@ -99,14 +99,15 @@
 #include "TextFrame.h"
 #endif
 
-#define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
-#  ifdef FLYLINKDC_CALC_MEMORY_USAGE
-#   ifdef OSVER_WIN_VISTA
-#    define PSAPI_VERSION 1
-#   endif
-#   include <psapi.h>
-#   pragma comment(lib, "psapi.lib")
-#endif // FLYLINKDC_CALC_MEMORY_USAGE
+#define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to FeatureDef.h
+
+#ifdef FLYLINKDC_CALC_MEMORY_USAGE
+#ifdef OSVER_WIN_VISTA
+#define PSAPI_VERSION 1
+#endif
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+#endif
 
 extern ParsedCommandLine cmdLine;
 extern IpBans tcpBans, udpBans;
@@ -121,13 +122,25 @@ int   g_RAM_PeakWorkingSetSize = 0;
 MainFrame* MainFrame::instance = nullptr;
 bool MainFrame::appMinimized = false;
 
-static const int STATUS_PART_PADDING = 12;
-
 enum
 {
 	TRAY_ICON_NONE,
 	TRAY_ICON_NORMAL,
 	TRAY_ICON_PM
+};
+
+static const int paneIcons[] =
+{
+	-1,
+	IconBitmaps::SHARE,
+	IconBitmaps::HUB_ONLINE,
+	IconBitmaps::TRAFFIC_LIGHTS,
+	IconBitmaps::FINISHED_DOWNLOADS,
+	IconBitmaps::FINISHED_UPLOADS,
+	IconBitmaps::DOWNLOAD,
+	IconBitmaps::UPLOAD,
+	IconBitmaps::SHUTDOWN,
+	-1
 };
 
 static const string emptyStringHash("LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ");
@@ -151,9 +164,8 @@ static bool hasPasswordClose()
 MainFrame::MainFrame() :
 	CSplitterImpl(false),
 	TimerHelper(m_hWnd),
-	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
 	hashProgressState(HASH_PROGRESS_HIDDEN),
-	updateStatusBar(0),
+	showStatusBar(true),
 	useTrayIcon(true),
 	hasPM(false),
 	trayIcon(TRAY_ICON_NONE),
@@ -184,7 +196,6 @@ MainFrame::MainFrame() :
 	visToolbar(TRUE), visWinampBar(TRUE), visQuickSearch(TRUE)
 {
 	m_bUpdateProportionalPos = false;
-	memset(statusSizes, 0, sizeof(statusSizes));
 	auto tick = GET_TICK();
 	timeDbCleanup = tick + 60000;
 	timeUsersCleanup = tick + Util::rand(3, 10)*60000;
@@ -461,7 +472,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 			}
 		}
 	}
-	
+
 	TimerManager::getInstance()->start(0, "TimerManager");
 	SetWindowText(getAppNameVerT().c_str());
 	createMainMenu();
@@ -473,41 +484,73 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	createQuickSearchBar();
 	createWinampToolbar(imageSize);
 	toolbarImageSize = imageSize;
-	
+
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	ctrlRebar = m_hWndToolBar;
-	
+
 	AddSimpleReBarBandCtrl(ctrlRebar, ctrlCmdBar);
 	AddSimpleReBarBandCtrl(ctrlRebar, ctrlToolbar, 0, NULL, TRUE);
-		
+
 	AddSimpleReBarBandCtrl(ctrlRebar, ctrlQuickSearchBar, 0, NULL, FALSE, 200, TRUE);
 	AddSimpleReBarBandCtrl(ctrlRebar, ctrlWinampToolbar, 0, NULL, TRUE);
-	
-	CreateSimpleStatusBar();
 
 	ToolbarManager::getInstance()->applyTo(m_hWndToolBar, "MainToolBar");
-	
-	ctrlStatus.Attach(m_hWndStatusBar);
-	ctrlStatus.SetSimple(FALSE); // https://www.box.net/shared/6d96012d9690dc892187
-	int w[STATUS_PART_LAST - 1] = {0};
-	ctrlStatus.SetParts(STATUS_PART_LAST - 1, w);
-	statusSizes[0] = WinUtil::getTextWidth(TSTRING(AWAY_STATUS), ctrlStatus) + STATUS_PART_PADDING;
-	
-	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
-	
+
+	ctrlStatus.setAutoGripper(true);
+	ctrlStatus.setCallback(this);
+	ctrlStatus.Create(m_hWnd, 0, nullptr, WS_CHILD);
+	ctrlStatus.setFont(Fonts::g_systemFont, false);
+
+	StatusBarCtrl::PaneInfo statusPane;
+	statusPane.minWidth = 0;
+	statusPane.maxWidth = INT_MAX;
+	statusPane.weight = 1;
+	statusPane.align = StatusBarCtrl::ALIGN_LEFT;
+	statusPane.flags = 0;
+	ctrlStatus.addPane(statusPane);
+
+	statusPane.weight = 0;
+	statusPane.flags = StatusBarCtrl::PANE_FLAG_MOUSE_CLICKS;
+	ctrlStatus.addPane(statusPane);
+	ctrlStatus.setPaneText(STATUS_PART_AWAY, TSTRING(AWAY_STATUS));
+	HDC hdc = GetDC();
+	statusPane.minWidth = statusPane.maxWidth = ctrlStatus.getPaneContentWidth(hdc, STATUS_PART_AWAY, false);
+	ReleaseDC(hdc);
+	ctrlStatus.setPaneInfo(STATUS_PART_AWAY, statusPane);
+
+	statusPane.minWidth = 0;
+	statusPane.maxWidth = INT_MAX;
+	statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+	for (int i = 2; i < STATUS_PART_LAST; ++i)
+	{
+		if (i == STATUS_PART_DL_SPEED || i == STATUS_PART_UL_SPEED)
+			statusPane.flags |= StatusBarCtrl::PANE_FLAG_MOUSE_CLICKS;
+		else
+			statusPane.flags &= ~StatusBarCtrl::PANE_FLAG_MOUSE_CLICKS;
+		if (i == STATUS_PART_HASH_PROGRESS)
+		{
+			statusPane.flags |= StatusBarCtrl::PANE_FLAG_NO_DECOR | StatusBarCtrl::PANE_FLAG_CUSTOM_DRAW;
+			statusPane.minWidth = statusPane.maxWidth = 80;
+		}
+		else
+			statusPane.flags &= ~(StatusBarCtrl::PANE_FLAG_NO_DECOR | StatusBarCtrl::PANE_FLAG_CUSTOM_DRAW);
+		ctrlStatus.addPane(statusPane);
+	}
+
 	RECT rect = {0};
 	ctrlHashProgress.Create(ctrlStatus, &rect, _T("Hashing"), WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
 	ctrlHashProgress.SetRange(0, HashProgressDlg::MAX_PROGRESS_VALUE);
 	ctrlHashProgress.SetStep(1);
-	
+
 	tabAwayMenu.CreatePopupMenu();
 	tabAwayMenu.AppendMenu(MF_STRING, IDC_STATUS_AWAY_ON_OFF, CTSTRING(AWAY));
-	
+
 	ctrlLastLines.Create(ctrlStatus, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
 	ctrlLastLines.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 	CToolInfo ti(TTF_SUBCLASS, ctrlStatus, 0, nullptr, LPSTR_TEXTCALLBACK);
 	ctrlLastLines.AddTool(&ti);
 	ctrlLastLines.SetDelayTime(TTDT_AUTOPOP, 15000);
+	ctrlLastLines.SetMaxTipWidth(400);
 	
 	CreateMDIClient();
 	ctrlCmdBar.SetMDIClient(m_hWndMDIClient);
@@ -561,9 +604,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::iTunes, CTSTRING(MEDIA_MENU_ITUNES));
 	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::WinMediaPlayerClassic, CTSTRING(MEDIA_MENU_WPC));
 	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + Conf::JetAudio, CTSTRING(MEDIA_MENU_JA));
-	
-	//File::ensureDirectory(SETTING(LOG_DIRECTORY));
-	
+
 #if 0
 	if (SETTING(PROTECT_START) && SETTING(PASSWORD) != emptyStringHash && !SETTING(PASSWORD).empty())
 	{
@@ -746,12 +787,6 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 	}
 	if (!appMinimized || IsWindowVisible())
 	{
-		if (updateStatusBar)
-		{
-			UpdateLayout(TRUE);
-			updateStatusBar = 0;
-		}
-
 #ifdef FLYLINKDC_CALC_MEMORY_USAGE
 		if (!SysVersion::isWine())
 		{
@@ -795,21 +830,21 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			unsigned normal, registered, op;
 			Client::getCounts(normal, registered, op);
 			TCHAR hubCounts[64];
-			_sntprintf(hubCounts, _countof(hubCounts), _T(" %u/%u/%u"), normal, registered, op);
-			stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesT(ShareManager::getInstance()->getTotalSharedSize()));
-			stats->push_back(TSTRING(H) + hubCounts);
-			stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringT(UploadManager::getFreeSlots()) + _T('/') + Util::toStringT(UploadManager::getSlots())
+			_sntprintf(hubCounts, _countof(hubCounts), _T("%u/%u/%u"), normal, registered, op);
+			stats->push_back(Util::formatBytesT(ShareManager::getInstance()->getTotalSharedSize()));
+			stats->push_back(hubCounts);
+			stats->push_back(Util::toStringT(UploadManager::getFreeSlots()) + _T('/') + Util::toStringT(UploadManager::getSlots())
 			                 + _T(" (") + Util::toStringT(um->getFreeExtraSlots()) + _T('/') + Util::toStringT(Util::getConfInt(Conf::EXTRA_SLOTS)) + _T(")"));
-			stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesT(currentDown));
-			stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesT(currentUp));
+			stats->push_back(Util::formatBytesT(currentDown));
+			stats->push_back(Util::formatBytesT(currentUp));
 			auto tm = ThrottleManager::getInstance();
 			size_t downLimit = tm->getDownloadLimitInKBytes();
 			size_t upLimit = tm->getUploadLimitInKBytes();
-			stats->push_back(TSTRING(D) + _T(" [") + Util::toStringT(dm->getDownloadCount()) + _T("][")
+			stats->push_back(_T("[") + Util::toStringT(dm->getDownloadCount()) + _T("][")
 			                 + (downLimit == 0 ?
 			                    TSTRING(N) : Util::toStringT(downLimit) + TSTRING(KILO)) + _T("] ")
 			                 + dlstr + _T('/') + TSTRING(S));
-			stats->push_back(TSTRING(U) + _T(" [") + Util::toStringT(um->getUploadCount()) + _T("][")
+			stats->push_back(_T("[") + Util::toStringT(um->getUploadCount()) + _T("][")
 			                 + (upLimit == 0 ?
 			                    TSTRING(N) : Util::toStringT(upLimit) + TSTRING(KILO)) + _T("] ")
 			                 + ulstr + _T('/') + TSTRING(S));
@@ -1417,9 +1452,9 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 
 		updateFileListMenu();
 		TStringList& str = *pstr;
-		if (ctrlStatus.IsWindow())
+		if (ctrlStatus.m_hWnd)
 		{
-			bool update = false;
+			bool updateHashProgress = false;
 			int newHashProgressState = HASH_PROGRESS_HIDDEN;
 			int progressValue = 0;
 			int smState = ShareManager::getInstance()->getState();
@@ -1442,6 +1477,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 
 			if (newHashProgressState != hashProgressState)
 			{
+				if (hashProgressState == HASH_PROGRESS_HIDDEN || newHashProgressState == HASH_PROGRESS_HIDDEN)
+					updateHashProgress = true;
 				if (newHashProgressState != HASH_PROGRESS_HIDDEN)
 				{
 #ifdef OSVER_WIN_XP
@@ -1463,7 +1500,6 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					}
 					if (newHashProgressState != HASH_PROGRESS_MARQUEE)
 						ctrlHashProgress.SetPos(progressValue);
-					ctrlHashProgress.ShowWindow(SW_SHOW);
 				}
 				else
 				{
@@ -1471,31 +1507,20 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					ctrlHashProgress.SetPos(0);
 				}
 				hashProgressState = newHashProgressState;
-				update = true;
 			}
 			else if (hashProgressState == HASH_PROGRESS_NORMAL)
 				ctrlHashProgress.SetPos(progressValue);
 
-			if (statusText[0] != str[0])
-			{
-				statusText[0] = std::move(str[0]);
-				ctrlStatus.SetText(1, statusText[0].c_str());
-			}
+			ctrlStatus.setAutoRedraw(false);
 			const size_t count = str.size();
 			dcassert(count < STATUS_PART_LAST);
-			for (size_t i = 1; i < count; i++)
+			for (size_t i = 0; i < count; i++)
 			{
-				if (statusText[i] != str[i])
-				{
-					statusText[i] = std::move(str[i]);
-					int w = WinUtil::getTextWidth(statusText[i], ctrlStatus) + STATUS_PART_PADDING;
-					if (i < STATUS_PART_LAST && statusSizes[i] < w)
-					{
-						statusSizes[i] = w;
-						update = true;
-					}
-					ctrlStatus.SetText(i + 1, statusText[i].c_str());
-				}
+				ctrlStatus.setPaneText(i + 1, str[i]);
+				if (!str[i].empty() && paneIcons[i] != -1)
+					ctrlStatus.setPaneIcon(i + 1, g_iconBitmaps.getBitmap(paneIcons[i], 0));
+				else
+					ctrlStatus.setPaneIcon(i + 1, nullptr);
 			}
 
 			if (shutdownEnabled)
@@ -1503,21 +1528,21 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				const uint64_t second = GET_TICK() / 1000;
 				if (!shutdownStatusDisplayed)
 				{
-					HICON shutdownIcon = g_iconBitmaps.getIcon(IconBitmaps::SHUTDOWN, 0);
-					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, shutdownIcon);
+					HBITMAP shutdownIcon = g_iconBitmaps.getBitmap(IconBitmaps::SHUTDOWN, 0);
+					ctrlStatus.setPaneIcon(STATUS_PART_SHUTDOWN_TIME, shutdownIcon);
 					shutdownStatusDisplayed = true;
 				}
 				if (DownloadManager::getInstance()->getDownloadCount() > 0)
 				{
 					shutdownTime = second;
-					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
+					ctrlStatus.setPaneText(STATUS_PART_SHUTDOWN_TIME, Util::emptyStringT);
 				}
 				else
 				{
 					const auto* ss = SettingsManager::instance.getUiSettings();
 					const int timeout = ss->getInt(Conf::SHUTDOWN_TIMEOUT);
 					const int64_t timeLeft = timeout - (second - shutdownTime);
-					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, (_T(' ') + Util::formatSecondsT(timeLeft, timeLeft < 3600)).c_str(), SBT_POPOUT);
+					ctrlStatus.setPaneText(STATUS_PART_SHUTDOWN_TIME, Util::formatSecondsT(timeLeft, timeLeft < 3600));
 					if (shutdownTime + timeout <= second)
 					{
 						// We better not try again. It WON'T work...
@@ -1533,8 +1558,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 						{
 							setShutdownButton(false);
 							addStatusMessage(TSTRING(FAILED_TO_SHUTDOWN));
-							ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
-							ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);
+							ctrlStatus.setPaneText(STATUS_PART_SHUTDOWN_TIME, Util::emptyStringT);
+							ctrlStatus.setPaneIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);
 						}
 					}
 				}
@@ -1543,14 +1568,20 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			{
 				if (shutdownStatusDisplayed)
 				{
-					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
-					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);
+					ctrlStatus.setPaneText(STATUS_PART_SHUTDOWN_TIME, Util::emptyStringT);
+					ctrlStatus.setPaneIcon(STATUS_PART_SHUTDOWN_TIME, nullptr);
 					shutdownStatusDisplayed = false;
 				}
 			}
-			
-			if (update)
-				updateStatusBar++;
+
+			ctrlStatus.setAutoRedraw(true);
+			if (updateHashProgress)
+			{
+				HDC hdc = GetDC();
+				ctrlStatus.updateLayout(hdc);
+				ReleaseDC(hdc);
+				updateHashProgressCtrl();
+			}
 		}
 	}
 	else if (wParam == STATUS_MESSAGE)
@@ -1677,7 +1708,7 @@ void MainFrame::addStatusMessage(const tstring& msg)
 	line += msg;
 	tstring::size_type rpos = line.find(_T('\r'));
 	if (rpos != tstring::npos) line.erase(rpos);
-	ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
+	ctrlStatus.setPaneText(STATUS_PART_MESSAGE, line);
 	statusHistory.addLine(line);
 }
 
@@ -2344,52 +2375,25 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	{
 		RECT rect;
 		GetClientRect(&rect);
-		// position bars and offset their dimensions
 		UpdateBarsPosition(rect, resizeBars);
-		
-		if (ctrlStatus.IsWindow() && ctrlLastLines.IsWindow())
+
+		if (showStatusBar)
 		{
-			CRect sr;
-			int w[STATUS_PART_LAST];
-			
-			int smState = ShareManager::getInstance()->getState();
-			bool isHashing = smState == ShareManager::STATE_SCANNING_DIRS || smState == ShareManager::STATE_CREATING_FILELIST
-				|| HashManager::getInstance()->isHashing();
-			ctrlStatus.GetClientRect(sr);
-			if (isHashing)
-			{
-				w[STATUS_PART_HASH_PROGRESS] = sr.right - 20;
-				w[STATUS_PART_SHUTDOWN_TIME] = w[STATUS_PART_HASH_PROGRESS] - 60;
-			}
-			else
-				w[STATUS_PART_SHUTDOWN_TIME] = sr.right - 20;
-				
-			w[STATUS_PART_8] = w[STATUS_PART_SHUTDOWN_TIME] - 60;
-#define setw(x) w[x] = max(w[x+1] - statusSizes[x], 0)
-			setw(STATUS_PART_7);
-			setw(STATUS_PART_UPLOAD);
-			setw(STATUS_PART_DOWNLOAD);
-			setw(STATUS_PART_SLOTS);
-			setw(STATUS_PART_3);
-			setw(STATUS_PART_SHARED_SIZE);
-			setw(STATUS_PART_1);
-			setw(STATUS_PART_MESSAGE);
-			
-			ctrlStatus.SetParts(STATUS_PART_LAST - 1 + (isHashing ? 1 : 0), w);
-			ctrlLastLines.SetMaxTipWidth(max(w[4], 400));
-			
-			if (isHashing)
-			{
-				RECT rect;
-				ctrlStatus.GetRect(STATUS_PART_HASH_PROGRESS, &rect);
-				
-				rect.right = w[STATUS_PART_HASH_PROGRESS] - 1;
-				ctrlHashProgress.MoveWindow(&rect);
-			}
-			
-			ctrlStatus.GetRect(STATUS_PART_1, &tabAwayRect);
-			ctrlStatus.GetRect(STATUS_PART_7, &tabDownSpeedRect);
-			ctrlStatus.GetRect(STATUS_PART_8, &tabUpSpeedRect);
+			HDC hdc = GetDC();
+			int statusHeight = ctrlStatus.getPrefHeight(hdc);
+			rect.bottom -= statusHeight;
+			RECT rcStatus = rect;
+			rcStatus.top = rect.bottom;
+			rcStatus.bottom = rcStatus.top + statusHeight;
+			ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+			ctrlStatus.updateLayout(hdc);
+			ReleaseDC(hdc);
+			updateHashProgressCtrl();
+		}
+		else
+		{
+			ctrlStatus.ShowWindow(SW_HIDE);
+			ctrlHashProgress.ShowWindow(SW_HIDE);
 		}
 
 		CRect rc  = rect;
@@ -2419,6 +2423,25 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	}
 }
 
+void MainFrame::updateHashProgressCtrl()
+{
+	if (hashProgressState != HASH_PROGRESS_HIDDEN)
+	{
+		RECT rc;
+		ctrlStatus.getPaneRect(STATUS_PART_HASH_PROGRESS, rc);
+		if (ctrlStatus.resolveStyle() != StatusBarCtrl::PANE_STYLE_BEVEL)
+		{
+			rc.left += 2;
+			rc.right -= 2;
+			rc.top += 2;
+			rc.bottom -= 3;
+		}
+		ctrlHashProgress.SetWindowPos(nullptr, &rc, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+	}
+	else
+		ctrlHashProgress.ShowWindow(SW_HIDE);
+}
+
 LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
@@ -2440,7 +2463,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			Util::emptyStringT, HintedUser(myUser, Util::emptyString), 0);
 		return 0;
 	}
-	
+
 	if (WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), WinUtil::getFileMaskString(WinUtil::fileListsMask).c_str()))
 	{
 		if (Util::isTorrentFile(file))
@@ -2673,11 +2696,10 @@ LRESULT MainFrame::onViewTopmost(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 LRESULT MainFrame::onViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	auto ss = SettingsManager::instance.getUiSettings();
-	BOOL bVisible = !::IsWindowVisible(m_hWndStatusBar);
-	::ShowWindow(m_hWndStatusBar, bVisible ? SW_SHOWNOACTIVATE : SW_HIDE);
-	UISetCheck(ID_VIEW_STATUS_BAR, bVisible);
+	showStatusBar = !ss->getBool(Conf::SHOW_STATUSBAR);
+	UISetCheck(ID_VIEW_STATUS_BAR, showStatusBar);
 	UpdateLayout();
-	ss->setBool(Conf::SHOW_STATUSBAR, bVisible != FALSE);
+	ss->setBool(Conf::SHOW_STATUSBAR, showStatusBar);
 	return 0;
 }
 
@@ -2975,41 +2997,39 @@ LRESULT MainFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 		tbMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		return TRUE;
 	}
-	if (reinterpret_cast<HWND>(wParam) == m_hWndStatusBar)
-	{
-		POINT ptClient = pt;
-		::ScreenToClient(m_hWndStatusBar, &ptClient);
-
-		// AWAY
-		if (ptClient.x >= tabAwayRect.left && ptClient.x <= tabAwayRect.right)
-		{
-			tabAwayMenu.CheckMenuItem(IDC_STATUS_AWAY_ON_OFF, MF_BYCOMMAND | (Util::getAway() ? MF_CHECKED : MF_UNCHECKED));
-			tabAwayMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		}
-		if (ptClient.x >= tabDownSpeedRect.left && ptClient.x <= tabDownSpeedRect.right)
-		{
-			if (setSpeedLimit(false, 32, 6144))
-				checkLimitsButton();
-		}
-		if (ptClient.x >= tabUpSpeedRect.left && ptClient.x <= tabUpSpeedRect.right)
-		{
-			if (setSpeedLimit(true, 32, 6144))
-				checkLimitsButton();
-		}
-		return TRUE;
-	}
 	bHandled = FALSE;
 	return FALSE;
 }
 
-LRESULT MainFrame::onStatusBarClick(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+void MainFrame::statusPaneClicked(int pane, int button, POINT pt)
 {
-	const POINT ptClient = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-	// AWAY area
-	if (ptClient.x >= tabAwayRect.left && ptClient.x <= tabAwayRect.right)
-		setAway(!Util::getAway());
-	bHandled = FALSE;
-	return 0;
+	if (pane == STATUS_PART_AWAY)
+	{
+		if (button == StatusBarCtrl::MOUSE_BUTTON_RIGHT)
+		{
+			ctrlStatus.ClientToScreen(&pt);
+			tabAwayMenu.CheckMenuItem(IDC_STATUS_AWAY_ON_OFF, MF_BYCOMMAND | (Util::getAway() ? MF_CHECKED : MF_UNCHECKED));
+			tabAwayMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		}
+		else
+			setAway(!Util::getAway());
+		return;
+	}
+	if (pane == STATUS_PART_DL_SPEED || pane == STATUS_PART_UL_SPEED)
+	{
+		if (button == StatusBarCtrl::MOUSE_BUTTON_RIGHT)
+		{
+			if (setSpeedLimit(pane == STATUS_PART_UL_SPEED, 32, 6144))
+				checkLimitsButton();
+		}
+	}
+}
+
+bool MainFrame::isStatusPaneEmpty(int pane) const
+{
+	if (pane == STATUS_PART_HASH_PROGRESS)
+		return hashProgressState == HASH_PROGRESS_HIDDEN;
+	return false;
 }
 
 bool MainFrame::setSpeedLimit(bool upload, int minValue, int maxValue)
@@ -3030,24 +3050,6 @@ bool MainFrame::setSpeedLimit(bool upload, int minValue, int maxValue)
 	ss->unlockWrite();
 	ThrottleManager::getInstance()->updateSettings();
 	return true;
-}
-
-LRESULT MainFrame::onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
-{
-	// [+] brain-ripper
-	// There is strange bug in WTL: when menu opened, status-bar is disappeared.
-	// It is caused by WTL's OnMenuSelect handler (atlframe.h), by calling
-	// ::SendMessage(m_hWndStatusBar, SB_SIMPLE, TRUE, 0L);
-	// This supposed to switch status-bar to simple mode and show description of tracked menu-item,
-	// but status-bar just disappears.
-	//
-	// Since we not provide description for menu-items in status-bar,
-	// i just turn off this feature by manually handling OnMenuSelect event.
-	// Do nothing in here, just mark as handled, to suppress WTL processing
-	//
-	// If decided to use menu-item descriptions in status-bar, then
-	// remove this function and debug why status-bar is disappeared
-	return FALSE;
 }
 
 void MainFrame::toggleTopmost()

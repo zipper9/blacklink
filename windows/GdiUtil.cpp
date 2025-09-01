@@ -11,7 +11,7 @@
 #include <arm_neon.h>
 #endif
 
-void WinUtil::drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, int height)
+void WinUtil::drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int destX, int destY, int srcX, int srcY, int width, int height)
 {
 	BLENDFUNCTION bf;
 	bf.BlendOp = AC_SRC_OVER;
@@ -20,9 +20,14 @@ void WinUtil::drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, 
 	bf.AlphaFormat = AC_SRC_ALPHA;
 	HDC bitmapDC = CreateCompatibleDC(hdc);
 	HGDIOBJ oldBitmap = SelectObject(bitmapDC, bitmap);
-	AlphaBlend(hdc, x, y, width, height, bitmapDC, 0, 0, width, height, bf);
+	AlphaBlend(hdc, destX, destY, width, height, bitmapDC, srcX, srcY, width, height, bf);
 	SelectObject(bitmapDC, oldBitmap);
 	DeleteDC(bitmapDC);
+}
+
+void WinUtil::drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, int height)
+{
+	drawAlphaBitmap(hdc, bitmap, x, y, 0, 0, width, height);
 }
 
 void WinUtil::drawMonoBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, int height, COLORREF color)

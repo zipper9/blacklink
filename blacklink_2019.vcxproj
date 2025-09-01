@@ -920,6 +920,7 @@
     <ClCompile Include="windows\SplitWnd.cpp" />
     <ClCompile Include="windows\SpyFrame.cpp" />
     <ClCompile Include="windows\StatsFrame.cpp" />
+    <ClCompile Include="windows\StatusBarCtrl.cpp" />
     <ClCompile Include="windows\StatusLabelCtrl.cpp" />
     <ClCompile Include="windows\StatusMessageHistory.cpp" />
     <ClCompile Include="windows\stdafx.cpp">
@@ -1094,6 +1095,7 @@
     <ClInclude Include="windows\SplashWindow.h" />
     <ClInclude Include="windows\SplitWnd.h" />
     <ClInclude Include="windows\StaticFrame.h" />
+    <ClInclude Include="windows\StatusBarCtrl.h" />
     <ClInclude Include="windows\StatusLabelCtrl.h" />
     <ClInclude Include="windows\StatusMessageHistory.h" />
     <ClInclude Include="windows\StringSetSearch.h" />

@@ -32,13 +32,13 @@
 #include "SingleInstance.h"
 #include "FlatTabCtrl.h"
 #include "TransferView.h"
+#include "StatusBarCtrl.h"
 #include "StatusMessageHistory.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
 #include "HIconWrapper.h"
 
 #define QUICK_SEARCH_MAP 20
-#define STATUS_MESSAGE_MAP 9
 
 class JAControl;
 struct ParsedCommandLine;
@@ -52,7 +52,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 	private FinishedManagerListener,
 	private FavoriteManagerListener,
 	private TimerHelper,
-	private CommandCallback
+	private CommandCallback,
+	private StatusBarCtrl::Callback
 {
 	public:
 		MainFrame();
@@ -108,7 +109,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_APPCOMMAND, onAppCommand)
 		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, onRebuildToolbar)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
-		MESSAGE_HANDLER(WM_MENUSELECT, onMenuSelect)
 #ifdef BL_UI_FEATURE_EMOTICONS
 		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, onAnimChangeFrame)
 #endif
@@ -195,8 +195,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onQuickSearchColor)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onQuickSearchColor)
 		COMMAND_CODE_HANDLER(EN_CHANGE, onQuickSearchEditChange)
-		ALT_MSG_MAP(STATUS_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_LBUTTONUP, onStatusBarClick)
 		END_MSG_MAP()
 		
 		BEGIN_UPDATE_UI_MAP(MainFrame)
@@ -250,8 +248,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onWinampButton(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onViewTopmost(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
-		LRESULT onStatusBarClick(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onQuickSearchColor(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -495,14 +491,14 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		enum DefinedStatusParts
 		{
 			STATUS_PART_MESSAGE,
-			STATUS_PART_1,
+			STATUS_PART_AWAY,
 			STATUS_PART_SHARED_SIZE,
-			STATUS_PART_3,
+			STATUS_PART_HUBS,
 			STATUS_PART_SLOTS,
-			STATUS_PART_DOWNLOAD,
-			STATUS_PART_UPLOAD,
-			STATUS_PART_7,
-			STATUS_PART_8,
+			STATUS_PART_DL_SIZE,
+			STATUS_PART_UL_SIZE,
+			STATUS_PART_DL_SPEED,
+			STATUS_PART_UL_SPEED,
 			STATUS_PART_SHUTDOWN_TIME,
 			STATUS_PART_HASH_PROGRESS,
 			STATUS_PART_LAST
@@ -517,18 +513,11 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		};
 
 		StatusMessageHistory statusHistory;
-		CStatusBarCtrl ctrlStatus;
+		StatusBarCtrl ctrlStatus;
 		CToolTipCtrl ctrlLastLines;
-		int statusSizes[STATUS_PART_LAST];
-		tstring statusText[STATUS_PART_LAST];
-		RECT tabAwayRect;
-		RECT tabDownSpeedRect;
-		RECT tabUpSpeedRect;
-
-		CContainedWindow statusContainer;
 		CProgressBarCtrl ctrlHashProgress;
 		int hashProgressState;
-		unsigned updateStatusBar;
+		bool showStatusBar;
 
 		// Tray icon
 		bool useTrayIcon;
@@ -618,6 +607,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool setSpeedLimit(bool upload, int minValue, int maxValue);
 		void addStatusMessage(const tstring& msg);
 		void updateSettings();
+		void updateHashProgressCtrl();
 
 		void setTrayIcon(int newIcon);
 		void clearPMStatus();
@@ -661,6 +651,11 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		// CommandCallback
 		void onCommandCompleted(int type, uint64_t frameId, const string& text) noexcept override;
+
+		// StatusBarCtrl::Callback
+		void statusPaneClicked(int pane, int button, POINT pt) override;
+		void drawStatusPane(int pane, HDC hdc, const RECT& rc) override {}
+		bool isStatusPaneEmpty(int pane) const override;
 };
 
 #endif // !defined(MAIN_FRM_H)

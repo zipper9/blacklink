@@ -8,6 +8,7 @@ namespace WinUtil
 {
 
 	void drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, int height);
+	void drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int destX, int destY, int srcX, int srcY, int width, int height);
 	void drawMonoBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, int height, COLORREF color);
 	HBITMAP createFrameControlBitmap(HDC hdc, int width, int height, int type, int flags);
 	void drawFrame(HDC hdc, const RECT& rc, int width, int height, HBRUSH brush);

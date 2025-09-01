@@ -432,6 +432,7 @@ IconBitmaps::IconBitmaps()
 	init(HELP,                    SOURCE_MAIN,     41);
 	init(DHT,                     SOURCE_MAIN,     44);
 	init(ABOUT,                   SOURCE_MAIN,     45);
+	init(SHARE,                   SOURCE_SETTINGS, 1);
 	init(FAVORITE_DIRS,           SOURCE_SETTINGS, 5);
 	init(PREVIEW,                 SOURCE_SETTINGS, 6);
 	init(PRIORITY,                SOURCE_SETTINGS, 8);
@@ -456,6 +457,7 @@ IconBitmaps::IconBitmaps()
 	init(USER_OFFLINE,            SOURCE_FAVUSERS, 2);
 	init(BANNED_USER,             SOURCE_FAVUSERS, 3);
 	init(DOWNLOAD,                SOURCE_ARROWS,   0);
+	init(UPLOAD,                  SOURCE_ARROWS,   1);
 	init(FAVORITE,                SOURCE_OTHER,    0);
 	init(INFORMATION,             SOURCE_OTHER,    1);
 	init(QUESTION,                SOURCE_OTHER,    2);
@@ -491,6 +493,9 @@ IconBitmaps::IconBitmaps()
 	init(FINGER,                  SOURCE_OTHER,    32);
 	init(KEY,                     SOURCE_OTHER,    33);
 	init(GOTO_FILELIST,           SOURCE_OTHER,    35);
+	init(TRAFFIC_LIGHTS,          SOURCE_OTHER,    36);
+	init(LOCK,                    SOURCE_OTHER,    37);
+	init(LOCK_UNLOCKED,           SOURCE_OTHER,    38);
 	init(FOLDER,                  SOURCE_FILES,    0);
 	init(EDITOR_SEND,             SOURCE_EDITOR,   0);
 	init(EDITOR_MULTILINE,        SOURCE_EDITOR,   1);
@@ -587,10 +592,15 @@ HBITMAP IconBitmaps::getBitmap(int index, int size)
 			HDC hdc = GetDC(mainFrame->m_hWnd);
 			if (!hdc) return nullptr;
 			HDC hdcTemp = CreateCompatibleDC(hdc);
-			if (!hdcTemp) return nullptr;
-			hBitmap = createBitmapFromImageList(imageList, iconSize, data[index].id, hdc, hdcTemp);
+			if (hdcTemp)
+			{
+				hBitmap = createBitmapFromImageList(imageList, iconSize, data[index].id, hdc, hdcTemp);
+				DeleteDC(hdcTemp);
+			}
+			else
+				hBitmap = nullptr;
 			ReleaseDC(mainFrame->m_hWnd, hdc);
-			DeleteDC(hdcTemp);
+			if (!hBitmap) return nullptr;
 		}
 		data[index].bitmap[size] = hBitmap;
 	}
