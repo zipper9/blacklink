@@ -39,9 +39,10 @@ class StatusBarCtrl : public CWindowImpl<StatusBarCtrl>, private ThemeWrapper
 	private:
 		enum
 		{
-			PANE_FLAG_PRIV_UPDATE_TEXT = 0x100,
-			PANE_FLAG_PRIV_UPDATE_ICON = 0x200,
-			PANE_FLAG_PRIV_WIDTH_SET   = 0x400
+			PANE_FLAG_PRIV_UPDATE_TEXT  = 0x100,
+			PANE_FLAG_PRIV_UPDATE_ICON  = 0x200,
+			PANE_FLAG_PRIV_WIDTH_SET    = 0x400,
+			PANE_FLAG_PRIV_ALPHA_BITMAP = 0x800
 		};
 
 		struct Pane
@@ -133,6 +134,7 @@ class StatusBarCtrl : public CWindowImpl<StatusBarCtrl>, private ThemeWrapper
 		HBITMAP getPaneIcon(int index) const;
 		void setPaneInfo(int index, const PaneInfo& pi);
 		void getPaneInfo(int index, PaneInfo& pi) const;
+		int getPaneWidth(int index) const;
 		void updateLayout(HDC hdc);
 		void setFont(HFONT hFont, bool ownFont);
 		int getPrefHeight(HDC hdc);

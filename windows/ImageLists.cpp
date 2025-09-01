@@ -198,9 +198,9 @@ void FlagImage::init()
 	customLocationsPath = Text::toT(s);
 }
 
-bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, POINT pt)
+HBITMAP FlagImage::getCountryBitmap(uint16_t countryCode)
 {
-	if (flagsPath.empty()) return false;
+	if (flagsPath.empty()) return nullptr;
 	HBITMAP bmp = nullptr;
 	auto i = bitmaps.find(countryCode);
 	if (i == bitmaps.end())
@@ -208,7 +208,7 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, POINT pt)
 		if (countryCode != TAG('z', 'z'))
 		{
 			tstring imagePath = flagsPath + Text::toT(tagToString(countryCode)) + _T(".bmp");
-			bmp = (HBITMAP) ::LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+			bmp = (HBITMAP) LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
 			bitmaps.insert(make_pair(countryCode, bmp));
 		}
 		else
@@ -220,6 +220,29 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, POINT pt)
 	}
 	else
 		bmp = i->second;
+	return bmp;
+}
+
+HBITMAP FlagImage::getLocationBitmap(int locationImage)
+{
+	if (customLocationsPath.empty()) return nullptr;
+	uint32_t index = (uint32_t) locationImage << 16;
+	auto i = bitmaps.find(index);
+	HBITMAP bmp;
+	if (i == bitmaps.end())
+	{
+		tstring imagePath = customLocationsPath + Util::toStringT(locationImage) + _T(".bmp");
+		bmp = (HBITMAP) LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
+		bitmaps.insert(make_pair(index, bmp));
+	}
+	else
+		bmp = i->second;
+	return bmp;
+}
+
+bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, POINT pt)
+{
+	HBITMAP bmp = getCountryBitmap(countryCode);
 	if (!bmp) return false;
 	if (!memDC) memDC = CreateCompatibleDC(dc);
 	HGDIOBJ oldBmp = SelectObject(memDC, bmp);
@@ -230,18 +253,7 @@ bool FlagImage::drawCountry(HDC dc, uint16_t countryCode, POINT pt)
 
 bool FlagImage::drawLocation(HDC dc, int locationImage, POINT pt)
 {
-	if (customLocationsPath.empty()) return false;
-	uint32_t index = (uint32_t) locationImage << 16;
-	auto i = bitmaps.find(index);
-	HBITMAP bmp;
-	if (i == bitmaps.end())
-	{
-		tstring imagePath = customLocationsPath + Util::toStringT(locationImage) + _T(".bmp");
-		bmp = (HBITMAP) ::LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-		bitmaps.insert(make_pair(index, bmp));
-	}
-	else
-		bmp = i->second;
+	HBITMAP bmp = getLocationBitmap(locationImage);
 	if (!bmp) return false;
 	if (!memDC) memDC = CreateCompatibleDC(dc);
 	HGDIOBJ oldBmp = SelectObject(memDC, bmp);

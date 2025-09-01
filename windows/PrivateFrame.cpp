@@ -58,12 +58,26 @@ PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : re
 	autoStartCCPM(true), sendCPMI(false), newMessageSent(false), newMessageReceived(false),
 	remoteChatClosed(false), sendTimeTyping(0), typingTimeout{0, 0}, lastSentTime(0),
 	uiInitialized(false),
-	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd),
-	statusSizes{0, 220, 60}
+	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP), timer(m_hWnd)
 {
 	frameId = WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_PM);
-	ctrlStatusCache.resize(STATUS_LAST);
-	ctrlStatusOwnerDraw = 1<<STATUS_LOCATION;
+
+	StatusBarCtrl::PaneInfo statusPane;
+	statusPane.minWidth = 0;
+	statusPane.maxWidth = INT_MAX;
+	statusPane.weight = 1;
+	statusPane.align = StatusBarCtrl::ALIGN_LEFT;
+	statusPane.flags = 0;
+	for (int i = 0; i < STATUS_LAST; ++i)
+	{
+		if (i == 1)
+		{
+			statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+			statusPane.weight = 0;
+		}
+		ctrlStatus.addPane(statusPane);
+	}
+
 	ctrlClient.setHubParam(replyTo.hint, myNick);
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	pmPreview = ss->getBool(Conf::POPUP_PM_PREVIEW);
@@ -129,10 +143,7 @@ LRESULT PrivateFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 void PrivateFrame::initUI()
 {
 	dcassert(!uiInitialized);
-	if (!m_hWndStatusBar)
-		CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-	BaseChatFrame::initStatusCtrl(m_hWndStatusBar);
-	updateStatusTextWidth();
+	BaseChatFrame::initStatusCtrl();
 	uiInitialized = true;
 }
 
@@ -549,7 +560,6 @@ void PrivateFrame::runUserCommand(UserCommand& uc)
 		return;
 	StringMap ucParams = ucLineParams;
 	ClientManager::userCommand(replyTo, uc, ucParams, true);
-	// TODO тут ucParams не используется позже
 }
 
 void PrivateFrame::openFrameLog() const
@@ -566,8 +576,21 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 	RECT rect;
 	GetClientRect(&rect);
-	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
+	if (ctrlStatus)
+	{
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
+		ctrlLastLinesToolTip.SetMaxTipWidth(std::max(ctrlStatus.getPaneWidth(0), 400));
+	}
+
 	int h, panelHeight, buttonPanelWidth;
 	if (msgPanel && ctrlMessage)
 	{
@@ -600,7 +623,6 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		if (msgPanel->showSelectHubButton)
 			msgPanel->getButton(MessagePanel::BUTTON_SELECT_HUB).EnableWindow(isMultipleHubs);
 	}
-	updateStatusParts();
 }
 
 void PrivateFrame::setLocation(const Identity& id)
@@ -618,59 +640,20 @@ void PrivateFrame::setLocation(const Identity& id)
 	}
 	else if (ipInfo.countryCode)
 	{
-		location = FLAG_COUNTRY| ipInfo.countryCode;
+		location = FLAG_COUNTRY | ipInfo.countryCode;
 		text = Text::toT(ipInfo.country);
 	}
 	if (location == currentLocation) return;
 	currentLocation = location;
+	HBITMAP flagBitmap;
+	if (currentLocation & FLAG_COUNTRY)
+		flagBitmap = g_flagImage.getCountryBitmap(currentLocation & ~FLAG_COUNTRY);
+	else if (currentLocation)
+		flagBitmap =  g_flagImage.getLocationBitmap(currentLocation);
+	else
+		flagBitmap = nullptr;
 	setStatusText(STATUS_LOCATION, text);
-}
-
-void PrivateFrame::setStatusText(int index, const tstring& text)
-{
-	if (index != STATUS_TEXT && ctrlStatus)
-	{
-		int w = getStatusTextWidth(index, text);
-		if (w > statusSizes[index])
-		{
-			statusSizes[index] = w;
-			if (ctrlStatus) updateStatusParts();
-		}
-	}
-	BaseChatFrame::setStatusText(index, text);
-}
-
-int PrivateFrame::getStatusTextWidth(int index, const tstring& text) const
-{
-	int w = WinUtil::getTextWidth(text, ctrlStatus) + STATUS_PART_PADDING;
-	if (index == STATUS_LOCATION) w += flagIconWidth + iconTextMargin;
-	return w;
-}
-
-void PrivateFrame::updateStatusTextWidth()
-{
-	for (int i = 1; i < STATUS_LAST; i++)
-	{
-		int w = getStatusTextWidth(i, ctrlStatusCache[i]);
-		if (w > statusSizes[i]) statusSizes[i] = w;
-	}
-}
-
-void PrivateFrame::updateStatusParts()
-{
-	if (!(ctrlStatus && ctrlLastLinesToolTip)) return;
-	CRect sr;
-	ctrlStatus.GetClientRect(sr);
-	int sum = 0;
-	for (int i = 1; i < STATUS_LAST; i++)
-		sum += statusSizes[i];
-	int w[STATUS_LAST];
-	w[STATUS_TEXT] = std::max(int(sr.right) - sum, 120);
-	for (int i = 1; i < STATUS_LAST; i++)
-		w[i] = w[i - 1] + statusSizes[i];
-	ctrlStatus.SetParts(STATUS_LAST, w);
-	ctrlLastLinesToolTip.SetMaxTipWidth(max(w[STATUS_TEXT], 400));
-	restoreStatusFromCache();
+	ctrlStatus.setPaneIcon(STATUS_LOCATION, flagBitmap);
 }
 
 void PrivateFrame::updateHubList()
@@ -1104,33 +1087,6 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			bHandled = TRUE;
 		}
 	}
-	return 0;
-}
-
-LRESULT PrivateFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-{
-	const DRAWITEMSTRUCT* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
-	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == STATUS_LOCATION)
-	{
-		if (currentLocation)
-		{
-			RECT rc = dis->rcItem;
-			POINT pt = { rc.left, (rc.top + rc.bottom - iconSize) / 2 };
-			if (currentLocation & FLAG_COUNTRY)
-				g_flagImage.drawCountry(dis->hDC, currentLocation & ~FLAG_COUNTRY, pt);
-			else
-				g_flagImage.drawLocation(dis->hDC, currentLocation, pt);
-			pt.x += flagIconWidth;
-			const tstring& desc = ctrlStatusCache[STATUS_LOCATION];
-			rc.left = pt.x + iconTextMargin;
-			int oldMode = GetBkMode(dis->hDC);
-			SetBkMode(dis->hDC, TRANSPARENT);
-			DrawText(dis->hDC, desc.c_str(), desc.length(), &rc, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
-			SetBkMode(dis->hDC, oldMode);
-		}
-	}
-	else
-		bHandled = FALSE;
 	return 0;
 }
 

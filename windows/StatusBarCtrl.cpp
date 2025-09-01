@@ -146,6 +146,11 @@ void StatusBarCtrl::getPaneInfo(int index, PaneInfo& pi) const
 	pi.flags = p.flags;
 }
 
+int StatusBarCtrl::getPaneWidth(int index) const
+{
+	return panes[index].width;
+}
+
 void StatusBarCtrl::updateContentSize(Pane& p, HDC hdc)
 {
 	if (p.flags & PANE_FLAG_PRIV_UPDATE_TEXT)
@@ -162,6 +167,10 @@ void StatusBarCtrl::updateContentSize(Pane& p, HDC hdc)
 		{
 			p.iconWidth = (uint16_t) bitmap.bmWidth;
 			p.iconHeight = (uint16_t) abs(bitmap.bmHeight);
+			if (bitmap.bmBitsPixel == 32)
+				p.flags |= PANE_FLAG_PRIV_ALPHA_BITMAP;
+			else
+				p.flags &= ~PANE_FLAG_PRIV_ALPHA_BITMAP;
 		}
 		else
 			p.iconWidth = p.iconHeight = 0;
@@ -258,7 +267,7 @@ void StatusBarCtrl::setPaneText(int index, const tstring& text)
 		p.text = text;
 		p.flags |= PANE_FLAG_PRIV_UPDATE_TEXT;
 		if (p.minWidth != p.maxWidth) flags |= FLAG_UPDATE_LAYOUT;
-		if (flags & FLAG_AUTO_REDRAW) Invalidate(FALSE);
+		if ((flags & FLAG_AUTO_REDRAW) && m_hWnd) Invalidate(FALSE);
 	}
 }
 
@@ -275,7 +284,7 @@ void StatusBarCtrl::setPaneIcon(int index, HBITMAP hBitmap)
 		p.icon = hBitmap;
 		p.flags |= PANE_FLAG_PRIV_UPDATE_ICON;
 		if (p.minWidth != p.maxWidth) flags |= FLAG_UPDATE_LAYOUT;
-		if (flags & FLAG_AUTO_REDRAW) Invalidate(FALSE);
+		if ((flags & FLAG_AUTO_REDRAW) && m_hWnd) Invalidate(FALSE);
 	}
 }
 
@@ -431,7 +440,10 @@ void StatusBarCtrl::drawContent(HDC hdc, const RECT& rc, const Pane& p)
 		}
 		if (y + height > rc.bottom)
 			height = rc.bottom - y;
-		WinUtil::drawAlphaBitmap(hdc, p.icon, x, y, xsrc, ysrc, width, height);
+		if (p.flags & PANE_FLAG_PRIV_ALPHA_BITMAP)
+			WinUtil::drawAlphaBitmap(hdc, p.icon, x, y, xsrc, ysrc, width, height);
+		else
+			WinUtil::drawBitmap(hdc, p.icon, x, y, xsrc, ysrc, width, height);
 		if (width < p.iconWidth)
 			return;
 		if (p.align & ALIGN_RIGHT)
@@ -556,7 +568,7 @@ void StatusBarCtrl::setAutoRedraw(bool flag)
 	if (flag)
 	{
 		flags |= FLAG_AUTO_REDRAW;
-		if (flags & FLAG_UPDATE_LAYOUT) Invalidate(NULL);
+		if ((flags & FLAG_UPDATE_LAYOUT) && m_hWnd) Invalidate(FALSE);
 	}
 	else
 		flags &= ~FLAG_AUTO_REDRAW;

@@ -76,7 +76,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
-		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		CHAIN_MSG_MAP(BaseChatFrame)
@@ -147,13 +146,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		}
 
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 
 		void setLocation(const Identity& id);
-		void setStatusText(int index, const tstring& text);
-		int getStatusTextWidth(int indx, const tstring& text) const;
-		void updateStatusTextWidth();
-		void updateStatusParts();
 
 		const UserPtr& getUser() const
 		{
@@ -194,7 +188,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		vector<pair<string, tstring>> hubList;
 
 		CContainedWindow ctrlChatContainer;
-		int statusSizes[STATUS_LAST];
 
 		bool isMultipleHubs;
 		bool isOffline;

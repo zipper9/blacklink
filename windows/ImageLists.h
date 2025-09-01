@@ -214,6 +214,8 @@ class FlagImage
 		FlagImage() : memDC(NULL) {}
 		~FlagImage();
 		void init();
+		HBITMAP getCountryBitmap(uint16_t countryCode);
+		HBITMAP getLocationBitmap(int locationImage);
 		bool drawCountry(HDC dc, uint16_t countryCode, POINT pt);
 		bool drawLocation(HDC dc, int locationImage, POINT pt);
 

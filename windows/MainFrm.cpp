@@ -2377,6 +2377,7 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		GetClientRect(&rect);
 		UpdateBarsPosition(rect, resizeBars);
 
+		int maxTextWidth = 0;
 		if (showStatusBar)
 		{
 			HDC hdc = GetDC();
@@ -2389,12 +2390,14 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			ctrlStatus.updateLayout(hdc);
 			ReleaseDC(hdc);
 			updateHashProgressCtrl();
+			maxTextWidth = ctrlStatus.getPaneWidth(0);
 		}
 		else
 		{
 			ctrlStatus.ShowWindow(SW_HIDE);
 			ctrlHashProgress.ShowWindow(SW_HIDE);
 		}
+		ctrlLastLines.SetMaxTipWidth(std::max(maxTextWidth, 400));
 
 		CRect rc  = rect;
 		CRect rc2 = rect;

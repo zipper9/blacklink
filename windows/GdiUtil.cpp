@@ -11,6 +11,20 @@
 #include <arm_neon.h>
 #endif
 
+void WinUtil::drawBitmap(HDC hdc, HBITMAP bitmap, int destX, int destY, int srcX, int srcY, int width, int height)
+{
+	HDC bitmapDC = CreateCompatibleDC(hdc);
+	HGDIOBJ oldBitmap = SelectObject(bitmapDC, bitmap);
+	BitBlt(hdc, destX, destY, width, height, bitmapDC, srcX, srcY, SRCCOPY);
+	SelectObject(bitmapDC, oldBitmap);
+	DeleteDC(bitmapDC);
+}
+
+void WinUtil::drawBitmap(HDC hdc, HBITMAP bitmap, int x, int y, int width, int height)
+{
+	drawBitmap(hdc, bitmap, x, y, 0, 0, width, height);
+}
+
 void WinUtil::drawAlphaBitmap(HDC hdc, HBITMAP bitmap, int destX, int destY, int srcX, int srcY, int width, int height)
 {
 	BLENDFUNCTION bf;

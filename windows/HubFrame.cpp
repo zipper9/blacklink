@@ -38,7 +38,6 @@
 
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
-static const int STATUS_PART_PADDING = 12;
 
 HubFrame::FrameMap HubFrame::frames;
 
@@ -84,7 +83,28 @@ HubFrame::HubFrame(const Settings& cs) :
 	disableChat(false)
 {
 	frameId = WinUtil::getNewFrameID(WinUtil::FRAME_TYPE_HUB);
-	ctrlStatusCache.resize(5);
+
+	StatusBarCtrl::PaneInfo statusPane;
+	statusPane.minWidth = 0;
+	statusPane.maxWidth = INT_MAX;
+	statusPane.weight = 1;
+	statusPane.align = StatusBarCtrl::ALIGN_LEFT;
+	statusPane.flags = 0;
+	for (int i = 0; i < STATUS_LAST; ++i)
+	{
+		if (i == 1)
+		{
+			statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+			statusPane.weight = 0;
+		}
+		else if (i == STATUS_HUB_ICON)
+		{
+			statusPane.flags = 0;
+			statusPane.minWidth = statusPane.maxWidth = 60;
+		}
+		ctrlStatus.addPane(statusPane);
+	}
+
 	showUsersStore = !cs.hideUserList;
 	showUsers = false;
 	serverUrl = cs.server;
@@ -220,9 +240,7 @@ void HubFrame::initUI()
 	if (!ctrlUsers)
 		ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
 
-	if (!m_hWndStatusBar)
-		CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-	BaseChatFrame::initStatusCtrl(m_hWndStatusBar);
+	BaseChatFrame::initStatusCtrl();
 
 	if (!ctrlSwitchPanels)
 	{
@@ -784,7 +802,11 @@ void HubFrame::doConnected()
 	setHubParam();
 
 	if (client)
-		setStatusText(STATUS_CIPHER_SUITE, Text::toT(client->getCipherName()));
+	{
+		tstring cipherSuite = Text::toT(client->getCipherName());
+		setStatusText(STATUS_CIPHER_SUITE, cipherSuite);
+		ctrlStatus.setPaneIcon(STATUS_CIPHER_SUITE, cipherSuite.empty() ? nullptr : g_iconBitmaps.getBitmap(IconBitmaps::LOCK, 0));
+	}
 	if (ctrlStatus)
 		UpdateLayout(FALSE);
 	shouldUpdateStats = true;
@@ -1157,41 +1179,38 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 	if (ctrlStatus)
 	{
-		CRect sr;
-		ctrlStatus.GetClientRect(sr);
-		const int tmp = sr.Width() > 332 ? 232 : (sr.Width() > 132 ? sr.Width() - 100 : 32);
-		const tstring& cipherName = ctrlStatusCache[1];
-		int cipherLen = 0;
-		if (!cipherName.empty())
-			cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus) + STATUS_PART_PADDING;
 		int hubPic = 0;
 		const int hubIconSize = 22;
 		hubPic += hubIconSize;
 		if (showUsers) hubPic += 20;
-		int w[STATUS_LAST];
-		w[STATUS_TEXT] = sr.right - tmp - 55 - hubPic - cipherLen;
-		w[STATUS_CIPHER_SUITE] = w[STATUS_TEXT] + cipherLen;
-		w[STATUS_USERS] = w[STATUS_CIPHER_SUITE] + (tmp - 30) / 2;
-		w[STATUS_SHARED] = w[STATUS_CIPHER_SUITE] + (tmp - 64);
-		w[STATUS_SIZE_PER_USER] = w[STATUS_SHARED] + 100;
-		w[STATUS_HUB_ICON] = w[STATUS_SIZE_PER_USER] + 18 + hubPic;
-		ctrlStatus.SetParts(STATUS_LAST, w);
+		StatusBarCtrl::PaneInfo pi;
+		ctrlStatus.getPaneInfo(STATUS_HUB_ICON, pi);
+		pi.minWidth = pi.maxWidth = hubPic + 18;
+		ctrlStatus.setPaneInfo(STATUS_HUB_ICON, pi);
 
-		ctrlLastLinesToolTip.SetMaxTipWidth(max(w[STATUS_TEXT], 400));
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
+		ctrlLastLinesToolTip.SetMaxTipWidth(std::max(ctrlStatus.getPaneWidth(0), 400));
 
-		// Strange, can't get the correct width of the last field...
-		ctrlStatus.GetRect(4, sr);
-
+		RECT sr;
+		ctrlStatus.getPaneRect(STATUS_HUB_ICON, sr);
+		sr.right = sr.left;
 		// Hub mode icon: active, passive, offline
 		if (ctrlModeIcon)
 		{
 			sr.left = sr.right + 2;
 			sr.right = sr.left + hubIconSize;
-			ctrlModeIcon.MoveWindow(sr);
+			ctrlModeIcon.SetWindowPos(nullptr, &sr, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 		}
 
 		// Switch panels button, same as /switch command
@@ -1201,21 +1220,17 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			{
 				sr.left = sr.right; // + 2;
 				sr.right = sr.left + 20;
-				ctrlSwitchPanels.MoveWindow(sr);
+				ctrlSwitchPanels.SetWindowPos(nullptr, &sr, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 			}
 			else
-			{
-				ctrlSwitchPanels.MoveWindow(0, 0, 0, 0);
-			}
+				ctrlSwitchPanels.ShowWindow(SW_HIDE);
 		}
 			
 		// Checkbox Show/Hide userlist
 		sr.left = sr.right + 2;
 		sr.right = sr.left + 16;
 		if (ctrlShowUsers)
-			ctrlShowUsers.MoveWindow(sr);
-		if (shouldRestoreStatusText)
-			restoreStatusFromCache();
+			ctrlShowUsers.SetWindowPos(nullptr, &sr, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 	}
 	if (msgPanel)
 	{
@@ -2814,6 +2829,7 @@ void HubFrame::updateStats(bool updateSize)
 		users += _T(' ');
 		users += TSTRING(HUB_USERS);
 		setStatusText(STATUS_USERS, users);
+		ctrlStatus.setPaneIcon(STATUS_USERS, g_iconBitmaps.getBitmap(IconBitmaps::USER, 0));
 		if (!isDHT && updateSize)
 		{
 			setStatusText(STATUS_SHARED, Util::formatBytesT(bytesShared));

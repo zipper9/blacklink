@@ -132,7 +132,6 @@ BaseChatFrame::BaseChatFrame() :
 	userMenu(nullptr),
 	disableChat(false),
 	shouldRestoreStatusText(true),
-	ctrlStatusOwnerDraw(0),
 	findDlg(nullptr)
 {
 	auto ss = SettingsManager::instance.getUiSettings();
@@ -187,9 +186,9 @@ void BaseChatFrame::insertBBCode(WORD wID, HWND hwndCtl)
 		default:
 			dcassert(0);
 	}
-	
+
 	if (startTag.empty()) return;
-	
+
 	int startSel = 0;
 	int endSel = 0;
 	ctrlMessage.GetSel(startSel, endSel);
@@ -314,12 +313,13 @@ LRESULT BaseChatFrame::onCreate(HWND hWnd, RECT &rc)
 	return 1;
 }
 
-void BaseChatFrame::initStatusCtrl(HWND hWnd)
+void BaseChatFrame::initStatusCtrl()
 {
 	if (!ctrlStatus)
 	{
-		ctrlStatus.Attach(hWnd);
-		ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
+		ctrlStatus.setAutoGripper(true);
+		ctrlStatus.setFont(Fonts::g_systemFont, false);
+		ctrlStatus.Create(messagePanelHwnd, 0, nullptr, WS_CHILD);
 	}
 	if (!ctrlLastLinesToolTip)
 	{
@@ -419,28 +419,9 @@ void BaseChatFrame::destroyMessagePanel()
 void BaseChatFrame::setStatusText(int index, const tstring& text)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(index < (int) ctrlStatusCache.size());
-	if ((unsigned) index >= ctrlStatusCache.size()) return;
-	if (!ctrlStatus || ctrlStatusCache[index] != text)
-	{
-		ctrlStatusCache[index] = text;
-		if (ctrlStatus)
-			if (ctrlStatusOwnerDraw & 1<<index)
-				ctrlStatus.SetText(index, nullptr, SBT_OWNERDRAW);
-			else
-				ctrlStatus.SetText(index, text.c_str(), SBT_NOTABPARSING);
-	}
-}
-
-void BaseChatFrame::restoreStatusFromCache()
-{
-	CLockRedraw<true> lockRedraw(ctrlStatus.m_hWnd);
-	for (size_t i = 0; i < ctrlStatusCache.size(); ++i)
-		if (ctrlStatusOwnerDraw & 1<<i)
-			ctrlStatus.SetText(i, nullptr, SBT_OWNERDRAW);
-		else
-			ctrlStatus.SetText(i, ctrlStatusCache[i].c_str(), SBT_NOTABPARSING);
-	shouldRestoreStatusText = false;
+	dcassert(index < ctrlStatus.getNumPanes());
+	if (index >= ctrlStatus.getNumPanes()) return;
+	ctrlStatus.setPaneText(index, text);
 }
 
 void BaseChatFrame::checkMultiLine()
@@ -711,7 +692,7 @@ void BaseChatFrame::sendCommandResult(Commands::Result& res)
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	auto ss = SettingsManager::instance.getUiSettings();
-	const char* cmd;	
+	const char* cmd;
 	switch (ss->getInt(Conf::MEDIA_PLAYER))
 	{
 		case Conf::WinAmp:
@@ -848,7 +829,7 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 			menu.AppendMenu(MF_SEPARATOR);
 		}
 	}
-	
+
 	menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY_SELECTED_TEXT));
 	menu.AppendMenu(MF_STRING, IDC_COPY_ACTUAL_LINE,  CTSTRING(COPY_LINE));
 	ChatCtrl::g_sSelectedHostname.clear();
@@ -875,7 +856,7 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR), g_iconBitmaps.getBitmap(IconBitmaps::ERASE, 0));
 	menu.AppendMenu(MF_STRING, IDC_SAVE, CTSTRING(SAVE_TO_FILE));
 	menu.AppendMenu(MF_SEPARATOR);
-	
+
 	menu.AppendMenu(MF_STRING, IDC_AUTOSCROLL_CHAT, CTSTRING(ASCROLL_CHAT));
 	if (ctrlClient.getAutoScroll())
 		menu.CheckMenuItem(IDC_AUTOSCROLL_CHAT, MF_BYCOMMAND | MF_CHECKED);

@@ -24,6 +24,7 @@
 #include "MessagePanel.h"
 #include "BaseHandlers.h"
 #include "Colors.h"
+#include "StatusBarCtrl.h"
 #include "StatusMessageHistory.h"
 #include "../client/ClientManager.h"
 #include "../client/Commands.h"
@@ -142,18 +143,14 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		DWORD lastMessageSelPos;
 		MessagePanel* msgPanel;
 		CToolTipCtrl ctrlLastLinesToolTip;
-		CStatusBarCtrl ctrlStatus;
+		StatusBarCtrl ctrlStatus;
 		bool disableChat;
 		bool shouldRestoreStatusText;
 		uint64_t frameId;
 		CFindReplaceDialog* findDlg;
 
-		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
-		unsigned ctrlStatusOwnerDraw;
-
-		void initStatusCtrl(HWND hWnd);
+		void initStatusCtrl();
 		void setStatusText(int index, const tstring& text);
-		void restoreStatusFromCache();
 
 		StatusMessageHistory statusHistory;
 		StringMap ucLineParams;
