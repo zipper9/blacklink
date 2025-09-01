@@ -1,6 +1,6 @@
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/zipper9/blacklink?svg=true)](https://ci.appveyor.com/api/projects/status/github/zipper9/blacklink)
 
-BlackLink is an advanced DC++ client, initially started as a fork of [FlylinkDC++](https://github.com/pavel-pimenov/flylinkdc-r5xx).
+BlackLink is an advanced client for the Direct Connect network, initially started as a fork of [FlylinkDC++](https://github.com/pavel-pimenov/flylinkdc-r5xx).
 
 ## Features
 
