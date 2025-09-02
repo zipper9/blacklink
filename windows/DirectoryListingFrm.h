@@ -30,6 +30,7 @@
 #include "FileStatusColors.h"
 #include "DirectoryListingNavWnd.h"
 #include "SplitWnd.h"
+#include "StatusBarCtrl.h"
 
 #include "../client/StringSearch.h"
 #include "../client/ADLSearch.h"
@@ -486,11 +487,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CustomDrawHelpers::CustomDrawState customDrawState;
 		bool treeViewFocused;
 		HTHEME hTheme;
-		CStatusBarCtrl ctrlStatus;
+		StatusBarCtrl ctrlStatus;
 		HTREEITEM treeRoot;
 		HTREEITEM selectedDir;
 
-		int updatingLayout;
 		DirectoryListingNavWnd navWnd;
 
 		FileStatusColorsEx colors;
@@ -510,8 +510,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		bool offline;
 		tstring lastHubName;
 		int setWindowTitleTick;
-
-		int statusSizes[STATUS_LAST];
 
 		std::unique_ptr<DirectoryListing> dl;
 		std::atomic_bool abortFlag;

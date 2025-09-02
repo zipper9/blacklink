@@ -810,7 +810,7 @@ enum Strings   // @DontAdd
 	PRIVATE_PASSWORD_HELP, // "The following variables are available:\n\n%[pm_pass]: anti-spam password"
 	PROCESSED_FILE_LIST, // "File list loaded in"
 	LOADING_FILE_LIST, // "Loading file list..."
-	LOADING_FILE_LIST_FMT, // "Loading file list: %1%%% – Files: %2%, Folders: %3%"
+	LOADING_FILE_LIST_FMT, // "Loading file list: %1%%%"
 	PREPARING_FILE_LIST, // "Preparing file list..."
 	PERFORMING_ADL_SEARCH, // "Performing ADL search..."
 	ERROR_PARSING_FILE_LIST, // "Error parsing file list: "
