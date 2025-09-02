@@ -520,7 +520,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 	statusPane.minWidth = 0;
 	statusPane.maxWidth = INT_MAX;
-	statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+	statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
 	for (int i = 2; i < STATUS_PART_LAST; ++i)
 	{
 		if (i == STATUS_PART_DL_SPEED || i == STATUS_PART_UL_SPEED)

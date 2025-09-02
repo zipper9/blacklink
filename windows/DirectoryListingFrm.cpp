@@ -247,7 +247,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	{
 		if (i == 1)
 		{
-			statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+			statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
 			statusPane.weight = 0;
 		}
 		ctrlStatus.addPane(statusPane);

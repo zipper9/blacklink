@@ -94,7 +94,7 @@ HubFrame::HubFrame(const Settings& cs) :
 	{
 		if (i == 1)
 		{
-			statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+			statusPane.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
 			statusPane.weight = 0;
 		}
 		else if (i == STATUS_HUB_ICON)

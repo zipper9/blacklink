@@ -191,6 +191,8 @@ void StatusBarCtrl::updateWidth(Pane& p, HDC hdc)
 		p.width = p.minWidth;
 	else if (p.width > p.maxWidth)
 		p.width = p.maxWidth;
+	if ((p.flags & PANE_FLAG_NO_SHRINK) && !p.weight && p.minWidth < p.width)
+		p.minWidth = p.width;
 	p.width += padding.left + padding.right;
 }
 
