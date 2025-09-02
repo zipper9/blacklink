@@ -137,6 +137,7 @@ class StatusBarCtrl : public CWindowImpl<StatusBarCtrl>, private ThemeWrapper
 		int getPaneWidth(int index) const;
 		void updateLayout(HDC hdc);
 		void setFont(HFONT hFont, bool ownFont);
+		HFONT getFont() const { return hFont; }
 		int getPrefHeight(HDC hdc);
 		int getPaneContentWidth(HDC hdc, int index, bool includePadding);
 		void setCallback(Callback* p) { callback = p; }

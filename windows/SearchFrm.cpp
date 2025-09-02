@@ -227,6 +227,25 @@ SearchFrame::SearchFrame() :
 	ctrlHubs.setColumns(2, hubsColumnIds, hubsColumnNames, hubsColumnSizes);
 	ctrlHubs.enableHeaderMenu = false;
 	ctrlHubs.setSortColumn(0);
+
+	StatusBarCtrl::PaneInfo pi;
+	pi.minWidth = pi.maxWidth = 0;
+	pi.weight = 0;
+	pi.align = StatusBarCtrl::ALIGN_LEFT;
+	pi.flags = StatusBarCtrl::PANE_FLAG_NO_DECOR;
+	ctrlStatus.addPane(pi);
+
+	pi.minWidth = 0;
+	pi.maxWidth = INT_MAX;
+	pi.weight = 1;
+	pi.flags = StatusBarCtrl::PANE_FLAG_NO_DECOR | StatusBarCtrl::PANE_FLAG_CUSTOM_DRAW;
+	ctrlStatus.addPane(pi);
+
+	pi.weight = 0;
+	pi.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY;
+	for (int i = STATUS_TIME; i < STATUS_LAST; ++i)
+		ctrlStatus.addPane(pi);
+
 	hashDb = DatabaseManager::getInstance()->getDefaultHashDatabaseConnection();
 }
 
@@ -309,6 +328,19 @@ void SearchFrame::onSizeMode()
 	ctrlSizeMode.EnableWindow(isNormal);
 }
 
+static int getCheckBoxSize(HWND hWnd)
+{
+	tstring str;
+	WinUtil::getWindowText(hWnd, str);
+	HDC hdc = GetDC(hWnd);
+	if (!hdc) return 0;
+	CustomDrawHelpers::CustomDrawCheckBoxState cb;
+	cb.init(hWnd, hdc);
+	int result = cb.checkBoxSize.cx;
+	if (!str.empty()) result += WinUtil::getTextWidth(str, hdc) + cb.checkBoxGap;
+	return result;
+}
+
 LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -322,9 +354,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
 
-	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-	ctrlStatus.Attach(m_hWndStatusBar);
-	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
+	ctrlStatus.setAutoGripper(true);
+	ctrlStatus.setCallback(this);
+	ctrlStatus.Create(m_hWnd, 0, nullptr, WS_CHILD | WS_CLIPCHILDREN);
+	ctrlStatus.setFont(Fonts::g_systemFont, false);
 
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP, 0, IDC_SEARCH_STRING);
@@ -444,6 +477,12 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	showOptionsContainer.SubclassWindow(ctrlShowOptions.m_hWnd);
 	WinUtil::addTool(tooltip, ctrlShowOptions, ResourceManager::SEARCH_SHOWHIDEPANEL);
 
+	int checkBoxSize = getCheckBoxSize(ctrlShowOptions);
+	StatusBarCtrl::PaneInfo statusPane;
+	ctrlStatus.getPaneInfo(STATUS_CHECKBOX, statusPane);
+	statusPane.minWidth = statusPane.maxWidth = checkBoxSize + 10;
+	ctrlStatus.setPaneInfo(STATUS_CHECKBOX, statusPane);
+
 	ctrlSearchBox.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSize.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlMode.SetFont(Fonts::g_systemFont, FALSE);
@@ -540,7 +579,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	WinUtil::fillComboBoxStrings(ctrlFilterSel, columnNames, _countof(columnNames));
 	ctrlFilterSel.SetCurSel(0);
-	ctrlStatus.SetText(STATUS_PROGRESS, nullptr, SBT_OWNERDRAW);
 	tooltip.SetMaxTipWidth(200);
 	tooltip.Activate(TRUE);
 	onSizeMode();   //Get Mode, and turn ON or OFF controlls Size
@@ -667,39 +705,38 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 	{
 		return OMenu::onDrawItem(m_hWnd, uMsg, wParam, lParam, bHandled);
 	}
-	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == STATUS_PROGRESS)
-	{
-		const auto delta = searchEndTime - searchStartTime;
-		if (searchStartTime > 0 && delta)
-		{
-			const RECT rc = dis->rcItem;
-			int borders[3];
-			ctrlStatus.GetBorders(borders);
-
-			const uint64_t now = GET_TICK();
-			const int width = rc.right - rc.left;
-			const int pos = (int) min<int64_t>(width, width * (now - searchStartTime) / delta);
-
-			OperaColors::drawBar(dis->hDC, rc.left, rc.top, rc.left + pos, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
-
-			SetBkMode(dis->hDC, TRANSPARENT);
-			const int textHeight = WinUtil::getTextHeight(dis->hDC);
-			const int top = rc.top + (rc.bottom - rc.top - textHeight) / 2;
-			
-			SetTextColor(dis->hDC, RGB(255, 255, 255));
-			RECT rc2 = rc;
-			rc2.right = rc.left + pos;
-			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), nullptr);
-			
-			SetTextColor(dis->hDC, Colors::g_textColor);
-			rc2 = rc;
-			rc2.left = rc.left + pos;
-			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), nullptr);
-		}
-		return TRUE;
-	}
 	bHandled = FALSE;
 	return FALSE;
+}
+
+void SearchFrame::drawStatusPane(int pane, HDC hdc, const RECT& rc)
+{
+	const auto delta = searchEndTime - searchStartTime;
+	if (searchStartTime > 0 && delta)
+	{
+		const uint64_t now = GET_TICK();
+		const int width = rc.right - rc.left;
+		const int pos = (int) min<int64_t>(width, width * (now - searchStartTime) / delta);
+
+		OperaColors::drawBar(hdc, rc.left, rc.top, rc.left + pos, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
+
+		HGDIOBJ prevFont = SelectObject(hdc, ctrlStatus.getFont());
+		SetBkMode(hdc, TRANSPARENT);
+		const int textHeight = WinUtil::getTextHeight(hdc);
+		const int top = rc.top + (rc.bottom - rc.top - textHeight) / 2;
+		static const int padding = 4;
+
+		SetTextColor(hdc, RGB(255, 255, 255));
+		RECT rc2 = rc;
+		rc2.right = rc.left + pos;
+		ExtTextOut(hdc, rc.left + padding, top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), nullptr);
+
+		SetTextColor(hdc, Colors::g_textColor);
+		rc2 = rc;
+		rc2.left = rc.left + pos;
+		ExtTextOut(hdc, rc.left + padding, top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), nullptr);
+		SelectObject(hdc, prevFont);
+	}
 }
 
 void SearchFrame::initSearchHistoryBox()
@@ -810,8 +847,8 @@ void SearchFrame::onEnter()
 	else
 		searchParam.sizeMode = SizeModes(ctrlMode.GetCurSel());
 		
-	ctrlStatus.SetText(STATUS_COUNT, _T(""));
-	ctrlStatus.SetText(STATUS_DROPPED, _T(""));
+	ctrlStatus.setPaneText(STATUS_COUNT, Util::emptyStringT);
+	ctrlStatus.setPaneText(STATUS_DROPPED, Util::emptyStringT);
 	
 	if (ss->getBool(Conf::CLEAR_SEARCH))
 		ctrlSearch.SetWindowText(_T(""));
@@ -1523,7 +1560,6 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	tooltip.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
-	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 
 	int xdu, ydu;
@@ -1542,26 +1578,24 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	const int comboWidth = WinUtil::dialogUnitsToPixelsX(80, xdu);
 	const int paneWidth = WinUtil::dialogUnitsToPixelsX(110, xdu);
 
-	if (ctrlStatus.IsWindow())
+	if (ctrlStatus)
 	{
-		CRect sr;
-		int w[STATUS_LAST];
-		ctrlStatus.GetClientRect(sr);
-		int tmp = (sr.Width()) > 420 ? 376 : ((sr.Width() > 116) ? sr.Width() - 100 : 16);
-		
-		w[0] = WinUtil::dialogUnitsToPixelsX(28, xdu);
-		w[1] = sr.right - tmp;
-		w[2] = w[1] + (tmp - 16) / 3;
-		w[3] = w[2] + (tmp - 16) / 3;
-		w[4] = w[3] + (tmp - 16) / 3;
-		
-		ctrlStatus.SetParts(5, w);
-		
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
+
 		// Layout showUI button in statusbar part #0
-		ctrlStatus.GetRect(0, sr);
+		RECT sr;
+		ctrlStatus.getPaneRect(0, sr);
 		sr.left += 4;
-		sr.right += 4;
-		ctrlShowOptions.MoveWindow(sr);
+		sr.right -= 4;
+		ctrlShowOptions.SetWindowPos(nullptr, &sr, SWP_NOZORDER | SWP_NOACTIVATE);
 	}
 	if (showOptions)
 	{
@@ -2942,8 +2976,8 @@ void SearchFrame::speak(Speakers s, const Client* c)
 
 void SearchFrame::updateResultCount()
 {
-	ctrlStatus.SetText(STATUS_COUNT, (Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES)).c_str());
-	ctrlStatus.SetText(STATUS_DROPPED, (Util::toStringT(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
+	ctrlStatus.setPaneText(STATUS_COUNT, Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES));
+	ctrlStatus.setPaneText(STATUS_DROPPED, Util::toStringT(droppedResults) + _T(' ') + TSTRING(FILTERED));
 	needUpdateResultCount = false;
 	#if 0 // not used
 	setCountMessages(resultsCount);
@@ -2958,12 +2992,12 @@ void SearchFrame::updateStatusLine(uint64_t tick)
 	if (searchDone)
 	{
 		statusLine = searchTarget + _T(" - ") + TSTRING(DONE);
-		ctrlStatus.SetText(STATUS_TIME, CTSTRING(DONE));
+		ctrlStatus.setPaneText(STATUS_TIME, TSTRING(DONE));
 	}
 	else
 	{
 		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + searchTarget + _T(" ... ") + Util::toStringT(percent) + _T("%");
-		ctrlStatus.SetText(STATUS_TIME, Util::formatSecondsT((searchEndTime - tick) / 1000).c_str());
+		ctrlStatus.setPaneText(STATUS_TIME, Util::formatSecondsT((searchEndTime - tick) / 1000));
 	}
 	setWindowTitle(statusLine);
 	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);

@@ -28,6 +28,7 @@
 #include "SearchHistory.h"
 #include "FileStatusColors.h"
 #include "DialogLayout.h"
+#include "StatusBarCtrl.h"
 #include "StatusLabelCtrl.h"
 #include "SearchBoxCtrl.h"
 #include "ControlList.h"
@@ -53,7 +54,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener,
 	private TimerHelper,
-	public CMessageFilter
+	public CMessageFilter,
+	private StatusBarCtrl::Callback
 {
 		class SearchInfo;
 		typedef TypedTreeListViewCtrl<SearchInfo, TTHValue, false> SearchInfoList;
@@ -370,14 +372,14 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		struct HubInfo
 		{
 			HubInfo(const string& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
-				
+
 			const tstring& getText(int col) const;
 			static int compareItems(const HubInfo* a, const HubInfo* b, int col, int flags);
 			static int getCompareFlags() { return 0; }
 			static int getImageIndex() { return 0; }
 			static uint8_t getStateImageIndex() { return 0; }
 			int getType() const;
-			
+
 			const string url;
 			const tstring name;
 			tstring waitTime;
@@ -409,7 +411,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		SizeModes initialMode;
 		int initialType;
 
-		CStatusBarCtrl ctrlStatus;
+		StatusBarCtrl ctrlStatus;
 		CEdit ctrlSearch;
 		CComboBox ctrlSearchBox;
 		void initSearchHistoryBox();
@@ -611,6 +613,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onItemChangedHub(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 
 		void speak(Speakers s, const Client* c);
+
+		// StatusBarCtrl::Callback
+		void statusPaneClicked(int pane, int button, POINT pt) override {}
+		void drawStatusPane(int pane, HDC hdc, const RECT& rc) override;
+		bool isStatusPaneEmpty(int pane) const override { return false; }
 };
 
 #endif // !defined(SEARCH_FRM_H)
