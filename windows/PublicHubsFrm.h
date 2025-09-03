@@ -23,6 +23,7 @@
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "SearchBoxCtrl.h"
+#include "StatusBarCtrl.h"
 #include "../client/HublistManager.h"
 
 class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
@@ -99,7 +100,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		COMMAND_CODE_HANDLER(EN_CHANGE, onFilterChanged)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
-		
+
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickHublist(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
@@ -122,7 +123,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onFilterReturn(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -190,6 +191,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 				const string& getSecureHubUrl() const { return secureHubUrl; }
 				const string& getKeyPrint() const { return keyPrint; }
 				int getCountryIndex() const { return countryIndex; }
+				const string& getConnectUrl() const;
+				const string& getFavUrl() const;
 
 			private:
 				string hubUrl;
@@ -210,7 +213,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		
 		int visibleHubs;
 		int users;
-		CStatusBarCtrl ctrlStatus;
+		StatusBarCtrl ctrlStatus;
 		CButton ctrlConfigure;
 		CButton ctrlRefresh;
 		SearchBoxCtrl ctrlFilter;
@@ -231,12 +234,10 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		vector<HublistManager::HubListInfo> hubLists;
 		uint64_t selectedHubList;
 		string filter; // converted to lowercase
-		
+
 		static const int columnId[];
 
 		HubInfo* findHub(const string& url, bool& secureUrl, int* pos) const;
-		string getPubServer(int pos) const { return getPubServer(ctrlHubs.getItemData(pos)); }
-		string getPubServer(const HubInfo* data) const;
 		void openHub(int ind);
 
 		void updateStatus();

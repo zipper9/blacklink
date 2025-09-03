@@ -24,6 +24,7 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "CountryList.h"
+#include "../client/CryptoManager.h"
 #include "../client/FormatUtil.h"
 #include "../client/SettingsUtil.h"
 #include "../client/Util.h"
@@ -108,21 +109,31 @@ PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0)
 	ctrlHubs.setColumnFormat(COLUMN_MAXHUBS, LVCFMT_RIGHT);
 	ctrlHubs.setColumnFormat(COLUMN_MAXUSERS, LVCFMT_RIGHT);
 	xdu = ydu = 0;
+
+	StatusBarCtrl::PaneInfo pi;
+	pi.minWidth = 0;
+	pi.maxWidth = INT_MAX;
+	pi.weight = 1;
+	pi.align = StatusBarCtrl::ALIGN_LEFT;
+	pi.flags = 0;
+	ctrlStatus.addPane(pi);
+
+	pi.weight = 0;
+	pi.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
+	for (int i = 1; i < 3; ++i)
+		ctrlStatus.addPane(pi);
 }
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	m_hAccel = LoadAccelerators(_Module.GetModuleInstance(), MAKEINTRESOURCE(IDR_INTERNET_HUBS));	
+	m_hAccel = LoadAccelerators(_Module.GetModuleInstance(), MAKEINTRESOURCE(IDR_INTERNET_HUBS));
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
 	dcassert(pLoop);
 	pLoop->AddMessageFilter(this);
 
-	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-	ctrlStatus.Attach(m_hWndStatusBar);
-	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
-
-	int w[3] = { 0, 0, 0 };
-	ctrlStatus.SetParts(3, w);
+	ctrlStatus.setAutoGripper(true);
+	ctrlStatus.Create(m_hWnd, 0, nullptr, WS_CHILD);
+	ctrlStatus.setFont(Fonts::g_systemFont, false);
 
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
@@ -292,7 +303,8 @@ LRESULT PublicHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const HubInfo* data = ctrlHubs.getItemData(i);
-		string server = getPubServer(data);
+		if (data->getFlags() & HubInfo::FLAGS_FAVORITE) continue;
+		const string& server = data->getConnectUrl();
 		FavoriteHubEntry e;
 		e.setName(Text::fromT(data->getText(COLUMN_NAME)));
 		e.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
@@ -313,7 +325,8 @@ LRESULT PublicHubsFrame::onRemoveFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		if (fm->removeFavoriteHub(getPubServer(i), false)) save = true;
+		HubInfo* data = ctrlHubs.getItemData(i);
+		if (fm->removeFavoriteHub(data->getFavUrl(), false)) save = true;
 	}
 	if (save) fm->saveFavorites();
 	return 0;
@@ -364,21 +377,19 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	RECT rect;
 	GetClientRect(&rect);
-	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 
-	if (ctrlStatus.IsWindow())
+	if (ctrlStatus)
 	{
-		CRect sr;
-		int w[3];
-		ctrlStatus.GetClientRect(sr);
-		int tmp = (sr.Width()) > 316 ? 216 : ((sr.Width() > 116) ? sr.Width() - 100 : 16);
-
-		w[0] = sr.right - tmp;
-		w[1] = w[0] + (tmp - 16) / 2;
-		w[2] = w[0] + (tmp);
-
-		ctrlStatus.SetParts(3, w);
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
 	}
 
 	const int buttonOffset = 1;
@@ -459,10 +470,12 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 void PublicHubsFrame::openHub(int ind)
 {
 	const HubInfo* data = ctrlHubs.getItemData(ind);
+	const string& server = data->getConnectUrl();
+	if (server.empty()) return;
+
 	RecentHubEntry r;
 	r.setName(Text::fromT(data->getText(COLUMN_NAME)));
 	r.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
-	string server = getPubServer(data);
 	r.setServer(server);
 	r.setOpenTab("+");
 	FavoriteManager::getInstance()->addRecent(r);
@@ -561,7 +574,7 @@ void PublicHubsFrame::showStatus(const HublistManager::HubListInfo &info)
 			status = TSTRING(HUBLIST_DOWNLOAD_CORRUPTED);
 			/* HUBLIST_CACHE_CORRUPTED */
 	}
-	ctrlStatus.SetText(0, status.c_str());
+	ctrlStatus.setPaneText(0, status);
 }
 
 LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
@@ -664,8 +677,8 @@ void PublicHubsFrame::redraw()
 
 void PublicHubsFrame::updateStatus()
 {
-	ctrlStatus.SetText(1, (TSTRING(HUBS) + _T(": ") + Util::toStringT(visibleHubs)).c_str());
-	ctrlStatus.SetText(2, (TSTRING(USERS) + _T(": ") + Util::toStringT(users)).c_str());
+	ctrlStatus.setPaneText(1, TSTRING(HUBS) + _T(": ") + Util::toStringT(visibleHubs));
+	ctrlStatus.setPaneText(2, TSTRING(USERS) + _T(": ") + Util::toStringT(users));
 }
 
 LRESULT PublicHubsFrame::onNextDlgCtl(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -748,7 +761,7 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 					hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(OPEN_HUB_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::GOTO_HUB, 0));
 				else
 					hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
-				if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(data)))
+				if (data->getFlags() & HubInfo::FLAGS_FAVORITE)
 				{
 					hubsMenu.AppendMenu(MF_STRING, IDC_FAVORITES, CTSTRING(OPEN_FAV_HUBS_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
 					hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
@@ -816,7 +829,11 @@ LRESULT PublicHubsFrame::onOpenFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	{
 		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
 		if (i != -1)
-			FavoriteHubsFrame::g_frame->showHub(getPubServer(i));
+		{
+			const HubInfo* data = ctrlHubs.getItemData(i);
+			const string& url = data->getFavUrl();
+			if (!url.empty()) FavoriteHubsFrame::g_frame->showHub(url);
+		}
 	}
 	return 0;
 }
@@ -1178,9 +1195,17 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 	rating = Util::toInt(hub.getRating());
 }
 
-string PublicHubsFrame::getPubServer(const HubInfo* data) const
+const string& PublicHubsFrame::HubInfo::getConnectUrl() const
 {
-	return data ? Util::formatDchubUrl(Text::fromT(data->getText(COLUMN_SERVER))) : Util::emptyString;
+	if (!secureHubUrl.empty() && CryptoManager::getInstance()->isInitialized()) return secureHubUrl;
+	return hubUrl;
+}
+
+const string& PublicHubsFrame::HubInfo::getFavUrl() const
+{
+	if (flags & FLAG_FAVORITE_SECURE) return secureHubUrl;
+	if (flags & FLAG_FAVORITE_NORMAL) return hubUrl;
+	return Util::emptyString;
 }
 
 PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url, bool& secureUrl, int* pos) const
