@@ -3000,7 +3000,7 @@ void SearchFrame::updateStatusLine(uint64_t tick)
 		ctrlStatus.setPaneText(STATUS_TIME, Util::formatSecondsT((searchEndTime - tick) / 1000));
 	}
 	setWindowTitle(statusLine);
-	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);
+	ctrlStatus.Invalidate(FALSE);
 }
 
 void SearchFrame::showPortStatus()
