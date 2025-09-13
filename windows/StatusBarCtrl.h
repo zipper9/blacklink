@@ -27,7 +27,8 @@ class StatusBarCtrl : public CWindowImpl<StatusBarCtrl>, private ThemeWrapper
 			FLAG_AUTO_GRIPPER       = 0x080,
 			FLAG_USE_STYLE_METRICS  = 0x100,
 			FLAG_INIT_STYLE_METRICS = 0x200,
-			FLAG_AUTO_REDRAW        = 0x400
+			FLAG_AUTO_REDRAW        = 0x400,
+			FLAG_NEED_REDRAW        = 0x800
 		};
 
 		enum

@@ -1927,7 +1927,7 @@ LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 	return 0;
 }
 
-void TransferView::pauseSelectedTransfer(void)
+void TransferView::pauseSelectedTransfer()
 {
 	const ItemInfo* ii = ctrlTransfers.getItemData(ctrlTransfers.GetNextItem(-1, LVNI_SELECTED));
 	if (ii)

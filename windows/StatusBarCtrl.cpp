@@ -269,7 +269,13 @@ void StatusBarCtrl::setPaneText(int index, const tstring& text)
 		p.text = text;
 		p.flags |= PANE_FLAG_PRIV_UPDATE_TEXT;
 		if (p.minWidth != p.maxWidth) flags |= FLAG_UPDATE_LAYOUT;
-		if ((flags & FLAG_AUTO_REDRAW) && m_hWnd) Invalidate(FALSE);
+		if (m_hWnd)
+		{
+			if (flags & FLAG_AUTO_REDRAW)
+				Invalidate(FALSE);
+			else
+				flags |= FLAG_NEED_REDRAW;
+		}
 	}
 }
 
@@ -317,6 +323,7 @@ void StatusBarCtrl::updateLayout(HDC hdc)
 
 void StatusBarCtrl::draw(HDC hdc, const RECT& rcClient)
 {
+	flags &= ~FLAG_NEED_REDRAW;
 	RECT rcPanes = rcClient;
 	if (gripperSize)
 	{
@@ -570,7 +577,8 @@ void StatusBarCtrl::setAutoRedraw(bool flag)
 	if (flag)
 	{
 		flags |= FLAG_AUTO_REDRAW;
-		if ((flags & FLAG_UPDATE_LAYOUT) && m_hWnd) Invalidate(FALSE);
+		if ((flags & (FLAG_UPDATE_LAYOUT | FLAG_NEED_REDRAW)) && m_hWnd)
+			Invalidate(FALSE);
 	}
 	else
 		flags &= ~FLAG_AUTO_REDRAW;

@@ -278,7 +278,7 @@ LRESULT MainFrame::onMatchAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	return 0;
 }
 
-void MainFrame::createMainMenu(void)
+void MainFrame::createMainMenu()
 {
 	// Loads images and creates command bar window
 	ctrlCmdBar.Create(m_hWnd, rcDefault, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE);

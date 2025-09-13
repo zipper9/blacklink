@@ -589,7 +589,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 
 		void updateItem(int ii, uint32_t updateMask);
 
-		void pauseSelectedTransfer(void);
+		void pauseSelectedTransfer();
 		void openDownloadQueue(const ItemInfo* ii);
 		void initProgressBars(bool check);
 };

@@ -92,7 +92,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WMU_LISTENER_INIT, onListenerInit)
-		MESSAGE_HANDLER(WMU_UPDATE_LAYOUT, onUpdateLayout);
+		MESSAGE_HANDLER(WMU_UPDATE_LAYOUT, onUpdateLayout)
 		MESSAGE_HANDLER(FTM_SELECTED, onSelected)
 		MESSAGE_HANDLER(FTM_ROWS_CHANGED, onRowsChanged)
 		MESSAGE_HANDLER(WMU_TRAY_ICON, onTrayIcon)
@@ -100,7 +100,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_SIZE, onSize)
 		MESSAGE_HANDLER(WM_ENDSESSION, onEndSession)
 		MESSAGE_HANDLER(messageIdTaskbarCreated, onTaskbarCreated)
-		MESSAGE_HANDLER(messageIdTaskbarButtonCreated, onTaskbarButtonCreated);
+		MESSAGE_HANDLER(messageIdTaskbarButtonCreated, onTaskbarButtonCreated)
 		MESSAGE_HANDLER(WM_COPYDATA, onCopyData)
 		MESSAGE_HANDLER(WMU_WHERE_ARE_YOU, onWhereAreYou)
 		MESSAGE_HANDLER(WMU_DIALOG_CREATED, onLineDlgCreated)
@@ -142,7 +142,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 		COMMAND_ID_HANDLER(IDC_CDMDEBUG_WINDOW, onOpenWindows)
 #endif
-		COMMAND_ID_HANDLER(IDC_DHT, onToggleDHT);
+		COMMAND_ID_HANDLER(IDC_DHT, onToggleDHT)
 		COMMAND_ID_HANDLER(IDC_AWAY, onAway)
 		COMMAND_ID_HANDLER(IDC_LIMITER, onLimiter)
 		COMMAND_ID_HANDLER(IDC_OPEN_FILE_LIST, onOpenFileList)
@@ -186,7 +186,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		CHAIN_MDI_CHILD_COMMANDS()
 		CHAIN_MSG_MAP(CUpdateUI<MainFrame>)
 		CHAIN_MSG_MAP(CMDIFrameWindowImpl<MainFrame>)
-		CHAIN_MSG_MAP(splitterBase);
+		CHAIN_MSG_MAP(splitterBase)
 		ALT_MSG_MAP(QUICK_SEARCH_MAP)
 		MESSAGE_HANDLER(WM_CHAR, onQuickSearchChar)
 		MESSAGE_HANDLER(WM_KEYDOWN, onQuickSearchChar)
