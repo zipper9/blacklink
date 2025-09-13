@@ -41,7 +41,6 @@ static const unsigned LOCAL_TYPING_SEND_PERIOD = 120000; // When local isTyping 
 static const unsigned LOCAL_TYPING_TIMEOUT     = 30000;  // Reset local isTyping flag after 30 seconds of inactivity
 static const unsigned REMOTE_TYPING_TIMEOUT    = 150000; // Reset remote isTyping flag if nothing is received for 2.5 minutes
 
-static const int STATUS_PART_PADDING = 12;
 static const uint32_t FLAG_COUNTRY = 0x10000;
 
 static const int iconSize = 16;

@@ -27,6 +27,7 @@
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
 #include "SplitWnd.h"
+#include "StatusBarCtrl.h"
 #include "../client/UserInfoBase.h"
 #include "../client/UploadManager.h"
 #include "../client/TaskQueue.h"
@@ -50,13 +51,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		~WaitingUsersFrame();
 
 		WaitingUsersFrame(const WaitingUsersFrame&) = delete;
-		WaitingUsersFrame& operator= (const WaitingUsersFrame&) = delete;	
-
-		enum Tasks
-		{
-			ADD_FILE,
-			REMOVE_USER
-		};
+		WaitingUsersFrame& operator= (const WaitingUsersFrame&) = delete;
 
 		typedef MDITabChildWindowImpl<WaitingUsersFrame> baseClass;
 
@@ -125,6 +120,20 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		void getSelectedUsers(vector<UserPtr>& v) const;
 
 	private:
+		enum Tasks
+		{
+			ADD_FILE,
+			REMOVE_USER
+		};
+
+		enum
+		{
+			STATUS_TEXT, // unused
+			STATUS_USERS,
+			STATUS_FILES,
+			STATUS_LAST
+		};
+
 		static const int columnId[];
 		
 		class UploadQueueItem : public UserInfoBase
@@ -257,8 +266,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		CTreeViewCtrl ctrlQueued;
 		HTREEITEM treeRoot;
 
-		CStatusBarCtrl ctrlStatus;
-		int statusSizes[4];
+		StatusBarCtrl ctrlStatus;
 
 		void addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser);
 		void removeUser(const UserPtr& user);

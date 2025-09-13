@@ -43,7 +43,6 @@ int QueueFrame::QueueItemInfo::itemsRemoved;
 const TTHValue QueueFrame::QueueItemInfo::emptyTTH;
 
 static const unsigned TIMER_VAL = 1000;
-static const int STATUS_PART_PADDING = 12;
 
 const int QueueFrame::columnId[] =
 {
@@ -109,13 +108,30 @@ QueueFrame::QueueFrame() :
 	clearingTree(0), currentDir(nullptr), treeInserted(false),
 	lastTotalCount(0), lastTotalSize(-1), updateStatus(false)
 {
-	memset(statusSizes, 0, sizeof(statusSizes));
 	root = new DirItem;
 	ctrlQueue.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlQueue.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlQueue.setColumnFormat(COLUMN_DOWNLOADED, LVCFMT_RIGHT);
 	ctrlQueue.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlQueue.setColumnFormat(COLUMN_SEGMENTS, LVCFMT_RIGHT);
+
+	StatusBarCtrl::PaneInfo pi;
+	pi.minWidth = pi.maxWidth = 0;
+	pi.weight = 0;
+	pi.align = StatusBarCtrl::ALIGN_LEFT;
+	pi.flags = StatusBarCtrl::PANE_FLAG_NO_DECOR;
+	ctrlStatus.addPane(pi);
+
+	pi.minWidth = 0;
+	pi.maxWidth = INT_MAX;
+	pi.weight = 1;
+	pi.flags = 0;
+	ctrlStatus.addPane(pi);
+
+	pi.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
+	pi.weight = 0;
+	for (int i = 2; i < STATUS_LAST; ++i)
+		ctrlStatus.addPane(pi);
 }
 
 QueueFrame::~QueueFrame()
@@ -180,15 +196,29 @@ void QueueFrame::sortSources(vector<QueueFrame::SourceInfo>& v)
 	});
 }
 
-LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+static int getCheckBoxSize(HWND hWnd)
+{
+	tstring str;
+	WinUtil::getWindowText(hWnd, str);
+	HDC hdc = GetDC(hWnd);
+	if (!hdc) return 0;
+	CustomDrawHelpers::CustomDrawCheckBoxState cb;
+	cb.init(hWnd, hdc);
+	int result = cb.checkBoxSize.cx;
+	if (!str.empty()) result += WinUtil::getTextWidth(str, hdc) + cb.checkBoxGap;
+	ReleaseDC(hWnd, hdc);
+	return result;
+}
+
+LRESULT QueueFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	showTree = ss->getBool(Conf::QUEUE_FRAME_SHOW_TREE);
 	showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
 
-	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-	ctrlStatus.Attach(m_hWndStatusBar);
-	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
+	ctrlStatus.setAutoGripper(true);
+	ctrlStatus.Create(m_hWnd, 0, nullptr, WS_CHILD | WS_CLIPCHILDREN);
+	ctrlStatus.setFont(Fonts::g_systemFont, false);
 
 	ctrlQueue.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_QUEUE);
@@ -222,14 +252,17 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlShowTree.SetFont(Fonts::g_systemFont);
 	showTreeContainer.SubclassWindow(ctrlShowTree.m_hWnd);
 
+	int checkBoxSize = getCheckBoxSize(ctrlShowTree);
+	StatusBarCtrl::PaneInfo statusPane;
+	ctrlStatus.getPaneInfo(STATUS_CHECKBOX, statusPane);
+	statusPane.minWidth = statusPane.maxWidth = checkBoxSize + 10;
+	ctrlStatus.setPaneInfo(STATUS_CHECKBOX, statusPane);
+
 	addQueueList();
 	QueueManager::getInstance()->addListener(this);
 	DownloadManager::getInstance()->addListener(this);
 	SettingsManager::instance.addListener(this);
 
-	memset(statusSizes, 0, sizeof(statusSizes));
-	statusSizes[0] = 16;
-	ctrlStatus.SetParts(6, statusSizes);
 	updateQueueStatus();
 
 	timer.createTimer(TIMER_VAL);
@@ -762,7 +795,7 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 #if defined(DEBUG_QUEUE_FRAME) && defined(DEBUG_QUEUE_FRAME_TREE)
 	LogManager::message("Adding subdir: " + dirname, false);
 #endif
-	
+
 	size_t minLen = std::numeric_limits<size_t>::max();
 	vector<DirItem*> toSplit;
 	bool inserted = false;
@@ -1302,7 +1335,7 @@ void QueueFrame::addTask(Tasks s, Task* task)
 	uint64_t tick = GET_TICK();
 	uint64_t prevTick = tick;
 	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
-		PostMessage(WM_SPEAKER);
+		PostMessage(WM_SPEAKER); // FAILED?
 }
 
 void QueueFrame::processTasks()
@@ -1394,7 +1427,7 @@ void QueueFrame::processTasks()
 			case UPDATE_STATUS:
 			{
 				auto& status = static_cast<StringTask&>(*ti->second);
-				ctrlStatus.SetText(1, Text::toT(status.str).c_str());
+				ctrlStatus.setPaneText(STATUS_TEXT, Text::toT(status.str));
 			}
 			break;
 			case UPDATE_FILE_SIZE:
@@ -1829,7 +1862,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				if (extraFlags & QueueItem::XFLAG_AUTO_PRIORITY)
 					priorityMenu.CheckMenuItem(IDC_AUTOPRIORITY, MF_BYCOMMAND | MF_CHECKED);
 
-				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);			
+				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 				MenuHelper::unlinkStaticMenus(singleMenu);
 			}
 			else
@@ -2016,7 +2049,7 @@ LRESULT QueueFrame::onReadd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 				}
 				catch (const QueueException& e)
 				{
-					ctrlStatus.SetText(1, Text::toT(e.getError()).c_str());
+					ctrlStatus.setPaneText(STATUS_TEXT, Text::toT(e.getError()));
 				}
 			}
 			else
@@ -2030,7 +2063,7 @@ LRESULT QueueFrame::onReadd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 					}
 					catch (const QueueException& e)
 					{
-						ctrlStatus.SetText(1, Text::toT(e.getError()).c_str());
+						ctrlStatus.setPaneText(STATUS_TEXT, Text::toT(e.getError()));
 					}
 				}
 			}
@@ -2232,7 +2265,7 @@ void QueueFrame::changePriority(bool inc)
 
 void QueueFrame::updateQueueStatus()
 {
-	if (!closed && ctrlStatus.IsWindow())
+	if (!closed && ctrlStatus.m_hWnd)
 	{
 		size_t newTotalCount = root->totalFileCount;
 		int64_t newTotalSize = root->totalSize;
@@ -2241,8 +2274,8 @@ void QueueFrame::updateQueueStatus()
 			newTotalCount += fileLists->totalFileCount;
 			//newTotalSize += fileLists->totalSize;
 		}
-		
-		tstring tmp1;
+
+		tstring countStr;
 		int64_t total = 0;
 		unsigned cnt = ctrlQueue.GetSelectedCount();
 		if (cnt == 0)
@@ -2252,7 +2285,7 @@ void QueueFrame::updateQueueStatus()
 				total = currentDir->totalSize;
 			else
 				total = newTotalSize;
-			tmp1 = TSTRING(DISPLAYED_ITEMS);
+			countStr = TSTRING(DISPLAYED_ITEMS);
 		}
 		else
 		{
@@ -2266,57 +2299,23 @@ void QueueFrame::updateQueueStatus()
 					if (size > 0) total += size;
 				}
 			}
-			tmp1 = TSTRING(SELECTED_ITEMS);
+			countStr = TSTRING(SELECTED_ITEMS);
 		}
 
-		tmp1 += Util::toStringT(cnt);
-		tstring tmp2 = TSTRING(SIZE) + _T(": ") + Util::formatBytesT(total);
-		bool u = false;
-		
-		int w = WinUtil::getTextWidth(tmp1, ctrlStatus) + STATUS_PART_PADDING;
-		if (statusSizes[1] < w)
-		{
-			statusSizes[1] = w;
-			u = true;
-		}
-		ctrlStatus.SetText(2, tmp1.c_str());
-		
-		w = WinUtil::getTextWidth(tmp2, ctrlStatus) + STATUS_PART_PADDING;
-		if (statusSizes[2] < w)
-		{
-			statusSizes[2] = w;
-			u = true;
-		}
-		ctrlStatus.SetText(3, tmp2.c_str());
-		
+		countStr += Util::toStringT(cnt);
+		ctrlStatus.setAutoRedraw(false);
+		ctrlStatus.setPaneText(STATUS_ITEM_COUNT, countStr);
+		ctrlStatus.setPaneText(STATUS_ITEM_SIZE, TSTRING(SIZE) + _T(": ") + Util::formatBytesT(total));
+
 		if (newTotalCount != lastTotalCount || newTotalSize != lastTotalSize)
 		{
 			lastTotalCount = newTotalCount;
 			lastTotalSize = newTotalSize;
-			
-			tmp1 = TSTRING(TOTAL_FILES) + Util::toStringT(lastTotalCount);
-			tmp2 = TSTRING(TOTAL_SIZE) + Util::formatBytesT(lastTotalSize);
-			
-			w = WinUtil::getTextWidth(tmp2, ctrlStatus) + STATUS_PART_PADDING;
-			if (statusSizes[3] < w)
-			{
-				statusSizes[3] = w;
-				u = true;
-			}
-			ctrlStatus.SetText(4, tmp1.c_str());
-			
-			w = WinUtil::getTextWidth(tmp2, ctrlStatus) + STATUS_PART_PADDING;
-			if (statusSizes[4] < w)
-			{
-				statusSizes[4] = w;
-				u = true;
-			}
-			ctrlStatus.SetText(5, tmp2.c_str());
+			ctrlStatus.setPaneText(STATUS_TOTAL_COUNT, TSTRING(TOTAL_FILES) + Util::toStringT(lastTotalCount));
+			ctrlStatus.setPaneText(STATUS_TOTAL_SIZE, TSTRING(TOTAL_SIZE) + Util::formatBytesT(lastTotalSize));
 		}
-		
-		if (u)
-			UpdateLayout(TRUE);
 
+		ctrlStatus.setAutoRedraw(true);
 		updateStatus = false;
 	}
 }
@@ -2329,28 +2328,26 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 
-	if (ctrlStatus.IsWindow())
+	if (ctrlStatus)
 	{
-		CRect sr;
-		int w[6];
-		ctrlStatus.GetClientRect(sr);
-		w[5] = sr.right - 16;
-#define setw(x) w[x] = max(w[x+1] - statusSizes[x], 0)
-		setw(4);
-		setw(3);
-		setw(2);
-		setw(1);
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
 
-		w[0] = 36;
-
-		ctrlStatus.SetParts(6, w);
-	
-		ctrlStatus.GetRect(0, sr);
-		if (ctrlShowTree.IsWindow())
-			ctrlShowTree.MoveWindow(sr);
+		// Place checkbox in statusbar part #0
+		RECT sr;
+		ctrlStatus.getPaneRect(0, sr);
+		sr.left += 4;
+		sr.right -= 4;
+		ctrlShowTree.SetWindowPos(nullptr, &sr, SWP_NOZORDER | SWP_NOACTIVATE);
 	}
 
 	if (showTree)

@@ -28,6 +28,7 @@
 #include "TimerHelper.h"
 #include "UserMessages.h"
 #include "SplitWnd.h"
+#include "StatusBarCtrl.h"
 
 #define SHOWTREE_MESSAGE_MAP 12
 
@@ -59,7 +60,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onTreeItemChanged)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
 		NOTIFY_HANDLER(IDC_QUEUE, NM_DBLCLK, onDoubleClick)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
@@ -109,7 +110,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		LRESULT onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTreeItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onAutoPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -236,6 +237,17 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			UPDATE_FILE_SIZE,
 			ADD_ITEM_ARRAY,
 			REMOVE_ITEM_ARRAY
+		};
+
+		enum
+		{
+			STATUS_CHECKBOX,
+			STATUS_TEXT,
+			STATUS_ITEM_COUNT,
+			STATUS_ITEM_SIZE,
+			STATUS_TOTAL_COUNT,
+			STATUS_TOTAL_SIZE,
+			STATUS_LAST
 		};
 
 		vector<QueueItem::SegmentEx> runningChunks;
@@ -443,11 +455,10 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 
 		QueueListViewCtrl ctrlQueue;
 		CTreeViewCtrl ctrlDirs;
-		
-		CStatusBarCtrl ctrlStatus;
-		int statusSizes[6];
+
+		StatusBarCtrl ctrlStatus;
 		bool updateStatus;
-		
+
 		static const int columnId[];
 
 		TaskQueue tasks;

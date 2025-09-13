@@ -18,10 +18,10 @@
 
 #include "stdafx.h"
 #include "WaitingUsersFrame.h"
-#include "MainFrm.h"
 #include "BarShader.h"
 #include "ImageLists.h"
 #include "Colors.h"
+#include "Fonts.h"
 #include "ConfUI.h"
 #include "../client/ClientManager.h"
 #include "../client/QueueManager.h"
@@ -31,7 +31,6 @@
 #include "../client/SysVersion.h"
 
 static const unsigned TIMER_VAL = 1000;
-static const int STATUS_PART_PADDING = 12;
 
 static const int columnSizes[] =
 {
@@ -90,12 +89,24 @@ WaitingUsersFrame::WaitingUsersFrame() :
 	treeRoot(nullptr)
 {
 	++UploadManager::g_count_WaitingUsersFrame;
-	memset(statusSizes, 0, sizeof(statusSizes));
 	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_WAITING, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SLOTS, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SHARE, LVCFMT_RIGHT);
+
+	StatusBarCtrl::PaneInfo pi;
+	pi.minWidth = 0;
+	pi.maxWidth = INT_MAX;
+	pi.weight = 1;
+	pi.align = StatusBarCtrl::ALIGN_LEFT;
+	pi.flags = 0;
+	ctrlStatus.addPane(pi);
+
+	pi.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
+	pi.weight = 0;
+	for (int i = 1; i < STATUS_LAST; ++i)
+		ctrlStatus.addPane(pi);
 }
 
 WaitingUsersFrame::~WaitingUsersFrame()
@@ -107,9 +118,9 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 {
 	initProgressBar(false);
 
-	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-	ctrlStatus.Attach(m_hWndStatusBar);
-	ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
+	ctrlStatus.setAutoGripper(true);
+	ctrlStatus.Create(m_hWnd, 0, nullptr, WS_CHILD | WS_CLIPCHILDREN);
+	ctrlStatus.setFont(Fonts::g_systemFont, false);
 
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_UPLOAD_QUEUE);
@@ -143,9 +154,6 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 
 	loadAll();
 
-	memset(statusSizes, 0, sizeof(statusSizes));
-	statusSizes[0] = 16;
-	ctrlStatus.SetParts(4, statusSizes);
 	updateStatus();
 	UpdateLayout();
 
@@ -208,22 +216,19 @@ void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 
-	if (ctrlStatus.IsWindow())
+	if (ctrlStatus)
 	{
-		CRect sr;
-		int w[4];
-		ctrlStatus.GetClientRect(sr);
-		w[3] = sr.right - 16;
-#define setw(x) w[x] = max(w[x+1] - statusSizes[x], 0)
-		setw(2);
-		setw(1);
-#undef setw
-		w[0] = 36;
-
-		ctrlStatus.SetParts(4, w);
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
 	}
 
 	MARGINS margins;
@@ -502,23 +507,10 @@ void WaitingUsersFrame::updateStatus()
 		const int cnt = ctrlList.GetItemCount();
 		const int users = ctrlQueued.GetCount() - 1;
 
-		tstring tmp[2];
-		tmp[0] = TPLURAL_F(PLURAL_USERS, users);
-		tmp[1] = TPLURAL_F(PLURAL_ITEMS, cnt);
-		bool u = false;
-
-		for (int i = 1; i < 3; i++)
-		{
-			const int w = WinUtil::getTextWidth(tmp[i - 1], ctrlStatus) + STATUS_PART_PADDING;
-			if (statusSizes[i] < w)
-			{
-				statusSizes[i] = w;
-				u = true;
-			}
-			ctrlStatus.SetText(i + 1, tmp[i - 1].c_str());
-		}
-
-		if (u) UpdateLayout(TRUE);
+		ctrlStatus.setAutoRedraw(false);
+		ctrlStatus.setPaneText(STATUS_USERS, TPLURAL_F(PLURAL_USERS, users));
+		ctrlStatus.setPaneText(STATUS_FILES, TPLURAL_F(PLURAL_ITEMS, cnt));
+		ctrlStatus.setAutoRedraw(true);
 		setCountMessages(ctrlList.GetItemCount());
 	}
 }
