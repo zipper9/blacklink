@@ -338,6 +338,7 @@ static int getCheckBoxSize(HWND hWnd)
 	cb.init(hWnd, hdc);
 	int result = cb.checkBoxSize.cx;
 	if (!str.empty()) result += WinUtil::getTextWidth(str, hdc) + cb.checkBoxGap;
+	ReleaseDC(hWnd, hdc);
 	return result;
 }
 
