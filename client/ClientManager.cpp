@@ -32,6 +32,7 @@
 #include "ConnectivityManager.h"
 #include "FavoriteManager.h"
 #include "DatabaseManager.h"
+#include "GlobalState.h"
 #include "PortTest.h"
 #include "BusyCounter.h"
 #include "Util.h"
@@ -40,9 +41,6 @@
 
 CID ClientManager::pid;
 CID ClientManager::cid;
-volatile bool g_isShutdown = false;
-volatile bool g_isBeforeShutdown = false;
-bool g_isStartupProcess = true;
 bool ClientManager::searchSpyEnabled = false;
 ClientManager::ClientMap ClientManager::g_clients;
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
@@ -72,7 +70,7 @@ ClientManager::ClientManager()
 
 ClientManager::~ClientManager()
 {
-	dcassert(isShutdown());
+	dcassert(GlobalState::isShutdown());
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 	dcassert(g_UserUpdateQueue.empty());
 #endif
@@ -139,25 +137,15 @@ ClientBasePtr ClientManager::getClient(const string& hubURL)
 
 void ClientManager::shutdown()
 {
-	dcassert(!isShutdown());
 #ifdef BL_FEATURE_IP_DATABASE
 	flushRatio();
 #endif
-	::g_isShutdown = true;
-	::g_isBeforeShutdown = true; // Для надежности
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 	{
 		WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
 		g_UserUpdateQueue.clear();
 	}
 #endif
-}
-
-void ClientManager::beforeShutdown()
-{
-	dcassert(!isBeforeShutdown());
-	::g_isBeforeShutdown = true;
-	TimerManager::getInstance()->setTicksDisabled(true);
 }
 
 void ClientManager::clear()
@@ -253,10 +241,9 @@ void ClientManager::putClient(const ClientBasePtr& cb)
 		WRITE_LOCK(*g_csClients);
 		g_clients.erase(client->getHubUrl());
 	}
-	if (!isBeforeShutdown()) // При закрытии не шлем уведомление (на него подписан только фрейм поиска)
-	{
+	if (!GlobalState::isShuttingDown())
 		fire(ClientManagerListener::ClientDisconnected(), client);
-	}
+
 	client->shutdown();
 	client->clearDefaultUsers();
 }
@@ -717,7 +704,7 @@ CID ClientManager::makeCid(const string& nick, const string& hubUrl)
 
 void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 {
-	if (!isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		const auto& user = ou->getUser();
 		dcassert(ou->getIdentity().getSID() != AdcCommand::HUB_SID);
@@ -740,7 +727,7 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noe
 #ifdef BL_FEATURE_IP_DATABASE
 	ou->getUser()->saveStats(DatabaseManager::getInstance()->getOptions());
 #endif
-	if (!isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		// [!] IRainman fix: don't put any hub to online or offline! Any hubs as user is always offline!
 		dcassert(ou->getIdentity().getSID() != AdcCommand::HUB_SID);
@@ -1149,7 +1136,7 @@ void ClientManager::getClientStatus(boost::unordered_map<string, ConnectionStatu
 
 void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& ou)
 {
-	if (!isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 		WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
@@ -1163,7 +1150,7 @@ void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& ou)
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 void ClientManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
-	if (!isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		READ_LOCK(*g_csOnlineUsersUpdateQueue);
 		for (auto i = g_UserUpdateQueue.cbegin(); i != g_UserUpdateQueue.cend(); ++i)

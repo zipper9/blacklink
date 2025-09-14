@@ -326,7 +326,7 @@ void HubFrame::createMessagePanel()
 
 void HubFrame::destroyMessagePanel(bool isShutdown)
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		isShutdown = true;
 	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(isShutdown);
@@ -346,7 +346,7 @@ void HubFrame::onActivate()
 
 void HubFrame::showActiveFrame()
 {
-	if (!uiInitialized && !ClientManager::isStartup()) initUI();
+	if (!uiInitialized && !GlobalState::isStartingUp()) initUI();
 	createMessagePanel();
 	UpdateLayout();
 	ctrlMessage.SetFocus();
@@ -849,9 +849,9 @@ void HubFrame::clearTaskAndUserList()
 
 void HubFrame::doDisconnected()
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	ctrlUsers.clearUserList();
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		setDisconnected(true);
 		PLAY_SOUND(SOUND_HUBDISCON);
@@ -929,7 +929,7 @@ void HubFrame::processTasks()
 
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			switch (i->first)
 			{
@@ -974,8 +974,8 @@ void HubFrame::processTasks()
 				break;
 				case ADD_CHAT_LINE:
 				{
-					dcassert(!ClientManager::isBeforeShutdown());
-					if (!ClientManager::isBeforeShutdown())
+					dcassert(!GlobalState::isShuttingDown());
+					if (!GlobalState::isShuttingDown())
 					{
 						if (ctrlClient.IsWindow())
 						{
@@ -987,7 +987,7 @@ void HubFrame::processTasks()
 						}
 						MessageTask& task = static_cast<MessageTask&>(*i->second);
 						const ChatMessage* msg = task.getMessage();
-						if (msg->from && !ClientManager::isBeforeShutdown())
+						if (msg->from && !GlobalState::isShuttingDown())
 						{
 							const Identity& from = msg->from->getIdentity();
 							const bool myMessage = msg->from->getUser()->isMe();
@@ -1021,8 +1021,8 @@ void HubFrame::processTasks()
 					break;
 				case ADD_STATUS_LINE:
 				{
-					dcassert(!ClientManager::isBeforeShutdown());
-					if (!ClientManager::isBeforeShutdown())
+					dcassert(!GlobalState::isShuttingDown());
+					if (!GlobalState::isShuttingDown())
 					{
 						const StatusTask& status = static_cast<StatusTask&>(*i->second);
 						addStatus(Text::toT(status.str), status.isInChat, true, status.isSystem ? Colors::TEXT_STYLE_SYSTEM_MESSAGE : Colors::TEXT_STYLE_SERVER_MESSAGE);
@@ -1173,7 +1173,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
-	if (ClientManager::isStartup())
+	if (GlobalState::isStartingUp())
 		return;
 	if (tooltip)
 		tooltip.Activate(FALSE);
@@ -1467,11 +1467,11 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 				r->setUsers(Util::toString(client->getUserCount()));
 				r->setShared(Util::toString(client->getBytesShared()));
 				r->setLastSeen(Util::formatDateTime(time(nullptr)));
-				if (!ClientManager::isBeforeShutdown())
+				if (!GlobalState::isShuttingDown())
 					r->setOpenTab("-");
 				fm->updateRecent(r);
 			}
-			if (!ClientManager::isBeforeShutdown() && !originalServerUrl.empty())
+			if (!GlobalState::isShuttingDown() && !originalServerUrl.empty())
 			{
 				r = fm->getRecentHubEntry(originalServerUrl);
 				if (r)
@@ -1601,7 +1601,7 @@ void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, c
 {
 	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxSmiles, textStyle, extra);
-	if (!ClientManager::isStartup())
+	if (!GlobalState::isStartingUp())
 	{
 		SHOW_POPUP(POPUP_ON_CHAT_LINE, line, TSTRING(CHAT_MESSAGE));
 	}
@@ -1619,7 +1619,7 @@ void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, c
 		if (baseClient) params["hubURL"] = baseClient->getHubUrl();
 		LOG(CHAT, params);
 	}
-	if (!ClientManager::isStartup() && SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_HUB))
+	if (!GlobalState::isStartingUp() && SettingsManager::instance.getUiSettings()->getBool(Conf::BOLD_HUB))
 	{
 		if (!client || client->isUserListLoaded())
 			setDirty();
@@ -2754,7 +2754,7 @@ UserInfo* HubFrame::findUserByNick(const tstring& nick) const
 
 void HubFrame::onTimerInternal()
 {
-	if (!ClientManager::isStartup() && !isClosedOrShutdown())
+	if (!GlobalState::isStartingUp() && !isClosedOrShutdown())
 	{
 		onTimerHubUpdated();
 		if (isDHT)
@@ -2780,7 +2780,7 @@ void HubFrame::onTimerInternal()
 		}
 		if (shouldUpdateStats)
 		{
-			dcassert(!ClientManager::isBeforeShutdown());
+			dcassert(!GlobalState::isShuttingDown());
 			updateStats();
 			shouldUpdateStats = false;
 		}

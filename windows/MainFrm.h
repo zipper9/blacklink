@@ -263,9 +263,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void UpdateLayout(BOOL resizeBars = TRUE);
 
 		void processCommandLine(const ParsedCommandLine& cmd);
-		
+
 		BOOL PreTranslateMessage(MSG* pMsg);
-		
+
 		BOOL OnIdle()
 		{
 			UIUpdateToolBar();
@@ -276,30 +276,18 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		{
 			return WMU_WHERE_ARE_YOU;
 		}
-		
+
 		LRESULT onTaskbarCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
 		LRESULT onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
-		LRESULT onRowsChanged(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			if (!ClientManager::isStartup())
-			{
-				UpdateLayout();
-				Invalidate();
-			}
-			return 0;
-		}
-		
+		LRESULT onRowsChanged(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSelected(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		
+
 		LRESULT onEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			return 0;
 		}
-		
+
 		LRESULT onExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			quitFromMenu = true;

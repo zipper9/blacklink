@@ -571,7 +571,7 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
-	if (ClientManager::isStartup() || ClientManager::isBeforeShutdown())
+	if (GlobalState::isStartingUp() || GlobalState::isShuttingDown())
 		return;
 
 	RECT rect;
@@ -1136,8 +1136,8 @@ void PrivateFrame::changeTheme()
 
 void PrivateFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		const auto* ss = SettingsManager::instance.getUiSettings();
 		pmPreview = ss->getBool(Conf::POPUP_PM_PREVIEW);
@@ -1170,13 +1170,13 @@ void PrivateFrame::onDeactivate()
 
 void PrivateFrame::onActivate()
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		showActiveFrame();
 }
 
 void PrivateFrame::showActiveFrame()
 {
-	if (!uiInitialized && !ClientManager::isStartup()) initUI();
+	if (!uiInitialized && !GlobalState::isStartingUp()) initUI();
 	createMessagePanel();
 	UpdateLayout();
 	ctrlMessage.SetFocus();
@@ -1228,7 +1228,7 @@ void PrivateFrame::createMessagePanel()
 
 void PrivateFrame::destroyMessagePanel(bool isShutdown)
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		isShutdown = true;
 	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(isShutdown);

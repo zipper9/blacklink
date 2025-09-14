@@ -1065,8 +1065,8 @@ bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCom
 
 void PublicHubsFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		if (ctrlHubs.isRedraw())
 		{
@@ -1233,25 +1233,25 @@ PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url, bool& secu
 
 void PublicHubsFrame::on(ClientConnected, const Client* c) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_HUB_CONNECTED, new string(c->getHubUrl()));
 }
 
 void PublicHubsFrame::on(ClientDisconnected, const Client* c) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_HUB_DISCONNECTED, new string(c->getHubUrl()));
 }
 
 void PublicHubsFrame::on(FavoriteAdded, const FavoriteHubEntry* fhe) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_FAVORITE_ADDED, new string(fhe->getServer()));
 }
 
 void PublicHubsFrame::on(FavoriteRemoved, const FavoriteHubEntry* fhe) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_FAVORITE_REMOVED, new string(fhe->getServer()));
 }
 

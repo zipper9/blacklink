@@ -184,7 +184,7 @@ void AdcHub::clearUsers()
 {
 	if (myOnlineUser)
 		myOnlineUser->getIdentity().setBytesShared(0);
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 	{
 		WRITE_LOCK(*csUsers);
 		users.clear();
@@ -1753,7 +1753,7 @@ void AdcHub::onConnected() noexcept
 
 void AdcHub::onDataLine(const char* buf, size_t len) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		Client::onDataLine(buf, len);
 		if (!Text::validateUtf8(buf, len))

@@ -32,6 +32,7 @@
 #include "HashUtil.h"
 #include "SimpleXMLReader.h"
 #include "User.h"
+#include "GlobalState.h"
 #include "ShareManager.h"
 #include "ClientManager.h"
 #include "SettingsManager.h"
@@ -168,7 +169,7 @@ void DirectoryListing::loadFile(const string& fileName, ProgressNotif *progressN
 	LogManager::message("DirectoryListing::loadFile = " + fileName);
 #endif
 	// For now, we detect type by ending...
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		::File ff(fileName, ::File::READ, ::File::OPEN);
 		if (Util::checkFileExt(fileName, extBZ2) || Util::isDclstFile(fileName))
@@ -294,9 +295,9 @@ static bool isValidName(const string& name)
 
 void ListLoader::startTag(const string& name, StringPairList& attribs, bool simple)
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 	{
-		throw AbortException("ListLoader::startTag - ClientManager::isBeforeShutdown()");
+		throw AbortException("ListLoader::startTag - GlobalState::isShuttingDown()");
 	}
 	if (list->abortFlag.load())
 	{

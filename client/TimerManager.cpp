@@ -21,7 +21,7 @@
 #include "TimeUtil.h"
 
 #ifdef _DEBUG
-#include "ClientManager.h"
+#include "GlobalState.h"
 #endif
 
 TimerManager::TimerManager() : ticksDisabled(false)
@@ -32,7 +32,7 @@ TimerManager::TimerManager() : ticksDisabled(false)
 TimerManager::~TimerManager()
 {
 #ifdef _DEBUG
-	dcassert(ClientManager::isShutdown());
+	dcassert(GlobalState::isShutdown());
 #endif
 }
 

@@ -20,6 +20,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "NmdcHub.h"
+#include "ClientManager.h"
 #include "SettingsManager.h"
 #include "ConnectionManager.h"
 #include "SearchManager.h"
@@ -244,7 +245,7 @@ void NmdcHub::clearUsers()
 {
 	if (myOnlineUser)
 		myOnlineUser->getIdentity().setBytesShared(0);
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 	{
 		WRITE_LOCK(*csUsers);
 		users.clear();
@@ -354,7 +355,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 	ClientManagerListener::SearchReply reply = ClientManagerListener::SEARCH_MISS;
 	vector<SearchResultCore> searchResults;
 	dcassert(searchParam.maxResults > 0);
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 	ShareManager::getInstance()->search(searchResults, searchParam, this);
 	if (!searchResults.empty())
@@ -1595,7 +1596,7 @@ void NmdcHub::onLine(const char* buf, size_t len)
 	}
 	if (searchType != ST_NONE)
 	{
-		if (!ClientManager::isStartup())
+		if (!GlobalState::isStartingUp())
 			searchParse(param, searchType);
 	}
 	else if (cmd == "MyINFO")
@@ -2508,7 +2509,7 @@ bool NmdcHub::extJSONParse(const string& param)
 
 void NmdcHub::myInfoParse(const string& param)
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 	string::size_type i = 5;
 	string::size_type j = param.find(' ', i);
@@ -2602,7 +2603,7 @@ void NmdcHub::myInfoParse(const string& param)
 
 void NmdcHub::onDataLine(const char* buf, size_t len) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		Client::onDataLine(buf, len);
 		onLine(buf, len);

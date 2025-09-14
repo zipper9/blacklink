@@ -40,6 +40,7 @@
 #include "DatabaseOptions.h"
 #include "AdcSupports.h"
 #include "SettingsUtil.h"
+#include "GlobalState.h"
 #include "dht/DHT.h"
 #include "ConfCore.h"
 
@@ -146,6 +147,7 @@ void preparingCoreToShutdown()
 	{
 		StepLogger sl("[Core shutdown]", false);
 		dht::DHT::getInstance()->stop();
+		GlobalState::shutdown();
 		ClientManager::shutdown();
 		ConnectionManager::getInstance()->stopServers();
 #ifdef DEBUG_SHUTDOWN

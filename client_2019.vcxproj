@@ -533,6 +533,7 @@
     <ClCompile Include="client\FinishedItem.cpp" />
     <ClCompile Include="client\FinishedManager.cpp" />
     <ClCompile Include="client\FormatUtil.cpp" />
+    <ClCompile Include="client\GlobalState.cpp" />
     <ClCompile Include="client\HashBloom.cpp" />
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
     <ClCompile Include="client\HashManager.cpp" />
@@ -770,6 +771,7 @@
     <ClInclude Include="client\FinishedItem.h" />
     <ClInclude Include="client\format.h" />
     <ClInclude Include="client\FormatUtil.h" />
+    <ClInclude Include="client\GlobalState.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
     <ClInclude Include="client\HashUtil.h" />
     <ClInclude Include="client\HintedUser.h" />

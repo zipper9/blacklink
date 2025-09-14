@@ -20,6 +20,7 @@
 #include <boost/algorithm/string/trim.hpp>
 
 #include "SettingsManager.h"
+#include "ClientManager.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "LogManager.h"
@@ -552,7 +553,7 @@ void Client::changeBytesShared(Identity& id, int64_t bytes)
 
 void Client::fireUserListUpdated(const OnlineUserList& userList)
 {
-	if (!userList.empty() && !ClientManager::isBeforeShutdown())
+	if (!userList.empty() && !GlobalState::isShuttingDown())
 	{
 		fire(ClientListener::UserListUpdated(), this, userList);
 	}
@@ -560,7 +561,7 @@ void Client::fireUserListUpdated(const OnlineUserList& userList)
 
 void Client::fireUserUpdated(const OnlineUserPtr& user)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		fire(ClientListener::UserUpdated(), user);
 }
 

@@ -18,7 +18,6 @@
 
 #include "stdinc.h"
 #include "ConnectivityManager.h"
-#include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "LogManager.h"
 #include "MappingManager.h"
@@ -26,6 +25,7 @@
 #include "SettingsManager.h"
 #include "DownloadManager.h"
 #include "CryptoManager.h"
+#include "GlobalState.h"
 #include "PortTest.h"
 #include "IpTest.h"
 #include "NetworkUtil.h"
@@ -374,7 +374,7 @@ string ConnectivityManager::getInformation() const
 
 void ConnectivityManager::mappingFinished(const string& mapper, int af)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		cs.lock();
 		bool autoDetectFlag = autoDetect[af == AF_INET6 ? 1 : 0];

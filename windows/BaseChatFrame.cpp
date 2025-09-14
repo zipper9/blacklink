@@ -24,6 +24,7 @@
 #include "BrowseFile.h"
 #include "NotifUtil.h"
 #include "ConfUI.h"
+#include "../client/GlobalState.h"
 #include "../client/SettingsManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/PathUtil.h"
@@ -394,8 +395,8 @@ void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 
 void BaseChatFrame::createMessagePanel(bool showSelectHubButton, bool showCCPMButton)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!msgPanel && !ClientManager::isStartup())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!msgPanel && !GlobalState::isStartingUp())
 	{
 		msgPanel = new MessagePanel(ctrlMessage);
 		msgPanel->showSelectHubButton = showSelectHubButton;
@@ -418,7 +419,7 @@ void BaseChatFrame::destroyMessagePanel()
 
 void BaseChatFrame::setStatusText(int index, const tstring& text)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	dcassert(index < ctrlStatus.getNumPanes());
 	if (index >= ctrlStatus.getNumPanes()) return;
 	ctrlStatus.setPaneText(index, text);
@@ -726,8 +727,8 @@ LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 void BaseChatFrame::addStatus(const tstring& line, bool inChat /*= true*/, bool history /*= true*/, int textStyle /* = Colors::TEXT_STYLE_SYSTEM_MESSAGE*/)
 {
 	ASSERT_MAIN_THREAD();
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (GlobalState::isShuttingDown())
 		return;
 	tstring formattedLine = _T('[') + Text::toT(Util::getShortTimeString()) + _T("] ") + line;
 	if (formattedLine.length() > 512)

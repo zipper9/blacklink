@@ -22,7 +22,6 @@
 #include "SimpleXML.h"
 #include "LogManager.h"
 #include "DatabaseManager.h"
-#include "ClientManager.h"
 #include "SysVersion.h"
 #include "ShareManager.h"
 #include "SettingsManager.h"

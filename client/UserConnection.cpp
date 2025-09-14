@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "ClientManager.h"
+#include "GlobalState.h"
 #include "StringTokenizer.h"
 #include "Download.h"
 #include "LogManager.h"
@@ -188,7 +189,7 @@ bool UserConnection::checkState(int state, const AdcCommand& command) const noex
 
 void UserConnection::onDataLine(const char* buf, size_t len) noexcept
 {
-	if (len < 2 || ClientManager::isBeforeShutdown())
+	if (len < 2 || GlobalState::isShuttingDown())
 		return;
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG(string(buf, len), DebugTask::CLIENT_IN, getRemoteIpPort());

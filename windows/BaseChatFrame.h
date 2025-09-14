@@ -26,7 +26,6 @@
 #include "Colors.h"
 #include "StatusBarCtrl.h"
 #include "StatusMessageHistory.h"
-#include "../client/ClientManager.h"
 #include "../client/Commands.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::Callback

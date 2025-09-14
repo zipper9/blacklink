@@ -20,8 +20,10 @@
 #include "stdinc.h"
 #include "SharedFileStream.h"
 #include "LogManager.h"
-#include "ClientManager.h"
+#include "GlobalState.h"
 #include "SettingsManager.h"
+#include "BaseUtil.h"
+#include "StrUtil.h"
 #include "ConfCore.h"
 
 #ifdef _WIN32
@@ -283,6 +285,7 @@ size_t SharedFileStream::write(const void* buf, size_t len)
 
 size_t SharedFileStream::read(void* buf, size_t& len)
 {
+	// TODO: use mappingPtr
 	LOCK(sfh->cs);
 	sfh->file.setPos(pos);
 	len = sfh->file.read(buf, len);
@@ -306,7 +309,7 @@ void SharedFileStream::setSize(int64_t newSize)
 
 size_t SharedFileStream::flushBuffers(bool force)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		try
 		{

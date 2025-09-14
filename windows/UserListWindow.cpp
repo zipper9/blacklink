@@ -8,6 +8,7 @@
 #include "../client/UserManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
+#include "../client/GlobalState.h"
 #include "../client/Util.h"
 #include "../client/dht/DHT.h"
 
@@ -548,7 +549,7 @@ LRESULT UserListWindow::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 {
 	//if (isClosedOrShutdown())
 	//	return CDRF_DODEFAULT;
-	if (ClientManager::isStartup())
+	if (GlobalState::isStartingUp())
 		return CDRF_DODEFAULT;
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
 	switch (cd->nmcd.dwDrawStage)

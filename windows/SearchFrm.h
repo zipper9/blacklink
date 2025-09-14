@@ -576,10 +576,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		}
 		void on(ClientDisconnected, const Client* c) noexcept override
 		{
-			if (!ClientManager::isShutdown())
-			{
+			if (!GlobalState::isShutdown())
 				speak(HUB_REMOVED, c);
-			}
 		}
 		void on(UserConnected, const UserPtr& user) noexcept override { onUserUpdated(user); }
 		void on(UserDisconnected, const UserPtr& user) noexcept override { onUserUpdated(user); }

@@ -30,6 +30,7 @@
 #include "ConnectionManager.h"
 #include "LogManager.h"
 #include "DatabaseManager.h"
+#include "GlobalState.h"
 #include "ConfCore.h"
 #include <boost/algorithm/string.hpp>
 
@@ -212,7 +213,7 @@ void FavoriteManager::removeUserCommand(int id)
 
 bool FavoriteManager::addUserL(const UserPtr& user, FavoriteMap::iterator& iUser, bool create /*= true*/)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	iUser = favoriteUsers.find(user->getCID());
 	if (iUser == favoriteUsers.end() && create)
 	{
@@ -897,7 +898,7 @@ void FavoriteManager::updateRecent(const RecentHubEntry* entry)
 	if (i == recentHubs.end())
 		return;
 	recentsDirty = true;
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		fire(FavoriteManagerListener::RecentUpdated(), entry);
 }
 
@@ -1458,7 +1459,7 @@ void FavoriteManager::load(SimpleXML& xml)
 
 void FavoriteManager::userUpdated(const OnlineUser& info)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		READ_LOCK(*csUsers);
 		auto i = favoriteUsers.find(info.getUser()->getCID());
@@ -1510,7 +1511,7 @@ FavoriteUser::Flags FavoriteManager::getFlags(const UserPtr& user) const
 
 void FavoriteManager::setFlag(const UserPtr& user, FavoriteUser::Flags f, bool value, bool createUser /*= true*/)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	bool added = false;
@@ -1540,7 +1541,7 @@ void FavoriteManager::setFlag(const UserPtr& user, FavoriteUser::Flags f, bool v
 
 void FavoriteManager::setFlags(const UserPtr& user, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser /*= true*/)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	bool added = false;
@@ -1674,17 +1675,17 @@ void FavoriteManager::on(UserUpdated, const OnlineUserPtr& user) noexcept
 
 void FavoriteManager::on(UserDisconnected, const UserPtr& user) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		{
 			READ_LOCK(*csUsers);
 			auto i = favoriteUsers.find(user->getCID());
 			if (i == favoriteUsers.end())
 				return;
-			i->second.lastSeen = GET_TIME(); // TODO: if ClientManager::isBeforeShutdown() returns true, it will not be updated
+			i->second.lastSeen = GET_TIME(); // TODO: if GlobalState::isShuttingDown() returns true, it will not be updated
 			favsDirty = true;
 		}
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			fire(FavoriteManagerListener::UserStatusChanged(), user);
 		}
@@ -1693,7 +1694,7 @@ void FavoriteManager::on(UserDisconnected, const UserPtr& user) noexcept
 
 void FavoriteManager::on(UserConnected, const UserPtr& user) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		{
 			READ_LOCK(*csUsers);
@@ -1703,7 +1704,7 @@ void FavoriteManager::on(UserConnected, const UserPtr& user) noexcept
 			i->second.lastSeen = GET_TIME();
 			favsDirty = true;
 		}
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			fire(FavoriteManagerListener::UserStatusChanged(), user);
 		}
@@ -1789,8 +1790,8 @@ void FavoriteManager::saveSearchUrls(SimpleXML& xml) const
 
 void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& user)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		if (added)
 		{

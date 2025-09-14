@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "SearchManager.h"
+#include "ClientManager.h"
 #include "UploadManager.h"
 #include "ShareManager.h"
 #include "SearchResult.h"
@@ -829,8 +830,7 @@ void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNi
 bool SearchManager::isShutdown() const
 {
 	if (stopFlag.load()) return true;
-	extern volatile bool g_isBeforeShutdown;
-	return g_isBeforeShutdown;
+	return GlobalState::isShuttingDown();
 }
 
 void SearchManager::addToSendQueue(string& data, const IpAddress& address, uint16_t port, uint16_t flags, const void* encKey) noexcept

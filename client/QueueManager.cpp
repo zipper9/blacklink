@@ -25,6 +25,7 @@
 #include "QueueManager.h"
 #include "AppPaths.h"
 #include "SearchManager.h"
+#include "ClientManager.h"
 #include "Download.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
@@ -417,7 +418,7 @@ bool QueueManager::UserQueue::getQueuedItems(const UserPtr& user, QueueItemList&
 {
 	bool hasDown = false;
 	QueueRLock(*QueueItem::g_cs);
-	for (size_t i = 0; i < QueueItem::LAST && !ClientManager::isBeforeShutdown(); ++i)
+	for (size_t i = 0; i < QueueItem::LAST && !GlobalState::isShuttingDown(); ++i)
 	{
 		const auto j = userQueueMap[i].find(user);
 		if (j != userQueueMap[i].end())
@@ -755,7 +756,7 @@ struct PartsInfoReqParam
 
 void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	auto sm = SearchManager::getInstance();
@@ -1988,7 +1989,7 @@ void QueueManager::copyFile(const string& source, const string& target, QueueIte
 
 void QueueManager::fireStatusUpdated(const QueueItemPtr& qi)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		fire(QueueManagerListener::StatusUpdated(), qi);
 }
 
@@ -2194,7 +2195,7 @@ void QueueManager::putDownload(DownloadPtr download, bool finished, bool reportF
 						}
 #endif
 
-						if (!ClientManager::isBeforeShutdown())
+						if (!GlobalState::isShuttingDown())
 						{
 							fire(QueueManagerListener::Finished(), q, dir, download);
 						}
@@ -3155,7 +3156,7 @@ void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& us
 	{
 		for (auto& qi : itemList)
 			qi->updateSourcesVersion();
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			fire(QueueManagerListener::StatusUpdatedList(), itemList);
 		}
@@ -3190,7 +3191,7 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 #endif
 		saveQueue();
 	}
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	bool sourceAddedFlag = false;
@@ -3401,7 +3402,7 @@ void QueueManager::FileQueue::findPFSSources(QueueItem::SourceList& sl, uint64_t
 		QueueRLock(*csFQ);
 		for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 		{
-			if (ClientManager::isBeforeShutdown())
+			if (GlobalState::isShuttingDown())
 				return;
 			const auto q = i->second;
 			if (q->getSize() < QueueItem::PFS_MIN_FILE_SIZE || !q->getDownloadedBytes()) continue;
@@ -3434,7 +3435,7 @@ void QueueManager::ListMatcherJob::run()
 		}
 		catch (const Exception&)
 		{
-			if (ClientManager::isBeforeShutdown() || dl.isAborted()) break;
+			if (GlobalState::isShuttingDown() || dl.isAborted()) break;
 		}
 	}
 	manager.listMatcherRunning.clear();

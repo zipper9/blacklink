@@ -39,6 +39,7 @@
 #include "TimeUtil.h"
 #include "FormatUtil.h"
 #include "Util.h"
+#include "GlobalState.h"
 #include "SettingsManager.h"
 #include "ConfCore.h"
 #include "MediaInfoUtil.h"
@@ -2310,7 +2311,7 @@ void ShareManager::load(SimpleXML& xml)
 
 void ShareManager::init()
 {
-	dcassert(ClientManager::isStartup());
+	dcassert(GlobalState::isStartingUp());
 	string xmlFile = Util::getConfigPath() + fileBZXml;
 	updateSharedSizeL();
 	initDefaultShareGroupL();
@@ -2376,7 +2377,7 @@ bool ShareManager::searchTTH(const TTHValue& tth, vector<SearchResultCore>& resu
  */
 void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& results, const StringSearch::List& strings, const SearchParamBase& sp) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	// Skip everything if there's nothing to find here (doh! =)
@@ -2443,7 +2444,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 
 void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchParam& sp, const Client* client) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 	if (sp.fileType == FILE_TYPE_TTH)
 	{
@@ -2650,7 +2651,7 @@ string AdcSearchParam::getDescription() const noexcept
 // ADC search
 void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 		
 	const StringSearch::List* cur = replaceInclude ? replaceInclude : &sp.include;
@@ -2714,7 +2715,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 // ADC search
 void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 		
 	if (sp.hasRoot)

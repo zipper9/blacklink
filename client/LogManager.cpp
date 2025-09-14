@@ -30,7 +30,7 @@
 #endif
 
 #ifdef _WIN32
-#include "ClientManager.h"
+#include "GlobalState.h"
 #endif
 
 static const int FILE_TIMEOUT     = 240*1000; // 4 min
@@ -337,7 +337,7 @@ void LogManager::commandTrace(const char* msg, size_t msgLen, int flags, const s
 void LogManager::speakStatusMessage(const string& message) noexcept
 {
 #ifdef _WIN32
-	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !ClientManager::isBeforeShutdown())
+	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !GlobalState::isShuttingDown())
 	{
 		size_t len = std::min<size_t>(message.length(), 255);
 		char* data = new char[len + 1];

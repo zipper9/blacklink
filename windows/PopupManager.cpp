@@ -25,6 +25,7 @@
 #include "Fonts.h"
 #include "../client/TimeUtil.h"
 #include "../client/Util.h"
+#include "../client/GlobalState.h"
 
 #ifdef OSVER_WIN_XP
 #include "../client/SysVersion.h"
@@ -40,8 +41,8 @@ PopupManager::PopupManager() : offset(0), enabled(true)
 
 void PopupManager::show(const tstring& message, const tstring& title, int icon, bool preview /*= false*/)
 {
-	if (ClientManager::isBeforeShutdown()) return;
-	if (ClientManager::isStartup()) return;
+	if (GlobalState::isShuttingDown()) return;
+	if (GlobalState::isStartingUp()) return;
 	if (!enabled) return;
 
 	auto mainFrame = MainFrame::getMainFrame();

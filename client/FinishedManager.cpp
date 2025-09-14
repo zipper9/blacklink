@@ -27,6 +27,7 @@
 #include "SettingsManager.h"
 #include "ClientManager.h"
 #include "DatabaseManager.h"
+#include "GlobalState.h"
 #include "ConfCore.h"
 
 FinishedManager::FinishedManager()
@@ -95,7 +96,7 @@ void FinishedManager::addItem(FinishedItemPtr& item, eType type)
 
 void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string&, const DownloadPtr& d) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		const bool isFile = (qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)) == 0;
 		if (isFile || ((qi->getFlags() & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST)) && (options & OPT_LOG_FILELIST_TRANSFERS)))

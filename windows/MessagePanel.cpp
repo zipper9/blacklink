@@ -20,7 +20,7 @@
 #include "MessagePanel.h"
 #include "WinUtil.h"
 #include "ConfUI.h"
-#include "../client/ClientManager.h"
+#include "../client/GlobalState.h"
 #include "../client/SettingsManager.h"
 #include "../client/SysVersion.h"
 #include "../client/Util.h"
@@ -113,7 +113,7 @@ void MessagePanel::updateButton(HDWP dwp, bool show, int index, CRect& rc)
 void MessagePanel::updatePanel(const CRect& rect)
 {
 	dcassert(initialized);
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	tooltip.Activate(FALSE);
 	if (m_hWnd == NULL)
 		return;

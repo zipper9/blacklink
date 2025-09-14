@@ -617,8 +617,8 @@ void ADLSearchFrame::showItem(int index, const ADLSearch& s)
 
 void ADLSearchFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		if (ctrlList.isRedraw())
 		{

@@ -454,6 +454,9 @@
     <ClCompile Include="client\SysInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\GlobalState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1114,6 +1117,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\AppPorts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\GlobalState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -768,7 +768,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		DatabaseManager::getInstance()->processTimer(tick);
 		timeDbCleanup = tick + 60000;
 	}
-	if (ClientManager::isStartup())
+	if (GlobalState::isStartingUp())
 		return 0;
 
 	const uint64_t currentUp   = Socket::g_stats.tcp.uploaded + Socket::g_stats.ssl.uploaded;
@@ -823,7 +823,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		{
 			auto dm = DownloadManager::getInstance();
 			auto um = UploadManager::getInstance();
-			dcassert(!ClientManager::isStartup());
+			dcassert(!GlobalState::isStartingUp());
 			const tstring dlstr = Util::formatBytesT(DownloadManager::getRunningAverage());
 			const tstring ulstr = Util::formatBytesT(UploadManager::getRunningAverage());
 			TStringList* stats = new TStringList();
@@ -1412,7 +1412,7 @@ LRESULT MainFrame::onListenerInit(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		MessageBox(CTSTRING_F(LISTENING_SOCKET_ERROR, type.c_str() % Text::toT(error->errorText)),
 			getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
 		delete error;
-		ClientManager::stopStartup();
+		GlobalState::started();
 		autoConnectFlag = false;
 		return 0;
 	}
@@ -1446,7 +1446,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	{
 		processingStats = false;
 		std::unique_ptr<TStringList> pstr(reinterpret_cast<TStringList*>(lParam));
-		if (ClientManager::isBeforeShutdown() || ClientManager::isStartup())
+		if (GlobalState::isShuttingDown() || GlobalState::isStartingUp())
 		{
 			return 0;
 		}
@@ -1589,14 +1589,14 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	{
 		LogManager::g_isLogSpeakerEnabled = true;
 		char* msg = reinterpret_cast<char*>(lParam);
-		if (!ClientManager::isShutdown() && !closing && ctrlStatus.IsWindow())
+		if (!GlobalState::isShutdown() && !closing && ctrlStatus.IsWindow())
 			addStatusMessage(Text::toT(msg));
 		delete[] msg;
 	}
 	else if (wParam == DOWNLOAD_LISTING)
 	{
 		std::unique_ptr<QueueManager::DirectoryListInfo> i(reinterpret_cast<QueueManager::DirectoryListInfo*>(lParam));
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			DirectoryListingFrame::openWindow(Text::toT(i->file), Text::toT(i->dir), i->hintedUser, i->speed, i->isDclst);
 		}
@@ -1604,7 +1604,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	else if (wParam == BROWSE_LISTING)
 	{
 		std::unique_ptr<DirectoryBrowseInfo> i(reinterpret_cast<DirectoryBrowseInfo*>(lParam));
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			DirectoryListingFrame::openWindow(i->hintedUser, i->text, 0);
 		}
@@ -1613,7 +1613,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	else if (wParam == VIEW_FILE_AND_DELETE)
 	{
 		std::unique_ptr<tstring> file(reinterpret_cast<tstring*>(lParam));
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			TextFrame::openWindow(*file);
 		}
@@ -1629,7 +1629,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	}
 	else if (wParam == SET_PM_TRAY_ICON)
 	{
-		if (!ClientManager::isBeforeShutdown() && !hasPM && (!WinUtil::g_isAppActive || appMinimized))
+		if (!GlobalState::isShuttingDown() && !hasPM && (!WinUtil::g_isAppActive || appMinimized))
 		{
 			hasPM = true;
 			if (taskbarList)
@@ -2074,7 +2074,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 			}
 		}
 	}
-	ClientManager::stopStartup();
+	GlobalState::started();
 	if (lastFrame)
 		lastFrame->showActiveFrame();
 	::LockWindowUpdate(NULL);
@@ -2296,11 +2296,11 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 
 				storeWindowsPos();
 
-				ClientManager::beforeShutdown();
+				GlobalState::prepareShutdown();
 				LogManager::g_mainWnd = nullptr;
 				closing = true;
 				destroyTimer();
-				ClientManager::stopStartup();
+				GlobalState::started();
 				preparingCoreToShutdown();
 
 				transferView.prepareClose();
@@ -2373,7 +2373,7 @@ LRESULT MainFrame::onDcLstFromFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
-	if ((!ClientManager::isStartup() || updateLayoutFlag) && !closing)
+	if ((!GlobalState::isStartingUp() || updateLayoutFlag) && !closing)
 	{
 		RECT rect;
 		GetClientRect(&rect);
@@ -2626,6 +2626,16 @@ LRESULT MainFrame::onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPAR
 	return 0;
 }
 
+LRESULT MainFrame::onRowsChanged(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	if (!GlobalState::isStartingUp())
+	{
+		UpdateLayout();
+		Invalidate();
+	}
+	return 0;
+}
+
 LRESULT MainFrame::onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/)
 {
 	if (::IsIconic(m_hWnd))
@@ -2849,8 +2859,8 @@ void MainFrame::on(QueueManagerListener::PartialList, const HintedUser& user, co
 
 void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& download) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		auto extraFlags = qi->getExtraFlags();
 		if (extraFlags & QueueItem::XFLAG_CLIENT_VIEW)

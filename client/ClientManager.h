@@ -175,7 +175,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		OnlineUserPtr connect(const HintedUser& user, const string& token, bool forcePassive);
 		static int privateMessage(const HintedUser& user, const string& msg, int flags);
 		static void userCommand(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
-		
+
 		static bool isActiveMode(int af, int favHubMode, bool udp);
 		static const CID& getMyCID();
 		static const CID& getMyPID();
@@ -186,44 +186,22 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void dumpUserInfo(const HintedUser& user);
 
 		static void shutdown();
-		static void beforeShutdown();
 		static void clear();
-		static bool isShutdown()
-		{
-			extern volatile bool g_isShutdown;
-			return g_isShutdown;
-		}
-		static bool isBeforeShutdown()
-		{
-			extern volatile bool g_isBeforeShutdown;
-			return g_isBeforeShutdown;
-		}
-		static bool isStartup()
-		{
-			extern bool g_isStartupProcess;
-			return g_isStartupProcess;
-		}
-		static void stopStartup()
-		{
-			extern bool g_isStartupProcess;
-			g_isStartupProcess = false;
-		}
 #ifdef BL_FEATURE_IP_DATABASE
 		static void flushRatio();
 #endif
 		static void usersCleanup();
-	
+
 		void updateUser(const OnlineUserPtr& ou);
 
 	private:	
 		typedef std::unordered_map<string, ClientBasePtr, NoCaseStringHash, NoCaseStringEq> ClientMap;
 		static ClientMap g_clients;
 		static std::unique_ptr<RWLock> g_csClients;
-		
+
 		typedef boost::unordered_map<CID, UserPtr> UserMap;
-		
 		static UserMap g_users;
-		
+
 		static std::unique_ptr<RWLock> g_csUsers;
 		typedef std::multimap<CID, OnlineUserPtr> OnlineMap;
 		typedef OnlineMap::iterator OnlineIter;

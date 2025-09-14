@@ -202,19 +202,19 @@ class FavoriteHubsFrame :
 		// ClientManagerListener
 		void on(ClientConnected, const Client* c) noexcept override
 		{
-			if (!ClientManager::isBeforeShutdown())
+			if (!GlobalState::isShuttingDown())
 				WinUtil::postSpeakerMsg(m_hWnd, HUB_CONNECTED, new string(c->getHubUrl()));
 		}
 
 		void on(ClientDisconnected, const Client* c) noexcept override
 		{
-			if (!ClientManager::isBeforeShutdown())
+			if (!GlobalState::isShuttingDown())
 				WinUtil::postSpeakerMsg(m_hWnd, HUB_DISCONNECTED, new string(c->getHubUrl()));
 		}
 
 		void on(ClientConnecting, const Client* c) noexcept override
 		{
-			if (!ClientManager::isBeforeShutdown())
+			if (!GlobalState::isShuttingDown())
 				WinUtil::postSpeakerMsg(m_hWnd, HUB_CONNECTING, new string(c->getHubUrl()));
 		}
 

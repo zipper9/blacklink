@@ -6,6 +6,7 @@
 
 #include "../client/compiler.h"
 #include "../client/typedefs.h"
+#include "../client/GlobalState.h"
 #include <set>
 
 class CGDIImage
@@ -56,9 +57,7 @@ class CGDIImage
 	public:
 		static bool isShutdown()
 		{
-			extern volatile bool g_isShutdown;
-			extern volatile bool g_isBeforeShutdown;
-			return g_isBeforeShutdown || g_isShutdown;
+			return GlobalState::isShuttingDown();
 		}
 		static CGDIImage *createInstance(const WCHAR* fileName);
 		bool isInitialized() const { return m_pImage != nullptr; }

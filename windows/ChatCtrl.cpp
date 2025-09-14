@@ -22,6 +22,7 @@
 #include "../client/OnlineUser.h"
 #include "../client/Client.h"
 #include "../client/Util.h"
+#include "../client/GlobalState.h"
 #include <boost/algorithm/string.hpp>
 #include <tom.h>
 
@@ -91,8 +92,8 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 	isRealUser(id ? !id->isBotOrHub() : false), msg(text), textStyle(textStyle),
 	thirdPerson(thirdPerson), extra(extra), useEmoticons(useEmoticons)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		if (removeLineBreaks)
 			normalizeLineBreaks(msg);
@@ -135,7 +136,7 @@ void ChatCtrl::restoreChatCache()
 	tstring oldText;
 	for (auto i = tempChatCache.begin(); i != tempChatCache.end(); ++i)
 	{
-		if (ClientManager::isBeforeShutdown())
+		if (GlobalState::isShuttingDown())
 			return;
 		if (count-- > 40) // Disable styles for old messages
 		{
@@ -171,8 +172,8 @@ void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startP
 
 void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (GlobalState::isShuttingDown())
 		return;
 
 	ASSERT_MAIN_THREAD();
@@ -243,15 +244,15 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 
 void ChatCtrl::appendTextInternal(tstring& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 		appendText(text, message, maxEmoticons, highlightNick);
 }
 
 void ChatCtrl::appendTextInternal(tstring&& text, const Message& message, unsigned maxEmoticons, bool highlightNick)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 		appendText(text, message, maxEmoticons, highlightNick);
 }
 

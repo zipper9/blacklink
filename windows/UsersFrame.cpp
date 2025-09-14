@@ -603,32 +603,28 @@ void UsersFrame::openUserLog()
 
 void UsersFrame::on(UserAdded, const FavoriteUser& user) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	addUser(user);
 }
 
 void UsersFrame::on(UserRemoved, const FavoriteUser& user) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 		removeUser(user);
-	}
 }
 
 void UsersFrame::on(UserStatusChanged, const UserPtr& user) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 		WinUtil::postSpeakerMsg(*this, USER_UPDATED, new UserPtr(user));
-	}
 }
 
 void UsersFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		if (ctrlUsers.isRedraw())
 		{

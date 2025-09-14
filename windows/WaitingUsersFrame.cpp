@@ -618,8 +618,8 @@ void WaitingUsersFrame::processTasks()
 
 void WaitingUsersFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		initProgressBar(true);
 		if (ctrlList.isRedraw())
@@ -712,7 +712,7 @@ void WaitingUsersFrame::initProgressBar(bool check)
 
 int WaitingUsersFrame::UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, int col, int /*flags*/)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	switch (col)
 	{
 		case COLUMN_FILE:

@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "ConnectionManager.h"
+#include "ClientManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
 #include "CryptoManager.h"
@@ -657,7 +658,7 @@ struct ReasonItem
 
 void ConnectionManager::onUserUpdated(const UserPtr& user)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		std::vector<TokenItem> downloadUsers;
 		std::vector<TokenItem> uploadUsers;
@@ -718,7 +719,7 @@ void ConnectionManager::connectNextNmdcUser(const ExpectedNmdcMap::NextConnectio
 
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 	updateAverageSpeed(tick);
 	flushUpdatedUsers();
@@ -847,7 +848,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		vector<ExpectedNmdcMap::NextConnectionInfo> vnci;
 		expectedNmdc.removeExpired(tick, vnci);
 		expectedAdc.removeExpired(tick);
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			for (const string& token : ccpmTokens)
 				removeExpiredCCPMToken(token);
@@ -1197,7 +1198,7 @@ void ConnectionManager::processMyNick(UserConnection* source, const string& nick
 	const CID cid = ClientManager::makeCid(nickUtf8, hubUrl);
 	
 	// First, we try looking in the pending downloads...hopefully it's one of them...
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		READ_LOCK(*csDownloads);
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
@@ -1327,7 +1328,7 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 	}
 	if (cqi)
 	{
-		if (!ClientManager::isBeforeShutdown())
+		if (!GlobalState::isShuttingDown())
 		{
 			fire(ConnectionManagerListener::Added(), cqi->getHintedUser(), false, cqi->getConnectionQueueToken());
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT

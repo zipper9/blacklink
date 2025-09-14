@@ -3,8 +3,10 @@
 
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 
-#include "ClientManager.h"
+#include "GlobalState.h"
 #include "BaseUtil.h"
+#include "Singleton.h"
+#include "Speaker.h"
 
 struct DebugTask
 {
@@ -53,7 +55,7 @@ class DebugManager : public Singleton<DebugManager>, public Speaker<DebugManager
 
 static inline bool CMD_DEBUG_ENABLED()
 {
-	return DebugManager::g_isCMDDebug && !ClientManager::isBeforeShutdown();
+	return DebugManager::g_isCMDDebug && !GlobalState::isShuttingDown();
 }
 
 static inline void COMMAND_DEBUG(const string& text, DebugTask::Type type, const string& ip)

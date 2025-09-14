@@ -19,7 +19,7 @@
 #ifndef SPY_FRAME_H
 #define SPY_FRAME_H
 
-#include "../client/ClientManager.h"
+#include "../client/ClientManagerListener.h"
 #include "../client/TaskQueue.h"
 
 #include "MDITabChildWindow.h"

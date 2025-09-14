@@ -35,7 +35,7 @@ TextFrame::TextFrame(const tstring& fileName) : file(fileName)
 void TextFrame::openWindow(const tstring& fileName)
 {
 	TextFrame* frame = new TextFrame(fileName);
-	frame->Create(WinUtil::g_mdiClient);
+	frame->Create(WinUtil::mdiClient);
 }
 
 DWORD CALLBACK TextFrame::editStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb)

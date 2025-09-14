@@ -703,7 +703,7 @@ void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcep
 
 void QueueFrame::on(QueueManagerListener::AddedArray, const vector<QueueItemPtr>& data) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		addTask(ADD_ITEM_ARRAY, new QueueItemArrayTask(data));
 }
 
@@ -1292,13 +1292,13 @@ void QueueFrame::addQueueList()
 
 void QueueFrame::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		addTask(REMOVE_ITEM, new QueueItemTask(qi));
 }
 
 void QueueFrame::on(QueueManagerListener::RemovedArray, const vector<QueueItemPtr>& data) noexcept
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 		addTask(REMOVE_ITEM_ARRAY, new QueueItemArrayTask(data));
 }
 
@@ -1315,15 +1315,15 @@ void QueueFrame::on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& q
 
 void QueueFrame::on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 		addTask(UPDATE_ITEM, new TargetTask(qi->getTarget()));
 }
 
 void QueueFrame::on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		for (auto i = itemList.cbegin(); i != itemList.cend(); ++i)
 			on(QueueManagerListener::StatusUpdated(), *i);
@@ -2678,8 +2678,8 @@ void QueueFrame::removeSources()
 
 void QueueFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		if (ctrlQueue.isRedraw())
 		{
@@ -2693,7 +2693,7 @@ void QueueFrame::on(SettingsManagerListener::ApplySettings)
 
 void QueueFrame::onRechecked(const string& target, const string& message)
 {
-	if (!ClientManager::isBeforeShutdown())
+	if (!GlobalState::isShuttingDown())
 	{
 		addTask(UPDATE_STATUS, new StringTask(STRING_F(INTEGRITY_CHECK_FMT, message % target)));
 	}

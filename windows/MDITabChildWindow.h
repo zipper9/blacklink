@@ -6,6 +6,7 @@
 #include "FlatTabCtrl.h"
 #include "OMenu.h"
 #include "UserMessages.h"
+#include "../client/GlobalState.h"
 
 template <class T, class TBase = CMDIWindow, class TWinTraits = CMDIChildWinTraits>
 class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase, TWinTraits>
@@ -274,7 +275,7 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	bool closing;
 	bool isClosedOrShutdown() const
 	{
-		return closing || closed || ClientManager::isBeforeShutdown();
+		return closing || closed || GlobalState::isShuttingDown();
 	}
 };
 

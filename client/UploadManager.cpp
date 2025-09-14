@@ -38,6 +38,7 @@
 #include "IpGrant.h"
 #include "Wildcards.h"
 #include "FilteredFile.h"
+#include "GlobalState.h"
 #include "ConfCore.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK     = 3000;
@@ -124,7 +125,7 @@ void UploadManager::initTransferData(TransferData& td, const Upload* u)
 
 bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	if (newLeecher->getSocket())
 	{
 		const auto newLeecherIp = newLeecher->getSocket()->getIp();
@@ -157,9 +158,9 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 
 bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, const string& fileName, bool hideShare, const CID& shareGroup, int64_t startPos, int64_t& bytes, bool listRecursive, int& compressionType, string& errorText)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	dcdebug("Preparing %s %s " I64_FMT " " I64_FMT " %d\n", typeStr.c_str(), fileName.c_str(), startPos, bytes, listRecursive);
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 	{
 		return false;
 	}
@@ -571,7 +572,7 @@ void UploadManager::shutdown()
 void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 {
 	UploadArray tickList;
-	//dcassert(!ClientManager::isBeforeShutdown());
+	//dcassert(!GlobalState::isShuttingDown());
 	{
 		WRITE_LOCK(*csFinishedUploads);
 		if (!uploads.empty())
@@ -610,7 +611,7 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 
 void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	{
 		WRITE_LOCK(*csReservedSlots);
 		reservedSlots[hintedUser.user] = GET_TICK() + seconds * 1000;
@@ -645,7 +646,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 
 void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	{
 		WRITE_LOCK(*csReservedSlots);
 		if (!reservedSlots.erase(hintedUser.user)) return;
@@ -688,7 +689,7 @@ static void getShareGroup(const UserConnection* source, bool& hideShare, CID& sh
 
 void UploadManager::processGet(UserConnection* source, const string& fileName, int64_t resume) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	bool hideShare;
@@ -707,7 +708,7 @@ void UploadManager::processGet(UserConnection* source, const string& fileName, i
 
 void UploadManager::processSend(UserConnection* source) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 	auto u = source->getUpload();
 	dcassert(u != nullptr);
@@ -720,7 +721,7 @@ void UploadManager::processSend(UserConnection* source) noexcept
 
 void UploadManager::processGetBlock(UserConnection* source, const string& cmd, const string& param) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	string fname;
@@ -780,7 +781,7 @@ void UploadManager::processGetBlock(UserConnection* source, const string& cmd, c
 
 void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	const string& type = c.getParam(0);
@@ -894,7 +895,7 @@ void UploadManager::failed(UserConnection* source, const string& error) noexcept
 
 void UploadManager::transmitDone(UserConnection* source) noexcept
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
+	//dcassert(!GlobalState::isShuttingDown());
 	dcassert(source->getState() == UserConnection::STATE_RUNNING);
 	auto u = source->getUpload();
 	dcassert(u != nullptr);
@@ -915,7 +916,7 @@ void UploadManager::transmitDone(UserConnection* source) noexcept
 
 void UploadManager::logUpload(const UploadPtr& upload)
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	auto ss = SettingsManager::instance.getCoreSettings();
@@ -934,7 +935,7 @@ void UploadManager::logUpload(const UploadPtr& upload)
 
 size_t UploadManager::addToQueue(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	size_t queuePosition = 0;
 	
 	UploadQueueFilePtr uqi;
@@ -976,7 +977,7 @@ size_t UploadManager::addToQueue(const UserConnection* source, const string& fil
 
 bool UploadManager::clearUserFilesL(const UserPtr& user)
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
+	//dcassert(!GlobalState::isShuttingDown());
 	auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr& u)
 	{
 		return u == user;
@@ -989,7 +990,7 @@ bool UploadManager::clearUserFilesL(const UserPtr& user)
 
 void UploadManager::fireUserRemoved(const UserPtr& user) noexcept
 {
-	if (g_count_WaitingUsersFrame && !ClientManager::isBeforeShutdown())
+	if (g_count_WaitingUsersFrame && !GlobalState::isShuttingDown())
 		fire(UploadManagerListener::QueueRemove(), user);
 }
 
@@ -1002,7 +1003,7 @@ void UploadManager::clearUploads() noexcept
 
 void UploadManager::addConnection(UserConnection* conn)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	if (conn->isIpBlocked(false))
 	{
 		removeConnectionSlot(conn);
@@ -1013,7 +1014,7 @@ void UploadManager::addConnection(UserConnection* conn)
 
 void UploadManager::testSlotTimeout(uint64_t tick /*= GET_TICK()*/)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	vector<UserPtr> users;
 	{
 		WRITE_LOCK(*csReservedSlots);
@@ -1065,7 +1066,7 @@ void UploadManager::removeConnectionSlot(UserConnection* source)
 
 void UploadManager::notifyQueuedUsers(int64_t tick)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
+	dcassert(!GlobalState::isShuttingDown());
 	if (slotQueue.empty())
 		return; //no users to notify
 	vector<WaitingUser> notifyList;
@@ -1100,7 +1101,7 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 
 void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 	UserList disconnects;
 	{
@@ -1183,7 +1184,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 // TimerManagerListener
 void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
-	if (ClientManager::isBeforeShutdown())
+	if (GlobalState::isShuttingDown())
 		return;
 
 	UploadArray tickList;
@@ -1273,7 +1274,7 @@ void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& u
 
 void UploadManager::removeFinishedUpload(const UserPtr& user)
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
+	//dcassert(!GlobalState::isShuttingDown());
 	WRITE_LOCK(*csFinishedUploads);
 	for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 	{
@@ -1291,7 +1292,7 @@ void UploadManager::removeFinishedUpload(const UserPtr& user)
  */
 void UploadManager::abortUpload(const string& fileName, bool waiting)
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
+	//dcassert(!GlobalState::isShuttingDown());
 	bool nowait = true;
 	{
 		READ_LOCK(*csFinishedUploads);
