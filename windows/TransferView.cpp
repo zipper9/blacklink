@@ -40,6 +40,7 @@
 #include "WaitingUsersFrame.h"
 #include "ExMessageBox.h"
 #include "NotifUtil.h"
+#include "MenuHelper.h"
 
 static const unsigned TIMER_VAL = 200;
 

@@ -25,7 +25,7 @@
 #ifndef ADL_SEARCH_FRAME_H
 #define ADL_SEARCH_FRAME_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "ExListViewCtrl.h"
 #include "../client/ADLSearch.h"

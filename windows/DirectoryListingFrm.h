@@ -19,7 +19,7 @@
 #ifndef DIRECTORY_LISTING_FRM_H
 #define DIRECTORY_LISTING_FRM_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "TypedListViewCtrl.h"
 #include "UCHandler.h"
 #include "ImageLists.h"

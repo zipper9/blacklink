@@ -41,6 +41,7 @@
 #include "../client/ConfCore.h"
 #include "Colors.h"
 #include "Fonts.h"
+#include "MDIUtil.h"
 #include "MagnetDlg.h"
 #include "PreviewMenu.h"
 #include "FlatTabCtrl.h"
@@ -67,9 +68,6 @@ const WinUtil::FileMaskItem WinUtil::allFilesMask[] =
 
 TStringList LastDir::dirs;
 HWND WinUtil::g_mainWnd = nullptr;
-HWND WinUtil::g_mdiClient = nullptr;
-FlatTabCtrl* WinUtil::g_tabCtrl = nullptr;
-HHOOK WinUtil::g_hook = nullptr;
 bool WinUtil::g_isAppActive = false;
 
 const GUID WinUtil::guidGetTTH          = { 0xbc034ae0, 0x40d8, 0x465d, { 0xb1, 0xf0, 0x01, 0xd9, 0xd8, 0x83, 0x7f, 0x96 } };
@@ -126,26 +124,6 @@ void WinUtil::appendSeparator(OMenu& menu)
 		menu.AppendMenu(MF_SEPARATOR);
 }
 
-static LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
-{
-	if (code == HC_ACTION)
-	{
-		if (WinUtil::g_tabCtrl) //[+]PPA
-			if (wParam == VK_CONTROL && LOWORD(lParam) == 1)
-			{
-				if (lParam & 0x80000000)
-				{
-					WinUtil::g_tabCtrl->endSwitch();
-				}
-				else
-				{
-					WinUtil::g_tabCtrl->startSwitch();
-				}
-			}
-	}
-	return CallNextHookEx(WinUtil::g_hook, code, wParam, lParam);
-}
-
 void WinUtil::init(HWND hWnd)
 {
 	g_mainWnd = hWnd;
@@ -170,6 +148,7 @@ void WinUtil::init(HWND hWnd)
 
 	Colors::init();
 	Fonts::init();
+	installKeyboardHook();
 
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	if (ss->getBool(Conf::REGISTER_URL_HANDLER))
@@ -180,16 +159,12 @@ void WinUtil::init(HWND hWnd)
 
 	if (ss->getBool(Conf::REGISTER_DCLST_HANDLER))
 		registerDclstHandler();
-
-	g_hook = SetWindowsHookEx(WH_KEYBOARD, &KeyboardProc, NULL, GetCurrentThreadId());
 }
 
 void WinUtil::uninit()
 {
-	UnhookWindowsHookEx(g_hook);
-	g_hook = nullptr;
+	removeKeyboardHook();
 
-	g_tabCtrl = nullptr;
 	g_mainWnd = nullptr;
 
 	g_fileImage.uninit();
@@ -768,14 +743,6 @@ bool WinUtil::shutDown(int action)
 	return ExitWindowsEx(action | forceIfHung, 0) != 0;
 }
 
-void WinUtil::activateMDIChild(HWND hWnd)
-{
-	::SendMessage(g_mdiClient, WM_SETREDRAW, FALSE, 0);
-	::SendMessage(g_mdiClient, WM_MDIACTIVATE, (WPARAM) hWnd, 0);
-	::SendMessage(g_mdiClient, WM_SETREDRAW, TRUE, 0);
-	::RedrawWindow(g_mdiClient, nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-}
-
 void WinUtil::getAdapterList(int af, vector<Util::AdapterInfo>& adapters, int options)
 {
 	adapters.clear();
@@ -873,7 +840,7 @@ void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, 
 	}
 	index = comboBox.AddString(CTSTRING(ENCODING_UTF8));
 	if (selected == Text::CHARSET_UTF8) selIndex = index;
-	comboBox.SetItemData(index, Text::CHARSET_UTF8);	
+	comboBox.SetItemData(index, Text::CHARSET_UTF8);
 	if (!onlyUTF8)
 		for (int i = 0; i < Text::NUM_SUPPORTED_CHARSETS; i++)
 		{
@@ -934,7 +901,7 @@ tstring WinUtil::getShellExtDllPath()
 	                             _T("_x64")
 #endif
 	                             _T(".dll");
-	                             
+
 	return filePath;
 }
 
@@ -968,7 +935,7 @@ bool WinUtil::registerShellExt(bool unregister)
 
 bool WinUtil::runElevated(HWND hwnd, const TCHAR* path, const TCHAR* parameters, const TCHAR* directory, int waitTime)
 {
-	SHELLEXECUTEINFO shex = { sizeof(SHELLEXECUTEINFO) };	
+	SHELLEXECUTEINFO shex = { sizeof(SHELLEXECUTEINFO) };
 	shex.fMask        = waitTime ? SEE_MASK_NOCLOSEPROCESS : 0;
 	shex.hwnd         = hwnd;
 	shex.lpVerb       = _T("runas");
@@ -976,7 +943,7 @@ bool WinUtil::runElevated(HWND hwnd, const TCHAR* path, const TCHAR* parameters,
 	shex.lpParameters = parameters;
 	shex.lpDirectory  = directory;
 	shex.nShow        = SW_NORMAL;
-	
+
 	if (!ShellExecuteEx(&shex)) return false;
 	if (!waitTime) return true;
 	bool result = WaitForSingleObject(shex.hProcess, waitTime) == WAIT_OBJECT_0;
@@ -1263,7 +1230,7 @@ int WinUtil::getComboBoxHeight(HWND hwnd, HFONT font)
 		res = size.cy + GetSystemMetrics(SM_CYEDGE) + 2*GetSystemMetrics(SM_CYFIXEDFRAME);
 	SelectObject(hdc, prevFont);
 	ReleaseDC(hwnd, hdc);
-	return res;	
+	return res;
 }
 
 void WinUtil::showInputError(HWND hwndCtl, const tstring& text)
@@ -1288,12 +1255,6 @@ tstring WinUtil::getFileMaskString(const FileMaskItem* items)
 	}
 	if (result.empty()) result += _T('\0');
 	return result;
-}
-
-bool WinUtil::useMDIMaximized()
-{
-	const auto* ss = SettingsManager::instance.getUiSettings();
-	return ss->getBool(Conf::MDI_MAXIMIZED);
 }
 
 int WinUtil::getDllPlatform(const string& fullpath)

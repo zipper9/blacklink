@@ -19,7 +19,7 @@
 #ifndef USERS_FRAME_H
 #define USERS_FRAME_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"

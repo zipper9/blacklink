@@ -24,6 +24,7 @@
 #include "MainFrm.h"
 #include "Fonts.h"
 #include "NotifUtil.h"
+#include "MenuHelper.h"
 #include "../client/FormatUtil.h"
 #include "../client/Util.h"
 #include "../client/QueueManager.h"
@@ -367,10 +368,10 @@ HubFrame* HubFrame::openHubWindow(const Settings& cs, bool* isNew)
 		if (rc.left < 0 || rc.top < 0 || rc.right - rc.left < 10 || rc.bottom - rc.top < 10)
 		{
 			CRect rcmdiClient;
-			::GetWindowRect(WinUtil::g_mdiClient, &rcmdiClient);
+			::GetWindowRect(WinUtil::mdiClient, &rcmdiClient);
 			rc = rcmdiClient; // frm->rcDefault;
 		}
-		frm->Create(WinUtil::g_mdiClient, rc);
+		frm->Create(WinUtil::mdiClient, rc);
 		//if (cs.windowType)
 		//	frm->ShowWindow(cs.windowType);
 		frames.insert(make_pair(cs.server, frm));
@@ -1403,7 +1404,7 @@ void HubFrame::storeColumnsInfo()
 		CRect rc;
 		GetWindowRect(rc);
 		CRect rcmdiClient;
-		::GetWindowRect(WinUtil::g_mdiClient, &rcmdiClient);
+		::GetWindowRect(WinUtil::mdiClient, &rcmdiClient);
 		if (wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL)
 		{
 			wi.windowPosX = rc.left - (rcmdiClient.left + 2);
@@ -1647,7 +1648,7 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 		tabMenu.InsertSeparatorFirst(TSTRING(DHT_TITLE));
 	if (client)
 		appendUcMenu(tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
-	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | WinUtil::g_tabCtrl->getContextMenuAlign(), pt.x, pt.y, m_hWnd);
+	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | WinUtil::tabCtrl->getContextMenuAlign(), pt.x, pt.y, m_hWnd);
 	cleanUcMenu(tabMenu);
 	MenuHelper::unlinkStaticMenus(tabMenu);
 	return TRUE;
@@ -2868,7 +2869,7 @@ BOOL HubFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
 	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
-	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (!WinUtil::tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
 	if (isFindDialogMessage(pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;

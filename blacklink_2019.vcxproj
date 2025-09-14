@@ -779,6 +779,7 @@
     <ClCompile Include="windows\EmoticonPacksDlg.cpp" />
     <ClCompile Include="windows\GdiUtil.cpp" />
     <ClCompile Include="windows\ListPopup.cpp" />
+    <ClCompile Include="windows\MDIUtil.cpp" />
     <ClCompile Include="windows\MenuHelper.cpp" />
     <ClCompile Include="windows\NavigationBar.cpp" />
     <ClCompile Include="windows\NotifUtil.cpp" />
@@ -935,6 +936,7 @@
     </ClCompile>
     <ClCompile Include="windows\StringSetSearch.cpp" />
     <ClCompile Include="windows\StylesPage.cpp" />
+    <ClCompile Include="windows\TabPreviewWindow.cpp" />
     <ClCompile Include="windows\TabsPage.cpp" />
     <ClCompile Include="windows\TextFrame.cpp" />
     <ClCompile Include="windows\ThemeManager.cpp" />
@@ -987,6 +989,8 @@
     <ClInclude Include="windows\GdiUtil.h" />
     <ClInclude Include="windows\ListPopup.h" />
     <ClInclude Include="windows\LockRedraw.h" />
+    <ClInclude Include="windows\MDITabChildWindow.h" />
+    <ClInclude Include="windows\MDIUtil.h" />
     <ClInclude Include="windows\MenuHelper.h" />
     <ClInclude Include="windows\NavigationBar.h" />
     <ClInclude Include="windows\NotifUtil.h" />
@@ -1100,6 +1104,7 @@
     <ClInclude Include="windows\StatusMessageHistory.h" />
     <ClInclude Include="windows\StringSetSearch.h" />
     <ClInclude Include="windows\StylesPage.h" />
+    <ClInclude Include="windows\TabPreviewWindow.h" />
     <ClInclude Include="windows\ThemeManager.h" />
     <ClInclude Include="windows\ThemeUtil.h" />
     <ClInclude Include="windows\ThemeWrapper.h" />

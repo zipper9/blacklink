@@ -22,6 +22,7 @@
 #include "ImageLists.h"
 #include "Colors.h"
 #include "Fonts.h"
+#include "MenuHelper.h"
 #include "ConfUI.h"
 #include "../client/ClientManager.h"
 #include "../client/QueueManager.h"

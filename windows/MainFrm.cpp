@@ -94,6 +94,7 @@
 #include "WinSysHandlers.h"
 #include "StylesPage.h"
 #include "NotifUtil.h"
+#include "MenuHelper.h"
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 #include "TextFrame.h"
@@ -210,7 +211,7 @@ MainFrame::MainFrame() :
 
 bool MainFrame::isAppMinimized(HWND hWnd)
 {
-	return appMinimized && WinUtil::g_tabCtrl && WinUtil::g_tabCtrl->isActive(hWnd);
+	return appMinimized && WinUtil::tabCtrl && WinUtil::tabCtrl->isActive(hWnd);
 }
 
 MainFrame::~MainFrame()
@@ -554,10 +555,10 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	CreateMDIClient();
 	ctrlCmdBar.SetMDIClient(m_hWndMDIClient);
-	WinUtil::g_mdiClient = m_hWndMDIClient;
+	WinUtil::mdiClient = m_hWndMDIClient;
 	ctrlTab.updateSettings(false);
 	ctrlTab.Create(m_hWnd, rcDefault);
-	WinUtil::g_tabCtrl = &ctrlTab;
+	WinUtil::tabCtrl = &ctrlTab;
 	
 	bool showTransferView = ss->getBool(Conf::SHOW_TRANSFERVIEW);
 	transferView.Create(m_hWnd);
@@ -2040,7 +2041,7 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 
 void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 {
-	::LockWindowUpdate(WinUtil::g_mdiClient);
+	::LockWindowUpdate(WinUtil::mdiClient);
 	HubFrame* lastFrame = nullptr;
 	HubFrame::Settings cs;
 	for (const FavoriteHubEntry& entry : hubs)
@@ -2404,7 +2405,7 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 
 		BOOL maximized;
 		MDIGetActive(&maximized);
-		BOOL showTabs = maximized && WinUtil::g_tabCtrl->getTabCount() != 0;
+		BOOL showTabs = maximized && WinUtil::tabCtrl->getTabCount() != 0;
 		if (ctrlTab.IsWindowVisible() != showTabs)
 			ctrlTab.ShowWindow(showTabs ? SW_SHOW : SW_HIDE);
 		if (showTabs)

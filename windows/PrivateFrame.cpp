@@ -23,6 +23,7 @@
 #include "WinUtil.h"
 #include "MainFrm.h"
 #include "NotifUtil.h"
+#include "MenuHelper.h"
 #include "../client/UserManager.h"
 #include "../client/ClientManager.h"
 #include "../client/UploadManager.h"
@@ -249,7 +250,7 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 			replyTo.user->setLastNick(ou->getIdentity().getNick());
 		p = new PrivateFrame(replyTo, myNick);
 		frames.insert(make_pair(replyTo.user, p));
-		p->Create(WinUtil::g_mdiClient);
+		p->Create(WinUtil::mdiClient);
 	}
 	else
 	{
@@ -473,7 +474,7 @@ void PrivateFrame::readFrameLog()
 
 void PrivateFrame::addStatus(const tstring& line, bool inChat, bool history, int textStyle)
 {
-	if (!created) Create(WinUtil::g_mdiClient);
+	if (!created) Create(WinUtil::mdiClient);
 	BaseChatFrame::addStatus(line, inChat, history, textStyle);
 }
 
@@ -485,7 +486,7 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 		if (ss->getBool(Conf::POPUNDER_PM))
 			WinUtil::hiddenCreateEx(this);
 		else
-			Create(WinUtil::g_mdiClient);
+			Create(WinUtil::mdiClient);
 	}
 
 	string extra;
@@ -933,7 +934,7 @@ LRESULT PrivateFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	uint64_t now = GET_TICK();
 	if (typingTimeout[0])
 	{
-		if (now > typingTimeout[0] || !WinUtil::g_tabCtrl->isActive(m_hWnd))
+		if (now > typingTimeout[0] || !WinUtil::tabCtrl->isActive(m_hWnd))
 			setLocalTyping(false);
 		else if (now > sendTimeTyping)
 		{
@@ -1237,7 +1238,7 @@ BOOL PrivateFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
 	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
-	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (!WinUtil::tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
 	if (isFindDialogMessage(pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;

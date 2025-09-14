@@ -22,7 +22,7 @@
 #include "../client/ClientManager.h"
 #include "../client/TaskQueue.h"
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "CustomDrawHelpers.h"

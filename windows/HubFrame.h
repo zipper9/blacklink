@@ -25,6 +25,7 @@
 #include "../client/UserManagerListener.h"
 #include "../client/TaskQueue.h"
 
+#include "MDITabChildWindow.h"
 #include "BaseChatFrame.h"
 #include "UserListWindow.h"
 #include "FlatTabCtrl.h"

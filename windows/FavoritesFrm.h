@@ -19,7 +19,7 @@
 #ifndef FAVORITE_HUBS_FRM_H
 #define FAVORITE_HUBS_FRM_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "ExListViewCtrl.h"
 #include "TimerHelper.h"

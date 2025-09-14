@@ -7,7 +7,7 @@
 #include "../client/WinEvent.h"
 #include "../client/StringTokenizer.h"
 #include "../client/Thread.h"
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "WinUtil.h"
 #include <atomic>

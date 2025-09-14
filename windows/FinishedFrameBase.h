@@ -19,7 +19,7 @@
 #ifndef FINISHED_FRAME_BASE_H
 #define FINISHED_FRAME_BASE_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "WinUtil.h"

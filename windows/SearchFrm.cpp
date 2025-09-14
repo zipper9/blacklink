@@ -30,6 +30,7 @@
 #include "BrowseFile.h"
 #include "LockRedraw.h"
 #include "QueueFrame.h"
+#include "MenuHelper.h"
 
 #include "../client/Client.h"
 #include "../client/QueueManager.h"
@@ -267,7 +268,7 @@ void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGL
 {
 	SearchFrame* frame = new SearchFrame();
 	frame->setInitial(str, size, mode, type);
-	frame->Create(WinUtil::g_mdiClient);
+	frame->Create(WinUtil::mdiClient);
 	framesLock.lock();
 	activeFrames.insert(make_pair(frame->id, frame));
 	framesLock.unlock();
@@ -1801,7 +1802,7 @@ BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
 	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
-	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (!WinUtil::tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);
 }

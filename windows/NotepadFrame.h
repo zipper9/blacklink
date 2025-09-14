@@ -19,7 +19,7 @@
 #ifndef NOTEPAD_FRAME_H
 #define NOTEPAD_FRAME_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 
 #define NOTEPAD_MESSAGE_MAP 13

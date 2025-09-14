@@ -27,6 +27,7 @@
 #include "Fonts.h"
 #include "BrowseFile.h"
 #include "LineDlg.h"
+#include "MenuHelper.h"
 #include "ConfUI.h"
 #include "../client/QueueManager.h"
 #include "../client/ClientManager.h"
@@ -125,7 +126,7 @@ void DirectoryListingFrame::openWindow(const tstring& file, const tstring& dir, 
 	if (ss->getBool(Conf::POPUNDER_FILELIST))
 		hwnd = WinUtil::hiddenCreateEx(frame);
 	else
-		hwnd = frame->Create(WinUtil::g_mdiClient);
+		hwnd = frame->Create(WinUtil::mdiClient);
 	if (hwnd)
 	{
 		frame->loadFile(file, dir);
@@ -150,7 +151,7 @@ void DirectoryListingFrame::openWindow(const HintedUser& user, const string& txt
 	if (ss->getBool(Conf::POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
-		frame->Create(WinUtil::g_mdiClient);
+		frame->Create(WinUtil::mdiClient);
 	frame->loadXML(txt);
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
@@ -164,7 +165,7 @@ DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing* dl, c
 	if (ss->getBool(Conf::POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
 	else
-		frame->Create(WinUtil::g_mdiClient);
+		frame->Create(WinUtil::mdiClient);
 	frame->updateWindowTitle();
 	frame->refreshTree(frame->dl->getRoot(), frame->treeRoot, false);
 	frame->loading = false;
@@ -3468,7 +3469,7 @@ void ThreadedDirectoryListing::notify(int progress, size_t files, size_t dirs)
 
 BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)
 {
-	if (WinUtil::g_tabCtrl->isActive(m_hWnd) && TranslateAccelerator(m_hWnd, m_hAccel, pMsg))
+	if (WinUtil::tabCtrl->isActive(m_hWnd) && TranslateAccelerator(m_hWnd, m_hAccel, pMsg))
 		return TRUE;
 	MainFrame* mainFrame = MainFrame::getMainFrame();
 	return TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg);

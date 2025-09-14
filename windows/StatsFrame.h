@@ -23,7 +23,7 @@
 
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TimerHelper.h"
 #include <gdiplustypes.h>

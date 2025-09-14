@@ -19,7 +19,7 @@
 #ifndef SEARCH_FRM_H
 #define SEARCH_FRM_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "TypedTreeListViewCtrl.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"

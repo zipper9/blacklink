@@ -21,8 +21,9 @@
 
 #include "../client/ClientManagerListener.h"
 #include "../client/ConnectionManagerListener.h"
+#include "../client/SettingsManagerListener.h"
 #include "BaseChatFrame.h"
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"

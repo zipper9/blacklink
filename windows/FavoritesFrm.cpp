@@ -1019,7 +1019,7 @@ BOOL FavoriteHubsFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
 	if (TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
-	if (!WinUtil::g_tabCtrl->isActive(m_hWnd)) return FALSE;
+	if (!WinUtil::tabCtrl->isActive(m_hWnd)) return FALSE;
 	if (TranslateAccelerator(m_hWnd, m_hAccel, pMsg)) return TRUE;
 	if (WinUtil::isCtrl()) return FALSE;
 	return IsDialogMessage(pMsg);

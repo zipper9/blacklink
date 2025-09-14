@@ -19,7 +19,7 @@
 #ifndef PUBLIC_HUBS_FRM_H
 #define PUBLIC_HUBS_FRM_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "SearchBoxCtrl.h"

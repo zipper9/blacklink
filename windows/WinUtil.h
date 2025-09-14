@@ -50,9 +50,6 @@ namespace WinUtil
 	uint64_t getNewFrameID(int type);
 
 	extern HWND g_mainWnd;
-	extern HWND g_mdiClient;
-	extern FlatTabCtrl* g_tabCtrl;
-	extern HHOOK g_hook;
 	extern bool g_isAppActive;
 
 	void init(HWND hWnd);
@@ -134,24 +131,6 @@ namespace WinUtil
 	inline bool isAlt() { return (GetKeyState(VK_MENU) & 0x8000) != 0; }
 	inline bool isCtrl() { return (GetKeyState(VK_CONTROL) & 0x8000) != 0; }
 
-	template<class T> static HWND hiddenCreateEx(T& p) noexcept
-	{
-		const HWND active = (HWND)::SendMessage(g_mdiClient, WM_MDIGETACTIVE, 0, 0);
-		LockWindowUpdate(g_mdiClient);
-		HWND ret = p.Create(g_mdiClient);
-		if (active && ::IsWindow(active))
-			::SendMessage(g_mdiClient, WM_MDIACTIVATE, (WPARAM)active, 0);
-		LockWindowUpdate(NULL);
-		return ret;
-	}
-
-	template<class T> static HWND hiddenCreateEx(T* p) noexcept
-	{
-		return hiddenCreateEx(*p);
-	}
-
-	bool useMDIMaximized();
-
 	static void translate(HWND page, const TextItem* textItems)
 	{
 		if (!textItems) return;
@@ -160,7 +139,6 @@ namespace WinUtil
 	}
 
 	bool shutDown(int action);
-	void activateMDIChild(HWND hWnd);
 
 	bool setExplorerTheme(HWND hWnd);
 	bool setTreeViewTheme(HWND hWnd, bool darkMode);

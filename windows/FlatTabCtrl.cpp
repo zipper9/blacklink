@@ -1,19 +1,24 @@
 #include "stdafx.h"
 #include "FlatTabCtrl.h"
+#include "MDIUtil.h"
 #include "ColorUtil.h"
 #include "Fonts.h"
+#include "GdiUtil.h"
 #include "BackingStore.h"
+#include "ResourceLoader.h"
+#include "UserMessages.h"
 
 FlatTabCtrl::FlatTabCtrl() :
-	closing(nullptr),
-	active(nullptr), moving(nullptr), inTab(false),
+	active(nullptr), pressed(nullptr), moving(false), inTab(false),
 	tabsPosition(Conf::TABS_TOP), tabChars(16), maxRows(7),
 	showIcons(true), showCloseButton(true), useBoldNotif(false), nonHubsFirst(true),
-	closeButtonPressedTab(nullptr), closeButtonHover(false), hoverTab(nullptr),
+	closeButtonPressedTab(nullptr), insertionTab(nullptr),
+	closeButtonHover(false), insertAfter(false), hoverTab(nullptr),
 	rows(1), height(0),
-	textHeight(0), edgeHeight(0), horizIconSpace(0), horizPadding(0), chevronWidth(0),
+	textHeight(0), edgeHeight(0), startMargin(0), horizIconSpace(0), horizPadding(0), chevronWidth(0),
 	backingStore(nullptr)
 {
+	colors[INSERTION_MARK_COLOR] = RGB(120, 120, 120);
 }
 
 void FlatTabCtrl::cleanup()
@@ -251,7 +256,7 @@ bool FlatTabCtrl::updateSettings(bool invalidate)
 
 	bool needInval = false;
 	const auto* ss = SettingsManager::instance.getUiSettings();
-	for (int i = 0; i < MAX_COLORS; i++)
+	for (int i = 0; i < _countof(colorOptions); i++)
 	{
 		COLORREF color = ss->getInt(colorOptions[i]);
 		if (colors[i] != color)
@@ -297,6 +302,56 @@ bool FlatTabCtrl::updateSettings(bool invalidate)
 	return needInval;
 }
 
+void FlatTabCtrl::setMoving(bool flag, POINT pt, RECT* tabRect)
+{
+	if (moving == flag) return;
+	moving = flag;
+	if (!flag)
+	{
+		if (preview.m_hWnd)
+		{
+			preview.DestroyWindow();
+			preview.m_hWnd = nullptr;
+		}
+		ReleaseCapture();
+		return;
+	}
+	if (preview.m_hWnd) return;
+
+	preview.setMaxPreviewSize(600, 400);
+	preview.setBackgroundColor(colors[ACTIVE_BACKGROUND_COLOR]);
+	preview.setTextColor(colors[ACTIVE_TEXT_COLOR]);
+	preview.setBorderColor(colors[BORDER_COLOR]);
+	preview.setPreview(active->hWnd);
+	HDC hdc = GetDC();
+	preview.init(showIcons ? active->getIcon() : nullptr, active->textEllip, tabsPosition);
+	preview.updateSize(hdc);
+	ReleaseDC(hdc);
+	SIZE size = preview.getSize();
+
+#if 0
+	if (tabRect)
+	{
+		POINT ptGrab;
+		ptGrab.x = tabRect->left - pt.x;
+		if (tabsPosition == TABS_TOP)
+			ptGrab.y = tabRect->top - pt.y;
+		else
+			ptGrab.y = pt.y - tabRect->bottom;
+		preview.setGrabPoint(ptGrab);
+	}
+#endif
+
+	POINT offset = preview.getOffset();
+	RECT rc;
+	rc.left = pt.x + offset.x;
+	rc.top = pt.y + offset.y;
+	rc.right = rc.left + size.cx;
+	rc.bottom = rc.top + size.cy;
+	preview.Create(nullptr, &rc);
+	SetCapture();
+}
+
 LRESULT FlatTabCtrl::onLButtonDown(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL & /*bHandled*/)
 {
 	int xPos = GET_X_LPARAM(lParam);
@@ -309,13 +364,14 @@ LRESULT FlatTabCtrl::onLButtonDown(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		{
 			if (showCloseButton)
 			{
-				CRect rc;
+				RECT rc;
 				getCloseButtonRect(t, rc);
 				if (xPos >= rc.left && xPos < rc.right && yPos >= rc.top && yPos < rc.bottom)
 				{
 					hoverTab = closeButtonPressedTab = t;
 					invalidate = true;
-					moving = nullptr;
+					pressed = t;
+					setMoving(false);
 					break;
 				}
 			}
@@ -324,8 +380,21 @@ LRESULT FlatTabCtrl::onLButtonDown(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			{
 				if (wParam & MK_SHIFT || wParam & MK_XBUTTON1)
 					::SendMessage(t->hWnd, WM_CLOSE, 0, 0);
+				else if (t == active)
+				{
+					POINT pt = {xPos, yPos};
+					ClientToScreen(&pt);
+					RECT tabRect;
+					tabRect.left = t->xpos;
+					tabRect.right = t->xpos + getWidth(t);
+					tabRect.top = edgeHeight + t->row * getTabHeight();
+					tabRect.bottom = tabRect.top + getTabHeight();
+					ClientToScreen(&tabRect);
+					setMoving(true, pt, &tabRect);
+					invalidate = true;
+				}
 				else
-					moving = t;
+					pressed = t;
 			}
 			break;
 		}
@@ -335,52 +404,49 @@ LRESULT FlatTabCtrl::onLButtonDown(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 LRESULT FlatTabCtrl::onLButtonUp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/)
 {
-	if (moving)
-	{
-		int xPos = GET_X_LPARAM(lParam);
-		int yPos = GET_Y_LPARAM(lParam);
-		int row = getRowFromPos(yPos);
-
-#if 1 // Selected tab must stay selected: don't swtich to previous tab!
-		bool moveLast = true;
-#endif
-		for (auto t : tabs)
-		{
-			int tabWidth = getWidth(t);
-			if (row == t->row && xPos >= t->xpos && xPos < t->xpos + tabWidth)
-			{
-				auto hWnd = GetParent();
-				if (hWnd)
-				{
-					if (t == moving)
-					{
-						if (t != active)
-							::SendMessage(hWnd, FTM_SELECTED, (WPARAM)t->hWnd, 0);
-					}
-					else
-					{
-						// check if the pointer is on the left or right half of the tab
-						// to determine where to insert the tab
-						moveTabs(t, xPos > t->xpos + tabWidth / 2);
-					}
-				}
-				moveLast = false;
-				break;
-			}
-		}
-		if (moveLast) moveTabs(tabs.back(), true);
-		moving = nullptr;
-	}
-	else if (closeButtonPressedTab)
+	bool invalidate = false;
+	if (closeButtonPressedTab)
 	{
 		if (closeButtonHover)
 		{
 			HWND hWnd = GetParent();
 			if (hWnd) ::SendMessage(closeButtonPressedTab->hWnd, WM_CLOSE, 0, 0);
 		}
-		closeButtonPressedTab = nullptr;
-		Invalidate();
+		closeButtonPressedTab = pressed = nullptr;
+		invalidate = true;
 	}
+	if (pressed)
+	{
+		POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+		RECT rc;
+		rc.left = pressed->xpos;
+		rc.top = getTopPos(pressed);
+		rc.right = rc.left + getWidth(pressed);
+		rc.bottom = rc.top + getTabHeight();
+		if (PtInRect(&rc, pt))
+		{
+			HWND hWnd = GetParent();
+			if (hWnd && pressed != active)
+				::SendMessage(hWnd, FTM_SELECTED, (WPARAM) pressed->hWnd, 0);
+		}
+		pressed = nullptr;
+		insertionTab = nullptr;
+		setMoving(false);
+		invalidate = true;
+	}
+	if (moving)
+	{
+		if (insertionTab)
+		{
+			moveTabs(active, insertionTab, insertAfter);
+			insertionTab = nullptr;
+		}
+		hoverTab = nullptr;
+		setMoving(false);
+		invalidate = true;
+	}
+	if (invalidate)
+		Invalidate();
 	return 0;
 }
 
@@ -403,70 +469,115 @@ LRESULT FlatTabCtrl::onMButtonUp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam
 
 LRESULT FlatTabCtrl::onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/)
 {
-	int xPos = GET_X_LPARAM(lParam);
-	int yPos = GET_Y_LPARAM(lParam);
-	int row = getRowFromPos(yPos);
+	POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+	RECT rc;
+	GetClientRect(&rc);
+	int row = PtInRect(&rc, pt) ? getRowFromPos(pt.y) : -1;
 	bool showTooltip = false;
 	bool closeButtonVisible = false;
 	bool invalidate = false;
 	closeButtonHover = false;
 
-	for (auto t : tabs)
+	if (moving && preview.m_hWnd)
 	{
-		if (row == t->row && xPos >= t->xpos && xPos < t->xpos + getWidth(t))
+		POINT ptMove = pt;
+		ClientToScreen(&ptMove);
+		POINT offset = preview.getOffset();
+		RECT rc;
+		rc.left = rc.right = ptMove.x + offset.x;
+		rc.top = rc.bottom = ptMove.y + offset.y;
+		preview.SetWindowPos(nullptr, &rc, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING | SWP_NOSIZE);
+	}
+
+	for (TabInfo::List::size_type i = 0; i < tabs.size(); i++)
+	{
+		TabInfo* t = tabs[i];
+		int tabWidth = getWidth(t);
+		if (row == t->row && pt.x >= t->xpos && pt.x < t->xpos + tabWidth)
 		{
-			TRACKMOUSEEVENT tme;
-			tme.cbSize = sizeof(tme);
-			tme.dwFlags = TME_LEAVE;
-			tme.hwndTrack = m_hWnd;
-			_TrackMouseEvent(&tme);
-
-			if (showCloseButton)
+			if (moving)
 			{
-				if (hoverTab != t)
+				TabInfo* newInsertionTab = t == active ? nullptr : t;
+				bool newInsertAfter = pt.x > t->xpos + tabWidth / 2;
+				if (newInsertAfter)
 				{
-					hoverTab = t;
-					invalidate = true;
-				}
-				CRect rc;
-				getCloseButtonRect(t, rc);
-				closeButtonHover = xPos >= rc.left && xPos < rc.right && yPos >= rc.top && yPos < rc.bottom;
-				closeButtonVisible = true;
-			}
-
-			const tstring& tabTooltip = t->tooltipText.empty() ? t->text : t->tooltipText;
-			if (tabTooltip != tooltipText)
-			{
-				tooltip.DelTool(m_hWnd);
-				tooltipText = tabTooltip;
-				if (!tooltipText.empty())
-				{
-					const auto* ss = SettingsManager::instance.getUiSettings();
-					if (ss->getBool(Conf::TABS_SHOW_INFOTIPS))
-					{
-						CToolInfo info(TTF_SUBCLASS, m_hWnd, 0, nullptr, const_cast<TCHAR*>(tooltipText.c_str()));
-						tooltip.AddTool(&info);
-						tooltip.Activate(TRUE);
-						showTooltip = true;
-					}
+					if (i < tabs.size() - 1 && tabs[i+1] == active) newInsertionTab = nullptr;
 				}
 				else
-					tooltip.Activate(FALSE);
+					if (i > 0 && tabs[i-1] == active) newInsertionTab = nullptr;
+				if (newInsertionTab != insertionTab || (insertionTab && newInsertAfter != insertAfter))
+				{
+					insertionTab = newInsertionTab;
+					insertAfter = newInsertAfter;
+					invalidate = true;
+				}
 			}
 			else
-				showTooltip = true;
+			{
+				TRACKMOUSEEVENT tme;
+				tme.cbSize = sizeof(tme);
+				tme.dwFlags = TME_LEAVE;
+				tme.hwndTrack = m_hWnd;
+				_TrackMouseEvent(&tme);
+
+				if (showCloseButton)
+				{
+					if (hoverTab != t)
+					{
+						hoverTab = t;
+						invalidate = true;
+					}
+					RECT rc;
+					getCloseButtonRect(t, rc);
+					closeButtonHover = PtInRect(&rc, pt) != FALSE;
+					closeButtonVisible = true;
+				}
+
+				const tstring& tabTooltip = t->tooltipText.empty() ? t->text : t->tooltipText;
+				if (tabTooltip != tooltipText)
+				{
+					tooltip.DelTool(m_hWnd);
+					tooltipText = tabTooltip;
+					if (!tooltipText.empty())
+					{
+						const auto* ss = SettingsManager::instance.getUiSettings();
+						if (ss->getBool(Conf::TABS_SHOW_INFOTIPS))
+						{
+							CToolInfo info(TTF_SUBCLASS, m_hWnd, 0, nullptr, const_cast<TCHAR*>(tooltipText.c_str()));
+							tooltip.AddTool(&info);
+							tooltip.Activate(TRUE);
+							showTooltip = true;
+						}
+					}
+					else
+						tooltip.Activate(FALSE);
+				}
+				else
+					showTooltip = true;
+			}
 			break;
 		}
 	}
-	if (!closeButtonVisible && hoverTab)
+	if (moving)
 	{
-		hoverTab = nullptr;
-		invalidate = true;
+		if (row < 0 && insertionTab)
+		{
+			insertionTab = nullptr;
+			invalidate = true;
+		}
 	}
-	if (!showTooltip && !tooltipText.empty())
+	else
 	{
-		tooltip.Activate(FALSE);
-		tooltipText.clear();
+		if (!closeButtonVisible && hoverTab)
+		{
+			hoverTab = nullptr;
+			invalidate = true;
+		}
+		if (!showTooltip && !tooltipText.empty())
+		{
+			tooltip.Activate(FALSE);
+			tooltipText.clear();
+		}
 	}
 	if (invalidate) Invalidate();
 	return TRUE;
@@ -497,7 +608,6 @@ LRESULT FlatTabCtrl::onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 		{
 			if (!::SendMessage(t->hWnd, FTM_CONTEXTMENU, 0, lParam))
 			{
-				closing = t->hWnd;
 				ClientToScreen(&pt);
 				CMenu contextMenu;
 				contextMenu.CreatePopupMenu();
@@ -507,12 +617,6 @@ LRESULT FlatTabCtrl::onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 			break;
 		}
 	}
-	return 0;
-}
-
-LRESULT FlatTabCtrl::onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/)
-{
-	if (::IsWindow(closing)) ::SendMessage(closing, WM_CLOSE, 0, 0);
 	return 0;
 }
 
@@ -556,8 +660,9 @@ LRESULT FlatTabCtrl::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	int xdu, ydu;
 	WinUtil::getDialogUnits(dc, xdu, ydu);
 	int dpi = dc.GetDeviceCaps(LOGPIXELSX);
-	edgeHeight = 2 * dpi / 96;
+	edgeHeight = 3 * dpi / 96;
 	horizPadding = 5 * dpi / 96;
+	startMargin = 3 * dpi / 96;
 	int vertExtraSpace = 10 * dpi / 96;
 	horizIconSpace = 2 * dpi / 96;
 	chevronWidth = WinUtil::dialogUnitsToPixelsX(8, xdu);
@@ -590,8 +695,8 @@ LRESULT FlatTabCtrl::onEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/)
 {
-	CRect rc;
-	CRect crc;
+	RECT rc;
+	RECT crc;
 	GetClientRect(&crc);
 
 	if (GetUpdateRect(&rc, FALSE))
@@ -602,14 +707,14 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		if (!backingStore) backingStore = BackingStore::getBackingStore();
 		if (backingStore)
 		{
-			HDC hMemDC = backingStore->getCompatibleDC(hdc, rc.Width(), rc.Height());
+			HDC hMemDC = backingStore->getCompatibleDC(hdc, rc.right - rc.left, rc.bottom - rc.top);
 			if (hMemDC) hdc = hMemDC;
 		}
 
 		POINT org;
 		SetWindowOrgEx(hdc, rc.left, rc.top, &org);
 
-		CRect rcEdge, rcBackground;
+		RECT rcEdge, rcBackground;
 		rcEdge.left = rcBackground.left = 0;
 		rcEdge.right = rcBackground.right = crc.right;
 		if (tabsPosition == Conf::TABS_TOP)
@@ -638,23 +743,28 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		HGDIOBJ oldfont = SelectObject(hdc, Fonts::g_systemFont);
 
 		int drawActiveOpt = 0;
-		int lastRow = tabs.empty() ? -1 : tabs.back()->row;
+		int insertXPos = -1, insertYPos = -1;
 		for (TabInfo::List::size_type i = 0; i < tabs.size(); i++)
 		{
 			const TabInfo *t = tabs[i];
-			if (t->row != -1 && t->xpos < rc.right && t->xpos + getWidth(t) >= rc.left)
+			int tabWidth = getWidth(t);
+			if (t->row != -1 && t->xpos < rc.right && t->xpos + tabWidth >= rc.left)
 			{
 				int options = 0;
 				if (i == 0 || t->row != tabs[i-1]->row)
 					options |= DRAW_TAB_FIRST_IN_ROW;
 				if (i == tabs.size() - 1 || t->row != tabs[i+1]->row)
 					options |= DRAW_TAB_LAST_IN_ROW;
-				if (t->row == lastRow)
-					options |= DRAW_TAB_LAST_ROW;
 				if (t == active)
 					drawActiveOpt = options | DRAW_TAB_ACTIVE;
 				else
 					drawTab(hdc, t, options);
+				if (t == insertionTab)
+				{
+					insertXPos = t->xpos;
+					insertYPos = getTopPos(t);
+					if (insertAfter) insertXPos += tabWidth;
+				}
 			}
 		}
 
@@ -675,9 +785,12 @@ LRESULT FlatTabCtrl::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 			drawTab(hdc, active, drawActiveOpt);
 		}
 
+		if (!(insertXPos == -1 && insertYPos == -1))
+			drawInsertionMark(hdc, insertXPos, insertYPos);
+
 		SelectObject(hdc, oldfont);
 		if (hdc != paintDC)
-			BitBlt(paintDC, rc.left, rc.top, rc.Width(), rc.Height(), hdc, rc.left, rc.top, SRCCOPY);
+			BitBlt(paintDC, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, hdc, rc.left, rc.top, SRCCOPY);
 		SetWindowOrgEx(hdc, org.x, org.y, nullptr);
 		EndPaint(&ps);
 	}
@@ -690,7 +803,7 @@ LRESULT FlatTabCtrl::onChevron(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 		menu.RemoveMenu(0, MF_BYPOSITION);
 
 	int n = 0;
-	CRect rc;
+	RECT rc;
 	GetClientRect(&rc);
 	CMenuItemInfo mi;
 	mi.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA | MIIM_STATE;
@@ -730,6 +843,17 @@ LRESULT FlatTabCtrl::onSelectWindow(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	return 0;
 }
 
+LRESULT FlatTabCtrl::onCaptureChanged(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL & /*bHandled*/)
+{
+	setMoving(false);
+	if (insertionTab)
+	{
+		insertionTab = nullptr;
+		Invalidate();
+	}
+	return 0;
+}
+
 void FlatTabCtrl::processTooltipPop(HWND hWnd)
 {
 	if (tooltip.m_hWnd == hWnd)
@@ -753,17 +877,17 @@ int FlatTabCtrl::getRowFromPos(int yPos) const
 
 void FlatTabCtrl::calcRows(bool invalidate)
 {
-	CRect rc;
-	GetClientRect(rc);
+	RECT rc;
+	GetClientRect(&rc);
 	int r = 1;
-	int w = 0;
+	int w = startMargin;
 	bool notify = false;
 	bool needInval = false;
 
 	for (auto t : tabs)
 	{
 		int tabWidth = getWidth(t);
-		if (r != 0 && w + tabWidth > rc.Width() - chevronWidth)
+		if (r != 0 && w + tabWidth > rc.right - rc.left - chevronWidth)
 		{
 			if (r >= maxRows)
 			{
@@ -775,7 +899,7 @@ void FlatTabCtrl::calcRows(bool invalidate)
 			else
 			{
 				r++;
-				w = 0;
+				w = startMargin;
 			}
 		}
 		t->xpos = w;
@@ -799,14 +923,14 @@ void FlatTabCtrl::calcRows(bool invalidate)
 	if (needInval && invalidate) Invalidate();
 }
 
-void FlatTabCtrl::moveTabs(TabInfo *aTab, bool after)
+void FlatTabCtrl::moveTabs(TabInfo* tabToMove, const TabInfo* t, bool after)
 {
-	if (moving == nullptr) return;
+	if (!tabToMove) return;
 
 	TabInfo::ListIter i, j;
 	// remove the tab we're moving
 	for (j = tabs.begin(); j != tabs.end(); ++j)
-		if ((*j) == moving)
+		if ((*j) == tabToMove)
 		{
 			tabs.erase(j);
 			break;
@@ -814,13 +938,13 @@ void FlatTabCtrl::moveTabs(TabInfo *aTab, bool after)
 
 	// find the tab we're going to insert before or after
 	for (i = tabs.begin(); i != tabs.end(); ++i)
-		if ((*i) == aTab)
+		if ((*i) == t)
 		{
 			if (after) ++i;
 			break;
 		}
 
-	tabs.insert(i, moving);
+	tabs.insert(i, tabToMove);
 
 	calcRows(false);
 	Invalidate();
@@ -840,7 +964,7 @@ int FlatTabCtrl::getTopPos(const TabInfo *tab) const
 	return (getRows() - 1 - tab->row) * getTabHeight() + edgeHeight;
 }
 
-void FlatTabCtrl::getCloseButtonRect(const TabInfo* t, CRect& rc) const
+void FlatTabCtrl::getCloseButtonRect(const TabInfo* t, RECT& rc) const
 {
 	rc.left = t->xpos + getWidth(t) - (CLOSE_BUTTON_SIZE + horizPadding);
 	rc.top = getTopPos(t);
@@ -857,7 +981,7 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 	HPEN borderPen = ::CreatePen(PS_SOLID, 1, colors[BORDER_COLOR]);
 	HGDIOBJ oldPen = SelectObject(hdc, borderPen);
 
-	CRect rc(pos, ypos, pos + getWidth(tab), ypos + getTabHeight());
+	RECT rc = {pos, ypos, pos + getWidth(tab), ypos + getTabHeight()};
 
 	COLORREF bgColor, textColor;
 	if (options & DRAW_TAB_ACTIVE)
@@ -884,29 +1008,13 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 	}
 
 	HBRUSH brBackground = CreateSolidBrush(bgColor);
-	FillRect(hdc, rc, brBackground);
+	FillRect(hdc, &rc, brBackground);
 	DeleteObject(brBackground);
 
 	if (options & DRAW_TAB_ACTIVE)
 	{
-		if ((options & (DRAW_TAB_FIRST_IN_ROW | DRAW_TAB_LAST_ROW)) == (DRAW_TAB_FIRST_IN_ROW | DRAW_TAB_LAST_ROW))
-		{
-			if (tabsPosition == Conf::TABS_TOP)
-			{
-				MoveToEx(hdc, rc.left, rc.top, nullptr);
-				LineTo(hdc, rc.left, getHeight());
-			}
-			else
-			{
-				MoveToEx(hdc, rc.left, 0, nullptr);
-				LineTo(hdc, rc.left, rc.bottom);
-			}
-		}
-		else
-		{
-			MoveToEx(hdc, rc.left, rc.top, nullptr);
-			LineTo(hdc, rc.left, rc.bottom);
-		}
+		MoveToEx(hdc, rc.left, rc.top, nullptr);
+		LineTo(hdc, rc.left, rc.bottom);
 
 		MoveToEx(hdc, rc.right, rc.top, nullptr);
 		LineTo(hdc, rc.right, rc.bottom);
@@ -940,9 +1048,9 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 
 	if (showIcons)
 	{
-		int iconIndex = tab->disconnected ? 1 : 0;
-		if (tab->hIcons[iconIndex])
-		DrawIconEx(hdc, pos, ypos + (height - ICON_SIZE) / 2, tab->hIcons[iconIndex], ICON_SIZE, ICON_SIZE, 0, nullptr, DI_NORMAL | DI_COMPAT);
+		HICON hIcon = tab->getIcon();
+		if (hIcon)
+			DrawIconEx(hdc, pos, ypos + (height - ICON_SIZE) / 2, hIcon, ICON_SIZE, ICON_SIZE, 0, nullptr, DI_NORMAL | DI_COMPAT);
 		pos += ICON_SIZE + horizIconSpace;
 	}
 
@@ -952,9 +1060,9 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 
 	TextOut(hdc, pos, ypos + (height - textHeight) / 2, tab->textEllip.c_str(), tab->textEllip.length());
 
-	if (hoverTab == tab)
+	if (hoverTab == tab && !moving)
 	{
-		CRect rcButton;
+		RECT rcButton;
 		getCloseButtonRect(tab, rcButton);
 		int image = closeButtonPressedTab == tab ? 1 : 0;
 		closeButtonImages.Draw(hdc, image, rcButton.left, rcButton.top, ILD_NORMAL);
@@ -965,6 +1073,25 @@ void FlatTabCtrl::drawTab(HDC hdc, const TabInfo *tab, int options)
 	if (oldFont) SelectObject(hdc, oldFont);
 
 	DeleteObject(borderPen);
+}
+
+void FlatTabCtrl::drawInsertionMark(HDC hdc, int xpos, int ypos)
+{
+	HBRUSH brush = CreateSolidBrush(colors[INSERTION_MARK_COLOR]);
+	RECT rc;
+	rc.left = xpos - 1;
+	rc.right = xpos + 2;
+	rc.top = ypos + 3;
+	rc.bottom = ypos + height - 3;
+	FillRect(hdc, &rc, brush);
+	rc.left -= 2;
+	rc.right += 2;
+	rc.bottom = rc.top + 1;
+	FillRect(hdc, &rc, brush);
+	rc.bottom = ypos + height - 3;
+	rc.top = rc.bottom - 1;
+	FillRect(hdc, &rc, brush);
+	DeleteObject(brush);
 }
 
 bool FlatTabCtrl::TabInfo::update()
@@ -1038,4 +1165,9 @@ void FlatTabCtrl::TabInfo::setMaxLength(unsigned maxLength, HDC hdc)
 	if (textEllip == newTextEllip) return;
 	textEllip = std::move(newTextEllip);
 	updateSize(hdc);
+}
+
+HICON FlatTabCtrl::TabInfo::getIcon() const
+{
+	return hIcons[disconnected ? 1 : 0];
 }

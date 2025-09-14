@@ -502,6 +502,12 @@
     <ClCompile Include="windows\StatusBarCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\TabPreviewWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\MDIUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -1135,6 +1141,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\StatusBarCtrl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\TabPreviewWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\MDIUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\MDITabChildWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

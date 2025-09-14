@@ -1,7 +1,7 @@
 #ifndef RECENTS_FRAME_H_
 #define RECENTS_FRAME_H_
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "../client/HubEntry.h"

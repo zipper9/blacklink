@@ -3,6 +3,7 @@
 #include "LimitEditDlg.h"
 #include "HubFrame.h"
 #include "QueueFrame.h"
+#include "MenuHelper.h"
 #include "../client/LocationUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/Util.h"

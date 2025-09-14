@@ -25,6 +25,7 @@
 #include "Fonts.h"
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
+#include "MenuHelper.h"
 #include "ConfUI.h"
 #include "../client/DownloadManager.h"
 #include "../client/PathUtil.h"

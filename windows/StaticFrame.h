@@ -2,6 +2,7 @@
 #define STATIC_FRAME_H_
 
 #include "MainFrm.h"
+#include "MDIUtil.h"
 #include "ConfUI.h"
 
 template < class T, int title, int ID = -1 >
@@ -23,7 +24,7 @@ class StaticFrame
 			if (g_frame == nullptr)
 			{
 				g_frame = new T();
-				g_frame->Create(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
+				g_frame->Create(WinUtil::mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
 				setButtonPressed(ID, true);
 			}
 			else
@@ -57,7 +58,7 @@ class StaticFrame
 			if (g_frame == nullptr)
 			{
 				g_frame = new T();
-				g_frame->Create(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
+				g_frame->Create(WinUtil::mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
 				setButtonPressed(ID, true);
 			}
 			else

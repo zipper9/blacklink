@@ -6,6 +6,7 @@ DwmApiLib DwmApiLib::instance;
 
 void DwmApiLib::clearPointers()
 {
+	pDwmIsCompositionEnabled = nullptr;
 	pDwmSetWindowAttribute = nullptr;
 }
 
@@ -20,6 +21,7 @@ void DwmApiLib::init()
 
 	bool result = true;
 	RESOLVE(DwmSetWindowAttribute);
+	RESOLVE(DwmIsCompositionEnabled);
 }
 
 void DwmApiLib::uninit()
@@ -31,4 +33,13 @@ void DwmApiLib::uninit()
 		clearPointers();
 	}
 	initialized = false;
+}
+
+bool DwmApiLib::isCompositionEnabled()
+{
+	init();
+	if (!pDwmIsCompositionEnabled) return false;
+	BOOL result = FALSE;
+	pDwmIsCompositionEnabled(&result);
+	return result != FALSE;
 }

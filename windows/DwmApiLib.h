@@ -8,7 +8,9 @@ class DwmApiLib
 {
 	public:
 		typedef HRESULT (STDAPICALLTYPE *fnDwmSetWindowAttribute)(HWND, DWORD, LPCVOID, DWORD);
+		typedef HRESULT (STDAPICALLTYPE *fnDwmIsCompositionEnabled)(BOOL* enabled);
 
+		fnDwmIsCompositionEnabled pDwmIsCompositionEnabled;
 		fnDwmSetWindowAttribute pDwmSetWindowAttribute;
 
 		DwmApiLib() : hModule(nullptr), initialized(false) { clearPointers(); }
@@ -19,6 +21,7 @@ class DwmApiLib
 
 		void init();
 		void uninit();
+		bool isCompositionEnabled();
 
 		static DwmApiLib instance;
 

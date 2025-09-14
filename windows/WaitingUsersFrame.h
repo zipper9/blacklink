@@ -20,7 +20,7 @@
 #ifndef WAITING_QUEUE_FRAME_H
 #define WAITING_QUEUE_FRAME_H
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
