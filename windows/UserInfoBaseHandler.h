@@ -3,7 +3,8 @@
 
 #include "UserInfoSimple.h"
 #include "WinUtil.h"
-#include "../client/CID.h"
+#include "../client/Text.h"
+#include "../client/ChatOptions.h"
 #include "../client/LogManager.h"
 #include "../client/forward.h"
 
@@ -453,7 +454,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			if (ENABLE(options, USER_LOG))
 			{
 				int flags = MF_STRING;
-				if (!(ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_PRIVATE_CHAT))
+				if (!(ChatOptions::getOptions() & ChatOptions::OPTION_LOG_PRIVATE_CHAT))
 					flags |= MF_DISABLED;
 				menu.AppendMenu(flags, IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 			}

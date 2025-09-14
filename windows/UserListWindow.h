@@ -11,8 +11,8 @@
 #include "UserInfoBaseHandler.h"
 #include "SearchBoxCtrl.h"
 #include "../client/TaskQueue.h"
-#include "../client/ClientManager.h"
 #include "../client/FavoriteManager.h"
+#include "../client/OnlineUserParams.h"
 
 class UserListWindow : public CWindowImpl<UserListWindow>
 {
@@ -55,7 +55,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		void getSelectedUsers(vector<OnlineUserPtr>& v) const;
 		bool selectNick(const tstring& nick);
 		bool selectCID(const CID& cid);
-		void getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const;
+		void getDupUsers(const OnlineUserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const;
 		bool loadIPInfo(const OnlineUserPtr& ou);
 
 		void onIgnoreListChanged();

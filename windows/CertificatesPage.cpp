@@ -20,6 +20,7 @@
 #include "CertificatesPage.h"
 #include "WinUtil.h"
 #include "BrowseFile.h"
+#include "../client/Text.h"
 #include "../client/SettingsManager.h"
 #include "../client/SettingsUtil.h"
 #include "../client/CryptoManager.h"

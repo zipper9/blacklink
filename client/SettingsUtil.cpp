@@ -2,7 +2,6 @@
 #include "SettingsUtil.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
-#include "ClientManager.h"
 #include "DatabaseManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
@@ -16,6 +15,7 @@
 #include "IpTrust.h"
 #include "SimpleXML.h"
 #include "AppPaths.h"
+#include "ChatOptions.h"
 #include "ConfCore.h"
 
 void Conf::getIPSettings(IPSettings& s, bool v6)
@@ -49,7 +49,7 @@ void Conf::getIPSettings(IPSettings& s, bool v6)
 void Util::updateCoreSettings()
 {
 	LogManager::updateSettings();
-	ClientManager::updateSettings();
+	ChatOptions::updateSettings();
 	DatabaseManager::getInstance()->updateSettings();
 	DownloadManager::getInstance()->updateSettings();
 	UploadManager::getInstance()->updateSettings();

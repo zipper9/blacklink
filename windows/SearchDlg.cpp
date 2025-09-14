@@ -7,6 +7,7 @@
 #include "ExMessageBox.h"
 #include "Fonts.h"
 #include "ConfUI.h"
+#include "../client/FileTypes.h"
 #include "../client/Util.h"
 #include "../client/SearchManager.h"
 #include "../client/BusyCounter.h"

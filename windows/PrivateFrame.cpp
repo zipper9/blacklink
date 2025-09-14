@@ -492,7 +492,7 @@ void PrivateFrame::addLine(const Identity& from, bool myMessage, bool thirdPerso
 	string extra;
 	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxEmoticons, textStyle, extra);
 
-	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_PRIVATE_CHAT)
+	if (ChatOptions::getOptions() & ChatOptions::OPTION_LOG_PRIVATE_CHAT)
 	{
 		StringMap params = getFrameLogParams();
 		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);

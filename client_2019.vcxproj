@@ -501,6 +501,7 @@
     <ClCompile Include="client\BufferedSocket.cpp" />
     <ClCompile Include="client\BZUtils.cpp" />
     <ClCompile Include="client\ChatMessage.cpp" />
+    <ClCompile Include="client\ChatOptions.cpp" />
     <ClCompile Include="client\CID.cpp" />
     <ClCompile Include="client\Client.cpp" />
     <ClCompile Include="client\ClientManager.cpp" />
@@ -747,6 +748,7 @@
     <ClInclude Include="client\BaseThread.h" />
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\BusyCounter.h" />
+    <ClInclude Include="client\ChatOptions.h" />
     <ClInclude Include="client\CommandCallback.h" />
     <ClInclude Include="client\Commands.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
@@ -810,6 +812,7 @@
     <ClInclude Include="client\NetworkDevices.h" />
     <ClInclude Include="client\NetworkUtil.h" />
     <ClInclude Include="client\NmdcExtJson.h" />
+    <ClInclude Include="client\OnlineUserParams.h" />
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />

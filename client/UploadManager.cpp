@@ -39,6 +39,7 @@
 #include "Wildcards.h"
 #include "FilteredFile.h"
 #include "GlobalState.h"
+#include "ChatOptions.h"
 #include "ConfCore.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK     = 3000;
@@ -636,7 +637,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 	}
 
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
-	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_SEND_GRANT_MSG)
+	if (ChatOptions::getOptions() & ChatOptions::OPTION_SEND_GRANT_MSG)
 		ClientManager::privateMessage(hintedUser,
 			STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds),
 			ClientBase::PM_FLAG_AUTOMATIC | ClientBase::PM_FLAG_THIRD_PERSON);
@@ -654,7 +655,7 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	}
 	save();
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
-	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_SEND_GRANT_MSG)
+	if (ChatOptions::getOptions() & ChatOptions::OPTION_SEND_GRANT_MSG)
 		ClientManager::privateMessage(hintedUser,
 			STRING(SLOT_REMOVED_MSG),
 			ClientBase::PM_FLAG_AUTOMATIC | ClientBase::PM_FLAG_THIRD_PERSON);

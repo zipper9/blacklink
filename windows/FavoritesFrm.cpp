@@ -24,6 +24,7 @@
 #include "FavHubGroupsDlg.h"
 #include "ExMessageBox.h"
 #include "Fonts.h"
+#include "../client/ClientManager.h"
 #include "../client/FormatUtil.h"
 #include "../client/Util.h"
 #include "../client/ShareManager.h"

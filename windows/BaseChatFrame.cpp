@@ -25,6 +25,7 @@
 #include "NotifUtil.h"
 #include "ConfUI.h"
 #include "../client/GlobalState.h"
+#include "../client/ChatMessage.h"
 #include "../client/SettingsManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/PathUtil.h"

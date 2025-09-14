@@ -30,6 +30,7 @@
 #include "ConfUI.h"
 #include "../client/Util.h"
 #include "../client/FormatUtil.h"
+#include "../client/ClientManager.h"
 #include "../client/UserManager.h"
 #include "../client/ShareManager.h"
 #include "../client/SettingsUtil.h"

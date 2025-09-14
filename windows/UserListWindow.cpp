@@ -5,6 +5,7 @@
 #include "Fonts.h"
 #include "LockRedraw.h"
 #include "UserTypeColors.h"
+#include "../client/ClientManager.h"
 #include "../client/UserManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
@@ -986,7 +987,7 @@ bool UserListWindow::selectCID(const CID& cid)
 	return false;
 }
 
-void UserListWindow::getDupUsers(const ClientManager::UserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const
+void UserListWindow::getDupUsers(const OnlineUserParams& param, const tstring& hubTitle, const string& hubUrl, UINT& idc, vector<UserInfoGuiTraits::DetailsItem>& items) const
 {
 	ASSERT_MAIN_THREAD();
 	auto fm = FavoriteManager::getInstance();

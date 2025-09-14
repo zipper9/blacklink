@@ -27,6 +27,7 @@
 #include "BrowseFile.h"
 #include "MenuHelper.h"
 #include "ConfUI.h"
+#include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PathUtil.h"
 #include "../client/FormatUtil.h"

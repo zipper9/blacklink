@@ -24,6 +24,7 @@
 #include "WinUtil.h"
 #include "Fonts.h"
 #include "CountryList.h"
+#include "../client/ClientManager.h"
 #include "../client/CryptoManager.h"
 #include "../client/FormatUtil.h"
 #include "../client/SettingsUtil.h"

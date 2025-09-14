@@ -6,6 +6,7 @@
 #include "Colors.h"
 #include "Fonts.h"
 #include "ConfUI.h"
+#include "../client/Text.h"
 #include "../client/SettingsManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/LruCache.h"

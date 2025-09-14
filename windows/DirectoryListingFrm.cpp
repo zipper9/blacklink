@@ -2115,37 +2115,37 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 		return 0;
 	}
 
-	string data;
+	tstring data;
 	int i = -1;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
-		string sCopy;
+		tstring sCopy;
 		switch (wID)
 		{
 			case IDC_COPY_FILENAME:
-				sCopy = Text::fromT(ii->columns[COLUMN_FILENAME]);
+				sCopy = ii->columns[COLUMN_FILENAME];
 				break;
 			case IDC_COPY_SIZE:
-				sCopy = Text::fromT(ii->columns[COLUMN_SIZE]);
+				sCopy = ii->columns[COLUMN_SIZE];
 				break;
 			case IDC_COPY_EXACT_SIZE:
-				sCopy = Util::toString(ii->type == ItemInfo::FILE ? ii->file->getSize() : ii->dir->getTotalSize());
+				sCopy = Util::toStringT(ii->type == ItemInfo::FILE ? ii->file->getSize() : ii->dir->getTotalSize());
 				break;
 			case IDC_COPY_PATH:
-				sCopy = Text::fromT(ii->columns[COLUMN_PATH]);
+				sCopy = ii->columns[COLUMN_PATH];
 				break;
 			case IDC_COPY_LINK:
 				if (ii->type == ItemInfo::FILE)
-					sCopy = Util::getMagnet(ii->file->getTTH(), ii->file->getName(), ii->file->getSize());
+					sCopy = Text::toT(Util::getMagnet(ii->file->getTTH(), ii->file->getName(), ii->file->getSize()));
 				break;
 			case IDC_COPY_TTH:
 				if (ii->type == ItemInfo::FILE)
-					sCopy = ii->file->getTTH().toBase32();
+					sCopy = Text::toT(ii->file->getTTH().toBase32());
 				break;
 			case IDC_COPY_WMLINK:
 				if (ii->type == ItemInfo::FILE)
-					sCopy = Util::getWebMagnet(ii->file->getTTH(), ii->file->getName(), ii->file->getSize());
+					sCopy = Text::toT(Util::getWebMagnet(ii->file->getTTH(), ii->file->getName(), ii->file->getSize()));
 				break;
 			default:
 				dcdebug("DIRECTORYLISTINGFRAME DON'T GO HERE\n");
@@ -2154,14 +2154,12 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 		if (!sCopy.empty())
 		{
 			if (!data.empty())
-				data += "\r\n";
+				data += _T("\r\n");
 			data += sCopy;
 		}
 	}
 	if (!data.empty())
-	{
 		WinUtil::setClipboard(data);
-	}
 	return 0;
 }
 

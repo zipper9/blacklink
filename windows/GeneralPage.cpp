@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "ResourceLoader.h"
 #include "KnownClients.h"
+#include "../client/ClientManager.h"
 #include "../client/SimpleXMLReader.h"
 #include "../client/File.h"
 #include "../client/AppPaths.h"

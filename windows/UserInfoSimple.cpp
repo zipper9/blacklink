@@ -38,7 +38,7 @@ tstring UserInfoSimple::getTagIP(const string& tag, Ip4Address ip4, const Ip6Add
 	return Text::toT(out);
 }
 
-tstring UserInfoSimple::getTagIP(const ClientManager::UserParams& params)
+tstring UserInfoSimple::getTagIP(const OnlineUserParams& params)
 {
 	return getTagIP(params.tag, params.ip4, params.ip6);
 }

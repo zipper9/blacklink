@@ -29,6 +29,7 @@
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/ShareManager.h"
 #include "../client/File.h"
+#include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/QueueManager.h"
 #include "../client/ParamExpander.h"
@@ -187,30 +188,38 @@ void WinUtil::uninit()
 
 void WinUtil::setClipboard(const tstring& str)
 {
-	if (!::OpenClipboard(g_mainWnd))
-	{
+	if (!OpenClipboard(g_mainWnd))
 		return;
-	}
-	
+
 	EmptyClipboard();
-	
+
 	// Allocate a global memory object for the text.
-	HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, (str.size() + 1) * sizeof(TCHAR));
-	if (hglbCopy == NULL)
+	size_t size = (str.length() + 1) * sizeof(TCHAR);
+	HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, size);
+	if (!hglbCopy)
 	{
 		CloseClipboard();
 		return;
 	}
-	
+
 	// Lock the handle and copy the text to the buffer.
-	TCHAR* lptstrCopy = (TCHAR*)GlobalLock(hglbCopy);
-	_tcscpy(lptstrCopy, str.c_str());
+	TCHAR* copy = (TCHAR*) GlobalLock(hglbCopy);
+	memcpy(copy, str.c_str(), size);
 	GlobalUnlock(hglbCopy);
-	
+
 	// Place the handle on the clipboard.
+#ifdef _UNICODE
 	SetClipboardData(CF_UNICODETEXT, hglbCopy);
-	
+#else
+	SetClipboardData(CF_TEXT, hglbCopy);
+#endif
+
 	CloseClipboard();
+}
+
+void WinUtil::setClipboard(const string& str)
+{
+	setClipboard(Text::toT(str));
 }
 
 int WinUtil::splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue) noexcept

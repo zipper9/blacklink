@@ -3,6 +3,7 @@
 #include "SlotPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"
+#include "../client/Text.h"
 #include "../client/SettingsManager.h"
 #include "../client/IpGrant.h"
 #include "../client/File.h"

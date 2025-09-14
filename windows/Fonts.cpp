@@ -2,6 +2,7 @@
 #include "Fonts.h"
 #include "WinUtil.h"
 #include "ConfUI.h"
+#include "../client/Text.h"
 #include "../client/StringTokenizer.h"
 #include "../client/SettingsManager.h"
 

@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "ClientManager.h"
+#include "ChatOptions.h"
 #include "SettingsManager.h"
 #include "ConnectionManager.h"
 #include "Client.h"
@@ -47,7 +48,6 @@ ClientManager::ClientMap ClientManager::g_clients;
 OnlineUserList ClientManager::g_UserUpdateQueue;
 std::unique_ptr<RWLock> ClientManager::g_csOnlineUsersUpdateQueue = std::unique_ptr<RWLock>(RWLock::create());
 #endif
-std::atomic_int ClientManager::chatOptions(0);
 
 std::unique_ptr<RWLock> ClientManager::g_csClients = std::unique_ptr<RWLock>(RWLock::create());
 std::unique_ptr<RWLock> ClientManager::g_csOnlineUsers = std::unique_ptr<RWLock> (RWLock::create());
@@ -65,7 +65,7 @@ ClientManager::ClientManager()
 		ss->setString(Conf::NICK, Util::getRandomNick(15));
 	ss->unlockWrite();
 	setMyPID(pid);
-	updateSettings();
+	ChatOptions::updateSettings();
 }
 
 ClientManager::~ClientManager()
@@ -192,7 +192,7 @@ void ClientManager::setUserIP(const UserPtr& user, const IpAddress& ip)
 			ou->getIdentity().setIP6(ip.data.v6);
 }
 
-bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
+bool ClientManager::getUserParams(const UserPtr& user, OnlineUserParams& params)
 {
 	READ_LOCK(*g_csOnlineUsers);
 	const OnlineUserPtr u = getOnlineUserL(user);
@@ -473,7 +473,7 @@ void ClientManager::findOnlineUsers(const CID& cid, OnlineUserList& res, int cli
 
 OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
 {
-	READ_LOCK(*g_csOnlineUsers);	
+	READ_LOCK(*g_csOnlineUsers);
 	auto op = g_onlineUsers.equal_range(cid);
 	for (auto i = op.first; i != op.second; ++i)
 	{
@@ -492,7 +492,7 @@ OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
 string ClientManager::getStringField(const CID& cid, const string& hint, const char* field)
 {
 	READ_LOCK(*g_csOnlineUsers);
-	
+
 	OnlinePairC p;
 	const auto u = findOnlineUserHintL(cid, hint, p);
 	if (u)
@@ -1415,43 +1415,6 @@ StringList ClientManager::getNicksByIp(const IpAddress& ip)
 void ClientManager::updateUser(const OnlineUserPtr& ou)
 {
 	addAsyncOnlineUserUpdated(ou);
-}
-
-void ClientManager::updateSettings()
-{
-	int newOptions = 0;
-	auto ss = SettingsManager::instance.getCoreSettings();
-	ss->lockRead();
-	if (ss->getBool(Conf::IP_IN_CHAT))
-		newOptions |= CHAT_OPTION_SHOW_IP;
-	if (ss->getBool(Conf::COUNTRY_IN_CHAT))
-		newOptions |= CHAT_OPTION_SHOW_COUNTRY;
-	if (ss->getBool(Conf::ISP_IN_CHAT))
-		newOptions |= CHAT_OPTION_SHOW_ISP;
-	if (ss->getBool(Conf::SEND_SLOTGRANT_MSG))
-		newOptions |= CHAT_OPTION_SEND_GRANT_MSG;
-	if (ss->getBool(Conf::SUPPRESS_MAIN_CHAT))
-		newOptions |= CHAT_OPTION_SUPPRESS_MAIN_CHAT;
-	if (ss->getBool(Conf::SUPPRESS_PMS))
-		newOptions |= CHAT_OPTION_SUPPRESS_PM;
-	if (ss->getBool(Conf::IGNORE_ME))
-		newOptions |= CHAT_OPTION_IGNORE_ME;
-	if (ss->getBool(Conf::IGNORE_HUB_PMS))
-		newOptions |= CHAT_OPTION_IGNORE_HUB_PMS;
-	if (ss->getBool(Conf::IGNORE_BOT_PMS))
-		newOptions |= CHAT_OPTION_IGNORE_BOT_PMS;
-	if (ss->getBool(Conf::PROTECT_PRIVATE))
-		newOptions |= CHAT_OPTION_PROTECT_PRIVATE;
-	if (ss->getBool(Conf::LOG_PRIVATE_CHAT))
-		newOptions |= CHAT_OPTION_LOG_PRIVATE_CHAT;
-	if (ss->getBool(Conf::LOG_IF_SUPPRESS_PMS))
-		newOptions |= CHAT_OPTION_LOG_SUPPRESSED;
-	if (ss->getBool(Conf::LOG_MAIN_CHAT))
-		newOptions |= CHAT_OPTION_LOG_MAIN_CHAT;
-	if (ss->getBool(Conf::FILTER_MESSAGES))
-		newOptions |= CHAT_OPTION_FILTER_KICK;
-	ss->unlockRead();
-	chatOptions.store(newOptions);
 }
 
 string ClientManager::getDefaultNick()

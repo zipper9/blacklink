@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "PropPage.h"
+#include "../client/Text.h"
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 

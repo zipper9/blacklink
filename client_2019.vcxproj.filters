@@ -457,6 +457,9 @@
     <ClCompile Include="client\GlobalState.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\ChatOptions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1120,6 +1123,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\GlobalState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\OnlineUserParams.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\ChatOptions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

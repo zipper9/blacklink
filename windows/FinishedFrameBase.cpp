@@ -2,6 +2,7 @@
 #include "FinishedFrameBase.h"
 #include "Colors.h"
 #include "ShellContextMenu.h"
+#include "../client/ClientManager.h"
 #include "../client/QueueManager.h"
 #include "../client/UploadManager.h"
 #include "../client/FormatUtil.h"
@@ -212,7 +213,7 @@ void FinishedFrameBase::addFinishedEntry(const FinishedItemPtr& entry, bool ensu
 
 LRESULT FinishedFrameBase::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	string data;
+	tstring data;
 	int i = -1;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -258,12 +259,12 @@ LRESULT FinishedFrameBase::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		{
 			if (data.empty())
 			{
-				data = Text::fromT(sCopy);
+				data = std::move(sCopy);
 			}
 			else
 			{
-				data += "\r\n";
-				data += Text::fromT(sCopy);
+				data += _T("\r\n");
+				data += sCopy;
 			}
 		}
 	}

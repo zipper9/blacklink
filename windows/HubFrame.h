@@ -21,7 +21,7 @@
 
 #include "../client/User.h"
 #include "../client/Client.h"
-#include "../client/ClientManager.h"
+#include "../client/OnlineUserParams.h"
 #include "../client/UserManagerListener.h"
 #include "../client/TaskQueue.h"
 
@@ -391,7 +391,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void clearAutoComplete() override;
 
 	public:
-		static void addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc);
+		static void addDupUsersToSummaryMenu(const OnlineUserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc);
 
 		StringMap getFrameLogParams() const;
 		void openFrameLog() const;

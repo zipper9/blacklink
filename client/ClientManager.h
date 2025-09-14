@@ -22,6 +22,7 @@
 #include "ClientListener.h"
 #include "ClientManagerListener.h"
 #include "OnlineUser.h"
+#include "OnlineUserParams.h"
 #include "HintedUser.h"
 #include "SearchParam.h"
 #include "Speaker.h"
@@ -41,24 +42,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			PM_NO_USER,
 			PM_DISABLED,
 			PM_ERROR
-		};
-
-		enum
-		{
-			CHAT_OPTION_SHOW_IP            = 0x0001,
-			CHAT_OPTION_SHOW_COUNTRY       = 0x0002,
-			CHAT_OPTION_SHOW_ISP           = 0x0004,
-			CHAT_OPTION_SEND_GRANT_MSG     = 0x0008,
-			CHAT_OPTION_SUPPRESS_MAIN_CHAT = 0x0010,
-			CHAT_OPTION_SUPPRESS_PM        = 0x0020,
-			CHAT_OPTION_IGNORE_ME          = 0x0040,
-			CHAT_OPTION_IGNORE_HUB_PMS     = 0x0080,
-			CHAT_OPTION_IGNORE_BOT_PMS     = 0x0100,
-			CHAT_OPTION_PROTECT_PRIVATE    = 0x0200,
-			CHAT_OPTION_LOG_PRIVATE_CHAT   = 0x0400,
-			CHAT_OPTION_LOG_SUPPRESSED     = 0x0800,
-			CHAT_OPTION_LOG_MAIN_CHAT      = 0x1000,
-			CHAT_OPTION_FILTER_KICK        = 0x2000
 		};
 
 		ClientBasePtr getClient(const string& hubURL);
@@ -87,10 +70,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void cancelSearch(uint64_t owner);
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);
-		static void updateSettings();
 		static string getDefaultNick();
 		static bool isNickEmpty();
-		static int getChatOptions() { return chatOptions; }
 
 		static UserPtr getUser(const string& nick, const string& hubUrl);
 		static UserPtr createUser(const CID& cid, const string& nick, const string& hubUrl);
@@ -112,19 +93,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 
 		static string findMyNick(const string& hubUrl);
 
-		struct UserParams
-		{
-			int64_t bytesShared;
-			int slots;
-			int limit;
-			Ip4Address ip4;
-			Ip6Address ip6;
-			std::string tag;
-			std::string nick;
-		};
-		
-		static bool getUserParams(const UserPtr& user, UserParams& params);
-		
+		static bool getUserParams(const UserPtr& user, OnlineUserParams& params);
+
 #define CREATE_LOCK_INSTANCE_CM(data, CS)\
 		class LockInstance##CS \
 		{\
@@ -153,7 +123,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool isOp(const string& hubUrl);
 		/** Constructs a synthetic, hopefully unique CID */
 		static CID makeCid(const string& nick, const string& hubUrl);
-		
+
 		void putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept;
 		void putOffline(const OnlineUserPtr& ou, bool disconnectFlag = false) noexcept;
 		static void removeOnlineUser(const OnlineUserPtr& ou) noexcept;
@@ -194,7 +164,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 
 		void updateUser(const OnlineUserPtr& ou);
 
-	private:	
+	private:
 		typedef std::unordered_map<string, ClientBasePtr, NoCaseStringHash, NoCaseStringEq> ClientMap;
 		static ClientMap g_clients;
 		static std::unique_ptr<RWLock> g_csClients;
@@ -208,7 +178,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		typedef OnlineMap::const_iterator OnlineIterC;
 		typedef pair<OnlineIter, OnlineIter> OnlinePair;
 		typedef pair<OnlineIterC, OnlineIterC> OnlinePairC;
-		
+
 		static OnlineMap g_onlineUsers;
 		static std::unique_ptr<RWLock> g_csOnlineUsers;
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
@@ -221,16 +191,14 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static CID cid;
 		static CID pid;
 
-		static std::atomic_int chatOptions;
-
 		friend class Singleton<ClientManager>;
 		friend class NmdcHub;
-		
+
 		ClientManager();
 		~ClientManager();
-		
+
 		static void updateNick(const OnlineUserPtr& ou);
-		
+
 		static OnlineUserPtr findOnlineUserHintL(const CID& cid, const string& hintUrl)
 		{
 			OnlinePairC p;
@@ -242,7 +210,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		* @return OnlineUserPtr found by CID and hint; discard any user that doesn't match the hint.
 		*/
 		static OnlineUserPtr findOnlineUserHintL(const CID& cid, const string& hintUrl, OnlinePairC& p);
-		
+
 		void fireIncomingSearch(int protocol, const string& seeker, const string& hub, const string& filter, ClientManagerListener::SearchReply reply);
 
 		// ClientListener

@@ -19,7 +19,7 @@
 #include "WinUtil.h"
 #include "Colors.h"
 #include "NotifUtil.h"
-#include "../client/OnlineUser.h"
+#include "../client/ClientManager.h"
 #include "../client/Client.h"
 #include "../client/Util.h"
 #include "../client/GlobalState.h"

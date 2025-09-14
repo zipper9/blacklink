@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "DialogLayout.h"
 #include "ConfUI.h"
+#include "../client/Text.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConfCore.h"
 

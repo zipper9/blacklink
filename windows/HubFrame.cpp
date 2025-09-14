@@ -691,7 +691,7 @@ void HubFrame::createTabMenu()
 			isAutoConnect = fhe->getAutoConnect();
 		}
 		fm->releaseFavoriteHubEntryPtr(fhe);
-		if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_MAIN_CHAT)
+		if (ChatOptions::getOptions() & ChatOptions::OPTION_LOG_MAIN_CHAT)
 		{
 			tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 			tabMenu.AppendMenu(MF_SEPARATOR);
@@ -1117,7 +1117,7 @@ void HubFrame::processTasks()
 				{
 					const StatusTask& task = static_cast<StatusTask&>(*i->second);
 					BaseChatFrame::addLine(Text::toT(task.str), 0, Colors::TEXT_STYLE_SYSTEM_MESSAGE);
-					if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_MAIN_CHAT)
+					if (ChatOptions::getOptions() & ChatOptions::OPTION_LOG_MAIN_CHAT)
 					{
 						StringMap params;
 						params["message"] = task.str;
@@ -1605,7 +1605,7 @@ void HubFrame::addLine(const Identity& from, bool myMessage, bool thirdPerson, c
 	{
 		SHOW_POPUP(POPUP_ON_CHAT_LINE, line, TSTRING(CHAT_MESSAGE));
 	}
-	if (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_MAIN_CHAT)
+	if (ChatOptions::getOptions() & ChatOptions::OPTION_LOG_MAIN_CHAT)
 	{
 		StringMap params;
 		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
@@ -2218,7 +2218,7 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 	Util::convertToDos(convertedLine);
 	addTask(ADD_STATUS_LINE, new StatusTask(convertedLine,
 		!(statusFlags & ClientListener::FLAG_KICK_MSG) ||
-		!(ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_FILTER_KICK), false));
+		!(ChatOptions::getOptions() & ChatOptions::OPTION_FILTER_KICK), false));
 }
 
 void HubFrame::on(ClientListener::SettingsLoaded, const Client*) noexcept
@@ -2670,7 +2670,7 @@ void HubFrame::openUserLog()
 	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
 }
 
-void HubFrame::addDupUsersToSummaryMenu(const ClientManager::UserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc)
+void HubFrame::addDupUsersToSummaryMenu(const OnlineUserParams& param, vector<UserInfoGuiTraits::DetailsItem>& detailsItems, UINT& idc)
 {
 	detailsItems.clear();
 	{

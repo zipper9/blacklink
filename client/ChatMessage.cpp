@@ -21,7 +21,7 @@
 #include "Util.h"
 #include "LocationUtil.h"
 #include "ClientManager.h"
-#include "SettingsManager.h"
+#include "ChatOptions.h"
 
 string ChatMessage::format() const
 {
@@ -67,18 +67,18 @@ void ChatMessage::translateMe(string& text, bool& thirdPerson)
 string ChatMessage::getExtra(const Identity& id)
 {
 	string result;
-	int chatOptions = ClientManager::getChatOptions();
+	int chatOptions = ChatOptions::getOptions();
 	int flags = 0;
-	if (chatOptions & ClientManager::CHAT_OPTION_SHOW_COUNTRY)
+	if (chatOptions & ChatOptions::OPTION_SHOW_COUNTRY)
 		flags |= IPInfo::FLAG_COUNTRY;
-	if (chatOptions & ClientManager::CHAT_OPTION_SHOW_ISP)
+	if (chatOptions & ChatOptions::OPTION_SHOW_ISP)
 		flags |= IPInfo::FLAG_LOCATION;
-	if ((chatOptions & ClientManager::CHAT_OPTION_SHOW_IP) || flags)
+	if ((chatOptions & ChatOptions::OPTION_SHOW_IP) || flags)
 	{
 		IpAddress ip = id.getConnectIP();
 		if (Util::isValidIp(ip) && !id.isIPCached(ip.type))
 		{
-			if (chatOptions & ClientManager::CHAT_OPTION_SHOW_IP)
+			if (chatOptions & ChatOptions::OPTION_SHOW_IP)
 				result += Util::printIpAddress(ip);
 			if (flags)
 			{

@@ -27,6 +27,7 @@
 #include "UxThemeLib.h"
 #include "DwmApiLib.h"
 #include "../client/DCPlusPlus.h"
+#include "../client/ClientManager.h"
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ThrottleManager.h"

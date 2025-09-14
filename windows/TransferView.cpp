@@ -18,7 +18,7 @@
 
 #include "stdafx.h"
 
-#include "../client/ResourceManager.h"
+#include "../client/ClientManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConnectionManager.h"
 #include "../client/DownloadManager.h"

@@ -1,0 +1,28 @@
+#ifndef CHAT_OPTIONS_H_
+#define CHAT_OPTIONS_H_
+
+namespace ChatOptions
+{
+	enum
+	{
+		OPTION_SHOW_IP            = 0x0001,
+		OPTION_SHOW_COUNTRY       = 0x0002,
+		OPTION_SHOW_ISP           = 0x0004,
+		OPTION_SEND_GRANT_MSG     = 0x0008,
+		OPTION_SUPPRESS_MAIN_CHAT = 0x0010,
+		OPTION_SUPPRESS_PM        = 0x0020,
+		OPTION_IGNORE_ME          = 0x0040,
+		OPTION_IGNORE_HUB_PMS     = 0x0080,
+		OPTION_IGNORE_BOT_PMS     = 0x0100,
+		OPTION_PROTECT_PRIVATE    = 0x0200,
+		OPTION_LOG_PRIVATE_CHAT   = 0x0400,
+		OPTION_LOG_SUPPRESSED     = 0x0800,
+		OPTION_LOG_MAIN_CHAT      = 0x1000,
+		OPTION_FILTER_KICK        = 0x2000
+	};
+
+	int getOptions();
+	void updateSettings();
+}
+
+#endif // CHAT_OPTIONS_H_

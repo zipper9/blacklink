@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "UserMessages.h"
 #include "ConfUI.h"
+#include "../client/Text.h"
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
 

@@ -23,6 +23,7 @@
 #include "PopupManager.h"
 #include "DialogLayout.h"
 #include "ConfUI.h"
+#include "../client/ClientManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/AdcHub.h"
 #include "../client/Random.h"

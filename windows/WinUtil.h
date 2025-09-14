@@ -85,7 +85,7 @@ namespace WinUtil
 	void showInputError(HWND hwndCtl, const tstring& text);
 
 	void setClipboard(const tstring& str);
-	inline void setClipboard(const string& str) { setClipboard(Text::toT(str)); }
+	void setClipboard(const string& str);
 
 	void copyMagnet(const TTHValue& hash, const string& file, int64_t size);
 

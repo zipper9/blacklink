@@ -2,6 +2,7 @@
 #include "GeoIPPage.h"
 #include "DialogLayout.h"
 #include "WinUtil.h"
+#include "../client/Text.h"
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
 #include "../client/FormatUtil.h"

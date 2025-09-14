@@ -2,6 +2,7 @@
 #include "DialogLayout.h"
 #include "ControlTypes.h"
 #include "WinUtil.h"
+#include "../client/Text.h"
 #include <algorithm>
 
 using namespace DialogLayout;

@@ -4,6 +4,7 @@
 #include "HubFrame.h"
 #include "QueueFrame.h"
 #include "MenuHelper.h"
+#include "../client/ClientManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/FormatUtil.h"
 #include "../client/Util.h"
@@ -243,7 +244,7 @@ void UserInfoGuiTraits::addSummaryMenu(const OnlineUserPtr& ou)
 	const UserPtr& user = ou->getUser();
 	userSummaryMenu.InsertSeparatorLast(Text::toT(ou->getIdentity().getNick()));
 
-	ClientManager::UserParams params;
+	OnlineUserParams params;
 	if (ClientManager::getUserParams(user, params))
 	{
 		tstring userInfo = TSTRING(SLOTS) + _T(": ") + Util::toStringT(params.slots) + _T(", ") + TSTRING(SHARED) + _T(": ") + Util::formatBytesT(params.bytesShared);

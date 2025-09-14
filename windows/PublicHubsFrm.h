@@ -25,6 +25,7 @@
 #include "SearchBoxCtrl.h"
 #include "StatusBarCtrl.h"
 #include "../client/HublistManager.h"
+#include "../client/ClientManagerListener.h"
 
 class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, IDC_PUBLIC_HUBS>,

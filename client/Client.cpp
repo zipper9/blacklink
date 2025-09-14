@@ -37,6 +37,7 @@
 #include "Resolver.h"
 #include "Random.h"
 #include "Util.h"
+#include "ChatOptions.h"
 #include "ConfCore.h"
 
 static const unsigned USER_CHECK_INTERVAL = 60000;
@@ -790,7 +791,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 			return false;
 		return true;
 	}
-	int chatOptions = ClientManager::getChatOptions();
+	int chatOptions = ChatOptions::getOptions();
 	UserManager::PasswordStatus passwordStatus;
 	bool isOpen = UserManager::getInstance()->checkPMOpen(message, passwordStatus);
 	if (passwordStatus == UserManager::CHECKED && response)
@@ -804,11 +805,11 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 		return true;
 	if (suppressChatAndPM)
 		return false;
-	if (message.thirdPerson && (chatOptions & ClientManager::CHAT_OPTION_IGNORE_ME))
+	if (message.thirdPerson && (chatOptions & ChatOptions::OPTION_IGNORE_ME))
 		return false;
 	if (UserManager::getInstance()->isInIgnoreList(message.replyTo->getIdentity().getNick()))
 		return false;
-	if (chatOptions & ClientManager::CHAT_OPTION_SUPPRESS_PM)
+	if (chatOptions & ChatOptions::OPTION_SUPPRESS_PM)
 	{
 		FavoriteUser::MaskType flags;
 		int uploadLimit;
@@ -818,7 +819,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	}
 	if (message.replyTo->getIdentity().isHub())
 	{
-		if ((chatOptions & ClientManager::CHAT_OPTION_IGNORE_HUB_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
+		if ((chatOptions & ChatOptions::OPTION_IGNORE_HUB_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
 			fire(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
@@ -827,7 +828,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 	}
 	if (message.replyTo->getIdentity().isBot())
 	{
-		if ((chatOptions & ClientManager::CHAT_OPTION_IGNORE_BOT_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
+		if ((chatOptions & ChatOptions::OPTION_IGNORE_BOT_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
 			fire(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
@@ -835,7 +836,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message, string* respons
 		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
 	}
 	auto pmFlags = FavoriteManager::getInstance()->getFlags(message.replyTo->getUser());
-	if ((chatOptions & ClientManager::CHAT_OPTION_PROTECT_PRIVATE) &&
+	if ((chatOptions & ChatOptions::OPTION_PROTECT_PRIVATE) &&
 	    !(pmFlags & (FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE)))
 	{
 		switch (passwordStatus)
@@ -881,10 +882,10 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 		return nick.empty() || !UserManager::getInstance()->isInIgnoreList(nick);
 	if (isMe(message.from))
 		return true;
-	int options = ClientManager::getChatOptions();
-	if (message.thirdPerson && (options & ClientManager::CHAT_OPTION_IGNORE_ME))
+	int options = ChatOptions::getOptions();
+	if (message.thirdPerson && (options & ChatOptions::OPTION_IGNORE_ME))
 		return false;
-	if ((options & ClientManager::CHAT_OPTION_SUPPRESS_MAIN_CHAT) && !isOp())
+	if ((options & ChatOptions::OPTION_SUPPRESS_MAIN_CHAT) && !isOp())
 		return false;
 	if (UserManager::getInstance()->isInIgnoreList(message.from->getIdentity().getNick()))
 		return false;
@@ -893,7 +894,7 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 
 void Client::logPM(const ChatMessage& message) const
 {
-	if ((ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_PRIVATE_CHAT) &&
+	if ((ChatOptions::getOptions() & ChatOptions::OPTION_LOG_PRIVATE_CHAT) &&
 	    message.from && message.from->getUser())
 	{
 		const Identity& from = message.from->getIdentity();
@@ -916,7 +917,7 @@ void Client::processIncomingPM(std::unique_ptr<ChatMessage>& message, string& re
 	else
 	{
 		logPM(*message);
-		if (response.empty() && (ClientManager::getChatOptions() & ClientManager::CHAT_OPTION_LOG_SUPPRESSED))
+		if (response.empty() && (ChatOptions::getOptions() & ChatOptions::OPTION_LOG_SUPPRESSED))
 		{
 			string hubName = getHubName();
 			const string& hubUrl = getHubUrl();
