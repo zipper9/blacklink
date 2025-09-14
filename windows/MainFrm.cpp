@@ -285,14 +285,14 @@ void MainFrame::createMainMenu()
 	ctrlCmdBar.Create(m_hWnd, rcDefault, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE);
 	ctrlCmdBar.SetImageSize(16, 16);
 	m_hMenu = MenuHelper::mainMenu;
-	
+
 	ctrlCmdBar.AttachMenu(m_hMenu);
-	
+
 	CImageList tmp;
-	
+
 	ResourceLoader::LoadImageList(IDR_TOOLBAR_SMALL, toolbar16, 16, 16);
 	ResourceLoader::LoadImageList(IDR_MEDIA_TOOLBAR_SMALL, tmp, 16, 16);
-	
+
 	int imageCount = tmp.GetImageCount();
 	for (int i = 0; i < imageCount; i++)
 	{
@@ -552,14 +552,14 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	ctrlLastLines.AddTool(&ti);
 	ctrlLastLines.SetDelayTime(TTDT_AUTOPOP, 15000);
 	ctrlLastLines.SetMaxTipWidth(400);
-	
+
 	CreateMDIClient();
 	ctrlCmdBar.SetMDIClient(m_hWndMDIClient);
 	WinUtil::mdiClient = m_hWndMDIClient;
 	ctrlTab.updateSettings(false);
 	ctrlTab.Create(m_hWnd, rcDefault);
 	WinUtil::tabCtrl = &ctrlTab;
-	
+
 	bool showTransferView = ss->getBool(Conf::SHOW_TRANSFERVIEW);
 	transferView.Create(m_hWnd);
 	toggleTransferView(showTransferView);
@@ -2198,9 +2198,10 @@ void MainFrame::storeWindowsPos()
 void MainFrame::prepareNonMaximized()
 {
 	ctrlTab.ShowWindow(SW_HIDE);
-	CRect rect;
+	RECT rect;
 	GetClientRect(&rect);
 	UpdateBarsPosition(rect, TRUE);
+	updateStatusBar(rect, false);
 	SetSplitterRect(&rect);
 	HubFrame::prepareNonMaximized();
 	PrivateFrame::prepareNonMaximized();
@@ -2377,28 +2378,7 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		RECT rect;
 		GetClientRect(&rect);
 		UpdateBarsPosition(rect, resizeBars);
-
-		int maxTextWidth = 0;
-		if (showStatusBar)
-		{
-			HDC hdc = GetDC();
-			int statusHeight = ctrlStatus.getPrefHeight(hdc);
-			rect.bottom -= statusHeight;
-			RECT rcStatus = rect;
-			rcStatus.top = rect.bottom;
-			rcStatus.bottom = rcStatus.top + statusHeight;
-			ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
-			ctrlStatus.updateLayout(hdc);
-			ReleaseDC(hdc);
-			updateHashProgressCtrl();
-			maxTextWidth = ctrlStatus.getPaneWidth(0);
-		}
-		else
-		{
-			ctrlStatus.ShowWindow(SW_HIDE);
-			ctrlHashProgress.ShowWindow(SW_HIDE);
-		}
-		ctrlLastLines.SetMaxTipWidth(std::max(maxTextWidth, 400));
+		updateStatusBar(rect, true);
 
 		CRect rc  = rect;
 		CRect rc2 = rect;
@@ -2425,6 +2405,32 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		}
 		SetSplitterRect(rc2);
 	}
+}
+
+void MainFrame::updateStatusBar(RECT& rect, bool setTooltipWidth)
+{
+	int maxTextWidth = 0;
+	if (showStatusBar)
+	{
+		HDC hdc = GetDC();
+		int statusHeight = ctrlStatus.getPrefHeight(hdc);
+		rect.bottom -= statusHeight;
+		RECT rcStatus = rect;
+		rcStatus.top = rect.bottom;
+		rcStatus.bottom = rcStatus.top + statusHeight;
+		ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+		ctrlStatus.updateLayout(hdc);
+		ReleaseDC(hdc);
+		updateHashProgressCtrl();
+		maxTextWidth = ctrlStatus.getPaneWidth(0);
+	}
+	else
+	{
+		ctrlStatus.ShowWindow(SW_HIDE);
+		ctrlHashProgress.ShowWindow(SW_HIDE);
+	}
+	if (setTooltipWidth)
+		ctrlLastLines.SetMaxTipWidth(std::max(maxTextWidth, 400));
 }
 
 void MainFrame::updateHashProgressCtrl()

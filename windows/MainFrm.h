@@ -607,6 +607,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool setSpeedLimit(bool upload, int minValue, int maxValue);
 		void addStatusMessage(const tstring& msg);
 		void updateSettings();
+		void updateStatusBar(RECT& rect, bool setTooltipWidth);
 		void updateHashProgressCtrl();
 
 		void setTrayIcon(int newIcon);
