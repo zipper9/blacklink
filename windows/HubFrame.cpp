@@ -1169,7 +1169,7 @@ void HubFrame::onUserParts(const OnlineUserPtr& ou)
 	}
 }
 
-void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
+void HubFrame::UpdateLayout(BOOL)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -1180,7 +1180,6 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	UpdateBarsPosition(rect, resizeBars);
 	if (ctrlStatus)
 	{
 		int hubPic = 0;

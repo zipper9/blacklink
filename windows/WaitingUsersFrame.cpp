@@ -209,7 +209,7 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	}
 }
 
-void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void WaitingUsersFrame::UpdateLayout(BOOL)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -217,7 +217,6 @@ void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	UpdateBarsPosition(rect, bResizeBars);
 
 	if (ctrlStatus)
 	{

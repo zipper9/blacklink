@@ -789,15 +789,10 @@ LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	}
 }
 
-void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
+void FavoriteHubsFrame::UpdateLayout(BOOL)
 {
 	WINDOWPLACEMENT wp = { sizeof(wp) };
 	GetWindowPlacement(&wp);
-
-	RECT rect;
-	GetClientRect(&rect);
-	// position bars and offset their dimensions
-	UpdateBarsPosition(rect, resizeBars);
 
 	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
 		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
@@ -813,35 +808,36 @@ void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		buttonDeltaWidth = WinUtil::dialogUnitsToPixelsX(10, xdu);
 	}
 
-	CRect rc = rect;
+	RECT rc;
+	GetClientRect(&rc);
 	rc.bottom -= buttonHeight + 2*vertMargin - splitBarHeight;
-	ctrlHubs.MoveWindow(rc);
+	ctrlHubs.MoveWindow(&rc);
 
 	rc.top = rc.bottom + vertMargin;
 	rc.bottom = rc.top + buttonHeight;
 
 	rc.left = horizMargin;
 	rc.right = rc.left + buttonWidth;
-	ctrlNew.MoveWindow(rc);
+	ctrlNew.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlProps.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlProps.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlRemove.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlRemove.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
-	ctrlUp.MoveWindow(rc);
+	OffsetRect(&rc, buttonSpace + buttonWidth + horizMargin, 0);
+	ctrlUp.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlDown.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlDown.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
-	ctrlConnect.MoveWindow(rc);
+	OffsetRect(&rc, buttonSpace + buttonWidth + horizMargin, 0);
+	ctrlConnect.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
+	OffsetRect(&rc, buttonSpace + buttonWidth + horizMargin, 0);
 	rc.right += buttonDeltaWidth;
-	ctrlManageGroups.MoveWindow(rc);
+	ctrlManageGroups.MoveWindow(&rc);
 }
 
 LRESULT FavoriteHubsFrame::onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

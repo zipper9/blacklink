@@ -2322,7 +2322,7 @@ void QueueFrame::updateQueueStatus()
 	}
 }
 
-void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void QueueFrame::UpdateLayout(BOOL)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -2330,7 +2330,6 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	UpdateBarsPosition(rect, bResizeBars);
 
 	if (ctrlStatus)
 	{

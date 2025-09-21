@@ -567,7 +567,7 @@ void PrivateFrame::openFrameLog() const
 	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_USER));
 }
 
-void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void PrivateFrame::UpdateLayout(BOOL)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -576,7 +576,6 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 	RECT rect;
 	GetClientRect(&rect);
-	UpdateBarsPosition(rect, bResizeBars);
 	if (ctrlStatus)
 	{
 		HDC hdc = GetDC();

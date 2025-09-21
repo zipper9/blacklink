@@ -184,15 +184,10 @@ LRESULT ADLSearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	}
 }
 
-void ADLSearchFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void ADLSearchFrame::UpdateLayout(BOOL)
 {
 	WINDOWPLACEMENT wp = { sizeof(wp) };
 	GetWindowPlacement(&wp);
-
-	RECT rect;
-	GetClientRect(&rect);
-	// Position bars and offset their dimensions
-	UpdateBarsPosition(rect, bResizeBars);
 
 	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
 		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
@@ -207,9 +202,10 @@ void ADLSearchFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		buttonSpace = WinUtil::dialogUnitsToPixelsX(8, xdu);
 	}
 
-	CRect rc = rect;
+	RECT rc;
+	GetClientRect(&rc);
 	rc.bottom -= buttonHeight + 2*vertMargin - splitBarHeight;
-	ctrlList.MoveWindow(rc);
+	ctrlList.MoveWindow(&rc);
 
 	//const long bwidth = 90;
 	//const long bspace = 10;
@@ -217,22 +213,22 @@ void ADLSearchFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	rc.bottom = rc.top + buttonHeight;
 	rc.left = horizMargin;
 	rc.right = rc.left + buttonWidth;
-	ctrlAdd.MoveWindow(rc);
+	ctrlAdd.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlEdit.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlEdit.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlRemove.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlRemove.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
-	ctrlMoveUp.MoveWindow(rc);
+	OffsetRect(&rc, buttonSpace + buttonWidth + horizMargin, 0);
+	ctrlMoveUp.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlMoveDown.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlMoveDown.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
-	ctrlHelp.MoveWindow(rc);
+	OffsetRect(&rc, buttonSpace + buttonWidth + horizMargin, 0);
+	ctrlHelp.MoveWindow(&rc);
 }
 
 // Keyboard shortcuts

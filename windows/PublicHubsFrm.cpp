@@ -374,11 +374,10 @@ LRESULT PublicHubsFrame::onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	return 0;
 }
 
-void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void PublicHubsFrame::UpdateLayout(BOOL)
 {
 	RECT rect;
 	GetClientRect(&rect);
-	UpdateBarsPosition(rect, bResizeBars);
 
 	if (ctrlStatus)
 	{

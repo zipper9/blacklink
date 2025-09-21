@@ -2037,7 +2037,7 @@ LRESULT DirectoryListingFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 	return 0;
 }
 
-void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void DirectoryListingFrame::UpdateLayout(BOOL)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -2045,7 +2045,6 @@ void DirectoryListingFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	RECT rect;
 	GetClientRect(&rect);
 	RECT prevRect = rect;
-	UpdateBarsPosition(rect, bResizeBars);
 
 	if (ctrlStatus)
 	{

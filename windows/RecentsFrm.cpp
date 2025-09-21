@@ -283,15 +283,10 @@ LRESULT RecentHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	}
 }
 
-void RecentHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
+void RecentHubsFrame::UpdateLayout(BOOL)
 {
 	WINDOWPLACEMENT wp = { sizeof(wp) };
 	GetWindowPlacement(&wp);
-
-	RECT rect;
-	GetClientRect(&rect);
-	// position bars and offset their dimensions
-	UpdateBarsPosition(rect, bResizeBars);
 
 	int splitBarHeight = wp.showCmd == SW_MAXIMIZE &&
 		SettingsManager::instance.getUiSettings()->getBool(Conf::SHOW_TRANSFERVIEW) ?
@@ -306,21 +301,22 @@ void RecentHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		buttonSpace = WinUtil::dialogUnitsToPixelsX(8, xdu);
 	}
 
-	CRect rc = rect;
+	RECT rc;
+	GetClientRect(&rc);
 	rc.bottom -= buttonHeight + 2*vertMargin - splitBarHeight;
-	ctrlHubs.MoveWindow(rc);
+	ctrlHubs.MoveWindow(&rc);
 
 	rc.top = rc.bottom + vertMargin;
 	rc.bottom = rc.top + buttonHeight;
 	rc.left = horizMargin;
 	rc.right = rc.left + buttonWidth;
-	ctrlConnect.MoveWindow(rc);
+	ctrlConnect.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonSpace + buttonWidth + horizMargin, 0);
-	ctrlRemove.MoveWindow(rc);
+	OffsetRect(&rc, buttonSpace + buttonWidth + horizMargin, 0);
+	ctrlRemove.MoveWindow(&rc);
 
-	rc.OffsetRect(buttonWidth + horizMargin, 0);
-	ctrlRemoveAll.MoveWindow(rc);
+	OffsetRect(&rc, buttonWidth + horizMargin, 0);
+	ctrlRemoveAll.MoveWindow(&rc);
 }
 
 LRESULT RecentHubsFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

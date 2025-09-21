@@ -1554,7 +1554,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 }
 
-void SearchFrame::UpdateLayout(BOOL resizeBars)
+void SearchFrame::UpdateLayout(BOOL)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -1562,7 +1562,6 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	tooltip.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
-	UpdateBarsPosition(rect, resizeBars);
 
 	int xdu, ydu;
 	WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
