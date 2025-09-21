@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FinishedFrameBase.h"
 #include "Colors.h"
+#include "Fonts.h"
 #include "ShellContextMenu.h"
 #include "../client/ClientManager.h"
 #include "../client/QueueManager.h"
@@ -79,6 +80,10 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 
+	ctrlStatus.setAutoGripper(true);
+	ctrlStatus.Create(hwnd, 0, nullptr, WS_CHILD | WS_CLIPCHILDREN);
+	ctrlStatus.setFont(Fonts::g_systemFont, false);
+
 	ctrlList.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, id);
 	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
@@ -116,7 +121,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 
 	g_TransferTreeImage.init();
 	ctrlTree.SetImageList(g_TransferTreeImage.getIconList(), TVSIL_NORMAL);
-			
+
 	rootItem = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
 		transferType == e_TransferDownload ? CTSTRING(FINISHED_DOWNLOADS) : CTSTRING(FINISHED_UPLOADS),
 		2, // nImage
@@ -130,7 +135,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 
 	loading = true;
 	ctrlTree.EnableWindow(FALSE);
-	ctrlStatus.SetText(0, CTSTRING(LOADING_DATA));
+	ctrlStatus.setPaneText(STATUS_TEXT, TSTRING(LOADING_DATA));
 
 	loader.parent = this;
 	loader.hwnd = hwnd;
@@ -171,7 +176,7 @@ void FinishedFrameBase::insertData()
 
 void FinishedFrameBase::addStatusLine(const tstring& text)
 {
-	ctrlStatus.SetText(0, (Text::toT(Util::getShortTimeString()) + _T(' ') + text).c_str());
+	ctrlStatus.setPaneText(STATUS_TEXT, Text::toT(Util::getShortTimeString()) + _T(' ') + text);
 }
 
 void FinishedFrameBase::updateStatus()
@@ -179,10 +184,10 @@ void FinishedFrameBase::updateStatus()
 	if (totalCountLast != totalCount)
 	{
 		totalCountLast = totalCount;
-		ctrlStatus.SetText(1, TPLURAL_F(PLURAL_ITEMS, totalCount).c_str());
-		ctrlStatus.SetText(2, Util::formatBytesT(totalBytes).c_str());
-		ctrlStatus.SetText(3, Util::formatBytesT(totalActual).c_str());
-		ctrlStatus.SetText(4, (Util::formatBytesT(totalCount > 0 ? totalSpeed / totalCount : 0) + _T('/') + TSTRING(S)).c_str());
+		ctrlStatus.setPaneText(STATUS_COUNT, TPLURAL_F(PLURAL_ITEMS, totalCount));
+		ctrlStatus.setPaneText(STATUS_BYTES, Util::formatBytesT(totalBytes));
+		ctrlStatus.setPaneText(STATUS_ACTUAL, Util::formatBytesT(totalActual));
+		ctrlStatus.setPaneText(STATUS_SPEED, Util::formatBytesT(totalCount > 0 ? totalSpeed / totalCount : 0) + _T('/') + TSTRING(S));
 		//setCountMessages(totalCount); -- not used
 	}
 }
@@ -400,7 +405,7 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 			loader.join();
 			if (!abortFlag)
 			{
-				ctrlStatus.SetText(0, _T(""));
+				ctrlStatus.setPaneText(STATUS_TEXT, Util::emptyStringT);
 				insertData();
 				ctrlTree.EnableWindow(TRUE);
 			}

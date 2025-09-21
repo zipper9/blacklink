@@ -25,6 +25,7 @@
 #include "WinUtil.h"
 #include "ImageLists.h"
 #include "SplitWnd.h"
+#include "StatusBarCtrl.h"
 #include "../client/FinishedManager.h"
 #include "../client/SettingsManager.h"
 #include "../client/DatabaseManager.h"
@@ -89,6 +90,16 @@ class FinishedFrameBase
 			SPEAK_FINISHED
 		};
 
+		enum
+		{
+			STATUS_TEXT,
+			STATUS_COUNT,
+			STATUS_BYTES,
+			STATUS_ACTUAL,
+			STATUS_SPEED,
+			STATUS_LAST
+		};
+
 		class FinishedItemInfo
 		{
 			public:
@@ -139,7 +150,7 @@ class FinishedFrameBase
 		bool loading;
 		std::atomic_bool abortFlag;
 
-		CStatusBarCtrl ctrlStatus;
+		StatusBarCtrl ctrlStatus;
 		CMenu copyMenu;
 		OMenu directoryMenu;
 
@@ -168,7 +179,7 @@ class FinishedFrameBase
 		void insertData();
 		void addStatusLine(const tstring& line);
 		void updateStatus();
-		void updateList(const FinishedItemList& fl);		
+		void updateList(const FinishedItemList& fl);
 		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);
 		void removeDroppedItems(int64_t maxTempId);
 		void appendMenuItems(OMenu& menu, bool fileExists, const CID& userCid, int& copyMenuPos);
@@ -205,14 +216,26 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 {
 	public:
 		typedef MDITabChildWindowImpl<T> baseClass;
-		
+
 		FinishedFrame(eTypeTransfer transferType) :
 			FinishedFrameBase(transferType),
 			treeContainer(WC_TREEVIEW, this, FINISHED_TREE_MESSAGE_MAP),
 			listContainer(WC_LISTVIEW, this, FINISHED_LIST_MESSAGE_MAP)
 		{
+			StatusBarCtrl::PaneInfo pi;
+			pi.minWidth = 0;
+			pi.maxWidth = INT_MAX;
+			pi.weight = 1;
+			pi.align = StatusBarCtrl::ALIGN_LEFT;
+			pi.flags = 0;
+			ctrlStatus.addPane(pi);
+
+			pi.flags = StatusBarCtrl::PANE_FLAG_HIDE_EMPTY | StatusBarCtrl::PANE_FLAG_NO_SHRINK;
+			pi.weight = 0;
+			for (int i = 1; i < STATUS_LAST; ++i)
+				ctrlStatus.addPane(pi);
 		}
-		
+
 	protected:
 		BEGIN_MSG_MAP(T)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
@@ -253,7 +276,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		CHAIN_MSG_MAP(SplitWndImpl<FinishedFrame>)
 		ALT_MSG_MAP(FINISHED_TREE_MESSAGE_MAP)
 		ALT_MSG_MAP(FINISHED_LIST_MESSAGE_MAP)
-		
+
 		END_MSG_MAP()
 
 		static const int columnId[FinishedItem::COLUMN_LAST];
@@ -263,10 +286,6 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			this->CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-			ctrlStatus.Attach(this->m_hWndStatusBar);
-			ctrlStatus.ModifyStyleEx(0, WS_EX_COMPOSITED);
-
 			FinishedFrameBase::onCreate(this->m_hWnd, id);
 			treeContainer.SubclassWindow(ctrlTree);
 
@@ -345,7 +364,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		{
 			return FinishedFrameBase::onContextMenu(this->m_hWnd, wParam, lParam, bHandled);
 		}
-		
+
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 		{
 			FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
@@ -353,7 +372,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			opt->isHub = false;
 			return TRUE;
 		}
-		
+
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMLVKEYDOWN* kd = reinterpret_cast<NMLVKEYDOWN*>(pnmh);
@@ -362,25 +381,23 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			return 0;
 		}
 
-		void UpdateLayout(BOOL bResizeBars = TRUE)
+		void UpdateLayout(BOOL = TRUE)
 		{
 			RECT rect;
 			this->GetClientRect(&rect);
 			RECT prevRect = rect;
-			// position bars and offset their dimensions
-			this->UpdateBarsPosition(rect, bResizeBars);
 
-			if (ctrlStatus.IsWindow())
+			if (ctrlStatus)
 			{
-				CRect sr;
-				int w[5];
-				ctrlStatus.GetClientRect(sr);
-				w[4] = sr.right - 16;
-				w[3] = max(w[4] - 100, 0);
-				w[2] = max(w[3] - 100, 0);
-				w[1] = max(w[2] - 100, 0);
-				w[0] = max(w[1] - 100, 0);
-				ctrlStatus.SetParts(5, w);
+				HDC hdc = this->GetDC();
+				int statusHeight = ctrlStatus.getPrefHeight(hdc);
+				rect.bottom -= statusHeight;
+				RECT rcStatus = rect;
+				rcStatus.top = rect.bottom;
+				rcStatus.bottom = rcStatus.top + statusHeight;
+				ctrlStatus.SetWindowPos(nullptr, &rcStatus, SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW);
+				ctrlStatus.updateLayout(hdc);
+				this->ReleaseDC(hdc);
 			}
 
 			MARGINS margins;
