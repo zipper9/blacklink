@@ -24,6 +24,7 @@
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
 #include "IgnoredUsersWindow.h"
+#include "SplitWnd.h"
 #include "../client/UserInfoBase.h"
 #include "../client/FavoriteManagerListener.h"
 #include "../client/UserManagerListener.h"
@@ -34,25 +35,26 @@ static const int USERS_FRAME_TRAITS = UserInfoGuiTraits::FAVORITES_VIEW | UserIn
 
 class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public StaticFrame<UsersFrame, ResourceManager::FAVORITE_USERS, IDC_FAVUSERS>,
-	public CSplitterImpl<UsersFrame>,
+	public SplitWndImpl<UsersFrame>,
 	public CMessageFilter,
 	private FavoriteManagerListener,
 	private UserManagerListener,
 	public UserInfoBaseHandler<UsersFrame, USERS_FRAME_TRAITS>,
-	private SettingsManagerListener
+	private SettingsManagerListener,
+	protected SplitWndBase::Callback
 {
-	public:	
+	public:
 		UsersFrame();
 
 		UsersFrame(const UsersFrame&) = delete;
 		UsersFrame& operator= (const UsersFrame&) = delete;
-		
+
 		static CFrameWndClassInfo& GetWndClassInfo();
-		
+
 		typedef MDITabChildWindowImpl<UsersFrame> baseClass;
-		typedef CSplitterImpl<UsersFrame> splitBase;
+		typedef SplitWndImpl<UsersFrame> splitBase;
 		typedef UserInfoBaseHandler<UsersFrame, USERS_FRAME_TRAITS> uibBase;
-		
+
 		BEGIN_MSG_MAP(UsersFrame)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, ctrlUsers.onColumnClick)
@@ -72,11 +74,11 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_HANDLER(IDC_SHOW_IGNORED, BN_CLICKED, onToggleIgnored)
+		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(uibBase)
-		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
-		
+
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -89,13 +91,13 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onToggleIgnored(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		
+
 		LRESULT onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			bHandled = FALSE;
@@ -116,7 +118,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			return 0;
 		}
 
-		void GetSystemSettings(bool bUpdate);
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 
 		// UserInfoBaseHandler
@@ -141,7 +142,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		{
 			USER_UPDATED
 		};
-		
+
 		class ItemInfo : public UserInfoBase
 		{
 			public:
@@ -149,7 +150,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				{
 					update(u);
 				}
-				
+
 				const tstring& getText(int col) const
 				{
 					dcassert(col >= 0 && col < COLUMN_LAST);
@@ -179,7 +180,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				time_t lastSeen;
 				bool isOnline;
 		};
-		
+
 		// FavoriteManagerListener
 		void on(UserAdded, const FavoriteUser& user) noexcept override;
 		void on(UserRemoved, const FavoriteUser& user) noexcept override;
@@ -196,6 +197,11 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		void updateUser(const int i, ItemInfo* ui, const FavoriteUser& favUser);
 		void removeUser(const FavoriteUser& user);
 
+	protected:
+		void setPaneRect(int pane, const RECT& rc) override {}
+		void splitterMoved(int splitter) override {}
+		int getMinPaneSize(int pane) const override;
+
 	private:
 		typedef TypedListViewCtrl<ItemInfo> UserInfoList;
 		UserInfoList ctrlUsers;
@@ -206,6 +212,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		SIZE checkBoxSize;
 		int checkBoxXOffset;
 		int checkBoxYOffset;
+		int minUsersWidth;
 		CButton ctrlShowIgnored;
 
 		static const int columnId[COLUMN_LAST];

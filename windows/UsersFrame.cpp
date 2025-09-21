@@ -34,6 +34,7 @@
 #include "../client/UserManager.h"
 #include "../client/ShareManager.h"
 #include "../client/SettingsUtil.h"
+#include "../client/SysVersion.h"
 #include "../client/dht/DHT.h"
 #include "../client/ConfCore.h"
 
@@ -79,9 +80,9 @@ static int getDefaultCommand()
 	return cmd[action];
 }
 
-UsersFrame::UsersFrame() : startup(true), barHeight(0)
+UsersFrame::UsersFrame() : startup(true), barHeight(0), minUsersWidth(0)
 {
-	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);	
+	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlUsers.setColumnFormat(COLUMN_SPEED_LIMIT, LVCFMT_RIGHT);
 	ctrlUsers.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
 }
@@ -121,17 +122,21 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlIgnored.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
 	ctrlShowIgnored.Create(m_hWnd, rcDefault, CTSTRING(SHOW_IGNORED_USERS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | BS_AUTOCHECKBOX | BS_VCENTER, 0, IDC_SHOW_IGNORED);
 	ctrlShowIgnored.SetFont(Fonts::g_systemFont);
+	minUsersWidth = ctrlIgnored.getMinWidth();
 
-	m_nProportionalPos = ss->getInt(Conf::USERS_FRAME_SPLIT);
-	SetSplitterPanes(ctrlUsers, ctrlIgnored, false);
-	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
+	addSplitter(-1, FLAG_HORIZONTAL | FLAG_PROPORTIONAL | FLAG_INTERACTIVE, ss->getInt(Conf::USERS_FRAME_SPLIT));
+	if (Colors::isAppThemed && SysVersion::isOsVistaPlus())
+		setSplitterColor(0, COLOR_TYPE_SYSCOLOR, COLOR_WINDOW);
+	setPaneWnd(0, ctrlUsers.m_hWnd);
+	setPaneWnd(1, ctrlIgnored.m_hWnd);
+	setCallback(this);
 
 	int showIgnored = ss->getInt(Conf::SHOW_IGNORED_USERS);
 	if (showIgnored == -1)
 		showIgnored = ctrlIgnored.getCount() ? 1 : 0;
 	ctrlShowIgnored.SetCheck(showIgnored ? BST_CHECKED : BST_UNCHECKED);
 	if (!showIgnored)
-		SetSinglePaneMode(SPLIT_PANE_LEFT);
+		setSinglePaneMode(0);
 
 	startup = false;
 	bHandled = FALSE;
@@ -153,12 +158,6 @@ LRESULT UsersFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	bHandled = FALSE;
 	return 0;
-}
-
-void UsersFrame::GetSystemSettings(bool bUpdate)
-{
-	splitBase::GetSystemSettings(bUpdate);
-	m_cxyMin = ctrlIgnored.getMinWidth();
 }
 
 LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -268,19 +267,19 @@ void UsersFrame::updateLayout()
 		barHeight = checkBoxSize.cy + 2*checkBoxYOffset;
 	}
 
-	RECT rect, rect2;
-	GetClientRect(&rect);
-	rect2 = rect;
-	rect2.bottom = rect.bottom - (barHeight - splitBarHeight);
-	
-	CRect rc = rect2;
-	SetSplitterRect(rc);
+	MARGINS margins;
+	margins.cxLeftWidth = margins.cxRightWidth = margins.cyTopHeight = 0;
+	margins.cyBottomHeight = barHeight - splitBarHeight;
+	setMargins(margins);
+	splitBase::updateLayout();
 
+	RECT rect, rc;
+	GetClientRect(&rect);
 	rc.left = checkBoxXOffset;
-	rc.top = rect2.bottom + checkBoxYOffset;
+	rc.top = rect.bottom - margins.cyBottomHeight + checkBoxYOffset;
 	rc.right = rc.left + checkBoxSize.cx;
 	rc.bottom = rc.top + checkBoxSize.cy;
-	ctrlShowIgnored.MoveWindow(rc);
+	ctrlShowIgnored.MoveWindow(&rc);
 }
 
 LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -496,7 +495,7 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		ss->setInt(Conf::USERS_FRAME_SORT, ctrlUsers.getSortForSettings());
 		ctrlUsers.deleteAll();
 
-		ss->setInt(Conf::USERS_FRAME_SPLIT, m_nProportionalPos);
+		ss->setInt(Conf::USERS_FRAME_SPLIT, getSplitterPos(0, true));
 		bHandled = FALSE;
 		return 0;
 	}
@@ -666,10 +665,11 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 
 LRESULT UsersFrame::onToggleIgnored(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	BOOL state = CButton(hWndCtl).GetCheck() == BST_CHECKED;
-	SetSinglePaneMode(state ? SPLIT_PANE_NONE : SPLIT_PANE_LEFT);
+	bool state = CButton(hWndCtl).GetCheck() == BST_CHECKED;
+	setSinglePaneMode(state ? -1 : 0);
 	auto ss = SettingsManager::instance.getUiSettings();
 	ss->setInt(Conf::SHOW_IGNORED_USERS, state ? 1 : 0);
+	updateLayout();
 	return 0;
 }
 
@@ -681,6 +681,11 @@ void UsersFrame::on(IgnoreListChanged) noexcept
 void UsersFrame::on(IgnoreListCleared) noexcept
 {
 	ctrlIgnored.updateUsers();
+}
+
+int UsersFrame::getMinPaneSize(int pane) const
+{
+	return pane == 1 ? minUsersWidth : SIZE_UNDEFINED;
 }
 
 BOOL UsersFrame::PreTranslateMessage(MSG* pMsg)
