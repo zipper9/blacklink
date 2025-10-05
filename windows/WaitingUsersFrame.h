@@ -89,7 +89,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
-		
+
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			if (!timer.checkTimerID(wParam))
@@ -101,7 +101,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 				onTimerInternal();
 			return 0;
 		}
-		
+
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 		{
 			processTasks();
@@ -113,7 +113,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		
+
 		// Update control layouts
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 
@@ -128,14 +128,14 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 
 		enum
 		{
-			STATUS_TEXT, // unused
+			STATUS_TEXT,
 			STATUS_USERS,
 			STATUS_FILES,
 			STATUS_LAST
 		};
 
 		static const int columnId[];
-		
+
 		class UploadQueueItem : public UserInfoBase
 		{
 			public:
@@ -161,7 +161,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 					dcassert(col >= 0 && col < COLUMN_LAST);
 					text[col] = val;
 				}
-		
+
 				enum
 				{
 					COLUMN_FILE,
@@ -179,7 +179,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 					COLUMN_SHARE,
 					COLUMN_LAST
 				};
-	
+
 				IpAddress ip;
 				IPInfo ipInfo;
 
@@ -217,7 +217,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			}
 			return 0;
 		}
-		
+
 		LRESULT onKeyDownDirs(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMTVKEYDOWN* kd = (NMTVKEYDOWN*) pnmh;
@@ -227,9 +227,9 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			}
 			return 0;
 		}
-		
+
 		void removeSelected();
-		
+
 		void removeSelectedUser()
 		{
 			const UserPtr User = getCurrentUser();
@@ -240,10 +240,10 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			}
 			shouldUpdateStatus = true;
 		}
-		
+
 		void loadFiles(const WaitingUser& wu);
 		void loadAll();
-		
+
 		struct UserListItem
 		{
 			UserPtr user;
@@ -263,6 +263,13 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		OMenu copyMenu;
 
 	private:
+		enum
+		{
+			USER_ACTION_NONE,
+			USER_ACTION_ADDED,
+			USER_ACTION_REMOVED
+		};
+
 		CTreeViewCtrl ctrlQueued;
 		HTREEITEM treeRoot;
 
@@ -278,10 +285,12 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 
 		bool shouldUpdateStatus;
 		bool shouldSort;
+		tstring lastUserNick;
+		int lastUserAction;
 
 		TaskQueue tasks;
 		TimerHelper timer;
-		
+
 		struct UploadQueueTask : public Task
 		{
 			UploadQueueTask(const HintedUser& hintedUser, const UploadQueueFilePtr& item) : hintedUser(hintedUser), item(item) {}
@@ -289,13 +298,13 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			const HintedUser hintedUser;
 			const UploadQueueFilePtr item;
 		};
-		
+
 		struct UserTask : public Task
 		{
 			UserTask(const UserPtr& user) : user(user) {}
 			const UserPtr user;
 		};
-		
+
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 

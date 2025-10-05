@@ -86,7 +86,7 @@ static const ResourceManager::Strings columnNames[] =
 
 WaitingUsersFrame::WaitingUsersFrame() :
 	timer(m_hWnd),
-	shouldUpdateStatus(false), shouldSort(false),
+	shouldUpdateStatus(false), shouldSort(false), lastUserAction(USER_ACTION_NONE),
 	treeRoot(nullptr)
 {
 	++UploadManager::g_count_WaitingUsersFrame;
@@ -129,8 +129,12 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	if (WinUtil::setExplorerTheme(ctrlList))
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
 
-	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(),
-	                  WS_EX_CLIENTEDGE, IDC_USERS);
+	unsigned treeViewExStyle = WS_EX_CLIENTEDGE;
+#ifdef OSVER_WIN_XP
+	if (SysVersion::isOsVistaPlus())
+#endif
+		treeViewExStyle |= TVS_EX_DOUBLEBUFFER;
+	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), treeViewExStyle, IDC_USERS);
 	WinUtil::setTreeViewTheme(ctrlQueued, Colors::isDarkTheme);
 
 	ctrlQueued.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
@@ -413,6 +417,8 @@ void WaitingUsersFrame::removeUser(const UserPtr& user)
 		if (i->user == user)
 		{
 			userNode = i->treeItem;
+			lastUserNick = Text::toT(user->getLastNick());
+			lastUserAction = USER_ACTION_REMOVED;
 			userList.erase(i);
 			shouldUpdateStatus = true;
 			break;
@@ -481,9 +487,16 @@ void WaitingUsersFrame::addFile(const HintedUser& hintedUser, const UploadQueueF
 		tstring text;
 		OnlineUserPtr ou = ClientManager::findOnlineUser(hintedUser.user->getCID(), hintedUser.hint, true);
 		if (ou)
-			text = Text::toT(ou->getIdentity().getNick() + " - " + ou->getClientBase()->getHubName());
+		{
+			lastUserNick = Text::toT(ou->getIdentity().getNick());
+			text = lastUserNick + _T(" - ") + Text::toT(ou->getClientBase()->getHubName());
+		}
 		else
-			text = Text::toT(hintedUser.user->getLastNick() + " - " + hintedUser.hint);
+		{
+			lastUserNick = Text::toT(hintedUser.user->getLastNick());
+			text = lastUserNick + _T(" - ") + Text::toT(hintedUser.hint);
+		}
+		lastUserAction = USER_ACTION_ADDED;
 		HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), treeRoot, TVI_LAST);
 		userList.emplace_back(hintedUser.user, treeItem);
 	}
@@ -508,6 +521,17 @@ void WaitingUsersFrame::updateStatus()
 		const int users = ctrlQueued.GetCount() - 1;
 
 		ctrlStatus.setAutoRedraw(false);
+		if (lastUserAction != USER_ACTION_NONE)
+		{
+			if (!lastUserNick.empty())
+			{
+				tstring text = lastUserAction == USER_ACTION_ADDED ?
+					TSTRING_F(WAITING_USER_ADDED, lastUserNick) :
+					TSTRING_F(WAITING_USER_REMOVED, lastUserNick);
+				ctrlStatus.setPaneText(STATUS_TEXT, text);
+			}
+			lastUserAction = USER_ACTION_NONE;
+		}
 		ctrlStatus.setPaneText(STATUS_USERS, TPLURAL_F(PLURAL_USERS, users));
 		ctrlStatus.setPaneText(STATUS_FILES, TPLURAL_F(PLURAL_ITEMS, cnt));
 		ctrlStatus.setAutoRedraw(true);
@@ -558,18 +582,16 @@ void WaitingUsersFrame::onTimerInternal()
 void WaitingUsersFrame::removeSelected()
 {
 	int j = -1;
-	UserList RemoveUsers;
+	UserList removeUsers;
 	while ((j = ctrlList.GetNextItem(j, LVNI_SELECTED)) != -1)
 	{
 		// Ok let's cheat here, if you try to remove more users here is not working :(
-		RemoveUsers.push_back(ctrlList.getItemData(j)->getUser());
+		removeUsers.push_back(ctrlList.getItemData(j)->getUser());
 	}
 	{
 		UploadManager::LockInstanceQueue lockedInstance;
-		for (auto i = RemoveUsers.cbegin(); i != RemoveUsers.cend(); ++i)
-		{
+		for (auto i = removeUsers.cbegin(); i != removeUsers.cend(); ++i)
 			lockedInstance->clearUserFilesL(*i);
-		}
 	}
 	shouldUpdateStatus = true;
 }
@@ -589,16 +611,17 @@ void WaitingUsersFrame::processTasks()
 	tasks.get(t);
 	if (t.empty()) return;
 		
-	CLockRedraw<> lockCtrlList(ctrlList);
-	CLockRedraw<> lockCtrlQueued(ctrlQueued);
 	for (auto j = t.cbegin(); j != t.cend(); ++j)
 	{
 		switch (j->first)
 		{
 			case REMOVE_USER:
-				removeUser(static_cast<UserTask&>(*j->second).user);
+			{
+				const auto& user = static_cast<UserTask&>(*j->second).user;
+				removeUser(user);
 				shouldUpdateStatus = true;
 				break;
+			}
 
 			case ADD_FILE:
 			{
