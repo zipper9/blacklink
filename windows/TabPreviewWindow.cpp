@@ -174,7 +174,7 @@ void TabPreviewWindow::setPreview(HWND hWnd)
 		exStyle = ::GetWindowLong(hWnd, GWL_EXSTYLE);
 		if (!(exStyle & (WS_EX_COMPOSITED | WS_EX_LAYERED)))
 		{
-			exStyle |= WS_EX_COMPOSITED;
+			exStyle |= WS_EX_LAYERED;
 			::SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
 			::UpdateWindow(hWnd);
 			updateStyle = true;
@@ -204,7 +204,7 @@ void TabPreviewWindow::setPreview(HWND hWnd)
 
 	if (updateStyle)
 	{
-		exStyle &= ~WS_EX_COMPOSITED;
+		exStyle &= ~WS_EX_LAYERED;
 		::SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
 	}
 
