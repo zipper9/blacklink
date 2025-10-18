@@ -499,7 +499,7 @@ bool Commands::processCommand(const ParsedCommand& pc, Result& res)
 	{
 		case COMMAND_HELP:
 			res.text = STRING(CMD_AVAILABLE_COMMANDS) + '\n' + getHelpText();
-			res.what = RESULT_LOCAL_TEXT;
+			res.what = RESULT_HELP_TEXT;
 			return true;
 
 		case COMMAND_REFRESH_SHARE:

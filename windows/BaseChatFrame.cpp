@@ -344,7 +344,6 @@ void BaseChatFrame::createChatCtrl()
 		dcassert(0);
 		return;
 	}
-	ctrlClient.SetTabStops(120);
 	ctrlClient.LimitText(0);
 	ctrlClient.SetFont(Fonts::g_font);
 	ctrlClient.SetAutoURLDetect(FALSE);
@@ -684,6 +683,21 @@ void BaseChatFrame::sendCommandResult(Commands::Result& res)
 			appendMyNick(res.text, thirdPerson);
 			addSystemMessage(Text::toT(res.text), Colors::TEXT_STYLE_SYSTEM_MESSAGE);
 			break;
+
+		case Commands::RESULT_HELP_TEXT:
+		{
+			int selBegin = ctrlClient.GetTextLengthEx();
+			addSystemMessage(Text::toT(res.text), Colors::TEXT_STYLE_SYSTEM_MESSAGE);
+			PARAFORMAT2 pf = {};
+			pf.cbSize = sizeof(pf);
+			pf.cTabCount = 1;
+			pf.rgxTabs[0] = 2400;
+			pf.dwMask = PFM_TABSTOPS;
+			ctrlClient.SetSel(selBegin, -1);
+			ctrlClient.SetParaFormat(pf);
+			ctrlClient.SetSel(-1, 0);
+			break;
+		}
 
 		case Commands::RESULT_ERROR_MESSAGE:
 			appendMyNick(res.text, thirdPerson);

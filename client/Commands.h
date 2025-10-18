@@ -121,7 +121,8 @@ enum
 	RESULT_LOCAL_TEXT,
 	RESULT_TEXT,
 	RESULT_ERROR_MESSAGE,
-	RESULT_NO_TEXT
+	RESULT_NO_TEXT,
+	RESULT_HELP_TEXT
 };
 
 bool processCommand(const ParsedCommand& cmd, Result& res);
