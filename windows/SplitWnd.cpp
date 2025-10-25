@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SplitWnd.h"
+#include "GdiUtil.h"
 #include <algorithm>
 #include <string.h>
 
@@ -622,7 +623,8 @@ void SplitWndBase::resetCapture(HWND hWnd)
 
 int SplitWndBase::getDefaultThickness(uint16_t flags)
 {
-	return GetSystemMetrics((flags & FLAG_HORIZONTAL) ? SM_CXSIZEFRAME : SM_CYSIZEFRAME);
+	int dpi = WinUtil::getDisplayDpi();
+	return 4 * dpi / 96;
 }
 
 int SplitWndBase::getSplitterPos(int index, bool proportional) const
