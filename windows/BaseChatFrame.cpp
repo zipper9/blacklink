@@ -337,7 +337,7 @@ void BaseChatFrame::createChatCtrl()
 {
 	if (ctrlClient) return;
 	HWND hwnd = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP, WS_EX_STATICEDGE, IDC_CLIENT);
+	                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP | WS_BORDER, 0, IDC_CLIENT);
 	if (!hwnd)
 	{
 		dcdebug("Error create BaseChatFrame::createChatCtrl %s", Util::translateError().c_str());
@@ -472,6 +472,36 @@ LRESULT BaseChatFrame::onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /
 	return 0;
 }
 
+LRESULT BaseChatFrame::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.copySelection();
+	return 0;
+}
+
+LRESULT BaseChatFrame::onEditSelectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.SetSel(0, -1);
+	return 0;
+}
+
+LRESULT BaseChatFrame::onEditClearAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.Clear();
+	return 0;
+}
+
+LRESULT BaseChatFrame::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.copyLine();
+	return 0;
+}
+
+LRESULT BaseChatFrame::onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.copyURL();
+	return 0;
+}
+
 LRESULT BaseChatFrame::onSaveToFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	IRichEditOle *pOle = ctrlClient.getRichEditOle();
@@ -583,7 +613,7 @@ bool BaseChatFrame::processFrameCommand(const Commands::ParsedCommand& pc, Comma
 			if (pc.args.size() >= 2)
 			{
 				param = Text::toT(pc.args[1]);
-				ctrlClient.SetSelNone();
+				ctrlClient.SetSel(-1, 0);
 				ctrlClient.resetFindPos();
 				ctrlClient.setNeedle(param);
 				ctrlClient.setFindFlags(FR_DOWN);
@@ -703,6 +733,12 @@ void BaseChatFrame::sendCommandResult(Commands::Result& res)
 			appendMyNick(res.text, thirdPerson);
 			addStatus(Text::toT(res.text), true, false);
 	}
+}
+
+LRESULT BaseChatFrame::onDumpUserInfo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.dumpUserInfo();
+	return 0;
 }
 
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -1158,7 +1194,7 @@ void BaseChatFrame::themeChanged()
 	ctrlClient.GetSel(cr);
 	ctrlClient.SetSel(0, -1);
 	CHARFORMAT2 cf = Colors::charFormat[Colors::TEXT_STYLE_LOG];
-	ctrlClient.SetSelectionCharFormat(cf);
+	ctrlClient.SetCharFormat(cf, SCF_SELECTION);
 	ctrlClient.SetSel(cr);
 	addStatus(TSTRING(CHAT_THEME_CHANGED_MSG), true, false);
 }

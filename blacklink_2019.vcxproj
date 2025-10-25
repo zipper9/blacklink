@@ -939,6 +939,8 @@
     <ClCompile Include="windows\TabPreviewWindow.cpp" />
     <ClCompile Include="windows\TabsPage.cpp" />
     <ClCompile Include="windows\TextFrame.cpp" />
+    <ClCompile Include="windows\TextHostCtrl.cpp" />
+    <ClCompile Include="windows\TextHostImpl.cpp" />
     <ClCompile Include="windows\ThemeManager.cpp" />
     <ClCompile Include="windows\ThemeUtil.cpp" />
     <ClCompile Include="windows\ThemeWrapper.cpp" />
@@ -1105,6 +1107,9 @@
     <ClInclude Include="windows\StringSetSearch.h" />
     <ClInclude Include="windows\StylesPage.h" />
     <ClInclude Include="windows\TabPreviewWindow.h" />
+    <ClInclude Include="windows\TextHostCtrl.h" />
+    <ClInclude Include="windows\TextHostDefs.h" />
+    <ClInclude Include="windows\TextHostImpl.h" />
     <ClInclude Include="windows\ThemeManager.h" />
     <ClInclude Include="windows\ThemeUtil.h" />
     <ClInclude Include="windows\ThemeWrapper.h" />

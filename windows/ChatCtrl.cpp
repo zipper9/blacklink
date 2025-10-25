@@ -51,18 +51,29 @@ ChatCtrl::ChatCtrl() : autoScroll(true), useChatCacheFlag(true), chatCacheSize(0
 	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1), pRichEditOle(nullptr),
 	findInit(true), findRangeStart(0), findRangeEnd(0), currentFindFlags(FR_DOWN)
 #ifdef BL_UI_FEATURE_EMOTICONS
-	, totalEmoticons(0), pStorage(nullptr), refs(0)
+	, totalEmoticons(0), pStorage(nullptr), refs(1)
 #endif
 {
 }
 
 ChatCtrl::~ChatCtrl()
 {
+	cleanup();
+}
+
+void ChatCtrl::cleanup()
+{
 	if (pRichEditOle)
+	{
 		pRichEditOle->Release();
+		pRichEditOle = nullptr;
+	}
 #ifdef BL_UI_FEATURE_EMOTICONS
 	if (pStorage)
+	{
 		pStorage->Release();
+		pStorage = nullptr;
+	}
 #endif
 }
 
@@ -166,7 +177,7 @@ void ChatCtrl::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startP
 		endPos = GetTextLengthEx(GTL_NUMCHARS);
 		SetSel(startPos, endPos);
 		cf.dwEffects |= addFlags;
-		SetSelectionCharFormat(cf);
+		SetCharFormat(cf, SCF_SELECTION);
 	}
 }
 
@@ -189,10 +200,10 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 		}
 		return;
 	}
-	LONG selBeginSaved = 0, selEndSaved = 0;
-	GetSel(selBeginSaved, selEndSaved);
-	POINT cr = { 0 };
-	GetScrollPos(&cr);
+	CHARRANGE savedSel = {};
+	GetSel(savedSel);
+	POINT savedScroll;
+	if (!autoScroll) GetScrollPos(&savedScroll);
 
 	SetRedraw(FALSE);
 	LONG selBegin = 0;
@@ -236,8 +247,11 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	}
 
 	appendTextInternal(text, message, maxEmoticons, highlightNick);
-	SetSel(selBeginSaved, selEndSaved);
-	goToEnd(cr, false);
+	SetSel(savedSel);
+	if (autoScroll)
+		goToEnd(false);
+	else
+		SetScrollPos(&savedScroll);
 	SetRedraw(TRUE);
 	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
@@ -279,7 +293,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 		if (ti.type == ChatTextParser::BBCODE_COLOR && !acceptColors) continue;
 		if (ti.type == ChatTextParser::BBCODE_URL) continue;
 		SetSel(startPos + ti.openTagStart, startPos + ti.closeTagEnd);
-		SetSelectionCharFormat(ti.fmt);
+		SetCharFormat(ti.fmt, SCF_SELECTION);
 	}
 #endif
 
@@ -288,13 +302,13 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 		if (li.start == tstring::npos || li.end == tstring::npos) continue;
 		auto tmp = Colors::charFormat[Colors::TEXT_STYLE_URL];
 		SetSel(startPos + li.start, startPos + li.end - li.hiddenTextLen);
-		SetSelectionCharFormat(tmp);
+		SetCharFormat(tmp, SCF_SELECTION);
 		if (li.hiddenTextLen)
 		{
 			tmp.dwMask |= CFM_HIDDEN;
 			tmp.dwEffects |= CFE_HIDDEN;
 			SetSel(startPos + li.end - li.hiddenTextLen, startPos + li.end);
-			SetSelectionCharFormat(tmp);
+			SetCharFormat(tmp, SCF_SELECTION);
 		}
 	}
 
@@ -340,7 +354,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 			{
 				SetSel(startPos + pos, startPos + pos + myNick.length());
 				auto tmp = Colors::charFormat[Colors::TEXT_STYLE_MY_NICK];
-				SetSelectionCharFormat(tmp);
+				SetCharFormat(tmp, SCF_SELECTION);
 				nickFound = true;
 				pos += myNick.length() + 1;
 			}
@@ -399,18 +413,18 @@ bool ChatCtrl::hitIP(POINT p, tstring& result, int& startPos, int& endPos)
 
 	if (len < 7) // 1.1.1.1
 		return false;
-		
+
 	tstring text;
 	text.resize(len);
 	GetTextRange(posBegin, posEnd, &text[0]);
-	
+
 	for (size_t i = 0; i < text.length(); i++)
 		if (!(text[i] == _T('.') || (text[i] >= _T('0') && text[i] <= _T('9'))))
 			return false;
-	
+
 	if (!Util::isValidIp4(text))
 		return false;
-	
+
 	result = std::move(text);
 	startPos = posBegin;
 	endPos = posEnd;
@@ -424,24 +438,10 @@ bool ChatCtrl::hitText(tstring& text, int selBegin, int selEnd) const
 	return !text.empty();
 }
 
-void ChatCtrl::goToEnd(POINT& scrollPos, bool force)
-{
-	SCROLLINFO si = { 0 };
-	si.cbSize = sizeof(si);
-	si.fMask = SIF_PAGE | SIF_RANGE | SIF_POS;
-	GetScrollInfo(SB_VERT, &si);
-	if (autoScroll || force)
-		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
-	SetScrollPos(&scrollPos);
-}
-
 void ChatCtrl::goToEnd(bool force)
 {
-	POINT pt = { 0 };
-	GetScrollPos(&pt);
-	goToEnd(pt, force);
 	if (autoScroll || force)
-		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
+		SendMessage(EM_SCROLL, SB_BOTTOM, 0);
 }
 
 void ChatCtrl::invertAutoScroll()
@@ -464,11 +464,11 @@ LRESULT ChatCtrl::onRButtonDown(POINT pt)
 	g_sSelectedUserName.clear();
 	g_sSelectedIP.clear();
 	g_sSelectedURL.clear();
-	
-	LONG selBegin, selEnd;
-	GetSel(selBegin, selEnd);
 
-	if (selEnd > selBegin)
+	CHARRANGE cr;
+	GetSel(cr);
+
+	if (cr.cpMax > cr.cpMin)
 	{
 		CHARFORMAT2 cf;
 		cf.cbSize = sizeof(cf);
@@ -476,22 +476,22 @@ LRESULT ChatCtrl::onRButtonDown(POINT pt)
 		GetSelectionCharFormat(cf);
 		if (cf.dwEffects & CFE_LINK)
 		{
-			g_sSelectedURL = getUrl(selBegin, selEnd, true);
+			g_sSelectedURL = getUrl(cr.cpMin, cr.cpMax, true);
 			if (!g_sSelectedURL.empty()) return 1;
 		}
 	}
-	
+
 	const int charPos = CharFromPos(pt);
 	int begin, end;
-	if (selEnd > selBegin && charPos >= selBegin && charPos <= selEnd)
+	if (cr.cpMax > cr.cpMin && charPos >= cr.cpMin && charPos <= cr.cpMax)
 	{
 		if (!hitIP(pt, g_sSelectedIP, begin, end))
 			if (!hitNick(pt, g_sSelectedUserName, begin, end))
-				hitText(g_sSelectedText, selBegin, selEnd);
-				
+				hitText(g_sSelectedText, cr.cpMin, cr.cpMax);
+
 		return 1;
 	}
-	
+
 	// hightlight IP or nick when clicking on it
 	if (hitIP(pt, g_sSelectedIP, begin, end) || hitNick(pt, g_sSelectedUserName, begin, end))
 	{
@@ -501,45 +501,41 @@ LRESULT ChatCtrl::onRButtonDown(POINT pt)
 	return 1;
 }
 
-//[+] sergiy.karasov
-//отключение автоскролла в окне чата при вращении колеса мыши вверх
-//влючать автоскролл либо в меню (по правому клику), либо проскроллировав (колесом мыши) до самого низа
+LRESULT ChatCtrl::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
+{
+	bHandled = FALSE;
+	cleanup();
+	return 0;
+}
+
+// Scrolling with mouse wheel can disable and re-enable the autoScroll option
 LRESULT ChatCtrl::onMouseWheel(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	RECT rc;
-	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }; // location of mouse click
-	SCROLLINFO si = { 0 };
-	
-	// Get the bounding rectangle of the client area.
-	ChatCtrl::GetClientRect(&rc);
-	ChatCtrl::ScreenToClient(&pt);
+	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+	GetClientRect(&rc);
+	ScreenToClient(&pt);
 	if (PtInRect(&rc, pt))
 	{
+		SCROLLINFO si;
 		si.cbSize = sizeof(si);
 		si.fMask = SIF_PAGE | SIF_RANGE | SIF_POS;
-		GetScrollInfo(SB_VERT, &si);
-		
-		if (GET_WHEEL_DELTA_WPARAM(wParam) > 0) //positive - wheel was rotated forward
+		if (GetScrollInfo(SB_VERT, &si))
 		{
-			if (si.nMin != si.nPos) //бегунок не в начале или есть скроллбар
+			if (GET_WHEEL_DELTA_WPARAM(wParam) > 0) // positive - wheel was rotated forward
 			{
-				setAutoScroll(false);
+				if (si.nMin != si.nPos)
+					setAutoScroll(false);
 			}
-		}
-		else //negative value indicates that the wheel was rotated backward, toward the user
-		{
-			//макс достигнут
-			//проблемка - мы обрабатываем WM_MOUSEWHEEL перед его основным обработчиком,
-			//поэтому автоскролл, зачастую, врубается при дополнительном (т.е. конец уже достигнут, но надо еще раз)
-			//вращении колеса мышки вниз
-			if (si.nPos == int(si.nMax - si.nPage))
+			else
 			{
-				setAutoScroll(true);
+				if (si.nPos >= int(si.nMax - si.nPage))
+					setAutoScroll(true);
 			}
 		}
 	}
 	bHandled = FALSE;
-	return 1;
+	return 0;
 }
 
 tstring ChatCtrl::getUrlHiddenText(LONG end)
@@ -660,7 +656,7 @@ bool ChatCtrl::findText()
 			findRangeEnd = ft.chrg.cpMax;
 		}
 	}
-	else if (ft.chrg.cpMin != ft.chrg.cpMax) 
+	else if (ft.chrg.cpMin != ft.chrg.cpMax)
 		savedSel = ft.chrg;
 
 	ft.lpstrText = const_cast<TCHAR*>(currentNeedle.c_str());
@@ -718,7 +714,7 @@ bool ChatCtrl::findText()
 
 long ChatCtrl::findAndSelect(DWORD flags, FINDTEXTEX& ft)
 {
-	long index = FindText(flags, ft);
+	int index = FindText(flags, ft);
 	dcdebug("findAndSelect: %d, %d, %d\n", index, ft.chrgText.cpMin, ft.chrgText.cpMax);
 	if (index != -1)
 	{
@@ -786,7 +782,7 @@ void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 }
 #endif
 
-LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+bool ChatCtrl::copyLine()
 {
 	if (selectedLine >= 0)
 	{
@@ -805,22 +801,24 @@ LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 #endif
 				removeHiddenText(line);
 				WinUtil::setClipboard(line);
+				return true;
 			}
 		}
 	}
-	return 0;
+	return false;
 }
 
-LRESULT ChatCtrl::onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+bool ChatCtrl::copyURL()
 {
 	if (!g_sSelectedURL.empty())
 	{
 		WinUtil::setClipboard(g_sSelectedURL);
+		return true;
 	}
-	return 0;
+	return false;
 }
 
-LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void ChatCtrl::dumpUserInfo()
 {
 	if (!g_sSelectedIP.empty())
 	{
@@ -836,24 +834,23 @@ LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				i->second->dumpUserInfo(report);
 		}
 	}
-	return 0;
 }
 
-LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+bool ChatCtrl::copySelection()
 {
 #if 1
 	if (!pRichEditOle)
 	{
 		initRichEditOle();
-		if (!pRichEditOle) return 0;
+		if (!pRichEditOle) return false;
 	}
-	LONG start, end;
-	GetSel(start, end);
+	CHARRANGE cr;
+	GetSel(cr);
 	ITextDocument* pTextDoc = nullptr;
 	if (SUCCEEDED(pRichEditOle->QueryInterface(IID_ITextDocument, (void**) &pTextDoc)))
 	{
 		ITextRange* pRange = nullptr;
-		if (SUCCEEDED(pTextDoc->Range(start, end, &pRange)))
+		if (SUCCEEDED(pTextDoc->Range(cr.cpMin, cr.cpMax, &pRange)))
 		{
 			BSTR text;
 			if (SUCCEEDED(pRange->GetText(&text)) && text)
@@ -861,7 +858,7 @@ LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 				tstring s = text;
 				SysFreeString(text);
 #ifdef BL_UI_FEATURE_EMOTICONS
-				replaceObjects(s, start);
+				replaceObjects(s, cr.cpMin);
 #endif
 				removeHiddenText(s);
 				WinUtil::setClipboard(s);
@@ -873,19 +870,7 @@ LRESULT ChatCtrl::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 #else
 	Copy();
 #endif
-	return 0;
-}
-
-LRESULT ChatCtrl::onEditSelectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	SetSelAll();
-	return 0;
-}
-
-LRESULT ChatCtrl::onEditClearAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	Clear();
-	return 0;
+	return true;
 }
 
 void ChatCtrl::setHubParam(const string& url, const string& nick)
@@ -912,23 +897,26 @@ void ChatCtrl::initRichEditOle()
 HRESULT STDMETHODCALLTYPE ChatCtrl::QueryInterface(THIS_ REFIID riid, LPVOID FAR * lplpObj)
 {
 	HRESULT res = E_NOINTERFACE;
-	
+
 	if (riid == IID_IRichEditOleCallback)
 	{
+		AddRef();
 		*lplpObj = this;
 		res = S_OK;
 	}
-	
+
 	return res;
 }
 
 COM_DECLSPEC_NOTHROW ULONG STDMETHODCALLTYPE ChatCtrl::AddRef(THIS)
 {
+	dcassert(refs > 0);
 	return InterlockedIncrement(&refs);
 }
 
 COM_DECLSPEC_NOTHROW ULONG STDMETHODCALLTYPE ChatCtrl::Release(THIS)
 {
+	dcassert(refs > 0);
 	return InterlockedDecrement(&refs);
 }
 
@@ -968,7 +956,7 @@ COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE ChatCtrl::DeleteObject(THIS_ LPOL
 		pDeleteNotify->SetDelete();
 		pDeleteNotify->Release();
 	}
-	
+
 	return S_OK;
 }
 

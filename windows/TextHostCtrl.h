@@ -44,8 +44,11 @@ class TextHostCtrl : public CWindowImpl<TextHostCtrl>, public ThemeWrapper
 		DWORD SetEventMask(DWORD eventMask);
 		DWORD GetEventMask() const;
 		int FindText(DWORD flags, FINDTEXTEX& ft) const;
+		void GetScrollPos(POINT* point) const;
+		void SetScrollPos(POINT* point);
 		IRichEditOle* GetOleInterface() const;
 		BOOL SetOleCallback(IRichEditOleCallback* pCallback);
+		BOOL GetScrollInfo(int what, SCROLLINFO* si);
 
 	protected:
 		void cleanup();
@@ -81,6 +84,7 @@ class TextHostCtrl : public CWindowImpl<TextHostCtrl>, public ThemeWrapper
 		MESSAGE_HANDLER(WM_TIMER, onCtrlMessage)
 		MESSAGE_HANDLER(WM_GETDLGCODE, onGetDlgCode)
 		MESSAGE_HANDLER(WM_SETCURSOR, onSetCursor)
+		MESSAGE_HANDLER(EM_SCROLL, onCtrlMessage)
 		END_MSG_MAP()
 
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

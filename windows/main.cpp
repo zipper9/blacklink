@@ -26,6 +26,7 @@
 #include "BackingStore.h"
 #include "UxThemeLib.h"
 #include "DwmApiLib.h"
+#include "TextHostDefs.h"
 #include "../client/DCPlusPlus.h"
 #include "../client/ClientManager.h"
 #include "../client/MappingManager.h"
@@ -413,19 +414,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	if (SysVersion::isOsWin11Plus()) DwmApiLib::instance.init();
 	BackingStore::globalInit();
 
-	HINSTANCE hRichEditNew;
-	hRichEditNew = ::LoadLibrary(_T("MSFTEDIT.DLL"));
-/*
-	hRichEditOld = ::LoadLibrary(_T("RICHED20.DLL"));
-	if (!hRichEditOld)
-		hRichEditOld = ::LoadLibrary(_T("RICHED32.DLL"));
-*/
+	HINSTANCE hRichEdit = LoadLibrary(RICH_EDIT_DLL);
 	const int nRet = Run(lpstrCmdLine, nCmdShow);
+	if (hRichEdit) FreeLibrary(hRichEdit);
 
-	if (hRichEditNew) ::FreeLibrary(hRichEditNew);
-/*
-	if (hRichEditOld) ::FreeLibrary(hRichEditOld);
-*/
 	_Module.Term();
 	::CoUninitialize();
 	DestroySplash();

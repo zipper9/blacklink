@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "TextHostImpl.h"
+#include "TextHostDefs.h"
 #include "../client/Text.h"
 #include "Fonts.h"
 #include <assert.h>
@@ -14,12 +15,6 @@ const IID IID_ITextDocument = { 0x8CC497C0, 0xA1DF, 0x11CE, { 0x80, 0x98, 0x00, 
 #endif
 
 static const unsigned DEFAULT_STYLE = 0;
-
-enum
-{
-	SB_FLAG_HORZ = 1,
-	SB_FLAG_VERT = 2
-};
 
 enum
 {
@@ -84,7 +79,7 @@ bool TextHostImpl::init(HWND hWnd, CREATESTRUCT& cs)
 
 	IUnknown* pUnk = nullptr;
 	HRESULT hr = E_FAIL;
-	HMODULE hModule = LoadLibrary(_T("msftedit.dll"));
+	HMODULE hModule = LoadLibrary(RICH_EDIT_DLL);
 	if (hModule)
 	{
 		PCreateTextServices pCreateTextServices = (PCreateTextServices) GetProcAddress(hModule, "CreateTextServices");

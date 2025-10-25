@@ -1718,10 +1718,10 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		
 		if (pt.x == -1 && pt.y == -1)
 		{
-			CRect erc;
-			ctrlClient.GetRect(&erc);
-			pt.x = erc.Width() / 2;
-			pt.y = erc.Height() / 2;
+			CRect rc;
+			ctrlClient.GetClientRect(&rc);
+			pt.x = rc.Width() / 2;
+			pt.y = rc.Height() / 2;
 			ctrlClient.ClientToScreen(&pt);
 		}
 		POINT ptCl = pt;

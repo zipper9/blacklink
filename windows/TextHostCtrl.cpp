@@ -446,6 +446,20 @@ int TextHostCtrl::FindText(DWORD flags, FINDTEXTEX& ft) const
 	return (int) lResult;
 }
 
+void TextHostCtrl::GetScrollPos(POINT* point) const
+{
+	if (!textHost) return;
+	LRESULT lResult;
+	textHost->sendMessage(EM_GETSCROLLPOS, 0, (LPARAM) point, &lResult);
+}
+
+void TextHostCtrl::SetScrollPos(POINT* point)
+{
+	if (!textHost) return;
+	LRESULT lResult;
+	textHost->sendMessage(EM_SETSCROLLPOS, 0, (LPARAM) point, &lResult);
+}
+
 IRichEditOle* TextHostCtrl::GetOleInterface() const
 {
 	return textHost ? textHost->queryRichEditOle() : nullptr;
@@ -457,6 +471,23 @@ BOOL TextHostCtrl::SetOleCallback(IRichEditOleCallback* pCallback)
 	LRESULT lResult;
 	textHost->sendMessage(EM_SETOLECALLBACK, 0, (LPARAM) pCallback, &lResult);
 	return (BOOL) lResult;
+}
+
+BOOL TextHostCtrl::GetScrollInfo(int what, SCROLLINFO* si)
+{
+	if (!textHost) return FALSE;
+	int sbFlags = textHost->getScrollBarFlags();
+	if (what == SB_VERT)
+	{
+		if (!(sbFlags & TextHostImpl::SB_FLAG_VERT)) return FALSE;
+		return textHost->getVScroll().GetScrollInfo(si);
+	}
+	if (what == SB_HORZ)
+	{
+		if (!(sbFlags & TextHostImpl::SB_FLAG_HORZ)) return FALSE;
+		return textHost->getHScroll().GetScrollInfo(si);
+	}
+	return FALSE;
 }
 
 void TextHostCtrl::updateTheme()

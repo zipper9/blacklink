@@ -23,6 +23,7 @@
 #include <atlcrack.h>
 #include "../client/typedefs.h"
 #include "../client/Locks.h"
+#include "TextHostCtrl.h"
 #include "ChatTextParser.h"
 #include "UserMessages.h"
 #include "resource.h"
@@ -30,7 +31,7 @@
 class Identity;
 class Client;
 
-class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
+class ChatCtrl: public TextHostCtrl
 #ifdef BL_UI_FEATURE_EMOTICONS
 	, public IRichEditOleCallback
 #endif
@@ -43,29 +44,24 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 
 		ChatCtrl(const ChatCtrl&) = delete;
 		ChatCtrl& operator= (const ChatCtrl&) = delete;
-		
+
 		BEGIN_MSG_MAP(thisClass)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_MOUSEWHEEL, onMouseWheel)
 		NOTIFY_HANDLER(IDC_CLIENT, EN_LINK, onEnLink)
-		COMMAND_ID_HANDLER(IDC_COPY_ACTUAL_LINE, onCopyActualLine)
-		COMMAND_ID_HANDLER(IDC_COPY_URL, onCopyURL)
-		COMMAND_ID_HANDLER(IDC_REPORT_CHAT, onDumpUserInfo)
-		COMMAND_ID_HANDLER(ID_EDIT_COPY, onEditCopy)
-		COMMAND_ID_HANDLER(ID_EDIT_SELECT_ALL, onEditSelectAll)
-		COMMAND_ID_HANDLER(ID_EDIT_CLEAR_ALL, onEditClearAll)
+		CHAIN_MSG_MAP(TextHostCtrl)
 		END_MSG_MAP()
-		
+
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onMouseWheel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onEditSelectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onEditClearAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
+		bool copySelection();
+		bool copyLine();
+		bool copyURL();
+		void dumpUserInfo();
 		LRESULT onRButtonDown(POINT pt);
-		
+
 		struct Message
 		{
 			const tstring nick;
@@ -103,6 +99,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		static const tstring nickBoundaryChars;
 
 	protected:
+		void cleanup();
 		bool hitNick(POINT p, tstring& nick, int& startPos, int& endPos);
 		bool hitIP(POINT p, tstring& result, int& startPos, int& endPos);
 		bool hitText(tstring& text, int selBegin, int selEnd) const;
@@ -138,18 +135,17 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		tstring getUrl(LONG start, LONG end, bool keepSelected);
 		tstring getUrl(const ENLINK* el, bool keepSelected);
 		tstring getUrlHiddenText(LONG end);
-	
+
 	public:
 		IRichEditOle* getRichEditOle();
 		void disableChatCache() { useChatCacheFlag = false; }
 		void restoreChatCache();
-		
+
 		void goToEnd(bool force);
-		void goToEnd(POINT& scrollPos, bool force);
 		bool getAutoScroll() const { return autoScroll; }
 		void invertAutoScroll();
 		void setAutoScroll(bool flag);
-		
+
 		void setHubParam(const string& url, const string& nick);
 		const string& getHubHint() const { return hubHint; }
 		void setHubHint(const string& hint) { hubHint = hint; }
@@ -165,15 +161,15 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 #ifdef BL_UI_FEATURE_EMOTICONS
 	protected:
 		volatile LONG refs;
-		
+
 		void replaceObjects(tstring& s, int startIndex) const;
 
 		// IRichEditOleCallback implementation
-		
+
 		COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE QueryInterface(THIS_ REFIID riid, LPVOID FAR * lplpObj);
 		COM_DECLSPEC_NOTHROW ULONG STDMETHODCALLTYPE AddRef(THIS);
 		COM_DECLSPEC_NOTHROW ULONG STDMETHODCALLTYPE Release(THIS);
-		
+
 		// *** IRichEditOleCallback methods ***
 		COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE GetNewStorage(THIS_ LPSTORAGE FAR * lplpstg);
 		COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE GetInPlaceContext(THIS_ LPOLEINPLACEFRAME FAR * lplpFrame,

@@ -15,6 +15,12 @@ struct ITextDocument;
 class TextHostImpl : public ITextHost2
 {
 public:
+	enum
+	{
+		SB_FLAG_HORZ = 1,
+		SB_FLAG_VERT = 2
+	};
+
 	TextHostImpl();
 	virtual ~TextHostImpl();
 
@@ -93,6 +99,7 @@ public:
 	CScrollBar& getHScroll() { return ctrlHScroll; }
 	bool isLargeSBRange() const;
 	void setTextMargins(const MARGINS& m);
+	int getScrollBarFlags() const { return sbFlags; }
 
 private:
 	int refs;

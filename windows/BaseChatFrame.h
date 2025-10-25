@@ -38,16 +38,21 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		COMMAND_ID_HANDLER(IDC_WINAMP_SPAM, onWinampSpam)
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
-		CHAIN_MSG_MAP_MEMBER(ctrlClient)
 		if (msgPanel && msgPanel->ProcessWindowMessage(hWnd, uMsg, wParam, lParam, lResult))
 		{
 			return TRUE;
 		}
+		COMMAND_ID_HANDLER(ID_EDIT_COPY, onEditCopy)
+		COMMAND_ID_HANDLER(ID_EDIT_SELECT_ALL, onEditSelectAll)
+		COMMAND_ID_HANDLER(ID_EDIT_CLEAR_ALL, onEditClearAll)
+		COMMAND_ID_HANDLER(IDC_COPY_ACTUAL_LINE, onCopyActualLine)
+		COMMAND_ID_HANDLER(IDC_COPY_URL, onCopyURL)
 		COMMAND_ID_HANDLER(IDC_SAVE, onSaveToFile)
 		COMMAND_ID_HANDLER(IDC_MESSAGEPANEL, onMultilineChatInputButton)
 		COMMAND_ID_HANDLER(IDC_TRANSCODE, onTextTranscode)
 		COMMAND_ID_HANDLER(IDC_LINK, onInsertLink)
 		COMMAND_ID_HANDLER(IDC_FIND, onFindText)
+		COMMAND_ID_HANDLER(IDC_REPORT_CHAT, onDumpUserInfo)
 		COMMAND_RANGE_HANDLER(IDC_BOLD, IDC_STRIKE, onTextStyleSelect)
 		COMMAND_ID_HANDLER(IDC_COLOR, onTextStyleSelect)
 		COMMAND_HANDLER(IDC_CHAT_MESSAGE_EDIT, EN_CHANGE, onChange)
@@ -96,6 +101,12 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 			return 0;
 		}
 		void onEnter();
+		LRESULT onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEditSelectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEditClearAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDumpUserInfo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

@@ -508,6 +508,12 @@
     <ClCompile Include="windows\MDIUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\TextHostImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\TextHostCtrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -1150,6 +1156,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\MDITabChildWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\TextHostImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\TextHostCtrl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\TextHostDefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

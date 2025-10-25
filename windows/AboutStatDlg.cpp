@@ -52,7 +52,7 @@ void AboutStatDlg::showText()
 	CRichEditCtrl ctrlText(GetDlgItem(IDC_COMMANDS));
 	ctrlText.SetTextEx((LPCTSTR) formattedText.c_str());
 	ctrlText.PostMessage(EM_SCROLL, SB_TOP);
-	ctrlText.PostMessage(EM_SETSEL, -1, 0);
+	ctrlText.PostMessage(EM_SETSEL, (WPARAM) -1, 0);
 }
 
 LRESULT AboutStatDlg::onDestroy(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
