@@ -607,6 +607,7 @@
 #define IDC_SKIPLIST_SHARE              1554
 #define IDC_SETTINGS_SOCKET_IN_BUFFER   1555
 #define IDC_ICON_SIZE                   1558
+#define IDC_RECONNECT_HUBS              1559
 #define IDC_TABSTEXT                    1566
 #define IDC_THOLD                       1567
 #define IDC_SETTINGS_NOMINALBW          1570

@@ -532,7 +532,7 @@ enum Strings   // @DontAdd
 	LARGER_TARGET_FILE_EXISTS, // "A file of equal or larger size already exists at the target location"
 	LAST_HUB, // "Hub (last seen on if offline)"
 	LAST_IP, // "Last IP"
-	LAST_RECENT_HUBS, // "Last opened hubs"
+	LAST_RECENT_HUBS, // "Reconnect to recently opened hubs"
 	LAST_SEEN, // "Time last seen"
 	LAST_SUCCESFULLY_CONNECTED, // "Time last connected"
 	LEFT_COLOR, // "Left color"

@@ -21,8 +21,15 @@
 #include "WinUtil.h"
 #include "ConfUI.h"
 
+static const PropPage::Item items[] =
+{
+	{ IDC_RECONNECT_HUBS, Conf::RECONNECT_HUBS_ON_START, PropPage::T_BOOL },
+	{ 0, 0, PropPage::T_END }
+};
+
 static const WinUtil::TextItem textItem[] =
 {
+	{ IDC_RECONNECT_HUBS, ResourceManager::LAST_RECENT_HUBS },
 	{ IDC_SETTINGS_AUTO_OPEN, ResourceManager::SETTINGS_AUTO_OPEN },
 	{ IDC_SETTINGS_WINDOWS_OPTIONS, ResourceManager::SETTINGS_WINDOWS_OPTIONS },
 	{ IDC_SETTINGS_CONFIRM_OPTIONS, ResourceManager::SETTINGS_CONFIRM_DIALOG_OPTIONS },
@@ -32,10 +39,10 @@ static const WinUtil::TextItem textItem[] =
 // Open on startup
 static const PropPage::ListItem listItems[] =
 {
-	{ Conf::OPEN_RECENT_HUBS, ResourceManager::LAST_RECENT_HUBS },
 	{ Conf::OPEN_FAVORITE_HUBS, ResourceManager::FAVORITE_HUBS },
 	{ Conf::OPEN_FAVORITE_USERS, ResourceManager::FAVORITE_USERS },
 	{ Conf::OPEN_PUBLIC_HUBS, ResourceManager::PUBLIC_HUBS },
+	{ Conf::OPEN_RECENT_HUBS, ResourceManager::RECENT_HUBS },
 	{ Conf::OPEN_QUEUE, ResourceManager::DOWNLOAD_QUEUE },
 	{ Conf::OPEN_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
 	{ Conf::OPEN_WAITING_USERS, ResourceManager::WAITING_USERS },
@@ -87,16 +94,16 @@ LRESULT WindowsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlConfirms.Attach(GetDlgItem(IDC_CONFIRM_OPTIONS));
 
 	WinUtil::translate(*this, textItem);
-	PropPage::read(*this, nullptr, listItems, ctrlStartup);
+	PropPage::read(*this, items, listItems, ctrlStartup);
 	PropPage::read(*this, nullptr, optionItems, ctrlOptions);
 	PropPage::read(*this, nullptr, confirmItems, ctrlConfirms);
-	
+
 	return TRUE;
 }
 
 void WindowsPage::write()
 {
-	PropPage::write(*this, nullptr, listItems, ctrlStartup);
+	PropPage::write(*this, items, listItems, ctrlStartup);
 	PropPage::write(*this, nullptr, optionItems, ctrlOptions);
 	PropPage::write(*this, nullptr, confirmItems, ctrlConfirms);
 }

@@ -190,6 +190,7 @@ namespace Conf
 
 		// Open at startup
 		// ints
+		RECONNECT_HUBS_ON_START,
 		OPEN_RECENT_HUBS,
 		OPEN_PUBLIC_HUBS,
 		OPEN_FAVORITE_HUBS,

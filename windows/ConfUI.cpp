@@ -228,7 +228,8 @@ void Conf::initUiSettings()
 	s->addString(QCDQMP_FORMAT, "QcdQmpFormat", "+me is listening to '%[title]' (%[bitrate], %[sample]) (%[elapsed] %[bar] %[length]) %[magnet]");
 
 	// Open at startup
-	s->addBool(OPEN_RECENT_HUBS, "OpenRecentHubs", true);
+	s->addBool(RECONNECT_HUBS_ON_START, "ReconnectHubsOnStart", true);
+	s->addBool(OPEN_RECENT_HUBS, "OpenRecentHubs2");
 	s->addBool(OPEN_PUBLIC_HUBS, "OpenPublic", true);
 	s->addBool(OPEN_FAVORITE_HUBS, "OpenFavoriteHubs");
 	s->addBool(OPEN_FAVORITE_USERS, "OpenFavoriteUsers");

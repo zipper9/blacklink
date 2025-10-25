@@ -699,6 +699,7 @@ void MainFrame::openDefaultWindows()
 		{ Conf::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,         true  },
 		{ Conf::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,          true  },
 		{ Conf::OPEN_PUBLIC_HUBS,        IDC_PUBLIC_HUBS,       true  },
+		{ Conf::OPEN_RECENT_HUBS,        IDC_RECENTS,           true  },
 		{ Conf::OPEN_QUEUE,              IDC_QUEUE,             true  },
 		{ Conf::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,          true  },
 		{ Conf::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,      true  },
@@ -2061,7 +2062,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 			lastFrame = HubFrame::openHubWindow(cs);
 		}
 	}
-	if (SettingsManager::instance.getUiSettings()->getBool(Conf::OPEN_RECENT_HUBS))
+	if (SettingsManager::instance.getUiSettings()->getBool(Conf::RECONNECT_HUBS_ON_START))
 	{
 		HubFrame::Settings cs;
 		const auto& recents = FavoriteManager::getInstance()->getRecentHubs();
