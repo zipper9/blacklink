@@ -71,6 +71,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
+		MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBkgnd)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -112,6 +113,14 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void openFrameLog() const;
+
+		LRESULT onEraseBkgnd(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+		{
+			RECT rc;
+			GetClientRect(&rc);
+			FillRect((HDC) wParam, &rc, Colors::g_tabBackgroundBrush);
+			return TRUE;
+		}
 
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 

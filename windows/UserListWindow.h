@@ -65,6 +65,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		BEGIN_MSG_MAP(UserListWindow)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
+		MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBkgnd)
 		MESSAGE_HANDLER(WM_NEXTDLGCTL, onNextDlgCtl)
 		MESSAGE_HANDLER(WMU_RETURN, onFilterReturn)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
@@ -86,6 +87,14 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		LRESULT onEnterUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+		LRESULT onEraseBkgnd(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+		{
+			RECT rc;
+			GetClientRect(&rc);
+			FillRect((HDC) wParam, &rc, Colors::g_tabBackgroundBrush);
+			return TRUE;
+		}
 
 	private:
 		enum FilterModes

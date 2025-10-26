@@ -35,6 +35,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		MESSAGE_HANDLER(WM_FORWARDMSG, onForwardMsg)
 		MESSAGE_HANDLER(WMU_CHAT_LINK_CLICKED, onChatLinkClicked)
 		MESSAGE_HANDLER(CFindReplaceDialog::GetFindReplaceMsg(), onFindDialogMessage)
+		MESSAGE_HANDLER(WM_CTLCOLORBTN, onButtonColor)
 		COMMAND_ID_HANDLER(IDC_WINAMP_SPAM, onWinampSpam)
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
@@ -119,6 +120,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onButtonColor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 
 		LRESULT onFindText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{

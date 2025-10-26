@@ -1226,3 +1226,8 @@ BOOL BaseChatFrame::isFindDialogMessage(MSG* msg) const
 {
 	return findDlg && findDlg->IsDialogMessage(msg);
 }
+
+LRESULT BaseChatFrame::onButtonColor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+{
+	return (LRESULT) Colors::g_tabBackgroundBrush;
+}

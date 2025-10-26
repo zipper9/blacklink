@@ -15,6 +15,10 @@
 
 using namespace UserTypeColors;
 
+static const int SPACE_NORMAL = 4;
+static const int SPACE_SMALL  = 2;
+static const int COMBO_HEIGHT = 256;
+
 static const int columnSizes[] =
 {
 	100,    // COLUMN_NICK
@@ -886,18 +890,18 @@ void UserListWindow::updateLayout()
 	{
 		HDWP dwp = BeginDeferWindowPos(4);
 		CRect rc;
-		rc.right = rect.right - 2;
-		rc.top = rect.bottom - 4 - editHeight + 1;
-		rc.bottom = rc.top + 256;
+		rc.right = rect.right;
+		rc.top = rect.bottom - editHeight;
+		rc.bottom = rc.top + COMBO_HEIGHT;
 		rc.left = rc.right - comboWidth;
 		ctrlFilterSel.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER | SWP_SHOWWINDOW);
 
-		rc.right = rc.left - 2;
-		rc.left = 2;
+		rc.right = rc.left - SPACE_SMALL;
+		rc.left = 0;
 		rc.bottom = rc.top + editHeight;
 		ctrlSearchBox.DeferWindowPos(dwp, nullptr, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER | SWP_SHOWWINDOW);
 
-		rect.bottom = rc.top - 4;
+		rect.bottom = rc.top - SPACE_NORMAL;
 		ctrlUsers.DeferWindowPos(dwp, nullptr, rect.left, rect.top, rect.Width(), rect.Height(), SWP_NOZORDER);
 		EndDeferWindowPos(dwp);
 	}

@@ -120,7 +120,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 
 	CRect rc = rect;
 
-	rc.right = rc.left + 2;
+	rc.right = rc.left;
 	rc.bottom = rc.top + BUTTON_HEIGHT;
 
 	const auto* ss = SettingsManager::instance.getUiSettings();
@@ -164,7 +164,7 @@ void MessagePanel::updatePanel(const CRect& rect)
 
 int MessagePanel::getPanelWidth() const
 {
-	int width = 4;
+	int width = 0;
 	if (disableChat) return width;
 	int count = 0;
 	const auto* ss = SettingsManager::instance.getUiSettings();

@@ -37,6 +37,9 @@
 #include "FavHubProperties.h"
 #include "LineDlg.h"
 
+static const int SPACE_NORMAL = 4;
+static const int SPACE_SMALL  = 2;
+
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
 
@@ -110,6 +113,8 @@ HubFrame::HubFrame(const Settings& cs) :
 	showUsers = false;
 	serverUrl = cs.server;
 	addSplitter(-1, FLAG_HORIZONTAL | FLAG_PROPORTIONAL | FLAG_INTERACTIVE, cs.chatUserSplit);
+	setSplitterColor(0, SplitWndBase::COLOR_TYPE_TRANSPARENT, 0);
+	setOptions(0);
 
 	if (serverUrl == dht::NetworkName)
 	{
@@ -419,11 +424,11 @@ void HubFrame::processFrameMessage(const tstring& fullMessageText, bool& resetIn
 StringMap HubFrame::getFrameLogParams() const
 {
 	StringMap params;
-	
+
 	params["hubNI"] = baseClient->getHubName();
 	params["hubURL"] = baseClient->getHubUrl();
 	params["myNI"] = baseClient->getMyNick();
-	
+
 	return params;
 }
 
@@ -1229,31 +1234,43 @@ void HubFrame::UpdateLayout(BOOL)
 	}
 	if (msgPanel)
 	{
+		BOOL isZoomed = IsZoomed();
 		const int h = getInputBoxHeight();
-		int panelHeight = msgPanel->initialized ? h + 6 : 0;
+		int panelHeight = msgPanel->initialized ? h + SPACE_NORMAL : 0;
 
 		CRect rc = rect;
 		rc.bottom -= panelHeight;
+		if (isZoomed)
+		{
+			rc.left += SPACE_NORMAL;
+			rc.right -= SPACE_NORMAL;
+			rc.bottom -= SPACE_NORMAL;
+		}
 		updateSplitterLayout(rc, prevRect);
 
 		if (msgPanel->initialized)
 		{
 			int buttonPanelWidth = msgPanel->getPanelWidth();
 			rc = rect;
-			rc.left += 2;
-			rc.bottom -= 4;
+			if (isZoomed)
+			{
+				rc.left += SPACE_NORMAL;
+				rc.bottom -= SPACE_NORMAL;
+			}
 			rc.top = rc.bottom - h;
 			rc.right -= buttonPanelWidth;
+			if (isZoomed)
+				rc.right -= SPACE_NORMAL;
 
-			const CRect rcMessage = rc;
+			CRect rcMessage = rc;
+			rcMessage.right -= SPACE_SMALL;
 			if (ctrlMessage)
 				ctrlMessage.MoveWindow(rcMessage);
-		
+
 			rc.left = rc.right;
 			rc.right += buttonPanelWidth;
-			rc.bottom -= 1;
-
-			rc.top += 1;
+			rc.bottom--;
+			rc.top++;
 			msgPanel->updatePanel(rc);
 		}
 		if (tooltip)

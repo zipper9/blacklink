@@ -97,6 +97,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onHubFrmCtlColor)
+		MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBkgnd)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		MESSAGE_HANDLER(WM_WINDOWPOSCHANGING, onSizeMove)
@@ -136,7 +137,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		ALT_MSG_MAP(HUBSTATUS_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onSwitchPanels)
 		END_MSG_MAP()
-		
+
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onHubFrmCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -159,6 +160,14 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
+
+		LRESULT onEraseBkgnd(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+		{
+			RECT rc;
+			GetClientRect(&rc);
+			FillRect((HDC) wParam, &rc, Colors::g_tabBackgroundBrush);
+			return TRUE;
+		}
 
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{

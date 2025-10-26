@@ -47,6 +47,8 @@ static const uint32_t FLAG_COUNTRY = 0x10000;
 static const int iconSize = 16;
 static const int flagIconWidth = 25;
 static const int iconTextMargin = 2;
+static const int spaceNormal = 4;
+static const int spaceSmall = 2;
 
 PrivateFrame::FrameMap PrivateFrame::frames;
 
@@ -574,6 +576,7 @@ void PrivateFrame::UpdateLayout(BOOL)
 	if (GlobalState::isStartingUp() || GlobalState::isShuttingDown())
 		return;
 
+	BOOL isZoomed = IsZoomed();
 	RECT rect;
 	GetClientRect(&rect);
 	if (ctrlStatus)
@@ -594,7 +597,7 @@ void PrivateFrame::UpdateLayout(BOOL)
 	if (msgPanel && ctrlMessage)
 	{
 		h = getInputBoxHeight();
-		panelHeight = h + 6;
+		panelHeight = h + spaceNormal;
 		buttonPanelWidth = msgPanel->getPanelWidth();
 	}
 	else
@@ -602,20 +605,26 @@ void PrivateFrame::UpdateLayout(BOOL)
 
 	CRect rc = rect;
 	rc.bottom -= panelHeight;
+	if (isZoomed)
+	{
+		rc.left += spaceNormal;
+		rc.right -= spaceNormal;
+		rc.bottom -= spaceNormal;
+	}
 	if (ctrlClient)
 		ctrlClient.MoveWindow(rc);
 
 	if (msgPanel && ctrlMessage)
 	{
-		rc = rect;
-		rc.left += 2;
-		rc.bottom -= 4;
+		rc.bottom = rect.bottom;
+		if (isZoomed)
+			rc.bottom -= spaceNormal;
 		rc.top = rc.bottom - h;
-		rc.right -= buttonPanelWidth;
+		rc.right -= buttonPanelWidth + spaceSmall;
 		ctrlMessage.MoveWindow(rc);
 
-		rc.left = rc.right;
-		rc.right += buttonPanelWidth;
+		rc.left = rc.right + spaceSmall;
+		rc.right = rc.left + buttonPanelWidth;
 		rc.bottom--;
 		rc.top++;
 		msgPanel->updatePanel(rc);
