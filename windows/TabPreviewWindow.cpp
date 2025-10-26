@@ -252,15 +252,13 @@ POINT TabPreviewWindow::getOffset() const
 	return pt;
 }
 
-static void clearAlpha(uint8_t* data, int stride, int x, int y, int width, int height)
+static void clearPixels(uint8_t* data, int stride, int x, int y, int width, int height)
 {
 	if (width <= 0 || height <= 0) return;
 	data += y * stride;
 	while (height)
 	{
-		uint8_t* p = data + x * 4 + 3;
-		for (int i = 0; i < width * 4; i += 4)
-			p[i] = 0;
+		memset(data + x * 4, 0, width * 4);
 		data += stride;
 		height--;
 	}
@@ -294,12 +292,11 @@ LRESULT TabPreviewWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	GdiFlush();
 
 	uint8_t* p = (uint8_t*) bitmapData;
-	for (int i = 3; i < (int) bmi.biSizeImage; i += 4)
-		p[i] = 0xFF;
+	WinUtil::fixAlpha32(p, bmi.biSizeImage >> 2);
 	int stride = size.cx * 4;
 	int ypos = pos == TABS_TOP ? 0 : size.cy - tabHeight;
-	clearAlpha(p, stride, 0, ypos, startMargin, tabHeight);
-	clearAlpha(p, stride, startMargin + tabWidth, ypos, size.cx - (startMargin + tabWidth), tabHeight);
+	clearPixels(p, stride, 0, ypos, startMargin, tabHeight);
+	clearPixels(p, stride, startMargin + tabWidth, ypos, size.cx - (startMargin + tabWidth), tabHeight);
 
 	POINT ptSrc = {};
 	BLENDFUNCTION bf;

@@ -178,6 +178,17 @@ void WinUtil::blend32Slow(const uint8_t* a, const uint8_t* b, uint8_t* c, unsign
 	}
 }
 
+static void fixAlpha32Slow(uint8_t* a, unsigned pixelCount)
+{
+	a += 3;
+	while (pixelCount)
+	{
+		*a = 0xFF;
+		a += 4;
+		pixelCount--;
+	}
+}
+
 #if defined _M_X64  || defined _M_IX86
 
 void WinUtil::blend32(const uint8_t* a, const uint8_t* b, uint8_t* c, unsigned pixelCount, int alpha)
@@ -205,6 +216,30 @@ void WinUtil::blend32(const uint8_t* a, const uint8_t* b, uint8_t* c, unsigned p
 	}
 	if (pixelCount & 1)
 		blend32Slow(a, b, c, 1, alpha);
+}
+
+static void fixAlpha32Fast(uint8_t* a, unsigned pixelCount)
+{
+	__m128i mask = _mm_set1_epi32(0xFF000000);
+	unsigned count = pixelCount >> 2;
+	while (count)
+	{
+		__m128i x = _mm_loadu_si128((const __m128i*) a);
+		_mm_storeu_si128((__m128i*) a, _mm_or_si128(x, mask));
+		a += 16;
+		count--;
+	}
+	pixelCount &= 3;
+	if (pixelCount)
+		fixAlpha32Slow(a, pixelCount);
+}
+
+void WinUtil::fixAlpha32(uint8_t* a, unsigned pixelCount)
+{
+	if (hasFastBlend())
+		fixAlpha32Fast(a, pixelCount);
+	else
+		fixAlpha32Slow(a, pixelCount);
 }
 
 #elif defined _M_ARM || defined _M_ARM64
@@ -237,11 +272,21 @@ void WinUtil::blend32(const uint8_t* a, const uint8_t* b, uint8_t* c, unsigned p
 		blend32Slow(a, b, c, 1, alpha);
 }
 
+void WinUtil::fixAlpha32(uint8_t* a, unsigned pixelCount)
+{
+	fixAlpha32Slow(a, pixelCount);
+}
+
 #else
 
 void WinUtil::blend32(const uint8_t* a, const uint8_t* b, uint8_t* c, unsigned pixelCount, int alpha)
 {
 	blend32Slow(a, b, c, pixelCount, alpha);
+}
+
+void WinUtil::fixAlpha32(uint8_t* a, unsigned pixelCount)
+{
+	fixAlpha32Slow(a, pixelCount);
 }
 
 #endif

@@ -18,6 +18,7 @@ namespace WinUtil
 	int getDisplayDpi();
 	void blend32Slow(const uint8_t* a, const uint8_t* b, uint8_t* c, unsigned pixelCount, int alpha);
 	void blend32(const uint8_t* a, const uint8_t* b, uint8_t* c, unsigned pixelCount, int alpha);
+	void fixAlpha32(uint8_t* a, unsigned pixelCount);
 	bool hasFastBlend();
 
 }
