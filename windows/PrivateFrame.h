@@ -141,8 +141,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 				sendSeenIndication();
 			if (ctrlMessage)
 				ctrlMessage.SetFocus();
-			if (ctrlClient.IsWindow())
-				ctrlClient.goToEnd(false);
+			if (ctrlClient)
+				ctrlClient.moveToEnd(true);
 			return 0;
 		}
 

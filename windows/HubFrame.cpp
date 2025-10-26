@@ -432,11 +432,6 @@ void HubFrame::openFrameLog() const
 	WinUtil::openLog(Util::getConfString(Conf::LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
 }
 
-void HubFrame::readFrameLog()
-{
-	ctrlClient.goToEnd(true);
-}
-
 bool HubFrame::hasNick(const tstring& nick) const
 {
 	return findUserByNick(nick) != nullptr;
@@ -2616,8 +2611,8 @@ LRESULT HubFrame::onSizeMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	bHandled = FALSE;
 	if (isClosedOrShutdown())
 		return 0;
-	if (ctrlClient.IsWindow())
-		ctrlClient.goToEnd(false);
+	if (ctrlClient)
+		ctrlClient.moveToEnd(true);
 	return 0;
 }
 

@@ -249,7 +249,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxEmoticons, bool hi
 	appendTextInternal(text, message, maxEmoticons, highlightNick);
 	SetSel(savedSel);
 	if (autoScroll)
-		goToEnd(false);
+		moveToEnd();
 	else
 		SetScrollPos(&savedScroll);
 	SetRedraw(TRUE);
@@ -438,9 +438,12 @@ bool ChatCtrl::hitText(tstring& text, int selBegin, int selEnd) const
 	return !text.empty();
 }
 
-void ChatCtrl::goToEnd(bool force)
+void ChatCtrl::moveToEnd(bool post)
 {
-	if (autoScroll || force)
+	if (!autoScroll) return;
+	if (post)
+		PostMessage(EM_SCROLL, SB_BOTTOM, 0);
+	else
 		SendMessage(EM_SCROLL, SB_BOTTOM, 0);
 }
 
@@ -453,7 +456,7 @@ void ChatCtrl::setAutoScroll(bool flag)
 {
 	autoScroll = flag;
 	if (autoScroll)
-		goToEnd(false);
+		moveToEnd();
 }
 
 LRESULT ChatCtrl::onRButtonDown(POINT pt)

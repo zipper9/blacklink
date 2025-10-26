@@ -403,7 +403,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) override;
 		bool sendMessage(const string& msg, bool thirdPerson = false) override;
 		void addStatus(const tstring& line, bool inChat = true, bool history = true, int textStyle = Colors::TEXT_STYLE_SYSTEM_MESSAGE) override;
-		void readFrameLog() override;
+		void readFrameLog() override {}
 		bool hasNick(const tstring& nick) const override;
 
 	private:

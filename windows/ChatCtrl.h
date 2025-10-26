@@ -141,7 +141,7 @@ class ChatCtrl: public TextHostCtrl
 		void disableChatCache() { useChatCacheFlag = false; }
 		void restoreChatCache();
 
-		void goToEnd(bool force);
+		void moveToEnd(bool post = false);
 		bool getAutoScroll() const { return autoScroll; }
 		void invertAutoScroll();
 		void setAutoScroll(bool flag);
