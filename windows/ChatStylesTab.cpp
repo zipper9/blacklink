@@ -188,8 +188,17 @@ ChatStylesTab::ChatStylesTab()
 	textStyles[TS_OTHER].init(this, ResourceManager::OTHER_USER,
 	    Conf::TEXT_NORMAL_BACK_COLOR, Conf::TEXT_NORMAL_FORE_COLOR,
 	    Conf::TEXT_NORMAL_BOLD, Conf::TEXT_NORMAL_ITALIC);
+}
 
-	preview.disableChatCache();
+void ChatStylesTab::insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos)
+{
+	if (text.empty()) return;
+	startPos = endPos = preview.GetTextLengthEx(GTL_NUMCHARS);
+	preview.SetSel(endPos, endPos);
+	preview.ReplaceSel(text.c_str());
+	endPos = preview.GetTextLengthEx(GTL_NUMCHARS);
+	preview.SetSel(startPos, endPos);
+	preview.SetSelectionCharFormat(cf);
 }
 
 void ChatStylesTab::updateFont()
@@ -357,13 +366,13 @@ void ChatStylesTab::refreshPreview()
 		for (int i = 0; i < TS_LAST; i++)
 		{
 			if (i == TS_TIMESTAMP) continue;
-			preview.insertAndFormat(timestamp, textStyles[TS_TIMESTAMP], startPos, endPos);
+			insertAndFormat(timestamp, textStyles[TS_TIMESTAMP], startPos, endPos);
 			if (i == TS_URL)
 			{
 				CHARFORMAT2 cf = textStyles[TS_URL];
 				cf.dwMask |= CFM_UNDERLINE;
 				cf.dwEffects |= CFE_UNDERLINE;
-				preview.insertAndFormat(TSTRING(SAMPLE_URL) + _T("\r\n"), cf, startPos, endPos);
+				insertAndFormat(TSTRING(SAMPLE_URL) + _T("\r\n"), cf, startPos, endPos);
 			}
 			else if (i >= TS_FAVORITE)
 			{
@@ -373,13 +382,13 @@ void ChatStylesTab::refreshPreview()
 					cf.dwMask |= CFM_BOLD;
 					cf.dwEffects |= CFE_BOLD;
 				}
-				preview.insertAndFormat(_T("<"), textStyles[TS_GENERAL], startPos, endPos);
-				preview.insertAndFormat(TSTRING_I(textStyles[i].name), cf, startPos, endPos);
-				preview.insertAndFormat(_T("> "), textStyles[TS_GENERAL], startPos, endPos);
-				preview.insertAndFormat(TSTRING(SAMPLE_MESSAGE) + _T("\r\n"), textStyles[TS_GENERAL], startPos, endPos);
+				insertAndFormat(_T("<"), textStyles[TS_GENERAL], startPos, endPos);
+				insertAndFormat(TSTRING_I(textStyles[i].name), cf, startPos, endPos);
+				insertAndFormat(_T("> "), textStyles[TS_GENERAL], startPos, endPos);
+				insertAndFormat(TSTRING(SAMPLE_MESSAGE) + _T("\r\n"), textStyles[TS_GENERAL], startPos, endPos);
 			}
 			else
-				preview.insertAndFormat(TSTRING_I(textStyles[i].name) + _T("\r\n"), textStyles[i], startPos, endPos);
+				insertAndFormat(TSTRING_I(textStyles[i].name) + _T("\r\n"), textStyles[i], startPos, endPos);
 		}
 	}
 	preview.InvalidateRect(nullptr);

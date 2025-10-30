@@ -7,9 +7,9 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "ChatCtrl.h"
 #include "SettingsStore.h"
 #include "PropPageCallback.h"
+#include "../client/typedefs.h"
 #include "../client/BaseSettingsImpl.h"
 
 class FontStyleDlg : public CDialogImpl<FontStyleDlg>
@@ -112,7 +112,7 @@ class ChatStylesTab : public CDialogImpl<ChatStylesTab>
 
 		TextStyleSettings textStyles[TS_LAST];
 		CListBox lsbList;
-		ChatCtrl preview;
+		CRichEditCtrl preview;
 		CButton ctrlBoldMsgAuthors;
 		tstring currentFont;
 		LOGFONT mainFont;
@@ -122,6 +122,7 @@ class ChatStylesTab : public CDialogImpl<ChatStylesTab>
 		bool boldMsgAuthor;
 		PropPageCallback* callback;
 
+		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
 		void updateFont();
 		void refreshPreview();
 		void applyFont();
