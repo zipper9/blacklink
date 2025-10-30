@@ -85,6 +85,7 @@ class TextHostCtrl : public CWindowImpl<TextHostCtrl>, public ThemeWrapper
 		MESSAGE_HANDLER(WM_GETDLGCODE, onGetDlgCode)
 		MESSAGE_HANDLER(WM_SETCURSOR, onSetCursor)
 		MESSAGE_HANDLER(EM_SCROLL, onCtrlMessage)
+		MESSAGE_HANDLER(WM_SETFONT, onCtrlMessage)
 		END_MSG_MAP()
 
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
