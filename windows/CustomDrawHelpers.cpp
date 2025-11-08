@@ -10,6 +10,7 @@
 #include "../client/SettingsManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/LruCache.h"
+#include "../client/CompatibilityManager.h"
 
 static const int iconSize = 16;
 static const int flagIconWidth = 25;
@@ -39,9 +40,9 @@ class GdiObjCache
 		static void deleter(Entry& e)
 		{
 			DeleteObject(e.brush);
-		}		
+		}
 };
-	
+
 static GdiObjCache gdiCache;
 
 HBRUSH GdiObjCache::getBrush(COLORREF color)
@@ -74,9 +75,13 @@ void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, con
 	state.currentItem = -1;
 	state.hImg = lv.GetImageList(LVSIL_SMALL);
 	state.hImgState = lv.GetImageList(LVSIL_STATE);
-	state.iconSpace = margin1;
-	if (state.hImgState)
-		state.iconSpace += iconSize + margin3;
+	state.iconSpace = 0;
+	if (CompatibilityManager::getComCtlVersion() >= MAKELONG(1, 6))
+	{
+		state.iconSpace = margin1;
+		if (state.hImgState)
+			state.iconSpace += iconSize + margin3;
+	}
 
 	if (state.flags & FLAG_GET_COLFMT)
 	{
@@ -135,14 +140,12 @@ void CustomDrawHelpers::drawBackground(HTHEME hTheme, const CustomDrawHelpers::C
 bool CustomDrawHelpers::startSubItemDraw(CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd)
 {
 	if (cd->nmcd.rc.left == 0 && cd->nmcd.rc.right == 0) return false;
-	
+
 	state.rc = cd->nmcd.rc;
 	state.drawCount++;
-	if (state.rc.top == 0 && state.rc.bottom == 0) // ???
-	{
-		CListViewCtrl lv(cd->nmcd.hdr.hwndFrom);
-		lv.GetSubItemRect(state.currentItem, cd->iSubItem, LVIR_BOUNDS, &state.rc);		
-	}
+	// ComCtl versions < 6.1 don't set subitem rect
+	if (state.rc.top == 0 && state.rc.bottom == 0)
+		getSubItemRect(cd->nmcd.hdr.hwndFrom, state.currentItem, cd->iSubItem, state.rc);
 	state.clrForeground = cd->clrText;
 	state.clrBackground = cd->clrTextBk;
 	if ((state.flags & (FLAG_APP_THEMED | FLAG_SELECTED)) == FLAG_SELECTED)
@@ -171,7 +174,7 @@ void CustomDrawHelpers::setColor(CustomDrawState& state, const NMLVCUSTOMDRAW* c
 	HDC hdc = cd->nmcd.hdc;
 	state.oldBkMode = GetBkMode(hdc);
 	SetBkMode(hdc, TRANSPARENT);
-	state.oldColor = SetTextColor(hdc, state.clrForeground);	
+	state.oldColor = SetTextColor(hdc, state.clrForeground);
 }
 
 void CustomDrawHelpers::fillBackground(const CustomDrawState& state, const NMLVCUSTOMDRAW* cd)
@@ -206,7 +209,7 @@ void CustomDrawHelpers::drawFirstSubItem(CustomDrawHelpers::CustomDrawState& sta
 	CListViewCtrl lv(cd->nmcd.hdr.hwndFrom);
 	LVITEM item;
 	memset(&item, 0, sizeof(item));
-	item.mask = LVIF_IMAGE | LVIF_INDENT | LVIF_STATE;	
+	item.mask = LVIF_IMAGE | LVIF_INDENT | LVIF_STATE;
 	item.stateMask = LVIS_STATEIMAGEMASK;
 	item.iItem = state.currentItem;
 	if (!lv.GetItem(&item)) return;
@@ -263,7 +266,7 @@ void CustomDrawHelpers::drawFirstSubItem(CustomDrawHelpers::CustomDrawState& sta
 	setColor(state, cd);
 	UINT textFlags = getTextFlags(state, cd);
 	if (textFlags & DT_RIGHT)
-		rc.right -= margin1 + margin2;	
+		rc.right -= margin1 + margin2;
 	else
 		rc.right -= margin2;
 	if (!text.empty() && rc.left < rc.right)
@@ -524,4 +527,36 @@ bool CustomDrawHelpers::drawCheckBox(const NMCUSTOMDRAW* cd, CustomDrawHelpers::
 		DrawFocusRect(cd->hdc, &rc);
 	}
 	return true;
+}
+
+void CustomDrawHelpers::getSubItemRect(HWND hWnd, int item, int subItem, RECT& rc)
+{
+	CListViewCtrl lv(hWnd);
+	lv.GetSubItemRect(item, subItem, LVIR_BOUNDS, &rc);
+	if (subItem) return;
+
+	int count = lv.GetHeader().GetItemCount();
+	int* order = (int*) alloca(count * sizeof(int));
+	lv.GetColumnOrderArray(count, order);
+	int index = -1;
+	for (int i = 0; i < count; i++)
+		if (order[i] == 0)
+		{
+			index = i;
+			break;
+		}
+	if (index != -1)
+	{
+		RECT rcTmp;
+		if (index != 0)
+		{
+			lv.GetSubItemRect(item, order[index-1], LVIR_BOUNDS, &rcTmp);
+			rc.left = rcTmp.right;
+		}
+		if (index != count - 1)
+		{
+			lv.GetSubItemRect(item, order[index+1], LVIR_BOUNDS, &rcTmp);
+			rc.right = rcTmp.left;
+		}
+	}
 }

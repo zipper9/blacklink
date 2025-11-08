@@ -598,20 +598,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						return 0;
 					}
 
-#if 0
-					//this is just severely broken, msdn says GetSubItemRect requires a one based index
-					//but it wont work and index 0 gives the rect of the whole item
-					if (cd->iSubItem == 0)
-					{
-						//use LVIR_LABEL to exclude the icon area since we will be painting over that
-						//later
-						ctrlTransfers.GetItemRect((int)cd->nmcd.dwItemSpec, &rc, LVIR_LABEL);
-					}
-					else
-					{
-						ctrlTransfers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, &rc);
-					}
-#endif
+					dcassert(cd->iSubItem != 0);
 					ctrlTransfers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, &rc);
 					int barIndex = ii->download ? (ii->hasParent() ? 1 : 0) : 2;
 					int iconIndex = -1;

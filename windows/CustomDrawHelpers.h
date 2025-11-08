@@ -62,6 +62,7 @@ namespace CustomDrawHelpers
 	void fillBackground(const CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
 	void drawFirstSubItem(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const tstring& text);
 	UINT getTextFlags(const CustomDrawState& state, const NMLVCUSTOMDRAW* cd);
+	void getSubItemRect(HWND hWnd, int item, int subItem, RECT& rc);
 
 	void drawLocation(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const IPInfo& ipInfo);
 	void drawCountry(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, uint16_t code, const tstring& text);

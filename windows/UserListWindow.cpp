@@ -172,8 +172,8 @@ LRESULT UserListWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(UserListWindow::columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(UserListWindow::columnId));
 
-	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP | WS_BORDER |
-		LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, 0, IDC_USERS);
+	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP |
+		LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
 	ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	if (WinUtil::setExplorerTheme(ctrlUsers))
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
