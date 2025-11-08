@@ -472,6 +472,12 @@ LRESULT BaseChatFrame::onPerformWebSearch(WORD /*wNotifyCode*/, WORD wID, HWND /
 	return 0;
 }
 
+LRESULT BaseChatFrame::onAutoScrollChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlClient.invertAutoScroll();
+	return 0;
+}
+
 LRESULT BaseChatFrame::onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ctrlClient.copySelection();
