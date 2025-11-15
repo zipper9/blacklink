@@ -26,6 +26,7 @@
 #include "ExMessageBox.h"
 #include "BrowseFile.h"
 #include "MenuHelper.h"
+#include "BackingStore.h"
 #include "ConfUI.h"
 #include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
@@ -108,7 +109,8 @@ QueueFrame::QueueFrame() :
 	usingDirMenu(false), fileLists(nullptr), showTree(true),
 	showTreeContainer(WC_BUTTON, this, SHOWTREE_MESSAGE_MAP),
 	clearingTree(0), currentDir(nullptr), treeInserted(false),
-	lastTotalCount(0), lastTotalSize(-1), updateStatus(false)
+	lastTotalCount(0), lastTotalSize(-1), updateStatus(false),
+	showProgressBars(false), progressDepth(0), backingStore(nullptr)
 {
 	root = new DirItem;
 	ctrlQueue.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
@@ -138,6 +140,7 @@ QueueFrame::QueueFrame() :
 
 QueueFrame::~QueueFrame()
 {
+	if (backingStore) backingStore->release();
 	destroyMenus();
 	deleteTree(fileLists);
 	deleteTree(root);
@@ -145,6 +148,17 @@ QueueFrame::~QueueFrame()
 	LogManager::message("QueueFrame::DirItem: created=" + Util::toString(QueueFrame::DirItem::itemsCreated) + " removed=" + Util::toString(QueueFrame::DirItem::itemsRemoved), false);
 	LogManager::message("QueueFrame::QueueItemInfo: created=" + Util::toString(QueueFrame::QueueItemInfo::itemsCreated) + " removed=" + Util::toString(QueueFrame::QueueItemInfo::itemsRemoved), false);
 #endif
+}
+
+void QueueFrame::updateProgressSettings()
+{
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
+	colorProgressBk = ss->getInt(Conf::PROGRESS_BACK_COLOR);
+	colorProgressRunning = ss->getInt(Conf::COLOR_RUNNING);
+	colorProgressRunning2 = ss->getInt(Conf::COLOR_RUNNING_COMPLETED);
+	colorProgressDownloaded = ss->getInt(Conf::COLOR_DOWNLOADED);
+	progressDepth = ss->getInt(Conf::PROGRESS_3DDEPTH);
 }
 
 static tstring getSourceName(const UserPtr& user)
@@ -214,9 +228,9 @@ static int getCheckBoxSize(HWND hWnd)
 
 LRESULT QueueFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	updateProgressSettings();
 	const auto* ss = SettingsManager::instance.getUiSettings();
 	showTree = ss->getBool(Conf::QUEUE_FRAME_SHOW_TREE);
-	showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
 
 	ctrlStatus.setAutoGripper(true);
 	ctrlStatus.Create(m_hWnd, 0, nullptr, WS_CHILD | WS_CLIPCHILDREN);
@@ -2521,33 +2535,41 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				}
 				const QueueItemPtr& qi = ii->getQueueItem();
 				if (!qi || qi->getSize() == -1) return CDRF_DODEFAULT;
-				
-				const auto* ss = SettingsManager::instance.getUiSettings();
-				CRect rc;
-				ctrlQueue.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-				CBarShader statusBar(rc.Height(), rc.Width(), ss->getInt(Conf::PROGRESS_BACK_COLOR), ii->getSize());
-				COLORREF colorRunning = ss->getInt(Conf::COLOR_RUNNING);
-				COLORREF colorRunning2 = ss->getInt(Conf::COLOR_RUNNING_COMPLETED);
-				COLORREF colorDownloaded = ss->getInt(Conf::COLOR_DOWNLOADED);
+
+				RECT rc;
+				ctrlQueue.GetSubItemRect((int) cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, &rc);
+				int width = rc.right - rc.left;
+				int height = rc.bottom - rc.top;
+				if (width <= 0 || height <= 0) return CDRF_DODEFAULT;
+
+				CBarShader bar(height, width, colorProgressBk, ii->getSize());
 				ii->getQueueItem()->getChunksVisualisation(runningChunks, doneChunks);
 				for (auto i = runningChunks.cbegin(); i < runningChunks.cend(); ++i)
 				{
 					const QueueItem::SegmentEx& rs = *i;
-					statusBar.FillRange(rs.start, rs.end, colorRunning);
-					statusBar.FillRange(rs.start, rs.start + rs.pos, colorRunning2);
+					bar.FillRange(rs.start, rs.end, colorProgressRunning);
+					bar.FillRange(rs.start, rs.start + rs.pos, colorProgressRunning2);
 				}
 				for (auto i = doneChunks.cbegin(); i < doneChunks.cend(); ++i)
 				{
-					statusBar.FillRange(i->getStart(), i->getEnd(), colorDownloaded);
+					bar.FillRange(i->getStart(), i->getEnd(), colorProgressDownloaded);
 				}
-				CDC cdc;
-				cdc.CreateCompatibleDC(cd->nmcd.hdc);
-				HBITMAP pOldBmp = cdc.SelectBitmap(CreateCompatibleBitmap(cd->nmcd.hdc,  rc.Width(),  rc.Height()));
-
-				statusBar.Draw(cdc, 0, 0, ss->getInt(Conf::PROGRESS_3DDEPTH));
-				BitBlt(cd->nmcd.hdc, rc.left, rc.top, rc.Width(), rc.Height(), cdc.m_hDC, 0, 0, SRCCOPY);
-				DeleteObject(cdc.SelectBitmap(pOldBmp));
-
+				if (!backingStore) backingStore = BackingStore::getBackingStore();
+				HDC hdc = cd->nmcd.hdc;
+				int drawX = rc.left;
+				int drawY = rc.top;
+				if (backingStore)
+				{
+					HDC hMemDC = backingStore->getCompatibleDC(hdc, width, height);
+					if (hMemDC)
+					{
+						hdc = hMemDC;
+						drawX = drawY = 0;
+					}
+				}
+				bar.Draw(hdc, drawX, drawY, progressDepth);
+				if (hdc != cd->nmcd.hdc)
+					BitBlt(cd->nmcd.hdc, rc.left, rc.top, width, height, hdc, 0, 0, SRCCOPY);
 				return CDRF_SKIPDEFAULT;
 			}
 		}
@@ -2681,13 +2703,10 @@ void QueueFrame::on(SettingsManagerListener::ApplySettings)
 	dcassert(!GlobalState::isShuttingDown());
 	if (!GlobalState::isShuttingDown())
 	{
+		updateProgressSettings();
 		if (ctrlQueue.isRedraw())
-		{
 			setTreeViewColors(ctrlDirs);
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-		}
-		const auto* ss = SettingsManager::instance.getUiSettings();
-		showProgressBars = ss->getBool(Conf::SHOW_PROGRESS_BARS);
+		RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
 	}
 }
 

@@ -510,8 +510,7 @@ void ProgressBar::draw(HDC hdc, const RECT& rc, int pos, const tstring& text, in
 	HGDIOBJ oldFont = SelectObject(hdc, Fonts::g_systemFont);
 	if (textColor[0] != textColor[1])
 	{
-		HRGN oldRegion = CreateRectRgn(0, 0, 0, 0);
-		GetClipRgn(hdc, oldRegion);
+		int saved = SaveDC(hdc);
 		int fillPos = rc.left + pos;
 		if (settings.odcStyle) fillPos++;
 		RECT rc3 = rc2;
@@ -525,10 +524,9 @@ void ProgressBar::draw(HDC hdc, const RECT& rc, int pos, const tstring& text, in
 		SelectClipRgn(hdc, region2);
 		SetTextColor(hdc, textColor[1]);
 		DrawText(hdc, text.c_str(), text.length(), &rc2, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
-		SelectClipRgn(hdc, oldRegion);
+		RestoreDC(hdc, saved);
 		DeleteObject(region1);
 		DeleteObject(region2);
-		DeleteObject(oldRegion);
 	}
 	else
 		DrawText(hdc, text.c_str(), text.length(), &rc2, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);

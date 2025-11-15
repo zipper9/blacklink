@@ -432,7 +432,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		CContainedWindow showTreeContainer;
 		bool showTree;
 		bool usingDirMenu;
-		bool showProgressBars;
 		size_t lastTotalCount;
 		int64_t lastTotalSize;
 
@@ -463,7 +462,16 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 
 		TaskQueue tasks;
 		TimerHelper timer;
-		
+
+		bool showProgressBars;
+		COLORREF colorProgressBk;
+		COLORREF colorProgressRunning;
+		COLORREF colorProgressRunning2;
+		COLORREF colorProgressDownloaded;
+		int progressDepth;
+		class BackingStore* backingStore;
+
+		void updateProgressSettings();
 		void createMenus();
 		void destroyMenus();
 		void initPriorityMenu();

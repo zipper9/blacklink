@@ -41,6 +41,7 @@
 #include "ExMessageBox.h"
 #include "NotifUtil.h"
 #include "MenuHelper.h"
+#include "BackingStore.h"
 
 static const unsigned TIMER_VAL = 200;
 
@@ -120,7 +121,7 @@ string UserInfoBaseHandlerTraitsUser<UserPtr>::getNick(const UserPtr& user)
 	return user->getLastNick();
 }
 
-TransferView::TransferView() : timer(m_hWnd), shouldSort(false), onlyActiveUploads(false)
+TransferView::TransferView() : timer(m_hWnd), shouldSort(false), onlyActiveUploads(false), backingStore(nullptr)
 {
 	ctrlTransfers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlTransfers.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
@@ -223,6 +224,11 @@ LRESULT TransferView::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	timer.destroyTimer();
 	ctrlTransfers.deleteAll();
 	destroyMenus();
+	if (backingStore)
+	{
+		backingStore->release();
+		backingStore = nullptr;
+	}
 	return 0;
 }
 
@@ -272,7 +278,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		{
 			createMenus();
 			int defaultItem = 0;
-			const auto* ss = SettingsManager::instance.getUiSettings(); 
+			const auto* ss = SettingsManager::instance.getUiSettings();
 			switch (ss->getInt(Conf::TRANSFERLIST_DBLCLICK))
 			{
 				case 0:
@@ -603,17 +609,18 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					int barIndex = ii->download ? (ii->hasParent() ? 1 : 0) : 2;
 					int iconIndex = -1;
 
-					// Real rc, the original one.
-					CRect real_rc = rc;
-					// We need to offset the current rc to (0, 0) to paint on the New dc
-					rc.MoveToXY(0, 0);
-
-					CDC cdc;
-					cdc.CreateCompatibleDC(cd->nmcd.hdc);
-					HBITMAP hBmp = CreateCompatibleBitmap(cd->nmcd.hdc, real_rc.Width(), real_rc.Height());
-
-					HBITMAP pOldBmp = cdc.SelectBitmap(hBmp);
-					HDC dc = cdc.m_hDC;
+					HDC hdc = cd->nmcd.hdc;
+					RECT rcDraw = rc;
+					if (!backingStore) backingStore = BackingStore::getBackingStore();
+					if (backingStore)
+					{
+						HDC hMemDC = backingStore->getCompatibleDC(hdc, rc.right - rc.left, rc.bottom - rc.top);
+						if (hMemDC)
+						{
+							hdc = hMemDC;
+							OffsetRect(&rcDraw, -rc.left, -rc.top);
+						}
+					}
 
 					if (showSpeedIcon)
 					{
@@ -647,11 +654,10 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					int width = rc.Width();
 					if (progressBar[barIndex].get().odcStyle) width -= 2;
 					int pos = width > 1 ? getProportionalWidth(width, ii->getPos(), ii->size) : 0;
-					progressBar[barIndex].draw(dc, rc, pos, status, iconIndex);
+					progressBar[barIndex].draw(hdc, rcDraw, pos, status, iconIndex);
 
-					BitBlt(cd->nmcd.hdc, real_rc.left, real_rc.top, real_rc.Width(), real_rc.Height(), dc, 0, 0, SRCCOPY);
-					ATLVERIFY(cdc.SelectBitmap(pOldBmp) == hBmp);
-					DeleteObject(hBmp);
+					if (hdc != cd->nmcd.hdc)
+						BitBlt(cd->nmcd.hdc, rc.left, rc.top, rc.Width(), rc.Height(), hdc, 0, 0, SRCCOPY);
 
 					if (cd->iSubItem == 0)
 					{
@@ -726,7 +732,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 
 		ItemInfo* i = ctrlTransfers.getItemData(item->iItem);
 		bool isUser = !i->isParent();
-		const auto* ss = SettingsManager::instance.getUiSettings(); 
+		const auto* ss = SettingsManager::instance.getUiSettings();
 		switch (ss->getInt(Conf::TRANSFERLIST_DBLCLICK))
 		{
 			case 0:

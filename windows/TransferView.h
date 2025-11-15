@@ -507,6 +507,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		bool showProgressBars;
 		bool showSpeedIcon;
 		int64_t topUploadSpeed, topDownloadSpeed;
+		class BackingStore* backingStore;
 
 		OMenu segmentedMenu;
 		OMenu copyMenu;
