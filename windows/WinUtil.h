@@ -26,7 +26,6 @@
 #include "OMenu.h"
 #include "ImageLists.h"
 
-class FlatTabCtrl;
 class UserCommand;
 
 namespace WinUtil

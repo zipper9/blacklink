@@ -1318,12 +1318,6 @@ LRESULT MainFrame::onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/
 	return 0;
 }
 
-LRESULT MainFrame::onQuickSearchColor(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	const HDC hDC = (HDC)wParam;
-	return Colors::setColor(hDC);
-}
-
 LRESULT MainFrame::onParentNotify(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	LRESULT res = 0;
@@ -1944,12 +1938,15 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			g_fileImage.updateSettings();
 			checkToolbarButtons();
 
-			bool needUpdateLayout = ctrlTab.getTabsPosition() != ss->getInt(Conf::TABS_POS);
+			bool needUpdateTabPos = ctrlTab.getTabsPosition() != ss->getInt(Conf::TABS_POS);
 			bool needInvalidateTabs = ctrlTab.updateSettings(false);
 
-			if (needUpdateLayout)
+			if (needUpdateTabPos)
 			{
 				UpdateLayout();
+				HWND hWnd = ctrlTab.getActive();
+				if (::IsZoomed(hWnd))
+					::SendMessage(hWnd, WMU_UPDATE_LAYOUT, 0, 0);
 				needInvalidateTabs = true;
 			}
 

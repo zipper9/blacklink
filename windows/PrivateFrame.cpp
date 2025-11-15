@@ -610,6 +610,8 @@ void PrivateFrame::UpdateLayout(BOOL)
 		rc.left += spaceNormal;
 		rc.right -= spaceNormal;
 		rc.bottom -= spaceNormal;
+		if (WinUtil::tabCtrl->getTabsPosition() == Conf::TABS_BOTTOM)
+			rc.top += spaceNormal;
 	}
 	if (ctrlClient)
 		ctrlClient.MoveWindow(rc);

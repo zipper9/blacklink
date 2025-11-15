@@ -45,7 +45,6 @@
 #include "MDIUtil.h"
 #include "MagnetDlg.h"
 #include "PreviewMenu.h"
-#include "FlatTabCtrl.h"
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "DirectoryListingFrm.h"

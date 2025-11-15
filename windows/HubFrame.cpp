@@ -1245,6 +1245,8 @@ void HubFrame::UpdateLayout(BOOL)
 			rc.left += SPACE_NORMAL;
 			rc.right -= SPACE_NORMAL;
 			rc.bottom -= SPACE_NORMAL;
+			if (WinUtil::tabCtrl->getTabsPosition() == Conf::TABS_BOTTOM)
+				rc.top += SPACE_NORMAL;
 		}
 		updateSplitterLayout(rc, prevRect);
 

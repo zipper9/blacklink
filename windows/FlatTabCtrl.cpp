@@ -144,16 +144,14 @@ void FlatTabCtrl::setActive(HWND hWnd)
 	}
 }
 
-bool FlatTabCtrl::getActive(HWND hWnd) const
-{
-	auto ti = getTabInfo(hWnd);
-	if (!ti) return false;
-	return active == ti;
-}
-
 bool FlatTabCtrl::isActive(HWND hWnd) const
 {
 	return active && active->hWnd == hWnd;
+}
+
+HWND FlatTabCtrl::getActive() const
+{
+	return active ? active->hWnd : nullptr;
 }
 
 void FlatTabCtrl::setTop(HWND hWnd)

@@ -81,8 +81,8 @@ public:
 	HWND getNext();
 	HWND getPrev();
 	void setActive(HWND hWnd);
-	bool getActive(HWND hWnd) const;
 	bool isActive(HWND hWnd) const;
+	HWND getActive() const;
 	void setTop(HWND hWnd);
 	void setDirty(HWND hWnd);
 	void setIcon(HWND hWnd, HICON icon, bool disconnected);
@@ -98,9 +98,6 @@ public:
 	int getTabCount() const { return (int) tabs.size(); }
 
 	bool updateSettings(bool invalidate);
-	void getOptions(bool& showIcons, bool& showCloseButton) const;
-	bool setOptions(bool showIcons, bool showCloseButton, bool invalidate);
-	bool setTabsPosition(int position);
 
 	BEGIN_MSG_MAP(thisClass)
 	MESSAGE_HANDLER(WM_SIZE, onSize)

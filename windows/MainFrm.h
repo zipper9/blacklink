@@ -191,9 +191,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_CHAR, onQuickSearchChar)
 		MESSAGE_HANDLER(WM_KEYDOWN, onQuickSearchChar)
 		MESSAGE_HANDLER(WM_KEYUP, onQuickSearchChar)
-		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onQuickSearchColor)
-		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onQuickSearchColor)
-		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onQuickSearchColor)
 		COMMAND_CODE_HANDLER(EN_CHANGE, onQuickSearchEditChange)
 		END_MSG_MAP()
 		
@@ -250,7 +247,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onQuickSearchColor(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onParentNotify(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled);
 		LRESULT onViewQuickSearchBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
