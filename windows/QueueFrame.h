@@ -24,7 +24,6 @@
 #include "TypedListViewCtrl.h"
 #include "ImageLists.h"
 #include "../client/QueueManagerListener.h"
-#include "../client/DownloadManagerListener.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
 #include "SplitWnd.h"
@@ -35,7 +34,6 @@
 class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	public StaticFrame<QueueFrame, ResourceManager::DOWNLOAD_QUEUE, IDC_QUEUE>,
 	private QueueManagerListener,
-	private DownloadManagerListener,
 	public SplitWndImpl<QueueFrame>,
 	public PreviewBaseHandler,
 	private SettingsManagerListener
@@ -531,25 +529,27 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 
-		void on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept override;
-		void on(AddedArray, const vector<QueueItemPtr>& data) noexcept override;
-		void on(QueueManagerListener::Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept override;
-		void on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept override;
-		void on(RemovedArray, const vector<QueueItemPtr>& data) noexcept override;
-		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
-		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept override;
-		void on(QueueManagerListener::FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
-		void on(SettingsManagerListener::ApplySettings) override;
-
 		void onRechecked(const string& target, const string& message);
 
-		void on(QueueManagerListener::RecheckStarted, const string& target) noexcept override;
-		void on(QueueManagerListener::RecheckNoFile, const string& target) noexcept override;
-		void on(QueueManagerListener::RecheckFileTooSmall, const string& target) noexcept override;
-		void on(QueueManagerListener::RecheckDownloadsRunning, const string& target) noexcept override;
-		void on(QueueManagerListener::RecheckNoTree, const string& target) noexcept override;
-		void on(QueueManagerListener::RecheckAlreadyFinished, const string& target) noexcept override;
-		void on(QueueManagerListener::RecheckDone, const string& target) noexcept override;
+		// QueueManagerListener
+		void on(Added, const QueueItemPtr& qi) noexcept override;
+		void on(AddedArray, const vector<QueueItemPtr>& data) noexcept override;
+		void on(Moved, const QueueItemPtr& qs, const QueueItemPtr& qt) noexcept override;
+		void on(Removed, const QueueItemPtr& qi) noexcept override;
+		void on(RemovedArray, const vector<QueueItemPtr>& data) noexcept override;
+		void on(StatusUpdated, const QueueItemPtr& qi) noexcept override;
+		void on(StatusUpdatedList, const QueueItemList& itemList) noexcept override;
+		void on(FileSizeUpdated, const QueueItemPtr& qi, int64_t diff) noexcept override;
+		void on(RecheckStarted, const string& target) noexcept override;
+		void on(RecheckNoFile, const string& target) noexcept override;
+		void on(RecheckFileTooSmall, const string& target) noexcept override;
+		void on(RecheckDownloadsRunning, const string& target) noexcept override;
+		void on(RecheckNoTree, const string& target) noexcept override;
+		void on(RecheckAlreadyFinished, const string& target) noexcept override;
+		void on(RecheckDone, const string& target) noexcept override;
+
+		// SettingsManagerListener
+		void on(ApplySettings) override;
 };
 
 #endif // !defined(QUEUE_FRAME_H)

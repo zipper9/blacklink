@@ -276,7 +276,6 @@ LRESULT QueueFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	addQueueList();
 	QueueManager::getInstance()->addListener(this);
-	DownloadManager::getInstance()->addListener(this);
 	SettingsManager::instance.addListener(this);
 
 	updateQueueStatus();
@@ -2402,7 +2401,6 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	{
 		closed = true;
 		SettingsManager::instance.removeListener(this);
-		DownloadManager::getInstance()->removeListener(this);
 		QueueManager::getInstance()->removeListener(this);
 
 		setButtonPressed(IDC_QUEUE, false);
