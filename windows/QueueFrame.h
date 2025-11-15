@@ -449,6 +449,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		const DirItem* currentDir;
 		string currentDirPath;
 		bool treeInserted;
+		bool checkDuplicates;
 
 		QueueListViewCtrl ctrlQueue;
 		CTreeViewCtrl ctrlDirs;
@@ -478,7 +479,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		static void sortSources(vector<SourceInfo>& v);
 		void addQueueList();
 		void addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree);
-		void addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree);
+		bool addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree);
 		void splitDir(DirItem* dir, string::size_type pos, DirItem* newParent, bool updateTree);
 		static void removeFromParent(DirItem* dir);
 		static string getFullPath(const DirItem* dir);

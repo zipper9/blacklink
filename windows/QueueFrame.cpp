@@ -108,7 +108,7 @@ QueueFrame::QueueFrame() :
 	timer(m_hWnd),
 	usingDirMenu(false), fileLists(nullptr), showTree(true),
 	showTreeContainer(WC_BUTTON, this, SHOWTREE_MESSAGE_MAP),
-	clearingTree(0), currentDir(nullptr), treeInserted(false),
+	clearingTree(0), currentDir(nullptr), treeInserted(false), checkDuplicates(false),
 	lastTotalCount(0), lastTotalSize(-1), updateStatus(false),
 	showProgressBars(false), progressDepth(0), backingStore(nullptr)
 {
@@ -274,11 +274,15 @@ LRESULT QueueFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	statusPane.minWidth = statusPane.maxWidth = checkBoxSize + 10;
 	ctrlStatus.setPaneInfo(STATUS_CHECKBOX, statusPane);
 
-	addQueueList();
 	QueueManager::getInstance()->addListener(this);
 	SettingsManager::instance.addListener(this);
 
+	addQueueList();
 	updateQueueStatus();
+
+	checkDuplicates = true;
+	processTasks();
+	checkDuplicates = false;
 
 	timer.createTimer(TIMER_VAL);
 	bHandled = FALSE;
@@ -802,8 +806,8 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 			if (updateTree)
 				insertFileListsItem();
 		}
-		addItem(fileLists, dirname, dirname.length(), filename, qi, false);
-		insertListItem(qi, dirname, sort);
+		if (addItem(fileLists, dirname, dirname.length(), filename, qi, false))
+			insertListItem(qi, dirname, sort);
 		return;
 	}
 
@@ -814,6 +818,7 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 	size_t minLen = std::numeric_limits<size_t>::max();
 	vector<DirItem*> toSplit;
 	bool inserted = false;
+	bool newItem = false;
 	for (DirItem* item : root->directories)
 	{
 		size_t subdirLen = findCommonSubdir(dirname, item->name);
@@ -821,7 +826,7 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 		{
 			if (subdirLen >= item->name.length()-1)
 			{
-				addItem(item, dirname, subdirLen + 1, filename, qi, updateTree);
+				newItem = addItem(item, dirname, subdirLen + 1, filename, qi, updateTree);
 				inserted = true;
 				break;
 			}
@@ -843,13 +848,14 @@ void QueueFrame::addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree
 					ctrlDirs.DeleteItem(item->ht);
 				}
 				else
-					addItem(item, dirname, minLen + 1, filename, qi, updateTree);
+					newItem = addItem(item, dirname, minLen + 1, filename, qi, updateTree);
 			}
 		}
 		else
-			addItem(root, dirname, dirname.length(), filename, qi, updateTree);
+			newItem = addItem(root, dirname, dirname.length(), filename, qi, updateTree);
 	}
-	insertListItem(qi, dirname, sort);
+	if (newItem)
+		insertListItem(qi, dirname, sort);
 }
 
 void QueueFrame::splitDir(DirItem* dir, string::size_type pos, DirItem* newParent, bool updateTree)
@@ -911,7 +917,7 @@ void QueueFrame::splitDir(DirItem* dir, string::size_type pos, DirItem* newParen
 		insertSubtree(first, first->parent->ht);
 }
 
-void QueueFrame::addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree)
+bool QueueFrame::addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree)
 {
 	DirItem* last = dir;
 	while (pathStart < path.length())
@@ -953,6 +959,13 @@ void QueueFrame::addItem(DirItem* dir, const string& path, string::size_type pat
 		if (updateTree)
 			insertTreeItem(last, last->parent->ht, TVI_SORT);
 	}
+	if (checkDuplicates)
+	{
+		const string& target = qi->getTarget();
+		for (QueueItemPtr file : last->files)
+			if (file->getTarget() == target)
+				return false;
+	}
 	last->files.push_back(qi);
 	int64_t size = qi->getSize();
 	if (size < 0) size = 0;
@@ -962,6 +975,7 @@ void QueueFrame::addItem(DirItem* dir, const string& path, string::size_type pat
 		last->totalFileCount++;
 		last = last->parent;
 	}
+	return true;
 }
 
 void QueueFrame::insertTreeItem(DirItem* dir, HTREEITEM htParent, HTREEITEM htAfter)
@@ -1350,7 +1364,7 @@ void QueueFrame::addTask(Tasks s, Task* task)
 	uint64_t tick = GET_TICK();
 	uint64_t prevTick = tick;
 	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
-		PostMessage(WM_SPEAKER); // FAILED?
+		PostMessage(WM_SPEAKER);
 }
 
 void QueueFrame::processTasks()
