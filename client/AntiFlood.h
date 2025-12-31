@@ -18,7 +18,7 @@ class IpBans
 
 		IpBans();
 		int checkBan(const IpPortKey& key, int64_t timestamp) const;
-		void addBan(const IpPortKey& key, int64_t timestamp, const string& url);
+		void addBan(const IpPortKey& key, int64_t timestamp, const string& url, int64_t reqCount);
 		void removeBan(const IpPortKey& key);
 		void removeExpired(int64_t timestamp);
 		void protect(const IpPortKey& key, bool enable);
@@ -28,6 +28,7 @@ class IpBans
 		struct BanInfo
 		{
 			int64_t unbanTime;
+			int64_t reqCount;
 			vector<string> hubUrls;
 			bool dontBan;
 		};

@@ -22,7 +22,7 @@ int IpBans::checkBan(const IpPortKey& key, int64_t timestamp) const
 	return timestamp > info.unbanTime ? BAN_EXPIRED : BAN_ACTIVE;
 }
 
-void IpBans::addBan(const IpPortKey& key, int64_t timestamp, const string& url)
+void IpBans::addBan(const IpPortKey& key, int64_t timestamp, const string& url, int64_t reqCount)
 {
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
@@ -33,6 +33,7 @@ void IpBans::addBan(const IpPortKey& key, int64_t timestamp, const string& url)
 	BanInfo& info = data[key];
 	info.dontBan = false;
 	info.unbanTime = timestamp + banDuration;
+	info.reqCount = reqCount;
 	if (std::find(info.hubUrls.begin(), info.hubUrls.end(), url) == info.hubUrls.end())
 		info.hubUrls.push_back(url);
 }
@@ -53,6 +54,7 @@ void IpBans::protect(const IpPortKey& key, bool enable)
 		BanInfo& info = data[key];
 		info.hubUrls.clear();
 		info.unbanTime = 0;
+		info.reqCount = 0;
 		info.dontBan = true;
 		return;
 	}
@@ -88,6 +90,7 @@ string IpBans::getInfo(const string& type, int64_t timestamp) const
 		s += Util::printIpAddress(ip, true);
 		s += ':';
 		s += Util::toString(i->first.port);
+		s += " reqs=" + Util::toString(info.reqCount);
 		if (!info.dontBan)
 		{
 			if (timestamp < info.unbanTime)
@@ -118,11 +121,12 @@ bool HubRequestCounters::addRequest(IpBans& bans, const IpAddress& ip, uint16_t 
 	int res = bans.checkBan(key, timestamp);
 	auto& item = data[key];
 	item.rq.add(timestamp);
-	bool flood = item.rq.getReqCount() >= minReqCount && item.rq.getAvgPerMinute() > maxReqPerMinute;
+	int64_t reqCount = item.rq.getReqCount();
+	bool flood = reqCount >= minReqCount && item.rq.getAvgPerMinute() > maxReqPerMinute;
 	if (flood && !item.banned && res != IpBans::DONT_BAN)
 	{
 		item.banned = true;
-		bans.addBan(key, timestamp, url);
+		bans.addBan(key, timestamp, url, reqCount);
 		res = IpBans::BAN_ACTIVE;
 		showMsg = true;
 	}
@@ -135,7 +139,7 @@ bool HubRequestCounters::addRequest(IpBans& bans, const IpAddress& ip, uint16_t 
 				item.banned = true;
 				showMsg = true;
 			}
-			bans.addBan(key, timestamp, url);
+			bans.addBan(key, timestamp, url, reqCount);
 			res = IpBans::BAN_ACTIVE;
 		}
 		else

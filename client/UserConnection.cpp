@@ -332,7 +332,7 @@ void UserConnection::onDataLine(const char* buf, size_t len) noexcept
 			{
 				IpPortKey key;
 				key.setIP(socket->getIp(), socket->getPort());
-				tcpBans.addBan(key, GET_TICK(), "CTM2HUB");
+				tcpBans.addBan(key, GET_TICK(), "CTM2HUB", 0);
 			}
 			else
 				dcdebug("Unknown $Error %s\n", param.c_str());
