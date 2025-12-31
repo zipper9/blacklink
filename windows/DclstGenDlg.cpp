@@ -130,7 +130,7 @@ LRESULT DclstGenDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	abortFlag.store(true);
 	join();
 	destroyTimer();
-	if (m_bModal)
+	if (isModal)
 		EndDialog(wID);
 	else
 	{
@@ -414,7 +414,7 @@ LRESULT DclstGenDlg::onShareOrOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWnd
 	if (!dir)
 	{
 		WinUtil::openFileList(Text::toT(listName));
-		if (m_bModal)
+		if (isModal)
 			EndDialog(IDOK);
 		else
 			PostMessage(WM_CLOSE);
@@ -493,6 +493,7 @@ void DclstGenDlg::showDialog(const string& path, HWND hWndParent)
 		return;
 	}
 	instance = new DclstGenDlg(path);
+	instance->isModal = false;
 	instance->Create(hWndParent);
 	instance->ShowWindow(SW_NORMAL);
 }

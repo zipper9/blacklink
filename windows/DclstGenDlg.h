@@ -36,7 +36,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 			TimerHelper(m_hWnd),
 			dir(dir), user(user), filesProcessed(0), foldersProcessed(0),
 			sizeProcessed(0), sizeTotal(0), abortFlag(false), calculatingSize(false),
-			includeSelf(false)
+			includeSelf(false), isModal(true)
 		{
 		}
 
@@ -45,7 +45,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 			dirToHash(path),
 			dir(nullptr), user(nullptr), filesProcessed(0), foldersProcessed(0),
 			sizeProcessed(0), sizeTotal(0), abortFlag(false),
-			includeSelf(false)
+			includeSelf(false), isModal(true)
 		{
 		}
 
@@ -89,6 +89,7 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 	private:
 		const DirectoryListing::Directory* const dir;
 		const UserPtr user;
+		bool isModal;
 		std::atomic_bool abortFlag;
 		FastCriticalSection cs;
 		size_t filesProcessed;
