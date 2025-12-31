@@ -2362,11 +2362,8 @@ LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 LRESULT MainFrame::onDcLstFromFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring directory;
-	if (WinUtil::browseDirectory(directory, m_hWnd, &WinUtil::guidDcLstFromFolder))
-	{
-		DclstGenDlg dlg(Text::fromT(directory));
-		dlg.DoModal();
-	}
+	if (DclstGenDlg::instance || WinUtil::browseDirectory(directory, m_hWnd, &WinUtil::guidDcLstFromFolder))
+		DclstGenDlg::showDialog(Text::fromT(directory), m_hWnd);
 	return 0;
 }
 

@@ -55,6 +55,8 @@ static const DialogLayout::Item layoutItems[] =
 	{ IDCANCEL, FLAG_TRANSLATE, UNSPEC, UNSPEC }
 };
 
+DclstGenDlg* DclstGenDlg::instance = nullptr;
+
 const string& DclstGenDlg::getDcLstDirectory()
 {
 	auto ss = SettingsManager::instance.getUiSettings();
@@ -128,7 +130,13 @@ LRESULT DclstGenDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	abortFlag.store(true);
 	join();
 	destroyTimer();
-	EndDialog(wID);
+	if (m_bModal)
+		EndDialog(wID);
+	else
+	{
+		DestroyWindow();
+		instance = nullptr;
+	}
 	return 0;
 }
 
@@ -406,7 +414,10 @@ LRESULT DclstGenDlg::onShareOrOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWnd
 	if (!dir)
 	{
 		WinUtil::openFileList(Text::toT(listName));
-		EndDialog(IDOK);
+		if (m_bModal)
+			EndDialog(IDOK);
+		else
+			PostMessage(WM_CLOSE);
 	}
 	else if (!magnet.empty())
 	{
@@ -472,4 +483,16 @@ void DclstGenDlg::progressFunc(void *ctx, int64_t fileSize)
 	DclstGenDlg* dlg = static_cast<DclstGenDlg*>(ctx);
 	LOCK(dlg->cs);
 	dlg->sizeTotal += fileSize;
+}
+
+void DclstGenDlg::showDialog(const string& path, HWND hWndParent)
+{
+	if (instance)
+	{
+		instance->BringWindowToTop();
+		return;
+	}
+	instance = new DclstGenDlg(path);
+	instance->Create(hWndParent);
+	instance->ShowWindow(SW_NORMAL);
 }

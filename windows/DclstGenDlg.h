@@ -69,6 +69,9 @@ class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private Ti
 
 		int run();
 
+		static DclstGenDlg* instance;
+		static void showDialog(const string& path, HWND hWndParent);
+
 	private:
 		void updateDialogItems();
 		void writeXMLStart();
