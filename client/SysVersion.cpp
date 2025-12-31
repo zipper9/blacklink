@@ -150,6 +150,7 @@ struct BuildName
 
 static const BuildName winDesktopBuilds[] =
 {
+	{ 26200, "11 ver. 25H2" },
 	{ 26100, "11 ver. 24H2" },
 	{ 22631, "11 ver. 23H2" },
 	{ 22621, "11 ver. 22H2" },

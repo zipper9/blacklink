@@ -1125,7 +1125,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, int af, uint16_t port
 	}
 }
 
-int ConnectionManager::adcConnectHbri(const IpAddress& addr, uint16_t port, const string& token, bool secure)
+uint64_t ConnectionManager::adcConnectHbri(const IpAddress& addr, uint16_t port, const string& token, bool secure)
 {
 	if (shuttingDown)
 		return 0;

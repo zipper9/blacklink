@@ -32,6 +32,11 @@ TextHostCtrl::TextHostCtrl() :
 
 void TextHostCtrl::cleanup()
 {
+	if (backingStore)
+	{
+		backingStore->release();
+		backingStore = nullptr;
+	}
 	if (textHost)
 	{
 		textHost->Release();

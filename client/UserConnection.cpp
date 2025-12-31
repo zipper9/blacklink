@@ -70,7 +70,7 @@ const string UserConnection::FEATURE_BANMSG = "BanMsg"; // !SMT!-B
 
 const string UserConnection::FILE_NOT_AVAILABLE = "File Not Available";
 
-static int nextConnID;
+static uint64_t nextConnID;
 
 // We only want ConnectionManager to create this...
 UserConnection::UserConnection() noexcept :

@@ -58,7 +58,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		static const vector<StringList>& getSearchExts() { return searchExts; }
 		static StringList parseSearchExts(int flag);
 
-		int getHbriConnId() const noexcept
+		uint64_t getHbriConnId() const noexcept
 		{
 			LOCK(csState);
 			return hbriConnId;
@@ -95,7 +95,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 
 		unsigned featureFlags;
 		int lastErrorCode;
-		int hbriConnId;
+		uint64_t hbriConnId;
 		SIDMap users;
 		std::unique_ptr<RWLock> csUsers;
 		boost::unordered_map<uint16_t, string> lastInfoMap;

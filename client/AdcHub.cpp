@@ -1135,7 +1135,7 @@ void AdcHub::handle(AdcCommand::TCP, const AdcCommand& c) noexcept
 	if (lastHbriCheck && lastHbriCheck + 5 * 60000 > tick)
 		return;
 	lastHbriCheck = tick;
-	int connId = ConnectionManager::getInstance()->adcConnectHbri(addr, port, token, isSecure());
+	uint64_t connId = ConnectionManager::getInstance()->adcConnectHbri(addr, port, token, isSecure());
 	csState.lock();
 	hbriConnId = connId;
 	csState.unlock();

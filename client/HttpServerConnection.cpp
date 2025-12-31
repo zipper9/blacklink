@@ -15,7 +15,7 @@ static const int64_t BODY_SIZE_CHUNKED = -2;
 static const unsigned long MAX_CHUNK_SIZE = 512*1024;
 static const size_t MAX_HEADERS_SIZE = 32*1024;
 
-HttpServerConnection::HttpServerConnection(int id, HttpServerCallback* server, unique_ptr<Socket>& newSock, uint16_t port)
+HttpServerConnection::HttpServerConnection(uint64_t id, HttpServerCallback* server, unique_ptr<Socket>& newSock, uint16_t port)
 	: id(id), server(server)
 {
 	socket = BufferedSocket::getBufferedSocket(0, this);

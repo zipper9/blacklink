@@ -583,7 +583,7 @@ int ClientManager::findHubEncoding(const string& url)
 	return Util::isAdcHub(url) ? Text::CHARSET_UTF8 : Text::CHARSET_SYSTEM_DEFAULT;
 }
 
-ClientBasePtr ClientManager::findClientForHbriConn(int id)
+ClientBasePtr ClientManager::findClientForHbriConn(uint64_t id)
 {
 	ClientBasePtr result;
 	READ_LOCK(*g_csClients);

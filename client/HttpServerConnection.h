@@ -23,7 +23,7 @@ public:
 class HttpServerConnection : BufferedSocketListener
 {
 public:
-	HttpServerConnection(int id, HttpServerCallback* server, unique_ptr<Socket>& newSock, uint16_t port);
+	HttpServerConnection(uint64_t id, HttpServerCallback* server, unique_ptr<Socket>& newSock, uint16_t port);
 
 	HttpServerConnection(const HttpServerConnection&) = delete;
 	HttpServerConnection& operator= (const HttpServerConnection&) = delete;

@@ -319,7 +319,7 @@ class UserConnection :
 #endif
 
 	private:
-		const int id;
+		const uint64_t id;
 		const int16_t number;
 		int64_t chunkSize;
 		BufferedSocket* socket;

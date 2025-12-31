@@ -1994,12 +1994,10 @@ LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	bHandled = FALSE;
 	if (uiInitialized)
 	{
-		if (wParam == BST_CHECKED)
-			setShowUsers(true);
-		else
-			setShowUsers(false);
+		setShowUsers(wParam == BST_CHECKED);
 		UpdateLayout(FALSE);
-		shouldUpdateStats = true;
+		updateStats();
+		shouldUpdateStats = false;
 	}
 	return 0;
 }

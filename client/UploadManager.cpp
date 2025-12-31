@@ -75,6 +75,7 @@ UploadManager::UploadManager() noexcept :
 {
 	csFinishedUploads = std::unique_ptr<RWLock>(RWLock::create());
 	csReservedSlots = std::unique_ptr<RWLock>(RWLock::create());
+	sharedStreamCleanupTick = GET_TICK() + 10000;
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
 	updateSettings();
@@ -1208,9 +1209,11 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 			}
 		}
 	}
-	static int g_count = 11;
-	if (++g_count % 10 == 0)
+	if (tick >= sharedStreamCleanupTick)
+	{
+		sharedStreamCleanupTick = tick + 10000;
 		SharedFileStream::cleanup();
+	}
 	tickList.reserve(uploads.size());
 	{
 		READ_LOCK(*csFinishedUploads);

@@ -189,6 +189,7 @@ class UploadManager : private ClientManagerListener, public Speaker<UploadManage
 		static int64_t g_runningAverage;
 		uint64_t fireballStartTick;
 		uint64_t fileServerCheckTick;
+		uint64_t sharedStreamCleanupTick;
 
 		UploadList uploads;
 		UploadList finishedUploads;
