@@ -193,7 +193,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 
 	startup(splashTextCallBack, nullptr, GuiInit, nullptr, dbErrorCallback);
 	ThemeManager::getInstance()->load();
-	static int nRet;
+	int nRet = 0;
 	{
 		auto ss = SettingsManager::instance.getUiSettings();
 		// !SMT!-fix this will ensure that GUI (wndMain) destroyed before client library shutdown (gui objects may call lib)
@@ -223,7 +223,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		{
 			ATLTRACE(_T("Main window creation failed!\n"));
 			DestroySplash();
-			nRet = 0;
+			nRet = 1;
 		}
 		else
 		{
@@ -240,7 +240,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			if (ss->getBool(Conf::MINIMIZE_ON_STARTUP))
 				wndMain.ShowWindow(SW_SHOWMINIMIZED);
 
-			nRet = theLoop.Run();
+			theLoop.Run();
 			_Module.RemoveMessageLoop();
 		}
 	}
