@@ -100,7 +100,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::HUB_NETWORK
 };
 
-PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0)
+PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0), selectedHubList(0)
 {
 	ctrlHubs.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlHubs.setColumnFormat(COLUMN_USERS, LVCFMT_RIGHT);
