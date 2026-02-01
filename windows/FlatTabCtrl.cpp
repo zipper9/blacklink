@@ -23,6 +23,7 @@ FlatTabCtrl::FlatTabCtrl() :
 
 void FlatTabCtrl::cleanup()
 {
+	closeButtonImages.Destroy();
 	if (backingStore)
 	{
 		backingStore->release();

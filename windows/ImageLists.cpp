@@ -644,8 +644,11 @@ IconBitmaps::~IconBitmaps()
 {
 	for (Image& image : data)
 	{
-		if (image.bitmap[0]) DeleteObject(image.bitmap[0]);
-		if (image.bitmap[1]) DeleteObject(image.bitmap[1]);
+		for (int i = 0; i < 2; i++)
+		{
+			if (image.bitmap[i]) DeleteObject(image.bitmap[i]);
+			if (image.icon[i]) DestroyIcon(image.icon[i]);
+		}
 	}
 }
 #endif

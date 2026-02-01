@@ -105,7 +105,13 @@ LRESULT TextHostCtrl::onPaint(UINT, WPARAM, LPARAM, BOOL&)
 		{
 			drawBackground(hMemDC, rcClient);
 			InflateRect(&rcClient, -borderWidth, -borderHeight);
-			if (textHost) textHost->draw(hMemDC, rc);
+			if (textHost)
+			{
+				// Save and restore the font to avoid GDI usage issue in ITextServices::TxDraw
+				HGDIOBJ oldFont = GetCurrentObject(hMemDC, OBJ_FONT);
+				textHost->draw(hMemDC, rc);
+				SelectObject(hMemDC, oldFont);
+			}
 			BitBlt(hdc, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, hMemDC, rc.left, rc.top, SRCCOPY);
 			drawn = true;
 		}

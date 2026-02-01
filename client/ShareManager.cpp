@@ -441,6 +441,10 @@ ShareManager::~ShareManager()
 		File::renameFile(Util::getConfigPath() + tempShareDataFile, Util::getConfigPath() + fileShareData);
 	if (hashDb)
 		DatabaseManager::getInstance()->putHashDatabaseConnection(hashDb);
+#ifdef _DEBUG
+	for (auto& share : shares)
+		SharedDir::deleteTree(share.dir);
+#endif
 }
 
 static const uint8_t SHARE_DATA_DIR_START = 1;

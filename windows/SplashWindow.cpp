@@ -586,6 +586,7 @@ LRESULT SplashWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	zs.avail_out = maskSize;
 	zs.next_out = (Bytef*) maskBuf[useEffect ? 2 : 0];
 	inflate(&zs, 0);
+	inflateEnd(&zs);
 
 	if (!IsAppThemed())
 		useDialogBackground = false;

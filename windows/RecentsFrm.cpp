@@ -256,7 +256,7 @@ LRESULT RecentHubsFrame::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	if (ctrlHubs.GetItemCount() == 0) return 0;
 	if (MessageBox(CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
 	{
-		ctrlHubs.DeleteAllItems();
+		ctrlHubs.deleteAll();
 		FavoriteManager::getInstance()->clearRecents();
 	}
 	return 0;
@@ -266,6 +266,7 @@ LRESULT RecentHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 {
 	if (!closed)
 	{
+		ctrlHubs.deleteAll();
 		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
 		SettingsManager::instance.removeListener(this);
