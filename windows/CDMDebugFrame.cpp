@@ -80,10 +80,9 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlExcludeFilter.SetLimitText(100);
 	ctrlExcludeFilter.SetFont(Fonts::g_font);
 	excludeFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
-	
+
 	m_hWndClient = ctrlCMDPad;
-	m_hMenu = MenuHelper::mainMenu;
-	
+
 	start(64, "CDMDebugFrame");
 	DebugManager::newInstance();
 	DebugManager::getInstance()->addListener(this);
