@@ -2,6 +2,7 @@
 #include "RecentsFrm.h"
 #include "Fonts.h"
 #include "HubFrame.h"
+#include "FavoritesFrm.h"
 #include "LineDlg.h"
 #include "../client/FormatUtil.h"
 #include "../client/Util.h"
@@ -133,17 +134,6 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	fm->addListener(this);
 	SettingsManager::instance.addListener(this);
 	updateList(fm->getRecentHubs());
-
-	hubsMenu.CreatePopupMenu();
-	hubsMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
-	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
-	hubsMenu.AppendMenu(MF_SEPARATOR);
-	hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
-	hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL));
-	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
 
 	bHandled = FALSE;
 	return TRUE;
@@ -341,6 +331,22 @@ LRESULT RecentHubsFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 	return 0;
 }
 
+LRESULT RecentHubsFrame::onOpenFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	FavoriteHubsFrame::openWindow();
+	if (FavoriteHubsFrame::g_frame)
+	{
+		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+		if (i != -1)
+		{
+			const ItemInfo* ii = ctrlHubs.getItemData(i);
+			const string& server = ii->entry->getServer();
+			if (!server.empty()) FavoriteHubsFrame::g_frame->showHub(server);
+		}
+	}
+	return 0;
+}
+
 void RecentHubsFrame::on(SettingsManagerListener::ApplySettings)
 {
 	dcassert(!GlobalState::isShuttingDown());
@@ -378,34 +384,50 @@ LRESULT RecentHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 		if (pt.x == -1 && pt.y == -1)
 			WinUtil::getContextMenuPos(ctrlHubs, pt);
 
-		int status = ctrlHubs.GetSelectedCount() > 0 ? MFS_ENABLED : MFS_DISABLED;
-		hubsMenu.EnableMenuItem(IDC_CONNECT, status);
-		hubsMenu.EnableMenuItem(IDC_ADD, status);
-		hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, status);
-		if (ctrlHubs.GetSelectedCount() > 1)
+		auto fm = FavoriteManager::getInstance();
+		int selCount = 0;
+		bool hasFav = false;
+		bool hasNotFav = false;
+		int i = -1;
+		while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
-			hubsMenu.EnableMenuItem(IDC_EDIT, MFS_DISABLED);
+			const ItemInfo* ii = ctrlHubs.getItemData(i);
+			if (fm->isFavoriteHub(ii->entry->getServer()))
+				hasFav = true;
+			else
+				hasNotFav = true;
+			selCount++;
+		}
+
+		OMenu hubsMenu;
+		hubsMenu.CreatePopupMenu();
+		hubsMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES), g_iconBitmaps.getBitmap(IconBitmaps::PROPERTIES, 0));
+		hubsMenu.AppendMenu(MF_SEPARATOR);
+		hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
+		if (selCount == 1)
+		{
+			if (hasFav)
+			{
+				hubsMenu.AppendMenu(MF_STRING, IDC_FAVORITES, CTSTRING(OPEN_FAV_HUBS_WINDOW), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
+				hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
+			}
+			else
+				hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
 		}
 		else
 		{
-			auto fm = FavoriteManager::getInstance();
-			int i = -1;
-			while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
-			{
-				const ItemInfo* ii = ctrlHubs.getItemData(i);
-				if (fm->isFavoriteHub(ii->entry->getServer()))
-				{
-					hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
-					hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);
-				}
-				else
-				{
-					hubsMenu.EnableMenuItem(IDC_ADD, MFS_ENABLED);
-					hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_DISABLED);
-				}
-			}
-			hubsMenu.EnableMenuItem(IDC_EDIT, status);
+			hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::ADD_HUB, 0));
+			hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE_HUB, 0));
+			hubsMenu.EnableMenuItem(IDC_ADD, hasNotFav ? MFS_ENABLED : MFS_DISABLED);
+			hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, hasFav ? MFS_ENABLED : MFS_DISABLED);
 		}
+		hubsMenu.AppendMenu(MF_SEPARATOR);
+		hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE), g_iconBitmaps.getBitmap(IconBitmaps::REMOVE, 0));
+		hubsMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL));
+		hubsMenu.EnableMenuItem(IDC_CONNECT, selCount ? MFS_ENABLED : MFS_DISABLED);
+		hubsMenu.EnableMenuItem(IDC_EDIT, selCount == 1 ? MFS_ENABLED : MFS_DISABLED);
+		hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
+
 		hubsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		return TRUE;
 	}

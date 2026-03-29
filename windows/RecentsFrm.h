@@ -49,6 +49,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemoveAll)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
+		COMMAND_ID_HANDLER(IDC_FAVORITES, onOpenFavorites)
 		NOTIFY_HANDLER(IDC_RECENTS, LVN_GETDISPINFO, ctrlHubs.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_RECENTS, LVN_COLUMNCLICK, ctrlHubs.onColumnClick)
 		NOTIFY_HANDLER(IDC_RECENTS, LVN_GETINFOTIP, ctrlHubs.onInfoTip)
@@ -71,6 +72,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		LRESULT onRemove(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onRemoveAll(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEdit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT onOpenFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 
@@ -111,7 +113,6 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		CButton ctrlConnect;
 		CButton ctrlRemove;
 		CButton ctrlRemoveAll;
-		OMenu hubsMenu;
 		TypedListViewCtrl<ItemInfo> ctrlHubs;
 
 		int xdu, ydu;
