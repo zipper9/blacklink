@@ -150,10 +150,8 @@
 #define IDC_DEBUG_IP_FILTER_TEXT        1013
 #define IDC_DEBUG_INCLUDE_FILTER_TEXT   1014
 #define IDC_DEBUG_EXCLUDE_FILTER_TEXT   1015
-#define IDC_USER_CMD_PREVIEW            1016
 #define IDC_CLEAR                       1017
 #define IDC_PUB_LIST_DROPDOWN           1018
-#define IDC_SEARCH_PAUSE                1019
 #define IDC_HUBLIST                     1020
 #define IDC_EMOT                        1021
 #define IDC_TRANSFERS_ONLY_ACTIVE_UPLOADS 1022
@@ -300,7 +298,6 @@
 #define IDC_HUB                         1181
 #define IDC_PROGRESS_OVERRIDE2          1182
 #define IDC_SHUTDOWN_TIMEOUT            1183
-#define IDC_PROGRESS_SEGMENT_SHOW       1184
 #define IDC_SETTINGS_ODC_MENUBAR_RIGHT  1185
 #define IDC_APPEARANCE_BOOLEANS         1186
 #define IDC_SETTINGS_ODC_MENUBAR_LEFT   1187
@@ -372,7 +369,6 @@
 #define IDC_SETTINGS_DEFAULT_AWAY_MSG2  1254
 #define IDC_SETTINGS_HINT3              1255
 #define IDC_SETTINGS_LOG_DIR            1257
-#define IDC_SETTINGS_ROLLBACK           1258
 #define IDC_SETTINGS_WRITE_BUFFER       1259
 #define IDC_SETTINGS_MAX_TAB_ROWS       1260
 #define IDC_SETTINGS_USER_MENU          1261
@@ -386,7 +382,6 @@
 #define IDC_SETTINGS_HINT1              1269
 #define IDC_SETTINGS_HINT2              1270
 #define IDC_USE_CUSTOM_MENU             1271
-#define IDC_NETWORK_WINFIREWALL_STATUS  1272
 #define IDC_ADLSP_DESTINATION           1276
 #define IDC_HELP_TYPE                   1277
 #define IDC_CAPTION_FILE_COUNT          1278
@@ -455,7 +450,6 @@
 #define IDC_MAGNET_REMEMBER             1350
 #define IDC_MAGNET_HASH                 1352
 #define IDC_MAGNET_NAME                 1354
-#define IDC_ADD_LINE                    1358
 #define IDC_MAGNET_DISP_NAME            1359
 #define IDC_MAGNET_DISP_HASH            1360
 #define IDC_MAGNET_TEXT                 1361
@@ -508,7 +502,6 @@
 #define IDC_USERLIST_IMAGE              1423
 #define IDC_SETTINGS_PORT_UDP           1424
 #define IDC_USERLIST                    1426
-#define IDC_SETTINGS_UPDATE_IP_INTERVAL 1428
 #define IDC_EXPORT                      1432
 #define IDC_LOG_FORMAT                  1435
 #define IDC_LOG_FILE                    1436
@@ -519,10 +512,8 @@
 #define IDC_KBPS                        1443
 #define IDC_MINUTES                     1444
 #define IDC_CAPTION_TARGET_EXISTS       1445
-#define IDC_KBPS2                       1446
 #define IDC_PLAY                        1447
 #define IDC_POPUPLIST                   1448
-#define IDC_COMBO1                      1449
 #define IDC_BIND_ADDRESS                1452
 #define IDC_STATIC1                     1454
 #define IDC_SETTINGS_BIND_ADDRESS_HELP  1455
@@ -551,7 +542,6 @@
 #define IDC_SETTINGS_WINDOWS_OPTIONS    1488
 #define IDC_ADLSEARCH_ACTION            1489
 #define IDC_AUTOPRIORITY_SIZE           1490
-#define IDC_SETTINGS_DHT                1491
 #define IDC_WINDOWS_OPTIONS             1492
 #define IDC_ADLSEARCH_RAW_ACTION        1493
 #define IDC_DIRECT                      1494
@@ -584,17 +574,12 @@
 #define IDC_CAPTION_BLANK               1530
 #define IDC_OVERRIDE_DEFAULT            1531
 #define IDC_MIN_MULTI_CHUNK_SIZE_SPIN   1532
-#define IDC_SETTINGS_SEGMENT            1533
 #define IDC_BOLD_BOOLEANS               1534
-#define IDC_PASSWORD_DESC               1535
 #define IDC_SETTINGS_BOLD_CONTENTS      1536
-#define IDC_PROT_START                  1537
 #define IDC_ENABLE                      1538
 #define IDC_SETTINGS_CONFIRM_OPTIONS    1539
 #define IDC_CAPTION_CONNECTION_TYPE     1540
-#define IDC_PROT_TRAY                   1541
 #define IDC_CONFIRM_OPTIONS             1542
-#define IDC_PROT_CLOSE                  1543
 #define IDC_SHOW_LEGEND                 1544
 #define IDC_SOCKET_IN_BUFFER            1545
 #define IDC_GROUP                       1546
@@ -622,15 +607,12 @@
 #define IDC_CAPTION_DHT_BOOTSTRAP_URL   1582
 #define IDC_DHT_BOOTSTRAP_URL           1583
 #define IDC_GETIP                       1586
-#define IDC_COPY_WEB_LINK               1587
-#define IDC_IPUPDATE                    1588
 #define IDC_CAPTION_AUTOPRIORITY_FILENAME 1589
 #define IDC_CAPTION_AUTOPRIORITY_FILESIZE 1590
 #define IDC_ADD_FIREWALL_EXCEPTION      1591
 #define IDC_AUTOPRIORITY_PATTERNS       1592
 #define IDC_POPUP_TIME                  1593
 #define IDC_POPUP_TIME_STR              1594
-#define IDC_SECS                        1596
 #define IDC_TIME_AWAY                   1599
 #define IDC_AWAY_START_TIME             1600
 #define IDC_AWAY_END_TIME               1601
@@ -663,9 +645,7 @@
 #define IDC_CHANGE                      1642
 #define IDC_PROTECT_PRIVATE_SAY         1643
 #define IDC_POPUP_TITLE_FONT            1644
-#define IDC_SAVEAS                      1645
 #define IDC_MAGNET_SAVEAS               1646
-#define IDC_BAN_COLOR                   1647
 #define IDC_IGNORELIST                  1648
 #define IDC_IGNORE_ADD                  1649
 #define IDC_IGNORE_REMOVE               1650
@@ -676,14 +656,12 @@
 #define IDC_POPUP_BORDER_COLOR          1655
 #define IDC_DCLSTGEN_SAVEAS             1656
 #define IDC_PLAYER_COMBO                1661
-#define IDC_IP_GET_IP                   1664
 #define IDC_IPTRUST_DATA                1665
 #define IDC_CAPTION_MANUAL_P2P_GUARD    1666
 #define IDC_MANUAL_P2P_GUARD            1667
 #define IDC_LOAD_INI_FILE               1668
 #define IDC_P2P_GUARD_BLOCK             1669
 #define IDC_SLOT_CONTROL_GROUP          1670
-#define IDC_MINISLOTCONTROL             1672
 #define IDC_MINISLOT_CONTROL_GROUP      1673
 #define IDC_DCLSTGEN_COPYMAGNET         1685
 #define IDC_ENABLE_WEBSERVER            1686
@@ -714,16 +692,13 @@
 #define IDC_FILELIST_COMPARE            1724
 #define IDC_SETTINGS_PASSWORD           1738
 #define IDC_SETTINGS_PASSWORD_HINT      1742
-#define IDC_AVAILABLE_STYLES            1744
 #define IDC_PASSWORD                    1745
 #define IDC_MESSAGES_BOOLEANS           1747
-#define IDC_SLOTASK                     1749
 #define IDC_TTH_IN_STREAM               1752
 #define IDC_BTN_EXIT_ON_DONE            1753
 #define IDC_TLS_PRIVATE_KEY_FILE        1754
 #define IDC_EDIT_MAX_HASH_SPEED         1755
 #define IDC_TLS_TRUSTED_CERTIFICATES_PATH 1756
-#define IDC_WMAGNET_TEMPL               1758
 #define IDC_EWMAGNET_TEMPL              1759
 #define IDC_CAPTION_STYLES              1760
 #define IDC_CAPTION_PREVIEW             1761
@@ -757,7 +732,6 @@
 #define IDC_CAPTION_HTTP_PROXY_URL      1826
 #define IDC_USERLIST_COLORS             1828
 #define IDC_SAMPLE_TAB_COLOR            1830
-#define IDC_RESET_TAB_COLOR             1831
 #define IDC_AUTOPRIORITY                1833
 #define IDC_AUTOPRIORITY_USE_PATTERNS   1834
 #define IDC_AUTOPRIORITY_USE_SIZE       1836
@@ -822,10 +796,6 @@
 #define IDC_REPLACE_DESCR               1904
 #define IDC_REPLACE_BORDER_EXISTS       1905
 #define IDC_REPLACE_BORDER_NEW          1906
-#define IDC_ON_DOWNLOAD_ASK             1908
-#define IDC_ON_DOWNLOAD_REPLACE         1909
-#define IDC_ON_DOWNLOAD_AUTORENAME      1910
-#define IDC_ON_DOWNLOAD_SKIP            1911
 #define IDC_THEME_COMBO                 1912
 #define IDC_THEME                       1913
 #define IDC_CAPTION_SHARED_AT_LAST      1915
@@ -833,7 +803,6 @@
 #define IDC_SHARED_DAYS                 1917
 #define IDC_GRANT_IP_GROUP              1918
 #define IDC_EXTRA_SLOT_BY_IP            1919
-#define IDC_GRANT_SLOTS_FOR_OTHER_IP    1920
 #define IDC_CAPTION_GRANTIP_INI         1921
 #define IDC_GRANTIP_INI                 1922
 #define IDC_CAPTION_GEOIP_URL           1923
@@ -849,7 +818,6 @@
 #define IDC_DCLS_GENERATORBORDER        1939
 #define IDC_DCLS_CREATE_IN_FOLDER       1940
 #define IDC_DCLS_FOLDER                 1941
-#define IDC_DCLS_MAGNETBORDER           1942
 #define IDC_DCLSTGEN_NAMEBORDER         1943
 #define IDC_DCLSTGEN_NAMESTATIC         1944
 #define IDC_DCLSTGEN_NAME               1945
@@ -952,7 +920,6 @@
 #define IDC_REMOVE_IF_BELOW             2119
 #define IDC_EXTRA_SLOTS                 2120
 #define IDC_SMALL_FILE_SIZE             2122
-#define IDC_DEFAULT_STYLES              2125
 #define IDC_COPY_APPLICATION            2126
 #define IDC_COPY_FILENAME               2127
 #define IDC_COPY_PATH                   2128
@@ -1021,7 +988,6 @@
 #define IDC_CAPTION_CHAT_LINES          2201
 #define IDC_CZDC_RATIOMSG               2202
 #define IDC_CAPTION_MIN_SIZE            2203
-#define IDC_CZDC_PREVIEW                2204
 #define IDC_MIN_MULTI_CHUNK_SIZE        2205
 #define IDC_CZDC_DW_SPEEED1             2206
 #define IDC_CZDC_UP_SPEEED1             2207
@@ -1123,7 +1089,6 @@
 #define IDC_COPY_FULL_MAGNET_LINK       2334
 #define IDC_HUBS_SWITCHPANELS           2335
 #define IDC_COPY_EXACT_SIZE             2336
-#define IDC_SPEED_STATIC                2339
 #define IDC_SAVE_SEARCH                 2344
 #define IDC_ABOUTTAB                    2351
 #define IDC_COPY_TAG                    2353
@@ -1152,7 +1117,6 @@
 #define IDC_UPLOAD_SPEED                2388
 #define IDC_PM_HANDLING                 2389
 #define IDC_COPY_SPEED                  2390
-#define IDC_AUTO_PASSIVE_MODE           2392
 #define IDC_OPEN_LOGS                   2393
 #define IDC_OPEN_CONFIGS                2394
 #define IDC_STATIC_USERLIST             2395
@@ -1226,7 +1190,6 @@
 #define ID_GET_TTH                      32774
 #define ID_FILE_SETTINGS                32778
 #define ID_FILE_SEARCH                  32780
-#define ID_HELP_ACCELERATOR             32782
 #define ID_WINDOW_MINIMIZE_ALL          32784
 #define ID_WINDOW_RESTORE_ALL           32785
 #define ID_MEDIA_MENU_WINAMP_START      32787
