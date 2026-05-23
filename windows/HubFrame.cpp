@@ -2155,6 +2155,20 @@ void HubFrame::updateFrames(int flags)
 	}
 }
 
+int HubFrame::getUpdateFlags()
+{
+	ASSERT_MAIN_THREAD();
+	int flags = 0;
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	if (ss->getBool(Conf::SORT_FAVUSERS_FIRST))
+		flags |= UPDATE_FLAG_SORT;
+	if (ss->getBool(Conf::SHOW_HIDDEN_USERS))
+		flags |= UPDATE_FLAG_HIDDEN_USERS;
+	if (ss->getBool(Conf::HUB_URL_IN_TITLE))
+		flags |= UPDATE_FLAG_TITLE;
+	return flags;
+}
+
 void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept
 {
 	if (isClosedOrShutdown())

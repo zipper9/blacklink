@@ -208,6 +208,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void reconnectDisconnected();
 		static void closeAll(size_t threshold = 0);
 		static void updateFrames(int flags);
+		static int getUpdateFlags();
 		static void prepareNonMaximized();
 		static void changeTheme();
 

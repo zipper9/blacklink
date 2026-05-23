@@ -1860,115 +1860,108 @@ void WebServerSettings::get()
 
 LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!PropertiesDlg::instance)
+	if (PropertiesDlg::instance)
+		return 0;
+
+	PropertiesDlg dlg(m_hWnd, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
+
+	NetworkSettings prevNetworkSettings;
+	prevNetworkSettings.get();
+	NetworkPage::setPrevSettings(&prevNetworkSettings);
+
+	WebServerSettings prevWebServerSettings;
+	auto cs = SettingsManager::instance.getCoreSettings();
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	int prevHubFlags = HubFrame::getUpdateFlags();
+	int prevRegHandlerSettings = WinUtil::getRegHandlerSettings();
+	prevWebServerSettings.get();
+	cs->lockRead();
+	bool prevDHT = cs->getBool(Conf::USE_DHT);
+	string prevDownloadDir = cs->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	cs->unlockRead();
+	COLORREF prevTextColor = Colors::g_textColor;
+	COLORREF prevBgColor = Colors::g_bgColor;
+
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	SettingsManager::instance.saveSettings();
+
+	NetworkSettings currentNetworkSettings;
+	currentNetworkSettings.get();
+	if (ConnectionManager::getInstance()->getPort() == 0 || !currentNetworkSettings.compare(prevNetworkSettings))
+		ConnectivityManager::getInstance()->setupConnections();
+
+	cs->lockRead();
+	bool useDHT = cs->getBool(Conf::USE_DHT);
+	string downloadDir = cs->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
+	cs->unlockRead();
+
+	if (useDHT != prevDHT)
 	{
-		PropertiesDlg dlg(m_hWnd, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
-
-		NetworkSettings prevNetworkSettings;
-		prevNetworkSettings.get();
-		NetworkPage::setPrevSettings(&prevNetworkSettings);
-
-		WebServerSettings prevWebServerSettings;
-		auto cs = SettingsManager::instance.getCoreSettings();
-		const auto* ss = SettingsManager::instance.getUiSettings();
-		bool prevSortFavUsersFirst = ss->getBool(Conf::SORT_FAVUSERS_FIRST);
-		bool prevHubUrlInTitle = ss->getBool(Conf::HUB_URL_IN_TITLE);
-		bool prevShowHiddenUsers = ss->getBool(Conf::SHOW_HIDDEN_USERS);
-		int prevRegHandlerSettings = WinUtil::getRegHandlerSettings();
-		prevWebServerSettings.get();
-		cs->lockRead();
-		bool prevDHT = cs->getBool(Conf::USE_DHT);
-		string prevDownloadDir = cs->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
-		cs->unlockRead();
-		COLORREF prevTextColor = Colors::g_textColor;
-		COLORREF prevBgColor = Colors::g_bgColor;
-
-		if (dlg.DoModal(m_hWnd) == IDOK)
-		{
-			SettingsManager::instance.saveSettings();
-
-			NetworkSettings currentNetworkSettings;
-			currentNetworkSettings.get();
-			if (ConnectionManager::getInstance()->getPort() == 0 || !currentNetworkSettings.compare(prevNetworkSettings))
-				ConnectivityManager::getInstance()->setupConnections();
-
-			cs->lockRead();
-			bool useDHT = cs->getBool(Conf::USE_DHT);
-			string downloadDir = cs->getString(Conf::TEMP_DOWNLOAD_DIRECTORY);
-			cs->unlockRead();
-
-			if (useDHT != prevDHT)
-			{
-				dht::DHT* d = dht::DHT::getInstance();
-				if (useDHT)
-					d->start();
-				else
-					d->stop();
-			}
-
-			WebServerSettings webServerSettings;
-			webServerSettings.get();
-			if (!webServerSettings.compare(prevWebServerSettings))
-			{
-				WebServerManager::getInstance()->shutdown();
-				if (webServerSettings.enabled)
-					WebServerManager::getInstance()->start();
-			}
-
-			int regHandlerSettings = WinUtil::getRegHandlerSettings();
-			int regHandlerMask = prevRegHandlerSettings ^ regHandlerSettings;
-			if (regHandlerMask)
-				WinUtil::applyRegHandlerSettings(regHandlerSettings, regHandlerMask);
-
-			int updateHubFlags = 0;
-			if (ss->getBool(Conf::SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
-				updateHubFlags |= HubFrame::UPDATE_FLAG_SORT;
-			if (ss->getBool(Conf::SHOW_HIDDEN_USERS) != prevShowHiddenUsers)
-				updateHubFlags |= HubFrame::UPDATE_FLAG_HIDDEN_USERS;
-			if (ss->getBool(Conf::HUB_URL_IN_TITLE) != prevHubUrlInTitle)
-				updateHubFlags |= HubFrame::UPDATE_FLAG_TITLE;
-			if (updateHubFlags)
-				HubFrame::updateFrames(updateHubFlags);
-
-			if (downloadDir != prevDownloadDir)
-				QueueItem::checkTempDir = true;
-
-			Util::updateCoreSettings();
-			updateSettings();
-			g_fileImage.updateSettings();
-			checkToolbarButtons();
-
-			bool needUpdateTabPos = ctrlTab.getTabsPosition() != ss->getInt(Conf::TABS_POS);
-			bool needInvalidateTabs = ctrlTab.updateSettings(false);
-
-			if (needUpdateTabPos)
-			{
-				UpdateLayout();
-				HWND hWnd = ctrlTab.getActive();
-				if (::IsZoomed(hWnd))
-					::SendMessage(hWnd, WMU_UPDATE_LAYOUT, 0, 0);
-				needInvalidateTabs = true;
-			}
-
-			if (Colors::g_textColor != prevTextColor || Colors::g_bgColor != prevBgColor)
-				quickSearchEdit.Invalidate();
-
-			if (needInvalidateTabs)
-				ctrlTab.Invalidate();
-
-			if (!ss->getBool(Conf::SHOW_CURRENT_SPEED_IN_TITLE))
-				SetWindowText(getAppNameVerT().c_str());
-
-			ShareManager::getInstance()->refreshShareIfChanged();
-			ClientManager::infoUpdated(true);
-
-			if (StylesPage::queryChatColorsChanged())
-			{
-				HubFrame::changeTheme();
-				PrivateFrame::changeTheme();
-			}
-		}
+		dht::DHT* d = dht::DHT::getInstance();
+		if (useDHT)
+			d->start();
+		else
+			d->stop();
 	}
+
+	WebServerSettings webServerSettings;
+	webServerSettings.get();
+	if (!webServerSettings.compare(prevWebServerSettings))
+	{
+		WebServerManager::getInstance()->shutdown();
+		if (webServerSettings.enabled)
+			WebServerManager::getInstance()->start();
+	}
+
+	int regHandlerSettings = WinUtil::getRegHandlerSettings();
+	int regHandlerMask = prevRegHandlerSettings ^ regHandlerSettings;
+	if (regHandlerMask)
+		WinUtil::applyRegHandlerSettings(regHandlerSettings, regHandlerMask);
+
+	int updateHubFlags = prevHubFlags ^ HubFrame::getUpdateFlags();
+	if (updateHubFlags)
+		HubFrame::updateFrames(updateHubFlags);
+
+	if (downloadDir != prevDownloadDir)
+		QueueItem::checkTempDir = true;
+
+	Util::updateCoreSettings();
+	updateSettings();
+	g_fileImage.updateSettings();
+	checkToolbarButtons();
+
+	bool needUpdateTabPos = ctrlTab.getTabsPosition() != ss->getInt(Conf::TABS_POS);
+	bool needInvalidateTabs = ctrlTab.updateSettings(false);
+
+	if (needUpdateTabPos)
+	{
+		UpdateLayout();
+		HWND hWnd = ctrlTab.getActive();
+		if (::IsZoomed(hWnd))
+			::SendMessage(hWnd, WMU_UPDATE_LAYOUT, 0, 0);
+		needInvalidateTabs = true;
+	}
+
+	if (Colors::g_textColor != prevTextColor || Colors::g_bgColor != prevBgColor)
+		quickSearchEdit.Invalidate();
+
+	if (needInvalidateTabs)
+		ctrlTab.Invalidate();
+
+	if (!ss->getBool(Conf::SHOW_CURRENT_SPEED_IN_TITLE))
+		SetWindowText(getAppNameVerT().c_str());
+
+	ShareManager::getInstance()->refreshShareIfChanged();
+	ClientManager::infoUpdated(true);
+
+	if (StylesPage::queryChatColorsChanged())
+	{
+		HubFrame::changeTheme();
+		PrivateFrame::changeTheme();
+	}
+
 	return 0;
 }
 
@@ -2045,19 +2038,18 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 	HubFrame::Settings cs;
 	for (const FavoriteHubEntry& entry : hubs)
 	{
-		if (!entry.getNick().empty())
-		{
-			RecentHubEntry r;
-			r.setName(entry.getName());
-			r.setDescription(entry.getDescription());
-			r.setOpenTab("+");
-			r.setServer(entry.getServer());
-			RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
-			if (recent)
-				recent->setAutoOpen(true);
-			cs.copySettings(entry);
-			lastFrame = HubFrame::openHubWindow(cs);
-		}
+		if (entry.getNick().empty())
+			continue;
+		RecentHubEntry r;
+		r.setName(entry.getName());
+		r.setDescription(entry.getDescription());
+		r.setOpenTab("+");
+		r.setServer(entry.getServer());
+		RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
+		if (recent)
+			recent->setAutoOpen(true);
+		cs.copySettings(entry);
+		lastFrame = HubFrame::openHubWindow(cs);
 	}
 	if (SettingsManager::instance.getUiSettings()->getBool(Conf::RECONNECT_HUBS_ON_START))
 	{
@@ -2116,13 +2108,12 @@ void MainFrame::setTrayIcon(int newIcon)
 
 void MainFrame::clearPMStatus()
 {
-	if (hasPM)
-	{
-		hasPM = false;
-		if (taskbarList)
-			taskbarList->SetOverlayIcon(m_hWnd, nullptr, nullptr);
-		setTrayIcon(useTrayIcon ? TRAY_ICON_NORMAL : TRAY_ICON_NONE);
-	}
+	if (!hasPM)
+		return;
+	hasPM = false;
+	if (taskbarList)
+		taskbarList->SetOverlayIcon(m_hWnd, nullptr, nullptr);
+	setTrayIcon(useTrayIcon ? TRAY_ICON_NORMAL : TRAY_ICON_NONE);
 }
 
 LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
