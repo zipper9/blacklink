@@ -160,9 +160,14 @@ typedef SSIZE_T	ssize_t;
 #include <resolv.h>	/* defines BYTE_ORDER on HPUX and Solaris */
 #endif
 
-#if defined(__FreeBSD__) && defined(__FreeBSD_version) && __FreeBSD_version >= 1100110
-# define MDB_USE_POSIX_MUTEX	1
-# define MDB_USE_ROBUST	1
+#if defined(__FreeBSD__) && defined(__FreeBSD_version)
+# if __FreeBSD_version >= 1100110
+#  define MDB_USE_POSIX_MUTEX	1
+#  define MDB_USE_ROBUST	1
+# endif
+# if __FreeBSD_version < 1101000
+#  define MDB_FDATASYNC		fsync
+# endif
 #elif defined(__APPLE__) || defined (BSD) || defined(__FreeBSD_kernel__)
 # if !(defined(MDB_USE_POSIX_MUTEX) || defined(MDB_USE_POSIX_SEM))
 # define MDB_USE_SYSV_SEM	1
@@ -174,6 +179,14 @@ typedef SSIZE_T	ssize_t;
 # endif
 #elif defined(__ANDROID__)
 # define MDB_FDATASYNC		fsync
+#elif defined(__HAIKU__)
+# define MDB_USE_POSIX_SEM	1
+# define MDB_FDATASYNC		fsync
+#endif
+
+/* NetBSD does not define union semun in sys/sem.h */
+#if defined(__NetBSD__) && !defined(_SEM_SEMUN_UNDEFINED)
+# define _SEM_SEMUN_UNDEFINED  1
 #endif
 
 #ifndef _WIN32
@@ -260,7 +273,7 @@ union semun {
 /* On older compilers, use a separate section */
 # ifdef __GNUC__
 #  ifdef __APPLE__
-#   define      ESECT   __attribute__ ((section("__TEXT,text_env")))
+#   define      ESECT   __attribute__ ((section("__TEXT,text_env,regular,pure_instructions")))
 #  else
 #   define      ESECT   __attribute__ ((section("text_env")))
 #  endif
@@ -3858,12 +3871,20 @@ retry_write:
 				}
 				async_i++;
 #else
-#ifdef MDB_USE_PWRITEV
-				wres = pwritev(fd, iov, n, wpos);
-#else
 				if (n == 1) {
+					while (wsize > MAX_WRITE) {
+						wsize -= MAX_WRITE;
+						wres = pwrite(fd, iov[0].iov_base, MAX_WRITE, wpos);
+						if (wres != MAX_WRITE)
+							goto bad_write;;
+						wpos += MAX_WRITE;
+						iov[0].iov_base += MAX_WRITE;
+					}
 					wres = pwrite(fd, iov[0].iov_base, wsize, wpos);
 				} else {
+#ifdef MDB_USE_PWRITEV
+					wres = pwritev(fd, iov, n, wpos);
+#else
 retry_seek:
 					if (lseek(fd, wpos, SEEK_SET) == -1) {
 						rc = ErrCode();
@@ -3875,6 +3896,7 @@ retry_seek:
 					wres = writev(fd, iov, n);
 				}
 #endif
+bad_write:
 				if (wres != wsize) {
 					if (wres < 0) {
 						rc = ErrCode();
@@ -4400,6 +4422,12 @@ mdb_env_write_meta(MDB_txn *txn)
 				rc = ErrCode();
 				goto fail;
 			}
+#if defined(__APPLE__)
+			if (MDB_FDATASYNC(env->me_fd)) {
+				rc = ErrCode();
+				goto fail;
+			}
+#endif
 		}
 		goto done;
 	}
@@ -4459,6 +4487,12 @@ fail:
 		env->me_flags |= MDB_FATAL_ERROR;
 		return rc;
 	}
+#if defined(__APPLE__)
+	if (mfd == env->me_mfd && MDB_FDATASYNC(env->me_mfd)) {
+		rc = ErrCode();
+		return rc;
+	}
+#endif
 	/* MIPS has cache coherency issues, this is a no-op everywhere else */
 	CACHEFLUSH(env->me_map + off, len, DCACHE);
 done:
@@ -7632,6 +7666,18 @@ mdb_cursor_touch(MDB_cursor *mc)
 	return rc;
 }
 
+static void
+mdb_subdb_adjust(MDB_cursor *mc, MDB_db *old, MDB_db *new)
+{
+	int delta;
+
+	delta = new->md_branch_pages - old->md_branch_pages;
+	mc->mc_db->md_branch_pages += delta;
+
+	delta = new->md_leaf_pages - old->md_leaf_pages;
+	mc->mc_db->md_leaf_pages += delta;
+}
+
 /** Do not spill pages to disk if txn is getting full, may fail instead */
 #define MDB_NOSPILL	0x8000
 
@@ -7661,10 +7707,19 @@ _mdb_cursor_put(MDB_cursor *mc, MDB_val *key, MDB_val *data,
 	 * early failures.
 	 */
 	if (flags & MDB_MULTIPLE) {
+		size_t tmp;
+		if (!data[1].mv_size)
+			return EINVAL;
+
 		dcount = data[1].mv_size;
 		data[1].mv_size = 0;
 		if (!F_ISSET(mc->mc_db->md_flags, MDB_DUPFIXED))
 			return MDB_INCOMPATIBLE;
+
+		/* check for overflow */
+		tmp = data[0].mv_size * dcount;
+		if (tmp/dcount != data[0].mv_size)
+			return MDB_BAD_VALSIZE;
 	}
 
 	nospill = flags & MDB_NOSPILL;
@@ -7874,8 +7929,15 @@ more:
 				switch (flags) {
 				default:
 					if (!(mc->mc_db->md_flags & MDB_DUPFIXED)) {
+						unsigned int left = SIZELEFT(fp);
 						offset = EVEN(NODESIZE + sizeof(indx_t) +
 							data->mv_size);
+						/* if there's enough space, just use it */
+						if (offset < left)
+							offset = 0;
+						else
+						/* else grow by whatever we need */
+							offset -= left;
 						break;
 					}
 					offset = fp->mp_pad;
@@ -7922,6 +7984,7 @@ prep_subDB:
 					flags |= F_DUPDATA|F_SUBDATA;
 					dummy.md_root = mp->mp_pgno;
 					sub_root = mp;
+					mc->mc_db->md_leaf_pages++;
 			}
 			if (mp != fp) {
 				MP_FLAGS(mp) = fp_flags | P_DIRTY;
@@ -8128,6 +8191,7 @@ put_sub:
 			rc = _mdb_cursor_put(&mc->mc_xcursor->mx_cursor, data, &xdata, xflags);
 			if (flags & F_SUBDATA) {
 				void *db = NODEDATA(leaf);
+				mdb_subdb_adjust(mc, db, &mc->mc_xcursor->mx_db);
 				memcpy(db, &mc->mc_xcursor->mx_db, sizeof(MDB_db));
 			}
 			insert_data = mc->mc_xcursor->mx_db.md_entries - ecount;
@@ -8225,6 +8289,7 @@ _mdb_cursor_del(MDB_cursor *mc, unsigned int flags)
 				if (leaf->mn_flags & F_SUBDATA) {
 					/* update subDB info */
 					void *db = NODEDATA(leaf);
+					mdb_subdb_adjust(mc, db, &mc->mc_xcursor->mx_db);
 					memcpy(db, &mc->mc_xcursor->mx_db, sizeof(MDB_db));
 				} else {
 					MDB_cursor *m2;
@@ -10223,7 +10288,14 @@ mdb_env_copythr(void *arg)
 #else
 	int len;
 #define DO_WRITE(rc, fd, ptr, w2, len)	len = write(fd, ptr, w2); rc = (len >= 0)
-#ifdef SIGPIPE
+#ifdef F_SETNOSIGPIPE
+	/* OS X delivers SIGPIPE to the whole process, not the thread that caused it.
+	 * Disable SIGPIPE using platform specific fcntl.
+	 */
+	int enabled = 1;
+	if ((rc = fcntl(my->mc_fd, F_SETNOSIGPIPE, &enabled)) != 0)
+		my->mc_error = errno;
+#elif defined SIGPIPE
 	sigset_t set;
 	sigemptyset(&set);
 	sigaddset(&set, SIGPIPE);
@@ -10246,15 +10318,6 @@ again:
 			DO_WRITE(rc, my->mc_fd, ptr, wsize, len);
 			if (!rc) {
 				rc = ErrCode();
-#if defined(SIGPIPE) && !defined(_WIN32)
-				if (rc == EPIPE) {
-					/* Collect the pending SIGPIPE, otherwise at least OS X
-					 * gives it to the process on thread-exit (ITS#8504).
-					 */
-					int tmp;
-					sigwait(&set, &tmp);
-				}
-#endif
 				break;
 			} else if (len > 0) {
 				rc = MDB_SUCCESS;
