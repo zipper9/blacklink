@@ -164,7 +164,6 @@ static bool hasPasswordClose()
 }
 
 MainFrame::MainFrame() :
-	CSplitterImpl(false),
 	TimerHelper(m_hWnd),
 	hashProgressState(HASH_PROGRESS_HIDDEN),
 	showStatusBar(true),
@@ -197,7 +196,6 @@ MainFrame::MainFrame() :
 	fileListVersion(0),
 	visToolbar(TRUE), visWinampBar(TRUE), visQuickSearch(TRUE)
 {
-	m_bUpdateProportionalPos = false;
 	auto tick = GET_TICK();
 	timeDbCleanup = tick + 60000;
 	timeUsersCleanup = tick + Util::rand(3, 10)*60000;
@@ -731,9 +729,9 @@ void MainFrame::initTransfersSplitter()
 		splitSize = 9100;
 		ss->setInt(Conf::TRANSFER_FRAME_SPLIT, splitSize);
 	}
-	SetSplitterPanes(m_hWndMDIClient, transferView.m_hWnd);
-	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
-	m_nProportionalPos = splitSize;
+	addSplitter(-1, FLAG_PROPORTIONAL | FLAG_INTERACTIVE, splitSize);
+	setPaneWnd(0, m_hWndMDIClient);
+	setPaneWnd(1, transferView.m_hWnd);
 }
 
 LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
@@ -2153,7 +2151,8 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 			autoAway = false;
 		}
 	}
-	bHandled = FALSE;
+	if (wParam != SIZE_MINIMIZED)
+		UpdateLayout();
 	return 0;
 }
 
@@ -2192,7 +2191,7 @@ void MainFrame::prepareNonMaximized()
 	GetClientRect(&rect);
 	UpdateBarsPosition(rect, TRUE);
 	updateStatusBar(rect, false);
-	SetSplitterRect(&rect);
+	//SetSplitterRect(&rect);
 	HubFrame::prepareNonMaximized();
 	PrivateFrame::prepareNonMaximized();
 }
@@ -2306,8 +2305,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 
 				useTrayIcon = false;
 				setTrayIcon(TRAY_ICON_NONE);
-				if (m_nProportionalPos > 300)
-					ss->setInt(Conf::TRANSFER_FRAME_SPLIT, m_nProportionalPos);
+				ss->setInt(Conf::TRANSFER_FRAME_SPLIT, getSplitterPos(0, true));
 				ShowWindow(SW_HIDE);
 				stopperThread = reinterpret_cast<HANDLE>(_beginthreadex(NULL, 0, &stopper, this, 0, nullptr));
 			}
@@ -2364,10 +2362,11 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	{
 		RECT rect;
 		GetClientRect(&rect);
+		RECT prevRect = rect;
 		UpdateBarsPosition(rect, resizeBars);
 		updateStatusBar(rect, true);
 
-		CRect rc  = rect;
+		CRect rc = rect;
 		CRect rc2 = rect;
 
 		BOOL maximized;
@@ -2390,7 +2389,10 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			}
 			ctrlTab.MoveWindow(rc);
 		}
-		SetSplitterRect(rc2);
+		MARGINS margins;
+		WinUtil::getMargins(margins, prevRect, rc2);
+		setMargins(margins);
+		updateLayout();
 	}
 }
 
@@ -2713,20 +2715,10 @@ LRESULT MainFrame::onViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 void MainFrame::toggleTransferView(BOOL bVisible)
 {
 	if (!bVisible)
-	{
-		if (GetSinglePaneMode() != SPLIT_PANE_TOP)
-		{
-			SetSinglePaneMode(SPLIT_PANE_TOP);
-		}
-	}
+		setSinglePaneMode(0);
 	else
-	{
-		if (GetSinglePaneMode() != SPLIT_PANE_NONE)
-		{
-			SetSinglePaneMode(SPLIT_PANE_NONE);
-		}
-	}
-	
+		setSinglePaneMode(-1);
+
 	UISetCheck(ID_VIEW_TRANSFER_VIEW, bVisible);
 	ctrlToolbar.CheckButton(ID_VIEW_TRANSFER_VIEW, bVisible);
 	UpdateLayout();

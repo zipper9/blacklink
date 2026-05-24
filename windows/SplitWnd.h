@@ -178,6 +178,7 @@ class SplitWndImpl : public SplitWndBase
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled)
 		{
 			cleanup();
+			bHandled = FALSE;
 			return 0;
 		}
 

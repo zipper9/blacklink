@@ -34,6 +34,7 @@
 #include "TransferView.h"
 #include "StatusBarCtrl.h"
 #include "StatusMessageHistory.h"
+#include "SplitWnd.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
 #include "HIconWrapper.h"
@@ -44,7 +45,7 @@ class JAControl;
 struct ParsedCommandLine;
 
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
-	public CMessageFilter, public CIdleHandler, public CSplitterImpl<MainFrame>,
+	public CMessageFilter, public CIdleHandler, public SplitWndImpl<MainFrame>,
 	private SearchManagerListener,
 	private QueueManagerListener,
 	private WebServerListener,
@@ -83,7 +84,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			string errorText;
 		};
 
-		typedef CSplitterImpl<MainFrame> splitterBase;
+		typedef SplitWndImpl<MainFrame> splitterBase;
 		BEGIN_MSG_MAP(MainFrame)
 		MESSAGE_HANDLER(WM_PARENTNOTIFY, onParentNotify)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
@@ -184,9 +185,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		NOTIFY_CODE_HANDLER(TTN_POP, onTooltipPop)
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, onToolbarDropDown)
 		CHAIN_MDI_CHILD_COMMANDS()
+		CHAIN_MSG_MAP(splitterBase)
 		CHAIN_MSG_MAP(CUpdateUI<MainFrame>)
 		CHAIN_MSG_MAP(CMDIFrameWindowImpl<MainFrame>)
-		CHAIN_MSG_MAP(splitterBase)
 		ALT_MSG_MAP(QUICK_SEARCH_MAP)
 		MESSAGE_HANDLER(WM_CHAR, onQuickSearchChar)
 		MESSAGE_HANDLER(WM_KEYDOWN, onQuickSearchChar)
