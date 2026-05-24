@@ -100,7 +100,7 @@ namespace dht
 		void info(Ip4Address ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey);
 
 		/** Sends Connect To Me request to online node */
-		void connect(const OnlineUserPtr& ou, const string& token, bool forcePassive);
+		void connectUser(const OnlineUserPtr& ou, const string& token, bool forcePassive);
 
 		/** Sends private message to online node */
 		bool privateMessage(const OnlineUserPtr& ou, const string& message, int flags);

@@ -106,7 +106,7 @@ void NmdcHub::disconnect(bool graceless)
 	clearUsers();
 }
 
-void NmdcHub::connect(const OnlineUserPtr& user, const string& token, bool forcePassive)
+void NmdcHub::connectUser(const OnlineUserPtr& user, const string& token, bool forcePassive)
 {
 	{
 		LOCK(csState);

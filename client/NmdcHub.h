@@ -34,7 +34,7 @@ class NmdcHub : public Client, private Flags
 		using Client::connect;
 
 		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
-		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) override;
+		void connectUser(const OnlineUserPtr& user, const string& token, bool forcePassive) override;
 		void disconnect(bool graceless) override;
 
 		int getType() const override { return TYPE_NMDC; }

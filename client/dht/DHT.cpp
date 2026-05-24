@@ -548,7 +548,7 @@ namespace dht
 	/*
 	 * Sends Connect To Me request to online node
 	 */
-	void DHT::connect(const OnlineUserPtr& ou, const string& token, bool forcePassive)
+	void DHT::connectUser(const OnlineUserPtr& ou, const string& token, bool forcePassive)
 	{
 		if (ou->getClientBase()->getType() != ClientBase::TYPE_DHT) return;
 		Node::Ptr node = std::static_pointer_cast<Node>(ou);

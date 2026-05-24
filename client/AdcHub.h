@@ -31,7 +31,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		using Client::connect;
 
 		static ClientBasePtr create(const string& hubURL, const string& address, uint16_t port, bool secure);
-		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) override;
+		void connectUser(const OnlineUserPtr& user, const string& token, bool forcePassive) override;
 
 		int getType() const override { return TYPE_ADC; }
 		void hubMessage(const string& message, bool thirdPerson = false) override;

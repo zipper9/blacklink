@@ -709,7 +709,7 @@ void ConnectionManager::connectNextNmdcUser(const ExpectedNmdcMap::NextConnectio
 	const CID cid = ClientManager::makeCid(nci.nick, nci.hubUrl);
 	OnlineUserPtr u = ClientManager::findOnlineUser(cid, nci.hubUrl, true);
 	if (u)
-		u->getClientBase()->connect(u, nci.token, false);
+		u->getClientBase()->connectUser(u, nci.token, false);
 #ifdef DEBUG_NMDC_UC
 	else
 		LogManager::message("Expected user " + nci.nick + "/" + cid.toBase32()
@@ -1737,7 +1737,7 @@ bool ConnectionManager::connectCCPM(const HintedUser& hintedUser)
 		tokenManager.removeToken(token);
 		return false;
 	}
-	client->connect(ou, token, false);
+	client->connectUser(ou, token, false);
 	return true;
 }
 

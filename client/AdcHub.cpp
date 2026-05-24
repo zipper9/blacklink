@@ -1141,7 +1141,7 @@ void AdcHub::handle(AdcCommand::TCP, const AdcCommand& c) noexcept
 	csState.unlock();
 }
 
-void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)
+void AdcHub::connectUser(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)
 {
 	connectUser(*user, token,
 		CryptoManager::getInstance()->isInitialized() &&

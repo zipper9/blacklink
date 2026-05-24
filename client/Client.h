@@ -62,7 +62,7 @@ class ClientBase
 		virtual string getHubName() const = 0;
 		virtual string getMyNick() const = 0;
 		virtual bool isOp() const = 0;
-		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
+		virtual void connectUser(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
 		virtual bool privateMessage(const OnlineUserPtr& user, const string& message, int falgs) = 0;
 		virtual int getType() const = 0;
 		virtual void dumpUserInfo(const string& userReport) = 0;

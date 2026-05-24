@@ -821,7 +821,7 @@ OnlineUserPtr ClientManager::connect(const HintedUser& user, const string& token
 	{
 		if (forcePassive)
 			ou->getClientBase()->resendMyINFO(false, true);
-		ou->getClientBase()->connect(ou, token, forcePassive);
+		ou->getClientBase()->connectUser(ou, token, forcePassive);
 	}
 	return ou;
 }
