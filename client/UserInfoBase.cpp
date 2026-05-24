@@ -101,7 +101,7 @@ void UserInfoBase::setFreePM()
 void UserInfoBase::setNormalPM()
 {
 	if (getUser())
-		FavoriteManager::getInstance()->setFlags(getUser(), FavoriteUser::FLAG_NONE, FavoriteUser::PM_FLAGS_MASK);
+		FavoriteManager::getInstance()->setFlags(getUser(), FavoriteUser::NO_FLAGS, FavoriteUser::PM_FLAGS_MASK);
 }
 
 void UserInfoBase::setUploadLimit(int limit)

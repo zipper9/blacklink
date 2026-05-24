@@ -819,8 +819,8 @@ OnlineUserPtr ClientManager::connect(const HintedUser& user, const string& token
 	OnlineUserPtr ou = findOnlineUserL(user, priv);
 	if (ou)
 	{
-		if (forcePassive)
-			ou->getClientBase()->resendMyINFO(false, true);
+		//if (forcePassive)
+		//	ou->getClientBase()->resendMyINFO(false, true);
 		ou->getClientBase()->connectUser(ou, token, forcePassive);
 	}
 	return ou;

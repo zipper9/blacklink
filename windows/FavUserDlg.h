@@ -28,6 +28,7 @@ class FavUserDlg: public CDialogImpl<FavUserDlg>
 	private:
 		CEdit ctrlDesc;
 		CButton ctrlAutoGrant;
+		CButton ctrlForcePassive;
 		CComboBox ctrlUpload;
 		CEdit ctrlSpeedValue;
 		CComboBox ctrlShareGroup;

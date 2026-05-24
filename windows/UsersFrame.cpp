@@ -641,7 +641,7 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		ItemInfo *ii = ctrlUsers.getItemData(i);
-		FavoriteUser::Flags flag = FavoriteUser::FLAG_NONE;
+		FavoriteUser::Flags flag = FavoriteUser::NO_FLAGS;
 		switch (wID)
 		{
 			case IDC_PM_IGNORED:

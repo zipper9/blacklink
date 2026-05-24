@@ -5,15 +5,16 @@
 
 static const WinUtil::TextItem texts[] =
 {
-	{ IDC_CAPTION_DESCRIPTION,  R_(DESCRIPTION)          },
-	{ IDC_AUTO_GRANT,           R_(FAVUSER_AUTO_GRANT)   },
-	{ IDC_CAPTION_UPLOAD_SPEED, R_(FAVUSER_UPLOAD_SPEED) },
-	{ IDC_KBPS,                 R_(KBPS)                 },
-	{ IDC_CAPTION_SHARE_GROUP,  R_(SHARE_GROUP)          },
-	{ IDC_CAPTION_PM_HANDLING,  R_(PM_HANDLING)          },
-	{ IDOK,                     R_(OK)                   },
-	{ IDCANCEL,                 R_(CANCEL)               },
-	{ 0,                        R_INVALID                }
+	{ IDC_CAPTION_DESCRIPTION,  R_(DESCRIPTION)           },
+	{ IDC_AUTO_GRANT,           R_(FAVUSER_AUTO_GRANT)    },
+	{ IDC_FORCE_PASSIVE,        R_(FAVUSER_FORCE_PASSIVE) },
+	{ IDC_CAPTION_UPLOAD_SPEED, R_(FAVUSER_UPLOAD_SPEED)  },
+	{ IDC_KBPS,                 R_(KBPS)                  },
+	{ IDC_CAPTION_SHARE_GROUP,  R_(SHARE_GROUP)           },
+	{ IDC_CAPTION_PM_HANDLING,  R_(PM_HANDLING)           },
+	{ IDOK,                     R_(OK)                    },
+	{ IDCANCEL,                 R_(CANCEL)                },
+	{ 0,                        R_INVALID                 }
 };
 
 LRESULT FavUserDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -30,6 +31,9 @@ LRESULT FavUserDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 
 	ctrlAutoGrant.Attach(GetDlgItem(IDC_AUTO_GRANT));
 	ctrlAutoGrant.SetCheck((flags & FavoriteUser::FLAG_GRANT_SLOT) ? BST_CHECKED : BST_UNCHECKED);
+
+	ctrlForcePassive.Attach(GetDlgItem(IDC_FORCE_PASSIVE));
+	ctrlForcePassive.SetCheck((flags & FavoriteUser::FLAG_FORCE_PASSIVE_MODE) ? BST_CHECKED : BST_UNCHECKED);
 
 	static const ResourceManager::Strings uploadStrings[] =
 	{
@@ -101,6 +105,8 @@ LRESULT FavUserDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		flags = 0;
 		if (ctrlAutoGrant.GetCheck() == BST_CHECKED)
 			flags |= FavoriteUser::FLAG_GRANT_SLOT;
+		if (ctrlForcePassive.GetCheck() == BST_CHECKED)
+			flags |= FavoriteUser::FLAG_FORCE_PASSIVE_MODE;
 		switch (ctrlPMHandling.GetCurSel())
 		{
 			case 1:

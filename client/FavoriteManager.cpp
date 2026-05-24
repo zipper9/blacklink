@@ -1028,6 +1028,8 @@ void FavoriteManager::saveFavorites()
 					xml.addChildAttrib("LastSeen", u.lastSeen);
 				if (u.isSet(FavoriteUser::FLAG_GRANT_SLOT))
 					xml.addChildAttrib("GrantSlot", true);
+				if (u.isSet(FavoriteUser::FLAG_FORCE_PASSIVE_MODE))
+					xml.addChildAttrib("ForcePassive", true);
 				if (u.isSet(FavoriteUser::FLAG_HIDE_SHARE))
 					xml.addChildAttrib("HideShare", true);
 				else if (!u.shareGroup.isZero())
@@ -1397,7 +1399,7 @@ void FavoriteManager::load(SimpleXML& xml)
 				user.setFlag(FavoriteUser::FLAG_IGNORE_PRIVATE);
 			if (xml.getBoolChildAttrib("FreeAccessPM"))
 				user.setFlag(FavoriteUser::FLAG_FREE_PM_ACCESS);
-						
+
 			if (xml.getBoolChildAttrib("SuperUser"))
 				user.uploadLimit = FavoriteUser::UL_SU;
 			else
@@ -1410,6 +1412,8 @@ void FavoriteManager::load(SimpleXML& xml)
 
 			if (xml.getBoolChildAttrib("GrantSlot"))
 				user.setFlag(FavoriteUser::FLAG_GRANT_SLOT);
+			if (xml.getBoolChildAttrib("ForcePassive"))
+				user.setFlag(FavoriteUser::FLAG_FORCE_PASSIVE_MODE);
 
 			if (!xml.getBoolChildAttrib("HideShare"))
 			{
@@ -1419,7 +1423,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			}
 			else
 				user.setFlag(FavoriteUser::FLAG_HIDE_SHARE);
-			
+
 			user.lastSeen = xml.getInt64ChildAttrib("LastSeen");
 			user.description = xml.getChildAttrib("UserDescription");
 		}

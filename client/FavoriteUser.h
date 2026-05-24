@@ -31,24 +31,25 @@ class FavoriteUser : public Flags
 			UL_BAN = -1,
 			UL_NONE = 0
 		};
-		
+
 		FavoriteUser(const UserPtr& user, const string& nick, const string& hubUrl) : user(user), nick(nick), url(hubUrl), uploadLimit(UL_NONE), lastSeen(0) { }
-		explicit FavoriteUser(const UserPtr& user) : user(user), uploadLimit(UL_NONE), lastSeen(0) {}		
+		explicit FavoriteUser(const UserPtr& user) : user(user), uploadLimit(UL_NONE), lastSeen(0) {}
 		FavoriteUser() : uploadLimit(UL_NONE), lastSeen(0) { }
-		
+
 		enum Flags
 		{
-			FLAG_NONE           = 0,
-			FLAG_GRANT_SLOT     = 1,
-			FLAG_IGNORE_PRIVATE = 2,
-			FLAG_FREE_PM_ACCESS = 4,
-			FLAG_HIDE_SHARE     = 8
+			NO_FLAGS                = 0,
+			FLAG_GRANT_SLOT         = 0x01,
+			FLAG_IGNORE_PRIVATE     = 0x02,
+			FLAG_FREE_PM_ACCESS     = 0x04,
+			FLAG_HIDE_SHARE         = 0x08,
+			FLAG_FORCE_PASSIVE_MODE = 0x10
 		};
-		
+
 		static const Flags PM_FLAGS_MASK = Flags(FLAG_IGNORE_PRIVATE | FLAG_FREE_PM_ACCESS);
 
 		void update(const OnlineUser& info);
-		
+
 		UserPtr user;
 		string nick;
 		string url;

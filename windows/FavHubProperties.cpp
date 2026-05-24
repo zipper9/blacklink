@@ -543,7 +543,7 @@ LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 
 	static const ResourceManager::Strings connTypeStrings[] =
 	{
-		R_(DEFAULT), R_(SETTINGS_DIRECT), R_(SETTINGS_FIREWALL_PASSIVE), R_INVALID
+		R_(DEFAULT), R_(SETTINGS_DIRECT), R_(SETTINGS_CONN_MODE_PASSIVE), R_INVALID
 	};
 	ctrlConnType.Attach(GetDlgItem(IDC_CONNECTION_TYPE));
 	WinUtil::fillComboBoxStrings(ctrlConnType, connTypeStrings);

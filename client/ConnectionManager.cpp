@@ -26,6 +26,7 @@
 #include "ShareManager.h"
 #include "DebugManager.h"
 #include "SettingsManager.h"
+#include "FavoriteManager.h"
 #include "SSLSocket.h"
 #include "AutoDetectSocket.h"
 #include "PortTest.h"
@@ -768,9 +769,14 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					{
 						if (DownloadManager::getInstance()->isStartDownload(prio))
 						{
+							FavoriteUser::MaskType favUserFlags;
+							int uploadLimit;
+							if (!FavoriteManager::getInstance()->getFavUserParam(cqi->getUser(), favUserFlags, uploadLimit))
+								favUserFlags = 0;
 							cqi->setLastAttempt(tick);
 							cqi->setState(ConnectionQueueItem::CONNECTING);
-							OnlineUserPtr ou = ClientManager::getInstance()->connect(cqi->getHintedUser(), cqi->getConnectionQueueToken(), false);
+							OnlineUserPtr ou = ClientManager::getInstance()->connect(cqi->getHintedUser(), cqi->getConnectionQueueToken(),
+							                                                         (favUserFlags & FavoriteUser::FLAG_FORCE_PASSIVE_MODE) != 0);
 							if (ou)
 								cqi->setHubHint(ou->getClientBase()->getHubUrl());
 							statusChanged.emplace_back(TokenItem{cqi->getHintedUser(), cqi->getConnectionQueueToken()});
