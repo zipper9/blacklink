@@ -49,10 +49,11 @@ static void logMessage(const char *msg, ...)
 }
 #endif
 
-static void sanitizeUrl(string& url) noexcept
+static inline void sanitizeUrl(string& url) noexcept
 {
-	// FIXME: remove boost
-	boost::algorithm::trim_if(url, boost::is_space() || boost::is_any_of("<>\""));
+	url.erase(std::remove_if(url.begin(), url.end(),
+		[](char c) { return (unsigned char) c <= 0x20 || c == '<' || c == '>' || c == '"'; }),
+		url.end());
 }
 
 HttpConnection::~HttpConnection()
@@ -342,6 +343,12 @@ void HttpConnection::onFailed(const string &errorText) noexcept
 	receivingData = false;
 	if (prevState == STATE_IDLE)
 		client->onDisconnected(this);
+	else if (prevState == STATE_DATA && bodySize == BODY_SIZE_UNKNOWN && resp.getResponseCode() >= 300)
+	{
+		// TODO: also check that connection has been closed gracefully
+		client->onCompleted(this, currentUrl);
+		client->onDisconnected(this);
+	}
 	else if (prevState != STATE_FAILED)
 		client->onFailed(this, errorText + " (" + currentUrl + ")");
 	disconnect();
