@@ -59,7 +59,7 @@ static wchar_t *utf8ToWidePtr(const string& str) noexcept
 			dcassert(0);
 			return nullptr;
 		}
-		
+
 	}
 	out[size] = 0;
 	return out;
@@ -211,9 +211,10 @@ class ListLoader : public SimpleXMLReader::CallBack
 			if (hashDb)
 				DatabaseManager::getInstance()->putHashDatabaseConnection(hashDb);
 		}
-		
-		void startTag(const string& name, StringPairList& attribs, bool simple);
-		void endTag(const string& name, const string& data);
+
+		void startTag(const string& name, StringPairList& attribs, bool simple) override;
+		void endTag(const string& name) override;
+		void data(const string&) override {}
 
 		void setProgressNotif(DirectoryListing::ProgressNotif *notif)
 		{
@@ -526,7 +527,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			if (simple)
 			{
 				// To handle <Directory Name="..." />
-				endTag(name, Util::emptyString);
+				endTag(name);
 			}
 		}
 	}
@@ -557,7 +558,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 		if (simple)
 		{
 			// To handle <Directory Name="..." />
-			endTag(name, Util::emptyString);
+			endTag(name);
 		}
 	}
 }
@@ -601,7 +602,7 @@ static void sortList(vector<T*> &data)
 #endif
 }
 
-void ListLoader::endTag(const string& name, const string&)
+void ListLoader::endTag(const string& name)
 {
 	if (!inListing) return;
 	notifyProgress();

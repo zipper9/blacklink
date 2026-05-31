@@ -278,7 +278,7 @@ LRESULT GeneralPage::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 class LangFileXMLCallback : public SimpleXMLReader::CallBack
 {
-	void startTag(const string& name, StringPairList& attribs, bool simple)
+	void startTag(const string& name, StringPairList& attribs, bool simple) override
 	{
 		if (name == "Language")
 		{
@@ -287,7 +287,8 @@ class LangFileXMLCallback : public SimpleXMLReader::CallBack
 		}
 	}
 
-	void endTag(const string& name, const std::string& data) {}
+	void endTag(const string&) override {}
+	void data(const string&) override {}
 
 public:
 	string language;
@@ -303,7 +304,7 @@ static string getLangFromFile(const string& filename)
 		size_t len = sizeof(buf);
 		f.read(buf, len);
 		SimpleXMLReader reader(&cb);
-		reader.parse(buf, len, false);
+		reader.parse(buf, len);
 	}
 	catch (FileException&) {}
 	catch (SimpleXMLException&) {}

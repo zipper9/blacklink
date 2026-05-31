@@ -253,7 +253,7 @@ void SimpleXML::fromXML(const string& xml)
 	}
 
 	TagReader t(&root);
-	SimpleXMLReader(&t).parse(xml.c_str(), xml.size(), false);
+	SimpleXMLReader(&t).parse(xml.c_str(), xml.size());
 
 	if (root.children.size() != 1)
 		throw SimpleXMLException(STRING(SXML_INVALID_FILE));

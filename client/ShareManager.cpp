@@ -104,10 +104,11 @@ class ShareLoader : public SimpleXMLReader::CallBack
 		ShareLoader(ShareManager& manager): manager(manager), current(nullptr), inListing(false)
 		{
 		}
-		
-		void startTag(const string& name, StringPairList& attribs, bool simple);
-		void endTag(const string& name, const string& data);
-		
+
+		void startTag(const string& name, StringPairList& attribs, bool simple) override;
+		void endTag(const string& name) override;
+		void data(const string&) override {}
+
 	private:
 		ShareManager& manager;
 		SharedDir* current;
@@ -143,11 +144,11 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				if (attrib == attrTS) valTS = &value; else
 				if (attrib == attrShared) valShared = &value;
 			}
-			
+
 			if (!valFilename) return;
 			if (!valSize) return;
 			if (!valTTH || valTTH->length() != 39) return;
-			
+
 			ShareManager::SharedItemAttribs attr;
 			bool error;
 			Util::fromBase32(valTTH->c_str(), attr.tth.data, sizeof(attr.tth.data), &error);
@@ -175,17 +176,17 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			const string& fileName = getAttrib(attribs, attrName, 0);
 			if (fileName.empty()) throw ShareLoaderException("Empty directory name");
 			manager.loadSharedDir(current, fileName);
-			if (simple) endTag(name, Util::emptyString);
+			if (simple) endTag(name);
 		}
 	}
 	else if (name == tagFileListing)
 	{
 		inListing = true;
-		if (simple) endTag(name, Util::emptyString);
+		if (simple) endTag(name);
 	}
 }
 
-void ShareLoader::endTag(const string& name, const string&)
+void ShareLoader::endTag(const string& name)
 {
 	if (!inListing) return;
 	if (name == tagDirectory)

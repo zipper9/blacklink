@@ -90,7 +90,7 @@ void QueueManager::FileQueue::updatePriority(QueueItem::Priority& p, bool& autoP
 	autoPriority = false;
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
-	
+
 	if (ss->getBool(Conf::AUTO_PRIORITY_USE_PATTERNS))
 	{
 		const string& pattern = ss->getString(Conf::AUTO_PRIORITY_PATTERNS);
@@ -801,7 +801,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		bool autoSearch = ss->getBool(Conf::AUTO_SEARCH);
 		ss->unlockRead();
 		if (autoSearch)
-		{		
+		{
 			// We keep 30 recent searches to avoid duplicate searches
 			while (m_recent.size() >= fileQueue.getSize() || m_recent.size() > 30)
 			{
@@ -2882,8 +2882,9 @@ class QueueLoader : public SimpleXMLReader::CallBack
 			QueueItem::g_cs->unlock();
 #endif
 		}
-		void startTag(const string& name, StringPairList& attribs, bool simple);
-		void endTag(const string& name, const string& data);
+		void startTag(const string& name, StringPairList& attribs, bool simple) override;
+		void endTag(const string& name) override;
+		void data(const string&) override {}
 
 	private:
 		string target;
@@ -3034,7 +3035,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 	}
 }
 
-void QueueLoader::endTag(const string& name, const string&)
+void QueueLoader::endTag(const string& name)
 {
 	if (isInDownloads)
 	{

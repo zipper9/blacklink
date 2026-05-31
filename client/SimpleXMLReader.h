@@ -31,7 +31,8 @@ class SimpleXMLReader
 		{
 				virtual ~CallBack() { }
 				virtual void startTag(const std::string& name, StringPairList& attribs, bool simple) = 0;
-				virtual void endTag(const std::string& name, const std::string& data) = 0;
+				virtual void endTag(const std::string& name) = 0;
+				virtual void data(const std::string& text) = 0;
 
 			protected:
 				static const std::string& getAttrib(StringPairList& attribs, const std::string& name, size_t hint);
@@ -41,7 +42,7 @@ class SimpleXMLReader
 		virtual ~SimpleXMLReader() { }
 
 		void parse(InputStream& is, size_t maxSize = 0);
-		bool parse(const char* data, size_t len, bool more);
+		bool parse(const char* data, size_t len);
 
 		SimpleXMLReader(const SimpleXMLReader&) = delete;
 		SimpleXMLReader& operator= (const SimpleXMLReader&) = delete;

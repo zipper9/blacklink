@@ -71,7 +71,8 @@ class XmlListLoader : public SimpleXMLReader::CallBack
 			}
 		}
 
-		void endTag(const string& name, const string& data) {}
+		void endTag(const string&) {}
+		void data(const string&) {}
 
 	private:
 		HubEntry::List &publicHubs;

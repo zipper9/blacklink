@@ -72,7 +72,7 @@ SimpleXMLReader::SimpleXMLReader(SimpleXMLReader::CallBack* callback) :
 	bufPos(0), pos(0), cb(callback), charset(Text::CHARSET_UTF8), state(STATE_START)
 {
 	elements.reserve(64);
-	attribs.reserve(4); // 16 Много в void ListLoader::startTag маскимум = 8
+	attribs.reserve(16);
 }
 
 void SimpleXMLReader::append(std::string& str, size_t maxLen, int c)
@@ -227,8 +227,8 @@ bool SimpleXMLReader::elementAttr()
 	int c = charAt(0);
 	if (isNameStartChar(c))
 	{
-		attribs.push_back(StringPair()); // Hot point - 10%
-		append(attribs.back().first, MAX_NAME_SIZE, c); // MAX_NAME_SIZE - 260
+		attribs.push_back(StringPair());
+		append(attribs.back().first, MAX_NAME_SIZE, c);
 
 		state = STATE_ELEMENT_ATTR_NAME;
 		advancePos(1);
@@ -489,7 +489,7 @@ bool SimpleXMLReader::cdata()
 
 bool SimpleXMLReader::entref(string& d)
 {
-	if (d.size() + 1 >= MAX_VALUE_SIZE)
+	if (d.size() + 1 > MAX_VALUE_SIZE)
 	{
 		error("Buffer overflow");
 	}
@@ -591,24 +591,13 @@ bool SimpleXMLReader::content()
 	}
 
 	int c = charAt(0);
-	if (c == '<')
-	{
-		if (!value.empty())
-		{
-			error("Mixed content not supported");
-		}
-		return false;
-	}
-
 	if (c == '&')
 	{
 		return entref(value);
 	}
 
 	append(value, MAX_VALUE_SIZE, c);
-
 	advancePos(1);
-
 	return true;
 }
 
@@ -644,10 +633,7 @@ bool SimpleXMLReader::elementEndEnd()
 
 	if (charAt(0) == '>')
 	{
-		if (charset != Text::CHARSET_UTF8)
-			value = Text::toUtf8(value, charset);
-		cb->endTag(elements.back(), value);
-		value.clear();
+		cb->endTag(elements.back());
 		elements.pop_back();
 
 		state = STATE_CONTENT;
@@ -712,11 +698,12 @@ void SimpleXMLReader::parse(InputStream& stream, size_t maxSize)
 	while (process());
 }
 
-bool SimpleXMLReader::parse(const char* data, size_t len, bool /*more*/)
+bool SimpleXMLReader::parse(const char* data, size_t len)
 {
 	buf.append(data, len);
 	return process();
 }
+
 bool SimpleXMLReader::spaceOrError(const char* message)
 {
 	if (!skipSpace())
@@ -869,9 +856,11 @@ bool SimpleXMLReader::process()
 			return true;
 		}
 
-		if (state == STATE_CONTENT && state != oldState)
+		if (oldState == STATE_CONTENT && state != oldState && !value.empty())
 		{
-			// might contain whitespace from previous unfruitful contents (that turned out to be elements / comments)
+			if (charset != Text::CHARSET_UTF8)
+				value = Text::toUtf8(value, charset);
+			cb->data(value);
 			value.clear();
 		}
 

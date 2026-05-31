@@ -254,18 +254,25 @@ class SimpleXML
 				{
 					return false;
 				}
-				virtual void startTag(const string& name, StringPairList& attribs, bool simple)
+
+				void startTag(const string& name, StringPairList& attribs, bool simple) override
 				{
 					cur->children.push_back(new Tag(name, attribs, cur));
 					if (!simple)
 						cur = cur->children.back();
 				}
-				virtual void endTag(const string&, const string& d)
+
+				void endTag(const string&) override
 				{
-					cur->data = d;
 					if (cur->parent == nullptr)
 						throw SimpleXMLException("Invalid end tag");
 					cur = cur->parent;
+				}
+
+				void data(const string& d) override
+				{
+					dcassert(cur);
+					cur->data += d;
 				}
 
 				Tag* cur;
