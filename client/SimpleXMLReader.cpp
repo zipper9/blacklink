@@ -78,18 +78,14 @@ SimpleXMLReader::SimpleXMLReader(SimpleXMLReader::CallBack* callback) :
 void SimpleXMLReader::append(std::string& str, size_t maxLen, int c)
 {
 	if (str.size() + 1 > maxLen)
-	{
 		error("Buffer overflow");
-	}
 	str.append(1, (std::string::value_type)c);
 }
 
 void SimpleXMLReader::append(std::string& str, size_t maxLen, const std::string::const_iterator& begin, const std::string::const_iterator& end)
 {
 	if (str.size() + (end - begin) > maxLen)
-	{
 		error("Buffer overflow");
-	}
 	str.append(begin, end);
 }
 
@@ -101,7 +97,6 @@ bool SimpleXMLReader::error(const char* e)
 const string& SimpleXMLReader::CallBack::getAttrib(StringPairList& attribs, const string& name, size_t hint)
 {
 	hint = std::min(hint, attribs.size());
-
 	auto compare = [&](const auto& p) { return p.first == name; };
 	auto i = find_if(attribs.begin() + hint, attribs.end(), compare);
 	if (i == attribs.end())
@@ -118,56 +113,39 @@ bool SimpleXMLReader::literal(const char* lit, size_t len, bool withSpace, Parse
 	for (; n < nend && n < len; ++n)
 	{
 		if (charAt(n) != lit[n])
-		{
 			return false;
-		}
 	}
-
 	if (n == len)
 	{
 		if (withSpace)
 		{
 			if (n == nend)
-			{
 				return true;
-			}
 			if (!isSpace(charAt(n)))
-			{
 				return false;
-			}
 			n++;
 		}
 		advancePos(n);
 		state = newState;
 	}
-
 	return true;
 }
 
 bool SimpleXMLReader::element()
 {
 	if (!needChars(2))
-	{
 		return true;
-	}
-
 	int c = charAt(1);
 	if (charAt(0) == '<' && isNameStartChar(c))
 	{
 		if (elements.size() >= MAX_NESTING)
-		{
 			error("Max nesting exceeded");
-		}
-
 		state = STATE_ELEMENT_NAME;
 		elements.push_back(Util::emptyString);
 		append(elements.back(), MAX_NAME_SIZE, c);
-
 		advancePos(2);
-
 		return true;
 	}
-
 	return false;
 }
 
@@ -177,209 +155,169 @@ bool SimpleXMLReader::elementName()
 	for (size_t iend = bufSize(); i < iend; ++i)
 	{
 		int c = charAt(i);
-
 		if (isSpace(c))
 		{
 			append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-
 			state = STATE_ELEMENT_ATTR;
 			advancePos(i + 1);
 			return true;
 		}
-		else if (c == '/')
+		if (c == '/')
 		{
 			append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-
 			state = STATE_ELEMENT_END_SIMPLE;
 			advancePos(i + 1);
 			return true;
 		}
-		else if (c == '>')
+		if (c == '>')
 		{
 			append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-
 			cb->startTag(elements.back(), attribs, false);
 			attribs.clear();
-
 			state = STATE_CONTENT;
 			advancePos(i + 1);
 			return true;
 		}
-		else if (!isNameChar(c))
-		{
+		if (!isNameChar(c))
 			return false;
-		}
 	}
 
 	append(elements.back(), MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 	advancePos(i);
-
 	return true;
 }
 
 bool SimpleXMLReader::elementAttr()
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
-
 	int c = charAt(0);
 	if (isNameStartChar(c))
 	{
+		if (attribs.size() >= MAX_ATTRIBS)
+			error("Too many attributes");
 		attribs.push_back(StringPair());
 		append(attribs.back().first, MAX_NAME_SIZE, c);
-
 		state = STATE_ELEMENT_ATTR_NAME;
 		advancePos(1);
-
 		return true;
 	}
-
 	return false;
 }
 
 bool SimpleXMLReader::elementAttrName()
 {
+	std::string& attr = attribs.back().first;
 	size_t i = 0;
 	for (size_t iend = bufSize(); i < iend; ++i)
 	{
 		const int c = charAt(i);
-
 		if (isSpace(c))
 		{
-			append(attribs.back().first, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-
+			append(attr, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 			state = STATE_ELEMENT_ATTR_EQ;
 			advancePos(i + 1);
 			return true;
 		}
-		else if (c == '=')
+		if (c == '=')
 		{
-			append(attribs.back().first, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-
+			append(attr, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 			state = STATE_ELEMENT_ATTR_VALUE;
 			advancePos(i + 1);
 			return true;
 		}
-		else if (!isNameChar(c))
-		{
+		if (!isNameChar(c))
 			return false;
-		}
 	}
-
-	append(attribs.back().first, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
+	append(attr, MAX_NAME_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 	advancePos(i);
 	return true;
 }
 
 bool SimpleXMLReader::elementAttrValue()
 {
+	std::string& attr = attribs.back().second;
 	size_t i = 0;
 	for (size_t iend = bufSize(); i < iend; ++i)
 	{
 		const int c = charAt(i);
-
 		if ((state == STATE_ELEMENT_ATTR_VALUE_APOS && c == '\'') || (state == STATE_ELEMENT_ATTR_VALUE_QUOT && c == '"'))
 		{
-			append(attribs.back().second, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
-
+			append(attr, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 			if (charset != Text::CHARSET_UTF8)
-				attribs.back().second = Text::toUtf8(attribs.back().second, charset);
-
+				attr = Text::toUtf8(attr, charset);
 			state = STATE_ELEMENT_ATTR;
 			advancePos(i + 1);
 			return true;
 		}
-		else if (c == '&')
+		if (c == '&')
 		{
-			append(attribs.back().second, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
+			append(attr, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 			advancePos(i);
-			return entref(attribs.back().second);
+			if (!entref(attr))
+				error("Error parsing entity reference");
+			return true;
 		}
 	}
-
-	append(attribs.back().second, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
+	append(attr, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 	advancePos(i);
-
 	return true;
 }
 
 bool SimpleXMLReader::elementEndSimple()
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
-
 	if (charAt(0) == '>')
 	{
 		cb->startTag(elements.back(), attribs, true);
 		elements.pop_back();
 		attribs.clear();
-
 		state = STATE_CONTENT;
 		advancePos(1);
 		return true;
 	}
-
 	return false;
 }
 
 bool SimpleXMLReader::elementEndComplex()
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
-
 	if (charAt(0) == '>')
 	{
 		cb->startTag(elements.back(), attribs, false);
 		attribs.clear();
-
 		state = STATE_CONTENT;
 		advancePos(1);
 		return true;
 	}
-
 	return false;
 }
 
 bool SimpleXMLReader::character(int character, ParseState newState)
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
-
 	if (charAt(0) == character)
 	{
 		advancePos(1);
 		state = newState;
 		return true;
 	}
-
 	return false;
 }
 
 bool SimpleXMLReader::declVersionNum()
 {
 	if (!needChars(5))
-	{
 		return true;
-	}
-
 	const int sep = charAt(0);
-
 	if ((sep == '"' || sep == '\'') && charAt(1) == '1' && charAt(2) == '.')
 	{
 		// At least one more number
 		if (!inRange(charAt(3), '0', '9'))
-		{
 			return false;
-		}
-
 		// Now an unknown number of [0-9]
 		for (string::size_type n = 4, nend = bufSize(); n < nend; ++n)
 		{
@@ -390,16 +328,11 @@ bool SimpleXMLReader::declVersionNum()
 				advancePos(n + 1);
 				return true;
 			}
-
 			if (!inRange(c, 0, 9))
-			{
 				return false;
-			}
 		}
-
 		return true;
 	}
-
 	return false;
 }
 
@@ -408,7 +341,6 @@ bool SimpleXMLReader::declEncodingValue()
 	while (bufSize() > 0)
 	{
 		int c = charAt(0);
-
 		if ((state == STATE_DECL_ENCODING_NAME_APOS && c == '\'') || (state == STATE_DECL_ENCODING_NAME_QUOT && c == '"'))
 		{
 			encoding = Text::toLower(encoding);
@@ -417,12 +349,10 @@ bool SimpleXMLReader::declEncodingValue()
 			advancePos(1);
 			return true;
 		}
-		else if (c == '&')
+		if (c == '&')
 		{
 			if (!entref(encoding))
-			{
 				return false;
-			}
 		}
 		else
 		{
@@ -430,7 +360,6 @@ bool SimpleXMLReader::declEncodingValue()
 			advancePos(1);
 		}
 	}
-
 	return true;
 }
 
@@ -444,9 +373,7 @@ bool SimpleXMLReader::comment()
 		if (c == '-')
 		{
 			if (!needChars(3))
-			{
 				return true;
-			}
 			if (charAt(1) == '-' && charAt(2) == '>')
 			{
 				state = STATE_CONTENT;
@@ -454,10 +381,8 @@ bool SimpleXMLReader::comment()
 				return true;
 			}
 		}
-
 		advancePos(1);
 	}
-
 	return true;
 }
 
@@ -466,22 +391,18 @@ bool SimpleXMLReader::cdata()
 	while (bufSize() > 0)
 	{
 		int c = charAt(0);
-
-		// TODO We shouldn't allow ---> to end a comment
 		if (c == ']')
 		{
-			if (!needChars(2))
-			{
+			if (!needChars(3))
 				return true;
-			}
-			if (charAt(1) == ']')
+			if (charAt(1) == ']' && charAt(2) == '>')
 			{
 				state = STATE_CONTENT;
-				advancePos(2);
+				advancePos(3);
 				return true;
 			}
 		}
-
+		append(value, MAX_VALUE_SIZE, c);
 		advancePos(1);
 	}
 	return true;
@@ -490,112 +411,131 @@ bool SimpleXMLReader::cdata()
 bool SimpleXMLReader::entref(string& d)
 {
 	if (d.size() + 1 > MAX_VALUE_SIZE)
-	{
 		error("Buffer overflow");
-	}
-
-	if (bufSize() > 6)
+	if (bufSize() < 6)
+		return true;
+	if (charAt(1) == 'l' && charAt(2) == 't' && charAt(3) == ';')
 	{
-		if (charAt(1) == 'l' && charAt(2) == 't' && charAt(3) == ';')
-		{
-			d.append(1, '<');
-			advancePos(4);
-			return true;
-		}
-		else if (charAt(1) == 'g' && charAt(2) == 't' && charAt(3) == ';')
-		{
-			d.append(1, '>');
-			advancePos(4);
-			return true;
-		}
-		else if (charAt(1) == 'a' && charAt(2) == 'm' && charAt(3) == 'p' && charAt(4) == ';')
-		{
-			d.append(1, '&');
-			advancePos(5);
-			return true;
-		}
-		else if (charAt(1) == 'q' && charAt(2) == 'u' && charAt(3) == 'o' && charAt(4) == 't' && charAt(5) == ';')
-		{
-			d.append(1, '"');
-			advancePos(6);
-			return true;
-		}
-		else if (charAt(1) == 'a' && charAt(2) == 'p' && charAt(3) == 'o' && charAt(4) == 's' && charAt(5) == ';')
-		{
-			d.append(1, '\'');
-			advancePos(6);
-			return true;
-
-			// Ignore &#00000 decimal and &#x0000 hex values to avoid error, they wouldn't be parsed anyway
-		}
-		else if (charAt(1) == '#' && isdigit(charAt(2)) && charAt(3) == ';')
-		{
-			advancePos(4);
-			return true;
-		}
-		else if (charAt(1) == '#' && isdigit(charAt(2)) && isdigit(charAt(3)) && charAt(4) == ';')
-		{
-			advancePos(5);
-			return true;
-		}
-		else if (charAt(1) == '#' && isdigit(charAt(2)) && isdigit(charAt(3)) && isdigit(charAt(4)) && charAt(5) == ';')
-		{
-			advancePos(6);
-			return true;
-		}
-		else if (charAt(1) == '#' && isdigit(charAt(2)) && isdigit(charAt(3)) && isdigit(charAt(4)) && isdigit(charAt(5)) && charAt(6) == ';')
-		{
-			advancePos(7);
-			return true;
-		}
-		else if (charAt(1) == '#' && isdigit(charAt(2)) && isdigit(charAt(3)) && isdigit(charAt(4)) && isdigit(charAt(5)) && isdigit(charAt(6)) && charAt(7) == ';')
-		{
-			advancePos(8);
-			return true;
-
-		}
-		else if (charAt(1) == '#' && (charAt(2) == 'x' ||  charAt(2) == 'X') && isxdigit(charAt(3)) && charAt(4) == ';')
-		{
-			advancePos(5);
-			return true;
-		}
-		else if (charAt(1) == '#' && (charAt(2) == 'x' ||  charAt(2) == 'X') && isxdigit(charAt(3)) && isxdigit(charAt(4)) && charAt(5) == ';')
-		{
-			advancePos(6);
-			return true;
-		}
-		else if (charAt(1) == '#' && (charAt(2) == 'x' ||  charAt(2) == 'X') && isxdigit(charAt(3)) && isxdigit(charAt(4)) && isxdigit(charAt(5)) && charAt(6) == ';')
-		{
-			advancePos(7);
-			return true;
-		}
-		else if (charAt(1) == '#' && (charAt(2) == 'x' ||  charAt(2) == 'X') && isxdigit(charAt(3)) && isxdigit(charAt(4)) && isxdigit(charAt(5)) && isxdigit(charAt(6)) && charAt(7) == ';')
-		{
-			advancePos(8);
-			return true;
-		}
-	}
-	else
-	{
+		d += '<';
+		advancePos(4);
 		return true;
 	}
-
+	if (charAt(1) == 'g' && charAt(2) == 't' && charAt(3) == ';')
+	{
+		d += '>';
+		advancePos(4);
+		return true;
+	}
+	if (charAt(1) == 'a' && charAt(2) == 'm' && charAt(3) == 'p' && charAt(4) == ';')
+	{
+		d += '&';
+		advancePos(5);
+		return true;
+	}
+	if (charAt(1) == 'q' && charAt(2) == 'u' && charAt(3) == 'o' && charAt(4) == 't' && charAt(5) == ';')
+	{
+		d += '"';
+		advancePos(6);
+		return true;
+	}
+	if (charAt(1) == 'a' && charAt(2) == 'p' && charAt(3) == 'o' && charAt(4) == 's' && charAt(5) == ';')
+	{
+		d += '\'';
+		advancePos(6);
+		return true;
+	}
+	if (charAt(1) == '#')
+	{
+		uint32_t ucs;
+		int usedChars, skip;
+		if (charAt(2) == 'x' || charAt(2) == 'X')
+		{
+			skip = 3;
+			usedChars = parseEntRefHex(ucs, skip);
+		}
+		else
+		{
+			skip = 2;
+			usedChars = parseEntRefDec(ucs, skip);
+		}
+		if (usedChars < 0)
+			return false;
+		if (usedChars)
+		{
+			char out[4];
+			int size = Text::wcToUtf8(ucs, out);
+			d.append(out, size);
+			advancePos(skip + usedChars);
+		}
+		return true;
+	}
 	return false;
+}
+
+/*
+ Return value:
+  -1 - error
+   0 - more data needed
+  >0 - number of characters scanned (successful parse)
+*/
+int SimpleXMLReader::parseEntRefDec(uint32_t& ucs, int offset) const
+{
+	ucs = 0;
+	int i = 0;
+	while (i + offset < bufSize())
+	{
+		char c = charAt(i + offset);
+		if (c == ';')
+			return ucs ? i + 1 : -1; // We don't allow embedded NULs
+		if (!inRange(c, '0', '9'))
+			return -1;
+		ucs = ucs * 10 + c - '0';
+		if (ucs > 0x10FFFF)
+			return -1;
+		if (++i > MAX_ENTREF_CHARS)
+			return -1;
+	}
+	return 0;
+}
+
+int SimpleXMLReader::parseEntRefHex(uint32_t& ucs, int offset) const
+{
+	ucs = 0;
+	int i = 0;
+	while (i + offset < bufSize())
+	{
+		char c = charAt(i + offset);
+		if (c == ';')
+			return ucs ? i + 1 : -1;
+		unsigned dig;
+		if (inRange(c, '0', '9'))
+			dig = c - '0';
+		else if (inRange(c, 'a', 'f'))
+			dig = c - 'a' + 10;
+		else if (inRange(c, 'A', 'F'))
+			dig = c - 'A' + 10;
+		else
+			return -1;
+		ucs = ucs << 4 | dig;
+		if (ucs > 0x10FFFF)
+			return -1;
+		if (++i > MAX_ENTREF_CHARS)
+			return -1;
+	}
+	return 0;
 }
 
 bool SimpleXMLReader::content()
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
-
 	int c = charAt(0);
 	if (c == '&')
 	{
-		return entref(value);
+		if (!entref(value))
+			error("Error parsing entity reference");
+		return true;
 	}
-
 	append(value, MAX_VALUE_SIZE, c);
 	advancePos(1);
 	return true;
@@ -604,67 +544,49 @@ bool SimpleXMLReader::content()
 bool SimpleXMLReader::elementEnd()
 {
 	if (elements.empty())
-	{
 		return false;
-	}
-
 	const string& top = elements.back();
 	if (!needChars(top.size()))
-	{
 		return true;
-	}
-
 	if (top.compare(0, top.size(), &buf[bufPos], top.size()) == 0)
 	{
 		state = STATE_ELEMENT_END_END;
 		advancePos(top.size());
 		return true;
 	}
-
 	return false;
 }
 
 bool SimpleXMLReader::elementEndEnd()
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
-
 	if (charAt(0) == '>')
 	{
 		cb->endTag(elements.back());
 		elements.pop_back();
-
 		state = STATE_CONTENT;
 		advancePos(1);
 		return true;
 	}
-
 	return false;
 }
 
 bool SimpleXMLReader::skipSpace(bool store)
 {
 	if (!needChars(1))
-	{
 		return true;
-	}
 	bool skipped = false;
 	int c;
 	while (needChars(1) && isSpace(c = charAt(0)))
 	{
 		if (store)
-		{
 			append(value, MAX_VALUE_SIZE, c);
-		}
 		advancePos();
 		skipped = true;
 	}
-
 	return skipped;
 }
-
 
 #define LITN(x) x, sizeof(x)-1
 
@@ -707,9 +629,7 @@ bool SimpleXMLReader::parse(const char* data, size_t len)
 bool SimpleXMLReader::spaceOrError(const char* message)
 {
 	if (!skipSpace())
-	{
 		error(message);
-	}
 	return true;
 }
 

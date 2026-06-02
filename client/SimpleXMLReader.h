@@ -48,63 +48,64 @@ class SimpleXMLReader
 		SimpleXMLReader& operator= (const SimpleXMLReader&) = delete;
 
 	private:
-
 		static const size_t MAX_NAME_SIZE = 260;
 		static const size_t MAX_VALUE_SIZE = 64 * 1024;
-		static const size_t MAX_NESTING = 256; // [!]IRainman change 16 to 256
+		static const size_t MAX_NESTING = 256;
+		static const size_t MAX_ATTRIBS = 128;
+		static const int MAX_ENTREF_CHARS = 8;
 
 		enum ParseState
 		{
-			/// Start of document
+			// Start of document
 			STATE_START,
 
-			/// In <?xml declaration, expect version
+			// In <?xml declaration, expect version
 			STATE_DECL_VERSION,
 
-			/// In <?xml declaration, expect =
+			// In <?xml declaration, expect =
 			STATE_DECL_VERSION_EQ,
 
-			/// In <?xml declaration, expect version number
+			// In <?xml declaration, expect version number
 			STATE_DECL_VERSION_NUM,
 
-			/// In <?xml declaration, expect encoding
+			// In <?xml declaration, expect encoding
 			STATE_DECL_ENCODING,
 
-			/// In <?xml declaration, expect =
+			// In <?xml declaration, expect =
 			STATE_DECL_ENCODING_EQ,
 
-			/// In <?xml declaration, expect encoding name
+			// In <?xml declaration, expect encoding name
 			STATE_DECL_ENCODING_NAME,
 
 			STATE_DECL_ENCODING_NAME_APOS,
 
 			STATE_DECL_ENCODING_NAME_QUOT,
 
-			/// in <?xml declaration, expect standalone
+			// in <?xml declaration, expect standalone
 			STATE_DECL_STANDALONE,
 
-			/// in <?xml declaration, expect =
+			// in <?xml declaration, expect =
 			STATE_DECL_STANDALONE_EQ,
 
-			/// in <?xml declaration, expect standalone yes
+			// in <?xml declaration, expect standalone yes
 			STATE_DECL_STANDALONE_YES,
 
-			/// In <?xml declaration, expect %>
+			// In <?xml declaration, expect %>
 			STATE_DECL_END,
 
-			/// In < element, expect element name
+			// In < element, expect element name
 			STATE_ELEMENT_NAME,
 
-			/// In < element, expect attribute or element end
+			// In < element, expect attribute or element end
 			STATE_ELEMENT_ATTR,
 
-			/// In < element, in attribute name
+			// In < element, in attribute name
 			STATE_ELEMENT_ATTR_NAME,
 
-			/// In < element, expect %
+			// In < element, expect %
 			STATE_ELEMENT_ATTR_EQ,
 
-			/// In < element, waiting for attribute value start
+			// In < element, waiting for attribute value start
 			STATE_ELEMENT_ATTR_VALUE,
 
 			STATE_ELEMENT_ATTR_VALUE_QUOT,
@@ -117,9 +118,10 @@ class SimpleXMLReader
 
 			STATE_ELEMENT_END_END,
 
-			/// In <!-- comment field
+			// Inside <!-- comment
 			STATE_COMMENT,
-			/// SSA - CDATA
+
+			// Inside CDATA
 			STATE_CDATA,
 
 			STATE_CONTENT,
@@ -167,10 +169,8 @@ class SimpleXMLReader
 
 		bool literal(const char* lit, size_t len, bool withSpace, ParseState newState);
 		bool character(int c, ParseState newState);
-
 		bool declVersionNum();
 		bool declEncodingValue();
-
 		bool element();
 		bool elementName();
 		bool elementEnd();
@@ -180,18 +180,16 @@ class SimpleXMLReader
 		bool elementAttr();
 		bool elementAttrName();
 		bool elementAttrValue();
-
 		bool comment();
 		bool cdata();
-
 		bool content();
-
 		bool entref(std::string& d);
-
 		bool process();
 		bool spaceOrError(const char* error);
-
 		bool error(const char* message);
+
+		int parseEntRefDec(uint32_t& ucs, int offset) const;
+		int parseEntRefHex(uint32_t& ucs, int offset) const;
 };
 
 #endif /* DCPP_SIMPLEXMLREADER_H_ */
