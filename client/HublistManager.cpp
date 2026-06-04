@@ -32,6 +32,7 @@
 #include "ConfCore.h"
 
 static const unsigned MAX_CACHED_AGE = 3600 * 24 * 2; // 2 days
+static const size_t MAX_HUBLIST_SIZE = 10 * 1024 * 1024; // 10Mb
 
 static const string strBZ2(".bz2");
 
@@ -138,11 +139,11 @@ void HublistManager::HubList::parse(const string &data, int listType) noexcept
 		if (listType == TYPE_BZIP2)
 		{
 			FilteredInputStream<UnBZFilter, false> f(&mis);
-			SimpleXMLReader(&loader).parse(f);
+			SimpleXMLReader(&loader).parse(f, MAX_HUBLIST_SIZE);
 		}
 		else
 		{
-			SimpleXMLReader(&loader).parse(mis);
+			SimpleXMLReader(&loader).parse(mis, MAX_HUBLIST_SIZE);
 		}
 		state = STATE_DOWNLOADED;
 	}
