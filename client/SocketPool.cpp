@@ -168,7 +168,7 @@ void SocketPool::removeExpired(uint64_t tick) noexcept
 	for (auto i = socketsByPort.begin(); i != socketsByPort.end();)
 	{
 		const SocketInfoPtr& si = i->second;
-		if (si->expires < tick)
+		if (si->expires > tick)
 		{
 			++i;
 			continue;
