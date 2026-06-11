@@ -40,6 +40,7 @@
 
 static const size_t INITIAL_CAPACITY = 8 * 1024;
 static const size_t STREAM_BUF_SIZE = 256 * 1024;
+static const unsigned SOCKS_VERSION = 5;
 
 static const int POLL_TIMEOUT = 250;
 static const int LONG_TIMEOUT = 30000;
@@ -286,7 +287,7 @@ void BufferedSocket::readData()
 			if (remainingSize != -1 && readSize > remainingSize) readSize = remainingSize;
 			if (state == CONNECT_PROXY)
 				result = sock->read(readBuf, readSize);
-			else	
+			else
 				result = readThrottled(readBuf, readSize);
 		}
 		else
@@ -529,7 +530,7 @@ void BufferedSocket::setMode(Modes newMode) noexcept
 		dcdebug("WARNING: Re-entering mode %d\n", mode);
 		return;
 	}
-	
+
 	if (mode == MODE_ZPIPE)
 		zfilter.reset();
 
@@ -707,7 +708,7 @@ bool BufferedSocket::processTask()
 			doAccept();
 			result = true;
 	}
-	if (updated && listener) 
+	if (updated && listener)
 		listener->onUpdated();
 	return result;
 }
@@ -743,7 +744,7 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 	switch (proxyStage)
 	{
 		case PROXY_STAGE_NEGOTIATE:
-			wb.buf[0] = 5; // SOCKSv5
+			wb.buf[0] = SOCKS_VERSION;
 			wb.buf[1] = 1; // Number of methods
 			wb.buf[2] = proxyAuthMethod;
 			break;
@@ -758,7 +759,7 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 			size += passwordLen;
 			break;
 		case PROXY_STAGE_CONNECT:
-			wb.buf[0] = 5;
+			wb.buf[0] = SOCKS_VERSION;
 			wb.buf[1] = 1; // Connect
 			wb.buf[2] = 0; // Reserved
 			if (resolveNames)
@@ -808,12 +809,41 @@ void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 	wb.writePtr = size;
 }
 
+int BufferedSocket::parseSocksReply(const uint8_t* data, size_t& size) const
+{
+	if (proxyStage != PROXY_STAGE_CONNECT)
+	{
+		int res = size >= 2;
+		size = 2;
+		return res;
+	}
+	if (size < 5)
+	{
+		size = 5;
+		return 0;
+	}
+	size_t needLen;
+	switch (data[3])
+	{
+		case 1: needLen = 4 + 6; break;
+		case 4: needLen = 16 + 6; break;
+		case 3: needLen = data[4] + 1 + 6; break;
+		default: return -1;
+	}
+	int res = size >= needLen;
+	size = needLen;
+	return res;
+}
+
 void BufferedSocket::checkSocksReply()
 {
-	size_t fill = rb.writePtr - rb.readPtr;
-	size_t responseSize = proxyStage == PROXY_STAGE_CONNECT ? 10 : 2;
-	if (fill < responseSize) return;
 	const uint8_t* resp = rb.buf + rb.readPtr;
+	size_t fill = rb.writePtr - rb.readPtr;
+	size_t responseSize = fill;
+	if (parseSocksReply(resp, responseSize) < 0)
+		throw SocketException(STRING(SOCKS_FAILED));
+	if (fill < responseSize)
+		return;
 	switch (proxyStage)
 	{
 		case PROXY_STAGE_NEGOTIATE:
@@ -831,7 +861,7 @@ void BufferedSocket::checkSocksReply()
 			createSocksMessage(connectInfo);
 			return;
 	}
-	if (resp[0] != 5 || resp[1] != 0)
+	if (resp[0] != SOCKS_VERSION || resp[1] != 0)
 		throw SocketException(STRING(SOCKS_FAILED));
 	rb.clear();
 	proxyStage = PROXY_STAGE_NONE;
@@ -975,7 +1005,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSo
 		}
 	}
 	while (GET_TICK() < endTime);
-	
+
 	throw SocketException(state == CONNECT_PROXY ? STRING(SOCKS_CONN_FAILED) : STRING(CONNECTION_TIMEOUT));
 }
 

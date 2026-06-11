@@ -224,6 +224,7 @@ class BufferedSocket : private Thread
 		void doAccept();
 		void createSocksMessage(const ConnectInfo* ci);
 		void checkSocksReply();
+		int parseSocksReply(const uint8_t* data, size_t& size) const;
 		void printSockName(string& sockName) const;
 		int writeThrottled(const void* data, int len);
 		int readThrottled(void* data, int len);
