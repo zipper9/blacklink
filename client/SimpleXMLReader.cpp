@@ -68,8 +68,15 @@ inline static bool isNameChar(int c)
 	       ;
 }
 
+inline static bool hasNonSpace(const string& s)
+{
+	for (char c : s)
+		if (!isSpace(c)) return true;
+	return false;
+}
+
 SimpleXMLReader::SimpleXMLReader(SimpleXMLReader::CallBack* callback) :
-	bufPos(0), pos(0), cb(callback), charset(Text::CHARSET_UTF8), state(STATE_START)
+	bufPos(0), pos(0), cb(callback), charset(Text::CHARSET_UTF8), state(STATE_START), commentDash(0)
 {
 	elements.reserve(64);
 	attribs.reserve(16);
@@ -79,7 +86,7 @@ void SimpleXMLReader::append(std::string& str, size_t maxLen, int c)
 {
 	if (str.size() + 1 > maxLen)
 		error("Buffer overflow");
-	str.append(1, (std::string::value_type)c);
+	str += (char) c;
 }
 
 void SimpleXMLReader::append(std::string& str, size_t maxLen, const std::string::const_iterator& begin, const std::string::const_iterator& end)
@@ -313,12 +320,12 @@ bool SimpleXMLReader::declVersionNum()
 	if (!needChars(5))
 		return true;
 	const int sep = charAt(0);
-	if ((sep == '"' || sep == '\'') && charAt(1) == '1' && charAt(2) == '.')
+	if ((sep == '"' || sep == '\'') && inRange(charAt(1), '0', '9') && charAt(2) == '.')
 	{
-		// At least one more number
-		if (!inRange(charAt(3), '0', '9'))
-			return false;
-		// Now an unknown number of [0-9]
+		// At least one more digit
+		if (charAt(1) != '1' || !inRange(charAt(3), '0', '9'))
+			error("Invalid version number");
+		// Arbitrary number of digits
 		for (string::size_type n = 4, nend = bufSize(); n < nend; ++n)
 		{
 			int c = charAt(n);
@@ -328,8 +335,8 @@ bool SimpleXMLReader::declVersionNum()
 				advancePos(n + 1);
 				return true;
 			}
-			if (!inRange(c, 0, 9))
-				return false;
+			if (!inRange(c, '0', '9') || n > MAX_VERSION_SIZE)
+				error("Invalid version number");
 		}
 		return true;
 	}
@@ -368,20 +375,19 @@ bool SimpleXMLReader::comment()
 	while (bufSize() > 0)
 	{
 		int c = charAt(0);
-
-		// TODO We shouldn't allow ---> to end a comment
-		if (c == '-')
-		{
-			if (!needChars(3))
-				return true;
-			if (charAt(1) == '-' && charAt(2) == '>')
-			{
-				state = STATE_CONTENT;
-				advancePos(3);
-				return true;
-			}
-		}
 		advancePos(1);
+		if (commentDash ==  2)
+		{
+			if (c != '>')
+				error("Illegal double dash in comment");
+			state = STATE_CONTENT;
+			commentDash = 0;
+			break;
+		}
+		if (c == '-')
+			++commentDash;
+		else
+			commentDash = 0;
 	}
 	return true;
 }
@@ -602,17 +608,13 @@ void SimpleXMLReader::parse(InputStream& stream, size_t maxSize)
 		size_t n = buf.size() - old;
 		size_t len = stream.read(&buf[old], n);
 
-		if (maxSize > 0 && (bytesRead + len) > maxSize)
+		if (maxSize > 0 && bytesRead + len > maxSize)
 			error("Greater than maximum allowed size");
 
 		if (len == 0)
 		{
-			if (elements.empty())
-			{
-				// Fine...
-				return;
-			}
-			error("Unexpected end of stream");
+			flush();
+			break;
 		}
 		buf.resize(old + len);
 		bytesRead += len;
@@ -624,6 +626,15 @@ bool SimpleXMLReader::parse(const char* data, size_t len)
 {
 	buf.append(data, len);
 	return process();
+}
+
+void SimpleXMLReader::flush()
+{
+	if (!elements.empty() ||
+	    !(state == STATE_START || state == STATE_END || state == STATE_CONTENT) ||
+	    hasNonSpace(value))
+		error("Unexpected end of stream");
+	state = STATE_END;
 }
 
 bool SimpleXMLReader::spaceOrError(const char* message)

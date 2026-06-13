@@ -43,6 +43,7 @@ class SimpleXMLReader
 
 		void parse(InputStream& is, size_t maxSize = 0);
 		bool parse(const char* data, size_t len);
+		void flush();
 
 		SimpleXMLReader(const SimpleXMLReader&) = delete;
 		SimpleXMLReader& operator= (const SimpleXMLReader&) = delete;
@@ -52,6 +53,7 @@ class SimpleXMLReader
 		static const size_t MAX_VALUE_SIZE = 64 * 1024;
 		static const size_t MAX_NESTING = 256;
 		static const size_t MAX_ATTRIBS = 128;
+		static const size_t MAX_VERSION_SIZE = 16;
 		static const int MAX_ENTREF_CHARS = 8;
 
 		enum ParseState
@@ -129,7 +131,6 @@ class SimpleXMLReader
 			STATE_END
 		};
 
-
 		std::string buf;
 		std::string::size_type bufPos;
 		uint64_t pos;
@@ -142,6 +143,7 @@ class SimpleXMLReader
 		int charset;
 
 		ParseState state;
+		int commentDash;
 
 		StringList elements;
 
