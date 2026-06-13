@@ -460,6 +460,9 @@
     <ClCompile Include="client\ChatOptions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\Speck64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -1129,6 +1132,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\ChatOptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Speck64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -627,6 +627,7 @@
     <ClCompile Include="client\SimpleXMLReader.cpp" />
     <ClCompile Include="client\Socket.cpp" />
     <ClCompile Include="client\SocketPool.cpp" />
+    <ClCompile Include="client\Speck64.cpp" />
     <ClCompile Include="client\SSLSocket.cpp" />
     <ClCompile Include="client\stdinc.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -837,6 +838,7 @@
     <ClInclude Include="client\SockDefs.h" />
     <ClInclude Include="client\SocketAddr.h" />
     <ClInclude Include="client\SocketPool.h" />
+    <ClInclude Include="client\Speck64.h" />
     <ClInclude Include="client\SpeedCalc.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />
     <ClInclude Include="client\sqlite\sqlite3ext.h" />

@@ -3,6 +3,7 @@
 #include "UriUtil.h"
 #include "SimpleXML.h"
 #include "Base32.h"
+#include "Speck64.h"
 
 static const boost::unordered_map<string, string> extToContentType =
 {
@@ -250,30 +251,34 @@ void WebServerUtil::printSelector(string& os, const char* name, int count, const
 	os += "</select>";
 }
 
-string WebServerUtil::printItemId(uintptr_t id) noexcept
+string WebServerUtil::printItemId(uintptr_t id, const Speck64 &obfs) noexcept
 {
-	uint8_t data[sizeof(id)];
-	size_t count = 0;
-	while (id)
+	union
 	{
-		data[count++] = id & 0xFF;
-		id >>= 8;
-	}
-	if (!count) data[count++] = 0;
-	return Util::toBase32(data, count);
+		uintptr_t p;
+		uint8_t b[8];
+		uint32_t w[2];
+	} u;
+	u.w[0] = u.w[1] = 0;
+	u.p = id;
+	obfs.encryptBlock(u.w);
+	return Util::toBase32(u.b, 8);
 }
 
-uintptr_t WebServerUtil::parseItemId(const string& s) noexcept
+uintptr_t WebServerUtil::parseItemId(const string& s, const Speck64 &obfs) noexcept
 {
 	if (s.empty()) return 0;
-	uint8_t data[sizeof(uintptr_t)];
+	union
+	{
+		uintptr_t p;
+		uint8_t b[8];
+		uint32_t w[2];
+	} u;
 	bool error;
-	Util::fromBase32(s.c_str(), data, sizeof(data), &error);
+	Util::fromBase32(s.c_str(), u.b, 8, &error);
 	if (error) return 0;
-	uintptr_t result = 0;
-	for (int i = sizeof(data)-1; i >= 0; i--)
-		result = result << 8 | data[i];
-	return result;
+	obfs.decryptBlock(u.w);
+	return u.p;
 }
 
 string WebServerUtil::getContentTypeForExt(const string& ext) noexcept

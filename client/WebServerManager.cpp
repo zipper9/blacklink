@@ -23,7 +23,11 @@
 #include "TimeUtil.h"
 #include "FormatUtil.h"
 #include "ConfCore.h"
+#include "Random.h"
+#include "Speck64.h"
 #include <boost/algorithm/string/trim.hpp>
+
+static Speck64 obfs;
 
 static const unsigned SESSION_EXPIRE_TIME = 10; // minutes
 
@@ -202,6 +206,13 @@ static uint64_t getIfModified(const Http::Request& req)
 	return Http::parseDateTime(t, s) ? t : 0;
 }
 
+static void initObfsSecret()
+{
+	uint8_t key[16];
+	Util::randBytes(key, sizeof(key), true);
+	obfs.setKey(key);
+}
+
 WebServerManager::WebServerManager() noexcept : csTemplateCache(RWLock::create())
 {
 	UrlInfo ui;
@@ -346,6 +357,7 @@ void WebServerManager::stopServer(int af) noexcept
 void WebServerManager::start()
 {
 	initAuthSecret();
+	initObfsSecret();
 	startListen(AF_INET, false);
 	SearchManager::getInstance()->addListener(this);
 }
@@ -950,7 +962,7 @@ void WebServerManager::ClientContext::printSearchResults(string& os, size_t from
 			offset = 2;
 		}
 		os += "<td class='r-border w0'>";
-		actions[0] = "/xsrdl?id=" + WebServerUtil::printItemId((uintptr_t) sr);
+		actions[0] = "/xsrdl?id=" + WebServerUtil::printItemId((uintptr_t) sr, obfs);
 		WebServerUtil::printActions(os, 3 - offset, searchActions + offset, actions + offset, rowId);
 		os += "</td></tr>\n";
 	}
@@ -1157,7 +1169,7 @@ void WebServerManager::ClientContext::printQueue(string& os, size_t from, size_t
 		actions[2] += STRING(SOURCES) + ": " + getSources(qi, tmp) + '\n';
 		actions[2] += STRING(TTH) + ": " + tthStr + '\n';
 		actions[2] += STRING(STATUS) + ": " + status;
-		actions[0] = "/xqrm?id=" + WebServerUtil::printItemId((uintptr_t) qi);
+		actions[0] = "/xqrm?id=" + WebServerUtil::printItemId((uintptr_t) qi, obfs);
 		WebServerUtil::printActions(os, 3, queueActions, actions, rowId);
 		os += "</td></tr>\n";
 	}
@@ -1261,7 +1273,7 @@ void WebServerManager::ClientContext::printFinishedItems(string& os, size_t from
 		actions[2] += STRING(USER) + ": " + fi->getNick() + '\n';
 		actions[2] += STRING(HUB) + ": " + fi->getHub() + '\n';
 		actions[2] += STRING(IP) + ": " + fi->getIP();
-		actions[0] = "/xfget?t=" + Util::toString(type) + "&id=" + WebServerUtil::printItemId((uintptr_t) fi);
+		actions[0] = "/xfget?t=" + Util::toString(type) + "&id=" + WebServerUtil::printItemId((uintptr_t) fi, obfs);
 		WebServerUtil::printActions(os, 3, finishedActions, actions, rowId);
 		os += "</td></tr>\n";
 	}
@@ -1399,7 +1411,7 @@ void WebServerManager::ClientContext::printWaitingUsers(string& os, size_t from,
 		actions[1] += STRING(ADDED) + ": " + timeStr + '\n';
 		actions[1] += STRING(IP) + ": " + ipStr + '\n';
 		actions[1] += STRING(FAKE_FILE_COUNT) + ": " + Util::toString(wu.fileCount);
-		actions[0] = "/xwugrant?id=" + WebServerUtil::printItemId((uintptr_t) wu.hintedUser.user.get());
+		actions[0] = "/xwugrant?id=" + WebServerUtil::printItemId((uintptr_t) wu.hintedUser.user.get(), obfs);
 		WebServerUtil::printActions(os, 2, waitingActions, actions, rowId);
 		os += "</td></tr>\n";
 	}
@@ -1701,7 +1713,7 @@ void WebServerManager::removeQueueItem(HandlerResult& res, const RequestInfo& st
 			ClientContext& ctx = i->second;
 			if (state.query)
 			{
-				uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"));
+				uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"), obfs);
 				if (id)
 				{
 					for (auto j = ctx.queue.begin(); j != ctx.queue.end(); ++j)
@@ -1826,7 +1838,7 @@ void WebServerManager::downloadFinishedItem(HandlerResult& res, const RequestInf
 	if (i != clients.end())
 	{
 		ClientContext& ctx = i->second;
-		uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"));
+		uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"), obfs);
 		if (id)
 		{
 			int type = WebServerUtil::getIntQueryParam(state.query, "t", -1);
@@ -1865,7 +1877,7 @@ void WebServerManager::downloadSearchResult(HandlerResult& res, const RequestInf
 		if (i != clients.end())
 		{
 			ClientContext& ctx = i->second;
-			uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"));
+			uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"), obfs);
 			if (id)
 			{
 				for (size_t i = 0; i < ctx.searchResults.size(); i++)
@@ -1962,7 +1974,7 @@ void WebServerManager::grantSlot(HandlerResult& res, const RequestInfo& state) n
 	if (!state.query) return;
 	int rowId = -1;
 	HintedUser hintedUser;
-	uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"));
+	uint64_t id = WebServerUtil::parseItemId(WebServerUtil::getStringQueryParam(state.query, "id"), obfs);
 	if (id)
 	{
 		LOCK(csClients);

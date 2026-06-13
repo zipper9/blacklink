@@ -4,6 +4,8 @@
 #include "typedefs.h"
 #include "ResourceManager.h"
 
+class Speck64;
+
 namespace WebServerUtil
 {
 	struct TableInfo
@@ -53,8 +55,8 @@ namespace WebServerUtil
 	void printItemCount(string& os, int count, ResourceManager::Strings resEmpty, ResourceManager::Strings resPlural) noexcept;
 	void printActions(string& os, int count, const ActionInfo* act, const string* data, const string& rowId) noexcept;
 	void printSelector(string& os, const char* name, int count, const ResourceManager::Strings* resId, int startVal, int selVal) noexcept;
-	string printItemId(uintptr_t id) noexcept;
-	uintptr_t parseItemId(const string& s) noexcept;
+	string printItemId(uintptr_t id, const Speck64& obfs) noexcept;
+	uintptr_t parseItemId(const string& s, const Speck64& obfs) noexcept;
 	string getContentTypeForExt(const string& ext) noexcept;
 	string getContentTypeForFile(const string& file) noexcept;
 	string getStringQueryParam(const std::map<string, string>* query, const string& param) noexcept;
