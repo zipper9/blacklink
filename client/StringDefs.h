@@ -1531,6 +1531,7 @@ enum Strings   // @DontAdd
 	WEBSERVER_POWER_USER, // "Power user"
 	WEBSERVER_LAST_REFRESH, // "Last refresh: %1%"
 	WEBSERVER_SHARE_REFRESHING, // "Share refresh is in progress"
+	WEBSERVER_BANNED, // "Too many requests from your IP address %1%. Try again later."
 	WEB_URL, // "Web URL"
 	WHATS_THIS, // "What's &this?"
 	WIDTH, // "Width"

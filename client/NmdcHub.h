@@ -76,7 +76,7 @@ class NmdcHub : public Client, private Flags
 		}
 		static string validateMessage(string tmp, bool reverse) noexcept;
 		void refreshUserList(bool) override;
-		
+
 		void getUserList(OnlineUserList& result) const override;
 
 		static string makeKeyFromLock(const string& lock);
@@ -108,7 +108,7 @@ class NmdcHub : public Client, private Flags
 			SUPPORTS_SALT_PASS   = 0x080,
 			SUPPORTS_MCTO        = 0x100
 		};
-		
+
 		enum
 		{
 			WAITING_FOR_MYINFO,
@@ -120,7 +120,7 @@ class NmdcHub : public Client, private Flags
 		~NmdcHub();
 
 		typedef boost::unordered_map<string, OnlineUserPtr> NickMap;
-		
+
 		NickMap users;
 		std::unique_ptr<RWLock> csUsers;
 
@@ -134,8 +134,8 @@ class NmdcHub : public Client, private Flags
 		unsigned hubSupportFlags;
 		char lastModeChar; // last Mode MyINFO
 
-		HubRequestCounters reqSearch;
-		HubRequestCounters reqConnectToMe;
+		ClientRequestCounters reqSearch;
+		ClientRequestCounters reqConnectToMe;
 
 	private:
 		void updateMyInfoState(bool isMyInfo);

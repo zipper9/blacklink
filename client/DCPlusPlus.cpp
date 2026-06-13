@@ -42,6 +42,7 @@
 #include "SettingsUtil.h"
 #include "GlobalState.h"
 #include "dht/DHT.h"
+#include "AntiFlood.h"
 #include "ConfCore.h"
 
 #include "IpGuard.h"
@@ -53,6 +54,9 @@
 #ifdef BL_FEATURE_WEB_SERVER
 #include "WebServerManager.h"
 #endif
+
+IpBans udpBans;
+IpBans tcpBans;
 
 static void initP2PGuard()
 {
@@ -128,6 +132,9 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP_L(CERTIFICATES, CryptoManager::getInstance()->initializeKeyPair());
 	LOAD_STEP_L(DOWNLOAD_QUEUE, QueueManager::getInstance()->loadQueue());
 	LOAD_STEP_L(WAITING_USERS, UploadManager::getInstance()->load());
+
+	udpBans.updateSettings();
+	tcpBans.updateSettings();
 
 #ifdef BL_FEATURE_WEB_SERVER
 	WebServerManager::newInstance();

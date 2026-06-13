@@ -10,8 +10,8 @@
 #include "SearchManagerListener.h"
 #include "SearchParam.h"
 #include "Locks.h"
-#include "RWLock.h"
 #include "Thread.h"
+#include "AntiFlood.h"
 
 struct WaitingUsersItem
 {
@@ -224,6 +224,7 @@ private:
 	void sendFile(const RequestInfo& inf, const string& path, bool sendContentDisposition, uint64_t timestamp) noexcept;
 	void sendTemplate(const RequestInfo& inf, const string& dir, const string& name, const string& requestName, const string& mimeType, int flags) noexcept;
 	void sendLoginPage(const RequestInfo& inf) noexcept;
+	void sendErrorPage(const RequestInfo& inf, const string& error) noexcept;
 	void handleRequest(const RequestInfo& inf, const UrlInfo& ui) noexcept;
 	uint32_t checkUser(const string& user, const string& password) const noexcept;
 	uint64_t createClientContext(uint32_t userId, uint64_t expires, const unsigned char iv[]) noexcept;
@@ -240,6 +241,7 @@ private:
 	static void printNavigationBar(string& os, int selectedPage) noexcept;
 	static void printTitle(string& os, int text, const char* cls = nullptr) noexcept;
 	static void printLoginPage(string& os, const Http::ServerCookies* cookies) noexcept;
+	static void printErrorPage(string& os, const Http::ServerCookies* cookies, const string& error) noexcept;
 	static void getTableParams(const RequestInfo& state, int& page, int& sortColumn) noexcept;
 
 	void printSearchForm(string& os, const RequestInfo& state) noexcept;
@@ -288,6 +290,10 @@ private:
 
 	ThemeAttributes themeAttr[2];
 	CriticalSection csThemeAttr;
+
+	IpBans bans;
+	ClientRequestCounters reqCounters;
+	CriticalSection csReqCounters;
 };
 
 #endif // WEB_SERVER_MANAGER_H_

@@ -16,7 +16,11 @@
 #include "SimpleXML.h"
 #include "AppPaths.h"
 #include "ChatOptions.h"
+#include "AntiFlood.h"
 #include "ConfCore.h"
+
+extern IpBans udpBans;
+extern IpBans tcpBans;
 
 void Conf::getIPSettings(IPSettings& s, bool v6)
 {
@@ -59,6 +63,8 @@ void Util::updateCoreSettings()
 	CryptoManager::getInstance()->updateSettings();
 	ipGuard.updateSettings();
 	ipTrust.updateSettings();
+	tcpBans.updateSettings();
+	udpBans.updateSettings();
 }
 
 string Util::getConfString(int id)

@@ -252,6 +252,7 @@ WebServerManager::WebServerManager() noexcept : csTemplateCache(RWLock::create()
 	ui.cf = &WebServerManager::downloadFinishedItem;
 	urlInfo["xfget"] = ui;
 	themeAttr[0].timestamp = themeAttr[1].timestamp = 0;
+	reqCounters.setConfig(15, 30);
 }
 
 WebServerManager::Server::Server(bool tls, const IpAddressEx& ip, uint16_t port): tls(tls), bindIp(ip), stopFlag(false)
@@ -452,6 +453,18 @@ void WebServerManager::sendLoginPage(const RequestInfo& inf) noexcept
 	inf.conn->sendResponse(resp, os);
 }
 
+void WebServerManager::sendErrorPage(const RequestInfo& inf, const string& error) noexcept
+{
+	string os;
+	printErrorPage(os, inf.cookies, error);
+
+	Http::Response resp;
+	resp.setResponse(200);
+	resp.addHeader(Http::HEADER_CONTENT_LENGTH, Util::toString(os.length()));
+	resp.addHeader(Http::HEADER_CONNECTION, "keep-alive");
+	inf.conn->sendResponse(resp, os);
+}
+
 void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request& req) noexcept
 {
 	int method = req.getMethodId();
@@ -492,7 +505,24 @@ void WebServerManager::onRequest(HttpServerConnection* conn, const Http::Request
 			user = WebServerUtil::getStringQueryParam(&query, "user");
 			string password = WebServerUtil::getStringQueryParam(&query, "password");
 			if (!user.empty() && !password.empty())
+			{
+				IpAddress ip;
+				conn->getIp(ip);
+				bool showMsg, allowRequest;
+				{
+					LOCK(csReqCounters);
+					allowRequest = reqCounters.addRequest(bans, ip, 0, GET_TICK(), Util::emptyString, showMsg);
+				}
+				if (!allowRequest)
+				{
+					string ipStr = Util::printIpAddress(ip);
+					if (showMsg && (LogManager::getLogOptions() & LogManager::OPT_LOG_WEB_SERVER))
+						LogManager::log(LogManager::WEBSERVER, "IP " + ipStr + " has been banned");
+					sendErrorPage(inf, STRING_F(WEBSERVER_BANNED, ipStr));
+					return;
+				}
 				userId = checkUser(user, password);
+			}
 		}
 		if (!userId)
 		{
@@ -1566,6 +1596,16 @@ void WebServerManager::printLoginPage(string& os, const Http::ServerCookies* coo
 	      "<div><input type='submit' class='button' id='login-button' value='";
 	os += SimpleXML::escape(STRING(WEBSERVER_SIGN_IN), tmp, true);
 	os += "'></div></form>\n</div>\n";
+	os += htmlEnd;
+}
+
+void WebServerManager::printErrorPage(string& os, const Http::ServerCookies* cookies, const string& error) noexcept
+{
+	string tmp;
+	printHtmlStart(os, cookies);
+	os += "<div class='align-center'>";
+	os += SimpleXML::escape(error, tmp, false);
+	os += "</div>\n";
 	os += htmlEnd;
 }
 

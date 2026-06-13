@@ -23,6 +23,8 @@ class IpBans
 		void removeExpired(int64_t timestamp);
 		void protect(const IpPortKey& key, bool enable);
 		string getInfo(const string& type, int64_t timestamp) const;
+		void setBanDuration(unsigned value);
+		void updateSettings();
 
 	private:
 		struct BanInfo
@@ -35,12 +37,15 @@ class IpBans
 
 		boost::unordered_map<IpPortKey, BanInfo> data;
 		mutable std::unique_ptr<RWLock> dataLock;
+		unsigned banDuration;
 };
 
-class HubRequestCounters
+// This class lacks data lock since it's only accessed from the hub thread
+class ClientRequestCounters
 {
 	public:
 		bool addRequest(IpBans& bans, const IpAddress& ip, uint16_t port, int64_t timestamp, const string& url, bool& showMsg);
+		void setConfig(int minReqCount, unsigned maxReqPerMinute);
 
 	private:
 		struct IpItem
@@ -50,6 +55,8 @@ class HubRequestCounters
 		};
 
 		boost::unordered_map<IpPortKey, IpItem> data;
+		int minReqCount = -1;
+		unsigned maxReqPerMinute = 0;
 };
 
 #endif // ANTI_FLOOD_H_

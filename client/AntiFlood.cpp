@@ -5,10 +5,7 @@
 #include "SettingsManager.h"
 #include "ConfCore.h"
 
-IpBans udpBans;
-IpBans tcpBans;
-
-IpBans::IpBans() : dataLock(RWLock::create())
+IpBans::IpBans() : dataLock(RWLock::create()), banDuration(3600)
 {
 }
 
@@ -24,15 +21,10 @@ int IpBans::checkBan(const IpPortKey& key, int64_t timestamp) const
 
 void IpBans::addBan(const IpPortKey& key, int64_t timestamp, const string& url, int64_t reqCount)
 {
-	auto ss = SettingsManager::instance.getCoreSettings();
-	ss->lockRead();
-	unsigned banDuration = (unsigned) ss->getInt(Conf::ANTIFLOOD_BAN_TIME) * 1000;
-	ss->unlockRead();
-
 	WRITE_LOCK(*dataLock);
 	BanInfo& info = data[key];
 	info.dontBan = false;
-	info.unbanTime = timestamp + banDuration;
+	info.unbanTime = timestamp + banDuration * 1000;
 	info.reqCount = reqCount;
 	if (std::find(info.hubUrls.begin(), info.hubUrls.end(), url) == info.hubUrls.end())
 		info.hubUrls.push_back(url);
@@ -107,13 +99,33 @@ string IpBans::getInfo(const string& type, int64_t timestamp) const
 	return s;
 }
 
-bool HubRequestCounters::addRequest(IpBans& bans, const IpAddress& ip, uint16_t port, int64_t timestamp, const string& url, bool& showMsg)
+void IpBans::setBanDuration(unsigned value)
+{
+	WRITE_LOCK(*dataLock);
+	banDuration = value;
+}
+
+void IpBans::updateSettings()
 {
 	auto ss = SettingsManager::instance.getCoreSettings();
 	ss->lockRead();
-	int minReqCount = ss->getInt(Conf::ANTIFLOOD_MIN_REQ_COUNT);
-	unsigned maxReqPerMinute = ss->getInt(Conf::ANTIFLOOD_MAX_REQ_PER_MIN);
+	unsigned value = (unsigned) ss->getInt(Conf::ANTIFLOOD_BAN_TIME);
 	ss->unlockRead();
+	setBanDuration(value);
+}
+
+bool ClientRequestCounters::addRequest(IpBans& bans, const IpAddress& ip, uint16_t port, int64_t timestamp, const string& url, bool& showMsg)
+{
+	int minReqCount = this->minReqCount;
+	unsigned maxReqPerMinute = this->maxReqPerMinute;
+	if (minReqCount < 0)
+	{
+		auto ss = SettingsManager::instance.getCoreSettings();
+		ss->lockRead();
+		minReqCount = ss->getInt(Conf::ANTIFLOOD_MIN_REQ_COUNT);
+		maxReqPerMinute = ss->getInt(Conf::ANTIFLOOD_MAX_REQ_PER_MIN);
+		ss->unlockRead();
+	}
 
 	showMsg = false;
 	IpPortKey key;
@@ -146,4 +158,10 @@ bool HubRequestCounters::addRequest(IpBans& bans, const IpAddress& ip, uint16_t 
 			bans.removeBan(key);
 	}
 	return res != IpBans::BAN_ACTIVE;
+}
+
+void ClientRequestCounters::setConfig(int minReqCount, unsigned maxReqPerMinute)
+{
+	this->minReqCount = minReqCount;
+	this->maxReqPerMinute = maxReqPerMinute;
 }
