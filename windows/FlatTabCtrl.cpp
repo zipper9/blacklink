@@ -619,6 +619,13 @@ LRESULT FlatTabCtrl::onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 	return 0;
 }
 
+LRESULT FlatTabCtrl::onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/)
+{
+	if (active)
+		::SendMessage(active->hWnd, WM_CLOSE, 0, 0);
+	return 0;
+}
+
 void FlatTabCtrl::switchTo(bool next)
 {
 	auto i = tabs.begin();

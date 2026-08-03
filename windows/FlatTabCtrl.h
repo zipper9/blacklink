@@ -113,6 +113,7 @@ public:
 	MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 	MESSAGE_HANDLER(WM_CAPTURECHANGED, onCaptureChanged)
 	COMMAND_ID_HANDLER(IDC_CHEVRON, onChevron)
+	COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 	COMMAND_RANGE_HANDLER(IDC_SELECT_WINDOW, IDC_SELECT_WINDOW + tabs.size(), onSelectWindow)
 	END_MSG_MAP()
 
@@ -137,6 +138,7 @@ public:
 	LRESULT onEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/);
 	LRESULT onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/);
 	LRESULT onChevron(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
+	LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
 	LRESULT onSelectWindow(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
 	LRESULT onCaptureChanged(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL & /*bHandled*/);
 
