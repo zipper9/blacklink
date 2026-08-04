@@ -1034,7 +1034,10 @@ void BZ_API(BZ2_bzWriteClose64)
       { BZ_SETERR(BZ_OK); return; };
    if (!(bzf->writing))
       { BZ_SETERR(BZ_SEQUENCE_ERROR); return; };
-   if (ferror(bzf->handle))
+   /* When abandoning we must still release the compressor state, even
+      if the handle has errored; otherwise the caller (e.g. BZ2_bzclose,
+      which retries with abandon=1 to force teardown) leaks it. */
+   if (!abandon && ferror(bzf->handle))
       { BZ_SETERR(BZ_IO_ERROR); return; };
 
    if (nbytes_in_lo32 != NULL) *nbytes_in_lo32 = 0;
@@ -1408,7 +1411,7 @@ BZFILE * bzopen_or_bzdopen
       case 's':
          smallMode = 1; break;
       default:
-         if (isdigit((int)(*mode))) {
+         if (isdigit((unsigned char)(*mode))) {
             blockSize100k = *mode-BZ_HDR_0;
          }
       }
