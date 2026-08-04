@@ -35,7 +35,6 @@
 
 static const int BUTTON_WIDTH = 26;
 static const int BUTTON_HEIGHT = 26;
-static const int EDIT_HEIGHT = 22;
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
 	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false),

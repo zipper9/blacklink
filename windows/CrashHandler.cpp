@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include "ExtendedTrace.h"
 #include "../client/Thread.h"
 #include "../client/File.h"
@@ -11,8 +11,6 @@ static CriticalSection exceptionCS;
 
 static const int DEBUG_BUFSIZE = 8192;
 static int recursion = 0;
-static char exeTTH[192*8/(5*8)+2];
-static bool firstException = true;
 
 static char debugBuf[DEBUG_BUFSIZE];
 

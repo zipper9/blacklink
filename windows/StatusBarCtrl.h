@@ -190,8 +190,6 @@ class StatusBarCtrl : public CWindowImpl<StatusBarCtrl>, private ThemeWrapper
 		COLORREF backgroundColor;
 		int separatorType;
 		COLORREF separatorColor;
-		int textType;
-		COLORREF textColor;
 		HFONT hFont;
 		int gripperSize;
 		int flags;

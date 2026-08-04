@@ -25,14 +25,15 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 {
 	public:
 		explicit IntegrationPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_INTEGRATION_PROP)),
-			shellIntEnabled(false),
-			autostartEnabled(false),
-			shellIntAvailable(false)
+			shellIntEnabled(false), autostartEnabled(false)
 		{
+#ifdef SSA_SHELL_INTEGRATION
+			shellIntAvailable = false;
+#endif
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		
+
 		BEGIN_MSG_MAP_EX(IntegrationPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 #ifdef SSA_SHELL_INTEGRATION
@@ -40,13 +41,13 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 #endif
 		COMMAND_ID_HANDLER(IDC_AUTOSTART_BUTTON, onClickedAutostart)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 #ifdef SSA_SHELL_INTEGRATION
 		LRESULT onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
 		LRESULT onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -62,11 +63,13 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 #endif
 		void checkAutostart();
 		void updateAutostartState();
-		
+
+#ifdef SSA_SHELL_INTEGRATION
 		bool shellIntAvailable;
+#endif
 		bool shellIntEnabled;
 		bool autostartEnabled;
-		
+
 		CListViewCtrl ctrlList;
 };
 

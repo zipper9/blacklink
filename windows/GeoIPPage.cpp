@@ -8,8 +8,6 @@
 #include "../client/FormatUtil.h"
 #include "../client/ConfCore.h"
 
-static const int ICON_SIZE = 16;
-
 using DialogLayout::FLAG_TRANSLATE;
 using DialogLayout::UNSPEC;
 using DialogLayout::AUTO;

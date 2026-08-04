@@ -44,9 +44,6 @@ static const unsigned REMOTE_TYPING_TIMEOUT    = 150000; // Reset remote isTypin
 
 static const uint32_t FLAG_COUNTRY = 0x10000;
 
-static const int iconSize = 16;
-static const int flagIconWidth = 25;
-static const int iconTextMargin = 2;
 static const int spaceNormal = 4;
 static const int spaceSmall = 2;
 

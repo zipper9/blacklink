@@ -1567,10 +1567,8 @@ void SearchFrame::UpdateLayout(BOOL)
 	WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
 	const int width = WinUtil::dialogUnitsToPixelsX(145, xdu);
 	const int comboExpandedHeight = WinUtil::dialogUnitsToPixelsY(120, ydu);
-	static const int labelH = 16;
 	static const int lMargin = 4;
 	static const int rMargin = 4;
-	static const int vertLabelOffset = 3;
 	static const int bottomMargin = 5;
 	static const int paneSpace = 7;
 
