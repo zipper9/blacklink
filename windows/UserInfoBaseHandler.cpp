@@ -14,8 +14,8 @@
 #include "../client/ConfCore.h"
 
 string UserInfoGuiTraits::g_hubHint;
-UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
-OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
+template<> UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
+template<> OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
 
 OMenu UserInfoGuiTraits::copyUserMenu;
 OMenu UserInfoGuiTraits::grantMenu;

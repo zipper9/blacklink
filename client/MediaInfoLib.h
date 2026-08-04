@@ -50,7 +50,7 @@ class MediaInfoLib : public DynamicLibrary
 		typedef void (MEDIA_INFO_API *fnMediaInfo_Delete)(void* handle);
 		typedef size_t (MEDIA_INFO_API *fnMediaInfo_Open)(void* handle, const wchar_t* path);
 		typedef void (MEDIA_INFO_API *fnMediaInfo_Close)(void* handle);
-		typedef const size_t (MEDIA_INFO_API *fnMediaInfo_Count_Get)(void* handle, int StreamKind, size_t StreamNumber);
+		typedef size_t (MEDIA_INFO_API *fnMediaInfo_Count_Get)(void* handle, int StreamKind, size_t StreamNumber);
 		typedef const wchar_t* (MEDIA_INFO_API *fnMediaInfo_Get)(void* handle, int StreamKind, size_t StreamNumber, const wchar_t* Parameter, int InfoKind, int SearchKind);
 		typedef const wchar_t* (MEDIA_INFO_API *fnMediaInfo_Inform)(void*, size_t);
 		typedef const wchar_t* (MEDIA_INFO_API *fnMediaInfo_Option)(void*, const wchar_t* param, const wchar_t* value);

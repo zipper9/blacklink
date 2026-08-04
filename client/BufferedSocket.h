@@ -78,7 +78,7 @@ class BufferedSocket : private Thread
 		string getRemoteIpAsString(bool brackets = false) const;
 		string getRemoteIpPort() const;
 		const IpAddress& getIp() const;
-		const uint16_t getPort() const
+		uint16_t getPort() const
 		{
 			return hasSocket() ? sock->getPort() : 0;
 		}

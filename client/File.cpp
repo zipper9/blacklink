@@ -141,7 +141,7 @@ wstring File::formatPath(const wstring& path) noexcept
 	return path;
 }
 
-wstring File::formatPath(wstring&& path) noexcept
+wstring& File::formatPath(wstring&& path) noexcept
 {
 	dcassert(path.find(L'/') == wstring::npos);
 	if (isDrivePath(path)) path.insert(0, L"\\\\?\\");

@@ -91,7 +91,7 @@ class CID
 
 		bool isZero() const
 		{
-			for (int i = 0; i < SIZE/sizeof(size_t); i++)
+			for (unsigned i = 0; i < SIZE/sizeof(size_t); i++)
 				if (cid.w[i]) return false;
 			return true;
 		}

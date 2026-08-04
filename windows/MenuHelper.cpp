@@ -171,7 +171,7 @@ void MenuHelper::removeStaticMenu(HMENU hMenu)
 
 void MenuHelper::unlinkStaticMenus(OMenu& menu)
 {
-	MENUITEMINFO mif = { sizeof MENUITEMINFO };
+	MENUITEMINFO mif = { sizeof(MENUITEMINFO) };
 	mif.fMask = MIIM_SUBMENU;
 	for (int i = menu.GetMenuItemCount()-1; i >= 0; i--)
 	{

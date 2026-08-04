@@ -231,7 +231,7 @@ static bool asciiEqual(const string_type& s1, const string_type& s2)
 inline wchar_t toLower(wchar_t c) noexcept
 {
 #ifdef _WIN32
-	return static_cast<wchar_t>(reinterpret_cast<ptrdiff_t>(CharLowerW((LPWSTR)c)));
+	return (wchar_t) (uintptr_t) CharLowerW((LPWSTR) (uintptr_t) c);
 #else
 	return (wchar_t) towlower(c);
 #endif

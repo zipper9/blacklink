@@ -27,7 +27,7 @@
 #include "../client/SysVersion.h"
 #endif
 
-ExMessageBox::MessageBoxValues ExMessageBox::mbv = {0};
+__declspec(thread) ExMessageBox::MessageBoxValues ExMessageBox::mbv = {0};
 
 static const UINT IDC_CHECK_BOX = 2025;
 

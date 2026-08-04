@@ -1284,10 +1284,12 @@ LRESULT MainFrame::onWinampButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 LRESULT MainFrame::onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (uMsg == WM_CHAR)
+	{
 		if (wParam == VK_BACK)
 			disableAutoComplete = true;
 		else
 			disableAutoComplete = false;
+	}
 			
 	switch (wParam)
 	{

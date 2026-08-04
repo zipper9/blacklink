@@ -243,14 +243,14 @@ bool FlatTabCtrl::updateSettings(bool invalidate)
 {
 	static const int colorOptions[] =
 	{
-		{ Conf::TABS_INACTIVE_BACKGROUND_COLOR       },
-		{ Conf::TABS_ACTIVE_BACKGROUND_COLOR         },
-		{ Conf::TABS_INACTIVE_TEXT_COLOR             },
-		{ Conf::TABS_ACTIVE_TEXT_COLOR               },
-		{ Conf::TABS_OFFLINE_BACKGROUND_COLOR        },
-		{ Conf::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR },
-		{ Conf::TABS_UPDATED_BACKGROUND_COLOR        },
-		{ Conf::TABS_BORDER_COLOR                    }
+		Conf::TABS_INACTIVE_BACKGROUND_COLOR,
+		Conf::TABS_ACTIVE_BACKGROUND_COLOR,
+		Conf::TABS_INACTIVE_TEXT_COLOR,
+		Conf::TABS_ACTIVE_TEXT_COLOR,
+		Conf::TABS_OFFLINE_BACKGROUND_COLOR,
+		Conf::TABS_OFFLINE_ACTIVE_BACKGROUND_COLOR,
+		Conf::TABS_UPDATED_BACKGROUND_COLOR,
+		Conf::TABS_BORDER_COLOR
 	};
 
 	bool needInval = false;

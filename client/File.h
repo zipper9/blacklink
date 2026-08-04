@@ -157,7 +157,7 @@ class File : public IOStream
 		static bool getVolumeInfo(const wstring& path, VolumeInfo &vi) noexcept;
 
 		static wstring formatPath(const wstring& path) noexcept;
-		static wstring formatPath(wstring&& path) noexcept;
+		static wstring& formatPath(wstring&& path) noexcept;
 #endif
 
 		static bool isAbsolute(const string& path) noexcept

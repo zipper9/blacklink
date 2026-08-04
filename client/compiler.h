@@ -25,6 +25,23 @@
 
 #ifdef __clang__
 
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-label"
+#pragma clang diagnostic ignored "-Wreorder-ctor"
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+#pragma clang diagnostic ignored "-Wswitch"
+
+// TODO: re-enable this warning
+#pragma clang diagnostic ignored "-Wsign-compare"
+
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #elif defined(__GNUC__)
 
 #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5)

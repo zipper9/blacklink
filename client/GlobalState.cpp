@@ -2,10 +2,10 @@
 #include "GlobalState.h"
 #include "TimerManager.h"
 
-static std::atomic_bool startingUp = true;
+static std::atomic_bool startingUp(true);
 
-static std::atomic_bool shutDown = false;
-static std::atomic_bool shuttingDown = false;
+static std::atomic_bool shutDown(false);
+static std::atomic_bool shuttingDown(false);
 
 void GlobalState::shutdown()
 {

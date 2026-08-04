@@ -34,7 +34,7 @@ class CImageDataObject : IDataObject
 			memset(&m_stgmed, 0, sizeof(m_stgmed));
 			memset(&m_format, 0, sizeof(m_format));
 		}
-		~CImageDataObject()
+		virtual ~CImageDataObject()
 		{
 			if (m_bRelease)
 				::ReleaseStgMedium(&m_stgmed);

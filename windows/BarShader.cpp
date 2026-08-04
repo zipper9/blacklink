@@ -122,7 +122,7 @@ void CBarShader::Fill(COLORREF crColor)
 void CBarShader::Draw(HDC hdc, int iLeft, int iTop, int P3DDepth)
 {
 	m_used3dlevel = (byte)P3DDepth;
-	COLORREF crLastColor = (COLORREF)~0, crPrevBkColor = GetBkColor(hdc);
+	COLORREF crLastColor = (COLORREF) ~0u, crPrevBkColor = GetBkColor(hdc);
 	POSITION pos = m_Spans.GetHeadPosition();
 	RECT rectSpan;
 	rectSpan.top = iTop;
@@ -186,7 +186,7 @@ void CBarShader::Draw(HDC hdc, int iLeft, int iTop, int P3DDepth)
 		while ((pos != NULL) && (m_Spans.GetKeyAt(pos) <= qwStart))
 			crColor = m_Spans.GetNextValue(pos);
 	}
-	if ((rectSpan.right < iLeft) && (crLastColor != ~0))
+	if ((rectSpan.right < iLeft) && (crLastColor != ~0u))
 	{
 		rectSpan.left = rectSpan.right;
 		rectSpan.right = iLeft;

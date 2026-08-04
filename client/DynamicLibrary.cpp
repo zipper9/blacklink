@@ -53,7 +53,7 @@ void* DynamicLibrary::resolve(const char* name) noexcept
 {
 	dcassert(lib);
 #ifdef _WIN32
-	return GetProcAddress(lib, name);
+	return (void *) GetProcAddress(lib, name);
 #else
 	return dlsym(lib, name);
 #endif

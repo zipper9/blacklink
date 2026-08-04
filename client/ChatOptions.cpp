@@ -3,7 +3,7 @@
 #include "SettingsManager.h"
 #include "ConfCore.h"
 
-static std::atomic_int chatOptions = 0;
+static std::atomic_int chatOptions(0);
 
 int ChatOptions::getOptions()
 {
