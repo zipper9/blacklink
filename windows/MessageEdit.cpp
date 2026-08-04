@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include "MessageEdit.h"
 #include "WinUtil.h"
 #include "ConfUI.h"

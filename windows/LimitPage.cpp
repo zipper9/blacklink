@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Resource.h"
+#include "resource.h"
 #include "LimitPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"

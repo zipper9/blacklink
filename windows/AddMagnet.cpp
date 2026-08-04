@@ -17,7 +17,7 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
+#include "resource.h"
 #include "WinUtil.h"
 #include "AddMagnet.h"
 #include "../client/SimpleStringTokenizer.h"

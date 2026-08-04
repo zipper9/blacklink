@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include "StatusLabelCtrl.h"
 #include "GdiUtil.h"
 #include "BackingStore.h"

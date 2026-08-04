@@ -24,7 +24,7 @@
 #include <atlwin.h>
 #include <atlctrls.h>
 #include "../client/typedefs.h"
-#include "Resource.h"
+#include "resource.h"
 
 class LineDlg : public CDialogImpl<LineDlg>
 {

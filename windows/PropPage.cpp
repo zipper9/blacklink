@@ -17,7 +17,7 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
+#include "resource.h"
 #include "PropPage.h"
 #include "../client/Text.h"
 #include "../client/SettingsManager.h"

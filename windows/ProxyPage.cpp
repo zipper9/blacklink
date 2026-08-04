@@ -18,7 +18,7 @@
 
 #include "stdafx.h"
 
-#include "Resource.h"
+#include "resource.h"
 #include "ProxyPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"

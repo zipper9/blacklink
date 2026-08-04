@@ -18,7 +18,7 @@
 
 #include "stdafx.h"
 
-#include "Resource.h"
+#include "resource.h"
 #include "PreviewDlg.h"
 #include "WinUtil.h"
 #include "BrowseFile.h"

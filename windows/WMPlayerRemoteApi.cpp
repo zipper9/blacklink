@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "WMPlayerRemoteApi.h"
-#include "../client/util.h"
+#include "../client/Util.h"
 
 WMPlayerRemoteApi::WMPlayerRemoteApi() { }
 WMPlayerRemoteApi::~WMPlayerRemoteApi() { }

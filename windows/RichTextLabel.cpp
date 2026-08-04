@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include "RichTextLabel.h"
 #include <atlmisc.h>
 #include "WinUtil.h"

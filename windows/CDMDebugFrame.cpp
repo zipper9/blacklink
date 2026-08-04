@@ -2,7 +2,7 @@
 
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 
-#include "Resource.h"
+#include "resource.h"
 #include "CDMDebugFrame.h"
 #include "Fonts.h"
 #include "MenuHelper.h"

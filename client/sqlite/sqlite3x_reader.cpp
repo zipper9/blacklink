@@ -20,7 +20,7 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "stdinc.h"
+#include <stdinc.h>
 #include "sqlite3x.hpp"
 #include <string.h>
 

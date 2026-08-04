@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 

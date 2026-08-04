@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include "StringSetSearch.h"
 #include "../client/Text.h"
 

@@ -3,7 +3,7 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
+#include "resource.h"
 #include "SearchPage.h"
 #include "WinUtil.h"
 #include "DialogLayout.h"

@@ -17,7 +17,7 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
+#include "resource.h"
 #include "WinUtil.h"
 #include "FavHubProperties.h"
 #include "KnownClients.h"

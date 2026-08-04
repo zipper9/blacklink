@@ -23,7 +23,7 @@
 
 #include "stdafx.h"
 #include "ADLSearchFrame.h"
-#include "AdlsProperties.h"
+#include "ADLSProperties.h"
 #include "Colors.h"
 #include "Fonts.h"
 #include "ExMessageBox.h"
