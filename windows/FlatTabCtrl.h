@@ -239,6 +239,7 @@ private:
 	bool closeButtonHover;
 	bool insertAfter;
 	bool moving;
+	HWND contextMenuTabHwnd;
 	tstring tooltipText;
 
 	std::list<HWND> viewOrder;

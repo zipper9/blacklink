@@ -13,7 +13,7 @@ FlatTabCtrl::FlatTabCtrl() :
 	tabsPosition(Conf::TABS_TOP), tabChars(16), maxRows(7),
 	showIcons(true), showCloseButton(true), useBoldNotif(false), nonHubsFirst(true),
 	closeButtonPressedTab(nullptr), insertionTab(nullptr),
-	closeButtonHover(false), insertAfter(false), hoverTab(nullptr),
+	closeButtonHover(false), insertAfter(false), hoverTab(nullptr), contextMenuTabHwnd(nullptr),
 	rows(1), height(0),
 	textHeight(0), edgeHeight(0), startMargin(0), horizIconSpace(0), horizPadding(0), chevronWidth(0),
 	backingStore(nullptr)
@@ -607,6 +607,7 @@ LRESULT FlatTabCtrl::onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 		{
 			if (!::SendMessage(t->hWnd, FTM_CONTEXTMENU, 0, lParam))
 			{
+				contextMenuTabHwnd = t->hWnd;
 				ClientToScreen(&pt);
 				CMenu contextMenu;
 				contextMenu.CreatePopupMenu();
@@ -621,8 +622,11 @@ LRESULT FlatTabCtrl::onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 
 LRESULT FlatTabCtrl::onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/)
 {
-	if (active)
-		::SendMessage(active->hWnd, WM_CLOSE, 0, 0);
+	if (contextMenuTabHwnd)
+	{
+		::SendMessage(contextMenuTabHwnd, WM_CLOSE, 0, 0);
+		contextMenuTabHwnd = nullptr;
+	}
 	return 0;
 }
 
