@@ -19,6 +19,10 @@
 
 #define PACKAGE_VERSION "1.13.3"
 
+#if defined(_MSC_VER) && !defined(restrict)
+#define restrict __restrict
+#endif
+
 #ifdef _WIN32
     #ifndef UNICODE
         #define UNICODE
