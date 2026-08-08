@@ -57,6 +57,7 @@ void ThemeManager::loadResourceLib()
 		themeFullPath += "_x64";
 #endif
 		themeFullPath += ".dll";
-		setResourceLibInstance(::LoadLibrary(Text::toT(themeFullPath).c_str()));
+		HMODULE hMod = LoadLibraryEx(Text::toT(themeFullPath).c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE);
+		setResourceLibInstance(hMod);
 	}
 }
