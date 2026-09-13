@@ -82,6 +82,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			COLUMN_MEDIA_AUDIO  = 12,
 			COLUMN_DURATION     = 13,
 			COLUMN_FILES        = 14,
+			COLUMN_STATUS       = 15,
 			COLUMN_LAST
 		};
 

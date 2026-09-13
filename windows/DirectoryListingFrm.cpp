@@ -66,7 +66,8 @@ const int DirectoryListingFrame::columnId[] =
 	COLUMN_MEDIA_VIDEO,
 	COLUMN_MEDIA_AUDIO,
 	COLUMN_DURATION,
-	COLUMN_FILES
+	COLUMN_FILES,
+	COLUMN_STATUS
 };
 
 static const int columnSizes[] =
@@ -84,7 +85,8 @@ static const int columnSizes[] =
 	100, // COLUMN_MEDIA_VIDEO
 	100, // COLUMN_MEDIA_AUDIO
 	80,  // COLUMN_DURATION
-	80   // COLUMN_FILES
+	80,  // COLUMN_FILES
+	80   // COLUMN_STATUS
 };
 
 static const ResourceManager::Strings columnNames[] =
@@ -102,7 +104,8 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::MEDIA_VIDEO,
 	ResourceManager::MEDIA_AUDIO,
 	ResourceManager::DURATION,
-	ResourceManager::FILES
+	ResourceManager::FILES,
+	ResourceManager::STATUS
 };
 
 enum
@@ -233,6 +236,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	colors.get();
 
 	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlList.setColumnFlags(COLUMN_STATUS, ColumnInfo::FLAG_HIDDEN_BY_DEFAULT);
 	ctrlList.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
@@ -2649,6 +2653,20 @@ static void parseDuration(const string& src, unsigned& msec, tstring& columnAudi
 	Text::toT(Util::formatTime((val + 999) / 1000), columnDuration);
 }
 
+static tstring getFileStatusString(uint16_t flags)
+{
+	tstring s;
+	if (flags & DirectoryListing::FLAG_SHARED)
+		s += _T('S');
+	else if (flags & DirectoryListing::FLAG_DOWNLOADED)
+		s += _T('D');
+	else if (flags & DirectoryListing::FLAG_CANCELED)
+		s += _T('X');
+	if (flags & DirectoryListing::FLAG_QUEUED)
+		s += _T('Q');
+	return s;
+}
+
 DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const DirectoryListing* dl) :
 	type(FILE), file(f), iconIndex(-1), duration(0)
 {
@@ -2689,6 +2707,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 		columns[COLUMN_MEDIA_VIDEO] = Text::toT(media->video);
 		parseDuration(media->audio, duration, columns[COLUMN_MEDIA_AUDIO], columns[COLUMN_DURATION]);
 	}
+	columns[COLUMN_STATUS] = getFileStatusString(f->getFlags());
 }
 
 DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) :

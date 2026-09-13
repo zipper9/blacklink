@@ -425,7 +425,7 @@ void Conf::initUiSettings()
 	s->addString(SEARCH_FRAME_VISIBLE, "SearchFrameVisible");
 	s->addString(DIRLIST_FRAME_ORDER, "DirectoryListingFrameOrder");
 	s->addString(DIRLIST_FRAME_WIDTHS, "DirectoryListingFrameWidths");
-	s->addString(DIRLIST_FRAME_VISIBLE, "DirectoryListingFrameVisible", "1,1,1,1,1");
+	s->addString(DIRLIST_FRAME_VISIBLE, "DirectoryListingFrameVisible");
 	s->addString(FAVORITES_FRAME_ORDER, "FavoritesFrameOrder");
 	s->addString(FAVORITES_FRAME_WIDTHS, "FavoritesFrameWidths");
 	s->addString(FAVORITES_FRAME_VISIBLE, "FavoritesFrameVisible");
