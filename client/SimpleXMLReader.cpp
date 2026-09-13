@@ -350,7 +350,7 @@ bool SimpleXMLReader::declEncodingValue()
 		int c = charAt(0);
 		if ((state == STATE_DECL_ENCODING_NAME_APOS && c == '\'') || (state == STATE_DECL_ENCODING_NAME_QUOT && c == '"'))
 		{
-			encoding = Text::toLower(encoding);
+			Text::asciiMakeLower(encoding);
 			charset = Text::charsetFromString(encoding);
 			state = STATE_DECL_STANDALONE;
 			advancePos(1);
@@ -359,13 +359,11 @@ bool SimpleXMLReader::declEncodingValue()
 		if (c == '&')
 		{
 			if (!entref(encoding))
-				return false;
+				error("Error parsing entity reference");
+			return true;
 		}
-		else
-		{
-			append(encoding, MAX_VALUE_SIZE, c);
-			advancePos(1);
-		}
+		append(encoding, MAX_VALUE_SIZE, c);
+		advancePos(1);
 	}
 	return true;
 }
