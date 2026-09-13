@@ -16,9 +16,17 @@ void TypedListViewColumns::setColumns(int count, const int* ids, const ResourceM
 		columnList[i].id = ids[i];
 		columnList[i].name = TSTRING_I(names[i]);
 		columnList[i].width = widths[i];
-		columnList[i].isOwnerDraw = false;
+		columnList[i].flags = 0;
 		columnList[i].isVisible = false;
 	}
+}
+
+int TypedListViewColumns::findColumnById(int id) const
+{
+	for (int i = 0; i < static_cast<int>(columnList.size()); ++i)
+		if (columnList[i].id == id)
+			return i;
+	return -1;
 }
 
 void TypedListViewColumns::insertColumns(CListViewCtrl& lv, const string& order, const string& widths, const string& visible)
@@ -36,7 +44,7 @@ void TypedListViewColumns::insertColumns(CListViewCtrl& lv, const string& order,
 	for (const auto& c : columnList)
 		if (c.id > count) count = c.id;
 	++count;
-	
+
 	TempColumnInfo* info = static_cast<TempColumnInfo*>(_alloca(count * sizeof(TempColumnInfo)));
 	for (int i = 0; i < count; ++i)
 	{
@@ -55,7 +63,7 @@ void TypedListViewColumns::insertColumns(CListViewCtrl& lv, const string& order,
 		info[id].pos = i;
 		columnList[i].isVisible = false;
 	}
-	
+
 	SimpleStringTokenizer<char> st1(visible, ',');
 	string tok;
 	int index = 0;
@@ -73,7 +81,7 @@ void TypedListViewColumns::insertColumns(CListViewCtrl& lv, const string& order,
 	if (!visibleCount)
 	{
 		for (int i = 0; i < count; ++i)
-			info[i].visible = true;		
+			info[i].visible = true;
 	}
 
 	SimpleStringTokenizer<char> st2(widths, ',');
@@ -118,29 +126,32 @@ void TypedListViewColumns::insertColumns(CListViewCtrl& lv, const string& order,
 	for (int i = 0; i < count; ++i)
 		if (info[i].valid && info[i].visible)
 		{
-			for (int j = 0; j < static_cast<int>(columnList.size()); ++j)
-				if (columnList[j].id == i)
+			int j = findColumnById(i);
+			if (j < 0)
+				continue;
+			columnList[j].isVisible = true;
+			if (info[i].order < 0)
+			{
+				if (columnList[j].flags & ColumnInfo::FLAG_HIDDEN_BY_DEFAULT)
 				{
-					columnList[j].isVisible = true;
-					if (info[i].order < 0)
-					{
-						int ord = 0;
-						for (--j; j >= 0; --j)
-						{
-							int visibleOrder = info[columnList[j].id].order;
-							if (visibleOrder >= 0)
-							{
-								ord = visibleOrder + 1;
-								break;
-							}
-						}
-						for (int k = 0; k < count; ++k)
-							if (info[k].order >= ord)
-								++info[k].order;
-						info[i].order = ord;
-					}
-					break;
+					columnList[j].isVisible = false;
+					continue;
 				}
+				int ord = 0;
+				for (--j; j >= 0; --j)
+				{
+					int visibleOrder = info[columnList[j].id].order;
+					if (visibleOrder >= 0)
+					{
+						ord = visibleOrder + 1;
+						break;
+					}
+				}
+				for (int k = 0; k < count; ++k)
+					if (info[k].order >= ord)
+						++info[k].order;
+				info[i].order = ord;
+			}
 		}
 
 	// Hide invalid columns
@@ -211,7 +222,7 @@ void TypedListViewColumns::saveSettings(const CListViewCtrl& lv, string& order, 
 	int headerItems = lv.GetHeader().GetItemCount();
 	int* ord = static_cast<int*>(_alloca(headerItems * sizeof(int)));
 	lv.GetColumnOrderArray(headerItems, ord);
-	
+
 	TempColumnInfo* info = static_cast<TempColumnInfo*>(_alloca(count * sizeof(TempColumnInfo)));
 	for (int i = 0; i < count; ++i)
 	{
@@ -276,7 +287,7 @@ void TypedListViewColumns::toggleColumn(CListViewCtrl& lv, int index, int& sortC
 	int headerItems = lv.GetHeader().GetItemCount();
 	ColumnInfo& c = columnList[index];
 	c.isVisible = !c.isVisible;
-	
+
 	LVCOLUMN lvc = {};
 
 	CLockRedraw<true> lockRedraw(lv);
@@ -390,9 +401,9 @@ void TypedListViewColumns::getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTi
 		_tcscpy(pInfoTip->pszText + outLen, _T("\r\n"));
 		outLen += 2;
 	}
-			
+
 	if (outLen > 2) outLen -= 2;
-				
+
 	pInfoTip->pszText[outLen] = 0;
 	pInfoTip->cchTextMax = static_cast<int>(outLen);
 }

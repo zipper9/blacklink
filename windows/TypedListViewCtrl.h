@@ -31,12 +31,18 @@
 class ColumnInfo
 {
 	public:
+		enum
+		{
+			FLAG_OWNER_DRAW = 1,
+			FLAG_HIDDEN_BY_DEFAULT = 2
+		};
+
 		int      id;
 		tstring  name;
 		uint16_t format;
 		int16_t  width;
+		uint8_t  flags;
 		bool     isVisible;
-		bool     isOwnerDraw;
 };
 
 class TypedListViewColumns
@@ -55,6 +61,9 @@ class TypedListViewColumns
 		void showMenu(POINT pt, HWND hWnd);
 		void toggleColumn(CListViewCtrl& lv, int index, int& sortColumn, bool& doResort);
 		static void getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTip);
+
+	private:
+		int findColumnById(int id) const;
 };
 
 template<class T>
@@ -95,7 +104,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			}
 			return refresh;
 		}
-		
+
 		LRESULT onChar(UINT msg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
 			// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1698
@@ -107,11 +116,11 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 				return 0;
 			}
-			
+
 			bHandled = FALSE;
 			return 1;
 		}
-		
+
 		void setText(LVITEM& i, const tstring &text)
 		{
 			_tcsncpy(i.pszText, text.c_str(), static_cast<size_t>(i.cchTextMax));
@@ -121,7 +130,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		{
 			i.pszText = const_cast<TCHAR*>(text);
 		}
-		
+
 		LRESULT onGetDispInfo(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* bHandled */)
 		{
 			dcassert(!destroyingItems);
@@ -207,7 +216,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			return this->InsertItem(LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE, i,
 				LPSTR_TEXTCALLBACK, 0, 0, image, (LPARAM)item); // TODO I_IMAGECALLBACK
 		}
-		
+
 		T* getItemData(int i) const
 		{
 			return reinterpret_cast<T*>(this->GetItemData(i));
@@ -291,7 +300,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 				T* itemData = getItemData(i);
 				if (itemData)
 					pred(itemData);
-					
+
 			}
 			return pred;
 		}
@@ -300,17 +309,17 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		{
 			const int cnt = this->GetHeader().GetItemCount();
 			for (int j = 0; j < cnt; ++j)
-				if (!columns.columnList[j].isOwnerDraw)
+				if (!(columns.columnList[j].flags & ColumnInfo::FLAG_OWNER_DRAW))
 					this->SetItemText(i, j, LPSTR_TEXTCALLBACK);
 		}
-		
+
 		void updateItem(int i, int column)
 		{
 			int index = columns.columnToSubItem[column];
 			if (index >= 0)
 				this->SetItemText(i, index, LPSTR_TEXTCALLBACK);
 		}
-		
+
 		int updateItem(const T* item)
 		{
 			int i = findItem(item);
@@ -342,7 +351,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			if (i != -1) this->DeleteItem(i);
 			return i;
 		}
-		
+
 		void deleteAllNoLock()
 		{
 			dcassert(!destroyingItems);
@@ -357,13 +366,13 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			}
 			this->DeleteAllItems();
 		}
-		
+
 		void deleteAll()
 		{
 			CLockRedraw<> lockRedraw(this->m_hWnd);
 			deleteAllNoLock();
 		}
-		
+
 		int getSortPos(const T* a) const
 		{
 			int high = this->GetItemCount();
@@ -400,7 +409,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 
 			return mid;
 		}
-		
+
 		int getSortColumn() const
 		{
 			return sortColumn;
@@ -447,7 +456,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			}
 			this->updateArrow();
 		}
-		
+
 		void setColumns(int count, const int* ids, const ResourceManager::Strings* names, const int* widths)
 		{
 			columns.setColumns(count, ids, names, widths);
@@ -463,12 +472,12 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 				}
 		}
 
-		void setColumnOwnerDraw(int id)
+		void setColumnFlags(int id, unsigned flags)
 		{
 			for (auto& c : columns.columnList)
 				if (c.id == id)
 				{
-					c.isOwnerDraw = true;
+					c.flags = flags;
 					break;
 				}
 		}
@@ -501,7 +510,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		{
 			columns.showMenu(pt, this->m_hWnd);
 		}
-		
+
 		LRESULT onEraseBkgnd(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			return TRUE;
@@ -523,10 +532,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 				bHandled = FALSE;
 				return 0;
 			}
-			
+
 			CRect rc;
 			this->GetHeader().GetWindowRect(&rc);
-			
+
 			if (PtInRect(&rc, pt))
 			{
 				showMenu(pt);
@@ -535,7 +544,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			bHandled = FALSE;
 			return 0;
 		}
-		
+
 		LRESULT onHeaderMenu(UINT /*msg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			bool doResort;
@@ -573,7 +582,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 		{
 			return columns.subItemToColumn[subItem];
 		}
-		
+
 		T* getSelectedItem() const
 		{
 			return this->GetSelectedCount() > 0 ?
@@ -606,7 +615,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T>, CListViewCtrl
 			int result = T::compareItems((T*)lParam1, (T*)lParam2, t->getRealSortColumn(), t->compareFlags);
 			return (t->sortAscending ? result : -result);
 		}
-		
+
 #if 0
 		void updateAllImages(bool updateItems = false)
 		{

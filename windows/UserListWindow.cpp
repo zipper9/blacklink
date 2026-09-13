@@ -135,14 +135,14 @@ UserListWindow::UserListWindow(HubFrameCallbacks* hubFrame) : hubFrame(hubFrame)
 	filterSelPos = COLUMN_NICK;
 
 	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
+	ctrlUsers.setColumnFlags(COLUMN_GEO_LOCATION, ColumnInfo::FLAG_OWNER_DRAW);
+	ctrlUsers.setColumnFlags(COLUMN_IP, ColumnInfo::FLAG_OWNER_DRAW);
 #ifdef BL_FEATURE_IP_DATABASE
-	ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
+	ctrlUsers.setColumnFlags(COLUMN_UPLOAD, ColumnInfo::FLAG_OWNER_DRAW);
+	ctrlUsers.setColumnFlags(COLUMN_DOWNLOAD, ColumnInfo::FLAG_OWNER_DRAW);
+	ctrlUsers.setColumnFlags(COLUMN_MESSAGES, ColumnInfo::FLAG_OWNER_DRAW);
 #endif
-	ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
+	ctrlUsers.setColumnFlags(COLUMN_P2P_GUARD, ColumnInfo::FLAG_OWNER_DRAW);
 	ctrlUsers.setColumnFormat(COLUMN_SHARED, LVCFMT_RIGHT);
 	ctrlUsers.setColumnFormat(COLUMN_EXACT_SHARED, LVCFMT_RIGHT);
 	ctrlUsers.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);

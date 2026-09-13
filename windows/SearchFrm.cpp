@@ -534,8 +534,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	setListViewColors(ctrlResults);
 	ctrlResults.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlResults.setColumnOwnerDraw(COLUMN_LOCATION);
-	ctrlResults.setColumnOwnerDraw(COLUMN_P2P_GUARD);
+	ctrlResults.setColumnFlags(COLUMN_LOCATION, ColumnInfo::FLAG_OWNER_DRAW);
+	ctrlResults.setColumnFlags(COLUMN_P2P_GUARD, ColumnInfo::FLAG_OWNER_DRAW);
 
 	hTheme = OpenThemeData(m_hWnd, L"EXPLORER::LISTVIEW");
 	if (hTheme)
