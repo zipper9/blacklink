@@ -5,6 +5,7 @@
 #include "StrUtil.h"
 #include "UriUtil.h"
 #include "Base32.h"
+#include "Tag16.h"
 #include "SimpleStringTokenizer.h"
 
 void MagnetLink::clear()
@@ -44,26 +45,30 @@ bool MagnetLink::parse(const string& url)
 		if (param.length() == 2)
 		{
 			Text::asciiMakeLower(param);
-			if (Text::isAsciiPrefix2(param.c_str(), "xt", 2))
-				exactTopic.push_back(value);
-			else
-			if (Text::isAsciiPrefix2(param.c_str(), "dn", 2))
-				displayName = std::move(value);
-			else
-			if (Text::isAsciiPrefix2(param.c_str(), "xl", 2))
-				exactLength = Util::toInt64(value);
-			else
-			if (Text::isAsciiPrefix2(param.c_str(), "dl", 2))
-				dirSize = Util::toInt64(value);
-			else
-			if (Text::isAsciiPrefix2(param.c_str(), "xs", 2))
-				exactSource = std::move(value);
-			else
-			if (Text::isAsciiPrefix2(param.c_str(), "as", 2))
-				acceptableSource = std::move(value);
-			else
-			if (Text::isAsciiPrefix2(param.c_str(), "kt", 2))
-				keywordTopic = std::move(value);
+			switch (stringToTag(param.c_str()))
+			{
+				case TAG('x', 't'):
+					exactTopic.push_back(value);
+					break;
+				case TAG('d', 'n'):
+					displayName = std::move(value);
+					break;
+				case TAG('x', 'l'):
+					exactLength = Util::toInt64(value);
+					break;
+				case TAG('d', 'l'):
+					dirSize = Util::toInt64(value);
+					break;
+				case TAG('x', 's'):
+					exactSource = std::move(value);
+					break;
+				case TAG('a', 's'):
+					acceptableSource = std::move(value);
+					break;
+				case TAG('k', 't'):
+					keywordTopic = std::move(value);
+					break;
+			}
 		}
 	}
 	return isValid();

@@ -31,6 +31,7 @@
 #include "../client/ConnectivityManager.h"
 #include "../client/UserManager.h"
 #include "../client/ClientManager.h"
+#include "../client/FavoriteManager.h"
 #include "../client/SettingsUtil.h"
 #include "../client/dht/DHT.h"
 #include "../client/ConfCore.h"
@@ -278,7 +279,7 @@ void HubFrame::initUI()
 
 	dcassert(baseClient->getHubUrl() == serverUrl);
 	auto fm = FavoriteManager::getInstance();
-	FavoriteManager::WindowInfo wi;
+	HubWindowInfo wi;
 	if (!fm->getFavoriteHubWindowInfo(serverUrl, wi))
 	{
 		auto cs = SettingsManager::instance.getCoreSettings();
@@ -1405,7 +1406,7 @@ void HubFrame::storeColumnsInfo()
 	if (!uiInitialized)
 		return;
 	auto fm = FavoriteManager::getInstance();
-	FavoriteManager::WindowInfo wi;
+	HubWindowInfo wi;
 	ctrlUsers.getUserList().saveHeaderOrder(wi.headerOrder, wi.headerWidths, wi.headerVisible);
 	if (fm->isFavoriteHub(serverUrl))
 	{

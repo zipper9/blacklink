@@ -471,7 +471,7 @@ bool FavoriteManager::getFavoriteHub(int id, FavoriteHubEntry& entry) const
 	return false;
 }
 
-bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const WindowInfo& wi)
+bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const HubWindowInfo& wi)
 {
 	WRITE_LOCK(*csHubs);
 	FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);
@@ -496,7 +496,7 @@ bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const Windo
 	return true;
 }
 
-bool FavoriteManager::getFavoriteHubWindowInfo(const string& server, WindowInfo& wi) const
+bool FavoriteManager::getFavoriteHubWindowInfo(const string& server, HubWindowInfo& wi) const
 {
 	READ_LOCK(*csHubs);
 	const FavoriteHubEntry* fhe = getFavoriteHubByUrlL(server);

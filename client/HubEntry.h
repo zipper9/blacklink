@@ -155,7 +155,8 @@ class RecentHubEntry
 	public:
 		typedef vector<RecentHubEntry*> List;
 
-		explicit RecentHubEntry() : name("*"),
+		RecentHubEntry() noexcept :
+			name("*"),
 			description("*"),
 			users("*"),
 			shared("*"),

@@ -567,7 +567,7 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 	{
 		const string& str = params[i];
 		if (str.length() <= 2) continue;
-		switch (AdcCommand::toCode(str.c_str()))
+		switch (stringToTag(str.c_str()))
 		{
 			case TAG('F', 'N'):
 				file = Util::toNmdcFile(str.c_str() + 2);
@@ -618,7 +618,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, con
 	{
 		const string& str = params[i];
 		if (str.length() <= 2) continue;
-		switch (AdcCommand::toCode(str.c_str()))
+		switch (stringToTag(str.c_str()))
 		{
 			case TAG('U', '4'):
 				udp4Port = static_cast<uint16_t>(Util::toInt(str.c_str() + 2));

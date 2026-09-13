@@ -762,6 +762,7 @@
     <ClInclude Include="client\HttpServerConnection.h" />
     <ClInclude Include="client\HublistManager.h" />
     <ClInclude Include="client\HublistManagerListener.h" />
+    <ClInclude Include="client\HubWindowInfo.h" />
     <ClInclude Include="client\idna\idna.h" />
     <ClInclude Include="client\idna\punycode.h" />
     <ClInclude Include="client\inet_compat.h" />

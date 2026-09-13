@@ -23,6 +23,7 @@
 #include "../client/Client.h"
 #include "../client/OnlineUserParams.h"
 #include "../client/UserManagerListener.h"
+#include "../client/FavoriteManagerListener.h"
 #include "../client/TaskQueue.h"
 
 #include "MDITabChildWindow.h"

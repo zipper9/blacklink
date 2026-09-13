@@ -24,7 +24,9 @@
 #include "WinUtil.h"
 #include "CompiledDateTime.h"
 
-#if _MSC_VER >= 1930
+#if _MSC_VER >= 1950
+#define MSC_RELEASE 2026
+#elif _MSC_VER >= 1930
 #define MSC_RELEASE 2022
 #elif _MSC_VER >= 1920
 #define MSC_RELEASE 2019

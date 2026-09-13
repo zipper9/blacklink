@@ -9,6 +9,7 @@
 #include "../client/UserManager.h"
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
+#include "../client/FavoriteManager.h"
 #include "../client/GlobalState.h"
 #include "../client/Util.h"
 #include "../client/dht/DHT.h"
@@ -152,7 +153,7 @@ UserListWindow::~UserListWindow()
 	dcassert(userMap.empty());
 }
 
-void UserListWindow::initialize(const FavoriteManager::WindowInfo& wi)
+void UserListWindow::initialize(const HubWindowInfo& wi)
 {
 	ctrlUsers.insertColumns(wi.headerOrder, wi.headerWidths, wi.headerVisible);
 	if (wi.headerSort >= 0)

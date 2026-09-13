@@ -28,7 +28,7 @@
 
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/ShareManager.h"
-#include "../client/File.h"
+#include "../client/FavoriteManager.h"
 #include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/QueueManager.h"
@@ -397,6 +397,7 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	string nick = std::move(p.user);
 	string file = Util::decodeUri(p.path);
 	const string formattedUrl = Util::formatDchubUrl(p);
+	// TODO: validate file name
 
 	RecentHubEntry r;
 	r.setOpenTab("+");

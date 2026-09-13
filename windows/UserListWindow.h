@@ -11,7 +11,7 @@
 #include "UserInfoBaseHandler.h"
 #include "SearchBoxCtrl.h"
 #include "../client/TaskQueue.h"
-#include "../client/FavoriteManager.h"
+#include "../client/HubWindowInfo.h"
 #include "../client/OnlineUserParams.h"
 
 class UserListWindow : public CWindowImpl<UserListWindow>
@@ -40,7 +40,7 @@ class UserListWindow : public CWindowImpl<UserListWindow>
 		void setHubHint(const string& hint);
 		void setShowUsers(bool flag);
 		void setShowHidden(bool flag);
-		void initialize(const FavoriteManager::WindowInfo& wi);
+		void initialize(const HubWindowInfo& wi);
 		void clearUserList();
 		void insertDHTUsers();
 		UserInfo* findUser(const OnlineUserPtr& user) const;

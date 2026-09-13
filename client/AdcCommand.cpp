@@ -270,7 +270,7 @@ string AdcCommand::getParamString(bool nmdc) const noexcept
 bool AdcCommand::getParam(uint16_t name, size_t start, string& value) const noexcept
 {
 	for (string::size_type i = start; i < parameters.size(); ++i)
-		if (parameters[i].length() >= 2 && name == toCode(parameters[i].c_str()))
+		if (parameters[i].length() >= 2 && name == stringToTag(parameters[i].c_str()))
 		{
 			value = parameters[i].substr(2);
 			return true;
@@ -280,18 +280,18 @@ bool AdcCommand::getParam(uint16_t name, size_t start, string& value) const noex
 
 bool AdcCommand::getParam(const char* name, size_t start, string& value) const noexcept
 {
-	return getParam(toCode(name), start, value);
+	return getParam(stringToTag(name), start, value);
 }
 
 bool AdcCommand::hasFlag(uint16_t name, size_t start) const noexcept
 {
 	for (string::size_type i = start; i < parameters.size(); ++i)
-		if (parameters[i].length() == 3 && name == toCode(parameters[i].c_str()) && parameters[i][2] == '1')
+		if (parameters[i].length() == 3 && name == stringToTag(parameters[i].c_str()) && parameters[i][2] == '1')
 			return true;
 	return false;
 }
 
 bool AdcCommand::hasFlag(const char* name, size_t start) const noexcept
 {
-	return hasFlag(toCode(name), start);
+	return hasFlag(stringToTag(name), start);
 }

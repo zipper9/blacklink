@@ -263,7 +263,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		if (i->length() < 2)
 			continue;
 
-		switch (AdcCommand::toCode(i->c_str()))
+		switch (stringToTag(i->c_str()))
 		{
 			case TAG('S', 'L'):
 			{

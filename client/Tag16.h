@@ -22,4 +22,9 @@ static inline std::string tagToString(uint16_t tag)
 	return std::string(v.c, 2);
 }
 
+static inline uint16_t stringToTag(const char* s)
+{
+	return *reinterpret_cast<const uint16_t*>(s);
+}
+
 #endif // TAG16_H_

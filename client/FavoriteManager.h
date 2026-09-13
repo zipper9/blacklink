@@ -21,6 +21,7 @@
 
 #include <boost/unordered/unordered_map.hpp>
 
+#include "HubWindowInfo.h"
 #include "UserCommand.h"
 #include "FavoriteUser.h"
 #include "SettingsManagerListener.h"
@@ -111,32 +112,14 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			return getFlag(user, FavoriteUser::FLAG_FREE_PM_ACCESS);
 		}
 
-		// Favorite Hubs
-		struct WindowInfo
-		{
-			int windowPosX;
-			int windowPosY;
-			int windowSizeX;
-			int windowSizeY;
-			int windowType;
-			bool hideUserList;
-			string headerOrder;
-			string headerWidths;
-			string headerVisible;
-			int headerSort;
-			bool headerSortAsc;
-			int chatUserSplit;
-			bool swapPanels;
-		};
-
 		bool addFavoriteHub(FavoriteHubEntry& entry, bool save = true);
 		bool removeFavoriteHub(const string& server, bool save = true);
 		bool removeFavoriteHub(int id, bool save = true);
 		bool setFavoriteHub(const FavoriteHubEntry& entry);
 		bool getFavoriteHub(const string& server, FavoriteHubEntry& entry) const;
 		bool getFavoriteHub(int id, FavoriteHubEntry& entry) const;
-		bool setFavoriteHubWindowInfo(const string& server, const WindowInfo& wi);
-		bool getFavoriteHubWindowInfo(const string& server, WindowInfo& wi) const;
+		bool setFavoriteHubWindowInfo(const string& server, const HubWindowInfo& wi);
+		bool getFavoriteHubWindowInfo(const string& server, HubWindowInfo& wi) const;
 		bool setFavoriteHubPassword(const string& server, const string& nick, const string& password, bool addIfNotFound);
 		bool setFavoriteHubAutoConnect(const string& server, bool autoConnect);
 		bool setFavoriteHubAutoConnect(int id, bool autoConnect);

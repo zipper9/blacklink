@@ -204,11 +204,6 @@ class AdcCommand
 		bool hasFlag(uint16_t name, size_t start) const noexcept;
 		bool hasFlag(const char* name, size_t start) const noexcept;
 
-		static uint16_t toCode(const char* x) noexcept
-		{
-			return *reinterpret_cast<const uint16_t*>(x);
-		}
-
 		static string escape(const string& str, bool old) noexcept;
 		uint32_t getTo() const noexcept { return to; }
 		AdcCommand& setTo(const uint32_t sid) noexcept { to = sid; return *this; }

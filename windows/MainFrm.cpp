@@ -59,6 +59,7 @@
 #include "../GdiOle/GDIImage.h"
 #include "../client/SimpleStringTokenizer.h"
 #endif
+#include "../client/FavoriteManager.h"
 #include "../client/ClientManager.h"
 #include "../client/ConnectionManager.h"
 #include "../client/ConnectivityManager.h"

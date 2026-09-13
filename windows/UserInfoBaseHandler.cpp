@@ -4,6 +4,7 @@
 #include "HubFrame.h"
 #include "QueueFrame.h"
 #include "MenuHelper.h"
+#include "../client/FavoriteManager.h"
 #include "../client/ClientManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/FormatUtil.h"
