@@ -126,6 +126,7 @@ class ChatCtrl: public TextHostCtrl
 
 #ifdef BL_UI_FEATURE_EMOTICONS
 		IStorage* pStorage;
+		COLORREF backgroundColor;
 #endif
 
 		void initRichEditOle();
@@ -145,6 +146,7 @@ class ChatCtrl: public TextHostCtrl
 		bool getAutoScroll() const { return autoScroll; }
 		void invertAutoScroll();
 		void setAutoScroll(bool flag);
+		void themeChanged();
 
 		void setHubParam(const string& url, const string& nick);
 		const string& getHubHint() const { return hubHint; }
@@ -163,6 +165,7 @@ class ChatCtrl: public TextHostCtrl
 		volatile LONG refs;
 
 		void replaceObjects(tstring& s, int startIndex) const;
+		void updateBackgroundColor();
 
 		// IRichEditOleCallback implementation
 

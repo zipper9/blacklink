@@ -1202,6 +1202,7 @@ void BaseChatFrame::themeChanged()
 	CHARFORMAT2 cf = Colors::charFormat[Colors::TEXT_STYLE_LOG];
 	ctrlClient.SetCharFormat(cf, SCF_SELECTION);
 	ctrlClient.SetSel(cr);
+	ctrlClient.themeChanged();
 	addStatus(TSTRING(CHAT_THEME_CHANGED_MSG), true, false);
 }
 

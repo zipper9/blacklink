@@ -30,7 +30,7 @@ bool CImageDataObject::InsertObject(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 	// weak -- which is needed for links to embedding silent update.
 	if (sc != S_OK)
 	{
-		string error = "CImageDataObject::InsertBitmap, OLE OleSetContainedObject error = " + Util::toHexString(sc);
+		string error = "CImageDataObject::InsertObject, OLE OleSetContainedObject error = " + Util::toHexString(sc);
 		LogManager::message(error, false);
 		return false;
 	}
@@ -44,7 +44,7 @@ bool CImageDataObject::InsertObject(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 
 	if (sc != S_OK)
 	{
-		string error = "CImageDataObject::InsertBitmap, OLE GetUserClassID error = " + Util::toHexString(sc);
+		string error = "CImageDataObject::InsertObject, OLE GetUserClassID error = " + Util::toHexString(sc);
 		LogManager::message(error, false);
 		dcassert(0);
 		return false;
@@ -62,7 +62,7 @@ bool CImageDataObject::InsertObject(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 	sc = pRichEditOle->InsertObject(&reobject);
 	if (sc != S_OK)
 	{
-		string error = "CImageDataObject::InsertBitmap, OLE InsertObject error = " + Util::toHexString(sc);
+		string error = "CImageDataObject::InsertObject, OLE InsertObject error = " + Util::toHexString(sc);
 		LogManager::message(error, false);
 		dcassert(0);
 		dcassert(::IsWindow(hWnd));
@@ -74,6 +74,7 @@ bool CImageDataObject::InsertObject(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 	return true;
 }
 
+#if 0 // Not used
 void CImageDataObject::SetBitmap(HBITMAP hBitmap)
 {
 	dcassert(hBitmap);
@@ -110,92 +111,4 @@ IOleObject *CImageDataObject::GetOleObject(IOleClientSite *pOleClientSite, IStor
 	}
 	return pOleObject;
 }
-
-/*
-void CRichEditCtrlEx::OnInsertObject()
-{
-// CHECKME: 29.11.2004
-IRichEditOle *pRichEdit = NULL;
-pRichEdit = GetIRichEditOle();
-
-if (pRichEdit)
-{
-IOleClientSite *pOleClientSite = NULL;
-pRichEdit->GetClientSite(&pOleClientSite);
-
-if (pOleClientSite)
-{
-HRESULT hr = 0;
-
-COleInsertDialog dlg;
-if (dlg.DoModal() == IDOK)
-{
-LPLOCKBYTES lpLockBytes = NULL;
-hr = CreateILockBytesOnHGlobal(NULL, TRUE, &lpLockBytes);
-ASSERT(lpLockBytes != NULL);
-
-IStorage *pStorage = NULL;
-hr = StgCreateDocfileOnILockBytes(lpLockBytes, STGM_SHARE_EXCLUSIVE | STGM_CREATE | STGM_READWRITE, 0, &pStorage);
-
-if (pStorage)
-{
-IOleObject *pOleObject;
-switch(dlg.GetSelectionType())
-{
-case COleInsertDialog::createNewItem:
-OleCreate(dlg.GetClassID(), IID_IOleObject, OLERENDER_DRAW, NULL, pOleClientSite, pStorage, (void **)&pOleObject);
-break;
-
-case COleInsertDialog::insertFromFile:
-{
-CA2W oleStr(dlg.GetPathName());
-OleCreateFromFile(dlg.GetClassID(), oleStr, IID_IOleObject, OLERENDER_DRAW, NULL, pOleClientSite, pStorage, (void **)&pOleObject);
-}
-break;
-
-case COleInsertDialog::linkToFile:
-{
-CA2W oleStr(dlg.GetPathName());
-OleCreateLinkToFile(oleStr, IID_IOleObject, OLERENDER_DRAW, NULL, pOleClientSite, pStorage, (void **)&pOleObject);
-}
-break;
-}
-
-if (pOleObject != NULL)
-{
-hr = OleSetContainedObject(pOleObject, TRUE);
-ASSERT(hr == S_OK);
-
-CLSID clsid;
-pOleObject->GetUserClassID(&clsid);
-
-REOBJECT reobject;
-ZeroMemory(&reobject, sizeof(REOBJECT));
-reobject.cbStruct = sizeof(REOBJECT);
-reobject.cp = REO_CP_SELECTION;
-reobject.clsid = clsid;
-reobject.poleobj = pOleObject;
-reobject.pstg = pStorage;
-reobject.polesite = pOleClientSite;
-reobject.dvaspect = DVASPECT_CONTENT;
-reobject.dwFlags = REO_RESIZABLE;
-
-hr = pRichEdit->InsertObject(&reobject);
-ASSERT(hr == S_OK);
-
-pOleObject->Release();
-}
-
-pStorage->Release();
-}
-
-lpLockBytes->Release(); // ???
-}
-
-pOleClientSite->Release();
-}
-
-pRichEdit->Release();
-}
-}
-*/
+#endif

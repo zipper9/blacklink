@@ -1,7 +1,6 @@
 #include "stdafx.h"
-#include "../client/debug.h"
-
 #include "GDIImageOle.h"
+#include "../client/debug.h"
 #include <algorithm>
 
 // CGDIImageOle
@@ -23,15 +22,8 @@ CGDIImageOle::CGDIImageOle():
 	m_bIsDeleting(false),
 	m_bRegistered(false),
 	m_dwCurrentFrame(0),
-	m_dwW(0),
-	m_dwH(0),
-	m_hBackDC(nullptr),
-	m_clrBack(0),
-	m_backWidth(0),
-	m_backHeight(0)
+	m_clrBack(0)
 {
-	//m_bWindowOnly = TRUE;
-	//CalcExtent(m_sizeExtent);
 }
 
 HRESULT CGDIImageOle::FinalConstruct()
@@ -46,14 +38,12 @@ void CGDIImageOle::FinalRelease()
 	{
 		if (m_bRegistered)
 		{
-			m_pImage->UnregisterCallback(OnFrameChanged, (LPARAM)this);
+			m_pImage->unregisterCallback(OnFrameChanged, (LPARAM)this);
 			m_bRegistered = false;
 		}
-		m_pImage->DeleteBackDC(m_hBackDC);
-		m_pImage->Release();
+		m_pImage->release();
 		m_pImage = nullptr;
 	}
-	
 	//DeleteCriticalSection(&m_csAdviseSink);
 }
 
@@ -63,7 +53,7 @@ static DefinedTestRectValue TestRectInRect(RECT *pRect1, RECT *pRect2)
 {
 	RECT rcIntersect;
 	DefinedTestRectValue ret = TR_NOOVERLAP;
-	
+
 	if (IntersectRect(&rcIntersect, pRect1, pRect2))
 	{
 		if (EqualRect(&rcIntersect, pRect2))
@@ -71,7 +61,7 @@ static DefinedTestRectValue TestRectInRect(RECT *pRect1, RECT *pRect2)
 		else
 			ret = TR_INTERSECT;
 	}
-	
+
 	return ret;
 }
 
@@ -110,9 +100,9 @@ HRESULT CGDIImageOle::FireViewChangeEx(BOOL bEraseBackground)
 			*/
 			CComPtr<IOleInPlaceSite> spInPlaceSite;
 			m_spClientSite->QueryInterface(__uuidof(IOleInPlaceSite), (void **)&spInPlaceSite);
-			
+
 			HWND hwndParent = NULL;
-			
+
 			if (spInPlaceSite &&
 			    spInPlaceSite->GetWindow(&hwndParent) == S_OK &&
 			    hwndParent &&
@@ -123,14 +113,14 @@ HRESULT CGDIImageOle::FireViewChangeEx(BOOL bEraseBackground)
 				IOleInPlaceUIWindow *pInPlaceUIWindow = nullptr;
 				RECT rcPos, rcClip;
 				frameInfo.cb = sizeof(OLEINPLACEFRAMEINFO);
-				
+
 				if (spInPlaceSite->GetWindowContext(&pInPlaceFrame, &pInPlaceUIWindow, &rcPos, &rcClip, &frameInfo) == S_OK)
 				{
 					if (pInPlaceFrame) pInPlaceFrame->Release();
 					if (pInPlaceUIWindow) pInPlaceUIWindow->Release();
 
 					DefinedTestRectValue TestRect = TestRectInRect(&rcClip, &rcPos);
-					
+
 					if (TestRect == TR_CONTAIN)
 					{
 						// Object fully visible
@@ -139,11 +129,11 @@ HRESULT CGDIImageOle::FireViewChangeEx(BOOL bEraseBackground)
 					else if (TestRect == TR_INTERSECT)
 					{
 						// Object partially visible
-						
+
 						// [!] brain-ripper
 						// this implementation flickers smiles
 						::InvalidateRect(hwndParent, &rcPos, FALSE);
-						
+
 						/*
 						// [!] brain-ripper
 						// this implementation doesn't respect selection color
@@ -184,32 +174,32 @@ bool CGDIImageOle::SetImage(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackW
 	dcassert(!CGDIImage::isShutdown());
 	if (m_pImage)
 		return false;
-		
+
 	m_pImage = pImage;
-	
+
 	if (!m_pImage)
 		return false;
-		
-	m_pImage->AddRef();
-	
-	m_dwW = m_pImage->GetWidth();
-	m_dwH = m_pImage->GetHeight();
-	
-	SIZEL szPix = {0};
-	szPix.cx = m_dwW;
-	szPix.cy = m_dwH;
+
+	m_pImage->addRef();
+
+	int width = m_pImage->getWidth();
+	int height = m_pImage->getHeight();
+
+	SIZEL szPix;
+	szPix.cx = width;
+	szPix.cy = height;
 	SIZEL szHi;
 	AtlPixelToHiMetric(&szPix, &szHi);
 	m_sizeExtent.cx = szHi.cx;
 	m_sizeExtent.cy = szHi.cy;
-	
+
 	m_hCallbackWnd = hCallbackWnd;
 	m_dwUpdateMsg = dwUpdateMsg;
 	m_clrBack = clrBack;
-	
-	m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
+
+	m_pImage->registerCallback(OnFrameChanged, (LPARAM)this);
 	m_bRegistered = true;
-	
+
 	return true;
 }
 
@@ -227,38 +217,33 @@ STDMETHODIMP CGDIImageOle::put_Text(BSTR text)
 	return S_OK;
 }
 
+STDMETHODIMP CGDIImageOle::get_BackgroundColor(COLORREF *color)
+{
+	if (!color) return E_INVALIDARG;
+	*color = m_clrBack;
+	return S_OK;
+}
+
+STDMETHODIMP CGDIImageOle::put_BackgroundColor(COLORREF color)
+{
+	m_clrBack = color;
+	return S_OK;
+}
+
 HRESULT CGDIImageOle::OnDraw(ATL_DRAWINFO& di)
 {
 	if (!CGDIImage::isShutdown())
 	{
 		int width = di.prcBounds->right - di.prcBounds->left;
 		int height = di.prcBounds->bottom - di.prcBounds->top;
-		if (m_hBackDC && !(width == m_backWidth && height == m_backHeight))
-		{
-			m_pImage->DeleteBackDC(m_hBackDC);
-			m_hBackDC = nullptr;
-			m_backWidth = m_backHeight = 0;
-		}
-		if (!m_hBackDC)
-		{
-			m_hBackDC = m_pImage->CreateBackDC(di.hdcDraw, m_clrBack, width, height);
-			if (m_hBackDC)
-			{
-				m_backWidth = width;
-				m_backHeight = height;
-			}
-		}
-		m_pImage->Draw(di.hdcDraw,
-		               di.prcBounds->left,
-		               di.prcBounds->top,
-		               std::min(m_dwW, width),
-		               std::min(m_dwH, height), 0, 0,
-		               m_hBackDC, 0, 0, m_backWidth, m_backHeight);
-
+		HBRUSH hBrush = CreateSolidBrush(m_clrBack);
+		FillRect(di.hdcDraw, (const RECT *) di.prcBounds, hBrush);
+		DeleteObject(hBrush);
+		m_pImage->draw(di.hdcDraw, di.prcBounds->left, di.prcBounds->top, width, height, 0, 0);
 		if (!m_bRegistered)
 		{
 			// Object became visible
-			m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
+			m_pImage->registerCallback(OnFrameChanged, (LPARAM)this);
 			m_bRegistered = true;
 		}
 	}

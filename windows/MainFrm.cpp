@@ -3075,8 +3075,8 @@ LRESULT MainFrame::onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lP
 		return 0;
 	}
 #endif
-	pImage->DrawFrame();
-	pImage->Release();
+	pImage->drawFrame();
+	pImage->release();
 	return 0;
 }
 #endif // BL_UI_FEATURE_EMOTICONS

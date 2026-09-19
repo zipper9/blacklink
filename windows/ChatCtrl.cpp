@@ -55,6 +55,9 @@ ChatCtrl::ChatCtrl() : autoScroll(true), useChatCacheFlag(true), chatCacheSize(0
 	, totalEmoticons(0), pStorage(nullptr), refs(1)
 #endif
 {
+#ifdef BL_UI_FEATURE_EMOTICONS
+	backgroundColor = Colors::charFormat[Colors::TEXT_STYLE_NORMAL].crBackColor;
+#endif
 }
 
 ChatCtrl::~ChatCtrl()
@@ -784,7 +787,37 @@ void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 		pos = nextPos + shift;
 	}
 }
+
+void ChatCtrl::updateBackgroundColor()
+{
+	if (!pRichEditOle) return;
+	LONG count = pRichEditOle->GetObjectCount();
+	for (LONG index = 0; index < count; index++)
+	{
+		REOBJECT ro;
+		memset(&ro, 0, sizeof(ro));
+		ro.cbStruct = sizeof(ro);
+		if (FAILED(pRichEditOle->GetObject(index, &ro, REO_GETOBJ_POLEOBJ)))
+			break;
+		IGDIImage* pImage = nullptr;
+		if (SUCCEEDED(ro.poleobj->QueryInterface(IID_IGDIImage, (void**) &pImage)))
+		{
+			pImage->put_BackgroundColor(backgroundColor);
+			pImage->Release();
+		}
+	}
+}
 #endif
+
+void ChatCtrl::themeChanged()
+{
+#ifdef BL_UI_FEATURE_EMOTICONS
+	COLORREF color = Colors::charFormat[Colors::TEXT_STYLE_NORMAL].crBackColor;
+	if (color == backgroundColor) return;
+	backgroundColor = color;
+	updateBackgroundColor();
+#endif
+}
 
 bool ChatCtrl::copyLine()
 {

@@ -23,8 +23,8 @@ Emoticon::Emoticon() :
 
 Emoticon::~Emoticon()
 {
-	if (imageGif) imageGif->Release();
-	if (imageBmp) imageBmp->Release();
+	if (imageGif) imageGif->release();
+	if (imageBmp) imageBmp->release();
 }
 
 string Emoticon::getGifPath() const
@@ -81,7 +81,7 @@ void Emoticon::tryLoadGif(HWND callbackWnd, UINT callbackMsg)
 		return;
 	}
 	LogManager::message("Can't load GIF image from " + path, false);
-	imageGif->Release();
+	imageGif->release();
 	imageGif = nullptr;
 	loadingError |= MASK_GIF;
 }
@@ -97,7 +97,7 @@ void Emoticon::tryLoadBmp(HWND callbackWnd, UINT callbackMsg)
 		return;
 	}
 	LogManager::message("Can't load BMP image from " + path, false);
-	imageBmp->Release();
+	imageBmp->release();
 	imageBmp = nullptr;
 	loadingError |= MASK_BMP;
 }

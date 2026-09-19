@@ -9,8 +9,7 @@
 #error "Single-threaded COM objects are not properly supported on Windows CE platform, such as the Windows Mobile platforms that do not include full DCOM support. Define _CE_ALLOW_SINGLE_THREADED_OBJECTS_IN_MTA to force ATL to support creating single-thread COM object's and allow use of it's single-threaded COM object implementations. The threading model in your rgs file was set to 'Free' as that is the only threading model supported in non DCOM Windows CE platforms."
 #endif
 
-
-EXTERN_C const IID IID_IGDIImageDeleteNotify;
+extern "C" const IID IID_IGDIImageDeleteNotify;
 
 class IGDIImageDeleteNotify: public IUnknown
 {
@@ -55,17 +54,17 @@ class ATL_NO_VTABLE CGDIImageOle :
 {
 	public:
 		CGDIImageOle();
-		
+
 		DECLARE_OLEMISC_STATUS(OLEMISC_RECOMPOSEONRESIZE |
 		                       OLEMISC_CANTLINKINSIDE |
 		                       OLEMISC_INSIDEOUT |
 		                       OLEMISC_ACTIVATEWHENVISIBLE |
 		                       OLEMISC_SETCLIENTSITEFIRST
 		                      )
-		                      
+
 		DECLARE_REGISTRY_RESOURCEID(IDR_GDIIMAGE)
-		
-		
+
+
 		BEGIN_COM_MAP(CGDIImageOle)
 		COM_INTERFACE_ENTRY(IGDIImage)
 		COM_INTERFACE_ENTRY(IDispatch)
@@ -95,7 +94,7 @@ class ATL_NO_VTABLE CGDIImageOle :
 #endif
 		COM_INTERFACE_ENTRY_IID(IID_IGDIImageDeleteNotify, IGDIImageDeleteNotify)
 		END_COM_MAP()
-		
+
 		BEGIN_PROP_MAP(CGDIImageOle)
 		PROP_DATA_ENTRY("_cx", m_sizeExtent.cx, VT_UI4)
 		PROP_DATA_ENTRY("_cy", m_sizeExtent.cy, VT_UI4)
@@ -103,8 +102,8 @@ class ATL_NO_VTABLE CGDIImageOle :
 		// PROP_ENTRY_TYPE("Property Name", dispid, clsid, vtType)
 		// PROP_PAGE(CLSID_StockColorPage)
 		END_PROP_MAP()
-		
-		
+
+
 		BEGIN_MSG_MAP(CGDIImageOle)
 #ifdef CTRL_WINDOWED
 		CHAIN_MSG_MAP(CComCompositeControl<CGDIImageOle>)
@@ -121,7 +120,7 @@ class ATL_NO_VTABLE CGDIImageOle :
 		BEGIN_SINK_MAP(CGDIImageOle)
 		//Make sure the Event Handlers have __stdcall calling convention
 		END_SINK_MAP()
-		
+
 // ISupportsErrorInfo
 		STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid)
 		{
@@ -129,7 +128,7 @@ class ATL_NO_VTABLE CGDIImageOle :
 			{
 				&IID_IGDIImage,
 			};
-			
+
 			for (int i = 0; i < _countof(arr); i++)
 			{
 				if (InlineIsEqualGUID(*arr[i], riid))
@@ -137,46 +136,46 @@ class ATL_NO_VTABLE CGDIImageOle :
 			}
 			return S_FALSE;
 		}
-		
+
 		/*
 		STDMETHOD(SetAdvise)(DWORD aspects, DWORD advf, IAdviseSink* pAdvSink)
 		{
 		    ATLTRACE(atlTraceControls,2,_T("IViewObjectExImpl::SetAdvise\n"));
-		
+
 		    EnterCriticalSection(&m_csAdviseSink);
 		    m_spAdviseSink = pAdvSink;
 		    LeaveCriticalSection(&m_csAdviseSink);
-		
+
 		    return S_OK;
 		}
 		*/
-		
+
 		static HRESULT WINAPI QueryViewObject(void* pv, REFIID riid, LPVOID* ppv, DWORD dw);
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		
+
 // IViewObjectEx
 		DECLARE_VIEW_STATUS(0)
-		
+
 // IGDIImage
 	public:
 		HRESULT OnDraw(ATL_DRAWINFO& di);
-		
+
 		void SetDelete()
 		{
 			m_bIsDeleting = true;
 		}
-		
-		enum { IDD = 100 };
-		
+
 		DECLARE_PROTECT_FINAL_CONSTRUCT()
-		
+
 		HRESULT FinalConstruct();
-		
+
 		void FinalRelease();
 		bool SetImage(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackWnd, DWORD dwUpdateMsg);
-		
+
 		STDMETHOD(get_Text)(BSTR *text);
 		STDMETHOD(put_Text)(BSTR text);
+		STDMETHOD(get_BackgroundColor)(COLORREF *color);
+		STDMETHOD(put_BackgroundColor)(COLORREF color);
 
 	private:
 		CGDIImage *m_pImage;
@@ -184,22 +183,17 @@ class ATL_NO_VTABLE CGDIImageOle :
 
 		UINT m_dwCurrentFrame;
 		UINT m_FrameCount;
-		int m_dwW;
-		int m_dwH;
-		
+
 		HWND m_hCallbackWnd;
 		DWORD m_dwUpdateMsg;
-		
-		HDC m_hBackDC;
+
 		COLORREF m_clrBack;
-		int m_backWidth;
-		int m_backHeight;
-		
+
 		bool m_bIsDeleting: 1;
 		bool m_bRegistered: 1;
-		
+
 		//CRITICAL_SECTION m_csAdviseSink;
-		
+
 		HRESULT FireViewChangeEx(BOOL bEraseBackground);
 		static bool __cdecl OnFrameChanged(CGDIImage *pImage, LPARAM lParam);
 };

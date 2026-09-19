@@ -25,8 +25,8 @@ class CAnimatedButton: public CWindowImpl<CAnimatedButton, CButton>
 		int hSrc;
 		int width, height;
 
-		HDC hBackDC;
 		HTHEME hTheme;
+		class BackingStore* backingStore;
 
 	public:
 		BEGIN_MSG_MAP(CAnimatedButton)
@@ -36,10 +36,10 @@ class CAnimatedButton: public CWindowImpl<CAnimatedButton, CButton>
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_THEMECHANGED, onThemeChanged)
 		END_MSG_MAP()
-		
+
 		explicit CAnimatedButton(CGDIImage *pImage);
 		~CAnimatedButton();
-		
+
 		LRESULT onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onErase(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -57,7 +57,7 @@ class EmoticonsDlg : public CDialogImpl<EmoticonsDlg>
 {
 	public:
 		enum { IDD = IDD_EMOTICONS_DLG };
-		
+
 		BEGIN_MSG_MAP(EmoticonsDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
@@ -78,7 +78,7 @@ class EmoticonsDlg : public CDialogImpl<EmoticonsDlg>
 			return 0;
 		}
 		~EmoticonsDlg();
-		
+
 		tstring result;
 		CRect pos;
 		bool isError = false;
@@ -86,11 +86,11 @@ class EmoticonsDlg : public CDialogImpl<EmoticonsDlg>
 
 	private:
 		CToolTipCtrl tooltip;
-		
+
 		static WNDPROC g_MFCWndProc;
 		static LRESULT CALLBACK NewWndProc(HWND, UINT, WPARAM, LPARAM);
 		static EmoticonsDlg* g_pDialog;
-		
+
 		std::vector<CAnimatedButton*> buttonList;
 		void clearButtons();
 };

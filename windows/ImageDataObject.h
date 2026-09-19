@@ -117,11 +117,11 @@ class CImageDataObject : IDataObject
 			return E_NOTIMPL;
 		}
 		
+#if 0
 		// Some Other helper functions
-		
 		void SetBitmap(HBITMAP hBitmap);
 		IOleObject *GetOleObject(IOleClientSite *pOleClientSite, IStorage *pStorage);
-		
+#endif	
 };
 
 #endif // !defined(DCPLUSPLUS_IMAGEDATAOBJECT_H)

@@ -46,13 +46,13 @@ void CGDIImage::stopTimers()
 		for (CGDIImage* image : imageSet)
 		{
 			imageVec.push_back(image);
-			image->AddRef();
+			image->addRef();
 		}
 	}
 	for (CGDIImage* image : imageVec)
 	{
 		destroyTimer(image, INVALID_HANDLE_VALUE);
-		image->Release();
+		image->release();
 	}
 }
 
@@ -66,11 +66,11 @@ tstring CGDIImage::getLoadedList()
 		if (!res.empty()) res += _T('\n');
 		res += _T("0x") + Util::toHexStringT(image) + _T(": ");
 		res += image->loadedFileName;
-		res += _T(" refs=") + Util::toStringT(image->m_lRef);
-		res += _T(" timer=") + Util::toHexStringT(image->m_hTimer);
-		EnterCriticalSection(&image->m_csCallback);
-		size_t callbacks = image->m_Callbacks.size();
-		LeaveCriticalSection(&image->m_csCallback);
+		res += _T(" refs=") + Util::toStringT(image->ref);
+		res += _T(" timer=") + Util::toHexStringT(image->hTimer);
+		EnterCriticalSection(&image->csCallback);
+		size_t callbacks = image->callbacks.size();
+		LeaveCriticalSection(&image->csCallback);
 		res += _T(" callbacks=") + Util::toStringT(callbacks);
 	}
 	return res;
@@ -92,30 +92,28 @@ static void updateStats(size_t callbacks)
 #endif
 
 CGDIImage::CGDIImage(const WCHAR* fileName):
-	m_dwFramesCount(0), m_pImage(nullptr), m_pItem(nullptr), m_hTimer(nullptr), m_lRef(1),
-	m_hCallbackWnd(nullptr), m_dwCallbackMsg(0),
-	m_dwWidth(0),
-	m_dwHeight(0),
-	m_dwCurrentFrame(0)
+	numFrames(0), image(nullptr), propItem(nullptr), hTimer(nullptr), ref(1),
+	hWndCallback(nullptr), callbackMsg(0),
+	width(0), height(0), currentFrame(0)
 {
 	dcassert(!isShutdown());
-	InitializeCriticalSection(&m_csCallback);
-	m_pImage = new Gdiplus::Image(fileName);
-	if (m_pImage->GetLastStatus() != Gdiplus::Ok)
+	InitializeCriticalSection(&csCallback);
+	image = new Gdiplus::Image(fileName);
+	if (image->GetLastStatus() != Gdiplus::Ok)
 	{
-		delete m_pImage;
-		m_pImage = nullptr;
+		delete image;
+		image = nullptr;
 		return;
 	}
 #ifdef _DEBUG
 	loadedFileName = fileName;
 #endif
-	m_dwWidth = m_pImage->GetWidth();
-	m_dwHeight = m_pImage->GetHeight();
-	
-	if (m_pImage->GetType() == Gdiplus::ImageTypeBitmap)
+	width = image->GetWidth();
+	height = image->GetHeight();
+
+	if (image->GetType() == Gdiplus::ImageTypeBitmap)
 	{
-		Gdiplus::Bitmap* bitmap = static_cast<Gdiplus::Bitmap*>(m_pImage);
+		Gdiplus::Bitmap* bitmap = static_cast<Gdiplus::Bitmap*>(image);
 		if (bitmap->GetFlags() & Gdiplus::ImageFlagsHasRealDPI)
 		{
 			HDC hdc = GetDC(nullptr);
@@ -127,26 +125,27 @@ CGDIImage::CGDIImage(const WCHAR* fileName):
 		}
 		applyMask(bitmap);
 	}
-	if (UINT TotalBuffer = m_pImage->GetPropertyItemSize(PropertyTagFrameDelay))
+	UINT propBufSize = image->GetPropertyItemSize(PropertyTagFrameDelay);
+	if (propBufSize)
 	{
-		m_pItem = (Gdiplus::PropertyItem*)new char[TotalBuffer]; //-V121
-		memset(m_pItem, 0, TotalBuffer); //-V106
-		m_dwCurrentFrame = 0;
-		m_dwWidth  = 0;
-		m_dwHeight = 0;
-		if (!m_pImage->GetPropertyItem(PropertyTagFrameDelay, TotalBuffer, m_pItem))
+		propItem = (Gdiplus::PropertyItem*) new char[propBufSize];
+		memset(propItem, 0, propBufSize);
+		currentFrame = 0;
+		width  = 0;
+		height = 0;
+		if (!image->GetPropertyItem(PropertyTagFrameDelay, propBufSize, propItem))
 		{
-			if (SelectActiveFrame(m_dwCurrentFrame))
-				if (const DWORD dwFrameCount = GetFrameCount())
+			if (selectActiveFrame(currentFrame))
+				if (const int frameCount = getFrameCount())
 				{
 					// [!] brain-ripper
 					// GDI+ seemed to have bug,
 					// and for some GIF's returned zero delay for all frames.
 					// Make such a workaround: take 50ms delay on every frame
 					bool bHaveDelay = false;
-					for (DWORD i = 0; i < dwFrameCount; i++)
+					for (int i = 0; i < frameCount; i++)
 					{
-						if (GetFrameDelay(i) > 0)
+						if (getFrameDelay(i) > 0)
 						{
 							bHaveDelay = true;
 							break;
@@ -154,37 +153,33 @@ CGDIImage::CGDIImage(const WCHAR* fileName):
 					}
 					if (!bHaveDelay)
 					{
-						for (DWORD i = 0; i < dwFrameCount; i++)
-						{
-							((UINT*)m_pItem[0].value)[i] = 5; //-V108
-						}
+						for (int i = 0; i < frameCount; i++)
+							((UINT*) propItem[0].value)[i] = 5;
 					}
 				}
 			// [!] brain-ripper
-			// Strange bug - m_pImage->GetWidth() and m_pImage->GetHeight()
+			// Strange bug - image->GetWidth() and image->GetHeight()
 			// sometimes returns zero, even object successfuly loaded.
 			// Cache this values here to return correct values later
-			m_dwWidth = m_pImage->GetWidth();
-			m_dwHeight = m_pImage->GetHeight();
+			width = image->GetWidth();
+			height = image->GetHeight();
 		}
 		else
-		{
 			freePropItem();
-		}
 	}
 }
 
 CGDIImage::~CGDIImage()
 {
-	_ASSERTE(m_Callbacks.empty());
-	if (m_hTimer)
+	_ASSERTE(callbacks.empty());
+	if (hTimer)
 	{
 		destroyTimer(this, INVALID_HANDLE_VALUE);
-		// INVALID_HANDLE_VALUE:  wait for any running timer callback functions to complete 
+		// INVALID_HANDLE_VALUE:  wait for any running timer callback functions to complete
 	}
-	delete m_pImage;
+	delete image;
 	freePropItem();
-	DeleteCriticalSection(&m_csCallback);
+	DeleteCriticalSection(&csCallback);
 }
 
 void CGDIImage::applyMask(Gdiplus::Bitmap* bitmap)
@@ -208,103 +203,84 @@ void CGDIImage::applyMask(Gdiplus::Bitmap* bitmap)
 	bitmap->UnlockBits(&bitmapData);
 }
 
-void CGDIImage::Draw(HDC hDC, int xDst, int yDst, int wSrc, int hSrc, int xSrc, int ySrc, HDC hBackDC, int xBk, int yBk, int wBk, int hBk)
+void CGDIImage::draw(HDC hDC, int xDst, int yDst, int wSrc, int hSrc, int xSrc, int ySrc)
 {
-	if (hBackDC)
-	{
-		BitBlt(hBackDC, xBk, yBk, wBk, hBk, NULL, 0, 0, PATCOPY);
-		Gdiplus::Graphics Graph(hBackDC);
-		Graph.DrawImage(m_pImage, xBk, yBk, xSrc, ySrc, wSrc, hSrc, Gdiplus::UnitPixel);
-		BitBlt(hDC, xDst, yDst, wBk, hBk, hBackDC, 0, 0, SRCCOPY);
-	}
-	else
-	{
-		Gdiplus::Graphics Graph(hDC);
-		Graph.DrawImage(m_pImage, xDst, yDst, xSrc, ySrc, wSrc, hSrc, Gdiplus::UnitPixel);
-	}
+	Gdiplus::Graphics Graph(hDC);
+	Graph.DrawImage(image, xDst, yDst, xSrc, ySrc, wSrc, hSrc, Gdiplus::UnitPixel);
 }
 
-DWORD CGDIImage::GetFrameDelay(DWORD dwFrame)
+unsigned CGDIImage::getFrameDelay(int frameNum) const
 {
-	if (m_pItem)
-		return ((UINT*)m_pItem[0].value)[dwFrame] * 10;
+	if (propItem)
+		return ((UINT*) propItem[0].value)[frameNum] * 10;
 	else
 		return 5;
 }
 
-bool CGDIImage::SelectActiveFrame(DWORD dwFrame)
+bool CGDIImage::selectActiveFrame(int frameNum)
 {
 	dcassert(!isShutdown());
 	if (!isShutdown())
 	{
 		static const GUID g_Guid = Gdiplus::FrameDimensionTime;
-		if (m_pImage) // crash https://drdump.com/DumpGroup.aspx?DumpGroupID=230505&Login=guest
-			m_pImage->SelectActiveFrame(&g_Guid, dwFrame); // [1] https://www.box.net/shared/x4tgntvw818gzd274nek
+		if (image)
+			image->SelectActiveFrame(&g_Guid, frameNum);
 		return true;
-		/* [!]TODO
-		if(m_pImage)
-		return m_pImage->SelectActiveFrame(&g_Guid, dwFrame) == Ok;
-		else
-		return false;
-		*/
 	}
-	else
-	{
-		return false;
-	}
+	return false;
 }
 
-DWORD CGDIImage::GetFrameCount()
+int CGDIImage::getFrameCount()
 {
 	dcassert(!isShutdown());
-	if (m_dwFramesCount == 0)
+	if (numFrames == 0)
 	{
 		//First of all we should get the number of frame dimensions
 		//Images considered by GDI+ as:
 		//frames[animation_frame_index][how_many_animation];
-		if (const UINT count = m_pImage->GetFrameDimensionsCount())
+		if (const UINT count = image->GetFrameDimensionsCount())
 		{
 			//Now we should get the identifiers for the frame dimensions
 			std::vector<GUID> l_pDimensionIDs(count); //-V121
-			m_pImage->GetFrameDimensionsList(&l_pDimensionIDs[0], count);
+			image->GetFrameDimensionsList(&l_pDimensionIDs[0], count);
 			//For gif image , we only care about animation set#0
-			m_dwFramesCount = m_pImage->GetFrameCount(&l_pDimensionIDs[0]);
+			numFrames = image->GetFrameCount(&l_pDimensionIDs[0]);
 		}
 	}
-	return m_dwFramesCount;
+	return numFrames;
 }
 
-void CGDIImage::DrawFrame()
+void CGDIImage::drawFrame()
 {
 	dcassert(!isShutdown());
-	
-	EnterCriticalSection(&m_csCallback);
-	for (auto i = m_Callbacks.cbegin(); i != m_Callbacks.cend(); ++i)
+
+	EnterCriticalSection(&csCallback);
+	for (auto i = callbacks.cbegin(); i != callbacks.cend(); ++i)
 	{
 		if (!i->pOnFrameChangedProc(this, i->lParam))
 		{
-			i = m_Callbacks.erase(i);
-			if (i == m_Callbacks.end())
+			i = callbacks.erase(i);
+			if (i == callbacks.end())
 				break;
 		}
 	}
-	LeaveCriticalSection(&m_csCallback);
+	LeaveCriticalSection(&csCallback);
 }
 
 void CGDIImage::destroyTimer(CGDIImage *pGDIImage, HANDLE completionEvent)
 {
-	EnterCriticalSection(&pGDIImage->m_csCallback);
-	if (pGDIImage->m_hTimer)
+	EnterCriticalSection(&pGDIImage->csCallback);
+	if (pGDIImage->hTimer)
 	{
-		if (!DeleteTimerQueueTimer(NULL, pGDIImage->m_hTimer, completionEvent))
+		if (!DeleteTimerQueueTimer(NULL, pGDIImage->hTimer, completionEvent))
 		{
 			auto result = GetLastError();
 			if (result != ERROR_IO_PENDING)
 				dcassert(0);
 		}
-		pGDIImage->m_hTimer = NULL;
+		pGDIImage->hTimer = NULL;
 	}
-	LeaveCriticalSection(&pGDIImage->m_csCallback);
+	LeaveCriticalSection(&pGDIImage->csCallback);
 }
 
 void CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
@@ -315,47 +291,42 @@ void CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 		if (isShutdown())
 		{
 			destroyTimer(pGDIImage, NULL);
-			pGDIImage->Release();
+			pGDIImage->release();
 			return;
 		}
 #ifdef DEBUG_GDI_IMAGE
 		if (checkImage(pGDIImage))
 		{
 #endif
-			if (pGDIImage->SelectActiveFrame(pGDIImage->m_dwCurrentFrame)) //Change Active frame
+			if (pGDIImage->selectActiveFrame(pGDIImage->currentFrame)) //Change Active frame
 			{
-				DWORD dwDelay = pGDIImage->GetFrameDelay(pGDIImage->m_dwCurrentFrame);
-				if (dwDelay == 0)
-					dwDelay++;
+				unsigned delay = pGDIImage->getFrameDelay(pGDIImage->currentFrame);
+				if (delay == 0)
+					delay++;
 				destroyTimer(pGDIImage, NULL);
-				if (pGDIImage->m_hCallbackWnd)
+				if (pGDIImage->hWndCallback)
 				{
 					// We should call DrawFrame in context of window thread
-					pGDIImage->AddRef();
-					SendMessage(pGDIImage->m_hCallbackWnd, pGDIImage->m_dwCallbackMsg, 0, reinterpret_cast<LPARAM>(pGDIImage));
+					pGDIImage->addRef();
+					SendMessage(pGDIImage->hWndCallback, pGDIImage->callbackMsg, 0, reinterpret_cast<LPARAM>(pGDIImage));
 				}
 				else
-				{
-					pGDIImage->DrawFrame();
-				}
+					pGDIImage->drawFrame();
 #ifdef DEBUG_GDI_IMAGE
 				if (checkImage(pGDIImage))
 				{
 #endif
 					// Move to the next frame
-					if (pGDIImage->m_dwFramesCount)
+					if (pGDIImage->numFrames)
+						pGDIImage->currentFrame = (pGDIImage->currentFrame + 1) % pGDIImage->numFrames;
+					EnterCriticalSection(&pGDIImage->csCallback);
+					if (!pGDIImage->callbacks.empty() && !isShutdown() && !pGDIImage->hTimer)
 					{
-						pGDIImage->m_dwCurrentFrame++;
-						pGDIImage->m_dwCurrentFrame %= pGDIImage->m_dwFramesCount;
+						pGDIImage->addRef();
+						if (!CreateTimerQueueTimer(&pGDIImage->hTimer, NULL, OnTimer, pGDIImage, delay, 0, WT_EXECUTEDEFAULT))
+							pGDIImage->release();
 					}
-					EnterCriticalSection(&pGDIImage->m_csCallback);
-					if (!pGDIImage->m_Callbacks.empty() && !isShutdown() && !pGDIImage->m_hTimer)
-					{
-						pGDIImage->AddRef();
-						if (!CreateTimerQueueTimer(&pGDIImage->m_hTimer, NULL, OnTimer, pGDIImage, dwDelay, 0, WT_EXECUTEDEFAULT))
-							pGDIImage->Release();
-					}
-					LeaveCriticalSection(&pGDIImage->m_csCallback);
+					LeaveCriticalSection(&pGDIImage->csCallback);
 #ifdef DEBUG_GDI_IMAGE
 				}
 #endif
@@ -363,88 +334,55 @@ void CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 #ifdef DEBUG_GDI_IMAGE
 		}
 #endif
-		pGDIImage->Release();
+		pGDIImage->release();
 	}
 }
 
-void CGDIImage::RegisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lParam)
+void CGDIImage::registerCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lParam)
 {
 	dcassert(!isShutdown());
-	
-	if (GetFrameCount() > 1)
+
+	if (getFrameCount() > 1)
 	{
-		EnterCriticalSection(&m_csCallback);
-		m_Callbacks.insert(CALLBACK_STRUCT(pOnFrameChangedProc, lParam));
-		if (!m_hTimer)
+		EnterCriticalSection(&csCallback);
+		callbacks.insert(CALLBACK_STRUCT(pOnFrameChangedProc, lParam));
+		if (!hTimer)
 		{
-			AddRef();
-			if (!CreateTimerQueueTimer(&m_hTimer, NULL, OnTimer, this, 0, 0, WT_EXECUTEDEFAULT))
-				Release();
+			addRef();
+			if (!CreateTimerQueueTimer(&hTimer, NULL, OnTimer, this, 0, 0, WT_EXECUTEDEFAULT))
+				release();
 		}
 #ifdef DEBUG_GDI_IMAGE
-		updateStats(m_Callbacks.size());
+		updateStats(callbacks.size());
 #endif
-		LeaveCriticalSection(&m_csCallback);
+		LeaveCriticalSection(&csCallback);
 	}
 }
 
-void CGDIImage::UnregisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lParam)
+void CGDIImage::unregisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lParam)
 {
 	if (isShutdown())
 	{
-		EnterCriticalSection(&m_csCallback);
-		m_Callbacks.clear();
-		LeaveCriticalSection(&m_csCallback);
+		EnterCriticalSection(&csCallback);
+		callbacks.clear();
+		LeaveCriticalSection(&csCallback);
 	}
 	else
 	{
-		if (GetFrameCount() > 1)
+		if (getFrameCount() > 1)
 		{
-			EnterCriticalSection(&m_csCallback);
-			tCALLBACK::iterator i = m_Callbacks.find(CALLBACK_STRUCT(pOnFrameChangedProc, lParam));
-			if (i != m_Callbacks.end())
+			EnterCriticalSection(&csCallback);
+			CallbackSet::iterator i = callbacks.find(CALLBACK_STRUCT(pOnFrameChangedProc, lParam));
+			if (i != callbacks.end())
 			{
-				m_Callbacks.erase(i);
+				callbacks.erase(i);
 #ifdef DEBUG_GDI_IMAGE
-				updateStats(m_Callbacks.size());
+				updateStats(callbacks.size());
 #endif
 			}
-			LeaveCriticalSection(&m_csCallback);
+			LeaveCriticalSection(&csCallback);
 		}
 	}
-}
-
-HDC CGDIImage::CreateBackDC(HDC displayDC, COLORREF clrBack, int width, int height)
-{
-	HDC hDC = nullptr;
-	if (m_pImage && displayDC)
-	{
-		hDC = CreateCompatibleDC(displayDC);
-		if (hDC)
-		{
-			::SaveDC(hDC);
-			HBITMAP hBitmap = CreateCompatibleBitmap(displayDC, width, height);
-			if (hBitmap)
-			{
-				SelectObject(hDC, hBitmap);
-				HBRUSH hBrush = CreateSolidBrush(clrBack);
-				if (hBrush) SelectObject(hDC, hBrush);
-			}
-		}
-	}
-	return hDC;
-}
-
-void CGDIImage::DeleteBackDC(HDC hBackDC)
-{
-	HBITMAP hBmp = (HBITMAP)GetCurrentObject(hBackDC, OBJ_BITMAP);
-	HBRUSH hBrush = (HBRUSH)GetCurrentObject(hBackDC, OBJ_BRUSH);
-
-	RestoreDC(hBackDC, -1);
-
-	DeleteDC(hBackDC);
-	DeleteObject(hBmp);
-	DeleteObject(hBrush);
 }
 
 CGDIImage *CGDIImage::createInstance(const WCHAR* fileName)
@@ -457,9 +395,9 @@ CGDIImage *CGDIImage::createInstance(const WCHAR* fileName)
 	return image;
 }
 
-LONG CGDIImage::Release()
+LONG CGDIImage::release()
 {
-	const LONG lRef = InterlockedDecrement(&m_lRef);
+	const LONG lRef = InterlockedDecrement(&ref);
 	dcassert(lRef >= 0);
 	if (lRef == 0)
 	{
@@ -474,12 +412,12 @@ LONG CGDIImage::Release()
 
 void CGDIImage::setCallback(HWND hwnd, UINT message)
 {
-	m_hCallbackWnd = hwnd;
-	m_dwCallbackMsg = message;
+	hWndCallback = hwnd;
+	callbackMsg = message;
 }
 
 void CGDIImage::freePropItem()
 {
-	delete[] (char*) m_pItem;
-	m_pItem = nullptr;
+	delete[] (char*) propItem;
+	propItem = nullptr;
 }

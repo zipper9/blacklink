@@ -3,6 +3,7 @@
 #ifdef BL_UI_FEATURE_EMOTICONS
 #include "EmoticonsDlg.h"
 #include "Emoticons.h"
+#include "BackingStore.h"
 #include "WinUtil.h"
 #include "UserMessages.h"
 #include "ConfUI.h"
@@ -64,8 +65,8 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			CGDIImage* pImage = icon->getImage(useAnimation, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
 			if (pImage)
 			{
-				int w = pImage->GetWidth();
-				int h = pImage->GetHeight();
+				int w = pImage->getWidth();
+				int h = pImage->getHeight();
 				if (w && h)
 				{
 					sw += w * w;
@@ -81,11 +82,11 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			EndDialog(IDCANCEL);
 			return 0;
 		}
-		
+
 		int i = (int) sqrt(double(numberOfIcons));
 		int nXfor = i;
 		int nYfor = i;
-		
+
 		if (i * i != numberOfIcons)
 		{
 			nXfor = i + 1;
@@ -95,11 +96,11 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		// Get mean square of all icon dimensions
 		sw = (int) sqrt((double) sw / numberOfIcons);
 		sh = (int) sqrt((double) sh / numberOfIcons);
-		
+
 		pos.bottom = pos.top - 3;
 		pos.left = pos.right - nXfor * (sw + BUTTON_SPACE) - 2;
 		pos.top = pos.bottom - nYfor * (sh + BUTTON_SPACE) - 2;
-		
+
 		// [+] brain-ripper
 		// Fit window in screen's work area
 		RECT rcWorkArea;
@@ -124,7 +125,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			pos.bottom += rcWorkArea.top - pos.top;
 			pos.top = rcWorkArea.top;
 		}
-		
+
 		MoveWindow(pos);
 
 		tooltip.Create(EmoticonsDlg::m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
@@ -137,7 +138,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			Emoticon* icon = icons[i];
 			if (icon->isDuplicate() || icon->isHidden()) continue;
 			CGDIImage *pImage = icon->getImage(useAnimation, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
-			if (pImage && pImage->GetWidth() && pImage->GetHeight())
+			if (pImage && pImage->getWidth() && pImage->getHeight())
 			{
 				pos.left = x * (sw + BUTTON_SPACE);
 				pos.top = y * (sh + BUTTON_SPACE);
@@ -217,7 +218,7 @@ EmoticonsDlg::~EmoticonsDlg()
 }
 
 CAnimatedButton::CAnimatedButton(CGDIImage *image):
-	image(image), initialized(false), hBackDC(nullptr)
+	image(image), initialized(false)
 {
 	xBk = 0;
 	yBk = 0;
@@ -227,9 +228,10 @@ CAnimatedButton::CAnimatedButton(CGDIImage *image):
 	hSrc = 0;
 	height = width = 0;
 	hTheme = nullptr;
+	backingStore = nullptr;
 
 	if (image)
-		image->AddRef();
+		image->addRef();
 }
 
 CAnimatedButton::~CAnimatedButton()
@@ -237,6 +239,7 @@ CAnimatedButton::~CAnimatedButton()
 	BOOL unused;
 	onClose(0, 0, 0, unused);
 	if (hTheme) CloseThemeData(hTheme);
+	if (backingStore) backingStore->release();
 }
 
 bool CAnimatedButton::OnFrameChanged(CGDIImage *pImage, LPARAM lParam)
@@ -266,8 +269,8 @@ LRESULT CAnimatedButton::onCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL&
 		width = rect.right - rect.left;
 		height = rect.bottom - rect.top;
 
-		int imageWidth = image->GetWidth();
-		int imageHeight = image->GetHeight();
+		int imageWidth = image->getWidth();
+		int imageHeight = image->getHeight();
 
 		int offsetX = (width - imageWidth) / 2;
 		int offsetY = (height - imageHeight) / 2;
@@ -277,7 +280,7 @@ LRESULT CAnimatedButton::onCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL&
 		xSrc = ySrc = 0;
 		wSrc = imageWidth;
 		hSrc = imageHeight;
-		
+
 		if (offsetX < BUTTON_PADDING)
 		{
 			xSrc = BUTTON_PADDING - offsetX;
@@ -303,10 +306,10 @@ LRESULT CAnimatedButton::onCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL&
 		if (!hTheme)
 			hTheme = OpenThemeData(m_hWnd, L"BUTTON");
 
-		image->RegisterCallback(OnFrameChanged, reinterpret_cast<LPARAM>(this));
+		image->registerCallback(OnFrameChanged, reinterpret_cast<LPARAM>(this));
 		initialized = true;
 	}
-	
+
 	return 0;
 }
 
@@ -320,11 +323,8 @@ LRESULT CAnimatedButton::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	if (image)
 	{
 		if (initialized)
-		{
-			image->UnregisterCallback(OnFrameChanged, (LPARAM)this);
-			image->DeleteBackDC(hBackDC);
-		}
-		image->Release();
+			image->unregisterCallback(OnFrameChanged, (LPARAM) this);
+		image->release();
 		image = nullptr;
 	}
 	return 0;
@@ -348,6 +348,8 @@ void CAnimatedButton::drawBackground(HDC hdc)
 		if (state & BST_PUSHED) flags = PBS_PRESSED;
 		else if (state & BST_HOT) flags = PBS_HOT;
 		else flags = PBS_NORMAL;
+		HBRUSH hBrush = (HBRUSH) SendMessage(WM_CTLCOLORDLG);
+		FillRect(hdc, &rect, hBrush);
 		DrawThemeBackground(hTheme, hdc, BP_PUSHBUTTON, flags, &rect, nullptr);
 	}
 	else
@@ -367,16 +369,16 @@ void CAnimatedButton::drawBackground(HDC hdc)
 void CAnimatedButton::drawImage(HDC hdc)
 {
 	if (wSrc > 0 && hSrc > 0)
-		image->Draw(hdc, xBk, yBk, wSrc, hSrc, xSrc, ySrc, nullptr, 0, 0, 0, 0);
+		image->draw(hdc, xBk, yBk, wSrc, hSrc, xSrc, ySrc);
 }
 
 void CAnimatedButton::draw(HDC hdc)
 {
-	if (!hBackDC && image)
-		hBackDC = image->CreateBackDC(hdc, GetSysColor(COLOR_BTNFACE), width, height);
+	if (!backingStore)
+		backingStore = BackingStore::getBackingStore();
+	HDC hBackDC = backingStore ? backingStore->getCompatibleDC(hdc, width, height) : nullptr;
 	if (hBackDC)
 	{
-		BitBlt(hBackDC, 0, 0, width, height, nullptr, 0, 0, PATCOPY);
 		drawBackground(hBackDC);
 		drawImage(hBackDC);
 		BitBlt(hdc, 0, 0, width, height, hBackDC, 0, 0, SRCCOPY);
