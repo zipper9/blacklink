@@ -29,14 +29,9 @@
 #include <deque>
 #include <unordered_set>
 
-class FavoriteHubEntry;
-typedef std::vector<FavoriteHubEntry*> FavoriteHubEntryList;
-
 class FinishedItem;
 typedef std::shared_ptr<FinishedItem> FinishedItemPtr;
 typedef std::deque<FinishedItemPtr> FinishedItemList;
-
-class HubEntry;
 
 class ClientBase;
 typedef std::shared_ptr<ClientBase> ClientBasePtr;

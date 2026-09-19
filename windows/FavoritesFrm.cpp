@@ -625,7 +625,7 @@ void FavoriteHubsFrame::handleMove(bool up)
 
 	{
 		FavoriteManager::LockInstanceHubs lock(fm, true);
-		FavoriteHubEntryList& l = lock.getFavoriteHubs();
+		auto& l = lock.getFavoriteHubs();
 		if (l.size() <= 1) return;
 
 		bool updated = false;

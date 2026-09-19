@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#ifdef IRAINMAN_INCLUDE_GDI_OLE
 #include "GdiImage.h"
 #include "../client/debug.h"
 
@@ -484,5 +483,3 @@ void CGDIImage::freePropItem()
 	delete[] (char*) m_pItem;
 	m_pItem = nullptr;
 }
-
-#endif // IRAINMAN_INCLUDE_GDI_OLE

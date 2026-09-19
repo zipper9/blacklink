@@ -1,7 +1,6 @@
-// GDIImage.h : Declaration of the CGDIImageOle
 #pragma once
-#ifdef IRAINMAN_INCLUDE_GDI_OLE
-#include "resource.h"       // main symbols
+
+#include "resource.h"
 #include <atlctl.h>
 #include "GdiOle_i.h"
 #include "GDIImage.h"
@@ -55,8 +54,6 @@ class ATL_NO_VTABLE CGDIImageOle :
 	public IGDIImageDeleteNotify
 {
 	public:
-	
-	
 		CGDIImageOle();
 		
 		DECLARE_OLEMISC_STATUS(OLEMISC_RECOMPOSEONRESIZE |
@@ -208,5 +205,3 @@ class ATL_NO_VTABLE CGDIImageOle :
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(GDIImage), CGDIImageOle)
-
-#endif //IRAINMAN_INCLUDE_GDI_OLE

@@ -56,11 +56,11 @@
 //#define SSA_SHELL_INTEGRATION
 
 #ifdef BL_UI_FEATURE_EMOTICONS
-# define IRAINMAN_INCLUDE_GDI_OLE 1
+# define BL_UI_FEATURE_GDI_OLE
 #endif
 
-#if defined(IRAINMAN_INCLUDE_GDI_OLE)
-# define IRAINMAN_INCLUDE_GDI_INIT
+#if defined(BL_UI_FEATURE_GDI_OLE) && !defined(USE_GDIPLUS)
+# define USE_GDIPLUS
 #endif
 
 #ifdef _DEBUG

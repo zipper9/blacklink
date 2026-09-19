@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef IRAINMAN_INCLUDE_GDI_OLE
-
 #include <gdiplus.h>
 
 #include "../client/compiler.h"
@@ -93,5 +91,3 @@ class CGDIImage
 #endif
 #endif
 };
-
-#endif // IRAINMAN_INCLUDE_GDI_OLE

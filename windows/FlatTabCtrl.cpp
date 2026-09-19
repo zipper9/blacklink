@@ -128,7 +128,7 @@ HWND FlatTabCtrl::getPrev()
 
 void FlatTabCtrl::setActive(HWND hWnd)
 {
-#ifdef IRAINMAN_INCLUDE_GDI_OLE
+#ifdef BL_UI_FEATURE_GDI_OLE
 	setActiveMDIWindow(hWnd);
 #endif
 	if (!inTab) setTop(hWnd);

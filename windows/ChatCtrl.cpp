@@ -23,6 +23,8 @@
 #include "../client/Client.h"
 #include "../client/Util.h"
 #include "../client/GlobalState.h"
+#include "../client/SettingsManager.h"
+#include "ConfUI.h"
 #include <boost/algorithm/string.hpp>
 #include <tom.h>
 
@@ -31,7 +33,6 @@
 #include "../GdiOle/GDIImageOle.h"
 #include "../client/SysVersion.h"
 #include "ImageDataObject.h"
-#include "MainFrm.h"
 #endif
 
 extern "C" const GUID IID_ITextDocument =
@@ -313,7 +314,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 	}
 
 #ifdef BL_UI_FEATURE_EMOTICONS
-	HWND mainFrameWnd = MainFrame::getMainFrame()->m_hWnd;
+	HWND mainFrameWnd = WinUtil::g_mainWnd;
 	for (const auto& ei : chatTextParser.getEmoticons())
 	{
 		SetSel(startPos + ei.start, startPos + ei.end);

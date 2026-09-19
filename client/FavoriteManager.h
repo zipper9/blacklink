@@ -157,7 +157,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				{
 					return fm->favHubGroups;
 				}
-				FavoriteHubEntryList& getFavoriteHubs() const
+				vector<FavoriteHubEntry*>& getFavoriteHubs() const
 				{
 					return fm->hubs;
 				}
@@ -252,7 +252,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void saveRecents();
 
 	private:
-		FavoriteHubEntryList hubs;
+		vector<FavoriteHubEntry*> hubs;
 		boost::unordered_map<string, FavoriteHubEntry*> hubsByUrl;
 		FavHubGroups favHubGroups;
 		mutable std::unique_ptr<RWLock> csHubs;

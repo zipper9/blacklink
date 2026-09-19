@@ -48,7 +48,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="GdiOle.def" />
-    <None Include="GDIImage.htm" />
     <None Include="GDIImage.bmp">
       <Filter>Resource Files</Filter>
     </None>

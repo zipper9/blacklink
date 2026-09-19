@@ -4,8 +4,10 @@
 #include "EmoticonsDlg.h"
 #include "Emoticons.h"
 #include "WinUtil.h"
-#include "MainFrm.h"
+#include "UserMessages.h"
+#include "ConfUI.h"
 #include "../client/Util.h"
+#include "../client/SettingsManager.h"
 #include "../GdiOle/GDIImage.h"
 
 #define SUBCLASS_BUTTON
@@ -59,7 +61,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			if (i == packSize) break;
 			Emoticon* icon = icons[i];
 			if (icon->isDuplicate() || icon->isHidden()) continue;
-			CGDIImage* pImage = icon->getImage(useAnimation, MainFrame::getMainFrame()->m_hWnd, WM_ANIM_CHANGE_FRAME);
+			CGDIImage* pImage = icon->getImage(useAnimation, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
 			if (pImage)
 			{
 				int w = pImage->GetWidth();
@@ -134,7 +136,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			if (i == packSize) break;
 			Emoticon* icon = icons[i];
 			if (icon->isDuplicate() || icon->isHidden()) continue;
-			CGDIImage *pImage = icon->getImage(useAnimation, MainFrame::getMainFrame()->m_hWnd, WM_ANIM_CHANGE_FRAME);
+			CGDIImage *pImage = icon->getImage(useAnimation, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
 			if (pImage && pImage->GetWidth() && pImage->GetHeight())
 			{
 				pos.left = x * (sw + BUTTON_SPACE);

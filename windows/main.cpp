@@ -181,12 +181,12 @@ void GuiUninit(void*)
 
 static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 {
-#ifdef IRAINMAN_INCLUDE_GDI_INIT
+#ifdef USE_GDIPLUS
 	// Initialize GDI+.
 	static Gdiplus::GdiplusStartupInput g_gdiplusStartupInput;
 	static ULONG_PTR g_gdiplusToken = 0;
 	Gdiplus::GdiplusStartup(&g_gdiplusToken, &g_gdiplusStartupInput, NULL);
-#endif // IRAINMAN_INCLUDE_GDI_INIT
+#endif // USE_GDIPLUS
 
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
@@ -254,7 +254,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	dcdebug("CGDIImage instance count: %d\n", (int) CGDIImage::getImageCount());
 #endif
 #endif
-#ifdef IRAINMAN_INCLUDE_GDI_INIT
+#ifdef USE_GDIPLUS
 	Gdiplus::GdiplusShutdown(g_gdiplusToken);
 #endif
 	return nRet;

@@ -33,7 +33,7 @@
 #include <algorithm>
 #include "resource.h"
 
-#ifdef IRAINMAN_INCLUDE_GDI_OLE
+#ifdef BL_UI_FEATURE_GDI_OLE
 void setActiveMDIWindow(HWND hwnd);
 #endif
 
