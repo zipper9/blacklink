@@ -26,6 +26,7 @@
 #include "Fonts.h"
 #include "../client/File.h"
 #include "../client/PathUtil.h"
+#include "../client/SettingsManager.h"
 
 TextFrame::TextFrame(const tstring& fileName) : file(fileName)
 {
@@ -140,6 +141,12 @@ LRESULT TextFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 	return TRUE;
 }
 
+LRESULT TextFrame::onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+{
+	ctrlPad.SetFont(Fonts::g_font);
+	return 0;
+}
+
 void TextFrame::UpdateLayout(BOOL /*bResizeBars*/ /* = TRUE */)
 {
 	if (isClosedOrShutdown())
@@ -157,8 +164,8 @@ void TextFrame::UpdateLayout(BOOL /*bResizeBars*/ /* = TRUE */)
 
 void TextFrame::on(SettingsManagerListener::ApplySettings)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	dcassert(!GlobalState::isShuttingDown());
+	if (!GlobalState::isShuttingDown())
 	{
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}

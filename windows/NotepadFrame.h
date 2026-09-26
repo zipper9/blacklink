@@ -46,6 +46,7 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
+		MESSAGE_HANDLER(WMU_CHANGE_FONT, onChangeFont)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(NOTEPAD_MESSAGE_MAP)
@@ -58,6 +59,7 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{

@@ -6,9 +6,12 @@
 #include "../client/StringTokenizer.h"
 #include "../client/SettingsManager.h"
 
-HFONT Fonts::g_font = nullptr;
+static tstring currentFont;
+
 int Fonts::g_fontHeight = 0;
-int Fonts::g_fontHeightPixl = 0;
+int Fonts::g_sysFontHeight = 0;
+
+HFONT Fonts::g_font = nullptr;
 HFONT Fonts::g_boldFont = nullptr;
 HFONT Fonts::g_systemFont = nullptr;
 HFONT Fonts::g_dialogFont = nullptr;
@@ -35,17 +38,17 @@ void Fonts::init()
 		GetObject((HFONT) GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
 
 	g_systemFont = CreateFontIndirect(&lf);
+	g_sysFontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_systemFont);
 
 	lf.lfWeight = FW_BOLD;
 	g_boldFont = CreateFontIndirect(&lf);
 
 	auto ss = SettingsManager::instance.getUiSettings();
-	decodeFont(Text::toT(ss->getString(Conf::TEXT_FONT)), lf);
+	currentFont = Text::toT(ss->getString(Conf::TEXT_FONT));
+	decodeFont(currentFont, lf);
 
 	g_font = ::CreateFontIndirect(&lf);
 	g_fontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_font);
-
-	g_fontHeightPixl = -MulDiv(lf.lfHeight, dpi, 72); // FIXME
 }
 
 void Fonts::uninit()
@@ -64,7 +67,7 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 {
 	const StringTokenizer<tstring, TStringList> st(setting, _T(','));
 	const auto& sl = st.getTokens();
-	
+
 	NONCLIENTMETRICS ncm = { offsetof(NONCLIENTMETRICS, lfMessageFont) + sizeof(NONCLIENTMETRICS::lfMessageFont) };
 	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
 		memcpy(&dest, &ncm.lfMessageFont, sizeof(LOGFONT));
@@ -79,7 +82,7 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 		dest.lfWeight = Util::toInt(sl[2]);
 		dest.lfItalic = (BYTE)Util::toInt(sl[3]);
 	}
-	
+
 	if (!face.empty() && face.length() < LF_FACESIZE)
 		_tcscpy(dest.lfFaceName, face.c_str());
 }
@@ -94,4 +97,19 @@ tstring Fonts::encodeFont(const LOGFONT& font)
 	res += _T(',');
 	res += Util::toStringT(font.lfItalic);
 	return res;
+}
+
+bool Fonts::changeFont()
+{
+	auto ss = SettingsManager::instance.getUiSettings();
+	tstring newFont = Text::toT(ss->getString(Conf::TEXT_FONT));
+	if (newFont == currentFont)
+		return false;
+	currentFont = std::move(newFont);
+	LOGFONT lf;
+	decodeFont(currentFont, lf);
+	DeleteObject(g_font);
+	g_font = ::CreateFontIndirect(&lf);
+	g_fontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_font);
+	return true;
 }

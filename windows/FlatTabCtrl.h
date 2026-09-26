@@ -143,6 +143,7 @@ public:
 	LRESULT onCaptureChanged(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL & /*bHandled*/);
 
 	void processTooltipPop(HWND hWnd);
+	void getChildWindows(vector<HWND>& windows) const;
 
 private:
 	class TabInfo

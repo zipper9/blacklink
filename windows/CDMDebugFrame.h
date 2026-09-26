@@ -52,6 +52,7 @@ class CDMDebugFrame : public MDITabChildWindowImpl<CDMDebugFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
+		MESSAGE_HANDLER(WMU_CHANGE_FONT, onChangeFont)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(DETECTION_MESSAGE_MAP)
@@ -79,6 +80,7 @@ class CDMDebugFrame : public MDITabChildWindowImpl<CDMDebugFrame>,
 		LRESULT onClear(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT OnFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			ctrlCMDPad.SetFocus();

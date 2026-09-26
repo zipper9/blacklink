@@ -38,7 +38,7 @@ PopupWindow::PopupWindow()
 	memset(&logFont, 0, sizeof(logFont));
 	memset(&logFontTitle, 0, sizeof(logFontTitle));
 	flags = 0;
-	hFont = Fonts::g_font;
+	hFont = Fonts::g_systemFont;
 	hFontTitle = Fonts::g_boldFont;
 
 	int dpi = WinUtil::getDisplayDpi();

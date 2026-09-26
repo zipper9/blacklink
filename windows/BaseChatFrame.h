@@ -37,6 +37,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		MESSAGE_HANDLER(CFindReplaceDialog::GetFindReplaceMsg(), onFindDialogMessage)
 		MESSAGE_HANDLER(WM_CTLCOLORBTN, onButtonColor)
 		MESSAGE_HANDLER(WMU_UPDATE_LAYOUT, onUpdateLayout)
+		MESSAGE_HANDLER(WMU_CHANGE_FONT, onChangeFont)
 		COMMAND_ID_HANDLER(IDC_WINAMP_SPAM, onWinampSpam)
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
@@ -125,6 +126,12 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		LRESULT onFindDialogMessage(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onButtonColor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 
+		LRESULT onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+		{
+			setDefaultFont();
+			return 0;
+		}
+
 		LRESULT onFindText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			showFindDialog();
@@ -150,6 +157,7 @@ class BaseChatFrame : public InternetSearchBaseHandler, protected MessageEdit::C
 		void addLine(const tstring& line, unsigned maxSmiles, int textStyle = Colors::TEXT_STYLE_NORMAL);
 		void addLine(const Identity& ou, bool myMessage, bool thirdPerson, const tstring& line, unsigned maxSmiles, int textStyle, string& extra);
 		void themeChanged();
+		void setDefaultFont();
 
 		static TCHAR getNickDelimiter();
 

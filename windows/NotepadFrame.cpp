@@ -81,6 +81,12 @@ LRESULT NotepadFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 	return FALSE;
 }
 
+LRESULT NotepadFrame::onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	ctrlPad.SetFont(Fonts::g_font);
+	return 0;
+}
+
 LRESULT NotepadFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);

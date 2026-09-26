@@ -68,17 +68,17 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	// add ES_AUTOHSCROLL - fix
 	ctrlIPFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_IP_FILTER_TEXT);
 	ctrlIPFilter.SetLimitText(22); // для IP+Port
-	ctrlIPFilter.SetFont(Fonts::g_font);
+	ctrlIPFilter.SetFont(Fonts::g_systemFont);
 	eFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
 	ctrlIncludeFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_INCLUDE_FILTER_TEXT);
 	ctrlIncludeFilter.SetLimitText(100);
-	ctrlIncludeFilter.SetFont(Fonts::g_font);
+	ctrlIncludeFilter.SetFont(Fonts::g_systemFont);
 	includeFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
 	ctrlExcludeFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_EXCLUDE_FILTER_TEXT);
 	ctrlExcludeFilter.SetLimitText(100);
-	ctrlExcludeFilter.SetFont(Fonts::g_font);
+	ctrlExcludeFilter.SetFont(Fonts::g_systemFont);
 	excludeFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
 
 	m_hWndClient = ctrlCMDPad;
@@ -272,6 +272,12 @@ LRESULT CDMDebugFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	}
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT CDMDebugFrame::onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	ctrlCMDPad.SetFont(Fonts::g_font);
+	return 0;
 }
 
 LRESULT CDMDebugFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

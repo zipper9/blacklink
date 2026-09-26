@@ -18,9 +18,10 @@ static const UINT WMU_DIALOG_CLOSED     = WM_USER + 114;
 static const UINT WMU_REMOVE_POPUP      = WM_USER + 115;
 static const UINT WMU_SHOW_QUEUE_ITEM   = WM_USER + 120;
 static const UINT WMU_LISTENER_INIT     = WM_USER + 121;
+static const UINT WMU_CHANGE_FONT       = WM_USER + 122;
 
-static const UINT WMU_EXIT_EDIT_MODE    = WM_USER + 122;
-static const UINT WMU_LIST_POPUP_RESULT = WM_USER + 123;
+static const UINT WMU_EXIT_EDIT_MODE    = WM_USER + 150;
+static const UINT WMU_LIST_POPUP_RESULT = WM_USER + 151;
 
 static const UINT WMU_USER_INITDIALOG   = WM_APP + 501;
 static const UINT WMU_RESTART_REQUIRED  = WM_APP + 502;

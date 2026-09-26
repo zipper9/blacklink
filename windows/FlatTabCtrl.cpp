@@ -870,6 +870,14 @@ void FlatTabCtrl::processTooltipPop(HWND hWnd)
 		tooltipText.clear();
 }
 
+void FlatTabCtrl::getChildWindows(vector<HWND>& windows) const
+{
+	windows.clear();
+	windows.reserve(tabs.size());
+	for (const TabInfo* tab : tabs)
+		windows.push_back(tab->hWnd);
+}
+
 int FlatTabCtrl::getWidth(const TabInfo* t) const
 {
 	return ((t->dirty && useBoldNotif) ? t->boldSize.cx : t->size.cx) +

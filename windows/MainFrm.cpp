@@ -1951,6 +1951,14 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	if (needInvalidateTabs)
 		ctrlTab.Invalidate();
 
+	if (Fonts::changeFont())
+	{
+		vector<HWND> v;
+		ctrlTab.getChildWindows(v);
+		for (HWND hWnd : v)
+			::SendMessage(hWnd, WMU_CHANGE_FONT, 0, 0);
+	}
+
 	if (!ss->getBool(Conf::SHOW_CURRENT_SPEED_IN_TITLE))
 		SetWindowText(getAppNameVerT().c_str());
 

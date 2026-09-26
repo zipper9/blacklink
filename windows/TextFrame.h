@@ -21,8 +21,9 @@
 
 #ifdef BL_UI_FEATURE_VIEW_AS_TEXT
 
-#include "FlatTabCtrl.h"
+#include "MDITabChildWindow.h"
 #include "WinUtil.h"
+#include "../client/SettingsManagerListener.h"
 
 class TextFrame : public MDITabChildWindowImpl<TextFrame>, private SettingsManagerListener
 {
@@ -44,6 +45,7 @@ class TextFrame : public MDITabChildWindowImpl<TextFrame>, private SettingsManag
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
+		MESSAGE_HANDLER(WMU_CHANGE_FONT, onChangeFont)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
@@ -59,6 +61,7 @@ class TextFrame : public MDITabChildWindowImpl<TextFrame>, private SettingsManag
 
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onChangeFont(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			ctrlPad.SetFocus();

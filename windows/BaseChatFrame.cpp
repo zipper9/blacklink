@@ -24,6 +24,7 @@
 #include "BrowseFile.h"
 #include "NotifUtil.h"
 #include "ConfUI.h"
+#include "GdiUtil.h"
 #include "../client/GlobalState.h"
 #include "../client/ChatMessage.h"
 #include "../client/SettingsManager.h"
@@ -33,6 +34,8 @@
 #include "../client/ConfCore.h"
 #include <tom.h>
 #include <comdef.h>
+
+static const int INPUT_BOX_EXTRA_HEIGHT = 12;
 
 #ifdef BL_UI_FEATURE_BB_CODES
 class DlgInsertLink : public CDialogImpl<DlgInsertLink>
@@ -345,11 +348,15 @@ void BaseChatFrame::createChatCtrl()
 		return;
 	}
 	ctrlClient.LimitText(0);
-	ctrlClient.SetFont(Fonts::g_font);
 	ctrlClient.SetAutoURLDetect(FALSE);
 	ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
 	ctrlClient.SetBackgroundColor(Colors::g_bgColor);
 	ctrlClient.SetUndoLimit(0);
+#if 1
+	setDefaultFont();
+#else
+	ctrlClient.SetFont(Fonts::g_font);
+#endif
 	if (!disableChat)
 		readFrameLog();
 }
@@ -369,7 +376,7 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 		ctrlMessage.SetWindowText(lastMessage.c_str());
 		ctrlMessage.SetSel(lastMessageSelPos);
 	}
-	ctrlMessage.SetFont(Fonts::g_font);
+	ctrlMessage.SetFont(Fonts::g_systemFont);
 	ctrlMessage.SetLimitText(9999);
 	//ctrlMessage.SetWindowPos(ctrlClient, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE); // Set Tab order
 	if (disableChat)
@@ -1013,7 +1020,7 @@ int BaseChatFrame::getInputBoxHeight() const
 {
 	const bool useMultiChat = SettingsManager::instance.getUiSettings()->getBool(Conf::MULTILINE_CHAT_INPUT) || multiChatLines;
 	int lines = useMultiChat ? std::max(multiChatLines + 1, 3u) : 1;
-	int height = Fonts::g_fontHeightPixl * lines + 12;
+	int height = Fonts::g_sysFontHeight * lines + INPUT_BOX_EXTRA_HEIGHT;
 	if (height < MessagePanel::MIN_INPUT_BOX_HEIGHT)
 		height = MessagePanel::MIN_INPUT_BOX_HEIGHT;
 	return height;
@@ -1237,4 +1244,19 @@ BOOL BaseChatFrame::isFindDialogMessage(MSG* msg) const
 LRESULT BaseChatFrame::onButtonColor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	return (LRESULT) Colors::g_tabBackgroundBrush;
+}
+
+void BaseChatFrame::setDefaultFont()
+{
+	LOGFONT lf;
+	if (!GetObject(Fonts::g_font, sizeof(lf), &lf)) return;
+	CHARFORMAT2 cf;
+	memset(&cf, 0, sizeof(cf));
+	cf.cbSize = sizeof(cf);
+	_tcscpy(cf.szFaceName, lf.lfFaceName);
+	cf.bPitchAndFamily = lf.lfPitchAndFamily;
+	cf.yHeight = abs(lf.lfHeight) * 1440 / WinUtil::getDisplayDpi();
+	cf.wWeight = lf.lfWeight;
+	cf.dwMask = CFM_FACE | CFM_SIZE | CFM_WEIGHT;
+	ctrlClient.SetCharFormat(cf, SPF_SETDEFAULT);
 }
