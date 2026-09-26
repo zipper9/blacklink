@@ -767,18 +767,24 @@ TransferView::ItemInfo* TransferView::addToken(const UpdateInfo& ui)
 {
 	if (ui.token.empty() || !ConnectionManager::tokenManager.isToken(ui.token))
 	{
-#ifdef _DEBUG
-		LogManager::message("TransferView: invalid token " + ui.token);
+#if defined(_DEBUG) || defined(DEBUG_TRANSFER_VIEW)
+		LogManager::message("TransferView: invalid token " + ui.token, false);
 #endif
 		return nullptr;
 	}
 	if (onlyActiveUploads && !ui.download && ui.status != ItemInfo::STATUS_RUNNING)
 		return nullptr;
+#ifdef DEBUG_TRANSFER_VIEW
+	LogManager::message("TransferView: addToken " + ui.token + " - target " + Text::fromT(ui.target), false);
+#endif
 	ItemInfo* ii = new ItemInfo(ui);
 	ii->update(ui);
 	if (ii->download)
 	{
 		int pos = ctrlTransfers.insertGroupedItem(ii, false, false);
+#ifdef DEBUG_TRANSFER_VIEW
+		LogManager::message("TransferView: token " + ui.token + " - insertGroupedItem pos=" + Util::toString(pos), false);
+#endif
 		ItemInfo* parent = ii->groupInfo->parent;
 		if (parent)
 		{
@@ -822,8 +828,8 @@ void TransferView::processTasks()
 				ItemInfo* foundItem = findItemByToken(ui.token, index);
 				if (foundItem)
 				{
-#ifdef _DEBUG
-					LogManager::message("TransferView: trying to add duplicate token " + ui.token);
+#if defined(_DEBUG) || defined(DEBUG_TRANSFER_VIEW)
+					LogManager::message("TransferView: trying to add duplicate token " + ui.token, false);
 #endif
 					break;
 				}
@@ -838,11 +844,14 @@ void TransferView::processTasks()
 				ItemInfo* ii = findItemByToken(st.str, index);
 				if (!ii)
 				{
-#ifdef _DEBUG
-					LogManager::message("TransferView: token " + st.str + " not found");
+#if defined(_DEBUG) || defined(DEBUG_TRANSFER_VIEW)
+					LogManager::message("TransferView: token " + st.str + " not found", false);
 #endif
 					break;
 				}
+#ifdef DEBUG_TRANSFER_VIEW
+				LogManager::message("TransferView: token " + st.str + " - removeGroupedItem for target " + Text::fromT(ii->target), false);
+#endif
 				ctrlTransfers.removeGroupedItem(ii);
 				break;
 			}
@@ -852,70 +861,96 @@ void TransferView::processTasks()
 				auto &ui = static_cast<UpdateInfo&>(*i->second);
 				int index;
 				ItemInfo* ii = findItemByToken(ui.token, index);
-				if (ii)
+				if (!ii)
 				{
-					if (ui.download)
+					addToken(ui);
+					break;
+				}
+				if (ui.download)
+				{
+					ItemInfo* parent = ii->groupInfo ? ii->groupInfo->parent : nullptr;
+					bool changeParent = false;
+					if (ui.updateMask & UpdateInfo::MASK_FILE)
 					{
-						ItemInfo* parent = ii->groupInfo ? ii->groupInfo->parent : nullptr;
-						bool changeParent = (ui.updateMask & UpdateInfo::MASK_FILE) && ui.target != ii->target;
-						if (changeParent)
-						{
-							ItemInfo* newParent = findItemByTarget(ui.target);
-							if (newParent != parent)
-								ctrlTransfers.removeGroupedItem(ii, false);
-							else
-								changeParent = false;
-						}
-						if (changeParent)
-						{
-							ii->target = ui.target;
-							ii->qi = ui.qi;
+						// FIXME: why it gets posted?
+						if (ui.target != ii->target)
+							changeParent = true;
+						else
 							ui.updateMask ^= UpdateInfo::MASK_FILE;
-							ctrlTransfers.insertGroupedItem(ii, false, false);
-							ii->update(ui);
-							parent = ii->groupInfo->parent;
-							if (parent) updateDownload(parent, -1, UpdateInfo::MASK_FILE);
+					}
+#ifdef DEBUG_TRANSFER_VIEW
+					if (changeParent)
+						LogManager::message("TransferView: token " + ui.token + " - target " + Text::fromT(ii->target) + " -> " + Text::fromT(ui.target), false);
+#endif
+					if (changeParent)
+					{
+						ItemInfo* newParent = findItemByTarget(ui.target);
+						if (newParent != parent)
+						{
+#ifdef DEBUG_TRANSFER_VIEW
+							LogManager::message("TransferView: token " + ui.token + " - removeGroupedItem", false);
+#endif
+							ctrlTransfers.removeGroupedItem(ii, false);
 						}
 						else
-						{
-							bool shouldRemoveParent = false;
-							if (!parent && (ui.updateMask & UpdateInfo::MASK_FILE))
-								ctrlTransfers.changeGroupCondNonVisual(ii, ui.target);
-							ii->update(ui);
-							if (index != -1)
-							{
-								if (parent)
-								{
-									updateDownload(parent, -1, ui.updateMask & UpdateInfo::MASK_FILE);
-									shouldRemoveParent = parent->status == ItemInfo::STATUS_WAITING && parent->qi && parent->qi->isFinished();
-									if (!shouldRemoveParent)
-										updateItem(index, ui.updateMask);
-								}
-								else
-									updateDownload(ii, index, ui.updateMask);
-							}
-							else if (parent)
-							{
-								updateDownload(parent, -1, ui.updateMask & UpdateInfo::MASK_FILE);
-								shouldRemoveParent = parent->status == ItemInfo::STATUS_WAITING && parent->qi && parent->qi->isFinished();
-							}
-							if (shouldRemoveParent)
-							{
-								ctrlTransfers.removeGroupedItem(ii, false);
-								ctrlTransfers.insertItem(ii, IMAGE_DOWNLOAD);
-							}
-						}
+							changeParent = false;
+					}
+					if (changeParent)
+					{
+						ii->target = ui.target;
+						ii->qi = ui.qi;
+						ui.updateMask ^= UpdateInfo::MASK_FILE;
+#ifdef DEBUG_TRANSFER_VIEW
+						LogManager::message("TransferView: token " + ui.token + " - insertGroupedItem", false);
+#endif
+						ctrlTransfers.insertGroupedItem(ii, false, false);
+						ii->update(ui);
+						parent = ii->groupInfo->parent;
+						if (parent) updateDownload(parent, -1, UpdateInfo::MASK_FILE);
 					}
 					else
 					{
+						bool shouldRemoveParent = false;
+						if (!parent && (ui.updateMask & UpdateInfo::MASK_FILE))
+						{
+#ifdef DEBUG_TRANSFER_VIEW
+							LogManager::message("TransferView: token " + ui.token + " - changeGroupCondNonVisual for target " + Text::fromT(ui.target), false);
+#endif
+							ctrlTransfers.changeGroupCondNonVisual(ii, ui.target);
+						}
 						ii->update(ui);
-						dcassert(index != -1);
-						updateItem(index, ui.updateMask);
+						if (index != -1)
+						{
+							if (parent)
+							{
+								updateDownload(parent, -1, ui.updateMask & UpdateInfo::MASK_FILE);
+								shouldRemoveParent = parent->status == ItemInfo::STATUS_WAITING && parent->qi && parent->qi->isFinished();
+								if (!shouldRemoveParent)
+									updateItem(index, ui.updateMask);
+							}
+							else
+								updateDownload(ii, index, ui.updateMask);
+						}
+						else if (parent)
+						{
+							updateDownload(parent, -1, ui.updateMask & UpdateInfo::MASK_FILE);
+							shouldRemoveParent = parent->status == ItemInfo::STATUS_WAITING && parent->qi && parent->qi->isFinished();
+						}
+						if (shouldRemoveParent)
+						{
+#ifdef DEBUG_TRANSFER_VIEW
+							LogManager::message("TransferView: token " + ui.token + " - shouldRemoveParent for target " + Text::fromT(ii->target), false);
+#endif
+							ctrlTransfers.removeGroupedItem(ii, false);
+							ctrlTransfers.insertItem(ii, IMAGE_DOWNLOAD);
+						}
 					}
 				}
 				else
 				{
-					ii = addToken(ui);
+					ii->update(ui);
+					dcassert(index != -1);
+					updateItem(index, ui.updateMask);
 				}
 				break;
 			}
@@ -1113,7 +1148,7 @@ TransferView::UpdateInfo* TransferView::createUpdateInfoForNewItem(const HintedU
 		qi = QueueManager::getQueuedItem(hintedUser.user);
 		if (!qi)
 		{
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(DEBUG_TRANSFER_VIEW)
 			LogManager::message("TransferView: no queued item for user " + hintedUser.user->getLastNick());
 #endif
 			return nullptr;
