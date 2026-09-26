@@ -333,10 +333,10 @@ void WinUtil::playSound(const string& soundFile, bool beep /* = false */)
 
 void WinUtil::openFile(const tstring& file)
 {
-	openFile(file.c_str());
+	shellOpen(File::formatPath(file).c_str());
 }
 
-void WinUtil::openFile(const TCHAR* file)
+void WinUtil::shellOpen(const TCHAR* file)
 {
 	::ShellExecute(NULL, _T("open"), file, NULL, NULL, SW_SHOWNORMAL);
 }

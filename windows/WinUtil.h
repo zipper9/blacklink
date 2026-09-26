@@ -102,7 +102,7 @@ namespace WinUtil
 	bool openLink(const tstring& url);
 	bool openWebLink(const tstring& url);
 	void openFile(const tstring& file);
-	void openFile(const TCHAR* file);
+	void shellOpen(const TCHAR* file);
 	void openLog(const string& dir, const StringMap& params, const tstring& noLogMessage);
 
 	void openFolder(const tstring& file);
