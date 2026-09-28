@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="windows-1252"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Emoticons CaseSensitive="0" PreferHintText="1">
 	<Emoticon HintText="Gasp!" PasteText=":O" Expression=":O" Bitmap="PeerWeb\icon5.bmp"/>
 	<Emoticon HintText="Gasp!" PasteText=":-O" Expression=":-O" Bitmap="PeerWeb\icon5.bmp"/>

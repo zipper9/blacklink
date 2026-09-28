@@ -1,102 +1,101 @@
-<?xml version="1.0" encoding="windows-1252"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Emoticons>
-	<Emoticon PasteText=":-)" Gif="Kolobok\1.gif"/>
-	<Emoticon PasteText=":)" Gif="Kolobok\1.gif"/>
-	<Emoticon PasteText="=)" Gif="Kolobok\1.gif"/>
-	<Emoticon PasteText=":smile:" Gif="Kolobok\1.gif"/>
+	<Emoticon PasteText=":-)" Gif="Kolobok\Light\1.gif" DarkGif="Kolobok\Dark\1.gif"/>
+	<Emoticon PasteText=":)" Gif="Kolobok\Light\1.gif" DarkGif="Kolobok\Dark\1.gif"/>
+	<Emoticon PasteText="=)" Gif="Kolobok\Light\1.gif" DarkGif="Kolobok\Dark\1.gif"/>
+	<Emoticon PasteText=":smile:" Gif="Kolobok\Light\1.gif" DarkGif="Kolobok\Dark\1.gif"/>
 
-	<Emoticon PasteText=":-(" Gif="Kolobok\2.gif"/>
-	<Emoticon PasteText=":(" Gif="Kolobok\2.gif"/>
-	<Emoticon PasteText=":sad:" Gif="Kolobok\2.gif"/>
+	<Emoticon PasteText=":-(" Gif="Kolobok\Light\2.gif" DarkGif="Kolobok\Dark\2.gif"/>
+	<Emoticon PasteText=":(" Gif="Kolobok\Light\2.gif" DarkGif="Kolobok\Dark\2.gif"/>
+	<Emoticon PasteText=":sad:" Gif="Kolobok\Light\2.gif" DarkGif="Kolobok\Dark\2.gif"/>
 
-	<Emoticon PasteText=";-)" Gif="Kolobok\3.gif"/>
-	<Emoticon PasteText=";)" Gif="Kolobok\3.gif"/>
-	<Emoticon PasteText=":wink:" Gif="Kolobok\3.gif"/>
+	<Emoticon PasteText=";-)" Gif="Kolobok\Light\3.gif" DarkGif="Kolobok\Dark\3.gif"/>
+	<Emoticon PasteText=";)" Gif="Kolobok\Light\3.gif" DarkGif="Kolobok\Dark\3.gif"/>
+	<Emoticon PasteText=":wink:" Gif="Kolobok\Light\3.gif" DarkGif="Kolobok\Dark\3.gif"/>
 
-	<Emoticon PasteText=":-P" Gif="Kolobok\4.gif"/>
-	<Emoticon PasteText=":p" Gif="Kolobok\4.gif"/>
-	<Emoticon PasteText=":P" Gif="Kolobok\4.gif"/>
-	<Emoticon PasteText=":-P" Gif="Kolobok\4.gif"/>
-	<Emoticon PasteText=":tongue:" Gif="Kolobok\4.gif"/>
+	<Emoticon PasteText=":-P" Gif="Kolobok\Light\4.gif" DarkGif="Kolobok\Dark\4.gif"/>
+	<Emoticon PasteText=":p" Gif="Kolobok\Light\4.gif" DarkGif="Kolobok\Dark\4.gif"/>
+	<Emoticon PasteText=":P" Gif="Kolobok\Light\4.gif" DarkGif="Kolobok\Dark\4.gif"/>
+	<Emoticon PasteText=":tongue:" Gif="Kolobok\Light\4.gif" DarkGif="Kolobok\Dark\4.gif"/>
 
-	<Emoticon PasteText="8-)" Gif="Kolobok\5.gif"/>
-	<Emoticon PasteText="8)" Gif="Kolobok\5.gif"/>
-	<Emoticon PasteText="B)" Gif="Kolobok\5.gif"/>
-	<Emoticon PasteText=":cool:" Gif="Kolobok\5.gif"/>
-	<Emoticon PasteText=":COOL:" Gif="Kolobok\5.gif"/>
+	<Emoticon PasteText="8-)" Gif="Kolobok\Light\5.gif" DarkGif="Kolobok\Dark\5.gif"/>
+	<Emoticon PasteText="8)" Gif="Kolobok\Light\5.gif" DarkGif="Kolobok\Dark\5.gif"/>
+	<Emoticon PasteText="B)" Gif="Kolobok\Light\5.gif" DarkGif="Kolobok\Dark\5.gif"/>
+	<Emoticon PasteText=":cool:" Gif="Kolobok\Light\5.gif" DarkGif="Kolobok\Dark\5.gif"/>
+	<Emoticon PasteText=":COOL:" Gif="Kolobok\Light\5.gif" DarkGif="Kolobok\Dark\5.gif"/>
 
-	<Emoticon PasteText=":-D" Gif="Kolobok\6.gif"/>
-	<Emoticon PasteText=":D" Gif="Kolobok\6.gif"/>
-	<Emoticon PasteText=":biggrin:" Gif="Kolobok\6.gif"/>
+	<Emoticon PasteText=":-D" Gif="Kolobok\Light\6.gif" DarkGif="Kolobok\Dark\6.gif"/>
+	<Emoticon PasteText=":D" Gif="Kolobok\Light\6.gif" DarkGif="Kolobok\Dark\6.gif"/>
+	<Emoticon PasteText=":biggrin:" Gif="Kolobok\Light\6.gif" DarkGif="Kolobok\Dark\6.gif"/>
 
-	<Emoticon PasteText=":-[" Gif="Kolobok\7.gif"/>
-	<Emoticon PasteText=":[" Gif="Kolobok\7.gif"/>
-	<Emoticon PasteText=":blush:" Gif="Kolobok\7.gif"/>
+	<Emoticon PasteText=":-[" Gif="Kolobok\Light\7.gif" DarkGif="Kolobok\Dark\7.gif"/>
+	<Emoticon PasteText=":[" Gif="Kolobok\Light\7.gif" DarkGif="Kolobok\Dark\7.gif"/>
+	<Emoticon PasteText=":blush:" Gif="Kolobok\Light\7.gif" DarkGif="Kolobok\Dark\7.gif"/>
 
-	<Emoticon PasteText="O_O" Gif="Kolobok\8.gif"/>
-	<Emoticon PasteText="O_o" Gif="Kolobok\8.gif"/>
-	<Emoticon PasteText="o_O" Gif="Kolobok\8.gif"/>
-	<Emoticon PasteText="=0" Gif="Kolobok\8.gif"/>
+	<Emoticon PasteText="O_O" Gif="Kolobok\Light\8.gif" DarkGif="Kolobok\Dark\8.gif"/>
+	<Emoticon PasteText="O_o" Gif="Kolobok\Light\8.gif" DarkGif="Kolobok\Dark\8.gif"/>
+	<Emoticon PasteText="o_O" Gif="Kolobok\Light\8.gif" DarkGif="Kolobok\Dark\8.gif"/>
+	<Emoticon PasteText="=0" Gif="Kolobok\Light\8.gif" DarkGif="Kolobok\Dark\8.gif"/>
 
-	<Emoticon PasteText=":-*" Gif="Kolobok\9.gif"/>
-	<Emoticon PasteText=":*" Gif="Kolobok\9.gif"/>
-	<Emoticon PasteText=":-{}" Gif="Kolobok\9.gif"/>
-	<Emoticon PasteText=":{}" Gif="Kolobok\9.gif"/>
-	<Emoticon PasteText="^.^" Gif="Kolobok\9.gif"/>
-	<Emoticon PasteText=":kiss:" Gif="Kolobok\9.gif"/>
-	<Emoticon PasteText="*KISS*" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText=":-*" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
+	<Emoticon PasteText=":*" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
+	<Emoticon PasteText=":-{}" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
+	<Emoticon PasteText=":{}" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
+	<Emoticon PasteText="^.^" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
+	<Emoticon PasteText=":kiss:" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
+	<Emoticon PasteText="*KISS*" Gif="Kolobok\Light\9.gif" DarkGif="Kolobok\Dark\9.gif"/>
 
-	<Emoticon PasteText=":'(" Gif="Kolobok\10.gif"/>
-	<Emoticon PasteText=":'-(" Gif="Kolobok\10.gif"/>
+	<Emoticon PasteText=":'(" Gif="Kolobok\Light\10.gif" DarkGif="Kolobok\Dark\10.gif"/>
+	<Emoticon PasteText=":'-(" Gif="Kolobok\Light\10.gif" DarkGif="Kolobok\Dark\10.gif"/>
 
-	<Emoticon PasteText=":-X" Gif="Kolobok\11.gif"/>
-	<Emoticon PasteText=":-x" Gif="Kolobok\11.gif"/>
-	<Emoticon PasteText=":X" Gif="Kolobok\11.gif"/>
-	<Emoticon PasteText=":x" Gif="Kolobok\11.gif"/>
-	<Emoticon PasteText=":#" Gif="Kolobok\11.gif"/>
-	<Emoticon PasteText=":-#" Gif="Kolobok\11.gif"/>
-	<Emoticon PasteText=":secret:" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":-X" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
+	<Emoticon PasteText=":-x" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
+	<Emoticon PasteText=":X" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
+	<Emoticon PasteText=":x" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
+	<Emoticon PasteText=":#" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
+	<Emoticon PasteText=":-#" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
+	<Emoticon PasteText=":secret:" Gif="Kolobok\Light\11.gif" DarkGif="Kolobok\Dark\11.gif"/>
 
-	<Emoticon PasteText=":angry:" Gif="Kolobok\12.gif"/>
-	<Emoticon PasteText=">:o" Gif="Kolobok\12.gif"/>
+	<Emoticon PasteText=":angry:" Gif="Kolobok\Light\12.gif" DarkGif="Kolobok\Dark\12.gif"/>
+	<Emoticon PasteText=">:o" Gif="Kolobok\Light\12.gif" DarkGif="Kolobok\Dark\12.gif"/>
 
-	<Emoticon PasteText=":-|" Gif="Kolobok\13.gif"/>
-	<Emoticon PasteText=":|" Gif="Kolobok\13.gif"/>
+	<Emoticon PasteText=":-|" Gif="Kolobok\Light\13.gif" DarkGif="Kolobok\Dark\13.gif"/>
+	<Emoticon PasteText=":|" Gif="Kolobok\Light\13.gif" DarkGif="Kolobok\Dark\13.gif"/>
 
-	<Emoticon PasteText=":-\" Gif="Kolobok\14.gif"/>
-	<Emoticon PasteText=":-/" Gif="Kolobok\14.gif"/>
-	<Emoticon PasteText=":\" Gif="Kolobok\14.gif"/>
+	<Emoticon PasteText=":-\" Gif="Kolobok\Light\14.gif" DarkGif="Kolobok\Dark\14.gif"/>
+	<Emoticon PasteText=":-/" Gif="Kolobok\Light\14.gif" DarkGif="Kolobok\Dark\14.gif"/>
+	<Emoticon PasteText=":\" Gif="Kolobok\Light\14.gif" DarkGif="Kolobok\Dark\14.gif"/>
 
-	<Emoticon PasteText="*TIRED*" Gif="Kolobok\15.gif"/>
-	<Emoticon PasteText="|-0" Gif="Kolobok\15.gif"/>
-	<Emoticon PasteText=":bored:" Gif="Kolobok\15.gif"/>
-	<Emoticon PasteText=":boredom:" Gif="Kolobok\15.gif"/>
+	<Emoticon PasteText="*TIRED*" Gif="Kolobok\Light\15.gif" DarkGif="Kolobok\Dark\15.gif"/>
+	<Emoticon PasteText="|-0" Gif="Kolobok\Light\15.gif" DarkGif="Kolobok\Dark\15.gif"/>
+	<Emoticon PasteText=":bored:" Gif="Kolobok\Light\15.gif" DarkGif="Kolobok\Dark\15.gif"/>
+	<Emoticon PasteText=":boredom:" Gif="Kolobok\Light\15.gif" DarkGif="Kolobok\Dark\15.gif"/>
 
-	<Emoticon PasteText="*DRINK*" Gif="Kolobok\16.gif"/>
-	<Emoticon PasteText=":drink:" Gif="Kolobok\16.gif"/>
+	<Emoticon PasteText="*DRINK*" Gif="Kolobok\Light\16.gif" DarkGif="Kolobok\Dark\16.gif"/>
+	<Emoticon PasteText=":drink:" Gif="Kolobok\Light\16.gif" DarkGif="Kolobok\Dark\16.gif"/>
 
-	<Emoticon PasteText="@=" Gif="Kolobok\17.gif"/>
+	<Emoticon PasteText="@=" Gif="Kolobok\Light\17.gif" DarkGif="Kolobok\Dark\17.gif"/>
 
-	<Emoticon PasteText="*HELP*" Gif="Kolobok\18.gif"/>
+	<Emoticon PasteText="*HELP*" Gif="Kolobok\Light\18.gif" DarkGif="Kolobok\Dark\18.gif"/>
 
-	<Emoticon PasteText="\m/" Gif="Kolobok\19.gif"/>
+	<Emoticon PasteText="\m/" Gif="Kolobok\Light\19.gif" DarkGif="Kolobok\Dark\19.gif"/>
 
-	<Emoticon PasteText="%)" Gif="Kolobok\20.gif"/>
-	<Emoticon PasteText="%-)" Gif="Kolobok\20.gif"/>
-	<Emoticon PasteText=":$" Gif="Kolobok\20.gif"/>
-	<Emoticon PasteText=":-$" Gif="Kolobok\20.gif"/>
-	<Emoticon PasteText=":WACKO:" Gif="Kolobok\20.gif"/>
-	<Emoticon PasteText=":wacko:" Gif="Kolobok\20.gif"/>
+	<Emoticon PasteText="%)" Gif="Kolobok\Light\20.gif" DarkGif="Kolobok\Dark\20.gif"/>
+	<Emoticon PasteText="%-)" Gif="Kolobok\Light\20.gif" DarkGif="Kolobok\Dark\20.gif"/>
+	<Emoticon PasteText=":$" Gif="Kolobok\Light\20.gif" DarkGif="Kolobok\Dark\20.gif"/>
+	<Emoticon PasteText=":-$" Gif="Kolobok\Light\20.gif" DarkGif="Kolobok\Dark\20.gif"/>
+	<Emoticon PasteText=":WACKO:" Gif="Kolobok\Light\20.gif" DarkGif="Kolobok\Dark\20.gif"/>
+	<Emoticon PasteText=":wacko:" Gif="Kolobok\Light\20.gif" DarkGif="Kolobok\Dark\20.gif"/>
 
-	<Emoticon PasteText="*ROFL*" Gif="Kolobok\21.gif"/>
-	<Emoticon PasteText=":ROFL:" Gif="Kolobok\21.gif"/>
-	<Emoticon PasteText=":rofl:" Gif="Kolobok\21.gif"/>
+	<Emoticon PasteText="*ROFL*" Gif="Kolobok\Light\21.gif" DarkGif="Kolobok\Dark\21.gif"/>
+	<Emoticon PasteText=":ROFL:" Gif="Kolobok\Light\21.gif" DarkGif="Kolobok\Dark\21.gif"/>
+	<Emoticon PasteText=":rofl:" Gif="Kolobok\Light\21.gif" DarkGif="Kolobok\Dark\21.gif"/>
 
-	<Emoticon PasteText="*NO*" Gif="Kolobok\22.gif"/>
+	<Emoticon PasteText="*NO*" Gif="Kolobok\Light\22.gif" DarkGif="Kolobok\Dark\22.gif"/>
 
-	<Emoticon PasteText=":lol:" Gif="Kolobok\23.gif"/>
-	<Emoticon PasteText="*LOL*" Gif="Kolobok\23.gif"/>
+	<Emoticon PasteText=":lol:" Gif="Kolobok\Light\23.gif" DarkGif="Kolobok\Dark\23.gif"/>
+	<Emoticon PasteText="*LOL*" Gif="Kolobok\Light\23.gif" DarkGif="Kolobok\Dark\23.gif"/>
 
-	<Emoticon PasteText="*CRAZY*" Gif="Kolobok\24.gif"/>
-	<Emoticon PasteText=":crazy:" Gif="Kolobok\24.gif"/>
+	<Emoticon PasteText="*CRAZY*" Gif="Kolobok\Light\24.gif" DarkGif="Kolobok\Dark\24.gif"/>
+	<Emoticon PasteText=":crazy:" Gif="Kolobok\Light\24.gif" DarkGif="Kolobok\Dark\24.gif"/>
 </Emoticons>

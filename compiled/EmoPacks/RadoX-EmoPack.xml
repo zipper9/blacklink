@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="windows-1252"?>
+<?xml version="1.0" encoding="utf-8"?>
 RadoX-Pack v.2.2
 <Emoticons>
         <Emoticon PasteText=" :D" Bitmap="RadoX-Pack\RadoX_002.bmp"/>
@@ -65,8 +65,8 @@ RadoX-Pack v.2.2
         <Emoticon PasteText=" 8|" Bitmap="RadoX-Pack\RadoX_032.bmp"/>
         <Emoticon PasteText=" 8-|" Bitmap="RadoX-Pack\RadoX_032.bmp"/>
         <Emoticon PasteText=" :|" Bitmap="RadoX-Pack\RadoX_032.bmp"/>
-        <Emoticon PasteText=" :-°" Bitmap="RadoX-Pack\RadoX_033.bmp"/>
-        <Emoticon PasteText=" :°" Bitmap="RadoX-Pack\RadoX_033.bmp"/>
+        <Emoticon PasteText=" :-Â°" Bitmap="RadoX-Pack\RadoX_033.bmp"/>
+        <Emoticon PasteText=" :Â°" Bitmap="RadoX-Pack\RadoX_033.bmp"/>
         <Emoticon PasteText=" 0_o" Bitmap="RadoX-Pack\RadoX_034.bmp"/>
         <Emoticon PasteText=" (LF)" Bitmap="RadoX-Pack\RadoX_035.bmp"/>
         <Emoticon PasteText=" 0o0" Bitmap="RadoX-Pack\RadoX_036.bmp"/>
@@ -92,10 +92,10 @@ RadoX-Pack v.2.2
         <Emoticon PasteText=" (Great)" Bitmap="RadoX-Pack\RadoX_047.bmp"/>
         <Emoticon PasteText=" (XX)" Bitmap="RadoX-Pack\RadoX_048.bmp"/>
         <Emoticon PasteText=" ($$)" Bitmap="RadoX-Pack\RadoX_049.bmp"/>
-        <Emoticon PasteText=" xþ" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
-        <Emoticon PasteText=" xÞ" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
-        <Emoticon PasteText=" XÞ" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
-        <Emoticon PasteText=" XÞ" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
+        <Emoticon PasteText=" xÃ¾" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
+        <Emoticon PasteText=" xÃž" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
+        <Emoticon PasteText=" XÃž" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
+        <Emoticon PasteText=" XÃž" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
         <Emoticon PasteText=" x-P" Bitmap="RadoX-Pack\RadoX_050.bmp"/>
         <Emoticon PasteText=" :'o" Bitmap="RadoX-Pack\RadoX_051.bmp"/>
         <Emoticon PasteText=" :'-o" Bitmap="RadoX-Pack\RadoX_051.bmp"/>
