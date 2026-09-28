@@ -10,7 +10,7 @@ import "ocidl.idl";
 
 [
 	object,
-	uuid(d6734693-edbd-411c-a9ca-b0aac8a09038),
+	uuid(b8b8469b-df53-433d-b52c-2935be4e5fb8),
 	dual,
 	nonextensible,
 	helpstring("IGdiOle Interface"),
@@ -22,10 +22,15 @@ interface IGDIImage : IDispatch
 	[propput, id(1)] HRESULT Text([in] BSTR text);
 	[propget, id(2)] HRESULT BackgroundColor([out, retval] COLORREF *color);
 	[propput, id(2)] HRESULT BackgroundColor([in] COLORREF color);
+	[propget, id(3)] HRESULT Flags([out, retval] int *flags);
+	[propput, id(3)] HRESULT Flags([in] int flags);
+	[propget, id(4)] HRESULT EmoticonId([out, retval] int *id);
+	[propput, id(4)] HRESULT EmoticonId([in] int id);
+	[local] HRESULT ReplaceImage([in] void *img);
 };
 
 [
-	uuid(e5f44b40-1a1b-43dc-92ff-ea1514d8f657),
+	uuid(fcd3e50d-3528-4ede-8a32-c4db831ac4b8),
 	version(1.0),
 	helpstring("GdiOle 1.0 Type Library")
 ]
@@ -33,7 +38,7 @@ library GdiOleLib
 {
 	importlib("stdole2.tlb");
 	[
-		uuid(ddb2dcb6-e6d1-4aa3-8709-b79adc5c9299),
+		uuid(a8bf8f4c-506e-417c-9bc1-e71f3162423c),
 		control,
 		helpstring("GdiOle")
 	]

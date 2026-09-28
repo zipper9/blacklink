@@ -16,12 +16,12 @@ void setActiveMDIWindow(HWND hwnd)
 
 CGDIImageOle::CGDIImageOle():
 	m_pImage(nullptr),
-	m_FrameCount(0),
+	m_flags(0),
+	m_id(0),
 	m_hCallbackWnd(nullptr),
 	m_dwUpdateMsg(WM_USER),
 	m_bIsDeleting(false),
 	m_bRegistered(false),
-	m_dwCurrentFrame(0),
 	m_clrBack(0)
 {
 }
@@ -203,6 +203,26 @@ bool CGDIImageOle::SetImage(CGDIImage *pImage, COLORREF clrBack, HWND hCallbackW
 	return true;
 }
 
+HRESULT CGDIImageOle::ReplaceImage(void *newImage)
+{
+	if (!m_pImage)
+		return E_FAIL;
+
+	if (m_bRegistered)
+	{
+		m_pImage->unregisterCallback(OnFrameChanged, (LPARAM)this);
+		m_bRegistered = false;
+	}
+	m_pImage->release();
+
+	m_pImage = static_cast<CGDIImage*>(newImage);
+	m_pImage->addRef();
+	m_pImage->registerCallback(OnFrameChanged, (LPARAM)this);
+	m_bRegistered = true;
+
+	return S_OK;
+}
+
 STDMETHODIMP CGDIImageOle::get_Text(BSTR *text)
 {
 	if (!text) return E_INVALIDARG;
@@ -227,6 +247,32 @@ STDMETHODIMP CGDIImageOle::get_BackgroundColor(COLORREF *color)
 STDMETHODIMP CGDIImageOle::put_BackgroundColor(COLORREF color)
 {
 	m_clrBack = color;
+	return S_OK;
+}
+
+STDMETHODIMP CGDIImageOle::get_Flags(int *flags)
+{
+	if (!flags) return E_INVALIDARG;
+	*flags = m_flags;
+	return S_OK;
+}
+
+STDMETHODIMP CGDIImageOle::put_Flags(int flags)
+{
+	m_flags = flags;
+	return S_OK;
+}
+
+STDMETHODIMP CGDIImageOle::get_EmoticonId(int *id)
+{
+	if (!id) return E_INVALIDARG;
+	*id = m_id;
+	return S_OK;
+}
+
+STDMETHODIMP CGDIImageOle::put_EmoticonId(int id)
+{
+	m_id = id;
 	return S_OK;
 }
 

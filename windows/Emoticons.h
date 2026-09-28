@@ -13,8 +13,23 @@ class Emoticon
 	public:
 		enum
 		{
-			FLAG_PREFER_GIF  = 1,
-			FLAG_NO_FALLBACK = 2
+			FLAG_PREFER_GIF      = 1,
+			FLAG_NO_FALLBACK     = 2,
+			FLAG_DARK_BACKGROUND = 4
+		};
+
+		enum
+		{
+			IMAGE_BMP,
+			IMAGE_LIGHT_GIF,
+			IMAGE_DARK_GIF,
+			MAX_IMAGES
+		};
+
+		enum
+		{
+			OLE_IMAGE_MULTIPLE_VARIANTS = 1,
+			OLE_IMAGE_DARK_VARIANT      = 2
 		};
 
 		Emoticon();
@@ -23,38 +38,45 @@ class Emoticon
 		Emoticon(const Emoticon&) = delete;
 		Emoticon& operator= (const Emoticon&) = delete;
 
-		void setIcon(const tstring& text, const string& iconBmpFile, const string& iconGifFile) noexcept;
+		void setImagePath(int type, const string& path);
+		const string& getImagePath(int type) const;
+		void setText(const tstring& text);
 		const tstring& getText() const { return text; }
-		string getBmpPath() const;
-		string getGifPath() const;
 		bool isDuplicate() const { return alias != nullptr; }
-		void checkDuplicate(Emoticon* prev) noexcept;
-		bool isHidden() const { return hidden; }
-		void setHidden(bool flag) { hidden = flag; }
+		void checkDuplicate(Emoticon* prev);
+		bool isHidden() const { return (flags & FLAG_HIDDEN) != 0; }
+		void setHidden(bool enable);
+		void setId(int id) { this->id = id; }
+		int getId() const { return id; }
+		int getEffectiveId() const;
+		bool isAlias() const { return alias != nullptr; }
 
-		CGDIImage* getImage(int flags, HWND callbackWnd, UINT callbackMsg);
+		CGDIImage* getImage(int flags, int* oleFlags, HWND callbackWnd, UINT callbackMsg);
 		IOleObject* getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground, const tstring& text);
+		int getOleImageFlags() const;
 
 	protected:
+		struct ImageInfo
+		{
+			string path;
+			CGDIImage* obj;
+		};
+
 		enum
 		{
-			MASK_BMP = 1,
-			MASK_GIF = 2
+			FLAG_HIDDEN = 1,
+			ERROR_BIT = 4
 		};
 
 		tstring text;
-		string  fileBmp;
-		string  fileGif;
-		bool    hidden;
-		int     loadingError;
+		int flags;
+		int id;
 
-		Emoticon *alias;
-		CGDIImage *imageGif;
-		CGDIImage *imageBmp;
+		Emoticon* alias;
+		ImageInfo images[MAX_IMAGES];
 
 	private:
-		void tryLoadGif(HWND callbackWnd, UINT callbackMsg);
-		void tryLoadBmp(HWND callbackWnd, UINT callbackMsg);
+		void tryLoadImage(int type, HWND callbackWnd, UINT callbackMsg);
 };
 
 // EmoticonPack
@@ -99,9 +121,11 @@ class EmoticonPackList
 		void setConfig(const StringList& names) noexcept;
 		void clear() noexcept;
 		const std::vector<EmoticonPack*>& getPacks() const { return packs; }
+		Emoticon* findById(int id) const;
 
 	protected:
 		std::vector<EmoticonPack*> packs;
+		boost::unordered_map<int, Emoticon*> idMap;
 };
 
 extern EmoticonPackList emoticonPackList;

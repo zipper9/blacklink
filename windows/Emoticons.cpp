@@ -11,101 +11,123 @@
 #include <boost/algorithm/string/trim.hpp>
 
 EmoticonPackList emoticonPackList;
+static int nextId = 0;
 
-Emoticon::Emoticon() :
-	imageGif(nullptr),
-	imageBmp(nullptr),
-	alias(nullptr),
-	hidden(false),
-	loadingError(0)
+Emoticon::Emoticon() : alias(nullptr), flags(0), id(0)
 {
+	for (int i = 0; i < MAX_IMAGES; ++i)
+		images[i].obj = nullptr;
 }
 
 Emoticon::~Emoticon()
 {
-	if (imageGif) imageGif->release();
-	if (imageBmp) imageBmp->release();
+	for (int i = 0; i < MAX_IMAGES; ++i)
+		if (images[i].obj) images[i].obj->release();
 }
 
-string Emoticon::getGifPath() const
-{
-	return Util::getEmoPacksPath() + fileGif;
-}
-
-string Emoticon::getBmpPath() const
-{
-	return Util::getEmoPacksPath() + fileBmp;
-}
-
-void Emoticon::setIcon(const tstring& text, const string& iconBmpFile, const string& iconGifFile) noexcept
+void Emoticon::setText(const tstring& text)
 {
 	this->text = text;
-	fileBmp = iconBmpFile;
-	fileGif = iconGifFile;
 }
 
-CGDIImage* Emoticon::getImage(int flags, HWND callbackWnd, UINT callbackMsg)
+void Emoticon::setImagePath(int type, const string& path)
 {
-	if (alias) return alias->getImage(flags, callbackWnd, callbackMsg);
+	images[type].path = path;
+}
+
+const string& Emoticon::getImagePath(int type) const
+{
+	return images[type].path;
+}
+
+void Emoticon::setHidden(bool enable)
+{
+	if (enable)
+		flags |= FLAG_HIDDEN;
+	else
+		flags &= ~FLAG_HIDDEN;
+}
+
+int Emoticon::getEffectiveId() const
+{
+	return alias ? alias->id : id;
+}
+
+CGDIImage* Emoticon::getImage(int flags, int* oleFlags, HWND callbackWnd, UINT callbackMsg)
+{
+	if (alias)
+		return alias->getImage(flags, oleFlags, callbackWnd, callbackMsg);
+
+	int types[MAX_IMAGES];
+	int count = 0;
+	int gif1 = IMAGE_LIGHT_GIF;
+	int gif2 = IMAGE_DARK_GIF;
+	if (flags & FLAG_DARK_BACKGROUND)
+		std::swap(gif1, gif2);
 	if (flags & FLAG_PREFER_GIF)
 	{
-		tryLoadGif(callbackWnd, callbackMsg);
-		if (imageGif) return imageGif;
+		types[count++] = gif1;
+		types[count++] = gif2;
 		if (!(flags & FLAG_NO_FALLBACK))
-		{
-			tryLoadBmp(callbackWnd, callbackMsg);
-			if (imageBmp) return imageBmp;
-		}
+			types[count++] = IMAGE_BMP;
 	}
 	else
 	{
-		tryLoadBmp(callbackWnd, callbackMsg);
-		if (imageBmp) return imageBmp;
+		types[count++] = IMAGE_BMP;
 		if (!(flags & FLAG_NO_FALLBACK))
 		{
-			tryLoadGif(callbackWnd, callbackMsg);
-			if (imageGif) return imageGif;
+			types[count++] = gif1;
+			types[count++] = gif2;
 		}
 	}
+	for (int i = 0; i < count; i++)
+	{
+		int type = types[i];
+		tryLoadImage(type, callbackWnd, callbackMsg);
+		if (images[type].obj)
+		{
+			if (oleFlags)
+			{
+				int outFlags = 0;
+				if (type != IMAGE_BMP)
+				{
+					outFlags = getOleImageFlags();
+					if (outFlags && type == IMAGE_DARK_GIF)
+						outFlags |= OLE_IMAGE_DARK_VARIANT;
+				}
+				*oleFlags = outFlags;
+			}
+			return images[type].obj;
+		}
+	}
+	if (oleFlags)
+		*oleFlags = 0;
 	return nullptr;
 }
 
-void Emoticon::tryLoadGif(HWND callbackWnd, UINT callbackMsg)
+void Emoticon::tryLoadImage(int type, HWND callbackWnd, UINT callbackMsg)
 {
-	if (imageGif || fileGif.empty() || (loadingError & MASK_GIF)) return;
-	const string path = getGifPath();
-	imageGif = CGDIImage::createInstance(Text::toT(path).c_str());
-	if (imageGif->isInitialized())
+	if (images[type].obj || images[type].path.empty()) return;
+	int errorMask = 1 << (ERROR_BIT + type);
+	if (flags & errorMask) return;
+	const string path = Util::getEmoPacksPath() + images[type].path;
+	CGDIImage* obj = CGDIImage::createInstance(Text::toT(path).c_str());
+	if (obj->isInitialized())
 	{
-		imageGif->setCallback(callbackWnd, callbackMsg);
+		obj->setCallback(callbackWnd, callbackMsg);
+		images[type].obj = obj;
 		return;
 	}
-	LogManager::message("Can't load GIF image from " + path, false);
-	imageGif->release();
-	imageGif = nullptr;
-	loadingError |= MASK_GIF;
-}
-
-void Emoticon::tryLoadBmp(HWND callbackWnd, UINT callbackMsg)
-{
-	if (imageBmp || fileBmp.empty() || (loadingError & MASK_BMP)) return;
-	const string path = getBmpPath();
-	imageBmp = CGDIImage::createInstance(Text::toT(path).c_str());
-	if (imageBmp->isInitialized())
-	{
-		imageBmp->setCallback(callbackWnd, callbackMsg);
-		return;
-	}
-	LogManager::message("Can't load BMP image from " + path, false);
-	imageBmp->release();
-	imageBmp = nullptr;
-	loadingError |= MASK_BMP;
+	LogManager::message("Can't load image of type " + Util::toString(type) + " from " + path, false);
+	obj->release();
+	flags |= errorMask;
 }
 
 IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, IStorage* pStorage, HWND hCallbackWnd, UINT callbackMsg, COLORREF clrBackground, const tstring& text)
 {
 	IOleObject* pObject = nullptr;
-	CGDIImage* image = getImage(flags, hCallbackWnd, callbackMsg);
+	int oleFlags;
+	CGDIImage* image = getImage(flags, &oleFlags, hCallbackWnd, callbackMsg);
 	if (!image) return nullptr;
 
 	CComObject<CGDIImageOle>* pImageObject = nullptr;
@@ -119,10 +141,12 @@ IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, 
 			pImageObject->Release();
 			return nullptr;
 		}
+		pImageObject->put_Flags(oleFlags);
 		pImageObject->QueryInterface(IID_IOleObject, (void**)&pObject);
 		if (pObject)
 		{
 			pImageObject->put_Text(const_cast<TCHAR*>(text.c_str()));
+			pImageObject->put_EmoticonId(getEffectiveId());
 			pObject->SetClientSite(pOleClientSite);
 			return pObject;
 		}
@@ -130,10 +154,21 @@ IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, 
 	return nullptr;
 }
 
-void Emoticon::checkDuplicate(Emoticon* prev) noexcept
+void Emoticon::checkDuplicate(Emoticon* prev)
 {
-	if (fileBmp == prev->fileBmp && fileGif == prev->fileGif)
-		alias = prev->alias ? prev->alias : prev;
+	for (int i = 0; i < MAX_IMAGES; i++)
+		if (images[i].path != prev->images[i].path)
+			return;
+	alias = prev->alias ? prev->alias : prev;
+}
+
+int Emoticon::getOleImageFlags() const
+{
+	int flags = 0;
+	if (!images[IMAGE_LIGHT_GIF].path.empty() && !images[IMAGE_DARK_GIF].path.empty() &&
+	    images[IMAGE_LIGHT_GIF].path != images[IMAGE_DARK_GIF].path)
+		flags |= OLE_IMAGE_MULTIPLE_VARIANTS;
+	return flags;
 }
 
 EmoticonPack::~EmoticonPack() noexcept
@@ -150,6 +185,7 @@ void EmoticonPack::cleanup() noexcept
 
 bool EmoticonPack::loadXMLFile(const string& name) noexcept
 {
+	const string attrNames[] = { "Bitmap", "Gif", "DarkGif" };
 	const string path = Util::getEmoPacksPath() + name + ".xml";
 	uint64_t timestamp = File::getTimeStamp(path);
 	if (!timestamp) return false;
@@ -172,14 +208,20 @@ bool EmoticonPack::loadXMLFile(const string& name) noexcept
 				dcassert(!iconText.empty());
 				if (!iconText.empty())
 				{
-					if (!nameSet.insert(iconText).second) continue;
-					const string& iconBmpFile = xml.getChildAttrib("Bitmap");
-					const string& iconGifFile = xml.getChildAttrib("Gif");
-					Emoticon* emoticon = new Emoticon();
-					emoticon->setIcon(Text::toT(iconText), iconBmpFile, iconGifFile);
+					if (!nameSet.insert(iconText).second) continue;					
+					Emoticon* emoticon = new Emoticon;
+					emoticon->setText(Text::toT(iconText));
+					for (int type = 0; type < Emoticon::MAX_IMAGES; type++)
+					{
+						const string& path = xml.getChildAttrib(attrNames[type]);
+						emoticon->setImagePath(type, path);
+					}
 					emoticon->setHidden(xml.getBoolChildAttrib("Hidden"));
-					if (!emoticons.empty()) emoticon->checkDuplicate(emoticons.back());
+					if (!emoticons.empty())
+						emoticon->checkDuplicate(emoticons.back());
 					emoticons.push_back(emoticon);
+					if (!emoticon->isAlias() && (emoticon->getOleImageFlags() & Emoticon::OLE_IMAGE_MULTIPLE_VARIANTS))
+						emoticon->setId(++nextId);
 				}
 			}
 			xml.stepOut();
@@ -214,7 +256,18 @@ void EmoticonPack::initialize() noexcept
 	dcdebug("-=[Dumping emoticons]=-\n");
 	for (const Emoticon* icon : sortedEmoticons)
 	{
-		string text = Text::fromT(icon->getText()) + " (bmp: " + icon->getBmpPath() + "   gif: " + icon->getGifPath() + ")";
+		string text = Text::fromT(icon->getText());
+		bool first = true;
+		for (int i = 0; i < Emoticon::MAX_IMAGES; i++)
+		{
+			const string& path = icon->getImagePath(i);
+			if (path.empty()) continue;
+			text += first ? " (" : ", ";
+			text += "type " + Util::toString(i) + ": ";
+			text += path;
+			first = false;
+		}
+		if (!first) text += ')';
 		dcdebug("%s\n", text.c_str());
 	}
 #endif
@@ -224,6 +277,7 @@ void EmoticonPackList::clear() noexcept
 {
 	for (EmoticonPack* pack : packs) delete pack;
 	packs.clear();
+	idMap.clear();
 }
 
 void EmoticonPackList::setConfig(const StringList& names) noexcept
@@ -256,6 +310,24 @@ void EmoticonPackList::setConfig(const StringList& names) noexcept
 	}
 	for_each(packs.begin(), packs.end(), [](auto p) { delete p; });
 	packs = std::move(newPacks);
+
+	idMap.clear();
+	for (const EmoticonPack* p : packs)
+	{
+		const auto& v = p->getEmoticons();
+		for (Emoticon* emoticon : v)
+		{
+			int id = emoticon->getId();
+			if (id)
+				idMap.insert(make_pair(id, emoticon));
+		}
+	}
+}
+
+Emoticon* EmoticonPackList::findById(int id) const
+{
+	auto i = idMap.find(id);
+	return i == idMap.end() ? nullptr : i->second;
 }
 
 #endif // BL_UI_FEATURE_EMOTICONS

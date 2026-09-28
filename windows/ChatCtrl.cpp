@@ -317,6 +317,9 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 	}
 
 #ifdef BL_UI_FEATURE_EMOTICONS
+	int emoticonFlags = ss->getBool(Conf::CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0;
+	if (Colors::isDarkTheme)
+		emoticonFlags |= Emoticon::FLAG_DARK_BACKGROUND;
 	HWND mainFrameWnd = WinUtil::g_mainWnd;
 	for (const auto& ei : chatTextParser.getEmoticons())
 	{
@@ -329,7 +332,7 @@ void ChatCtrl::appendText(tstring& text, const Message& message, unsigned maxEmo
 		if (pRichEditOle && SUCCEEDED(pRichEditOle->GetClientSite(&pOleClientSite)) && pOleClientSite)
 		{
 			IOleObject* pObject = ei.emoticon->getImageObject(
-				ss->getBool(Conf::CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
+				emoticonFlags,
 				pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
 				Colors::charFormat[message.myMessage ? Colors::TEXT_STYLE_MY_MESSAGE : Colors::TEXT_STYLE_NORMAL].crBackColor,
 				ei.emoticon->getText());
@@ -791,6 +794,16 @@ void ChatCtrl::replaceObjects(tstring& s, int startIndex) const
 void ChatCtrl::updateBackgroundColor()
 {
 	if (!pRichEditOle) return;
+
+	const auto* ss = SettingsManager::instance.getUiSettings();
+	int emoticonFlags = ss->getBool(Conf::CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0;
+	int oleImageFlags = 0;
+	if (Colors::isDarkTheme)
+	{
+		emoticonFlags |= Emoticon::FLAG_DARK_BACKGROUND;
+		oleImageFlags = Emoticon::OLE_IMAGE_DARK_VARIANT;
+	}
+	HWND mainFrameWnd = WinUtil::g_mainWnd;
 	LONG count = pRichEditOle->GetObjectCount();
 	for (LONG index = 0; index < count; index++)
 	{
@@ -800,11 +813,34 @@ void ChatCtrl::updateBackgroundColor()
 		if (FAILED(pRichEditOle->GetObject(index, &ro, REO_GETOBJ_POLEOBJ)))
 			break;
 		IGDIImage* pImage = nullptr;
-		if (SUCCEEDED(ro.poleobj->QueryInterface(IID_IGDIImage, (void**) &pImage)))
+		if (FAILED(ro.poleobj->QueryInterface(IID_IGDIImage, (void**) &pImage)))
+			continue;
+		int flags = 0;
+		pImage->get_Flags(&flags);
+		if (flags & Emoticon::OLE_IMAGE_MULTIPLE_VARIANTS)
 		{
-			pImage->put_BackgroundColor(backgroundColor);
-			pImage->Release();
+			int newFlags = (flags & ~Emoticon::OLE_IMAGE_DARK_VARIANT) | oleImageFlags;
+			if (flags != newFlags)
+			{
+				int id = 0;
+				pImage->get_EmoticonId(&id);
+				if (id)
+				{
+					Emoticon* emoticon = emoticonPackList.findById(id);
+					if (emoticon)
+					{
+						CGDIImage* image = emoticon->getImage(emoticonFlags, &newFlags, mainFrameWnd, WM_ANIM_CHANGE_FRAME);
+						if (image)
+						{
+							if (SUCCEEDED(pImage->ReplaceImage(image)))
+								pImage->put_Flags(newFlags);
+						}
+					}
+				}
+			}
 		}
+		pImage->put_BackgroundColor(backgroundColor);
+		pImage->Release();
 	}
 }
 #endif

@@ -176,13 +176,17 @@ class ATL_NO_VTABLE CGDIImageOle :
 		STDMETHOD(put_Text)(BSTR text);
 		STDMETHOD(get_BackgroundColor)(COLORREF *color);
 		STDMETHOD(put_BackgroundColor)(COLORREF color);
+		STDMETHOD(get_Flags)(int *flags);
+		STDMETHOD(put_Flags)(int flags);
+		STDMETHOD(get_EmoticonId)(int *id);
+		STDMETHOD(put_EmoticonId)(int id);
+		STDMETHOD(ReplaceImage)(void *newImage);
 
 	private:
 		CGDIImage *m_pImage;
 		wstring m_text;
-
-		UINT m_dwCurrentFrame;
-		UINT m_FrameCount;
+		int m_flags;
+		int m_id;
 
 		HWND m_hCallbackWnd;
 		DWORD m_dwUpdateMsg;

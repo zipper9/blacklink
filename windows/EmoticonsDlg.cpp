@@ -51,7 +51,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	if (!packList.empty() && packList[0])
 	{
 		const EmoticonPack* pack = packList[0];
-		const int useAnimation = SettingsManager::instance.getUiSettings()->getBool(Conf::SMILE_SELECT_WND_ANIM_SMILES) ?
+		const int emoticonFlags = SettingsManager::instance.getUiSettings()->getBool(Conf::SMILE_SELECT_WND_ANIM_SMILES) ?
 			Emoticon::FLAG_PREFER_GIF : Emoticon::FLAG_NO_FALLBACK;
 		const vector<Emoticon*>& icons = pack->getEmoticons();
 		size_t packSize = icons.size();
@@ -62,7 +62,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			if (i == packSize) break;
 			Emoticon* icon = icons[i];
 			if (icon->isDuplicate() || icon->isHidden()) continue;
-			CGDIImage* pImage = icon->getImage(useAnimation, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
+			CGDIImage* pImage = icon->getImage(emoticonFlags, nullptr, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
 			if (pImage)
 			{
 				int w = pImage->getWidth();
@@ -137,7 +137,7 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 			if (i == packSize) break;
 			Emoticon* icon = icons[i];
 			if (icon->isDuplicate() || icon->isHidden()) continue;
-			CGDIImage *pImage = icon->getImage(useAnimation, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
+			CGDIImage *pImage = icon->getImage(emoticonFlags, nullptr, WinUtil::g_mainWnd, WM_ANIM_CHANGE_FRAME);
 			if (pImage && pImage->getWidth() && pImage->getHeight())
 			{
 				pos.left = x * (sw + BUTTON_SPACE);
