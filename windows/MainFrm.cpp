@@ -2952,8 +2952,8 @@ LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 
 LRESULT MainFrame::onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	bool popusDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_POPUPS) != FALSE;
-	SettingsManager::instance.getUiSettings()->setBool(Conf::POPUPS_DISABLED, popusDisabled);
+	bool popupsDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_POPUPS) != FALSE;
+	SettingsManager::instance.getUiSettings()->setBool(Conf::POPUPS_DISABLED, popupsDisabled);
 	return 0;
 }
 
