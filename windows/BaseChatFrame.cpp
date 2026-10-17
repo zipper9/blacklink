@@ -37,6 +37,10 @@
 
 static const int INPUT_BOX_EXTRA_HEIGHT = 12;
 
+#ifndef SPF_SETDEFAULT
+#define SPF_SETDEFAULT 4
+#endif
+
 #ifdef BL_UI_FEATURE_BB_CODES
 class DlgInsertLink : public CDialogImpl<DlgInsertLink>
 {
