@@ -496,6 +496,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	AddSimpleReBarBandCtrl(ctrlRebar, ctrlWinampToolbar, 0, NULL, TRUE);
 
 	ToolbarManager::getInstance()->applyTo(m_hWndToolBar, "MainToolBar");
+	toggleLockToolbars(TRUE, 0, 0);
 
 	ctrlStatus.setAutoGripper(true);
 	ctrlStatus.setCallback(this);
@@ -1056,7 +1057,7 @@ LRESULT MainFrame::onRebuildToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	if (ctrlRebar.IsWindow())   // resize of reband to fix position of chevron
 	{
 		const int nCount = ctrlRebar.GetBandCount();
-		for (int i = 0; i < nCount; i++)
+		for (int i = 1; i < nCount; i++)
 		{
 			REBARBANDINFO rbBand = {0};
 			rbBand.cbSize = sizeof(REBARBANDINFO);
@@ -2654,17 +2655,21 @@ LRESULT MainFrame::onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& 
 
 void MainFrame::toggleLockToolbars(BOOL state)
 {
+	toggleLockToolbars(state, 1, ctrlRebar.GetBandCount() - 1);
+}
+
+void MainFrame::toggleLockToolbars(BOOL state, int firstIndex, int lastIndex)
+{
 	REBARBANDINFO rbi = {};
 	rbi.cbSize = sizeof(rbi);
 	rbi.fMask  = RBBIM_STYLE;
-	int count = ctrlRebar.GetBandCount();
-	for (int i = 0; i < count; i++)
+	for (int i = firstIndex; i <= lastIndex; i++)
 	{
 		ctrlRebar.GetBandInfo(i, &rbi);
 		if (state)
-			rbi.fStyle |= RBBS_NOGRIPPER | RBBS_GRIPPERALWAYS;
+			rbi.fStyle = (rbi.fStyle | RBBS_NOGRIPPER) & ~RBBS_GRIPPERALWAYS;
 		else
-			rbi.fStyle &= ~(RBBS_NOGRIPPER | RBBS_GRIPPERALWAYS);
+			rbi.fStyle = (rbi.fStyle | RBBS_GRIPPERALWAYS) & ~RBBS_NOGRIPPER;
 		ctrlRebar.SetBandInfo(i, &rbi);
 	}
 }

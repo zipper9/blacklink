@@ -578,6 +578,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		static void checkImageList(CImageList& imageList, int resource, int size);
 		void toggleTopmost();
 		void toggleLockToolbars(BOOL state);
+		void toggleLockToolbars(BOOL state, int firstIndex, int lastIndex);
 		void toggleRebarBand(BOOL state, int bandNumber, int commandId, int setting);
 
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
