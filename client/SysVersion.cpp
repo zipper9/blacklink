@@ -150,6 +150,7 @@ struct BuildName
 
 static const BuildName winDesktopBuilds[] =
 {
+	{ 26300, "11 ver. 26H2" },
 	{ 26200, "11 ver. 25H2" },
 	{ 26100, "11 ver. 24H2" },
 	{ 22631, "11 ver. 23H2" },
@@ -368,6 +369,11 @@ string SysVersion::getFormattedOsName()
 #endif
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4996) 
+#endif
+
 void SysVersion::initialize()
 {
 #ifdef _WIN32
@@ -411,3 +417,7 @@ void SysVersion::initialize()
 	GetSystemInfo(&sysInfo);
 #endif
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
