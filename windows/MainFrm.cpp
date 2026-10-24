@@ -619,7 +619,6 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 #endif	
 
 	updateFileListMenu();
-	openDefaultWindows();
 
 	ConnectivityManager::getInstance()->setupConnections();
 
@@ -664,7 +663,10 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	if (!PopupManager::isValidInstance())
 		PopupManager::newInstance();
 
-	PostMessage(WMU_UPDATE_LAYOUT);
+	updateLayoutFlag = true;
+	UpdateLayout();
+	updateLayoutFlag = false;
+	openDefaultWindows();
 	createTimer(1000, 3);
 
 	return 0;
@@ -2170,7 +2172,7 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 
 void MainFrame::storeWindowsPos()
 {
-	WINDOWPLACEMENT wp = { 0 };
+	WINDOWPLACEMENT wp;
 	wp.length = sizeof(wp);
 	if (GetWindowPlacement(&wp))
 	{
@@ -2188,12 +2190,6 @@ void MainFrame::storeWindowsPos()
 			ss->setInt(Conf::MAIN_WINDOW_SIZE_Y, rc.Height());
 		}
 	}
-#ifdef _DEBUG
-	else
-	{
-		dcdebug("MainFrame:: WINDOW  GetWindowPlacement(&wp) -> NULL data !!!\n");
-	}
-#endif
 }
 
 void MainFrame::prepareNonMaximized()
