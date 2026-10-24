@@ -2251,12 +2251,9 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			
 			if (!dontQuit)
 			{
-				// [+] brain-ripper
-				// check if hashing pending,
-				// and display hashing progress
-				// if any
-				
-				if (HashManager::getInstance()->isHashing())
+				// FIXME: clean this up and also handle the endSession flag
+				auto sm = ShareManager::getInstance();
+				if (sm->isRefreshing())
 				{
 					bool forceStopExit = false;
 					if (!HashProgressDlg::instanceCounter)
@@ -2264,17 +2261,10 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 						HashProgressDlg dlg(true, true);
 						forceStopExit = dlg.DoModal() != IDC_BTN_EXIT_ON_DONE;
 					}
-					
-					// User take decision in dialog,
-					//so avoid one more warning message
 					forceNoWarning = true;
-					
-					if (HashManager::getInstance()->isHashing() || forceStopExit)
+					if (sm->isRefreshing() || forceStopExit)
 					{
-						// User closed progress window, while hashing still in progress,
-						// or user unchecked "exit on done" checkbox,
-						// so let program to work
-						
+						// HashProgressDlg was closed by the user, do not quit
 						dontQuit = true;
 						quitFromMenu = false;
 					}

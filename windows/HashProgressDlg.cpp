@@ -151,16 +151,6 @@ void HashProgressDlg::updateStats()
 	if (info.filesLeft == 0)
 	{
 		pauseButton.EnableWindow(FALSE);
-		if (exitOnDoneButton.GetCheck())
-		{
-			EndDialog(IDC_BTN_EXIT_ON_DONE);
-			return;
-		}
-		if (autoClose)
-		{
-			PostMessage(WM_CLOSE);
-			return;
-		}
 		GetDlgItem(IDC_BTN_REFRESH_FILELIST).EnableWindow(!ShareManager::getInstance()->isRefreshing());
 		currentFile.ShowWindow(SW_HIDE);
 		ResourceManager::Strings stateText;
@@ -194,6 +184,19 @@ void HashProgressDlg::updateStats()
 				setProgressState(PBST_NORMAL);
 				setProgressMarquee(false);
 				progress.SetPos(0);
+		}
+		if (stateText == ResourceManager::DONE)
+		{
+			if (exitOnDoneButton.GetCheck())
+			{
+				EndDialog(IDC_BTN_EXIT_ON_DONE);
+				return;
+			}
+			if (autoClose)
+			{
+				PostMessage(WM_CLOSE);
+				return;
+			}
 		}
 		infoState.SetWindowText(CTSTRING_I(stateText));
 		return;
