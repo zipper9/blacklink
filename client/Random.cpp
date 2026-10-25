@@ -57,7 +57,7 @@ void Util::MT19937::randomize()
 {
 #ifdef HAVE_OPENSSL
 	RAND_pseudo_bytes((unsigned char*) mt, sizeof(mt));
-	mti = N + 1;
+	mti = N;
 #else
 	uint32_t seed = 0;
 	while (seed == 0)
@@ -75,7 +75,7 @@ void Util::MT19937::setSeed(uint32_t seed)
 	mt[0] = seed;
 	for (mti = 1; mti < N; mti++)
 		mt[mti] = 69069 * mt[mti-1];
-	mti = N + 1;
+	mti = N;
 }
 
 /* Period parameters */
@@ -103,7 +103,7 @@ uint32_t Util::MT19937::getValue()
 		int kk;
 
 		if (mti == N + 1)
-			initRand();
+			randomize();
 
 		for (kk = 0; kk < N - M; kk++)
 		{
