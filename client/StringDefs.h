@@ -1286,7 +1286,6 @@ enum Strings   // @DontAdd
 	SHUTDOWN_OFF, // "Shutdown canceled"
 	SHUTDOWN_ON, // "System will shutdown after timeout"
 	SIZE, // "Size"
-	SKIP_RENAME, // "New virtual name matches old name, skipping..."
 	SLOTS, // "Slots"
 	SLOTS_SET, // "Slots set"
 	SLOT_CONTROL_GROUP, // "Slots Control"

@@ -309,7 +309,7 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 {
 	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
 	if (i < 0) return 0;
-	
+
 	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
 	LVITEM item = {0};
 	item.mask = LVIF_TEXT | LVIF_GROUPID;
@@ -328,30 +328,23 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		LineDlg virt;
 		virt.title = TSTRING(VIRTUAL_NAME);
 		virt.description = TSTRING(VIRTUAL_NAME_LONG);
-		virt.line = std::move(vName);
+		virt.line = vName;
 		virt.allowEmpty = false;
 		virt.icon = IconBitmaps::FINISHED_UPLOADS;
-		if (virt.DoModal(m_hWnd) == IDOK)
+		if (virt.DoModal(m_hWnd) == IDOK && vName != virt.line)
 		{
-			if (stricmp(buf.get(), virt.line.c_str()) != 0)
-			{
-				ShareManager::getInstance()->renameDirectory(Text::fromT(rPath), Text::fromT(virt.line));
-				renamingItem = true;
-				ctrlDirectories.SetItemText(i, 0, virt.line.c_str());
-				renamingItem = false;
-				updateTree = true;
-			}
-			else
-			{
-				MessageBox(CTSTRING(SKIP_RENAME), getAppNameVerT().c_str(), MB_ICONINFORMATION | MB_OK);
-			}
+			ShareManager::getInstance()->renameDirectory(Text::fromT(rPath), Text::fromT(virt.line));
+			renamingItem = true;
+			ctrlDirectories.SetItemText(i, 0, virt.line.c_str());
+			renamingItem = false;
+			updateTree = true;
 		}
 	}
 	catch (const ShareException& e)
 	{
 		MessageBox(Text::toT(e.getError()).c_str(), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 	}
-	
+
 	return 0;
 }
 
